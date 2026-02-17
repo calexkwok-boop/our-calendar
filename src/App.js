@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Save, Tag, Mic, MicOff, Settings, Eye, EyeOff, Lock, User, Bell, BellOff, AlertTriangle } from 'lucide-react';
+
 // Simple localStorage wrapper
 const storage = {
   get: async (key, shared = false) => {
@@ -300,7 +300,7 @@ function App() {
     const text = transcript.toLowerCase();
     let targetDate = new Date(selectedDate);
     
-    const dateMatch = text.match(/(?:on\s+)?(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+   const dateMatch = text.match(/(?:on\s+)?(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?/);
     if (dateMatch) {
       const month = parseInt(dateMatch[1]) - 1;
       const day = parseInt(dateMatch[2]);
@@ -403,7 +403,7 @@ function App() {
         setIsListening(false);
       };
     }
-  }, [selectedCategory, isPrivate, events, selectedDate, currentUser]);
+  }, [selectedCategory, isPrivate, events, selectedDate, processVoiceCommand]);
 
   const toggleVoiceInput = () => {
     if (isListening) {
