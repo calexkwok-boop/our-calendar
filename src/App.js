@@ -31,9 +31,9 @@ const storage = {
 if (typeof window !== 'undefined') {
   window.storage = storage;
 }
-
 if (typeof window !== 'undefined') {
   window.storage = storage;
+  window.supabase = supabase;
 }
 const DEFAULT_CATEGORIES = {
   work: { label: 'Work', color: 'bg-blue-500', lightBg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
