@@ -27,10 +27,6 @@ const storage = {
     return { key, value, shared: true };
   }
 };
-
-if (typeof window !== 'undefined') {
-  window.storage = storage;
-}
 if (typeof window !== 'undefined') {
   window.storage = storage;
   window.supabase = supabase;
