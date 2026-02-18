@@ -1058,9 +1058,11 @@ const handleDateTap = (date) => {
               {getDaysInMonth(currentDate).map((date, index) => {
                 const dateKey = date ? getDateKey(date) : null;
                 const allDateEvents = dateKey && events[dateKey] ? events[dateKey] : [];
-                const dateEvents = allDateEvents.filter(e => 
-  !e.isPrivate || e.isPrivate && (showPrivateEvents || e.createdBy === currentUser)
-);
+                const dateEvents = allDateEvents.filter(e => {
+  if (!e.isPrivate) return true;
+  const currentUserName = localStorage.getItem('calendar-user');
+  return showPrivateEvents || e.createdBy === currentUserName;
+});
                 const isSelected = date && isSameDay(date, selectedDate);
                 const isTodayDate = date && isToday(date);
                 const isInSelection = date && selectedDates.some(d => isSameDay(d, date));
