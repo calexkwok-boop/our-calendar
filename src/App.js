@@ -1,16 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
-// Simple localStorage wrapper
+// Initialize Supabase
+const supabase = createClient(
+  'https://qyifsblebdnlcyurrgbt.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5aWZzYmxlYmRubGN5dXJyZ2J0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NTA1NTcsImV4cCI6MjA4NzAyNjU1N30.S_DUVQCwkBWrbSWoujQipb_5jz1d5UCsU_gSwWAGzTk'
+);
+// Supabase storage wrapper
 const storage = {
   get: async (key, shared = false) => {
-    const value = localStorage.getItem(key);
-    return value ? { key, value, shared } : null;
+    if (key === 'calendar-user') {
+      // User is stored locally
+      const value = localStorage.getItem(key);
+      return value ? { key, value, shared } : null;
+    }
+    // Everything else uses Supabase - events and categories are always shared
+    return { key, value: null, shared };
   },
   set: async (key, value, shared = false) => {
-    localStorage.setItem(key, value);
-    return { key, value, shared };
+    if (key === 'calendar-user' || key.includes('notification')) {
+      // User and notifications stored locally
+      localStorage.setItem(key, value);
+      return { key, value, shared };
+    }
+    // Events and categories go to Supabase
+    return { key, value, shared: true };
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.storage = storage;
+}
 
 if (typeof window !== 'undefined') {
   window.storage = storage;
@@ -77,22 +97,68 @@ function App() {
   };
 
   const saveEvents = async (newEvents) => {
-    try {
-      await window.storage.set('calendar-events', JSON.stringify(newEvents), true);
-      setEvents(newEvents);
-    } catch (error) {
-      console.error('Error saving events:', error);
+  try {
+    setEvents(newEvents);
+    
+    // Flatten events object to array for Supabase
+    const eventsArray = [];
+    Object.entries(newEvents).forEach(([date, dateEvents]) => {
+      dateEvents.forEach(event => {
+        eventsArray.push({
+          id: event.id,
+          date: event.date,
+          title: event.title,
+          time: event.time,
+          category: event.category,
+          is_private: event.isPrivate || false,
+          is_urgent: event.isUrgent || false,
+          is_multi_day: event.isMultiDay || false,
+          multi_day_id: event.multiDayId,
+          created_by: event.createdBy,
+          created_at: event.createdAt
+        });
+      });
+    });
+    
+    // Clear all events and insert new ones
+    await supabase.from('events').delete().neq('id', '___nonexistent___');
+    
+    if (eventsArray.length > 0) {
+      const { error } = await supabase.from('events').insert(eventsArray);
+      if (error) {
+        console.error('Error saving events to Supabase:', error);
+      }
     }
-  };
+  } catch (error) {
+    console.error('Error saving events:', error);
+  }
+};
 
   const saveCategories = async (newCategories) => {
-    try {
-      await window.storage.set('calendar-categories', JSON.stringify(newCategories), true);
-      setCategories(newCategories);
-    } catch (error) {
-      console.error('Error saving categories:', error);
+  try {
+    setCategories(newCategories);
+    
+    // Convert to array for Supabase
+    const categoriesArray = Object.entries(newCategories).map(([key, cat]) => ({
+      key,
+      label: cat.label,
+      color: cat.color,
+      light_bg: cat.lightBg,
+      border: cat.border,
+      text: cat.text
+    }));
+    
+    // Clear and insert
+    await supabase.from('categories').delete().neq('key', '___nonexistent___');
+    
+    const { error } = await supabase.from('categories').insert(categoriesArray);
+    if (error) {
+      console.error('Error saving categories to Supabase:', error);
     }
-  };
+  } catch (error) {
+    console.error('Error saving categories:', error);
+  }
+};
 
   const saveUser = async (userName) => {
     console.log('Attempting to save user:', userName);
@@ -113,39 +179,95 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const eventsResult = await window.storage.get('calendar-events', true);
-        if (eventsResult && eventsResult.value) {
-          setEvents(JSON.parse(eventsResult.value));
-        }
-        
-        const categoriesResult = await window.storage.get('calendar-categories', true);
-        if (categoriesResult && categoriesResult.value) {
-          setCategories(JSON.parse(categoriesResult.value));
-        }
-
-        try {
-          const userResult = await window.storage.get('calendar-user', false);
-          if (userResult && userResult.value) {
-            setCurrentUser(userResult.value);
-            setShowUserSetup(false);
-          } else {
-            setShowUserSetup(true);
+ useEffect(() => {
+  const loadData = async () => {
+    try {
+      // Load events from Supabase
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('events')
+        .select('*');
+      
+      if (eventsError) {
+        console.error('Error loading events:', eventsError);
+      } else if (eventsData) {
+        // Convert flat array to date-keyed object
+        const eventsObj = {};
+        eventsData.forEach(event => {
+          if (!eventsObj[event.date]) {
+            eventsObj[event.date] = [];
           }
-        } catch (userError) {
-          console.log('No user found, showing setup');
+          eventsObj[event.date].push({
+            id: event.id,
+            title: event.title,
+            time: event.time,
+            date: event.date,
+            category: event.category,
+            isPrivate: event.is_private,
+            isUrgent: event.is_urgent,
+            isMultiDay: event.is_multi_day,
+            multiDayId: event.multi_day_id,
+            createdBy: event.created_by,
+            createdAt: event.created_at
+          });
+        });
+        setEvents(eventsObj);
+      }
+      
+      // Load categories from Supabase
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*');
+      
+      if (categoriesError) {
+        console.log('No categories yet, using defaults');
+      } else if (categoriesData && categoriesData.length > 0) {
+        const categoriesObj = {};
+        categoriesData.forEach(cat => {
+          categoriesObj[cat.key] = {
+            label: cat.label,
+            color: cat.color,
+            lightBg: cat.light_bg,
+            border: cat.border,
+            text: cat.text
+          };
+        });
+        setCategories(categoriesObj);
+      }
+
+      // Load user from localStorage
+      try {
+        const userResult = await window.storage.get('calendar-user', false);
+        if (userResult && userResult.value) {
+          setCurrentUser(userResult.value);
+          setShowUserSetup(false);
+        } else {
           setShowUserSetup(true);
         }
-      } catch (error) {
-        console.log('Error loading data:', error);
-      } finally {
-        setIsLoading(false);
+      } catch (userError) {
+        console.log('No user found, showing setup');
+        setShowUserSetup(true);
       }
-    };
-    loadData();
-  }, []);
+    } catch (error) {
+      console.log('Error loading data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  loadData();
+  
+  // Subscribe to realtime changes
+  const eventsSubscription = supabase
+    .channel('events-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+      // Reload events when they change
+      loadData();
+    })
+    .subscribe();
+
+  return () => {
+    eventsSubscription.unsubscribe();
+  };
+}, []);
 
   // Check notification permission on load
   useEffect(() => {
@@ -268,12 +390,43 @@ function App() {
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [isSelecting]);
 
-  const handleDateMouseDown = (date) => {
-    if (!date) return;
-    setIsSelecting(true);
-    setSelectionStart(date);
+ const [firstTapDate, setFirstTapDate] = useState(null);
+const [lastTapTime, setLastTapTime] = useState(0);
+
+const handleDateTap = (date) => {
+  if (!date) return;
+  
+  const now = Date.now();
+  const timeSinceLastTap = now - lastTapTime;
+  
+  // Double tap detection (within 300ms)
+  if (timeSinceLastTap < 300 && firstTapDate && isSameDay(firstTapDate, date)) {
+    // This is a double tap on the same date - start selection
     setSelectedDates([date]);
-  };
+    setSelectionStart(date);
+    setFirstTapDate(null);
+  } else if (selectionStart && !isSameDay(selectionStart, date)) {
+    // We have a start date, this is the end date
+    const start = new Date(Math.min(selectionStart, date));
+    const end = new Date(Math.max(selectionStart, date));
+    const dates = [];
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      dates.push(new Date(d));
+    }
+    
+    setSelectedDates(dates);
+    setSelectionStart(null);
+  } else {
+    // Single tap - select this date
+    setSelectedDate(date);
+    setFirstTapDate(date);
+    setSelectedDates([]);
+    setSelectionStart(null);
+  }
+  
+  setLastTapTime(now);
+};
 
   const handleDateMouseEnter = (date) => {
     if (!date || !isSelecting || !selectionStart) return;
@@ -938,9 +1091,7 @@ function App() {
                 return (
                   <div key={index} className="relative pb-3">
                     <button
-                      onMouseDown={() => handleDateMouseDown(date)}
-                      onMouseEnter={() => handleDateMouseEnter(date)}
-                      onMouseUp={handleDateMouseUp}
+                      onClick={() => handleDateTap(date)}
                       disabled={!date}
                       className={`
                         w-full aspect-square rounded-xl p-2 transition-all duration-200 relative select-none
