@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Mic, MicOff, Settings, Eye, EyeOff, Lock, User, Bell, BellOff, AlertTriangle } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase
