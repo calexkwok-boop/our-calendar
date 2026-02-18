@@ -108,6 +108,7 @@ function App() {
           time: event.time,
           category: event.category,
           is_private: event.isPrivate || false,
+is_private_for: event.isPrivate ? event.createdBy : null,
           is_urgent: event.isUrgent || false,
           is_multi_day: event.isMultiDay || false,
           multi_day_id: event.multiDayId,
@@ -1044,7 +1045,7 @@ const handleDateTap = (date) => {
             {/* Instruction banner */}
             <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
               <p className="text-sm text-purple-700 text-center">
-                💡 <strong>Tip:</strong> Click and drag across dates to create multi-day events like vacations!
+                💡 <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
               </p>
             </div>
             
@@ -1057,7 +1058,9 @@ const handleDateTap = (date) => {
               {getDaysInMonth(currentDate).map((date, index) => {
                 const dateKey = date ? getDateKey(date) : null;
                 const allDateEvents = dateKey && events[dateKey] ? events[dateKey] : [];
-                const dateEvents = allDateEvents.filter(e => showPrivateEvents || !e.isPrivate);
+                const dateEvents = allDateEvents.filter(e => 
+  !e.isPrivate || e.isPrivate && (showPrivateEvents || e.createdBy === currentUser)
+);
                 const isSelected = date && isSameDay(date, selectedDate);
                 const isTodayDate = date && isToday(date);
                 const isInSelection = date && selectedDates.some(d => isSameDay(d, date));
