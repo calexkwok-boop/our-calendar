@@ -251,7 +251,6 @@ if (typeof window !== 'undefined') {
     }
   };
   loadData();
-}, []);
   
   // Subscribe to realtime changes
   const eventsSubscription = supabase
@@ -264,7 +263,7 @@ if (typeof window !== 'undefined') {
 
   return () => {
     eventsSubscription.unsubscribe();
-  }; [];
+  };
 
   // Check notification permission on load
   useEffect(() => {
@@ -1349,6 +1348,6 @@ const handleDateTap = (date) => {
       </div>
     </div>
   );
-};
+}
 
 export default App;
