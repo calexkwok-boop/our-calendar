@@ -177,7 +177,7 @@ is_private_for: event.isPrivate ? event.createdBy : null,
     }
   };
 
- useEffect(() => {
+useEffect(() => {
   const loadData = async () => {
     try {
       // Load events from Supabase
@@ -209,16 +209,15 @@ is_private_for: event.isPrivate ? event.createdBy : null,
           });
         });
         setEvents(eventsObj);
+        if (typeof window !== 'undefined') window.events = eventsObj;
       }
       
       // Load categories from Supabase
-      const { data: categoriesData, error: categoriesError } = await supabase
+      const { data: categoriesData } = await supabase
         .from('categories')
         .select('*');
       
-      if (categoriesError) {
-        console.log('No categories yet, using defaults');
-      } else if (categoriesData && categoriesData.length > 0) {
+      if (categoriesData && categoriesData.length > 0) {
         const categoriesObj = {};
         categoriesData.forEach(cat => {
           categoriesObj[cat.key] = {
@@ -233,16 +232,11 @@ is_private_for: event.isPrivate ? event.createdBy : null,
       }
 
       // Load user from localStorage
-      try {
-        const userResult = await window.storage.get('calendar-user', false);
-        if (userResult && userResult.value) {
-          setCurrentUser(userResult.value);
-          setShowUserSetup(false);
-        } else {
-          setShowUserSetup(true);
-        }
-      } catch (userError) {
-        console.log('No user found, showing setup');
+      const userResult = await window.storage.get('calendar-user', false);
+      if (userResult && userResult.value) {
+        setCurrentUser(userResult.value);
+        setShowUserSetup(false);
+      } else {
         setShowUserSetup(true);
       }
     } catch (error) {
@@ -252,6 +246,7 @@ is_private_for: event.isPrivate ? event.createdBy : null,
     }
   };
   loadData();
+}, []);
   
   // Subscribe to realtime changes
   const eventsSubscription = supabase
@@ -753,9 +748,11 @@ const handleDateTap = (date) => {
   };
 
   const selectedDateKey = getDateKey(selectedDate);
-  const selectedEvents = (events[selectedDateKey] || []).filter(event => 
-    showPrivateEvents || !event.isPrivate
-  );
+ const selectedEvents = (events[selectedDateKey] || []).filter(event => {
+  if (!event.isPrivate) return true;
+  const currentUserName = localStorage.getItem('calendar-user');
+  return showPrivateEvents || event.createdBy === currentUserName;
+});
 
   if (isLoading) {
     return (
@@ -1058,11 +1055,7 @@ const handleDateTap = (date) => {
               {getDaysInMonth(currentDate).map((date, index) => {
                 const dateKey = date ? getDateKey(date) : null;
                 const allDateEvents = dateKey && events[dateKey] ? events[dateKey] : [];
-                const dateEvents = allDateEvents.filter(e => {
-  if (!e.isPrivate) return true;
-  const currentUserName = localStorage.getItem('calendar-user');
-  return showPrivateEvents || e.createdBy === currentUserName;
-});
+                const dateEvents = allDateEvents; // Show ALL events for now to test;
                 const isSelected = date && isSameDay(date, selectedDate);
                 const isTodayDate = date && isToday(date);
                 const isInSelection = date && selectedDates.some(d => isSameDay(d, date));
