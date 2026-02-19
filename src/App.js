@@ -1,37 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Mic, MicOff, Settings, Eye, EyeOff, Lock, User, Bell, BellOff, AlertTriangle } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Save, Tag, Mic, MicOff, Settings, Eye, EyeOff, Lock, User, Bell, BellOff, AlertTriangle } from 'lucide-react';
 
-// Initialize Supabase
-const supabase = createClient(
-  'https://qyifsblebdnlcyurrgbt.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5aWZzYmxlYmRubGN5dXJyZ2J0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NTA1NTcsImV4cCI6MjA4NzAyNjU1N30.S_DUVQCwkBWrbSWoujQipb_5jz1d5UCsU_gSwWAGzTk'
-);
-// Supabase storage wrapper
-const storage = {
-  get: async (key, shared = false) => {
-    if (key === 'calendar-user') {
-      // User is stored locally
-      const value = localStorage.getItem(key);
-      return value ? { key, value, shared } : null;
-    }
-    // Everything else uses Supabase - events and categories are always shared
-    return { key, value: null, shared };
-  },
-  set: async (key, value, shared = false) => {
-    if (key === 'calendar-user' || key.includes('notification')) {
-      // User and notifications stored locally
-      localStorage.setItem(key, value);
-      return { key, value, shared };
-    }
-    // Events and categories go to Supabase
-    return { key, value, shared: true };
-  }
-};
-if (typeof window !== 'undefined') {
-  window.storage = storage;
-  window.supabase = supabase;
-}
 const DEFAULT_CATEGORIES = {
   work: { label: 'Work', color: 'bg-blue-500', lightBg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
   wife: { label: 'Wife', color: 'bg-rose-500', lightBg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
@@ -59,7 +28,7 @@ const COLOR_OPTIONS = [
   { name: 'Gray', color: 'bg-gray-500', lightBg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700' },
 ];
 
-function App() {
+const SharedCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState({});
@@ -88,75 +57,30 @@ function App() {
   const [isUrgent, setIsUrgent] = useState(false);
   const [onlyNotifyUrgent, setOnlyNotifyUrgent] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [showTimePrompt, setShowTimePrompt] = useState(false);
+  const [pendingEvent, setPendingEvent] = useState(null);
 
   const getDateKey = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   };
 
   const saveEvents = async (newEvents) => {
-  try {
-    setEvents(newEvents);
-    
-    // Flatten events object to array for Supabase
-    const eventsArray = [];
-    Object.entries(newEvents).forEach(([date, dateEvents]) => {
-      dateEvents.forEach(event => {
-        eventsArray.push({
-          id: event.id,
-          date: event.date,
-          title: event.title,
-          time: event.time,
-          category: event.category,
-          is_private: event.isPrivate || false,
-is_private_for: event.isPrivate ? event.createdBy : null,
-          is_urgent: event.isUrgent || false,
-          is_multi_day: event.isMultiDay || false,
-          multi_day_id: event.multiDayId,
-          created_by: event.createdBy,
-          created_at: event.createdAt
-        });
-      });
-    });
-    
-    // Clear all events and insert new ones
-    await supabase.from('events').delete().neq('id', '___nonexistent___');
-    
-    if (eventsArray.length > 0) {
-      const { error } = await supabase.from('events').insert(eventsArray);
-      if (error) {
-        console.error('Error saving events to Supabase:', error);
-      }
+    try {
+      await window.storage.set('calendar-events', JSON.stringify(newEvents), true);
+      setEvents(newEvents);
+    } catch (error) {
+      console.error('Error saving events:', error);
     }
-  } catch (error) {
-    console.error('Error saving events:', error);
-  }
-};
+  };
 
   const saveCategories = async (newCategories) => {
-  try {
-    setCategories(newCategories);
-    
-    // Convert to array for Supabase
-    const categoriesArray = Object.entries(newCategories).map(([key, cat]) => ({
-      key,
-      label: cat.label,
-      color: cat.color,
-      light_bg: cat.lightBg,
-      border: cat.border,
-      text: cat.text
-    }));
-    
-    // Clear and insert
-    await supabase.from('categories').delete().neq('key', '___nonexistent___');
-    
-    const { error } = await supabase.from('categories').insert(categoriesArray);
-    if (error) {
-      console.error('Error saving categories to Supabase:', error);
+    try {
+      await window.storage.set('calendar-categories', JSON.stringify(newCategories), true);
+      setCategories(newCategories);
+    } catch (error) {
+      console.error('Error saving categories:', error);
     }
-  } catch (error) {
-    console.error('Error saving categories:', error);
-  }
-};
+  };
 
   const saveUser = async (userName) => {
     console.log('Attempting to save user:', userName);
@@ -176,95 +100,41 @@ is_private_for: event.isPrivate ? event.createdBy : null,
       setShowUserSetup(false);
     }
   };
-useEffect(() => {
-  console.log('===== USEEFFECT RUNNING =====');
-  const loadData = async () => {
 
-    try {
-      // Load events from Supabase
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('events')
-        .select('*');
-      
-      if (eventsError) {
-        console.error('Error loading events:', eventsError);
-      } else if (eventsData) {
-        // Convert flat array to date-keyed object
-        const eventsObj = {};
-        eventsData.forEach(event => {
-          if (!eventsObj[event.date]) {
-            eventsObj[event.date] = [];
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const eventsResult = await window.storage.get('calendar-events', true);
+        if (eventsResult && eventsResult.value) {
+          setEvents(JSON.parse(eventsResult.value));
+        }
+        
+        const categoriesResult = await window.storage.get('calendar-categories', true);
+        if (categoriesResult && categoriesResult.value) {
+          setCategories(JSON.parse(categoriesResult.value));
+        }
+
+        try {
+          const userResult = await window.storage.get('calendar-user', false);
+          if (userResult && userResult.value) {
+            setCurrentUser(userResult.value);
+            setShowUserSetup(false);
+          } else {
+            setShowUserSetup(true);
           }
-          eventsObj[event.date].push({
-            id: event.id,
-            title: event.title,
-            time: event.time,
-            date: event.date,
-            category: event.category,
-            isPrivate: event.is_private,
-            isUrgent: event.is_urgent,
-            isMultiDay: event.is_multi_day,
-            multiDayId: event.multi_day_id,
-            createdBy: event.created_by,
-            createdAt: event.created_at
-          });
-        });
-        setEvents(eventsObj);
-if (typeof window !== 'undefined') {
-  window.events = eventsObj;
-  console.log('Set window.events:', Object.keys(eventsObj).length, 'dates');
-}
+        } catch (userError) {
+          console.log('No user found, showing setup');
+          setShowUserSetup(true);
+        }
+      } catch (error) {
+        console.log('Error loading data:', error);
+      } finally {
+        setIsLoading(false);
       }
-      
-      // Load categories from Supabase
-      const { data: categoriesData } = await supabase
-        .from('categories')
-        .select('*');
-      
-      if (categoriesData && categoriesData.length > 0) {
-        const categoriesObj = {};
-        categoriesData.forEach(cat => {
-          categoriesObj[cat.key] = {
-            label: cat.label,
-            color: cat.color,
-            lightBg: cat.light_bg,
-            border: cat.border,
-            text: cat.text
-          };
-        });
-        setCategories(categoriesObj);
-      }
+    };
+    loadData();
+  }, []);
 
-      // Load user from localStorage
-      const userResult = await window.storage.get('calendar-user', false);
-      if (userResult && userResult.value) {
-        setCurrentUser(userResult.value);
-        setShowUserSetup(false);
-      } else {
-        setShowUserSetup(true);
-      }
-    } catch (error) {
-      console.log('Error loading data:', error);
-    
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  loadData();
-  
-  // Subscribe to realtime changes
-  const eventsSubscription = supabase
-    .channel('events-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
-      // Reload events when they change
-      loadData();
-    })
-    .subscribe();
-
-  return () => {
-    eventsSubscription.unsubscribe();
-  };
-}, []);
   // Check notification permission on load
   useEffect(() => {
     if ('Notification' in window) {
@@ -386,43 +256,12 @@ if (typeof window !== 'undefined') {
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [isSelecting]);
 
- const [firstTapDate, setFirstTapDate] = useState(null);
-const [lastTapTime, setLastTapTime] = useState(0);
-
-const handleDateTap = (date) => {
-  if (!date) return;
-  
-  const now = Date.now();
-  const timeSinceLastTap = now - lastTapTime;
-  
-  // Double tap detection (within 300ms)
-  if (timeSinceLastTap < 300 && firstTapDate && isSameDay(firstTapDate, date)) {
-    // This is a double tap on the same date - start selection
-    setSelectedDates([date]);
+  const handleDateMouseDown = (date) => {
+    if (!date) return;
+    setIsSelecting(true);
     setSelectionStart(date);
-    setFirstTapDate(null);
-  } else if (selectionStart && !isSameDay(selectionStart, date)) {
-    // We have a start date, this is the end date
-    const start = new Date(Math.min(selectionStart, date));
-    const end = new Date(Math.max(selectionStart, date));
-    const dates = [];
-    
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      dates.push(new Date(d));
-    }
-    
-    setSelectedDates(dates);
-    setSelectionStart(null);
-  } else {
-    // Single tap - select this date
-    setSelectedDate(date);
-    setFirstTapDate(date);
-    setSelectedDates([]);
-    setSelectionStart(null);
-  }
-  
-  setLastTapTime(now);
-};
+    setSelectedDates([date]);
+  };
 
   const handleDateMouseEnter = (date) => {
     if (!date || !isSelecting || !selectionStart) return;
@@ -449,7 +288,7 @@ const handleDateTap = (date) => {
     const text = transcript.toLowerCase();
     let targetDate = new Date(selectedDate);
     
-   const dateMatch = text.match(/(?:on\s+)?(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?/);
+    const dateMatch = text.match(/(?:on\s+)?(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
     if (dateMatch) {
       const month = parseInt(dateMatch[1]) - 1;
       const day = parseInt(dateMatch[2]);
@@ -552,7 +391,7 @@ const handleDateTap = (date) => {
         setIsListening(false);
       };
     }
-  }, [selectedCategory, isPrivate, events, selectedDate, processVoiceCommand]);
+  }, [selectedCategory, isPrivate, events, selectedDate, currentUser]);
 
   const toggleVoiceInput = () => {
     if (isListening) {
@@ -630,25 +469,38 @@ const handleDateTap = (date) => {
   const handleQuickAdd = () => {
     if (!quickEntry.trim()) return;
     
-    const { title, time } = parseQuickEntry(quickEntry);
+    const title = quickEntry.trim();
     const datesToAdd = selectedDates.length > 1 ? selectedDates : [selectedDate];
     
-    const updatedEvents = { ...events };
-    const multiDayId = selectedDates.length > 1 ? Date.now().toString() : null;
+    // Store pending event and show time prompt
+    setPendingEvent({
+      title,
+      datesToAdd,
+      isMultiDay: selectedDates.length > 1
+    });
+    setShowTimePrompt(true);
+    setQuickEntry('');
+  };
+
+  const handleTimeSubmit = (time) => {
+    if (!pendingEvent) return;
     
-    datesToAdd.forEach(date => {
+    const updatedEvents = { ...events };
+    const multiDayId = pendingEvent.isMultiDay ? Date.now().toString() : null;
+    
+    pendingEvent.datesToAdd.forEach(date => {
       const dateKey = getDateKey(date);
       const newEvent = {
         id: `${Date.now()}-${Math.random()}`,
-        title,
-        time: selectedDates.length > 1 ? null : time,
+        title: pendingEvent.title,
+        time: pendingEvent.isMultiDay ? null : (time || null),
         date: dateKey,
         category: selectedCategory,
         isPrivate: isPrivate,
         isUrgent: isUrgent,
         createdBy: currentUser,
         createdAt: new Date().toISOString(),
-        isMultiDay: selectedDates.length > 1,
+        isMultiDay: pendingEvent.isMultiDay,
         multiDayId
       };
       
@@ -661,8 +513,9 @@ const handleDateTap = (date) => {
     });
     
     saveEvents(updatedEvents);
-    setQuickEntry('');
     setSelectedDates([]);
+    setShowTimePrompt(false);
+    setPendingEvent(null);
   };
 
   const handleDeleteEvent = (dateKey, eventId) => {
@@ -751,11 +604,9 @@ const handleDateTap = (date) => {
   };
 
   const selectedDateKey = getDateKey(selectedDate);
- const selectedEvents = (events[selectedDateKey] || []).filter(event => {
-  if (!event.isPrivate) return true;
-  const currentUserName = localStorage.getItem('calendar-user');
-  return showPrivateEvents || event.createdBy === currentUserName;
-});
+  const selectedEvents = (events[selectedDateKey] || []).filter(event => 
+    showPrivateEvents || !event.isPrivate
+  );
 
   if (isLoading) {
     return (
@@ -804,6 +655,62 @@ const handleDateTap = (date) => {
               className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all"
             >
               Skip
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Time prompt modal
+  if (showTimePrompt && pendingEvent) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+            What time?
+          </h2>
+          <p className="text-gray-600 mb-2">Event: <strong>{pendingEvent.title}</strong></p>
+          <p className="text-gray-500 text-sm mb-6">
+            {pendingEvent.isMultiDay ? 'Multi-day events don\'t need a time' : 'Enter a time or skip to add without time'}
+          </p>
+          
+          <input
+            type="time"
+            autoFocus
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handleTimeSubmit(e.target.value);
+              }
+            }}
+          />
+          
+          <div className="flex gap-3">
+            <button
+              onClick={(e) => {
+                const input = e.target.previousElementSibling.previousElementSibling;
+                handleTimeSubmit(input.value);
+              }}
+              className="flex-1 px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
+            >
+              Add Event
+            </button>
+            <button
+              onClick={() => handleTimeSubmit(null)}
+              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all"
+            >
+              Skip Time
+            </button>
+            <button
+              onClick={() => {
+                setShowTimePrompt(false);
+                setPendingEvent(null);
+                setQuickEntry(pendingEvent.title); // Restore the text
+              }}
+              className="px-6 py-3 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 transition-all"
+            >
+              Cancel
             </button>
           </div>
         </div>
@@ -1045,7 +952,7 @@ const handleDateTap = (date) => {
             {/* Instruction banner */}
             <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
               <p className="text-sm text-purple-700 text-center">
-                💡 <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
+                💡 <strong>Tip:</strong> Click and drag across dates to create multi-day events like vacations!
               </p>
             </div>
             
@@ -1058,7 +965,7 @@ const handleDateTap = (date) => {
               {getDaysInMonth(currentDate).map((date, index) => {
                 const dateKey = date ? getDateKey(date) : null;
                 const allDateEvents = dateKey && events[dateKey] ? events[dateKey] : [];
-                const dateEvents = allDateEvents; // Show ALL events for now to test;
+                const dateEvents = allDateEvents.filter(e => showPrivateEvents || !e.isPrivate);
                 const isSelected = date && isSameDay(date, selectedDate);
                 const isTodayDate = date && isToday(date);
                 const isInSelection = date && selectedDates.some(d => isSameDay(d, date));
@@ -1089,7 +996,9 @@ const handleDateTap = (date) => {
                 return (
                   <div key={index} className="relative pb-3">
                     <button
-                      onClick={() => handleDateTap(date)}
+                      onMouseDown={() => handleDateMouseDown(date)}
+                      onMouseEnter={() => handleDateMouseEnter(date)}
+                      onMouseUp={handleDateMouseUp}
                       disabled={!date}
                       className={`
                         w-full aspect-square rounded-xl p-2 transition-all duration-200 relative select-none
@@ -1348,6 +1257,6 @@ const handleDateTap = (date) => {
       </div>
     </div>
   );
-}
+};
 
-export default App;
+export default SharedCalendar;
