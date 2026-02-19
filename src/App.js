@@ -264,7 +264,7 @@ if (typeof window !== 'undefined') {
   return () => {
     eventsSubscription.unsubscribe();
   };
-
+}, []);
   // Check notification permission on load
   useEffect(() => {
     if ('Notification' in window) {
