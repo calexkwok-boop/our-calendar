@@ -252,7 +252,6 @@ setIsLoading(false);
 }
 };
 loadData();
-}, []);
 
 // Subscribe to realtime changes
 const eventsSubscription = supabase
@@ -265,7 +264,8 @@ loadData();
 
 return () => {
 eventsSubscription.unsubscribe();
-}; [];
+};
+}, []);
 
 // Check notification permission on load
 useEffect(() => {
