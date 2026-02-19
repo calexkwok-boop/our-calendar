@@ -677,6 +677,7 @@ const SharedCalendar = () => {
           
           <input
             type="time"
+            id="timeInput"
             autoFocus
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
             onKeyPress={(e) => {
@@ -688,8 +689,8 @@ const SharedCalendar = () => {
           
           <div className="flex gap-3">
             <button
-              onClick={(e) => {
-                const input = e.target.previousElementSibling.previousElementSibling;
+              onClick={() => {
+                const input = document.getElementById('timeInput');
                 handleTimeSubmit(input.value);
               }}
               className="flex-1 px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
