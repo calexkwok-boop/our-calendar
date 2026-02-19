@@ -209,7 +209,10 @@ useEffect(() => {
           });
         });
         setEvents(eventsObj);
-        if (typeof window !== 'undefined') window.events = eventsObj;
+if (typeof window !== 'undefined') {
+  window.events = eventsObj;
+  console.log('Set window.events:', Object.keys(eventsObj).length, 'dates');
+}
       }
       
       // Load categories from Supabase
@@ -259,8 +262,7 @@ useEffect(() => {
 
   return () => {
     eventsSubscription.unsubscribe();
-  };
-}, []);
+  }; [];
 
   // Check notification permission on load
   useEffect(() => {
