@@ -176,9 +176,10 @@ is_private_for: event.isPrivate ? event.createdBy : null,
       setShowUserSetup(false);
     }
   };
-
 useEffect(() => {
+  console.log('===== USEEFFECT RUNNING =====');
   const loadData = async () => {
+
     try {
       // Load events from Supabase
       const { data: eventsData, error: eventsError } = await supabase
@@ -244,6 +245,7 @@ if (typeof window !== 'undefined') {
       }
     } catch (error) {
       console.log('Error loading data:', error);
+    
     } finally {
       setIsLoading(false);
     }
