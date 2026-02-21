@@ -88,7 +88,8 @@ const [notificationPermission, setNotificationPermission] = useState('default');
 const [isUrgent, setIsUrgent] = useState(false);
 const [onlyNotifyUrgent, setOnlyNotifyUrgent] = useState(false);
 const [showNotificationSettings, setShowNotificationSettings] = useState(false);
-
+const [showTimePrompt, setShowTimePrompt] = useState(false);
+const [pendingEvent, setPendingEvent] = useState(null);
 const getDateKey = (date) => {
 return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
@@ -629,42 +630,74 @@ title = text.replace(match[0], '').trim();
 return { title, time };
 };
 
+
 const handleQuickAdd = () => {
-if (!quickEntry.trim()) return;
-
-const { title, time } = parseQuickEntry(quickEntry);
-const datesToAdd = selectedDates.length > 1 ? selectedDates : [selectedDate];
-
-const updatedEvents = { ...events };
-const multiDayId = selectedDates.length > 1 ? Date.now().toString() : null;
-
-datesToAdd.forEach(date => {
-const dateKey = getDateKey(date);
-const newEvent = {
-id: `${Date.now()}-${Math.random()}`,
-title,
-time: selectedDates.length > 1 ? null : time,
-date: dateKey,
-category: selectedCategory,
-isPrivate: isPrivate,
-isUrgent: isUrgent,
-createdBy: currentUser,
-createdAt: new Date().toISOString(),
-isMultiDay: selectedDates.length > 1,
-multiDayId
+  alert('HANDLE QUICK ADD WAS CALLED!');  
+  console.log('=== handleQuickAdd START ===');
+  console.log('quickEntry:', quickEntry);
+  console.log('Current showTimePrompt:', showTimePrompt);
+  console.log('Current pendingEvent:', pendingEvent);
+  if (!quickEntry.trim()) {
+    console.log('Empty entry, returning early');
+    return;
+  }
+  
+  const title = quickEntry.trim();
+  const datesToAdd = selectedDates.length > 1 ? selectedDates : [selectedDate];
+  
+  console.log('Creating pending event:', title);
+  
+  // Store pending event and show time prompt
+  setPendingEvent({
+    title,
+    datesToAdd,
+    isMultiDay: selectedDates.length > 1
+  });
+  
+  console.log('Setting showTimePrompt to TRUE');
+  setShowTimePrompt(true);
+  
+  console.log('Clearing quick entry');
+  setQuickEntry('');
+  
+  console.log('=== handleQuickAdd END ===');
 };
 
-const dateEvents = updatedEvents[dateKey] || [];
-updatedEvents[dateKey] = [...dateEvents, newEvent].sort((a, b) => {
-if (!a.time) return 1;
-if (!b.time) return -1;
-return a.time.localeCompare(b.time);
-});
-});
+const handleTimeSubmit = (time) => {
+  console.log('=== handleTimeSubmit called with time:', time);
+  if (!pendingEvent) return;
 
-saveEvents(updatedEvents);
-setQuickEntry('');
-setSelectedDates([]);
+  const updatedEvents = { ...events };
+  const multiDayId = pendingEvent.isMultiDay ? Date.now().toString() : null;
+  
+  pendingEvent.datesToAdd.forEach(date => {
+    const dateKey = getDateKey(date);
+    const newEvent = {
+      id: `${Date.now()}-${Math.random()}`,
+      title: pendingEvent.title,
+      time: pendingEvent.isMultiDay ? null : (time || null),
+      date: dateKey,
+      category: selectedCategory,
+      isPrivate: isPrivate,
+      isUrgent: isUrgent,
+      createdBy: currentUser,
+      createdAt: new Date().toISOString(),
+      isMultiDay: pendingEvent.isMultiDay,
+      multiDayId
+    };
+    
+    const dateEvents = updatedEvents[dateKey] || [];
+    updatedEvents[dateKey] = [...dateEvents, newEvent].sort((a, b) => {
+      if (!a.time) return 1;
+      if (!b.time) return -1;
+      return a.time.localeCompare(b.time);
+    });
+  });
+  
+  saveEvents(updatedEvents);
+  setSelectedDates([]);
+  setShowTimePrompt(false);
+  setPendingEvent(null);
 };
 
 const handleDeleteEvent = (dateKey, eventId) => {
@@ -760,15 +793,72 @@ return showPrivateEvents || event.createdBy === currentUserName;
 });
 
 if (isLoading) {
-return (
-<div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 flex items-center justify-center">
-<div className="text-gray-600">Loading calendar...</div>
-</div>
-);
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 flex items-center justify-center">
+      <div className="text-gray-600">Loading calendar...</div>
+    </div>
+  );
+}
+// Time prompt modal
+if (showTimePrompt && pendingEvent) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+          What time?
+        </h2>
+        <p className="text-gray-600 mb-2">Event: <strong>{pendingEvent.title}</strong></p>
+        <p className="text-gray-500 text-sm mb-6">
+          {pendingEvent.isMultiDay ? 'Multi-day events don\'t need a time' : 'Enter a time or skip to add without time'}
+        </p>
+        
+        <input
+          type="time"
+          id="timeInput"
+          autoFocus
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleTimeSubmit(e.target.value);
+            }
+          }}
+        />
+        
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              const input = document.getElementById('timeInput');
+              handleTimeSubmit(input.value);
+            }}
+            className="flex-1 px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
+          >
+            Add Event
+          </button>
+          <button
+            onClick={() => handleTimeSubmit(null)}
+            className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all"
+          >
+            Skip Time
+          </button>
+          <button
+            onClick={() => {
+              setShowTimePrompt(false);
+              setPendingEvent(null);
+              setQuickEntry(pendingEvent.title);
+            }}
+            className="px-6 py-3 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 transition-all"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
+
 if (showUserSetup) {
-return (
+  return (
 <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 flex items-center justify-center p-4">
 <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
 <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
@@ -811,6 +901,7 @@ Skip
 </div>
 </div>
 );
+
 }
 
 return (
