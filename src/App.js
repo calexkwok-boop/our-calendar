@@ -632,27 +632,31 @@ return { title, time };
 
 
 const handleQuickAdd = () => {
-  alert('HANDLE QUICK ADD WAS CALLED!');  
-  console.log('=== handleQuickAdd START ===');
-  console.log('quickEntry:', quickEntry);
-  console.log('Current showTimePrompt:', showTimePrompt);
-  console.log('Current pendingEvent:', pendingEvent);
-  if (!quickEntry.trim()) {
-    console.log('Empty entry, returning early');
-    return;
-  }
+  if (!quickEntry.trim()) return;
+  
+  alert('Quick add called. About to set states...');
   
   const title = quickEntry.trim();
   const datesToAdd = selectedDates.length > 1 ? selectedDates : [selectedDate];
   
-  console.log('Creating pending event:', title);
-  
-  // Store pending event and show time prompt
   setPendingEvent({
     title,
     datesToAdd,
     isMultiDay: selectedDates.length > 1
   });
+  
+  setShowTimePrompt(true);
+  setQuickEntry('');
+  
+  alert('States set. showTimePrompt should now be true');
+  
+  // Force a slight delay to let React render
+  setTimeout(() => {
+    alert('Checking if modal is visible...');
+    const modal = document.querySelector('[class*="fixed inset-0"]');
+    alert('Modal element found: ' + (modal !== null));
+  }, 100);
+};
   
   console.log('Setting showTimePrompt to TRUE');
   setShowTimePrompt(true);
@@ -815,7 +819,6 @@ if (showTimePrompt && pendingEvent) {
         <input
           type="time"
           id="timeInput"
-          autoFocus
           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
           onKeyPress={(e) => {
             if (e.key === 'Enter') {
