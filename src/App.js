@@ -634,8 +634,6 @@ return { title, time };
 const handleQuickAdd = () => {
   if (!quickEntry.trim()) return;
   
-  alert('Quick add called. About to set states...');
-  
   const title = quickEntry.trim();
   const datesToAdd = selectedDates.length > 1 ? selectedDates : [selectedDate];
   
@@ -647,8 +645,6 @@ const handleQuickAdd = () => {
   
   setShowTimePrompt(true);
   setQuickEntry('');
-  
-  alert('States set. showTimePrompt should now be true');
   
   // Force a slight delay to let React render
   setTimeout(() => {
