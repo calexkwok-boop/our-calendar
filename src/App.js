@@ -862,23 +862,15 @@ if (showAuth) {
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
         <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-6">
-          {authMode === 'login' ? 'Login to Calendar' : 'Create Account'}
+          Login to Calendar
         </h2>
         
-        <form onSubmit={authMode === 'login' ? handleLogin : handleSignUp} className="space-y-4">
+        <form onSubmit={handleMagicLink} className="space-y-4">
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400"
             required
           />
@@ -891,17 +883,13 @@ if (showAuth) {
             type="submit"
             className="w-full px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
           >
-            {authMode === 'login' ? 'Login' : 'Sign Up'}
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
-            className="w-full text-purple-600 hover:text-purple-800 text-sm"
-          >
-            {authMode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Login'}
+            Send Magic Link
           </button>
         </form>
+        
+        <p className="text-xs text-gray-500 mt-4 text-center">
+          We'll send you an email with a login link
+        </p>
       </div>
     </div>
   );
