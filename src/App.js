@@ -90,6 +90,8 @@ const [onlyNotifyUrgent, setOnlyNotifyUrgent] = useState(false);
 const [showNotificationSettings, setShowNotificationSettings] = useState(false);
 const [showTimePrompt, setShowTimePrompt] = useState(false);
 const [pendingEvent, setPendingEvent] = useState(null);
+const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
+const [isEditingTitle, setIsEditingTitle] = useState(false);
 const getDateKey = (date) => {
 return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
@@ -236,7 +238,10 @@ text: cat.text
 });
 setCategories(categoriesObj);
 }
-
+const titleResult = await window.storage.get('calendar-title', false);
+if (titleResult && titleResult.value) {
+  setCalendarTitle(titleResult.value);
+}
 // Load user from localStorage
 const userResult = await window.storage.get('calendar-user', false);
 if (userResult && userResult.value) {
@@ -908,9 +913,33 @@ return (
 <Calendar className="w-8 h-8 text-white" />
 </div>
 <div>
-<h1 className="text-3xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
-Our Calendar
-</h1>
+{isEditingTitle ? (
+  <input
+    type="text"
+    value={calendarTitle}
+    onChange={(e) => setCalendarTitle(e.target.value)}
+    onBlur={async () => {
+      setIsEditingTitle(false);
+      await window.storage.set('calendar-title', calendarTitle, false);
+    }}
+    onKeyPress={async (e) => {
+      if (e.key === 'Enter') {
+        setIsEditingTitle(false);
+        await window.storage.set('calendar-title', calendarTitle, false);
+      }
+    }}
+    className="text-3xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 border-2 border-purple-300 rounded-lg"
+    autoFocus
+  />
+) : (
+  <h1 
+    onClick={() => setIsEditingTitle(true)}
+    className="text-3xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:opacity-70 transition-opacity"
+    title="Click to rename calendar"
+  >
+    {calendarTitle}
+  </h1>
+)}
 <p className="text-sm text-gray-500 mt-1">
 Logged in as <span className="font-semibold text-purple-600">{currentUser}</span>
 <button
