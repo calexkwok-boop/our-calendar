@@ -933,7 +933,14 @@ title={notificationsEnabled ? 'Notifications enabled' : 'Enable notifications'}
 {notificationsEnabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
 </button>
 <button
-
+onClick={() => setShowPrivateEvents(!showPrivateEvents)}
+className={`p-2 rounded-xl transition-all duration-200 ${
+                 showPrivateEvents ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
+               }`}
+>
+{showPrivateEvents ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+</button>
+<button
 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
 className="p-2 hover:bg-purple-100 rounded-xl transition-all duration-200"
 >
