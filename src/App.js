@@ -834,12 +834,7 @@ setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + delt
 };
 
 const selectedDateKey = getDateKey(selectedDate);
-const selectedEvents = (events[selectedDateKey] || []).filter(event => {
-if (!event.isPrivate) return true;
-const currentUserName = localStorage.getItem('calendar-user');
-return showPrivateEvents || event.createdBy === currentUserName;
-});
-
+const selectedEvents = events[selectedDateKey] || [];
 if (isLoading) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 flex items-center justify-center">
@@ -1543,6 +1538,5 @@ Urgent
 </div>
 </div>
 );
-};
 
 export default App;
