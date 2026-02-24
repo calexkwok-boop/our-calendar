@@ -647,12 +647,7 @@ const handleQuickAdd = () => {
   setQuickEntry('');
   
   // Force a slight delay to let React render
-  setTimeout(() => {
-    alert('Checking if modal is visible...');
-    const modal = document.querySelector('[class*="fixed inset-0"]');
-    alert('Modal element found: ' + (modal !== null));
-  }, 100);
-};
+
   
   console.log('Setting showTimePrompt to TRUE');
   setShowTimePrompt(true);
