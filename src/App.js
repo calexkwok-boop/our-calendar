@@ -92,6 +92,12 @@ const [showTimePrompt, setShowTimePrompt] = useState(false);
 const [pendingEvent, setPendingEvent] = useState(null);
 const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
 const [isEditingTitle, setIsEditingTitle] = useState(false);
+const [user, setUser] = useState(null);
+const [showAuth, setShowAuth] = useState(true);
+const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
+const [email, setEmail] = useState('');
+const [password, setPassword] = useState('');
+const [authError, setAuthError] = useState('');
 const getDateKey = (date) => {
 return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
@@ -179,7 +185,44 @@ setCurrentUser(userName);
 setShowUserSetup(false);
 }
 };
+const handleSignUp = async (e) => {
+  e.preventDefault();
+  setAuthError('');
+  
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+  
+  if (error) {
+    setAuthError(error.message);
+  } else {
+    alert('Check your email for confirmation link!');
+  }
+};
 
+const handleLogin = async (e) => {
+  e.preventDefault();
+  setAuthError('');
+  
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  
+  if (error) {
+    setAuthError(error.message);
+  } else {
+    setUser(data.user);
+    setShowAuth(false);
+  }
+};
+
+const handleLogout = async () => {
+  await supabase.auth.signOut();
+  setUser(null);
+  setShowAuth(true);
+};
 useEffect(() => {
   console.log('===== USEEFFECT RUNNING =====');
 const loadData = async () => {
@@ -397,6 +440,20 @@ return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
 const [firstTapDate, setFirstTapDate] = useState(null);
 const [lastTapTime, setLastTapTime] = useState(0);
 
+// Check if user is logged in
+useEffect(() => {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    setUser(session?.user ?? null);
+    setShowAuth(!session?.user);
+  });
+
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    setUser(session?.user ?? null);
+    setShowAuth(!session?.user);
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
 const handleDateTap = (date) => {
 if (!date) return;
 
@@ -799,6 +856,56 @@ if (isLoading) {
     </div>
   );
 }
+// Auth screen
+if (showAuth) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-6">
+          {authMode === 'login' ? 'Login to Calendar' : 'Create Account'}
+        </h2>
+        
+        <form onSubmit={authMode === 'login' ? handleLogin : handleSignUp} className="space-y-4">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400"
+            required
+          />
+          
+          {authError && (
+            <p className="text-red-600 text-sm">{authError}</p>
+          )}
+          
+          <button
+            type="submit"
+            className="w-full px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
+          >
+            {authMode === 'login' ? 'Login' : 'Sign Up'}
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+            className="w-full text-purple-600 hover:text-purple-800 text-sm"
+          >
+            {authMode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Login'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 // Time prompt modal
 if (showTimePrompt && pendingEvent) {
   return (
@@ -941,13 +1048,13 @@ return (
   </h1>
 )}
 <p className="text-sm text-gray-500 mt-1">
-Logged in as <span className="font-semibold text-purple-600">{currentUser}</span>
-<button
-onClick={() => setShowUserSetup(true)}
-className="ml-2 text-xs text-purple-500 hover:text-purple-700 underline"
->
-change
-</button>
+  Logged in as <span className="font-semibold text-purple-600">{user?.email}</span>
+  <button
+    onClick={handleLogout}
+    className="ml-2 text-xs text-purple-500 hover:text-purple-700 underline"
+  >
+    logout
+  </button>
 </p>
 </div>
 </div>
