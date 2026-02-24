@@ -428,20 +428,25 @@ const [lastTapTime, setLastTapTime] = useState(0);
 
 // Check if user is logged in
 useEffect(() => {
+  // Check for existing session
   supabase.auth.getSession().then(({ data: { session } }) => {
     setUser(session?.user ?? null);
     setShowAuth(!session?.user);
+    setIsLoading(false);
   });
 
+  // Listen for auth changes
   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    console.log('Auth state changed:', _event, session?.user?.email);
     setUser(session?.user ?? null);
     setShowAuth(!session?.user);
+    if (session?.user) {
+      setCurrentUser(session.user.email);
+    }
   });
 
   return () => subscription.unsubscribe();
 }, []);
-const handleDateTap = (date) => {
-if (!date) return;
 
 const now = Date.now();
 const timeSinceLastTap = now - lastTapTime;
