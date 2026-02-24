@@ -186,6 +186,7 @@ setCurrentUser(userName);
 setShowUserSetup(false);
 }
 };
+
 const handleMagicLink = async (e) => {
   e.preventDefault();
   setAuthError('');
@@ -209,6 +210,7 @@ const handleLogout = async () => {
   setUser(null);
   setShowAuth(true);
 };
+
 useEffect(() => {
   console.log('===== USEEFFECT RUNNING =====');
 const loadData = async () => {
@@ -478,7 +480,6 @@ setSelectionStart(null);
 }
 
 setLastTapTime(now);
-};
 
 const handleDateMouseEnter = (date) => {
 if (!date || !isSelecting || !selectionStart) return;
@@ -840,6 +841,7 @@ if (isLoading) {
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 flex items-center justify-center">
       <div className="text-gray-600">Loading calendar...</div>
     </div>
+
   );
 }
 // Auth screen
@@ -1538,5 +1540,6 @@ Urgent
 </div>
 </div>
 );
+}; 
 
 export default App;
