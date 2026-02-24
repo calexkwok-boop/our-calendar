@@ -98,6 +98,7 @@ const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
 const [email, setEmail] = useState('');
 const [password, setPassword] = useState('');
 const [authError, setAuthError] = useState('');
+
 const getDateKey = (date) => {
 return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
@@ -185,36 +186,21 @@ setCurrentUser(userName);
 setShowUserSetup(false);
 }
 };
-const handleSignUp = async (e) => {
+const handleMagicLink = async (e) => {
   e.preventDefault();
   setAuthError('');
   
-  const { data, error } = await supabase.auth.signUp({
+  const { error } = await supabase.auth.signInWithOtp({
     email,
-    password,
+    options: {
+      emailRedirectTo: window.location.origin,
+    }
   });
   
   if (error) {
     setAuthError(error.message);
   } else {
-    alert('Check your email for confirmation link!');
-  }
-};
-
-const handleLogin = async (e) => {
-  e.preventDefault();
-  setAuthError('');
-  
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  
-  if (error) {
-    setAuthError(error.message);
-  } else {
-    setUser(data.user);
-    setShowAuth(false);
+    alert('Check your email for the magic link!');
   }
 };
 
