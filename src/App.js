@@ -290,9 +290,10 @@ function App() {
         color: cat.color,
         light_bg: cat.lightBg,
         border: cat.border,
-        text: cat.text
+        text: cat.text,
+        user_id: user?.id
       }));
-      await supabase.from('categories').delete().neq('key', '___nonexistent___');
+      await supabase.from('categories').delete().eq('user_id', user?.id);
       const { error } = await supabase.from('categories').insert(categoriesArray);
       if (error) console.error('Error saving categories to Supabase:', error);
     } catch (error) {
@@ -340,7 +341,15 @@ function App() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const { data: eventsData, error: eventsError } = await supabase.from('events').select('*');
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        if (!userId) return;
+
+        const { data: eventsData, error: eventsError } = await supabase
+          .from('events')
+          .select('*')
+          .eq('user_id', userId);
+
         if (eventsError) {
           console.error('Error loading events:', eventsError);
         } else if (eventsData) {
@@ -369,7 +378,11 @@ function App() {
           if (typeof window !== 'undefined') window.events = eventsObj;
         }
 
-        const { data: categoriesData } = await supabase.from('categories').select('*');
+        const { data: categoriesData } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('user_id', userId);
+
         if (categoriesData && categoriesData.length > 0) {
           const categoriesObj = {};
           categoriesData.forEach(cat => {
@@ -382,10 +395,15 @@ function App() {
             };
           });
           setCategories(categoriesObj);
+        } else {
+          setCategories(DEFAULT_CATEGORIES);
         }
 
-        const titleResult = await window.storage.get('calendar-title', false);
-        if (titleResult && titleResult.value) setCalendarTitle(titleResult.value);
+        // Calendar title per user — stored in localStorage keyed by user id
+        const titleKey = `calendar-title-${userId}`;
+        const savedTitle = localStorage.getItem(titleKey);
+        if (savedTitle) setCalendarTitle(savedTitle);
+        else setCalendarTitle('Our Calendar');
 
         const userResult = await window.storage.get('calendar-user', false);
         if (userResult && userResult.value) {
@@ -948,12 +966,12 @@ function App() {
                     onChange={(e) => setCalendarTitle(e.target.value)}
                     onBlur={async () => {
                       setIsEditingTitle(false);
-                      await window.storage.set('calendar-title', calendarTitle, false);
+                      localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
                     }}
                     onKeyPress={async (e) => {
                       if (e.key === 'Enter') {
                         setIsEditingTitle(false);
-                        await window.storage.set('calendar-title', calendarTitle, false);
+                        localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
                       }
                     }}
                     className="text-3xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 border-2 border-purple-300 rounded-lg"
