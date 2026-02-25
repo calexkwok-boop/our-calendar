@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Mic, MicOff, Settings, Eye, EyeOff, Lock, User, Bell, BellOff, AlertTriangle, Repeat } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Mic, MicOff, Settings, Eye, EyeOff, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase
@@ -104,7 +104,18 @@ function App() {
   const [showSharePanel, setShowSharePanel] = useState(false);
   const [shareEmailInput, setShareEmailInput] = useState('');
   const [shareMessage, setShareMessage] = useState('');
-  const [activeCalendars, setActiveCalendars] = useState([]); // owner ids whose events to show
+  const [activeCalendars, setActiveCalendars] = useState([]);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+
+  // Apply dark mode to document
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', darkMode);
+  }, [darkMode]);
 
   const getDateKey = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -914,8 +925,8 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-gray-600">Loading calendar...</div>
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-gray-600 dark:text-gray-300">Loading calendar...</div>
       </div>
     );
   }
@@ -931,8 +942,8 @@ function App() {
 
   if (showAuth) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full">
           <div className="flex items-center gap-3 mb-8">
             <div className="p-2 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
               <Calendar className="w-7 h-7 text-white" />
@@ -941,18 +952,15 @@ function App() {
               Our Calendar
             </h2>
           </div>
-
-          <p className="text-gray-500 text-sm text-center mb-6">
+          <p className="text-gray-500 dark:text-gray-400 text-sm text-center mb-6">
             Sign in to access your personal calendar
           </p>
-
           {authError && (
             <p className="text-red-600 text-sm text-center mb-4">{authError}</p>
           )}
-
           <button
             onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:border-purple-300 hover:shadow-md transition-all font-medium text-gray-700"
+            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-purple-300 hover:shadow-md transition-all font-medium text-gray-700 dark:text-gray-200"
           >
             <svg width="20" height="20" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -964,7 +972,7 @@ function App() {
             Sign in with Google
           </button>
 
-          <p className="text-xs text-gray-400 mt-6 text-center">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-6 text-center">
             Each account only sees its own events
           </p>
         </div>
@@ -975,19 +983,19 @@ function App() {
   if (showTimePrompt && pendingEvent) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
             What time?
           </h2>
-          <p className="text-gray-600 mb-2">Event: <strong>{pendingEvent.title}</strong></p>
-          <p className="text-gray-500 text-sm mb-6">
+          <p className="text-gray-600 dark:text-gray-300 mb-2">Event: <strong>{pendingEvent.title}</strong></p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
             {pendingEvent.isMultiDay ? "Multi-day events don't need a time" : 'Enter a time or skip to add without time'}
             {isAnnual && <span className="ml-2 px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">🔁 Repeats annually</span>}
           </p>
           <input
             type="time"
             id="timeInput"
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
+            className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
             onKeyPress={(e) => {
               if (e.key === 'Enter') handleTimeSubmit(e.target.value);
             }}
@@ -1004,7 +1012,7 @@ function App() {
             </button>
             <button
               onClick={() => handleTimeSubmit(null)}
-              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all"
+              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
             >
               Skip Time
             </button>
@@ -1014,7 +1022,7 @@ function App() {
                 setPendingEvent(null);
                 setQuickEntry(pendingEvent.title);
               }}
-              className="px-6 py-3 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 transition-all"
+              className="px-6 py-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-200 dark:hover:bg-red-800 transition-all"
             >
               Cancel
             </button>
@@ -1026,18 +1034,18 @@ function App() {
 
   if (showUserSetup) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
             Welcome to Your Calendar!
           </h2>
-          <p className="text-gray-600 mb-6">What's your name? This helps identify who created each event.</p>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">What's your name? This helps identify who created each event.</p>
           <input
             type="text"
             value={userNameInput}
             onChange={(e) => setUserNameInput(e.target.value)}
             placeholder="Enter your name"
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
+            className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
             onKeyPress={(e) => {
               if (e.key === 'Enter') saveUser(userNameInput.trim() || 'User');
             }}
@@ -1052,7 +1060,7 @@ function App() {
             </button>
             <button
               onClick={() => saveUser('User')}
-              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all"
+              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
             >
               Skip
             </button>
@@ -1063,9 +1071,9 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
@@ -1099,8 +1107,8 @@ function App() {
                     {calendarTitle}
                   </h1>
                 )}
-                <p className="text-sm text-gray-500 mt-1">
-                  Logged in as <span className="font-semibold text-purple-600">{user?.email}</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Logged in as <span className="font-semibold text-purple-600 dark:text-purple-400">{user?.email}</span>
                   <button onClick={handleLogout} className="ml-2 text-xs text-purple-500 hover:text-purple-700 underline">logout</button>
                 </p>
               </div>
@@ -1108,62 +1116,69 @@ function App() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowSharePanel(!showSharePanel)}
-                className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}
+                className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
                 title="Share calendar"
               >
                 <User className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setShowNotificationSettings(!showNotificationSettings)}
-                className={`p-2 rounded-xl transition-all duration-200 ${notificationsEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}
+                className={`p-2 rounded-xl transition-all duration-200 ${notificationsEnabled ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
                 title={notificationsEnabled ? 'Notifications enabled' : 'Enable notifications'}
               >
                 {notificationsEnabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
               </button>
               <button
                 onClick={() => setShowHolidays(!showHolidays)}
-                className={`p-2 rounded-xl transition-all duration-200 text-base ${showHolidays ? 'bg-red-100' : 'bg-gray-100 opacity-40'}`}
+                className={`p-2 rounded-xl transition-all duration-200 text-base ${showHolidays ? 'bg-red-100 dark:bg-red-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
                 title={showHolidays ? 'Hide US holidays' : 'Show US holidays'}
               >
                 🇺🇸
               </button>
               <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
-                className="p-2 hover:bg-purple-100 rounded-xl transition-all duration-200"
+                className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
               >
-                <Settings className="w-5 h-5 text-purple-600" />
+                <Settings className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </button>
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 rounded-xl transition-all duration-200 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-yellow-400"
+                title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
             </div>
           </div>
 
           <div className="flex items-center justify-between">
-            <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-purple-100 rounded-xl transition-all duration-200">
-              <ChevronLeft className="w-6 h-6 text-purple-600" />
+            <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200">
+              <ChevronLeft className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </button>
             <h2 className="text-2xl font-semibold bg-gradient-to-r from-rose-600 to-purple-600 bg-clip-text text-transparent">
               {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </h2>
-            <button onClick={() => changeMonth(1)} className="p-2 hover:bg-purple-100 rounded-xl transition-all duration-200">
-              <ChevronRight className="w-6 h-6 text-purple-600" />
+            <button onClick={() => changeMonth(1)} className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200">
+              <ChevronRight className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </button>
           </div>
         </div>
 
         {/* Notification Settings Panel */}
         {showNotificationSettings && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">Notification Settings</h3>
-              <button onClick={() => setShowNotificationSettings(false)} className="p-1 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5 text-gray-600" />
+              <button onClick={() => setShowNotificationSettings(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
             <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-xl">
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Bell className="w-5 h-5 text-green-600" />
-                    <span className="font-semibold text-gray-800">Enable Notifications</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">Enable Notifications</span>
                   </div>
                   <button
                     onClick={toggleNotifications}
@@ -1172,13 +1187,13 @@ function App() {
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                   </button>
                 </div>
-                <p className="text-sm text-gray-600">Get notified 1 week and 1 day before events</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Get notified 1 week and 1 day before events</p>
               </div>
-              <div className="p-4 bg-red-50 rounded-xl border-2 border-red-200">
+              <div className="p-4 bg-red-50 dark:bg-red-900/30 rounded-xl border-2 border-red-200 dark:border-red-800">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5 text-red-600" />
-                    <span className="font-semibold text-gray-800">Urgent Events Only</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">Urgent Events Only</span>
                   </div>
                   <button
                     onClick={async () => {
@@ -1191,10 +1206,10 @@ function App() {
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${onlyNotifyUrgent ? 'translate-x-6' : 'translate-x-1'}`} />
                   </button>
                 </div>
-                <p className="text-sm text-gray-600">Only send notifications for events marked as urgent 🚨</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Only send notifications for events marked as urgent 🚨</p>
               </div>
-              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-sm text-blue-800">
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
                   <strong>📅 1 Week Before:</strong> Yellow notification<br />
                   <strong>⚠️ 1 Day Before:</strong> Red notification<br />
                   <strong>🚨 Urgent Events:</strong> Show "URGENT" prefix
@@ -1204,22 +1219,18 @@ function App() {
           </div>
         )}
 
-    
-
         {showSharePanel && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                 Share Calendar
               </h3>
-              <button onClick={() => { setShowSharePanel(false); setShareMessage(''); }} className="p-1 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5 text-gray-600" />
+              <button onClick={() => { setShowSharePanel(false); setShareMessage(''); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
-
-            {/* Share with someone */}
             <div className="mb-5">
-              <p className="text-sm text-gray-600 mb-3">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 Enter someone's email to give them access to your calendar. They'll see and be able to edit your events when they log in.
               </p>
               <div className="flex gap-2">
@@ -1228,7 +1239,7 @@ function App() {
                   value={shareEmailInput}
                   onChange={(e) => { setShareEmailInput(e.target.value); setShareMessage(''); }}
                   placeholder="wife@gmail.com"
-                  className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400"
+                  className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
                   onKeyPress={(e) => e.key === 'Enter' && handleShareCalendar()}
                 />
                 <button
@@ -1244,25 +1255,19 @@ function App() {
                 </p>
               )}
             </div>
-
-            {/* People I've shared with */}
             {myShares.length > 0 && (
               <div className="mb-5">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Shared with:</h4>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Shared with:</h4>
                 <div className="space-y-2">
                   {myShares.map((share, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-200">
+                    <div key={i} className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-200 dark:border-purple-700">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-purple-400 flex items-center justify-center text-white text-xs font-bold">
                           {share.shared_with_email[0].toUpperCase()}
                         </div>
-                        <span className="text-sm text-gray-700">{share.shared_with_email}</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{share.shared_with_email}</span>
                       </div>
-                      <button
-                        onClick={() => handleRemoveShare(share.shared_with_email)}
-                        className="p-1 hover:bg-red-100 rounded-lg transition-all"
-                        title="Remove access"
-                      >
+                      <button onClick={() => handleRemoveShare(share.shared_with_email)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all" title="Remove access">
                         <X className="w-4 h-4 text-red-500" />
                       </button>
                     </div>
@@ -1270,47 +1275,42 @@ function App() {
                 </div>
               </div>
             )}
-
-            {/* Calendars shared with me */}
             {sharedCalendars.length > 0 && (
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Calendars shared with you:</h4>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Calendars shared with you:</h4>
                 <div className="space-y-2">
                   {sharedCalendars.map((share, i) => (
-                    <div key={i} className="flex items-center gap-2 p-3 bg-green-50 rounded-xl border border-green-200">
-                      <div className="w-7 h-7 rounded-full bg-green-400 flex items-center justify-center text-white text-xs">
-                        📅
-                      </div>
-                      <span className="text-sm text-gray-700">Shared by <strong>{share.shared_with_email === user?.email ? share.owner_id : 'another user'}</strong></span>
+                    <div key={i} className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-700">
+                      <div className="w-7 h-7 rounded-full bg-green-400 flex items-center justify-center text-white text-xs">📅</div>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Shared by <strong>{share.shared_with_email === user?.email ? share.owner_id : 'another user'}</strong></span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-
             {myShares.length === 0 && sharedCalendars.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-2">No shares yet. Add someone's email above to get started.</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add someone's email above to get started.</p>
             )}
           </div>
         )}
 
         {showCategoryEditor && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Manage Categories</h3>
-              <button onClick={() => setShowCategoryEditor(false)} className="p-1 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5 text-gray-600" />
+              <button onClick={() => setShowCategoryEditor(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
-            <div className="mb-6 p-4 bg-gray-50 rounded-xl">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Add New Category</h4>
+            <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Add New Category</h4>
               <div className="flex gap-2 mb-3">
                 <input
                   type="text"
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="Category name"
-                  className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400"
+                  className="flex-1 px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-400"
                 />
                 <button onClick={handleAddCategory} className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg">
                   <Plus className="w-5 h-5" />
@@ -1321,7 +1321,7 @@ function App() {
                   <button
                     key={idx}
                     onClick={() => setNewCategoryColor(colorOption)}
-                    className={`w-full aspect-square rounded-lg ${colorOption.color} ${newCategoryColor.name === colorOption.name ? 'ring-4 ring-gray-800' : ''}`}
+                    className={`w-full aspect-square rounded-lg ${colorOption.color} ${newCategoryColor.name === colorOption.name ? 'ring-4 ring-gray-800 dark:ring-white' : ''}`}
                   />
                 ))}
               </div>
@@ -1335,7 +1335,7 @@ function App() {
                         type="text"
                         defaultValue={cat.label}
                         onBlur={(e) => handleUpdateCategory(key, { label: e.target.value })}
-                        className="w-full px-2 py-1 border-2 border-gray-300 rounded-lg text-sm"
+                        className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                         autoFocus
                       />
                       <div className="grid grid-cols-6 gap-1">
@@ -1343,7 +1343,7 @@ function App() {
                           <button
                             key={idx}
                             onClick={() => handleUpdateCategory(key, { ...colorOption })}
-                            className={`w-full aspect-square rounded-lg ${colorOption.color} ${cat.color === colorOption.color ? 'ring-2 ring-gray-800' : ''}`}
+                            className={`w-full aspect-square rounded-lg ${colorOption.color} ${cat.color === colorOption.color ? 'ring-2 ring-gray-800 dark:ring-white' : ''}`}
                             title={colorOption.name}
                           />
                         ))}
@@ -1354,14 +1354,14 @@ function App() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className={`w-4 h-4 rounded-full ${cat.color}`} />
-                        <span className="font-medium text-gray-800">{cat.label}</span>
+                        <span className="font-medium text-gray-800 dark:text-gray-200">{cat.label}</span>
                       </div>
                       <div className="flex gap-1">
-                        <button onClick={() => setEditingCategory(key)} className="p-1 hover:bg-white rounded-lg">
-                          <Edit2 className="w-4 h-4 text-gray-600" />
+                        <button onClick={() => setEditingCategory(key)} className="p-1 hover:bg-white dark:hover:bg-gray-700 rounded-lg">
+                          <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                         </button>
                         {key !== 'other' && (
-                          <button onClick={() => handleDeleteCategory(key)} className="p-1 hover:bg-red-100 rounded-lg">
+                          <button onClick={() => handleDeleteCategory(key)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg">
                             <Trash2 className="w-4 h-4 text-red-600" />
                           </button>
                         )}
@@ -1375,15 +1375,15 @@ function App() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-xl p-6">
-            <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
-              <p className="text-sm text-purple-700 text-center">
+          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+            <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-xl border border-purple-200 dark:border-purple-700">
+              <p className="text-sm text-purple-700 dark:text-purple-300 text-center">
                 💡 <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
               </p>
             </div>
             <div className="grid grid-cols-7 gap-2 mb-2">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="text-center text-sm font-semibold text-gray-600 py-2">{day}</div>
+                <div key={day} className="text-center text-sm font-semibold text-gray-600 dark:text-gray-400 py-2">{day}</div>
               ))}
             </div>
             <div className="grid grid-cols-7 gap-2">
@@ -1423,17 +1423,17 @@ function App() {
                       disabled={!date}
                       className={`
                         w-full aspect-square rounded-xl p-2 transition-all duration-200 relative select-none
-                        ${!date ? 'invisible' : 'bg-white'}
+                        ${!date ? 'invisible' : 'bg-white dark:bg-gray-700'}
                         ${hasUrgentEvent && !isSelected && !isInSelection ? 'ring-2 ring-red-500 shadow-lg shadow-red-200' : ''}
                         ${isInSelection ? 'bg-gradient-to-br from-purple-400 to-indigo-400 text-white shadow-lg scale-105 ring-2 ring-purple-300' : ''}
                         ${isSelected && !isInSelection ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg scale-105' : ''}
-                        ${!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent ? 'bg-gradient-to-br from-rose-100 to-purple-100 text-purple-900 ring-2 ring-purple-400' : ''}
-                        ${!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent ? 'text-gray-700 hover:bg-purple-50' : ''}
-                        ${hasUrgentEvent && !isSelected && !isInSelection ? 'bg-red-50' : ''}
+                        ${!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 text-purple-900 dark:text-purple-200 ring-2 ring-purple-400' : ''}
+                        ${!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent ? 'text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600' : ''}
+                        ${hasUrgentEvent && !isSelected && !isInSelection ? 'bg-red-50 dark:bg-red-900/30' : ''}
                       `}
                       style={{ zIndex: 10 }}
                     >
-                      <div className={`text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700' : ''}`}>
+                      <div className={`text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
                         {date ? date.getDate() : ''}
                         {hasHoliday && !isSelected && !isInSelection && (
                           <span className="absolute top-0.5 right-0.5 text-xs">🇺🇸</span>
@@ -1468,18 +1468,18 @@ function App() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
             <div className="mb-4">
               {selectedDates.length > 1 ? (
-                <div className="p-4 bg-gradient-to-r from-purple-100 to-indigo-100 rounded-xl border-2 border-purple-300">
+                <div className="p-4 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-xl border-2 border-purple-300 dark:border-purple-600">
                   <h3 className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">Multi-Day Selection</h3>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-purple-700 font-medium">
+                    <p className="text-sm text-purple-700 dark:text-purple-300 font-medium">
                       {selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {selectedDates[selectedDates.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </p>
                     <span className="px-2 py-1 bg-purple-500 text-white text-xs rounded-full">{selectedDates.length} days</span>
                   </div>
-                  <button onClick={() => setSelectedDates([])} className="text-xs text-purple-700 hover:text-purple-900 underline font-medium">Clear selection</button>
+                  <button onClick={() => setSelectedDates([])} className="text-xs text-purple-700 dark:text-purple-300 hover:text-purple-900 underline font-medium">Clear selection</button>
                 </div>
               ) : (
                 <h3 className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
@@ -1489,7 +1489,7 @@ function App() {
             </div>
 
             <div className="mb-4">
-              <div className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
                 <Tag className="w-4 h-4" />
                 Category:
               </div>
@@ -1512,7 +1512,7 @@ function App() {
               <button
                 onClick={() => setIsPrivate(!isPrivate)}
                 className={`w-full px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ${
-                  isPrivate ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  isPrivate ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 <Lock className="w-4 h-4" />
@@ -1521,7 +1521,7 @@ function App() {
               <button
                 onClick={() => setIsUrgent(!isUrgent)}
                 className={`w-full px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ${
-                  isUrgent ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md animate-pulse' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  isUrgent ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md animate-pulse' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 <AlertTriangle className="w-4 h-4" />
@@ -1530,7 +1530,7 @@ function App() {
               <button
                 onClick={() => setIsAnnual(!isAnnual)}
                 className={`w-full px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ${
-                  isAnnual ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  isAnnual ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 <Repeat className="w-4 h-4" />
@@ -1539,7 +1539,7 @@ function App() {
             </div>
 
             <div className="mb-6">
-              <div className="text-sm font-medium text-gray-700 mb-2">Quick add:</div>
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Quick add:</div>
               <div className="flex gap-2 mb-2">
                 <input
                   type="text"
@@ -1547,7 +1547,7 @@ function App() {
                   onChange={(e) => setQuickEntry(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleQuickAdd()}
                   placeholder={selectedDates.length > 1 ? "Vacation in Mexico" : "Ed working, or Playdate 3pm"}
-                  className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400"
+                  className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-purple-400"
                 />
                 <button onClick={handleQuickAdd} className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all">
                   <Plus className="w-5 h-5" />
@@ -1566,33 +1566,32 @@ function App() {
                     {isListening ? 'Listening...' : 'Use Voice Input'}
                   </button>
                   {voiceTranscript && (
-                    <div className="mt-2 p-2 bg-emerald-50 rounded-lg text-sm text-emerald-700">"{voiceTranscript}"</div>
+                    <div className="mt-2 p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg text-sm text-emerald-700 dark:text-emerald-300">"{voiceTranscript}"</div>
                   )}
-                  <div className="text-xs text-gray-500 mt-1">Say: "Meeting with John at 2pm on Friday"</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Say: "Meeting with John at 2pm on Friday"</div>
                 </div>
               ) : (
-                <div className="text-xs text-gray-500">Voice input not supported</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Voice input not supported</div>
               )}
             </div>
 
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {selectedEvents.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">No events for this day</div>
+                <div className="text-center py-8 text-gray-400 dark:text-gray-500">No events for this day</div>
               ) : (
                 selectedEvents.map(event => {
                   const category = categories[event.category || 'other'] || categories.other;
 
-                  // Holiday card — special read-only display
                   if (event.isHoliday) {
                     return (
-                      <div key={event.id} className="bg-red-50 rounded-xl p-3 border-2 border-red-200 transition-all duration-200 hover:shadow-md">
+                      <div key={event.id} className="bg-red-50 dark:bg-red-900/30 rounded-xl p-3 border-2 border-red-200 dark:border-red-700 transition-all duration-200 hover:shadow-md">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-lg">🇺🇸</span>
                             <div>
-                              <div className="text-gray-800 font-medium">{event.title}</div>
+                              <div className="text-gray-800 dark:text-gray-200 font-medium">{event.title}</div>
                               {event.fullName !== event.title && (
-                                <div className="text-xs text-gray-500">{event.fullName}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">{event.fullName}</div>
                               )}
                             </div>
                           </div>
@@ -1615,25 +1614,25 @@ function App() {
                             type="text"
                             defaultValue={event.title}
                             onBlur={(e) => handleUpdateEvent(selectedDateKey, event.id, { title: e.target.value })}
-                            className="w-full px-2 py-1 border-2 border-gray-300 rounded-lg text-sm"
+                            className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                             autoFocus
                           />
                           <input
                             type="time"
                             defaultValue={event.time || ''}
                             onChange={(e) => handleUpdateEvent(selectedDateKey, event.id, { time: e.target.value })}
-                            className="w-full px-2 py-1 border-2 border-gray-300 rounded-lg text-sm"
+                            className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
                           <select
                             defaultValue={event.category || 'other'}
                             onChange={(e) => handleUpdateEvent(selectedDateKey, event.id, { category: e.target.value })}
-                            className="w-full px-2 py-1 border-2 border-gray-300 rounded-lg text-sm"
+                            className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           >
                             {Object.entries(categories).map(([key, cat]) => (
                               <option key={key} value={key}>{cat.label}</option>
                             ))}
                           </select>
-                          <label className="flex items-center gap-2 text-sm">
+                          <label className="flex items-center gap-2 text-sm dark:text-gray-300">
                             <input
                               type="checkbox"
                               defaultChecked={event.isPrivate}
@@ -1642,7 +1641,7 @@ function App() {
                             />
                             Private event
                           </label>
-                          <label className="flex items-center gap-2 text-sm">
+                          <label className="flex items-center gap-2 text-sm dark:text-gray-300">
                             <input
                               type="checkbox"
                               defaultChecked={event.isUrgent}
@@ -1651,7 +1650,7 @@ function App() {
                             />
                             🚨 Urgent event
                           </label>
-                          <label className="flex items-center gap-2 text-sm">
+                          <label className="flex items-center gap-2 text-sm dark:text-gray-300">
                             <input
                               type="checkbox"
                               defaultChecked={event.isAnnual}
@@ -1694,21 +1693,21 @@ function App() {
                                 </div>
                               )}
                             </div>
-                            <div className="text-gray-800 font-medium mb-1">{event.title}</div>
+                            <div className="text-gray-800 dark:text-gray-200 font-medium mb-1">{event.title}</div>
                             {event.createdBy && (
-                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                 <User className="w-3 h-3" />
                                 {event.createdBy}
                                 {event.isShared && (
-                                  <span className="ml-1 px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">shared</span>
+                                  <span className="ml-1 px-1.5 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full text-xs">shared</span>
                                 )}
                               </div>
                             )}
                           </div>
                           <div className="flex gap-1 ml-2">
                             {!event.isVirtualAnnual && (
-                              <button onClick={() => setEditingEvent(event.id)} className="p-1.5 hover:bg-white rounded-lg transition-all">
-                                <Edit2 className="w-4 h-4 text-gray-600" />
+                              <button onClick={() => setEditingEvent(event.id)} className="p-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-all">
+                                <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                               </button>
                             )}
                             <button
@@ -1722,7 +1721,7 @@ function App() {
                                   handleDeleteEvent(selectedDateKey, event.id, event.isVirtualAnnual);
                                 }
                               }}
-                              className="p-1.5 hover:bg-red-100 rounded-lg transition-all"
+                              className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all"
                               title={event.isAnnual || event.isVirtualAnnual ? 'Deletes from all years' : 'Delete event'}
                             >
                               <Trash2 className="w-4 h-4 text-red-600" />
