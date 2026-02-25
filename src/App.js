@@ -1204,7 +1204,7 @@ function App() {
           </div>
         )}
 
-        )}
+    
 
         {showSharePanel && (
           <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
