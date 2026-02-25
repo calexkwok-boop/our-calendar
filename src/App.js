@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Mic, MicOff, Settings, Eye, EyeOff, Lock, User, Bell, BellOff, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Mic, MicOff, Settings, Eye, EyeOff, Lock, User, Bell, BellOff, AlertTriangle, Repeat } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase
@@ -99,6 +99,7 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [firstTapDate, setFirstTapDate] = useState(null);
   const [lastTapTime, setLastTapTime] = useState(0);
+  const [isAnnual, setIsAnnual] = useState(false);
 
   const getDateKey = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -163,6 +164,41 @@ function App() {
     }
   };
 
+  // Returns all events for a given date, including virtual annual recurrences
+  const getEventsForDate = (date) => {
+    if (!date) return [];
+    const dateKey = getDateKey(date);
+    const directEvents = events[dateKey] || [];
+
+    // Find annual events from any year that match this month+day
+    const month = date.getMonth() + 1; // 1-based
+    const day = date.getDate();
+    const virtualAnnual = [];
+
+    Object.values(events).forEach(dateEvents => {
+      dateEvents.forEach(event => {
+        if (!event.isAnnual) return;
+        if (event.annualMonth === month && event.annualDay === day) {
+          // Only show if it's not already in directEvents (i.e. not the original year)
+          const alreadyDirect = directEvents.some(e => e.id === event.id);
+          if (!alreadyDirect) {
+            virtualAnnual.push({
+              ...event,
+              date: dateKey,
+              isVirtualAnnual: true, // marks it as a recurrence (not the original record)
+            });
+          }
+        }
+      });
+    });
+
+    return [...directEvents, ...virtualAnnual].sort((a, b) => {
+      if (!a.time) return 1;
+      if (!b.time) return -1;
+      return a.time.localeCompare(b.time);
+    });
+  };
+
   const saveEvents = async (newEvents) => {
     try {
       setEvents(newEvents);
@@ -180,6 +216,9 @@ function App() {
             is_urgent: event.isUrgent || false,
             is_multi_day: event.isMultiDay || false,
             multi_day_id: event.multiDayId,
+            is_annual: event.isAnnual || false,
+            annual_month: event.annualMonth || null,
+            annual_day: event.annualDay || null,
             created_by: event.createdBy,
             created_at: event.createdAt
           });
@@ -267,6 +306,9 @@ function App() {
               isUrgent: event.is_urgent,
               isMultiDay: event.is_multi_day,
               multiDayId: event.multi_day_id,
+              isAnnual: event.is_annual || false,
+              annualMonth: event.annual_month || null,
+              annualDay: event.annual_day || null,
               createdBy: event.created_by,
               createdAt: event.created_at
             });
@@ -582,6 +624,9 @@ function App() {
         category: selectedCategory,
         isPrivate: isPrivate,
         isUrgent: isUrgent,
+        isAnnual: isAnnual,
+        annualMonth: isAnnual ? (date.getMonth() + 1) : null,
+        annualDay: isAnnual ? date.getDate() : null,
         createdBy: currentUser,
         createdAt: new Date().toISOString(),
         isMultiDay: pendingEvent.isMultiDay,
@@ -596,12 +641,28 @@ function App() {
     });
     saveEvents(updatedEvents);
     setSelectedDates([]);
+    setIsAnnual(false);
     setShowTimePrompt(false);
     setPendingEvent(null);
   };
 
-  const handleDeleteEvent = (dateKey, eventId) => {
+  const handleDeleteEvent = (dateKey, eventId, isVirtualAnnual = false) => {
     const eventToDelete = events[dateKey]?.find(e => e.id === eventId);
+
+    // For virtual annual recurrences, find and delete the original record
+    if (isVirtualAnnual) {
+      let originalDateKey = null;
+      Object.entries(events).forEach(([key, evts]) => {
+        if (evts.some(e => e.id === eventId)) originalDateKey = key;
+      });
+      if (originalDateKey) {
+        const updatedEvents = { ...events, [originalDateKey]: events[originalDateKey].filter(e => e.id !== eventId) };
+        if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
+        saveEvents(updatedEvents);
+      }
+      return;
+    }
+
     if (eventToDelete?.isMultiDay && eventToDelete.multiDayId) {
       const updatedEvents = { ...events };
       Object.keys(updatedEvents).forEach(key => {
@@ -665,7 +726,7 @@ function App() {
   };
 
   const selectedDateKey = getDateKey(selectedDate);
-  const selectedEvents = events[selectedDateKey] || [];
+  const selectedEvents = getEventsForDate(selectedDate);
 
   if (isLoading) {
     return (
@@ -715,6 +776,7 @@ function App() {
           <p className="text-gray-600 mb-2">Event: <strong>{pendingEvent.title}</strong></p>
           <p className="text-gray-500 text-sm mb-6">
             {pendingEvent.isMultiDay ? "Multi-day events don't need a time" : 'Enter a time or skip to add without time'}
+            {isAnnual && <span className="ml-2 px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">🔁 Repeats annually</span>}
           </p>
           <input
             type="time"
@@ -1017,7 +1079,7 @@ function App() {
             <div className="grid grid-cols-7 gap-2">
               {getDaysInMonth(currentDate).map((date, index) => {
                 const dateKey = date ? getDateKey(date) : null;
-                const dateEvents = dateKey && events[dateKey] ? events[dateKey] : [];
+                const dateEvents = getEventsForDate(date);
                 const isSelected = date && isSameDay(date, selectedDate);
                 const isTodayDate = date && isToday(date);
                 const isInSelection = date && selectedDates.some(d => isSameDay(d, date));
@@ -1148,6 +1210,15 @@ function App() {
                 <AlertTriangle className="w-4 h-4" />
                 {isUrgent ? '🚨 Urgent Event' : 'Normal Event'}
               </button>
+              <button
+                onClick={() => setIsAnnual(!isAnnual)}
+                className={`w-full px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ${
+                  isAnnual ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Repeat className="w-4 h-4" />
+                {isAnnual ? '🔁 Annual (repeats every year)' : 'One-time Event'}
+              </button>
             </div>
 
             <div className="mb-6">
@@ -1194,7 +1265,7 @@ function App() {
                 selectedEvents.map(event => {
                   const category = categories[event.category || 'other'] || categories.other;
                   return (
-                    <div key={event.id} className={`${category.lightBg} rounded-xl p-3 border-2 ${category.border} transition-all duration-200 hover:shadow-md relative`}>
+                    <div key={event.id} className={`${category.lightBg} rounded-xl p-3 border-2 ${event.isVirtualAnnual ? 'border-violet-300 border-dashed' : category.border} transition-all duration-200 hover:shadow-md relative`}>
                       {event.isPrivate && (
                         <div className="absolute top-2 right-2">
                           <Lock className="w-3 h-3 text-amber-600" />
@@ -1242,6 +1313,19 @@ function App() {
                             />
                             🚨 Urgent event
                           </label>
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              defaultChecked={event.isAnnual}
+                              onChange={(e) => handleUpdateEvent(selectedDateKey, event.id, {
+                                isAnnual: e.target.checked,
+                                annualMonth: e.target.checked ? (new Date(event.date).getMonth() + 1) : null,
+                                annualDay: e.target.checked ? new Date(event.date).getDate() : null
+                              })}
+                              className="rounded"
+                            />
+                            🔁 Annual (repeats every year)
+                          </label>
                         </div>
                       ) : (
                         <div className="flex items-start justify-between">
@@ -1259,6 +1343,12 @@ function App() {
                               {event.isMultiDay && (
                                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-500 text-white">Multi-day</span>
                               )}
+                              {event.isAnnual && (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-violet-500 text-white flex items-center gap-1">
+                                  <Repeat className="w-3 h-3" />
+                                  Annual
+                                </span>
+                              )}
                               {event.time && (
                                 <div className={`flex items-center gap-1 ${category.text} text-sm font-medium`}>
                                   <Clock className="w-3 h-3" />
@@ -1275,10 +1365,25 @@ function App() {
                             )}
                           </div>
                           <div className="flex gap-1 ml-2">
-                            <button onClick={() => setEditingEvent(event.id)} className="p-1.5 hover:bg-white rounded-lg transition-all">
-                              <Edit2 className="w-4 h-4 text-gray-600" />
-                            </button>
-                            <button onClick={() => handleDeleteEvent(selectedDateKey, event.id)} className="p-1.5 hover:bg-red-100 rounded-lg transition-all">
+                            {!event.isVirtualAnnual && (
+                              <button onClick={() => setEditingEvent(event.id)} className="p-1.5 hover:bg-white rounded-lg transition-all">
+                                <Edit2 className="w-4 h-4 text-gray-600" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                const msg = event.isVirtualAnnual
+                                  ? `Delete "${event.title}" from ALL years? This removes the annual event entirely.`
+                                  : event.isAnnual
+                                  ? `Delete "${event.title}" from ALL years? This removes the annual event entirely.`
+                                  : null;
+                                if (!msg || window.confirm(msg)) {
+                                  handleDeleteEvent(selectedDateKey, event.id, event.isVirtualAnnual);
+                                }
+                              }}
+                              className="p-1.5 hover:bg-red-100 rounded-lg transition-all"
+                              title={event.isAnnual || event.isVirtualAnnual ? 'Deletes from all years' : 'Delete event'}
+                            >
                               <Trash2 className="w-4 h-4 text-red-600" />
                             </button>
                           </div>
