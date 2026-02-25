@@ -97,8 +97,14 @@ function App() {
   const [firstTapDate, setFirstTapDate] = useState(null);
   const [lastTapTime, setLastTapTime] = useState(0);
   const [isAnnual, setIsAnnual] = useState(false);
-  const [holidays, setHolidays] = useState({}); // { 2025: [{date, localName, name}, ...], 2026: [...] }
+  const [holidays, setHolidays] = useState({});
   const [showHolidays, setShowHolidays] = useState(true);
+  const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
+  const [myShares, setMyShares] = useState([]); // people I've shared with
+  const [showSharePanel, setShowSharePanel] = useState(false);
+  const [shareEmailInput, setShareEmailInput] = useState('');
+  const [shareMessage, setShareMessage] = useState('');
+  const [activeCalendars, setActiveCalendars] = useState([]); // owner ids whose events to show
 
   const getDateKey = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -246,7 +252,7 @@ function App() {
       const eventsArray = [];
       Object.entries(newEvents).forEach(([date, dateEvents]) => {
         dateEvents.forEach(event => {
-          // Only save events that belong to the current user
+          // Only save events owned by current user
           if (event.userId && event.userId !== user?.id) return;
           eventsArray.push({
             id: event.id,
@@ -264,14 +270,12 @@ function App() {
             annual_day: event.annualDay || null,
             created_by: event.createdBy,
             created_at: event.createdAt,
-            user_id: event.userId || user?.id || null
+            user_id: user?.id
           });
         });
       });
-
-      // Only delete THIS user's events, not everyone's
+      // Only delete and reinsert current user's events
       await supabase.from('events').delete().eq('user_id', user?.id);
-
       if (eventsArray.length > 0) {
         const { error } = await supabase.from('events').insert(eventsArray);
         if (error) console.error('Error saving events to Supabase:', error);
@@ -338,23 +342,95 @@ function App() {
     setShowAuth(true);
   };
 
+  const handleShareCalendar = async () => {
+    if (!shareEmailInput.trim()) return;
+    const email = shareEmailInput.trim().toLowerCase();
+
+    // Check not already shared
+    if (myShares.some(s => s.shared_with_email === email)) {
+      setShareMessage('Already shared with this email.');
+      return;
+    }
+
+    // Check not sharing with yourself
+    if (email === user?.email) {
+      setShareMessage("You can't share with yourself.");
+      return;
+    }
+
+    const { error } = await supabase.from('shared_access').insert({
+      owner_id: user.id,
+      shared_with_email: email,
+    });
+
+    if (error) {
+      setShareMessage('Error sharing calendar. Try again.');
+      console.error(error);
+    } else {
+      setMyShares(prev => [...prev, { owner_id: user.id, shared_with_email: email }]);
+      setShareEmailInput('');
+      setShareMessage(`✅ Shared! When ${email} logs in they'll see your calendar.`);
+    }
+  };
+
+  const handleRemoveShare = async (shareEmail) => {
+    const { error } = await supabase
+      .from('shared_access')
+      .delete()
+      .eq('owner_id', user.id)
+      .eq('shared_with_email', shareEmail);
+
+    if (!error) {
+      setMyShares(prev => prev.filter(s => s.shared_with_email !== shareEmail));
+      setShareMessage(`Removed access for ${shareEmail}.`);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
+        const userEmail = session?.user?.email;
         if (!userId) return;
 
+        // Load my own events
         const { data: eventsData, error: eventsError } = await supabase
           .from('events')
           .select('*')
           .eq('user_id', userId);
 
-        if (eventsError) {
-          console.error('Error loading events:', eventsError);
-        } else if (eventsData) {
+        // Load calendars shared WITH me (by email)
+        const { data: sharedWithMe } = await supabase
+          .from('shared_access')
+          .select('*')
+          .eq('shared_with_email', userEmail);
+
+        // Update shared_with_id if not yet set (first time they log in)
+        if (sharedWithMe && sharedWithMe.length > 0) {
+          for (const share of sharedWithMe) {
+            if (!share.shared_with_id) {
+              await supabase
+                .from('shared_access')
+                .update({ shared_with_id: userId })
+                .eq('id', share.id);
+            }
+          }
+          setSharedCalendars(sharedWithMe);
+
+          // Load events from all owners who shared with me
+          const ownerIds = sharedWithMe.map(s => s.owner_id);
+          setActiveCalendars(ownerIds);
+
+          const { data: sharedEventsData } = await supabase
+            .from('events')
+            .select('*')
+            .in('user_id', ownerIds);
+
+          // Merge own events + shared events
+          const allEventsData = [...(eventsData || []), ...(sharedEventsData || [])];
           const eventsObj = {};
-          eventsData.forEach(event => {
+          allEventsData.forEach(event => {
             if (!eventsObj[event.date]) eventsObj[event.date] = [];
             eventsObj[event.date].push({
               id: event.id,
@@ -371,12 +447,50 @@ function App() {
               annualDay: event.annual_day || null,
               createdBy: event.created_by,
               createdAt: event.created_at,
-              userId: event.user_id
+              userId: event.user_id,
+              isShared: event.user_id !== userId
             });
           });
           setEvents(eventsObj);
           if (typeof window !== 'undefined') window.events = eventsObj;
+        } else {
+          setSharedCalendars([]);
+          if (eventsError) {
+            console.error('Error loading events:', eventsError);
+          } else if (eventsData) {
+            const eventsObj = {};
+            eventsData.forEach(event => {
+              if (!eventsObj[event.date]) eventsObj[event.date] = [];
+              eventsObj[event.date].push({
+                id: event.id,
+                title: event.title,
+                time: event.time,
+                date: event.date,
+                category: event.category,
+                isPrivate: event.is_private,
+                isUrgent: event.is_urgent,
+                isMultiDay: event.is_multi_day,
+                multiDayId: event.multi_day_id,
+                isAnnual: event.is_annual || false,
+                annualMonth: event.annual_month || null,
+                annualDay: event.annual_day || null,
+                createdBy: event.created_by,
+                createdAt: event.created_at,
+                userId: event.user_id,
+                isShared: false
+              });
+            });
+            setEvents(eventsObj);
+            if (typeof window !== 'undefined') window.events = eventsObj;
+          }
         }
+
+        // Load people I've shared with
+        const { data: mySharesData } = await supabase
+          .from('shared_access')
+          .select('*')
+          .eq('owner_id', userId);
+        setMyShares(mySharesData || []);
 
         const { data: categoriesData } = await supabase
           .from('categories')
@@ -399,7 +513,6 @@ function App() {
           setCategories(DEFAULT_CATEGORIES);
         }
 
-        // Calendar title per user — stored in localStorage keyed by user id
         const titleKey = `calendar-title-${userId}`;
         const savedTitle = localStorage.getItem(titleKey);
         if (savedTitle) setCalendarTitle(savedTitle);
@@ -994,6 +1107,13 @@ function App() {
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setShowSharePanel(!showSharePanel)}
+                className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}
+                title="Share calendar"
+              >
+                <User className="w-5 h-5" />
+              </button>
+              <button
                 onClick={() => setShowNotificationSettings(!showNotificationSettings)}
                 className={`p-2 rounded-xl transition-all duration-200 ${notificationsEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}
                 title={notificationsEnabled ? 'Notifications enabled' : 'Enable notifications'}
@@ -1081,6 +1201,96 @@ function App() {
                 </p>
               </div>
             </div>
+          </div>
+        )}
+
+        )}
+
+        {showSharePanel && (
+          <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                Share Calendar
+              </h3>
+              <button onClick={() => { setShowSharePanel(false); setShareMessage(''); }} className="p-1 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Share with someone */}
+            <div className="mb-5">
+              <p className="text-sm text-gray-600 mb-3">
+                Enter someone's email to give them access to your calendar. They'll see and be able to edit your events when they log in.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={shareEmailInput}
+                  onChange={(e) => { setShareEmailInput(e.target.value); setShareMessage(''); }}
+                  placeholder="wife@gmail.com"
+                  className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400"
+                  onKeyPress={(e) => e.key === 'Enter' && handleShareCalendar()}
+                />
+                <button
+                  onClick={handleShareCalendar}
+                  className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+              {shareMessage && (
+                <p className={`text-sm mt-2 ${shareMessage.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>
+                  {shareMessage}
+                </p>
+              )}
+            </div>
+
+            {/* People I've shared with */}
+            {myShares.length > 0 && (
+              <div className="mb-5">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Shared with:</h4>
+                <div className="space-y-2">
+                  {myShares.map((share, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-200">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-purple-400 flex items-center justify-center text-white text-xs font-bold">
+                          {share.shared_with_email[0].toUpperCase()}
+                        </div>
+                        <span className="text-sm text-gray-700">{share.shared_with_email}</span>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveShare(share.shared_with_email)}
+                        className="p-1 hover:bg-red-100 rounded-lg transition-all"
+                        title="Remove access"
+                      >
+                        <X className="w-4 h-4 text-red-500" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Calendars shared with me */}
+            {sharedCalendars.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Calendars shared with you:</h4>
+                <div className="space-y-2">
+                  {sharedCalendars.map((share, i) => (
+                    <div key={i} className="flex items-center gap-2 p-3 bg-green-50 rounded-xl border border-green-200">
+                      <div className="w-7 h-7 rounded-full bg-green-400 flex items-center justify-center text-white text-xs">
+                        📅
+                      </div>
+                      <span className="text-sm text-gray-700">Shared by <strong>{share.shared_with_email === user?.email ? share.owner_id : 'another user'}</strong></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {myShares.length === 0 && sharedCalendars.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-2">No shares yet. Add someone's email above to get started.</p>
+            )}
           </div>
         )}
 
@@ -1489,6 +1699,9 @@ function App() {
                               <div className="flex items-center gap-1 text-xs text-gray-500">
                                 <User className="w-3 h-3" />
                                 {event.createdBy}
+                                {event.isShared && (
+                                  <span className="ml-1 px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">shared</span>
+                                )}
                               </div>
                             )}
                           </div>
