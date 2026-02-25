@@ -100,6 +100,8 @@ function App() {
   const [firstTapDate, setFirstTapDate] = useState(null);
   const [lastTapTime, setLastTapTime] = useState(0);
   const [isAnnual, setIsAnnual] = useState(false);
+  const [holidays, setHolidays] = useState({}); // { 2025: [{date, localName, name}, ...], 2026: [...] }
+  const [showHolidays, setShowHolidays] = useState(true);
 
   const getDateKey = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -112,7 +114,35 @@ function App() {
       date1.getFullYear() === date2.getFullYear();
   };
 
-  // ✅ FIXED: handleDateTap is now a proper function inside the component
+  const fetchHolidays = async (year) => {
+    if (holidays[year]) return; // already fetched
+    try {
+      const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/US`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setHolidays(prev => ({ ...prev, [year]: data }));
+    } catch (err) {
+      console.error('Failed to fetch holidays:', err);
+    }
+  };
+
+  // Fetch holidays for visible years whenever month changes
+  useEffect(() => {
+    const year = currentDate.getFullYear();
+    fetchHolidays(year);
+    // Also pre-fetch adjacent year in case calendar spans it
+    const month = currentDate.getMonth();
+    if (month === 11) fetchHolidays(year + 1);
+    if (month === 0) fetchHolidays(year - 1);
+  }, [currentDate]);
+
+  // Helper: get holiday info for a specific date key
+  const getHolidayForDate = (dateKey) => {
+    if (!showHolidays) return null;
+    const year = parseInt(dateKey.split('-')[0]);
+    const yearHolidays = holidays[year] || [];
+    return yearHolidays.find(h => h.date === dateKey) || null;
+  };
   const handleDateTap = (date) => {
     if (!date) return;
 
@@ -164,35 +194,49 @@ function App() {
     }
   };
 
-  // Returns all events for a given date, including virtual annual recurrences
+  // Returns all events for a given date, including virtual annual recurrences and holidays
   const getEventsForDate = (date) => {
     if (!date) return [];
     const dateKey = getDateKey(date);
     const directEvents = events[dateKey] || [];
 
     // Find annual events from any year that match this month+day
-    const month = date.getMonth() + 1; // 1-based
+    const month = date.getMonth() + 1;
     const day = date.getDate();
     const virtualAnnual = [];
-
     Object.values(events).forEach(dateEvents => {
       dateEvents.forEach(event => {
         if (!event.isAnnual) return;
         if (event.annualMonth === month && event.annualDay === day) {
-          // Only show if it's not already in directEvents (i.e. not the original year)
           const alreadyDirect = directEvents.some(e => e.id === event.id);
           if (!alreadyDirect) {
-            virtualAnnual.push({
-              ...event,
-              date: dateKey,
-              isVirtualAnnual: true, // marks it as a recurrence (not the original record)
-            });
+            virtualAnnual.push({ ...event, date: dateKey, isVirtualAnnual: true });
           }
         }
       });
     });
 
-    return [...directEvents, ...virtualAnnual].sort((a, b) => {
+    // Inject holiday if present
+    const holidayEvents = [];
+    if (showHolidays) {
+      const holiday = getHolidayForDate(dateKey);
+      if (holiday) {
+        holidayEvents.push({
+          id: `holiday-${dateKey}`,
+          title: holiday.localName,
+          fullName: holiday.name,
+          date: dateKey,
+          time: null,
+          category: 'other',
+          isHoliday: true,
+          isReadOnly: true,
+        });
+      }
+    }
+
+    return [...holidayEvents, ...directEvents, ...virtualAnnual].sort((a, b) => {
+      if (a.isHoliday) return -1; // holidays always first
+      if (b.isHoliday) return 1;
       if (!a.time) return 1;
       if (!b.time) return -1;
       return a.time.localeCompare(b.time);
@@ -908,6 +952,13 @@ function App() {
                 {notificationsEnabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
               </button>
               <button
+                onClick={() => setShowHolidays(!showHolidays)}
+                className={`p-2 rounded-xl transition-all duration-200 text-base ${showHolidays ? 'bg-red-100' : 'bg-gray-100 opacity-40'}`}
+                title={showHolidays ? 'Hide US holidays' : 'Show US holidays'}
+              >
+                🇺🇸
+              </button>
+              <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
                 className="p-2 hover:bg-purple-100 rounded-xl transition-all duration-200"
               >
@@ -1084,6 +1135,7 @@ function App() {
                 const isTodayDate = date && isToday(date);
                 const isInSelection = date && selectedDates.some(d => isSameDay(d, date));
                 const hasUrgentEvent = dateEvents.some(e => e.isUrgent);
+                const hasHoliday = dateEvents.some(e => e.isHoliday);
 
                 const multiDayEvents = dateEvents.filter(e => e.isMultiDay);
                 const uniqueMultiDayIds = [...new Set(multiDayEvents.map(e => e.multiDayId))];
@@ -1124,10 +1176,16 @@ function App() {
                     >
                       <div className={`text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700' : ''}`}>
                         {date ? date.getDate() : ''}
+                        {hasHoliday && !isSelected && !isInSelection && (
+                          <span className="absolute top-0.5 right-0.5 text-xs">🇺🇸</span>
+                        )}
                       </div>
                       {dateEvents.length > 0 && (
                         <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex gap-0.5">
-                          {[...new Set(dateEvents.filter(e => !e.isMultiDay).map(e => e.category || 'other'))].slice(0, 3).map((cat, i) => (
+                          {hasHoliday && (
+                            <div className={`w-1.5 h-1.5 rounded-full ${isSelected || isInSelection ? 'bg-white' : 'bg-red-400'}`} />
+                          )}
+                          {[...new Set(dateEvents.filter(e => !e.isMultiDay && !e.isHoliday).map(e => e.category || 'other'))].slice(0, 2).map((cat, i) => (
                             <div
                               key={i}
                               className={`w-1.5 h-1.5 rounded-full ${isSelected || isInSelection ? 'bg-white' : categories[cat]?.color || 'bg-gray-500'}`}
@@ -1264,6 +1322,27 @@ function App() {
               ) : (
                 selectedEvents.map(event => {
                   const category = categories[event.category || 'other'] || categories.other;
+
+                  // Holiday card — special read-only display
+                  if (event.isHoliday) {
+                    return (
+                      <div key={event.id} className="bg-red-50 rounded-xl p-3 border-2 border-red-200 transition-all duration-200 hover:shadow-md">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🇺🇸</span>
+                            <div>
+                              <div className="text-gray-800 font-medium">{event.title}</div>
+                              {event.fullName !== event.title && (
+                                <div className="text-xs text-gray-500">{event.fullName}</div>
+                              )}
+                            </div>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">US Holiday</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div key={event.id} className={`${category.lightBg} rounded-xl p-3 border-2 ${event.isVirtualAnnual ? 'border-violet-300 border-dashed' : category.border} transition-all duration-200 hover:shadow-md relative`}>
                       {event.isPrivate && (
