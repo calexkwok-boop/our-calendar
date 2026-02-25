@@ -249,6 +249,8 @@ function App() {
       const eventsArray = [];
       Object.entries(newEvents).forEach(([date, dateEvents]) => {
         dateEvents.forEach(event => {
+          // Only save events that belong to the current user
+          if (event.userId && event.userId !== user?.id) return;
           eventsArray.push({
             id: event.id,
             date: event.date,
@@ -264,11 +266,15 @@ function App() {
             annual_month: event.annualMonth || null,
             annual_day: event.annualDay || null,
             created_by: event.createdBy,
-            created_at: event.createdAt
+            created_at: event.createdAt,
+            user_id: event.userId || user?.id || null
           });
         });
       });
-      await supabase.from('events').delete().neq('id', '___nonexistent___');
+
+      // Only delete THIS user's events, not everyone's
+      await supabase.from('events').delete().eq('user_id', user?.id);
+
       if (eventsArray.length > 0) {
         const { error } = await supabase.from('events').insert(eventsArray);
         if (error) console.error('Error saving events to Supabase:', error);
@@ -354,7 +360,8 @@ function App() {
               annualMonth: event.annual_month || null,
               annualDay: event.annual_day || null,
               createdBy: event.created_by,
-              createdAt: event.created_at
+              createdAt: event.created_at,
+              userId: event.user_id
             });
           });
           setEvents(eventsObj);
@@ -674,7 +681,8 @@ function App() {
         createdBy: currentUser,
         createdAt: new Date().toISOString(),
         isMultiDay: pendingEvent.isMultiDay,
-        multiDayId
+        multiDayId,
+        userId: user?.id || null
       };
       const dateEvents = updatedEvents[dateKey] || [];
       updatedEvents[dateKey] = [...dateEvents, newEvent].sort((a, b) => {
