@@ -317,8 +317,12 @@ function App() {
   };
 
   const handleMagicLink = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setAuthError('');
+    if (!email) {
+      setAuthError('Please enter your email address first.');
+      return;
+    }
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: window.location.origin }
@@ -326,7 +330,7 @@ function App() {
     if (error) {
       setAuthError(error.message);
     } else {
-      alert('Check your email for the magic link!');
+      setAuthError('✅ Magic link sent! Check your email.');
     }
   };
 
@@ -788,31 +792,101 @@ function App() {
     );
   }
 
+  const handlePasswordAuth = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    try {
+      if (authMode === 'signup') {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) setAuthError(error.message);
+        else setAuthError('✅ Account created! Check your email to confirm, then log in.');
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) setAuthError(error.message);
+      }
+    } catch (err) {
+      setAuthError(err.message);
+    }
+  };
+
   if (showAuth) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-6">
-            Login to Calendar
-          </h2>
-          <form onSubmit={handleMagicLink} className="space-y-4">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
+              <Calendar className="w-7 h-7 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              Our Calendar
+            </h2>
+          </div>
+
+          {/* Tab toggle */}
+          <div className="flex rounded-xl overflow-hidden border-2 border-gray-200 mb-6">
+            <button
+              onClick={() => { setAuthMode('login'); setAuthError(''); }}
+              className={`flex-1 py-2 text-sm font-medium transition-all ${authMode === 'login' ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              Log In
+            </button>
+            <button
+              onClick={() => { setAuthMode('signup'); setAuthError(''); }}
+              className={`flex-1 py-2 text-sm font-medium transition-all ${authMode === 'signup' ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              Sign Up
+            </button>
+          </div>
+
+          {/* Email/password form */}
+          <form onSubmit={handlePasswordAuth} className="space-y-3">
             <input
               type="email"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
               required
             />
-            {authError && <p className="text-red-600 text-sm">{authError}</p>}
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+              required
+              minLength={6}
+            />
+            {authError && (
+              <p className={`text-sm ${authError.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>
+                {authError}
+              </p>
+            )}
             <button
               type="submit"
-              className="w-full px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
+              className="w-full px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all font-medium"
             >
-              Send Magic Link
+              {authMode === 'login' ? 'Log In' : 'Create Account'}
             </button>
           </form>
-          <p className="text-xs text-gray-500 mt-4 text-center">We'll send you an email with a login link</p>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-4">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-400">or</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+
+          {/* Magic link fallback */}
+          <button
+            onClick={handleMagicLink}
+            className="w-full px-6 py-3 border-2 border-purple-200 text-purple-600 rounded-xl hover:bg-purple-50 transition-all text-sm font-medium"
+          >
+            Send Magic Link instead
+          </button>
+          <p className="text-xs text-gray-400 mt-3 text-center">
+            Each account only sees its own events
+          </p>
         </div>
       </div>
     );
