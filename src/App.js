@@ -102,7 +102,7 @@ function App() {
   const [calendarView, setCalendarView] = useState('month');
   const [showReactionPicker, setShowReactionPicker] = useState(null); // event.id
 
-  const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '🎂', '💯'];
+  const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
 
   const handleReact = (event, emoji) => {
     const actualDateKey = Object.keys(events).find(k => events[k].some(e => e.id === event.id));
@@ -1730,12 +1730,28 @@ function App() {
                       </div>
                     );
                     return (
-                      <div key={event.id} className="flex items-center gap-2 px-3 py-1.5">
+                      <div key={event.id} className="relative flex items-center gap-2 px-3 py-1.5">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${cat.color}`} />
                         <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1">{event.title}</span>
                         {event.time && <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{formatTime(event.time)}</span>}
                         {event.isUrgent && <span className="text-xs">🚨</span>}
                         {event.isPrivate && <span className="text-xs">🔒</span>}
+                        {event.reactions && Object.entries(event.reactions).map(([emoji, users]) => (
+                          <button key={emoji} onClick={() => handleReact(event, emoji)} className="text-xs">{emoji}</button>
+                        ))}
+                        <button
+                          onClick={() => setShowReactionPicker(showReactionPicker === `preview-${event.id}` ? null : `preview-${event.id}`)}
+                          className="text-gray-400 hover:text-purple-500 text-xs leading-none"
+                        >＋</button>
+                        {showReactionPicker === `preview-${event.id}` && (
+                          <div className="absolute right-3 z-10 flex gap-1 p-1.5 bg-white dark:bg-gray-700 rounded-xl shadow-lg border border-gray-200 dark:border-gray-600">
+                            {REACTION_EMOJIS.map(emoji => (
+                              <button key={emoji} onClick={() => handleReact(event, emoji)} className="text-base hover:scale-125 transition-transform p-0.5">
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
