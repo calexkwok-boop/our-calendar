@@ -1383,7 +1383,7 @@ function App() {
             </div>
             <div className="grid grid-cols-7 gap-2 mb-2">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="text-center text-sm font-semibold text-gray-600 dark:text-gray-400 py-2">{day}</div>
+                <div key={day} className="text-center text-sm font-semibold text-gray-600 dark:text-gray-200 py-2">{day}</div>
               ))}
             </div>
             <div className="grid grid-cols-7 gap-2">
@@ -1428,7 +1428,7 @@ function App() {
                         ${isInSelection ? 'bg-gradient-to-br from-purple-400 to-indigo-400 text-white shadow-lg scale-105 ring-2 ring-purple-300' : ''}
                         ${isSelected && !isInSelection ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg scale-105' : ''}
                         ${!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 text-purple-900 dark:text-purple-200 ring-2 ring-purple-400' : ''}
-                        ${!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent ? 'text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600' : ''}
+                        ${!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent ? 'text-gray-700 dark:text-gray-100 hover:bg-purple-50 dark:hover:bg-gray-600' : ''}
                         ${hasUrgentEvent && !isSelected && !isInSelection ? 'bg-red-50 dark:bg-red-900/30' : ''}
                       `}
                       style={{ zIndex: 10 }}
@@ -1693,7 +1693,7 @@ function App() {
                                 </div>
                               )}
                             </div>
-                            <div className="text-gray-800 dark:text-gray-200 font-medium mb-1">{event.title}</div>
+                            <div className="text-gray-800 dark:text-white font-medium mb-1">{event.title}</div>
                             {event.createdBy && (
                               <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                 <User className="w-3 h-3" />
