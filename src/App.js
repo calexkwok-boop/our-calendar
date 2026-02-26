@@ -161,18 +161,18 @@ function App() {
     return yearHolidays.find(h => h.date === dateKey) || null;
   };
 
-  // Weather code → emoji mapping
-  const weatherEmoji = (code) => {
-    if (code === 0) return '☀️';
-    if (code <= 2) return '⛅';
-    if (code <= 3) return '☁️';
-    if (code <= 49) return '🌫️';
-    if (code <= 59) return '🌦️';
-    if (code <= 69) return '🌧️';
-    if (code <= 79) return '❄️';
-    if (code <= 84) return '🌧️';
-    if (code <= 94) return '⛈️';
-    return '🌩️';
+  // Weather code → display object with emoji/label and a color
+  const weatherDisplay = (code) => {
+    if (code === 0) return { icon: '☀️', color: 'text-yellow-500' };
+    if (code <= 2) return { icon: '⛅', color: 'text-yellow-400' };
+    if (code <= 3) return { icon: '☁️', color: 'text-gray-400' };
+    if (code <= 49) return { icon: 'FOG', color: 'text-gray-400' };
+    if (code <= 59) return { icon: '🌦️', color: 'text-blue-400' };
+    if (code <= 67) return { icon: '🌧️', color: 'text-blue-500' };
+    if (code <= 77) return { icon: '🌨️', color: 'text-blue-200' };
+    if (code <= 84) return { icon: '🌧️', color: 'text-blue-500' };
+    if (code <= 99) return { icon: '⛈️', color: 'text-purple-500' };
+    return { icon: '⛈️', color: 'text-purple-500' };
   };
 
   const fetchWeather = async () => {
@@ -187,8 +187,10 @@ function App() {
       const data = await res.json();
       const weatherMap = {};
       data.daily.time.forEach((dateStr, i) => {
+        const display = weatherDisplay(data.daily.weathercode[i]);
         weatherMap[dateStr] = {
-          emoji: weatherEmoji(data.daily.weathercode[i]),
+          icon: display.icon,
+          color: display.color,
           high: Math.round(data.daily.temperature_2m_max[i]),
           low: Math.round(data.daily.temperature_2m_min[i]),
         };
@@ -1515,7 +1517,9 @@ function App() {
                       </div>
                       {weatherData && !isSelected && !isInSelection && (
                         <div className="flex flex-col items-center leading-none mt-0.5">
-                          <span style={{ fontSize: '0.85rem' }}>{weatherData.emoji}</span>
+                          <span style={{ fontSize: weatherData.icon.length > 2 ? '0.5rem' : '0.85rem' }} className={`${weatherData.icon.length > 2 ? `font-bold ${weatherData.color}` : ''}`}>
+                            {weatherData.icon}
+                          </span>
                           <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
                             {weatherData.high}°/{weatherData.low}°
                           </span>
