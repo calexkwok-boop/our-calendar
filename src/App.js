@@ -1636,23 +1636,30 @@ function App() {
                       )}
 
                       {/* Events */}
-                      <div className="flex flex-col gap-0.5 overflow-hidden">
+                      <div className="flex flex-col gap-1 overflow-hidden">
                         {dateEvents.slice(0, 4).map(event => {
                           const cat = categories[event.category || 'other'] || categories.other;
                           if (event.isHoliday) return (
-                            <div key={event.id} className="text-xs px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 truncate">
-                              {event.title}
+                            <div key={event.id} className="text-xs px-1.5 py-1 rounded-md bg-red-500 text-white truncate font-medium shadow-sm">
+                              🇺🇸 {event.title}
                             </div>
                           );
                           return (
-                            <div key={event.id} className={`text-xs px-1 py-0.5 rounded ${isSelected ? 'bg-white/20 text-white' : `${cat.lightBg} text-gray-800`} truncate`}>
-                              {event.time && <span className="opacity-70 mr-1">{formatTime(event.time)}</span>}
+                            <div
+                              key={event.id}
+                              className={`text-xs px-1.5 py-1 rounded-md truncate font-medium shadow-sm
+                                ${isSelected ? 'bg-white/25 text-white' : `${cat.color} text-white`}
+                                ${event.isUrgent ? 'ring-1 ring-red-300' : ''}
+                              `}
+                            >
+                              {event.time && <span className="opacity-80 mr-1">{formatTime(event.time)}</span>}
+                              {event.isPrivate && '🔒 '}
                               {event.title}
                             </div>
                           );
                         })}
                         {dateEvents.length > 4 && (
-                          <div className={`text-xs ${isSelected ? 'text-white/70' : 'text-gray-400 dark:text-gray-500'}`}>
+                          <div className={`text-xs font-medium ${isSelected ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'}`}>
                             +{dateEvents.length - 4} more
                           </div>
                         )}
