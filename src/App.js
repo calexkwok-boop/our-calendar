@@ -824,7 +824,7 @@ function App() {
 
       recognitionRef.current.onend = () => setIsListening(false);
     }
-  }, [selectedCategory, isPrivate, events, selectedDate]);
+  }, [selectedCategory, isPrivate, selectedDate]);
 
   const toggleVoiceInput = () => {
     if (isListening) {
