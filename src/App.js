@@ -642,6 +642,79 @@ function App() {
     };
 
     loadData();
+
+    // Listen for changes to OTHER users' events (shared calendars)
+    // We use a separate loadSharedEvents function that only fetches shared data
+    // and merges it with local state — never triggers a save
+    const loadSharedEvents = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        const userEmail = session?.user?.email;
+        if (!userId) return;
+
+        // Get calendars shared with me
+        const { data: sharedData } = await supabase
+          .from('shared_access')
+          .select('*')
+          .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`);
+
+        if (!sharedData || sharedData.length === 0) return;
+
+        const ownerIds = sharedData.map(s => s.owner_id);
+        const { data: sharedEventsData } = await supabase
+          .from('events')
+          .select('*')
+          .in('user_id', ownerIds);
+
+        if (!sharedEventsData) return;
+
+        // Merge shared events into current state without overwriting own events
+        setEvents(prev => {
+          const merged = {};
+          // Keep all own events
+          Object.entries(prev).forEach(([dateKey, evts]) => {
+            merged[dateKey] = evts.filter(e => !e.isShared);
+          });
+          // Add fresh shared events
+          sharedEventsData.forEach(event => {
+            if (!merged[event.date]) merged[event.date] = [];
+            merged[event.date].push({
+              id: event.id,
+              title: event.title,
+              time: event.time,
+              date: event.date,
+              category: event.category,
+              isPrivate: event.is_private,
+              isUrgent: event.is_urgent,
+              isMultiDay: event.is_multi_day,
+              multiDayId: event.multi_day_id,
+              isAnnual: event.is_annual || false,
+              annualMonth: event.annual_month || null,
+              annualDay: event.annual_day || null,
+              recurrence: event.recurrence || 'once',
+              exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
+              createdBy: event.created_by,
+              createdAt: event.created_at,
+              userId: event.user_id,
+              isShared: true
+            });
+          });
+          return merged;
+        });
+      } catch (err) {
+        console.error('Error refreshing shared events:', err);
+      }
+    };
+
+    const sharedSubscription = supabase
+      .channel('shared-events')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        loadSharedEvents();
+      })
+      .subscribe();
+
+    return () => sharedSubscription.unsubscribe();
   }, []);
 
   // Check auth session
