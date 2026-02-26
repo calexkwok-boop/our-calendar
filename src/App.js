@@ -97,7 +97,8 @@ function App() {
   const [firstTapDate, setFirstTapDate] = useState(null);
   const [lastTapTime, setLastTapTime] = useState(0);
   const [isAnnual, setIsAnnual] = useState(false);
-  const [recurrence, setRecurrence] = useState('once'); // 'once' | 'weekly' | 'monthly' | 'annual'
+  const [recurrence, setRecurrence] = useState('once');
+  const [calendarView, setCalendarView] = useState('month'); // 'month' | 'week'
   const [holidays, setHolidays] = useState({});
   const [showHolidays, setShowHolidays] = useState(true);
   const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
@@ -984,6 +985,25 @@ function App() {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + delta, 1));
   };
 
+  const changeWeek = (delta) => {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + delta * 7);
+    setCurrentDate(d);
+  };
+
+  // Returns the 7 days of the week containing currentDate
+  const getWeekDays = (date) => {
+    const d = new Date(date);
+    const day = d.getDay(); // 0=Sun
+    const sunday = new Date(d);
+    sunday.setDate(d.getDate() - day);
+    return Array.from({ length: 7 }, (_, i) => {
+      const dd = new Date(sunday);
+      dd.setDate(sunday.getDate() + i);
+      return dd;
+    });
+  };
+
   const selectedDateKey = getDateKey(selectedDate);
   const selectedEvents = getEventsForDate(selectedDate);
 
@@ -1226,14 +1246,44 @@ function App() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
+              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+            >
               <ChevronLeft className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </button>
-            <h2 className="text-2xl font-semibold bg-gradient-to-r from-rose-600 to-purple-600 bg-clip-text text-transparent">
-              {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            </h2>
-            <button onClick={() => changeMonth(1)} className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200">
+            <div className="flex flex-col items-center gap-1">
+              <h2 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-rose-600 to-purple-600 bg-clip-text text-transparent">
+                {calendarView === 'month'
+                  ? currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                  : (() => {
+                      const days = getWeekDays(currentDate);
+                      const start = days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                      const end = days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                      return `${start} – ${end}`;
+                    })()
+                }
+              </h2>
+              <div className="flex rounded-lg overflow-hidden border border-purple-200 dark:border-gray-600 text-xs font-medium">
+                <button
+                  onClick={() => setCalendarView('month')}
+                  className={`px-3 py-1 transition-all ${calendarView === 'month' ? 'bg-purple-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                >
+                  Month
+                </button>
+                <button
+                  onClick={() => setCalendarView('week')}
+                  className={`px-3 py-1 transition-all ${calendarView === 'week' ? 'bg-purple-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                >
+                  Week
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
+              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+            >
               <ChevronRight className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </button>
           </div>
@@ -1450,108 +1500,168 @@ function App() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6">
             <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-xl border border-purple-200 dark:border-purple-700">
               <p className="text-sm text-purple-700 dark:text-purple-300 text-center">
                 💡 <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
               </p>
             </div>
-            <div className="grid grid-cols-7 gap-2 mb-2">
+
+            {/* Day headers */}
+            <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="text-center text-sm font-semibold text-gray-600 dark:text-gray-200 py-2">{day}</div>
+                <div key={day} className="text-center text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-200 py-2">{day}</div>
               ))}
             </div>
-            <div className="grid grid-cols-7 gap-2">
-              {getDaysInMonth(currentDate).map((date, index) => {
-                const dateKey = date ? getDateKey(date) : null;
-                const dateEvents = getEventsForDate(date);
-                const isSelected = date && isSameDay(date, selectedDate);
-                const isTodayDate = date && isToday(date);
-                const isInSelection = date && selectedDates.some(d => isSameDay(d, date));
-                const hasUrgentEvent = dateEvents.some(e => e.isUrgent);
-                const hasHoliday = dateEvents.some(e => e.isHoliday);
-                const weatherData = showWeather && dateKey ? weather[dateKey] : null;
 
-                const multiDayEvents = dateEvents.filter(e => e.isMultiDay);
-                const uniqueMultiDayIds = [...new Set(multiDayEvents.map(e => e.multiDayId))];
+            {calendarView === 'month' ? (
+              /* ── MONTH VIEW ── */
+              <div className="grid grid-cols-7 gap-2">
+                {getDaysInMonth(currentDate).map((date, index) => {
+                  const dateKey = date ? getDateKey(date) : null;
+                  const dateEvents = getEventsForDate(date);
+                  const isSelected = date && isSameDay(date, selectedDate);
+                  const isTodayDate = date && isToday(date);
+                  const isInSelection = date && selectedDates.some(d => isSameDay(d, date));
+                  const hasUrgentEvent = dateEvents.some(e => e.isUrgent);
+                  const hasHoliday = dateEvents.some(e => e.isHoliday);
+                  const weatherData = showWeather && dateKey ? weather[dateKey] : null;
 
-                const multiDayBars = uniqueMultiDayIds.map(multiDayId => {
-                  const allDatesForEvent = Object.entries(events)
-                    .filter(([_, evts]) => evts.some(e => e.multiDayId === multiDayId))
-                    .map(([dateKey]) => {
-                      const [year, month, day] = dateKey.split('-').map(Number);
-                      return new Date(year, month - 1, day);
-                    })
-                    .sort((a, b) => a - b);
+                  const multiDayEvents = dateEvents.filter(e => e.isMultiDay);
+                  const uniqueMultiDayIds = [...new Set(multiDayEvents.map(e => e.multiDayId))];
+                  const multiDayBars = uniqueMultiDayIds.map(multiDayId => {
+                    const allDatesForEvent = Object.entries(events)
+                      .filter(([_, evts]) => evts.some(e => e.multiDayId === multiDayId))
+                      .map(([dk]) => { const [y,m,d] = dk.split('-').map(Number); return new Date(y,m-1,d); })
+                      .sort((a, b) => a - b);
+                    const isFirst = date && allDatesForEvent[0] && isSameDay(date, allDatesForEvent[0]);
+                    const isLast = date && allDatesForEvent[allDatesForEvent.length-1] && isSameDay(date, allDatesForEvent[allDatesForEvent.length-1]);
+                    const isMiddle = date && allDatesForEvent.some(d => isSameDay(d, date)) && !isFirst && !isLast;
+                    const eventWithId = dateEvents.find(e => e.multiDayId === multiDayId);
+                    const categoryColor = eventWithId ? categories[eventWithId.category || 'other']?.color : 'bg-purple-500';
+                    return { isFirst, isLast, isMiddle, categoryColor };
+                  });
 
-                  const isFirst = date && allDatesForEvent[0] && isSameDay(date, allDatesForEvent[0]);
-                  const isLast = date && allDatesForEvent[allDatesForEvent.length - 1] && isSameDay(date, allDatesForEvent[allDatesForEvent.length - 1]);
-                  const isMiddle = date && allDatesForEvent.some(d => isSameDay(d, date)) && !isFirst && !isLast;
-                  const eventWithId = dateEvents.find(e => e.multiDayId === multiDayId);
-                  const categoryColor = eventWithId ? categories[eventWithId.category || 'other']?.color : 'bg-purple-500';
-                  return { isFirst, isLast, isMiddle, categoryColor };
-                });
+                  return (
+                    <div key={index} className="relative pb-3">
+                      <button
+                        onClick={() => handleDateTap(date)}
+                        disabled={!date}
+                        className={`
+                          w-full aspect-square rounded-xl p-2 transition-all duration-200 relative select-none
+                          ${!date ? 'invisible' : 'bg-white dark:bg-gray-700'}
+                          ${hasUrgentEvent && !isSelected && !isInSelection ? 'ring-2 ring-red-500 shadow-lg shadow-red-200' : ''}
+                          ${isInSelection ? 'bg-gradient-to-br from-purple-400 to-indigo-400 text-white shadow-lg scale-105 ring-2 ring-purple-300' : ''}
+                          ${isSelected && !isInSelection ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg scale-105' : ''}
+                          ${!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 text-purple-900 dark:text-purple-200 ring-2 ring-purple-400' : ''}
+                          ${!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent ? 'text-gray-700 dark:text-gray-100 hover:bg-purple-50 dark:hover:bg-gray-600' : ''}
+                          ${hasUrgentEvent && !isSelected && !isInSelection ? 'bg-red-50 dark:bg-red-900/30' : ''}
+                        `}
+                        style={{ zIndex: 10 }}
+                      >
+                        <div className={`text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
+                          {date ? date.getDate() : ''}
+                          {hasHoliday && !isSelected && !isInSelection && (
+                            <span className="absolute top-0.5 right-0.5 text-xs">🇺🇸</span>
+                          )}
+                        </div>
+                        {weatherData && !isSelected && !isInSelection && (
+                          <div className="flex flex-col items-center leading-none mt-0.5">
+                            <span style={{ fontSize: weatherData.icon.length > 2 ? '0.5rem' : '0.85rem' }} className={`${weatherData.icon.length > 2 ? `font-bold ${weatherData.color}` : ''}`}>
+                              {weatherData.icon}
+                            </span>
+                            <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                              {weatherData.high}°/{weatherData.low}°
+                            </span>
+                          </div>
+                        )}
+                        {dateEvents.length > 0 && (
+                          <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex gap-0.5">
+                            {hasHoliday && <div className={`w-1.5 h-1.5 rounded-full ${isSelected || isInSelection ? 'bg-white' : 'bg-red-400'}`} />}
+                            {[...new Set(dateEvents.filter(e => !e.isMultiDay && !e.isHoliday).map(e => e.category || 'other'))].slice(0, 2).map((cat, i) => (
+                              <div key={i} className={`w-1.5 h-1.5 rounded-full ${isSelected || isInSelection ? 'bg-white' : categories[cat]?.color || 'bg-gray-500'}`} />
+                            ))}
+                          </div>
+                        )}
+                      </button>
+                      {multiDayBars.map((bar, barIndex) => (
+                        bar.isFirst || bar.isLast || bar.isMiddle ? (
+                          <div key={barIndex} className="absolute left-0 right-0 flex items-center" style={{ top: '100%', marginTop: `${barIndex * 5}px` }}>
+                            {bar.isFirst && <div className={`h-2 ${bar.categoryColor} rounded-l-full`} style={{ width: '85%', marginLeft: '15%' }} />}
+                            {bar.isMiddle && <div className={`h-2 ${bar.categoryColor} w-full`} />}
+                            {bar.isLast && <div className={`h-2 ${bar.categoryColor} rounded-r-full`} style={{ width: '85%' }} />}
+                          </div>
+                        ) : null
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* ── WEEK VIEW ── */
+              <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                {getWeekDays(currentDate).map((date, index) => {
+                  const dateKey = getDateKey(date);
+                  const dateEvents = getEventsForDate(date);
+                  const isSelected = isSameDay(date, selectedDate);
+                  const isTodayDate = isToday(date);
+                  const hasUrgentEvent = dateEvents.some(e => e.isUrgent);
+                  const hasHoliday = dateEvents.some(e => e.isHoliday);
+                  const weatherData = showWeather ? weather[dateKey] : null;
 
-                return (
-                  <div key={index} className="relative pb-3">
-                    <button
-                      onClick={() => handleDateTap(date)}
-                      disabled={!date}
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => { setSelectedDate(date); setSelectedDates([]); }}
                       className={`
-                        w-full aspect-square rounded-xl p-2 transition-all duration-200 relative select-none
-                        ${!date ? 'invisible' : 'bg-white dark:bg-gray-700'}
-                        ${hasUrgentEvent && !isSelected && !isInSelection ? 'ring-2 ring-red-500 shadow-lg shadow-red-200' : ''}
-                        ${isInSelection ? 'bg-gradient-to-br from-purple-400 to-indigo-400 text-white shadow-lg scale-105 ring-2 ring-purple-300' : ''}
-                        ${isSelected && !isInSelection ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg scale-105' : ''}
-                        ${!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 text-purple-900 dark:text-purple-200 ring-2 ring-purple-400' : ''}
-                        ${!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent ? 'text-gray-700 dark:text-gray-100 hover:bg-purple-50 dark:hover:bg-gray-600' : ''}
-                        ${hasUrgentEvent && !isSelected && !isInSelection ? 'bg-red-50 dark:bg-red-900/30' : ''}
+                        min-h-32 rounded-xl p-2 cursor-pointer transition-all duration-200 flex flex-col gap-1
+                        ${isSelected ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg ring-2 ring-purple-300' : ''}
+                        ${!isSelected && isTodayDate ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : ''}
+                        ${!isSelected && !isTodayDate ? 'bg-gray-50 dark:bg-gray-700 hover:bg-purple-50 dark:hover:bg-gray-600' : ''}
+                        ${hasUrgentEvent && !isSelected ? 'ring-2 ring-red-500' : ''}
                       `}
-                      style={{ zIndex: 10 }}
                     >
-                      <div className={`text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
-                        {date ? date.getDate() : ''}
-                        {hasHoliday && !isSelected && !isInSelection && (
-                          <span className="absolute top-0.5 right-0.5 text-xs">🇺🇸</span>
+                      {/* Date number */}
+                      <div className={`text-xs font-bold mb-1 ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-200' : 'text-gray-700 dark:text-gray-200'}`}>
+                        {date.getDate()}
+                        {hasHoliday && <span className="ml-1">🇺🇸</span>}
+                      </div>
+
+                      {/* Weather */}
+                      {weatherData && !isSelected && (
+                        <div className="flex items-center gap-0.5 mb-1">
+                          <span style={{ fontSize: '0.7rem' }}>{weatherData.icon.length > 2 ? <span className={`text-xs font-bold ${weatherData.color}`}>{weatherData.icon}</span> : weatherData.icon}</span>
+                          <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{weatherData.high}°/{weatherData.low}°</span>
+                        </div>
+                      )}
+
+                      {/* Events */}
+                      <div className="flex flex-col gap-0.5 overflow-hidden">
+                        {dateEvents.slice(0, 4).map(event => {
+                          const cat = categories[event.category || 'other'] || categories.other;
+                          if (event.isHoliday) return (
+                            <div key={event.id} className="text-xs px-1 py-0.5 rounded bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 truncate">
+                              {event.title}
+                            </div>
+                          );
+                          return (
+                            <div key={event.id} className={`text-xs px-1 py-0.5 rounded ${isSelected ? 'bg-white/20 text-white' : `${cat.lightBg} text-gray-800`} truncate`}>
+                              {event.time && <span className="opacity-70 mr-1">{formatTime(event.time)}</span>}
+                              {event.title}
+                            </div>
+                          );
+                        })}
+                        {dateEvents.length > 4 && (
+                          <div className={`text-xs ${isSelected ? 'text-white/70' : 'text-gray-400 dark:text-gray-500'}`}>
+                            +{dateEvents.length - 4} more
+                          </div>
                         )}
                       </div>
-                      {weatherData && !isSelected && !isInSelection && (
-                        <div className="flex flex-col items-center leading-none mt-0.5">
-                          <span style={{ fontSize: weatherData.icon.length > 2 ? '0.5rem' : '0.85rem' }} className={`${weatherData.icon.length > 2 ? `font-bold ${weatherData.color}` : ''}`}>
-                            {weatherData.icon}
-                          </span>
-                          <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
-                            {weatherData.high}°/{weatherData.low}°
-                          </span>
-                        </div>
-                      )}
-                      {dateEvents.length > 0 && (
-                        <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex gap-0.5">
-                          {hasHoliday && (
-                            <div className={`w-1.5 h-1.5 rounded-full ${isSelected || isInSelection ? 'bg-white' : 'bg-red-400'}`} />
-                          )}
-                          {[...new Set(dateEvents.filter(e => !e.isMultiDay && !e.isHoliday).map(e => e.category || 'other'))].slice(0, 2).map((cat, i) => (
-                            <div
-                              key={i}
-                              className={`w-1.5 h-1.5 rounded-full ${isSelected || isInSelection ? 'bg-white' : categories[cat]?.color || 'bg-gray-500'}`}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </button>
-                    {multiDayBars.map((bar, barIndex) => (
-                      bar.isFirst || bar.isLast || bar.isMiddle ? (
-                        <div key={barIndex} className="absolute left-0 right-0 flex items-center" style={{ top: '100%', marginTop: `${barIndex * 5}px` }}>
-                          {bar.isFirst && <div className={`h-2 ${bar.categoryColor} rounded-l-full`} style={{ width: '85%', marginLeft: '15%' }} />}
-                          {bar.isMiddle && <div className={`h-2 ${bar.categoryColor} w-full`} />}
-                          {bar.isLast && <div className={`h-2 ${bar.categoryColor} rounded-r-full`} style={{ width: '85%' }} />}
-                        </div>
-                      ) : null
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
