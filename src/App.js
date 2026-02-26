@@ -76,6 +76,7 @@ function App() {
   const [isListening, setIsListening] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const recognitionRef = useRef(null);
+  const saveTimeoutRef = useRef(null);
   const [currentUser, setCurrentUser] = useState('');
   const [showUserSetup, setShowUserSetup] = useState(false);
   const [selectedDates, setSelectedDates] = useState([]);
@@ -336,39 +337,47 @@ function App() {
 
   const saveEvents = async (newEvents) => {
     try {
+      // Update state immediately so UI is responsive
       setEvents(newEvents);
-      const eventsArray = [];
-      Object.entries(newEvents).forEach(([date, dateEvents]) => {
-        dateEvents.forEach(event => {
-          // Only save events owned by current user
-          if (event.userId && event.userId !== user?.id) return;
-          eventsArray.push({
-            id: event.id,
-            date: event.date,
-            title: event.title,
-            time: event.time,
-            category: event.category,
-            is_private: event.isPrivate || false,
-            is_private_for: event.isPrivate ? event.createdBy : null,
-            is_urgent: event.isUrgent || false,
-            is_multi_day: event.isMultiDay || false,
-            multi_day_id: event.multiDayId,
-            is_annual: event.isAnnual || false,
-            annual_month: event.annualMonth || null,
-            annual_day: event.annualDay || null,
-            recurrence: event.recurrence || 'once',
-            created_by: event.createdBy,
-            created_at: event.createdAt,
-            user_id: user?.id
+
+      // Debounce the actual DB write — wait 800ms after last call
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(async () => {
+        try {
+          const eventsArray = [];
+          Object.entries(newEvents).forEach(([date, dateEvents]) => {
+            dateEvents.forEach(event => {
+              if (event.userId && event.userId !== user?.id) return;
+              eventsArray.push({
+                id: event.id,
+                date: event.date,
+                title: event.title,
+                time: event.time,
+                category: event.category,
+                is_private: event.isPrivate || false,
+                is_private_for: event.isPrivate ? event.createdBy : null,
+                is_urgent: event.isUrgent || false,
+                is_multi_day: event.isMultiDay || false,
+                multi_day_id: event.multiDayId,
+                is_annual: event.isAnnual || false,
+                annual_month: event.annualMonth || null,
+                annual_day: event.annualDay || null,
+                recurrence: event.recurrence || 'once',
+                created_by: event.createdBy,
+                created_at: event.createdAt,
+                user_id: user?.id
+              });
+            });
           });
-        });
-      });
-      // Only delete and reinsert current user's events
-      await supabase.from('events').delete().eq('user_id', user?.id);
-      if (eventsArray.length > 0) {
-        const { error } = await supabase.from('events').insert(eventsArray);
-        if (error) console.error('Error saving events to Supabase:', error);
-      }
+          await supabase.from('events').delete().eq('user_id', user?.id);
+          if (eventsArray.length > 0) {
+            const { error } = await supabase.from('events').insert(eventsArray);
+            if (error) console.error('Error saving events to Supabase:', error);
+          }
+        } catch (err) {
+          console.error('Error writing to Supabase:', err);
+        }
+      }, 800);
     } catch (error) {
       console.error('Error saving events:', error);
     }
@@ -624,15 +633,6 @@ function App() {
     };
 
     loadData();
-
-    const eventsSubscription = supabase
-      .channel('events-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
-        loadData();
-      })
-      .subscribe();
-
-    return () => eventsSubscription.unsubscribe();
   }, []);
 
   // Check auth session
