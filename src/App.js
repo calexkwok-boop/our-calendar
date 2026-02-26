@@ -119,16 +119,24 @@ function App() {
     Object.keys(updatedReactions).forEach(k => {
       if (updatedReactions[k].length === 0) delete updatedReactions[k];
     });
-    // Update state directly first so reaction persists through re-render
+
+    // Update local state immediately — single setEvents call, no saveEvents
     setEvents(prev => ({
       ...prev,
       [actualDateKey]: prev[actualDateKey].map(e =>
         e.id === event.id ? { ...e, reactions: updatedReactions } : e
       )
     }));
-    // Then debounce the DB save
-    handleUpdateEventField(actualDateKey, event.id, { reactions: updatedReactions });
     setShowReactionPicker(null);
+
+    // Save only the reactions field directly to DB — bypass saveEvents entirely
+    supabase
+      .from('events')
+      .update({ reactions: JSON.stringify(updatedReactions) })
+      .eq('id', event.id)
+      .then(({ error }) => {
+        if (error) console.error('Error saving reaction:', error);
+      });
   }; // 'month' | 'week'
   const [holidays, setHolidays] = useState({});
   const [showHolidays, setShowHolidays] = useState(true);
