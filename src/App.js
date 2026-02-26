@@ -872,6 +872,11 @@ function App() {
   const handleUpdateCategory = (key, updates) => {
     const updatedCategories = { ...categories, [key]: { ...categories[key], ...updates } };
     saveCategories(updatedCategories);
+  };
+
+  const handleUpdateCategoryAndClose = (key, updates) => {
+    const updatedCategories = { ...categories, [key]: { ...categories[key], ...updates } };
+    saveCategories(updatedCategories);
     setEditingCategory(null);
   };
 
