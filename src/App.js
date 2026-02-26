@@ -1071,15 +1071,15 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-2 sm:p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
-                <Calendar className="w-8 h-8 text-white" />
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl shrink-0">
+                <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
               </div>
-              <div>
+              <div className="min-w-0">
                 {isEditingTitle ? (
                   <input
                     type="text"
@@ -1095,42 +1095,42 @@ function App() {
                         localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
                       }
                     }}
-                    className="text-3xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 border-2 border-purple-300 rounded-lg"
+                    className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 border-2 border-purple-300 rounded-lg w-full"
                     autoFocus
                   />
                 ) : (
                   <h1
                     onClick={() => setIsEditingTitle(true)}
-                    className="text-3xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:opacity-70 transition-opacity"
+                    className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:opacity-70 transition-opacity truncate"
                     title="Click to rename calendar"
                   >
                     {calendarTitle}
                   </h1>
                 )}
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Logged in as <span className="font-semibold text-purple-600 dark:text-purple-400">{user?.email}</span>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">{user?.email}</span>
                   <button onClick={handleLogout} className="ml-2 text-xs text-purple-500 hover:text-purple-700 underline">logout</button>
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setShowSharePanel(!showSharePanel)}
                 className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
                 title="Share calendar"
               >
-                <User className="w-5 h-5" />
+                <User className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button
                 onClick={() => setShowNotificationSettings(!showNotificationSettings)}
                 className={`p-2 rounded-xl transition-all duration-200 ${notificationsEnabled ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
                 title={notificationsEnabled ? 'Notifications enabled' : 'Enable notifications'}
               >
-                {notificationsEnabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
+                {notificationsEnabled ? <Bell className="w-4 h-4 sm:w-5 sm:h-5" /> : <BellOff className="w-4 h-4 sm:w-5 sm:h-5" />}
               </button>
               <button
                 onClick={() => setShowHolidays(!showHolidays)}
-                className={`p-2 rounded-xl transition-all duration-200 text-base ${showHolidays ? 'bg-red-100 dark:bg-red-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
+                className={`p-2 rounded-xl transition-all duration-200 text-sm ${showHolidays ? 'bg-red-100 dark:bg-red-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
                 title={showHolidays ? 'Hide US holidays' : 'Show US holidays'}
               >
                 🇺🇸
@@ -1139,14 +1139,14 @@ function App() {
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
                 className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
               >
-                <Settings className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
               </button>
               <button
                 onClick={() => setDarkMode(!darkMode)}
                 className="p-2 rounded-xl transition-all duration-200 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-yellow-400"
                 title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
               >
-                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {darkMode ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
               </button>
             </div>
           </div>
