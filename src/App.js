@@ -176,13 +176,10 @@ function App() {
     return { icon: '⛈️', color: 'text-purple-500' };
   };
 
-  const fetchWeather = async () => {
+  const fetchWeather = async (lat, lon) => {
     try {
-      // Use Fresno, CA coordinates (from user location)
-      const lat = 36.7378;
-      const lon = -119.7871;
       const res = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FLos_Angeles&forecast_days=14`
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=14`
       );
       if (!res.ok) return;
       const data = await res.json();
@@ -202,11 +199,30 @@ function App() {
     }
   };
 
-  // Fetch weather on mount, refresh every 3 hours
+  // Get user location then fetch weather
   useEffect(() => {
-    fetchWeather();
-    const interval = setInterval(fetchWeather, 3 * 60 * 60 * 1000);
-    return () => clearInterval(interval);
+    const initWeather = () => {
+      if (!navigator.geolocation) {
+        // Fallback to Fresno if geolocation not supported
+        fetchWeather(36.7378, -119.7871);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          fetchWeather(latitude, longitude);
+          // Refresh every 3 hours with same location
+          const interval = setInterval(() => fetchWeather(latitude, longitude), 3 * 60 * 60 * 1000);
+          return () => clearInterval(interval);
+        },
+        () => {
+          // User denied or error — fallback to Fresno
+          fetchWeather(36.7378, -119.7871);
+        },
+        { timeout: 10000 }
+      );
+    };
+    initWeather();
   }, []);
   const handleDateTap = (date) => {
     if (!date) return;
