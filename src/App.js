@@ -110,17 +110,23 @@ function App() {
     const currentReactions = event.reactions || {};
     const currentUsers = currentReactions[emoji] || [];
     let updatedUsers;
-    // Toggle — if already reacted, remove; otherwise add
     if (currentUsers.includes(currentUser)) {
       updatedUsers = currentUsers.filter(u => u !== currentUser);
     } else {
       updatedUsers = [...currentUsers, currentUser];
     }
     const updatedReactions = { ...currentReactions, [emoji]: updatedUsers };
-    // Clean up empty arrays
     Object.keys(updatedReactions).forEach(k => {
       if (updatedReactions[k].length === 0) delete updatedReactions[k];
     });
+    // Update state directly first so reaction persists through re-render
+    setEvents(prev => ({
+      ...prev,
+      [actualDateKey]: prev[actualDateKey].map(e =>
+        e.id === event.id ? { ...e, reactions: updatedReactions } : e
+      )
+    }));
+    // Then debounce the DB save
     handleUpdateEventField(actualDateKey, event.id, { reactions: updatedReactions });
     setShowReactionPicker(null);
   }; // 'month' | 'week'
