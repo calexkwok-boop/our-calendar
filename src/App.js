@@ -690,7 +690,7 @@ function App() {
     const checkNotifications = () => {
       const now = new Date();
       Object.entries(events).forEach(([dateKey, dateEvents]) => {
-        const eventDate = new Date(dateKey);
+        const eventDate = new Date(dateKey + 'T00:00:00');
         dateEvents.forEach(event => {
           if (event.isPrivate && showPrivateEvents === false) return;
           if (onlyNotifyUrgent && !event.isUrgent) return;
@@ -954,9 +954,11 @@ function App() {
   };
 
   const handleUpdateEvent = (dateKey, eventId, updates) => {
+    // Find the actual date key where this event is stored
+    const actualDateKey = Object.keys(events).find(k => events[k].some(e => e.id === eventId)) || dateKey;
     const updatedEvents = {
       ...events,
-      [dateKey]: events[dateKey].map(e => e.id === eventId ? { ...e, ...updates } : e)
+      [actualDateKey]: events[actualDateKey].map(e => e.id === eventId ? { ...e, ...updates } : e)
         .sort((a, b) => {
           if (!a.time) return 1;
           if (!b.time) return -1;
@@ -969,9 +971,11 @@ function App() {
 
   // Update a field without closing the edit form (for toggles)
   const handleUpdateEventField = (dateKey, eventId, updates) => {
+    // Find the actual date key where this event is stored
+    const actualDateKey = Object.keys(events).find(k => events[k].some(e => e.id === eventId)) || dateKey;
     const updatedEvents = {
       ...events,
-      [dateKey]: events[dateKey]?.map(e => e.id === eventId ? { ...e, ...updates } : e) || []
+      [actualDateKey]: events[actualDateKey]?.map(e => e.id === eventId ? { ...e, ...updates } : e) || []
     };
     saveEvents(updatedEvents);
   };
@@ -1953,8 +1957,8 @@ function App() {
                               defaultChecked={event.isAnnual}
                               onChange={(e) => handleUpdateEventField(event.date, event.id, {
                                 isAnnual: e.target.checked,
-                                annualMonth: e.target.checked ? (new Date(event.date).getMonth() + 1) : null,
-                                annualDay: e.target.checked ? new Date(event.date).getDate() : null
+                                annualMonth: e.target.checked ? (new Date(event.date + 'T00:00:00').getMonth() + 1) : null,
+                                annualDay: e.target.checked ? new Date(event.date + 'T00:00:00').getDate() : null
                               })}
                               className="rounded"
                             />
