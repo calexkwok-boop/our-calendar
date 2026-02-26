@@ -1693,7 +1693,7 @@ function App() {
                                 </div>
                               )}
                             </div>
-                            <div className="text-gray-800 dark:text-white font-medium mb-1">{event.title}</div>
+                            <div className="text-gray-900 font-medium mb-1">{event.title}</div>
                             {event.createdBy && (
                               <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                 <User className="w-3 h-3" />
