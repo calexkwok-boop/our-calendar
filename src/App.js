@@ -951,6 +951,15 @@ function App() {
     setEditingEvent(null);
   };
 
+  // Update a field without closing the edit form (for toggles)
+  const handleUpdateEventField = (dateKey, eventId, updates) => {
+    const updatedEvents = {
+      ...events,
+      [dateKey]: events[dateKey].map(e => e.id === eventId ? { ...e, ...updates } : e)
+    };
+    saveEvents(updatedEvents);
+  };
+
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -1885,24 +1894,30 @@ function App() {
                               <option key={key} value={key}>{cat.label}</option>
                             ))}
                           </select>
-                          <label className="flex items-center gap-2 text-sm dark:text-gray-300">
-                            <input
-                              type="checkbox"
-                              defaultChecked={event.isPrivate}
-                              onChange={(e) => handleUpdateEvent(selectedDateKey, event.id, { isPrivate: e.target.checked })}
-                              className="rounded"
-                            />
-                            Private event
-                          </label>
-                          <label className="flex items-center gap-2 text-sm dark:text-gray-300">
-                            <input
-                              type="checkbox"
-                              defaultChecked={event.isUrgent}
-                              onChange={(e) => handleUpdateEvent(selectedDateKey, event.id, { isUrgent: e.target.checked })}
-                              className="rounded"
-                            />
-                            🚨 Urgent event
-                          </label>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleUpdateEventField(selectedDateKey, event.id, { isPrivate: !event.isPrivate })}
+                              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                                event.isPrivate
+                                  ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md'
+                                  : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                              }`}
+                            >
+                              <Lock className="w-3 h-3" />
+                              {event.isPrivate ? 'Private' : 'Shared'}
+                            </button>
+                            <button
+                              onClick={() => handleUpdateEventField(selectedDateKey, event.id, { isUrgent: !event.isUrgent })}
+                              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                                event.isUrgent
+                                  ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md animate-pulse'
+                                  : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                              }`}
+                            >
+                              <AlertTriangle className="w-3 h-3" />
+                              {event.isUrgent ? 'Urgent' : 'Normal'}
+                            </button>
+                          </div>
                           <label className="flex items-center gap-2 text-sm dark:text-gray-300">
                             <input
                               type="checkbox"
