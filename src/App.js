@@ -1067,7 +1067,7 @@ function App() {
   if (showTimePrompt && pendingEvent) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ padding: '1rem' }}>
-        <div style={{ width: '100%', maxWidth: '28rem', boxSizing: 'border-box' }} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+        <div style={{ width: '100%', maxWidth: '28rem', boxSizing: 'border-box' }} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
             What time?
           </h2>
