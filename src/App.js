@@ -1515,8 +1515,8 @@ function App() {
                       </div>
                       {weatherData && !isSelected && !isInSelection && (
                         <div className="flex flex-col items-center leading-none mt-0.5">
-                          <span style={{ fontSize: '0.65rem' }}>{weatherData.emoji}</span>
-                          <span style={{ fontSize: '0.5rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                          <span style={{ fontSize: '0.85rem' }}>{weatherData.emoji}</span>
+                          <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
                             {weatherData.high}°/{weatherData.low}°
                           </span>
                         </div>
