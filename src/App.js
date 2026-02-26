@@ -1896,7 +1896,7 @@ function App() {
                           </select>
                           <div className="flex gap-2">
                             <button
-                              onClick={() => handleUpdateEventField(selectedDateKey, event.id, { isPrivate: !event.isPrivate })}
+                              onClick={() => handleUpdateEventField(event.date, event.id, { isPrivate: !event.isPrivate })}
                               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                                 event.isPrivate
                                   ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md'
@@ -1907,7 +1907,7 @@ function App() {
                               {event.isPrivate ? 'Private' : 'Shared'}
                             </button>
                             <button
-                              onClick={() => handleUpdateEventField(selectedDateKey, event.id, { isUrgent: !event.isUrgent })}
+                              onClick={() => handleUpdateEventField(event.date, event.id, { isUrgent: !event.isUrgent })}
                               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                                 event.isUrgent
                                   ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md animate-pulse'
