@@ -295,15 +295,21 @@ function App() {
 
         if (event.recurrence === 'annual' || event.isAnnual) {
           if (event.annualMonth === month && event.annualDay === day) {
-            virtualRecurrences.push({ ...event, date: dateKey, isVirtualAnnual: true });
+            if (!(event.exceptions || []).includes(dateKey)) {
+              virtualRecurrences.push({ ...event, date: dateKey, isVirtualAnnual: true });
+            }
           }
         } else if (event.recurrence === 'weekly') {
           if (eventDate.getDay() === dayOfWeek && date > eventDate) {
-            virtualRecurrences.push({ ...event, date: dateKey, isVirtualRecurrence: true });
+            if (!(event.exceptions || []).includes(dateKey)) {
+              virtualRecurrences.push({ ...event, date: dateKey, isVirtualRecurrence: true });
+            }
           }
         } else if (event.recurrence === 'monthly') {
           if (eventDate.getDate() === day && date > eventDate) {
-            virtualRecurrences.push({ ...event, date: dateKey, isVirtualRecurrence: true });
+            if (!(event.exceptions || []).includes(dateKey)) {
+              virtualRecurrences.push({ ...event, date: dateKey, isVirtualRecurrence: true });
+            }
           }
         }
       });
@@ -363,6 +369,7 @@ function App() {
                 annual_month: event.annualMonth || null,
                 annual_day: event.annualDay || null,
                 recurrence: event.recurrence || 'once',
+                exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
                 created_by: event.createdBy,
                 created_at: event.createdAt,
                 user_id: user?.id
@@ -544,6 +551,7 @@ function App() {
               annualMonth: event.annual_month || null,
               annualDay: event.annual_day || null,
               recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
+              exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
               createdBy: event.created_by,
               createdAt: event.created_at,
               userId: event.user_id,
@@ -574,6 +582,7 @@ function App() {
                 annualMonth: event.annual_month || null,
                 annualDay: event.annual_day || null,
                 recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
+                exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
                 createdBy: event.created_by,
                 createdAt: event.created_at,
                 userId: event.user_id,
@@ -928,15 +937,31 @@ function App() {
     setPendingEvent(null);
   };
 
-  const handleDeleteEvent = (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false) => {
+  const handleDeleteEvent = (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false, skipOnce = false) => {
     const eventToDelete = events[dateKey]?.find(e => e.id === eventId);
 
     if (isVirtualAnnual || isVirtualRecurrence) {
+      // Find the original event
       let originalDateKey = null;
+      let originalEvent = null;
       Object.entries(events).forEach(([key, evts]) => {
-        if (evts.some(e => e.id === eventId)) originalDateKey = key;
+        const found = evts.find(e => e.id === eventId);
+        if (found) { originalDateKey = key; originalEvent = found; }
       });
-      if (originalDateKey) {
+      if (!originalDateKey || !originalEvent) return;
+
+      if (skipOnce) {
+        // Add this date as an exception so it's skipped in future renders
+        const updatedExceptions = [...(originalEvent.exceptions || []), dateKey];
+        const updatedEvents = {
+          ...events,
+          [originalDateKey]: events[originalDateKey].map(e =>
+            e.id === eventId ? { ...e, exceptions: updatedExceptions } : e
+          )
+        };
+        saveEvents(updatedEvents);
+      } else {
+        // Delete the whole recurring event
         const updatedEvents = { ...events, [originalDateKey]: events[originalDateKey].filter(e => e.id !== eventId) };
         if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
         saveEvents(updatedEvents);
@@ -2025,15 +2050,18 @@ function App() {
                             <button
                               onClick={() => {
                                 const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
-                                const msg = isRepeating
-                                  ? `Delete "${event.title}" from ALL occurrences? This removes the recurring event entirely.`
-                                  : null;
-                                if (!msg || window.confirm(msg)) {
-                                  handleDeleteEvent(selectedDateKey, event.id, event.isVirtualAnnual, event.isVirtualRecurrence);
+                                if (isRepeating) {
+                                  const choice = window.confirm(
+                                    `"${event.title}" is a recurring event.\n\nOK = Remove just this occurrence\nCancel = Delete ALL occurrences`
+                                  );
+                                  // OK = true = skip once, Cancel = false = delete all
+                                  handleDeleteEvent(selectedDateKey, event.id, event.isVirtualAnnual, event.isVirtualRecurrence, choice);
+                                } else {
+                                  handleDeleteEvent(selectedDateKey, event.id, false, false, false);
                                 }
                               }}
                               className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all"
-                              title={event.recurrence && event.recurrence !== 'once' ? 'Deletes all occurrences' : 'Delete event'}
+                              title="Delete event"
                             >
                               <Trash2 className="w-4 h-4 text-red-600" />
                             </button>
