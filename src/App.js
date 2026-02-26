@@ -1491,7 +1491,7 @@ function App() {
                 <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
-            <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+            <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
               <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Add New Category</h4>
               <div className="flex gap-2 mb-3">
                 <input
@@ -1517,7 +1517,7 @@ function App() {
             </div>
             <div className="space-y-2">
               {Object.entries(categories).map(([key, cat]) => (
-                <div key={key} className={`p-3 rounded-xl ${cat.lightBg} border-2 ${cat.border}`}>
+                <div key={key} className={`p-3 rounded-xl border-2 ${cat.border} bg-white dark:bg-gray-700`}>
                   {editingCategory === key ? (
                     <div className="space-y-2">
                       <input
