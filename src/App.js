@@ -107,6 +107,8 @@ function App() {
   const [shareMessage, setShareMessage] = useState('');
   const [activeCalendars, setActiveCalendars] = useState([]);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+  const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
+  const [showWeather, setShowWeather] = useState(true);
 
   // Apply dark mode to document
   useEffect(() => {
@@ -158,6 +160,51 @@ function App() {
     const yearHolidays = holidays[year] || [];
     return yearHolidays.find(h => h.date === dateKey) || null;
   };
+
+  // Weather code → emoji mapping
+  const weatherEmoji = (code) => {
+    if (code === 0) return '☀️';
+    if (code <= 2) return '⛅';
+    if (code <= 3) return '☁️';
+    if (code <= 49) return '🌫️';
+    if (code <= 59) return '🌦️';
+    if (code <= 69) return '🌧️';
+    if (code <= 79) return '❄️';
+    if (code <= 84) return '🌧️';
+    if (code <= 94) return '⛈️';
+    return '🌩️';
+  };
+
+  const fetchWeather = async () => {
+    try {
+      // Use Fresno, CA coordinates (from user location)
+      const lat = 36.7378;
+      const lon = -119.7871;
+      const res = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FLos_Angeles&forecast_days=7`
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      const weatherMap = {};
+      data.daily.time.forEach((dateStr, i) => {
+        weatherMap[dateStr] = {
+          emoji: weatherEmoji(data.daily.weathercode[i]),
+          high: Math.round(data.daily.temperature_2m_max[i]),
+          low: Math.round(data.daily.temperature_2m_min[i]),
+        };
+      });
+      setWeather(weatherMap);
+    } catch (err) {
+      console.error('Failed to fetch weather:', err);
+    }
+  };
+
+  // Fetch weather on mount, refresh every 3 hours
+  useEffect(() => {
+    fetchWeather();
+    const interval = setInterval(fetchWeather, 3 * 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
   const handleDateTap = (date) => {
     if (!date) return;
 
@@ -1155,6 +1202,13 @@ function App() {
                 🇺🇸
               </button>
               <button
+                onClick={() => setShowWeather(!showWeather)}
+                className={`p-2 rounded-xl transition-all duration-200 text-sm ${showWeather ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
+                title={showWeather ? 'Hide weather' : 'Show weather'}
+              >
+                🌤️
+              </button>
+              <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
                 className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
               >
@@ -1414,6 +1468,7 @@ function App() {
                 const isInSelection = date && selectedDates.some(d => isSameDay(d, date));
                 const hasUrgentEvent = dateEvents.some(e => e.isUrgent);
                 const hasHoliday = dateEvents.some(e => e.isHoliday);
+                const weatherData = showWeather && dateKey ? weather[dateKey] : null;
 
                 const multiDayEvents = dateEvents.filter(e => e.isMultiDay);
                 const uniqueMultiDayIds = [...new Set(multiDayEvents.map(e => e.multiDayId))];
@@ -1458,6 +1513,14 @@ function App() {
                           <span className="absolute top-0.5 right-0.5 text-xs">🇺🇸</span>
                         )}
                       </div>
+                      {weatherData && !isSelected && !isInSelection && (
+                        <div className="flex flex-col items-center leading-none mt-0.5">
+                          <span style={{ fontSize: '0.65rem' }}>{weatherData.emoji}</span>
+                          <span style={{ fontSize: '0.5rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                            {weatherData.high}°/{weatherData.low}°
+                          </span>
+                        </div>
+                      )}
                       {dateEvents.length > 0 && (
                         <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex gap-0.5">
                           {hasHoliday && (
