@@ -99,7 +99,31 @@ function App() {
   const [lastTapTime, setLastTapTime] = useState(0);
   const [isAnnual, setIsAnnual] = useState(false);
   const [recurrence, setRecurrence] = useState('once');
-  const [calendarView, setCalendarView] = useState('month'); // 'month' | 'week'
+  const [calendarView, setCalendarView] = useState('month');
+  const [showReactionPicker, setShowReactionPicker] = useState(null); // event.id
+
+  const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢'];
+
+  const handleReact = (event, emoji) => {
+    const actualDateKey = Object.keys(events).find(k => events[k].some(e => e.id === event.id));
+    if (!actualDateKey) return;
+    const currentReactions = event.reactions || {};
+    const currentUsers = currentReactions[emoji] || [];
+    let updatedUsers;
+    // Toggle — if already reacted, remove; otherwise add
+    if (currentUsers.includes(currentUser)) {
+      updatedUsers = currentUsers.filter(u => u !== currentUser);
+    } else {
+      updatedUsers = [...currentUsers, currentUser];
+    }
+    const updatedReactions = { ...currentReactions, [emoji]: updatedUsers };
+    // Clean up empty arrays
+    Object.keys(updatedReactions).forEach(k => {
+      if (updatedReactions[k].length === 0) delete updatedReactions[k];
+    });
+    handleUpdateEventField(actualDateKey, event.id, { reactions: updatedReactions });
+    setShowReactionPicker(null);
+  }; // 'month' | 'week'
   const [holidays, setHolidays] = useState({});
   const [showHolidays, setShowHolidays] = useState(true);
   const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
@@ -370,6 +394,7 @@ function App() {
                 annual_day: event.annualDay || null,
                 recurrence: event.recurrence || 'once',
                 exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
+                reactions: event.reactions ? JSON.stringify(event.reactions) : null,
                 created_by: event.createdBy,
                 created_at: event.createdAt,
                 user_id: user?.id
@@ -552,6 +577,7 @@ function App() {
               annualDay: event.annual_day || null,
               recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
               exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
+              reactions: event.reactions ? JSON.parse(event.reactions) : {},
               createdBy: event.created_by,
               createdAt: event.created_at,
               userId: event.user_id,
@@ -583,6 +609,7 @@ function App() {
                 annualDay: event.annual_day || null,
                 recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
                 exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
+                reactions: event.reactions ? JSON.parse(event.reactions) : {},
                 createdBy: event.created_by,
                 createdAt: event.created_at,
                 userId: event.user_id,
@@ -694,6 +721,7 @@ function App() {
               annualDay: event.annual_day || null,
               recurrence: event.recurrence || 'once',
               exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
+              reactions: event.reactions ? JSON.parse(event.reactions) : {},
               createdBy: event.created_by,
               createdAt: event.created_at,
               userId: event.user_id,
@@ -2111,6 +2139,45 @@ function App() {
                                 {event.isShared && (
                                   <span className="ml-1 px-1.5 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full text-xs">shared</span>
                                 )}
+                              </div>
+                            )}
+
+                            {/* Reactions */}
+                            <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                              {event.reactions && Object.entries(event.reactions).map(([emoji, users]) => (
+                                <button
+                                  key={emoji}
+                                  onClick={() => handleReact(event, emoji)}
+                                  className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs transition-all ${
+                                    users.includes(currentUser)
+                                      ? 'bg-purple-100 dark:bg-purple-900 ring-1 ring-purple-400'
+                                      : 'bg-gray-100 dark:bg-gray-600'
+                                  }`}
+                                  title={users.join(', ')}
+                                >
+                                  <span>{emoji}</span>
+                                  <span className="text-gray-600 dark:text-gray-300 font-medium">{users.length}</span>
+                                </button>
+                              ))}
+                              <button
+                                onClick={() => setShowReactionPicker(showReactionPicker === event.id ? null : event.id)}
+                                className="text-gray-400 dark:text-gray-500 hover:text-purple-500 text-sm px-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition-all"
+                                title="Add reaction"
+                              >
+                                {showReactionPicker === event.id ? '✕' : '＋'}
+                              </button>
+                            </div>
+                            {showReactionPicker === event.id && (
+                              <div className="flex gap-1 mt-1 p-1.5 bg-white dark:bg-gray-700 rounded-xl shadow-lg border border-gray-200 dark:border-gray-600 w-fit">
+                                {REACTION_EMOJIS.map(emoji => (
+                                  <button
+                                    key={emoji}
+                                    onClick={() => handleReact(event, emoji)}
+                                    className="text-lg hover:scale-125 transition-transform p-0.5"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
                               </div>
                             )}
                           </div>
