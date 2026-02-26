@@ -953,13 +953,10 @@ function App() {
 
   // Update a field without closing the edit form (for toggles)
   const handleUpdateEventField = (dateKey, eventId, updates) => {
-    console.log('handleUpdateEventField called', dateKey, eventId, updates);
-    console.log('events[dateKey]', events[dateKey]);
     const updatedEvents = {
       ...events,
       [dateKey]: events[dateKey]?.map(e => e.id === eventId ? { ...e, ...updates } : e) || []
     };
-    console.log('updatedEvents', updatedEvents[dateKey]);
     saveEvents(updatedEvents);
   };
 
@@ -1878,19 +1875,32 @@ function App() {
                           <input
                             type="text"
                             defaultValue={event.title}
-                            onBlur={(e) => handleUpdateEvent(selectedDateKey, event.id, { title: e.target.value })}
+                            onBlur={(e) => handleUpdateEventField(event.date, event.id, { title: e.target.value })}
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                             autoFocus
                           />
                           <input
-                            type="time"
+                            type="text"
                             defaultValue={event.time || ''}
-                            onChange={(e) => handleUpdateEvent(selectedDateKey, event.id, { time: e.target.value })}
+                            placeholder="e.g. 3:00 PM"
+                            onBlur={(e) => {
+                              const val = e.target.value.trim();
+                              if (!val) { handleUpdateEventField(event.date, event.id, { time: null }); return; }
+                              const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                              if (match) {
+                                let h = parseInt(match[1]);
+                                const m = match[2] ? parseInt(match[2]) : 0;
+                                const period = match[3]?.toLowerCase();
+                                if (period === 'pm' && h < 12) h += 12;
+                                if (period === 'am' && h === 12) h = 0;
+                                handleUpdateEventField(event.date, event.id, { time: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` });
+                              }
+                            }}
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
                           <select
                             defaultValue={event.category || 'other'}
-                            onChange={(e) => handleUpdateEvent(selectedDateKey, event.id, { category: e.target.value })}
+                            onChange={(e) => handleUpdateEventField(event.date, event.id, { category: e.target.value })}
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           >
                             {Object.entries(categories).map(([key, cat]) => (
@@ -1913,7 +1923,7 @@ function App() {
                               onClick={() => handleUpdateEventField(event.date, event.id, { isUrgent: !event.isUrgent })}
                               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                                 event.isUrgent
-                                  ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md animate-pulse'
+                                  ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md'
                                   : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
                               }`}
                             >
@@ -1925,7 +1935,7 @@ function App() {
                             <input
                               type="checkbox"
                               defaultChecked={event.isAnnual}
-                              onChange={(e) => handleUpdateEvent(selectedDateKey, event.id, {
+                              onChange={(e) => handleUpdateEventField(event.date, event.id, {
                                 isAnnual: e.target.checked,
                                 annualMonth: e.target.checked ? (new Date(event.date).getMonth() + 1) : null,
                                 annualDay: e.target.checked ? new Date(event.date).getDate() : null
@@ -1934,6 +1944,12 @@ function App() {
                             />
                             🔁 Annual (repeats every year)
                           </label>
+                          <button
+                            onClick={() => setEditingEvent(null)}
+                            className="w-full px-3 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl text-sm font-medium"
+                          >
+                            Done
+                          </button>
                         </div>
                       ) : (
                         <div className="flex items-start justify-between">
