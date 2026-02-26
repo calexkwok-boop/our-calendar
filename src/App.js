@@ -1080,12 +1080,12 @@ function App() {
               </span>
             )}
           </p>
-          <div style={{ width: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr' }}>
             <input
               type="time"
               id="timeInput"
-              style={{ width: '100%', boxSizing: 'border-box', display: 'block' }}
-              className="px-4 py-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
+              style={{ boxSizing: 'border-box', minWidth: 0 }}
+              className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
               onKeyPress={(e) => {
                 if (e.key === 'Enter') handleTimeSubmit(e.target.value);
               }}
