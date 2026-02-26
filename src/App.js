@@ -1067,7 +1067,7 @@ function App() {
   if (showTimePrompt && pendingEvent) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-md overflow-hidden">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
             What time?
           </h2>
@@ -1083,7 +1083,8 @@ function App() {
           <input
             type="time"
             id="timeInput"
-            className="w-full max-w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4 box-border"
+            className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
+            style={{ maxWidth: '100%', boxSizing: 'border-box', minWidth: 0 }}
             onKeyPress={(e) => {
               if (e.key === 'Enter') handleTimeSubmit(e.target.value);
             }}
