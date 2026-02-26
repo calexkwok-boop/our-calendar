@@ -953,10 +953,13 @@ function App() {
 
   // Update a field without closing the edit form (for toggles)
   const handleUpdateEventField = (dateKey, eventId, updates) => {
+    console.log('handleUpdateEventField called', dateKey, eventId, updates);
+    console.log('events[dateKey]', events[dateKey]);
     const updatedEvents = {
       ...events,
-      [dateKey]: events[dateKey].map(e => e.id === eventId ? { ...e, ...updates } : e)
+      [dateKey]: events[dateKey]?.map(e => e.id === eventId ? { ...e, ...updates } : e) || []
     };
+    console.log('updatedEvents', updatedEvents[dateKey]);
     saveEvents(updatedEvents);
   };
 
