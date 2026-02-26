@@ -1711,6 +1711,43 @@ function App() {
               </p>
             </div>
 
+            {/* Inline event preview — shows when a date is selected */}
+            {selectedDate && selectedEvents.length > 0 && (
+              <div className="mb-3 rounded-xl border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 bg-purple-100 dark:bg-purple-900/40">
+                  <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">
+                    {selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </span>
+                  <span className="text-xs text-purple-500 dark:text-purple-400">{selectedEvents.length} event{selectedEvents.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="divide-y divide-purple-100 dark:divide-purple-800 max-h-36 overflow-y-auto">
+                  {selectedEvents.map(event => {
+                    const cat = categories[event.category || 'other'] || categories.other;
+                    if (event.isHoliday) return (
+                      <div key={event.id} className="flex items-center gap-2 px-3 py-1.5">
+                        <span className="text-xs">🇺🇸</span>
+                        <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{event.title}</span>
+                      </div>
+                    );
+                    return (
+                      <div key={event.id} className="flex items-center gap-2 px-3 py-1.5">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${cat.color}`} />
+                        <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1">{event.title}</span>
+                        {event.time && <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{formatTime(event.time)}</span>}
+                        {event.isUrgent && <span className="text-xs">🚨</span>}
+                        {event.isPrivate && <span className="text-xs">🔒</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {selectedDate && selectedEvents.length === 0 && (
+              <div className="mb-3 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/40 text-xs text-gray-500 dark:text-gray-400 text-center">
+                {selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} — no events
+              </div>
+            )}
+
             {/* Day headers */}
             <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
