@@ -102,7 +102,7 @@ function App() {
   const [calendarView, setCalendarView] = useState('month');
   const [showReactionPicker, setShowReactionPicker] = useState(null); // event.id
 
-  const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢'];
+  const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '🎂', '💯'];
 
   const handleReact = (event, emoji) => {
     const actualDateKey = Object.keys(events).find(k => events[k].some(e => e.id === event.id));
