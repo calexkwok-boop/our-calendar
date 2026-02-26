@@ -1082,12 +1082,27 @@ function App() {
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr' }}>
             <input
-              type="time"
+              type="text"
               id="timeInput"
+              placeholder="e.g. 3:00 PM or 15:00"
               style={{ boxSizing: 'border-box', minWidth: 0 }}
-              className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
+              className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
               onKeyPress={(e) => {
-                if (e.key === 'Enter') handleTimeSubmit(e.target.value);
+                if (e.key === 'Enter') {
+                  const val = e.target.value;
+                  // parse "3pm", "3:30pm", "15:00" etc into HH:MM
+                  const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                  if (match) {
+                    let h = parseInt(match[1]);
+                    const m = match[2] ? parseInt(match[2]) : 0;
+                    const period = match[3]?.toLowerCase();
+                    if (period === 'pm' && h < 12) h += 12;
+                    if (period === 'am' && h === 12) h = 0;
+                    handleTimeSubmit(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+                  } else {
+                    handleTimeSubmit(null);
+                  }
+                }
               }}
             />
           </div>
@@ -1095,7 +1110,19 @@ function App() {
             <button
               onClick={() => {
                 const input = document.getElementById('timeInput');
-                handleTimeSubmit(input.value);
+                const val = input.value.trim();
+                if (!val) { handleTimeSubmit(null); return; }
+                const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                if (match) {
+                  let h = parseInt(match[1]);
+                  const m = match[2] ? parseInt(match[2]) : 0;
+                  const period = match[3]?.toLowerCase();
+                  if (period === 'pm' && h < 12) h += 12;
+                  if (period === 'am' && h === 12) h = 0;
+                  handleTimeSubmit(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+                } else {
+                  handleTimeSubmit(null);
+                }
               }}
               className="flex-1 px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all font-medium"
             >
