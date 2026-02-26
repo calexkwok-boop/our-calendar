@@ -983,7 +983,7 @@ function App() {
   if (showTimePrompt && pendingEvent) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full mx-4">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
             What time?
           </h2>
@@ -1000,19 +1000,19 @@ function App() {
               if (e.key === 'Enter') handleTimeSubmit(e.target.value);
             }}
           />
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={() => {
                 const input = document.getElementById('timeInput');
                 handleTimeSubmit(input.value);
               }}
-              className="flex-1 px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
+              className="flex-1 px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all font-medium"
             >
               Add Event
             </button>
             <button
               onClick={() => handleTimeSubmit(null)}
-              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+              className="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
             >
               Skip Time
             </button>
@@ -1022,7 +1022,7 @@ function App() {
                 setPendingEvent(null);
                 setQuickEntry(pendingEvent.title);
               }}
-              className="px-6 py-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-200 dark:hover:bg-red-800 transition-all"
+              className="flex-1 px-6 py-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-200 dark:hover:bg-red-800 transition-all"
             >
               Cancel
             </button>
