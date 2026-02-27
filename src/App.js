@@ -129,6 +129,7 @@ function App() {
   const [subCalSelectedDate, setSubCalSelectedDate] = useState(null);
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
   const [subCalAddingSlot, setSubCalAddingSlot] = useState(null); // hour number being added to
+  const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', endTime: '', location: '' });
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
 
@@ -446,7 +447,7 @@ function App() {
     setSubCalNotes(prev => prev.map(n => n.id === noteId ? { ...n, checklist } : n));
   };
 
-  const addSubCalEvent = async (date, title, time, endTime) => {
+  const addSubCalEvent = async (date, title, time, endTime, location = null) => {
     if (!title?.trim() || !activeSubCalendar) { console.log('addSubCalEvent bail: no title or no activeSubCalendar', {title, activeSubCalendar}); return; }
     if (!user?.id) { console.log('addSubCalEvent bail: no user'); return; }
     const id = `sce_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -462,9 +463,8 @@ function App() {
       created_by: currentUser,
       user_id: user.id,
       reactions: null,
-      location: null,
+      location: location || null,
     };
-    console.log('Inserting sub_calendar_event:', newEvent);
     const { error } = await supabase.from('sub_calendar_events').insert(newEvent);
     if (error) { console.error('Error adding sub_calendar_event:', error); return; }
     const dateKey = getDateKey(date);
@@ -474,6 +474,7 @@ function App() {
         id, title: newEvent.title, time: newEvent.time,
         endTime: newEvent.end_time, notes: null, date: dateKey,
         category: 'other', createdBy: currentUser, userId: user.id, reactions: {},
+        location: location || null,
       }]
     }));
   };
@@ -3252,25 +3253,68 @@ function App() {
                         ))}
                         {/* Click slot to add event */}
                         {subCalAddingSlot === hour ? (
-                          <div className="flex gap-1 mt-1">
+                          <div className="mt-1 p-3 bg-white dark:bg-gray-700 rounded-xl border-2 border-purple-300 dark:border-purple-600 shadow-lg space-y-2">
                             <input
                               autoFocus
                               type="text"
-                              placeholder="Event name..."
-                              className="flex-1 text-xs px-2 py-1 border border-purple-300 dark:border-purple-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-400"
-                              onKeyDown={e => {
-                                if (e.key === 'Enter' && e.target.value.trim()) {
-                                  addSubCalEvent(subCalSelectedDate, e.target.value.trim(), timeStr, null);
-                                  setSubCalAddingSlot(null);
-                                }
-                                if (e.key === 'Escape') setSubCalAddingSlot(null);
-                              }}
-                              onBlur={() => setSubCalAddingSlot(null)}
+                              placeholder="Event title *"
+                              value={subCalNewEventForm.title}
+                              onChange={e => setSubCalNewEventForm(f => ({ ...f, title: e.target.value }))}
+                              className="w-full text-sm px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
                             />
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                readOnly
+                                value={`${hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`}
+                                className="w-24 text-xs px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-gray-300 rounded-lg bg-gray-50"
+                              />
+                              <input
+                                type="text"
+                                placeholder="End time (optional)"
+                                value={subCalNewEventForm.endTime}
+                                onChange={e => setSubCalNewEventForm(f => ({ ...f, endTime: e.target.value }))}
+                                className="flex-1 text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
+                              />
+                            </div>
+                            <PlacesAutocomplete
+                              value={subCalNewEventForm.location}
+                              onSelect={val => setSubCalNewEventForm(f => ({ ...f, location: val || '' }))}
+                              placeholder="📍 Add location (optional)"
+                              className="w-full text-xs px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={async () => {
+                                  if (!subCalNewEventForm.title.trim()) return;
+                                  const timeStr = `${String(hour).padStart(2,'0')}:00`;
+                                  let endTimeStr = null;
+                                  if (subCalNewEventForm.endTime.trim()) {
+                                    const match = subCalNewEventForm.endTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                                    if (match) {
+                                      let h = parseInt(match[1]);
+                                      const m = match[2] ? parseInt(match[2]) : 0;
+                                      const p = match[3]?.toLowerCase();
+                                      if (p === 'pm' && h < 12) h += 12;
+                                      if (p === 'am' && h === 12) h = 0;
+                                      endTimeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+                                    }
+                                  }
+                                  await addSubCalEvent(subCalSelectedDate, subCalNewEventForm.title, timeStr, endTimeStr, subCalNewEventForm.location || null);
+                                  setSubCalAddingSlot(null);
+                                  setSubCalNewEventForm({ title: '', endTime: '', location: '' });
+                                }}
+                                className="flex-1 py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg text-xs font-medium"
+                              >Add Event</button>
+                              <button
+                                onClick={() => { setSubCalAddingSlot(null); setSubCalNewEventForm({ title: '', endTime: '', location: '' }); }}
+                                className="px-3 py-1.5 bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-lg text-xs"
+                              >Cancel</button>
+                            </div>
                           </div>
                         ) : (
                           <button
-                            onClick={() => setSubCalAddingSlot(hour)}
+                            onClick={() => { setSubCalAddingSlot(hour); setSubCalNewEventForm({ title: '', endTime: '', location: '' }); }}
                             className="absolute inset-0 w-full opacity-0 group-hover:opacity-100 hover:bg-purple-50 dark:hover:bg-purple-900/10 rounded transition-all text-xs text-purple-400 flex items-center justify-center"
                             style={{ display: slotEvents.length > 0 ? 'none' : undefined }}
                           >+ {label}</button>
