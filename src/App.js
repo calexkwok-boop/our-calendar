@@ -3136,7 +3136,14 @@ function App() {
                       <div className="w-12 shrink-0 text-right">
                         <span className="text-xs text-gray-400 dark:text-gray-500 leading-[52px]">{label}</span>
                       </div>
-                      <div className="flex-1 border-t border-gray-200 dark:border-gray-700 pt-1 pb-1 relative">
+                      <div
+                        className="flex-1 border-t border-gray-200 dark:border-gray-700 pt-1 pb-1 relative"
+                        onClick={() => {
+                          if (subCalAddingSlot === hour || slotEvents.length > 0 || subCalEditingEvent) return;
+                          setSubCalAddingSlot(hour);
+                          setSubCalNewEventForm({ title: '', endTime: '', location: '' });
+                        }}
+                      >
                         {slotEvents.map(event => (
                           <div key={event.id}>
                             {subCalEditingEvent === event.id ? (
@@ -3313,11 +3320,11 @@ function App() {
                             </div>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => { setSubCalAddingSlot(hour); setSubCalNewEventForm({ title: '', endTime: '', location: '' }); }}
-                            className="absolute inset-0 w-full opacity-0 group-hover:opacity-100 hover:bg-purple-50 dark:hover:bg-purple-900/10 rounded transition-all text-xs text-purple-400 flex items-center justify-center"
-                            style={{ display: slotEvents.length > 0 ? 'none' : undefined }}
-                          >+ {label}</button>
+                          slotEvents.length === 0 && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <span className="text-xs text-purple-300 dark:text-purple-700 group-hover:text-purple-400 dark:group-hover:text-purple-500 transition-colors">＋</span>
+                            </div>
+                          )
                         )}
                       </div>
                     </div>
