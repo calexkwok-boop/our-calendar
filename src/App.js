@@ -765,6 +765,7 @@ function App() {
                 recurrence: event.recurrence || 'once',
                 exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
                 reactions: event.reactions ? JSON.stringify(event.reactions) : null,
+                location: event.location || null,
                 created_by: event.createdBy,
                 created_at: event.createdAt,
                 user_id: user?.id
@@ -948,6 +949,7 @@ function App() {
               recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
               exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
               reactions: event.reactions ? JSON.parse(event.reactions) : {},
+              location: event.location || null,
               createdBy: event.created_by,
               createdAt: event.created_at,
               userId: event.user_id,
@@ -980,6 +982,7 @@ function App() {
                 recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
                 exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
                 reactions: event.reactions ? JSON.parse(event.reactions) : {},
+                location: event.location || null,
                 createdBy: event.created_by,
                 createdAt: event.created_at,
                 userId: event.user_id,
@@ -1095,6 +1098,7 @@ function App() {
               recurrence: event.recurrence || 'once',
               exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
               reactions: event.reactions ? JSON.parse(event.reactions) : {},
+              location: event.location || null,
               createdBy: event.created_by,
               createdAt: event.created_at,
               userId: event.user_id,
@@ -2536,6 +2540,13 @@ function App() {
                             }}
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
+                          <input
+                            type="text"
+                            defaultValue={event.location || ''}
+                            placeholder="📍 Add location (optional)"
+                            onBlur={(e) => handleUpdateEventField(event.date, event.id, { location: e.target.value || null })}
+                            className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
+                          />
                           <select
                             defaultValue={event.category || 'other'}
                             onChange={(e) => handleUpdateEventField(event.date, event.id, { category: e.target.value })}
@@ -2618,7 +2629,18 @@ function App() {
                                 </div>
                               )}
                             </div>
-                            <div className="text-gray-900 font-medium mb-1">{event.title}</div>
+                            <div className="text-gray-900 dark:text-gray-100 font-medium mb-1">{event.title}</div>
+                            {event.location && (
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 mb-1"
+                                onClick={e => e.stopPropagation()}
+                              >
+                                📍 {event.location}
+                              </a>
+                            )}
                             {event.createdBy && (
                               <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                 <User className="w-3 h-3" />
