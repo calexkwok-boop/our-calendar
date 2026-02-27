@@ -3333,9 +3333,8 @@ function App() {
                                   <button onClick={() => deleteSubCalEvent(event.id, dk)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
                                 </div>
                               </div>
-                              {/* Event photo thumbnails */}
                               {tripPhotos.filter(p => p.event_id === event.id).length > 0 && (
-                                <div className="flex gap-1.5 mt-2 flex-wrap">
+                                <div className="flex gap-1.5 mt-2 flex-wrap px-1">
                                   {tripPhotos.filter(p => p.event_id === event.id).map(photo => (
                                     <img
                                       key={photo.id}
@@ -3347,7 +3346,6 @@ function App() {
                                   ))}
                                 </div>
                               )}
-                              </div>
                             )}
                           </div>
                         ))}
