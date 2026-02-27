@@ -114,6 +114,9 @@ function App() {
   const [editingSubCalDates, setEditingSubCalDates] = useState(false);
   const [shakingDates, setShakingDates] = useState(false);
   const shakingTimeoutRef = useRef(null);
+  const [subCalWeather, setSubCalWeather] = useState({});
+  const [subCalWeatherLocation, setSubCalWeatherLocation] = useState('');
+  const [subCalWeatherLoading, setSubCalWeatherLoading] = useState(false);
   const [draggedNoteId, setDraggedNoteId] = useState(null);
   const [subCalendarEvents, setSubCalendarEvents] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
@@ -221,6 +224,8 @@ function App() {
 
   const openSubCalendar = async (sc) => {
     setActiveSubCalendar(sc);
+    setSubCalWeather({});
+    setSubCalWeatherLocation('');
     await loadSubCalendarEvents(sc.id);
     await loadSubCalendarMembers(sc.id);
     await loadSubCalNotes(sc.id);
@@ -339,7 +344,43 @@ function App() {
     if (!selectedKey || selectedKey < newStart || selectedKey > newEnd) setSubCalSelectedDate(start);
   };
 
-  const reorderNote = async (noteId, direction) => {
+  const fetchSubCalWeather = async (locationName) => {
+    if (!locationName.trim() || !activeSubCalendar) return;
+    setSubCalWeatherLoading(true);
+    try {
+      // Geocode the location name to lat/lon using Open-Meteo's geocoding API
+      const geoRes = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(locationName.trim())}&count=1&language=en&format=json`
+      );
+      const geoData = await geoRes.json();
+      if (!geoData.results?.length) {
+        alert(`Couldn't find "${locationName}" — try a city name like "San Francisco" or "New York"`);
+        setSubCalWeatherLoading(false);
+        return;
+      }
+      const { latitude, longitude } = geoData.results[0];
+      // Fetch forecast for the sub-calendar date range (up to 16 days out)
+      const res = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=16`
+      );
+      const data = await res.json();
+      const weatherMap = {};
+      data.daily.time.forEach((dateStr, i) => {
+        const display = weatherDisplay(data.daily.weathercode[i]);
+        weatherMap[dateStr] = {
+          icon: display.icon,
+          color: display.color,
+          high: Math.round(data.daily.temperature_2m_max[i]),
+          low: Math.round(data.daily.temperature_2m_min[i]),
+        };
+      });
+      setSubCalWeather(weatherMap);
+      setSubCalWeatherLocation(locationName.trim());
+    } catch (err) {
+      console.error('Failed to fetch sub-cal weather:', err);
+    }
+    setSubCalWeatherLoading(false);
+  };
     const idx = subCalNotes.findIndex(n => n.id === noteId);
     if (direction === 'up' && idx === 0) return;
     if (direction === 'down' && idx === subCalNotes.length - 1) return;
@@ -2868,16 +2909,43 @@ function App() {
               {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </div>
           </div>
-          {/* Invite button */}
-          <button
-            onClick={() => {
-              const email = window.prompt('Enter email to invite:');
-              if (email) { inviteToSubCalendar(email); }
-            }}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs rounded-xl font-medium"
-          >
-            <Plus className="w-3.5 h-3.5" /> Invite
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Dark mode toggle */}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+              title={darkMode ? 'Light mode' : 'Dark mode'}
+            >
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            {/* Invite button */}
+            <button
+              onClick={() => {
+                const email = window.prompt('Enter email to invite:');
+                if (email) { inviteToSubCalendar(email); }
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs rounded-xl font-medium"
+            >
+              <Plus className="w-3.5 h-3.5" /> Invite
+            </button>
+          </div>
+        </div>
+
+        {/* Weather location bar */}
+        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800">
+          <span className="text-sm">🌤️</span>
+          <input
+            type="text"
+            placeholder="Enter city for weather (e.g. San Francisco)"
+            defaultValue={subCalWeatherLocation}
+            onKeyPress={e => { if (e.key === 'Enter') fetchSubCalWeather(e.target.value); }}
+            onBlur={e => { if (e.target.value.trim() && e.target.value.trim() !== subCalWeatherLocation) fetchSubCalWeather(e.target.value); }}
+            className="flex-1 text-xs px-2 py-1 bg-white dark:bg-gray-700 dark:text-white border border-blue-200 dark:border-blue-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
+          />
+          {subCalWeatherLoading && <span className="text-xs text-blue-400 animate-pulse">Loading…</span>}
+          {subCalWeatherLocation && !subCalWeatherLoading && (
+            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium shrink-0">📍 {subCalWeatherLocation}</span>
+          )}
         </div>
 
         {/* Day tabs */}
@@ -2924,7 +2992,16 @@ function App() {
                   >
                     <span className="text-xs font-medium">{date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
                     <span className="text-lg font-bold leading-none">{date.getDate()}</span>
-                    {hasEvents && !shakingDates && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
+                    {subCalWeather[dk] && (
+                      <span className="text-xs mt-0.5">{subCalWeather[dk].icon}</span>
+                    )}
+                    {subCalWeather[dk] && (
+                      <span className={`text-xs leading-none ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                        {subCalWeather[dk].high}°
+                      </span>
+                    )}
+                    {hasEvents && !shakingDates && !subCalWeather[dk] && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
+                    {hasEvents && !shakingDates && subCalWeather[dk] && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
                   </button>
                   {/* Minus badge — only on first/last when shaking */}
                   {shakingDates && canRemove && (
@@ -2965,6 +3042,21 @@ function App() {
 
           return (
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+
+              {/* Weather for selected day */}
+              {subCalWeather[dk] && (
+                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                  <span className="text-2xl">{subCalWeather[dk].icon}</span>
+                  <div>
+                    <div className="text-sm font-semibold text-gray-800 dark:text-white">
+                      {subCalSelectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-300">
+                      {subCalWeatherLocation} · High {subCalWeather[dk].high}° / Low {subCalWeather[dk].low}°
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Notes / Reminders */}
               <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-700">
