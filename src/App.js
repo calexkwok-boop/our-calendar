@@ -182,10 +182,15 @@ function App() {
       created_by: currentUser,
       owner_id: user.id,
     };
-    const { error } = await supabase.from('sub_calendars').insert(newSC);
+    const { data: insertData, error } = await supabase.from('sub_calendars').insert(newSC).select();
+    console.log('insert response:', insertData, error);
     if (error) {
       console.error('Error creating sub_calendar:', error);
       alert(`Error saving: ${error.message}`);
+      return;
+    }
+    if (!insertData || insertData.length === 0) {
+      alert('Saved silently failed — check Supabase RLS policies. Run the SQL fix in the console.');
       return;
     }
     setSubCalendars(prev => [...prev, newSC]);
