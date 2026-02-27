@@ -315,9 +315,24 @@ function App() {
     const updated = { ...activeSubCalendar, start_date: newStart, end_date: newEnd };
     setActiveSubCalendar(updated);
     setSubCalendars(prev => prev.map(sc => sc.id === activeSubCalendar.id ? updated : sc));
-    // Select the new date
     if (direction === 'before') setSubCalSelectedDate(start);
     else setSubCalSelectedDate(end);
+  };
+
+  const shrinkSubCalDate = async (direction) => {
+    const start = new Date(activeSubCalendar.start_date + 'T00:00:00');
+    const end = new Date(activeSubCalendar.end_date + 'T00:00:00');
+    if (start.getTime() === end.getTime()) return; // keep at least 1 day
+    if (direction === 'before') start.setDate(start.getDate() + 1);
+    else end.setDate(end.getDate() - 1);
+    const newStart = getDateKey(start);
+    const newEnd = getDateKey(end);
+    await supabase.from('sub_calendars').update({ start_date: newStart, end_date: newEnd }).eq('id', activeSubCalendar.id);
+    const updated = { ...activeSubCalendar, start_date: newStart, end_date: newEnd };
+    setActiveSubCalendar(updated);
+    setSubCalendars(prev => prev.map(sc => sc.id === activeSubCalendar.id ? updated : sc));
+    const selectedKey = subCalSelectedDate ? getDateKey(subCalSelectedDate) : null;
+    if (!selectedKey || selectedKey < newStart || selectedKey > newEnd) setSubCalSelectedDate(start);
   };
 
   const reorderNote = async (noteId, direction) => {
@@ -2817,24 +2832,35 @@ function App() {
           >
             <span className="text-xs">‹+</span>
           </button>
-          {getSubCalDates(activeSubCalendar).map(date => {
+          {getSubCalDates(activeSubCalendar).map((date, dateIdx, allDates) => {
             const dk = getDateKey(date);
             const isSelected = subCalSelectedDate && getDateKey(subCalSelectedDate) === dk;
             const hasEvents = (subCalendarEvents[dk] || []).length > 0;
+            const isFirst = dateIdx === 0;
+            const isLast = dateIdx === allDates.length - 1;
+            const canRemove = allDates.length > 1 && (isFirst || isLast);
             return (
-              <button
-                key={dk}
-                onClick={() => setSubCalSelectedDate(date)}
-                className={`flex flex-col items-center px-3 py-2 rounded-xl shrink-0 transition-all ${
-                  isSelected
-                    ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-md'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                }`}
-              >
-                <span className="text-xs font-medium">{date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
-                <span className="text-lg font-bold leading-none">{date.getDate()}</span>
-                {hasEvents && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
-              </button>
+              <div key={dk} className="relative shrink-0">
+                <button
+                  onClick={() => setSubCalSelectedDate(date)}
+                  className={`flex flex-col items-center px-3 py-2 rounded-xl transition-all ${
+                    isSelected
+                      ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-md'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  <span className="text-xs font-medium">{date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                  <span className="text-lg font-bold leading-none">{date.getDate()}</span>
+                  {hasEvents && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
+                </button>
+                {canRemove && (
+                  <button
+                    onClick={() => shrinkSubCalDate(isFirst ? 'before' : 'after')}
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-400 hover:bg-red-500 text-white rounded-full text-xs flex items-center justify-center leading-none shadow"
+                    title="Remove this day"
+                  >✕</button>
+                )}
+              </div>
             );
           })}
           {/* Add day after */}
@@ -2867,21 +2893,31 @@ function App() {
                     <p className="text-xs text-gray-400 dark:text-gray-500 italic">No reminders yet</p>
                   )}
                   {subCalNotes.map((note, noteIdx) => (
-                    <div key={note.id} className="bg-white dark:bg-gray-700 rounded-lg border border-yellow-200 dark:border-yellow-700 overflow-hidden">
+                    <div
+                      key={note.id}
+                      draggable
+                      onDragStart={() => setDraggedNoteId(note.id)}
+                      onDragOver={e => { e.preventDefault(); }}
+                      onDrop={() => {
+                        if (!draggedNoteId || draggedNoteId === note.id) return;
+                        const from = subCalNotes.findIndex(n => n.id === draggedNoteId);
+                        const to = noteIdx;
+                        const newNotes = [...subCalNotes];
+                        const [moved] = newNotes.splice(from, 1);
+                        newNotes.splice(to, 0, moved);
+                        setSubCalNotes(newNotes);
+                        setDraggedNoteId(null);
+                        // Persist order via timestamps
+                        newNotes.forEach((n, i) => {
+                          supabase.from('sub_calendar_notes').update({ created_at: new Date(Date.now() - (newNotes.length - i) * 1000).toISOString() }).eq('id', n.id);
+                        });
+                      }}
+                      onDragEnd={() => setDraggedNoteId(null)}
+                      className={`bg-white dark:bg-gray-700 rounded-lg border border-yellow-200 dark:border-yellow-700 overflow-hidden transition-opacity ${draggedNoteId === note.id ? 'opacity-40' : 'opacity-100'}`}
+                    >
                       <div className="flex items-center gap-2 px-2.5 py-2">
-                        {/* Reorder buttons */}
-                        <div className="flex flex-col shrink-0">
-                          <button
-                            onClick={() => reorderNote(note.id, 'up')}
-                            disabled={noteIdx === 0}
-                            className="text-gray-300 hover:text-gray-500 disabled:opacity-20 leading-none text-xs"
-                          >▲</button>
-                          <button
-                            onClick={() => reorderNote(note.id, 'down')}
-                            disabled={noteIdx === subCalNotes.length - 1}
-                            className="text-gray-300 hover:text-gray-500 disabled:opacity-20 leading-none text-xs"
-                          >▼</button>
-                        </div>
+                        {/* Drag handle */}
+                        <span className="text-gray-300 dark:text-gray-500 cursor-grab active:cursor-grabbing shrink-0 select-none text-sm">⠿</span>
                         <button onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)} className="text-xs text-gray-400 shrink-0 w-3">
                           {expandedNote === note.id ? '◂' : '▸'}
                         </button>
