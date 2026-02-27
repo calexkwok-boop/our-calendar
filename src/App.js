@@ -740,18 +740,22 @@ function App() {
 
   const saveEvents = async (newEvents) => {
     try {
-      // Update state immediately so UI is responsive
       setEvents(newEvents);
 
-      // Debounce the actual DB write — wait 800ms after last call
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(async () => {
         try {
-          const eventsArray = [];
+          const myEvents = [];
+          const sharedUpdates = []; // events owned by others that we've edited
+
           Object.entries(newEvents).forEach(([date, dateEvents]) => {
             dateEvents.forEach(event => {
-              if (event.userId && event.userId !== user?.id) return;
-              eventsArray.push({
+              if (event.userId && event.userId !== user?.id) {
+                // Shared event — do a targeted update on just the fields we allow editing
+                sharedUpdates.push(event);
+                return;
+              }
+              myEvents.push({
                 id: event.id,
                 date: event.date,
                 title: event.title,
@@ -775,10 +779,30 @@ function App() {
               });
             });
           });
+
+          // Save own events via delete+reinsert
           await supabase.from('events').delete().eq('user_id', user?.id);
-          if (eventsArray.length > 0) {
-            const { error } = await supabase.from('events').insert(eventsArray);
+          if (myEvents.length > 0) {
+            const { error } = await supabase.from('events').insert(myEvents);
             if (error) console.error('Error saving events to Supabase:', error);
+          }
+
+          // Save shared event edits via targeted UPDATE on each row
+          for (const event of sharedUpdates) {
+            await supabase.from('events').update({
+              title: event.title,
+              time: event.time,
+              category: event.category,
+              is_private: event.isPrivate || false,
+              is_urgent: event.isUrgent || false,
+              is_annual: event.isAnnual || false,
+              annual_month: event.annualMonth || null,
+              annual_day: event.annualDay || null,
+              recurrence: event.recurrence || 'once',
+              exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
+              reactions: event.reactions ? JSON.stringify(event.reactions) : null,
+              location: event.location || null,
+            }).eq('id', event.id);
           }
         } catch (err) {
           console.error('Error writing to Supabase:', err);
