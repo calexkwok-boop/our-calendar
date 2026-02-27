@@ -110,6 +110,9 @@ function App() {
   const [expandedNote, setExpandedNote] = useState(null);
   const [editingNote, setEditingNote] = useState(null);
   const [newChecklistItem, setNewChecklistItem] = useState('');
+  const [editingSubCalTitle, setEditingSubCalTitle] = useState(false);
+  const [editingSubCalName, setEditingSubCalName] = useState(false);
+  const [draggedNoteId, setDraggedNoteId] = useState(null);
   const [subCalendarEvents, setSubCalendarEvents] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
   const [newSubCalName, setNewSubCalName] = useState('');
@@ -255,7 +258,13 @@ function App() {
     } catch (e) { console.error(e); }
   };
 
-  const addSubCalNote = async () => {
+  const renameSubCalendar = async (newName) => {
+    if (!newName.trim() || !activeSubCalendar) return;
+    await supabase.from('sub_calendars').update({ name: newName.trim() }).eq('id', activeSubCalendar.id);
+    setActiveSubCalendar(prev => ({ ...prev, name: newName.trim() }));
+    setSubCalendars(prev => prev.map(sc => sc.id === activeSubCalendar.id ? { ...sc, name: newName.trim() } : sc));
+    setEditingSubCalName(false);
+  };
     if (!newNote.trim() || !activeSubCalendar) return;
     const note = {
       id: `scn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -278,7 +287,43 @@ function App() {
     if (expandedNote === noteId) setExpandedNote(null);
   };
 
-  const updateNoteText = async (noteId, newText) => {
+  const updateSubCalTitle = async (newName) => {
+    if (!newName.trim() || !activeSubCalendar) return;
+    await supabase.from('sub_calendars').update({ name: newName.trim() }).eq('id', activeSubCalendar.id);
+    setActiveSubCalendar(prev => ({ ...prev, name: newName.trim() }));
+    setSubCalendars(prev => prev.map(sc => sc.id === activeSubCalendar.id ? { ...sc, name: newName.trim() } : sc));
+    setEditingSubCalTitle(false);
+  };
+
+  const extendSubCalDates = async (direction) => {
+    // direction: 'before' adds 1 day before start, 'after' adds 1 day after end
+    const start = new Date(activeSubCalendar.start_date + 'T00:00:00');
+    const end = new Date(activeSubCalendar.end_date + 'T00:00:00');
+    if (direction === 'before') start.setDate(start.getDate() - 1);
+    else end.setDate(end.getDate() + 1);
+    const newStart = getDateKey(start);
+    const newEnd = getDateKey(end);
+    await supabase.from('sub_calendars').update({ start_date: newStart, end_date: newEnd }).eq('id', activeSubCalendar.id);
+    const updated = { ...activeSubCalendar, start_date: newStart, end_date: newEnd };
+    setActiveSubCalendar(updated);
+    setSubCalendars(prev => prev.map(sc => sc.id === activeSubCalendar.id ? updated : sc));
+    // Select the new date
+    if (direction === 'before') setSubCalSelectedDate(start);
+    else setSubCalSelectedDate(end);
+  };
+
+  const reorderNote = async (noteId, direction) => {
+    const idx = subCalNotes.findIndex(n => n.id === noteId);
+    if (direction === 'up' && idx === 0) return;
+    if (direction === 'down' && idx === subCalNotes.length - 1) return;
+    const newNotes = [...subCalNotes];
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    [newNotes[idx], newNotes[swapIdx]] = [newNotes[swapIdx], newNotes[idx]];
+    setSubCalNotes(newNotes);
+    // Save new order by updating a sort_order field or re-inserting — simplest: update created_at timestamps
+    await supabase.from('sub_calendar_notes').update({ created_at: new Date(Date.now() - 1000).toISOString() }).eq('id', newNotes[swapIdx].id);
+    await supabase.from('sub_calendar_notes').update({ created_at: new Date().toISOString() }).eq('id', newNotes[idx].id);
+  };
     await supabase.from('sub_calendar_notes').update({ text: newText }).eq('id', noteId);
     setSubCalNotes(prev => prev.map(n => n.id === noteId ? { ...n, text: newText } : n));
     setEditingNote(null);
@@ -2728,7 +2773,20 @@ function App() {
             <ChevronLeft className="w-4 h-4" /> Back
           </button>
           <div className="text-center">
-            <div className="font-bold text-gray-800 dark:text-white">{activeSubCalendar.name}</div>
+            {editingSubCalTitle ? (
+              <input
+                autoFocus
+                defaultValue={activeSubCalendar.name}
+                onBlur={e => updateSubCalTitle(e.target.value)}
+                onKeyPress={e => e.key === 'Enter' && updateSubCalTitle(e.target.value)}
+                className="font-bold text-gray-800 dark:text-white bg-transparent border-b-2 border-purple-400 text-center outline-none w-40"
+              />
+            ) : (
+              <div
+                className="font-bold text-gray-800 dark:text-white cursor-pointer hover:text-purple-600 dark:hover:text-purple-400"
+                onClick={() => setEditingSubCalTitle(true)}
+              >{activeSubCalendar.name} ✏️</div>
+            )}
             <div className="text-xs text-gray-500 dark:text-gray-400">
               {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </div>
@@ -2746,7 +2804,15 @@ function App() {
         </div>
 
         {/* Day tabs */}
-        <div className="flex gap-2 px-4 py-3 overflow-x-auto bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex gap-2 px-4 py-3 overflow-x-auto bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 items-center">
+          {/* Add day before */}
+          <button
+            onClick={() => extendSubCalDates('before')}
+            className="flex flex-col items-center px-2 py-2 rounded-xl shrink-0 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-all"
+            title="Add day before"
+          >
+            <span className="text-xs">‹+</span>
+          </button>
           {getSubCalDates(activeSubCalendar).map(date => {
             const dk = getDateKey(date);
             const isSelected = subCalSelectedDate && getDateKey(subCalSelectedDate) === dk;
@@ -2767,6 +2833,14 @@ function App() {
               </button>
             );
           })}
+          {/* Add day after */}
+          <button
+            onClick={() => extendSubCalDates('after')}
+            className="flex flex-col items-center px-2 py-2 rounded-xl shrink-0 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-all"
+            title="Add day after"
+          >
+            <span className="text-xs">+›</span>
+          </button>
         </div>
 
         {/* Day content */}
@@ -2788,11 +2862,24 @@ function App() {
                   {subCalNotes.length === 0 && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 italic">No reminders yet</p>
                   )}
-                  {subCalNotes.map(note => (
+                  {subCalNotes.map((note, noteIdx) => (
                     <div key={note.id} className="bg-white dark:bg-gray-700 rounded-lg border border-yellow-200 dark:border-yellow-700 overflow-hidden">
                       <div className="flex items-center gap-2 px-2.5 py-2">
+                        {/* Reorder buttons */}
+                        <div className="flex flex-col shrink-0">
+                          <button
+                            onClick={() => reorderNote(note.id, 'up')}
+                            disabled={noteIdx === 0}
+                            className="text-gray-300 hover:text-gray-500 disabled:opacity-20 leading-none text-xs"
+                          >▲</button>
+                          <button
+                            onClick={() => reorderNote(note.id, 'down')}
+                            disabled={noteIdx === subCalNotes.length - 1}
+                            className="text-gray-300 hover:text-gray-500 disabled:opacity-20 leading-none text-xs"
+                          >▼</button>
+                        </div>
                         <button onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)} className="text-xs text-gray-400 shrink-0 w-3">
-                          {expandedNote === note.id ? '▼' : '▶'}
+                          {expandedNote === note.id ? '◂' : '▸'}
                         </button>
                         <span className="text-xs">📌</span>
                         {editingNote === note.id ? (
