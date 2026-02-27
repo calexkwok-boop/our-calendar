@@ -1588,6 +1588,7 @@ function App() {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-2 sm:p-4">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 mb-6">
@@ -2845,6 +2846,7 @@ function App() {
         })()}
       </div>
     )}
+    </>
   );
 }
 
