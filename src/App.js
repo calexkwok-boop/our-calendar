@@ -112,6 +112,8 @@ function App() {
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [editingSubCalTitle, setEditingSubCalTitle] = useState(false);
   const [editingSubCalDates, setEditingSubCalDates] = useState(false);
+  const [shakingDates, setShakingDates] = useState(false);
+  const shakingTimeoutRef = useRef(null);
   const [draggedNoteId, setDraggedNoteId] = useState(null);
   const [subCalendarEvents, setSubCalendarEvents] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
@@ -1737,6 +1739,7 @@ function App() {
 
   return (
     <>
+    <style>{shakeStyle}</style>
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-2 sm:p-4" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))', paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
       <div className="max-w-6xl mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 mb-6">
@@ -2825,46 +2828,76 @@ function App() {
 
         {/* Day tabs */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex gap-2 px-4 pt-3 pb-2 overflow-x-auto items-center">
-            {getSubCalDates(activeSubCalendar).map((date, dateIdx) => {
+          <div
+            className="flex gap-2 px-4 py-3 overflow-x-auto items-center"
+            onMouseLeave={() => { if (shakingDates) { clearTimeout(shakingTimeoutRef.current); setShakingDates(false); } }}
+          >
+            {/* Add day before */}
+            <button
+              onClick={() => extendSubCalDates('before')}
+              className="flex flex-col items-center justify-center w-10 h-14 rounded-xl shrink-0 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-all"
+            >
+              <span className="text-lg leading-none">+</span>
+            </button>
+
+            {getSubCalDates(activeSubCalendar).map((date, dateIdx, allDates) => {
               const dk = getDateKey(date);
               const isSelected = subCalSelectedDate && getDateKey(subCalSelectedDate) === dk;
               const hasEvents = (subCalendarEvents[dk] || []).length > 0;
+              const isFirst = dateIdx === 0;
+              const isLast = dateIdx === allDates.length - 1;
+              const canRemove = allDates.length > 1 && (isFirst || isLast);
               return (
-                <button
+                <div
                   key={dk}
-                  onClick={() => setSubCalSelectedDate(date)}
-                  className={`flex flex-col items-center px-3 py-2 rounded-xl shrink-0 transition-all ${
-                    isSelected
-                      ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-md'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                  }`}
+                  className={`relative shrink-0 ${shakingDates && canRemove ? 'shake-wiggle' : ''}`}
+                  onMouseDown={() => {
+                    shakingTimeoutRef.current = setTimeout(() => setShakingDates(true), 500);
+                  }}
+                  onMouseUp={() => clearTimeout(shakingTimeoutRef.current)}
+                  onTouchStart={() => {
+                    shakingTimeoutRef.current = setTimeout(() => setShakingDates(true), 500);
+                  }}
+                  onTouchEnd={() => clearTimeout(shakingTimeoutRef.current)}
                 >
-                  <span className="text-xs font-medium">{date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
-                  <span className="text-lg font-bold leading-none">{date.getDate()}</span>
-                  {hasEvents && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
-                </button>
+                  <button
+                    onClick={() => { if (shakingDates) return; setSubCalSelectedDate(date); }}
+                    className={`flex flex-col items-center px-3 py-2 rounded-xl transition-all ${
+                      isSelected && !shakingDates
+                        ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-md'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                    }`}
+                  >
+                    <span className="text-xs font-medium">{date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                    <span className="text-lg font-bold leading-none">{date.getDate()}</span>
+                    {hasEvents && !shakingDates && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
+                  </button>
+                  {/* Minus badge — only on first/last when shaking */}
+                  {shakingDates && canRemove && (
+                    <button
+                      onClick={e => { e.stopPropagation(); shrinkSubCalDate(isFirst ? 'before' : 'after'); if (allDates.length <= 2) setShakingDates(false); }}
+                      className="absolute -top-2 -left-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md border-2 border-white dark:border-gray-800 leading-none"
+                    >−</button>
+                  )}
+                </div>
               );
             })}
+
+            {/* Add day after */}
+            <button
+              onClick={() => extendSubCalDates('after')}
+              className="flex flex-col items-center justify-center w-10 h-14 rounded-xl shrink-0 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-all"
+            >
+              <span className="text-lg leading-none">+</span>
+            </button>
           </div>
-          {/* Edit dates row */}
-          <div className="flex items-center justify-end px-4 pb-2 gap-2">
-            {editingSubCalDates ? (
-              <>
-                <span className="text-xs text-gray-400 dark:text-gray-500 mr-auto">Adjust date range:</span>
-                <button onClick={() => shrinkSubCalDate('before')} className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-red-50 hover:text-red-500 transition-all" title="Remove first day">− Start</button>
-                <button onClick={() => extendSubCalDates('before')} className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-purple-50 hover:text-purple-500 transition-all" title="Add day before">+ Start</button>
-                <button onClick={() => extendSubCalDates('after')} className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-purple-50 hover:text-purple-500 transition-all" title="Add day after">+ End</button>
-                <button onClick={() => shrinkSubCalDate('after')} className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-red-50 hover:text-red-500 transition-all" title="Remove last day">− End</button>
-                <button onClick={() => setEditingSubCalDates(false)} className="px-2 py-1 text-xs bg-purple-500 text-white rounded-lg">Done</button>
-              </>
-            ) : (
-              <button
-                onClick={() => setEditingSubCalDates(true)}
-                className="text-xs text-gray-400 dark:text-gray-500 hover:text-purple-500 dark:hover:text-purple-400 transition-all"
-              >✏️ Edit dates</button>
-            )}
-          </div>
+          {/* Tap hint when shaking */}
+          {shakingDates && (
+            <div className="flex items-center justify-between px-4 pb-2">
+              <span className="text-xs text-red-400">Tap − to remove a day</span>
+              <button onClick={() => setShakingDates(false)} className="text-xs text-gray-400 hover:text-gray-600 underline">Done</button>
+            </div>
+          )}
         </div>
 
         {/* Day content */}
@@ -3195,5 +3228,19 @@ function App() {
     </>
   );
 }
+
+const shakeStyle = `
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-4deg); }
+  40% { transform: rotate(4deg); }
+  60% { transform: rotate(-3deg); }
+  80% { transform: rotate(3deg); }
+}
+.shake-wiggle {
+  animation: wiggle 0.5s ease-in-out infinite;
+  transform-origin: center;
+}
+`;
 
 export default App;
