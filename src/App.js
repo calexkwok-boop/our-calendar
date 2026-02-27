@@ -166,8 +166,9 @@ function App() {
   };
 
   const createSubCalendar = async () => {
+    console.log('createSubCalendar called', { name: newSubCalName, dates: selectedDates.length, user: user?.id });
     if (!newSubCalName.trim() || selectedDates.length < 2) {
-      alert(selectedDates.length < 2 ? 'Please select at least 2 dates first by holding on dates in the calendar.' : 'Please enter a name.');
+      alert(selectedDates.length < 2 ? `Please select at least 2 dates first. Currently selected: ${selectedDates.length}` : 'Please enter a name.');
       return;
     }
     const sorted = [...selectedDates].sort((a, b) => a - b);
