@@ -865,6 +865,22 @@ function App() {
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [isSelecting]);
 
+  // Close reaction picker when clicking anywhere outside it
+  useEffect(() => {
+    if (!showReactionPicker) return;
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.reaction-picker')) {
+        setShowReactionPicker(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showReactionPicker]);
+
   const processVoiceCommand = (transcript) => {
     const text = transcript.toLowerCase();
     let targetDate = new Date(selectedDate);
@@ -1741,10 +1757,10 @@ function App() {
                         ))}
                         <button
                           onClick={() => setShowReactionPicker(showReactionPicker === `preview-${event.id}` ? null : `preview-${event.id}`)}
-                          className="text-gray-400 hover:text-purple-500 text-xs leading-none"
+                          className="reaction-picker text-gray-400 hover:text-purple-500 text-xs leading-none"
                         >＋</button>
                         {showReactionPicker === `preview-${event.id}` && (
-                          <div className="absolute right-3 z-10 flex gap-1 p-1.5 bg-white dark:bg-gray-700 rounded-xl shadow-lg border border-gray-200 dark:border-gray-600">
+                          <div className="reaction-picker absolute right-3 z-10 flex gap-1 p-1.5 bg-white dark:bg-gray-700 rounded-xl shadow-lg border border-gray-200 dark:border-gray-600">
                             {REACTION_EMOJIS.map(emoji => (
                               <button key={emoji} onClick={() => handleReact(event, emoji)} className="text-base hover:scale-125 transition-transform p-0.5">
                                 {emoji}
@@ -2228,14 +2244,14 @@ function App() {
                               ))}
                               <button
                                 onClick={() => setShowReactionPicker(showReactionPicker === event.id ? null : event.id)}
-                                className="text-gray-400 dark:text-gray-500 hover:text-purple-500 text-sm px-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition-all"
+                                className="reaction-picker text-gray-400 dark:text-gray-500 hover:text-purple-500 text-sm px-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition-all"
                                 title="Add reaction"
                               >
                                 {showReactionPicker === event.id ? '✕' : '＋'}
                               </button>
                             </div>
                             {showReactionPicker === event.id && (
-                              <div className="flex gap-1 mt-1 p-1.5 bg-white dark:bg-gray-700 rounded-xl shadow-lg border border-gray-200 dark:border-gray-600 w-fit">
+                              <div className="reaction-picker flex gap-1 mt-1 p-1.5 bg-white dark:bg-gray-700 rounded-xl shadow-lg border border-gray-200 dark:border-gray-600 w-fit">
                                 {REACTION_EMOJIS.map(emoji => (
                                   <button
                                     key={emoji}
