@@ -357,7 +357,7 @@ function App() {
   };
 
   // Hours to show in timeline
-  const TIMELINE_HOURS = Array.from({ length: 19 }, (_, i) => i + 6); // 6am–midnight
+  const TIMELINE_HOURS = Array.from({ length: 23 }, (_, i) => (i + 6) % 24); // 6am–5am
 
   const handleReact = (event, emoji) => {
     const actualDateKey = Object.keys(events).find(k => events[k].some(e => e.id === event.id));
@@ -2691,6 +2691,34 @@ function App() {
           return (
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
 
+              {/* Notes / Reminders */}
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-700">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📝 Reminders &amp; Notes</h4>
+                <div className="space-y-1.5 mb-2">
+                  {subCalNotes.length === 0 && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 italic">No reminders yet</p>
+                  )}
+                  {subCalNotes.map(note => (
+                    <div key={note.id} className="flex items-start gap-2">
+                      <span className="text-xs mt-0.5">📌</span>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 flex-1">{note.text}</p>
+                      <button onClick={() => deleteSubCalNote(note.id)} className="text-gray-300 hover:text-red-400 text-xs">✕</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newNote}
+                    onChange={e => setNewNote(e.target.value)}
+                    onKeyPress={e => e.key === 'Enter' && addSubCalNote()}
+                    placeholder="Add a reminder..."
+                    className="flex-1 px-2.5 py-1.5 text-xs border border-yellow-300 dark:border-yellow-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-yellow-400"
+                  />
+                  <button onClick={addSubCalNote} className="px-2.5 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs font-medium">Add</button>
+                </div>
+              </div>
+
               {/* Quick add */}
               <div className="flex gap-2">
                 <input
@@ -2723,14 +2751,22 @@ function App() {
               <div className="relative">
                 {TIMELINE_HOURS.map(hour => {
                   const timeStr = `${String(hour).padStart(2,'0')}:00`;
-                  const nextStr = `${String(hour+1).padStart(2,'0')}:00`;
-                  const slotEvents = dayEvents.filter(e => e.time && e.time >= timeStr && e.time < nextStr);
+                  const nextHour = (hour + 1) % 24;
+                  const nextStr = `${String(nextHour).padStart(2,'0')}:00`;
+                  // For overnight hours (0-5), events with time < "06:00" belong here
+                  const slotEvents = dayEvents.filter(e => {
+                    if (!e.time) return false;
+                    if (hour < 6) {
+                      // overnight slot: time must be >= timeStr AND < nextStr (both < 06:00)
+                      return e.time >= timeStr && e.time < nextStr;
+                    }
+                    return e.time >= timeStr && e.time < nextStr;
+                  });
+                  const label = hour === 0 ? '12am' : hour === 12 ? '12pm' : hour > 12 ? `${hour-12}pm` : `${hour}am`;
                   return (
                     <div key={hour} className="flex gap-3 min-h-[52px] group">
                       <div className="w-12 shrink-0 text-right">
-                        <span className="text-xs text-gray-400 dark:text-gray-500 leading-[52px]">
-                          {hour === 12 ? '12pm' : hour > 12 ? `${hour-12}pm` : `${hour}am`}
-                        </span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 leading-[52px]">{label}</span>
                       </div>
                       <div className="flex-1 border-t border-gray-200 dark:border-gray-700 pt-1 pb-1 relative">
                         {slotEvents.map(event => (
@@ -2860,43 +2896,6 @@ function App() {
                     ))}
                   </div>
                 )}
-              </div>
-
-              {/* Notes / Reminders */}
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📝 Reminders &amp; Notes</h4>
-                <div className="space-y-2 mb-2">
-                  {subCalNotes.length === 0 && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 italic">No notes yet — add reminders like "pack diapers" or "confirm reservation"</p>
-                  )}
-                  {subCalNotes.map(note => (
-                    <div key={note.id} className="flex items-start gap-2 p-2.5 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-700">
-                      <span className="text-sm">📌</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-700 dark:text-gray-300">{note.text}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{note.created_by}</p>
-                      </div>
-                      <button
-                        onClick={() => deleteSubCalNote(note.id)}
-                        className="text-gray-300 dark:text-gray-600 hover:text-red-400 text-xs shrink-0"
-                      >✕</button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newNote}
-                    onChange={e => setNewNote(e.target.value)}
-                    onKeyPress={e => e.key === 'Enter' && addSubCalNote()}
-                    placeholder="Add a reminder..."
-                    className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400"
-                  />
-                  <button
-                    onClick={addSubCalNote}
-                    className="px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-white rounded-xl text-sm font-medium transition-all"
-                  >Add</button>
-                </div>
               </div>
 
               {/* Members */}
