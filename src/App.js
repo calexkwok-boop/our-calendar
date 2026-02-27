@@ -391,7 +391,7 @@ function App() {
   };
 
   // Hours to show in timeline
-  const TIMELINE_HOURS = Array.from({ length: 23 }, (_, i) => (i + 6) % 24); // 6am–5am
+  const TIMELINE_HOURS = Array.from({ length: 24 }, (_, i) => (i + 6) % 24); // 6am–5am
 
   const handleReact = (event, emoji) => {
     const actualDateKey = Object.keys(events).find(k => events[k].some(e => e.id === event.id));
@@ -2723,7 +2723,7 @@ function App() {
       <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 shadow-md">
+        <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 shadow-md" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <button onClick={() => setActiveSubCalendar(null)} className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium text-sm">
             <ChevronLeft className="w-4 h-4" /> Back
           </button>
