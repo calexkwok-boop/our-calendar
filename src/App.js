@@ -332,10 +332,6 @@ function App() {
     await supabase.from('sub_calendar_notes').update({ created_at: new Date(Date.now() - 1000).toISOString() }).eq('id', newNotes[swapIdx].id);
     await supabase.from('sub_calendar_notes').update({ created_at: new Date().toISOString() }).eq('id', newNotes[idx].id);
   };
-    await supabase.from('sub_calendar_notes').update({ text: newText }).eq('id', noteId);
-    setSubCalNotes(prev => prev.map(n => n.id === noteId ? { ...n, text: newText } : n));
-    setEditingNote(null);
-  };
 
   const addChecklistItem = async (noteId, itemText) => {
     if (!itemText.trim()) return;
