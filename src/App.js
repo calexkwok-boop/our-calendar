@@ -105,6 +105,8 @@ function App() {
   // Sub-calendar state
   const [subCalendars, setSubCalendars] = useState([]);
   const [activeSubCalendar, setActiveSubCalendar] = useState(null);
+  const [subCalNotes, setSubCalNotes] = useState([]); // [{id, text, createdBy, createdAt}]
+  const [newNote, setNewNote] = useState('');
   const [subCalendarEvents, setSubCalendarEvents] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
   const [newSubCalName, setNewSubCalName] = useState('');
@@ -212,7 +214,7 @@ function App() {
     setActiveSubCalendar(sc);
     await loadSubCalendarEvents(sc.id);
     await loadSubCalendarMembers(sc.id);
-    // Default select first date
+    await loadSubCalNotes(sc.id);
     const firstDate = new Date(sc.start_date + 'T00:00:00');
     setSubCalSelectedDate(firstDate);
   };
@@ -236,6 +238,39 @@ function App() {
       .eq('sub_calendar_id', activeSubCalendar.id)
       .eq('email', email);
     setSubCalMembers(prev => prev.filter(m => m.email !== email));
+  };
+
+  const loadSubCalNotes = async (subCalId) => {
+    try {
+      const { data, error } = await supabase
+        .from('sub_calendar_notes')
+        .select('*')
+        .eq('sub_calendar_id', subCalId)
+        .order('created_at', { ascending: true });
+      if (error) { console.error('Error loading notes:', error); return; }
+      setSubCalNotes(data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const addSubCalNote = async () => {
+    if (!newNote.trim() || !activeSubCalendar) return;
+    const note = {
+      id: `scn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      sub_calendar_id: activeSubCalendar.id,
+      text: newNote.trim(),
+      created_by: currentUser,
+      user_id: user?.id,
+      created_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('sub_calendar_notes').insert(note);
+    if (error) { console.error('Error adding note:', error); return; }
+    setSubCalNotes(prev => [...prev, note]);
+    setNewNote('');
+  };
+
+  const deleteSubCalNote = async (noteId) => {
+    await supabase.from('sub_calendar_notes').delete().eq('id', noteId);
+    setSubCalNotes(prev => prev.filter(n => n.id !== noteId));
   };
 
   const addSubCalEvent = async (date, title, time, endTime) => {
@@ -2825,6 +2860,43 @@ function App() {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Notes / Reminders */}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📝 Reminders &amp; Notes</h4>
+                <div className="space-y-2 mb-2">
+                  {subCalNotes.length === 0 && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 italic">No notes yet — add reminders like "pack diapers" or "confirm reservation"</p>
+                  )}
+                  {subCalNotes.map(note => (
+                    <div key={note.id} className="flex items-start gap-2 p-2.5 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-700">
+                      <span className="text-sm">📌</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">{note.text}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{note.created_by}</p>
+                      </div>
+                      <button
+                        onClick={() => deleteSubCalNote(note.id)}
+                        className="text-gray-300 dark:text-gray-600 hover:text-red-400 text-xs shrink-0"
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newNote}
+                    onChange={e => setNewNote(e.target.value)}
+                    onKeyPress={e => e.key === 'Enter' && addSubCalNote()}
+                    placeholder="Add a reminder..."
+                    className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400"
+                  />
+                  <button
+                    onClick={addSubCalNote}
+                    className="px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-white rounded-xl text-sm font-medium transition-all"
+                  >Add</button>
+                </div>
               </div>
 
               {/* Members */}
