@@ -2640,16 +2640,14 @@ function App() {
                             }}
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
-                          <input
-                            type="text"
-                            defaultValue={event.location || ''}
-                            placeholder="📍 Add location (optional)"
-                            onBlur={(e) => {
-                              const val = e.target.value.trim() || null;
+                          <PlacesAutocomplete
+                            value={event.location || ''}
+                            onSelect={(val) => {
                               if (val !== (event.location || null)) {
                                 handleUpdateEventField(event.date, event.id, { location: val });
                               }
                             }}
+                            placeholder="📍 Add location (optional)"
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
                           <select
@@ -3338,11 +3336,10 @@ function App() {
                                   rows={2}
                                   className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-sm resize-none"
                                 />
-                                <input
-                                  type="text"
-                                  defaultValue={event.location || ''}
+                                <PlacesAutocomplete
+                                  value={event.location || ''}
+                                  onSelect={(val) => updateSubCalEvent(event.id, { location: val })}
                                   placeholder="📍 Add location (optional)"
-                                  onBlur={e => updateSubCalEvent(event.id, { location: e.target.value || null })}
                                   className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-sm"
                                 />
                                 <button onClick={() => setSubCalEditingEvent(null)} className="w-full py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg text-sm font-medium">Done</button>
@@ -3459,6 +3456,82 @@ function App() {
       </div>
     )}
     </>
+  );
+}
+
+function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
+  const [input, setInput] = React.useState(value || '');
+  const [suggestions, setSuggestions] = React.useState([]);
+  const [showSuggestions, setShowSuggestions] = React.useState(false);
+  const autocompleteService = React.useRef(null);
+  const containerRef = React.useRef(null);
+
+  React.useEffect(() => { setInput(value || ''); }, [value]);
+
+  React.useEffect(() => {
+    const handleClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick);
+    return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('touchstart', handleClick); };
+  }, []);
+
+  const search = (query) => {
+    if (!query.trim() || query.length < 2) { setSuggestions([]); return; }
+    if (!window.google?.maps?.places) { setSuggestions([]); return; }
+    if (!autocompleteService.current) {
+      autocompleteService.current = new window.google.maps.places.AutocompleteService();
+    }
+    autocompleteService.current.getPlacePredictions(
+      { input: query },
+      (predictions, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+          setSuggestions(predictions);
+          setShowSuggestions(true);
+        } else {
+          setSuggestions([]);
+        }
+      }
+    );
+  };
+
+  const handleSelect = (prediction) => {
+    setInput(prediction.description);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    onSelect(prediction.description);
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        type="text"
+        value={input}
+        onChange={e => { setInput(e.target.value); search(e.target.value); }}
+        onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+        onBlur={() => setTimeout(() => { setShowSuggestions(false); if (!suggestions.length) onSelect(input.trim() || null); }, 150)}
+        placeholder={placeholder || '📍 Add location (optional)'}
+        className={className}
+      />
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 z-50 overflow-hidden">
+          {suggestions.map((s) => (
+            <button
+              key={s.place_id}
+              onMouseDown={() => handleSelect(s)}
+              className="w-full text-left px-3 py-2 text-xs hover:bg-purple-50 dark:hover:bg-purple-900/30 border-b border-gray-100 dark:border-gray-700 last:border-0"
+            >
+              <span className="text-gray-500 mr-1">📍</span>
+              <span className="font-medium text-gray-800 dark:text-white">{s.structured_formatting.main_text}</span>
+              <span className="text-gray-400 ml-1">{s.structured_formatting.secondary_text}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
