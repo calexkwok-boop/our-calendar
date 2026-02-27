@@ -2371,7 +2371,7 @@ function App() {
             )}
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-gray-100">
             <div className="mb-4">
               {selectedDates.length > 1 ? (
                 <div className="p-4 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-xl border-2 border-purple-300 dark:border-purple-600">
@@ -2571,7 +2571,12 @@ function App() {
                             type="text"
                             defaultValue={event.location || ''}
                             placeholder="📍 Add location (optional)"
-                            onBlur={(e) => handleUpdateEventField(event.date, event.id, { location: e.target.value || null })}
+                            onBlur={(e) => {
+                              const val = e.target.value.trim() || null;
+                              if (val !== (event.location || null)) {
+                                handleUpdateEventField(event.date, event.id, { location: val });
+                              }
+                            }}
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
                           <select
@@ -2656,7 +2661,7 @@ function App() {
                                 </div>
                               )}
                             </div>
-                            <div className="text-gray-900 dark:text-gray-100 font-medium mb-1">{event.title}</div>
+                            <p className="font-medium mb-1 text-gray-900 dark:text-gray-100">{event.title}</p>
                             {event.location && (
                               <a
                                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
