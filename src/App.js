@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Mic, MicOff, Settings, Eye, EyeOff, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Eye, EyeOff, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase
@@ -73,9 +73,7 @@ function App() {
   const [newCategoryColor, setNewCategoryColor] = useState(COLOR_OPTIONS[0]);
   const [isPrivate, setIsPrivate] = useState(false);
   const [showPrivateEvents, setShowPrivateEvents] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [voiceTranscript, setVoiceTranscript] = useState('');
-  const recognitionRef = useRef(null);
+
   const saveTimeoutRef = useRef(null);
   const [currentUser, setCurrentUser] = useState('');
   const [showUserSetup, setShowUserSetup] = useState(false);
@@ -1345,118 +1343,6 @@ function App() {
     };
   }, [showReactionPicker]);
 
-  const processVoiceCommand = (transcript) => {
-    const text = transcript.toLowerCase();
-    let targetDate = new Date(selectedDate);
-
-    const dateMatch = text.match(/(?:on\s+)?(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?/);
-    if (dateMatch) {
-      const month = parseInt(dateMatch[1]) - 1;
-      const day = parseInt(dateMatch[2]);
-      const year = dateMatch[3] ? (dateMatch[3].length === 2 ? 2000 + parseInt(dateMatch[3]) : parseInt(dateMatch[3])) : targetDate.getFullYear();
-      targetDate = new Date(year, month, day);
-    } else {
-      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      for (let i = 0; i < days.length; i++) {
-        if (text.includes(days[i])) {
-          const today = new Date();
-          const currentDay = today.getDay();
-          const daysUntil = (i - currentDay + 7) % 7 || 7;
-          targetDate = new Date(today);
-          targetDate.setDate(today.getDate() + daysUntil);
-          break;
-        }
-      }
-      if (text.includes('today')) {
-        targetDate = new Date();
-      } else if (text.includes('tomorrow')) {
-        targetDate = new Date();
-        targetDate.setDate(targetDate.getDate() + 1);
-      }
-    }
-
-    const timeMatch = text.match(/(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?/);
-    let time = null;
-    if (timeMatch) {
-      let hours = parseInt(timeMatch[1]);
-      const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
-      const meridiem = timeMatch[3]?.replace(/\./g, '').toLowerCase();
-      if (meridiem === 'pm' && hours !== 12) hours += 12;
-      if (meridiem === 'am' && hours === 12) hours = 0;
-      if (!meridiem && hours < 8) hours += 12;
-      time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-    }
-
-    let title = transcript;
-    title = title.replace(/(?:schedule|add|create|new)\s+/gi, '');
-    title = title.replace(/\s+(?:on|at|for)\s+.*$/i, '');
-    if (dateMatch) title = title.replace(dateMatch[0], '');
-    if (timeMatch) title = title.replace(timeMatch[0], '');
-    title = title.trim();
-
-    const dateKey = getDateKey(targetDate);
-    const newEvent = {
-      id: Date.now().toString(),
-      title,
-      time,
-      date: dateKey,
-      category: selectedCategory,
-      isPrivate: isPrivate,
-      createdBy: currentUser,
-      createdAt: new Date().toISOString()
-    };
-
-    const dateEvents = events[dateKey] || [];
-    const updatedEvents = {
-      ...events,
-      [dateKey]: [...dateEvents, newEvent].sort((a, b) => {
-        if (!a.time) return 1;
-        if (!b.time) return -1;
-        return a.time.localeCompare(b.time);
-      })
-    };
-
-    saveEvents(updatedEvents);
-    setSelectedDate(targetDate);
-    setQuickEntry(`Added: ${title}`);
-    setTimeout(() => setQuickEntry(''), 3000);
-  };
-
-  useEffect(() => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'en-US';
-
-      recognitionRef.current.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setVoiceTranscript(transcript);
-        processVoiceCommand(transcript);
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onend = () => setIsListening(false);
-    }
-  }, [selectedCategory, isPrivate, selectedDate]);
-
-  const toggleVoiceInput = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-    } else {
-      setVoiceTranscript('');
-      recognitionRef.current?.start();
-      setIsListening(true);
-    }
-  };
-
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) return;
     const key = newCategoryName.toLowerCase().replace(/\s+/g, '_');
@@ -2575,27 +2461,6 @@ function App() {
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
-
-              {('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) ? (
-                <div>
-                  <button
-                    onClick={toggleVoiceInput}
-                    className={`w-full px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ${
-                      isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white hover:shadow-lg'
-                    }`}
-                  >
-                    {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                    {isListening ? 'Listening...' : 'Use Voice Input'}
-                  </button>
-                  {voiceTranscript && (
-                    <div className="mt-2 p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg text-sm text-emerald-700 dark:text-emerald-300">"{voiceTranscript}"</div>
-                  )}
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Say: "Meeting with John at 2pm on Friday"</div>
-                </div>
-              ) : (
-                <div className="text-xs text-gray-500 dark:text-gray-400">Voice input not supported</div>
-              )}
-            </div>
 
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {selectedEvents.length === 0 ? (
