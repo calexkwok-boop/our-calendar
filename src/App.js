@@ -2461,6 +2461,7 @@ function App() {
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
+            </div>
 
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {selectedEvents.length === 0 ? (
