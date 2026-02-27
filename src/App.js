@@ -158,6 +158,7 @@ function App() {
           createdBy: e.created_by,
           userId: e.user_id,
           reactions: e.reactions ? JSON.parse(e.reactions) : {},
+          location: e.location || null,
         });
       });
       setSubCalendarEvents(grouped);
@@ -389,6 +390,7 @@ function App() {
       created_by: currentUser,
       user_id: user.id,
       reactions: null,
+      location: null,
     };
     const { error } = await supabase.from('sub_calendar_events').insert(newEvent);
     if (error) { console.error('Error adding sub_calendar_event:', error); return; }
@@ -409,6 +411,7 @@ function App() {
     if (updates.time !== undefined) dbUpdates.time = updates.time;
     if (updates.endTime !== undefined) dbUpdates.end_time = updates.endTime;
     if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+    if (updates.location !== undefined) dbUpdates.location = updates.location;
     if (updates.category !== undefined) dbUpdates.category = updates.category;
     if (updates.reactions !== undefined) dbUpdates.reactions = JSON.stringify(updates.reactions);
     await supabase.from('sub_calendar_events').update(dbUpdates).eq('id', eventId);
@@ -3143,6 +3146,13 @@ function App() {
                                   rows={2}
                                   className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-sm resize-none"
                                 />
+                                <input
+                                  type="text"
+                                  defaultValue={event.location || ''}
+                                  placeholder="📍 Add location (optional)"
+                                  onBlur={e => updateSubCalEvent(event.id, { location: e.target.value || null })}
+                                  className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-sm"
+                                />
                                 <button onClick={() => setSubCalEditingEvent(null)} className="w-full py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg text-sm font-medium">Done</button>
                               </div>
                             ) : (
@@ -3156,6 +3166,15 @@ function App() {
                                     </div>
                                   )}
                                   {event.notes && <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 italic">{event.notes}</div>}
+                                  {event.location && (
+                                    <a
+                                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 mt-0.5"
+                                      onClick={e => e.stopPropagation()}
+                                    >📍 {event.location}</a>
+                                  )}
                                   {event.createdBy && <div className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-0.5"><User className="w-2.5 h-2.5" />{event.createdBy}</div>}
                                   {/* Reactions */}
                                   <div className="flex flex-wrap items-center gap-1 mt-1">
