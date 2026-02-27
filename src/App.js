@@ -120,7 +120,6 @@ function App() {
   // ── Sub-calendar functions ──────────────────────────────────────────────
 
   const loadSubCalendars = async () => {
-    if (!user) return;
     try {
       const { data, error } = await supabase.from('sub_calendars').select('*');
       if (error) { console.error('Error loading sub_calendars:', error); return; }
@@ -896,6 +895,9 @@ function App() {
         } else {
           setShowUserSetup(true);
         }
+
+        // Load sub-calendars now that we know user is authenticated
+        await loadSubCalendars();
       } catch (error) {
         console.log('Error loading data:', error);
       } finally {
@@ -904,7 +906,6 @@ function App() {
     };
 
     loadData();
-    loadSubCalendars();
 
     // Listen for changes to OTHER users' events (shared calendars)
     // We use a separate loadSharedEvents function that only fetches shared data
