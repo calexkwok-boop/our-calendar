@@ -105,8 +105,11 @@ function App() {
   // Sub-calendar state
   const [subCalendars, setSubCalendars] = useState([]);
   const [activeSubCalendar, setActiveSubCalendar] = useState(null);
-  const [subCalNotes, setSubCalNotes] = useState([]); // [{id, text, createdBy, createdAt}]
+  const [subCalNotes, setSubCalNotes] = useState([]); // [{id, text, checklist, createdBy, createdAt}]
   const [newNote, setNewNote] = useState('');
+  const [expandedNote, setExpandedNote] = useState(null);
+  const [editingNote, setEditingNote] = useState(null);
+  const [newChecklistItem, setNewChecklistItem] = useState('');
   const [subCalendarEvents, setSubCalendarEvents] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
   const [newSubCalName, setNewSubCalName] = useState('');
@@ -248,7 +251,7 @@ function App() {
         .eq('sub_calendar_id', subCalId)
         .order('created_at', { ascending: true });
       if (error) { console.error('Error loading notes:', error); return; }
-      setSubCalNotes(data || []);
+      setSubCalNotes((data || []).map(n => ({ ...n, checklist: n.checklist ? JSON.parse(n.checklist) : [] })));
     } catch (e) { console.error(e); }
   };
 
@@ -258,19 +261,50 @@ function App() {
       id: `scn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       sub_calendar_id: activeSubCalendar.id,
       text: newNote.trim(),
+      checklist: JSON.stringify([]),
       created_by: currentUser,
       user_id: user?.id,
       created_at: new Date().toISOString(),
     };
     const { error } = await supabase.from('sub_calendar_notes').insert(note);
     if (error) { console.error('Error adding note:', error); return; }
-    setSubCalNotes(prev => [...prev, note]);
+    setSubCalNotes(prev => [...prev, { ...note, checklist: [] }]);
     setNewNote('');
   };
 
   const deleteSubCalNote = async (noteId) => {
     await supabase.from('sub_calendar_notes').delete().eq('id', noteId);
     setSubCalNotes(prev => prev.filter(n => n.id !== noteId));
+    if (expandedNote === noteId) setExpandedNote(null);
+  };
+
+  const updateNoteText = async (noteId, newText) => {
+    await supabase.from('sub_calendar_notes').update({ text: newText }).eq('id', noteId);
+    setSubCalNotes(prev => prev.map(n => n.id === noteId ? { ...n, text: newText } : n));
+    setEditingNote(null);
+  };
+
+  const addChecklistItem = async (noteId, itemText) => {
+    if (!itemText.trim()) return;
+    const note = subCalNotes.find(n => n.id === noteId);
+    const checklist = [...(note.checklist || []), { id: Date.now(), text: itemText.trim(), done: false }];
+    await supabase.from('sub_calendar_notes').update({ checklist: JSON.stringify(checklist) }).eq('id', noteId);
+    setSubCalNotes(prev => prev.map(n => n.id === noteId ? { ...n, checklist } : n));
+    setNewChecklistItem('');
+  };
+
+  const toggleChecklistItem = async (noteId, itemId) => {
+    const note = subCalNotes.find(n => n.id === noteId);
+    const checklist = note.checklist.map(item => item.id === itemId ? { ...item, done: !item.done } : item);
+    await supabase.from('sub_calendar_notes').update({ checklist: JSON.stringify(checklist) }).eq('id', noteId);
+    setSubCalNotes(prev => prev.map(n => n.id === noteId ? { ...n, checklist } : n));
+  };
+
+  const deleteChecklistItem = async (noteId, itemId) => {
+    const note = subCalNotes.find(n => n.id === noteId);
+    const checklist = note.checklist.filter(item => item.id !== itemId);
+    await supabase.from('sub_calendar_notes').update({ checklist: JSON.stringify(checklist) }).eq('id', noteId);
+    setSubCalNotes(prev => prev.map(n => n.id === noteId ? { ...n, checklist } : n));
   };
 
   const addSubCalEvent = async (date, title, time, endTime) => {
@@ -2569,18 +2603,38 @@ function App() {
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">🗓️ Sub-Calendars</h4>
                 <div className="space-y-2">
-                  {subCalendars.map(sc => (
-                    <div key={sc.id} className="flex items-center justify-between p-2.5 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl border border-purple-200 dark:border-purple-700">
+                  {[...subCalendars].sort((a, b) => {
+                    const today = getDateKey(new Date());
+                    const aActive = today >= a.start_date && today <= a.end_date;
+                    const bActive = today >= b.start_date && today <= b.end_date;
+                    // Also check if name loosely matches any event today
+                    const todayEvents = events[today] || [];
+                    const aMatches = aActive && todayEvents.some(e => e.title.toLowerCase().includes(a.name.toLowerCase()) || a.name.toLowerCase().includes(e.title.toLowerCase()));
+                    const bMatches = bActive && todayEvents.some(e => e.title.toLowerCase().includes(b.name.toLowerCase()) || b.name.toLowerCase().includes(e.title.toLowerCase()));
+                    if (aMatches && !bMatches) return -1;
+                    if (bMatches && !aMatches) return 1;
+                    if (aActive && !bActive) return -1;
+                    if (bActive && !aActive) return 1;
+                    return 0;
+                  }).map(sc => {
+                    const today = getDateKey(new Date());
+                    const isActive = today >= sc.start_date && today <= sc.end_date;
+                    return (
+                    <div key={sc.id} className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${isActive ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-300 dark:border-green-700' : 'bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-purple-200 dark:border-purple-700'}`}>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm text-gray-800 dark:text-gray-200 truncate">{sc.name}</div>
+                        <div className="flex items-center gap-1.5">
+                          {isActive && <span className="text-xs">🟢</span>}
+                          <div className="font-medium text-sm text-gray-800 dark:text-gray-200 truncate">{sc.name}</div>
+                        </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {isActive && <span className="ml-1 text-green-600 dark:text-green-400 font-medium">· happening now</span>}
                         </div>
                       </div>
                       <div className="flex gap-1 ml-2">
                         <button
                           onClick={() => openSubCalendar(sc)}
-                          className="px-2.5 py-1 bg-purple-500 text-white text-xs rounded-lg hover:bg-purple-600 transition-all"
+                          className={`px-2.5 py-1 text-white text-xs rounded-lg transition-all ${isActive ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-500 hover:bg-purple-600'}`}
                         >Open</button>
                         {sc.owner_id === user?.id && (
                           <button onClick={() => deleteSubCalendar(sc.id)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg">
@@ -2589,7 +2643,8 @@ function App() {
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -2699,10 +2754,60 @@ function App() {
                     <p className="text-xs text-gray-400 dark:text-gray-500 italic">No reminders yet</p>
                   )}
                   {subCalNotes.map(note => (
-                    <div key={note.id} className="flex items-start gap-2">
-                      <span className="text-xs mt-0.5">📌</span>
-                      <p className="text-xs text-gray-700 dark:text-gray-300 flex-1">{note.text}</p>
-                      <button onClick={() => deleteSubCalNote(note.id)} className="text-gray-300 hover:text-red-400 text-xs">✕</button>
+                    <div key={note.id} className="bg-white dark:bg-gray-700 rounded-lg border border-yellow-200 dark:border-yellow-700 overflow-hidden">
+                      <div className="flex items-center gap-2 px-2.5 py-2">
+                        <button onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)} className="text-xs text-gray-400 shrink-0 w-3">
+                          {expandedNote === note.id ? '▼' : '▶'}
+                        </button>
+                        <span className="text-xs">📌</span>
+                        {editingNote === note.id ? (
+                          <input
+                            autoFocus
+                            defaultValue={note.text}
+                            onBlur={e => updateNoteText(note.id, e.target.value)}
+                            onKeyPress={e => e.key === 'Enter' && updateNoteText(note.id, e.target.value)}
+                            className="flex-1 text-xs px-1.5 py-0.5 border border-purple-300 rounded dark:bg-gray-600 dark:text-white"
+                          />
+                        ) : (
+                          <span
+                            className="flex-1 text-xs text-gray-700 dark:text-gray-300 cursor-pointer hover:text-purple-600"
+                            onClick={() => setEditingNote(note.id)}
+                          >{note.text}</span>
+                        )}
+                        {(note.checklist || []).length > 0 && (
+                          <span className="text-xs text-gray-400">
+                            {(note.checklist || []).filter(i => i.done).length}/{(note.checklist || []).length}
+                          </span>
+                        )}
+                        <button onClick={() => deleteSubCalNote(note.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">✕</button>
+                      </div>
+                      {expandedNote === note.id && (
+                        <div className="px-3 pb-2.5 space-y-1.5 border-t border-yellow-100 dark:border-yellow-800 pt-2">
+                          {(note.checklist || []).map(item => (
+                            <div key={item.id} className="flex items-center gap-2">
+                              <button
+                                onClick={() => toggleChecklistItem(note.id, item.id)}
+                                className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
+                              >
+                                {item.done && <span className="text-xs leading-none">✓</span>}
+                              </button>
+                              <span className={`text-xs flex-1 ${item.done ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>{item.text}</span>
+                              <button onClick={() => deleteChecklistItem(note.id, item.id)} className="text-gray-300 hover:text-red-400 text-xs">✕</button>
+                            </div>
+                          ))}
+                          <div className="flex gap-1.5 mt-1">
+                            <input
+                              type="text"
+                              value={newChecklistItem}
+                              onChange={e => setNewChecklistItem(e.target.value)}
+                              onKeyPress={e => { if (e.key === 'Enter') { addChecklistItem(note.id, newChecklistItem); } }}
+                              placeholder="Add item..."
+                              className="flex-1 px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg"
+                            />
+                            <button onClick={() => addChecklistItem(note.id, newChecklistItem)} className="px-2 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs">+</button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -2712,7 +2817,7 @@ function App() {
                     value={newNote}
                     onChange={e => setNewNote(e.target.value)}
                     onKeyPress={e => e.key === 'Enter' && addSubCalNote()}
-                    placeholder="Add a reminder..."
+                    placeholder="Add a note..."
                     className="flex-1 px-2.5 py-1.5 text-xs border border-yellow-300 dark:border-yellow-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-yellow-400"
                   />
                   <button onClick={addSubCalNote} className="px-2.5 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs font-medium">Add</button>
