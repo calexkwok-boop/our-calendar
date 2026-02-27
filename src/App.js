@@ -129,6 +129,7 @@ function App() {
   const [subCalQuickEntry, setSubCalQuickEntry] = useState('');
   const [subCalSelectedDate, setSubCalSelectedDate] = useState(null);
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
+  const [subCalAddingSlot, setSubCalAddingSlot] = useState(null); // hour number being added to
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
 
@@ -3277,14 +3278,30 @@ function App() {
                           </div>
                         ))}
                         {/* Click slot to add event */}
-                        <button
-                          onClick={() => {
-                            const title = window.prompt('Event name?');
-                            if (title) addSubCalEvent(subCalSelectedDate, title, timeStr, null);
-                          }}
-                          className="absolute inset-0 w-full opacity-0 group-hover:opacity-100 hover:bg-purple-50 dark:hover:bg-purple-900/10 rounded transition-all text-xs text-purple-400 flex items-center justify-center"
-                          style={{ display: slotEvents.length > 0 ? 'none' : undefined }}
-                        >+ {hour === 12 ? '12pm' : hour > 12 ? `${hour-12}pm` : `${hour}am`}</button>
+                        {subCalAddingSlot === hour ? (
+                          <div className="flex gap-1 mt-1">
+                            <input
+                              autoFocus
+                              type="text"
+                              placeholder="Event name..."
+                              className="flex-1 text-xs px-2 py-1 border border-purple-300 dark:border-purple-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-400"
+                              onKeyDown={e => {
+                                if (e.key === 'Enter' && e.target.value.trim()) {
+                                  addSubCalEvent(subCalSelectedDate, e.target.value.trim(), timeStr, null);
+                                  setSubCalAddingSlot(null);
+                                }
+                                if (e.key === 'Escape') setSubCalAddingSlot(null);
+                              }}
+                              onBlur={() => setSubCalAddingSlot(null)}
+                            />
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setSubCalAddingSlot(hour)}
+                            className="absolute inset-0 w-full opacity-0 group-hover:opacity-100 hover:bg-purple-50 dark:hover:bg-purple-900/10 rounded transition-all text-xs text-purple-400 flex items-center justify-center"
+                            style={{ display: slotEvents.length > 0 ? 'none' : undefined }}
+                          >+ {label}</button>
+                        )}
                       </div>
                     </div>
                   );
