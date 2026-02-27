@@ -381,6 +381,8 @@ function App() {
     }
     setSubCalWeatherLoading(false);
   };
+
+  const reorderNote = async (noteId, direction) => {
     const idx = subCalNotes.findIndex(n => n.id === noteId);
     if (direction === 'up' && idx === 0) return;
     if (direction === 'down' && idx === subCalNotes.length - 1) return;
