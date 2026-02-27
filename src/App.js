@@ -1905,7 +1905,7 @@ function App() {
         {showNotificationSettings && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">Notification Settings</h3>
+              <h3 className="text-xl font-semibold text-green-600 dark:text-green-400">Notification Settings</h3>
               <button onClick={() => setShowNotificationSettings(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
@@ -1959,7 +1959,7 @@ function App() {
         {showSharePanel && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400">
                 Share Calendar
               </h3>
               <button onClick={() => { setShowSharePanel(false); setShareMessage(''); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
@@ -2034,7 +2034,7 @@ function App() {
         {showCategoryEditor && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Manage Categories</h3>
+              <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400">Manage Categories</h3>
               <button onClick={() => setShowCategoryEditor(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
@@ -2375,7 +2375,7 @@ function App() {
             <div className="mb-4">
               {selectedDates.length > 1 ? (
                 <div className="p-4 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-xl border-2 border-purple-300 dark:border-purple-600">
-                  <h3 className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">Multi-Day Selection</h3>
+                  <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400 mb-2">Multi-Day Selection</h3>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm text-purple-700 dark:text-purple-300 font-medium">
                       {selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {selectedDates[selectedDates.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -2393,7 +2393,7 @@ function App() {
                   </div>
                 </div>
               ) : (
-                <h3 className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+                <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400 mb-2">
                   {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                 </h3>
               )}
@@ -2661,7 +2661,7 @@ function App() {
                                 </div>
                               )}
                             </div>
-                            <p className="font-medium mb-1 text-gray-900 dark:text-gray-100">{event.title}</p>
+                            <div className="font-medium mb-1 text-gray-900 dark:text-gray-100">{event.title}</div>
                             {event.location && (
                               <a
                                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
