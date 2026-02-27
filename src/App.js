@@ -166,7 +166,10 @@ function App() {
   };
 
   const createSubCalendar = async () => {
-    if (!newSubCalName.trim() || selectedDates.length < 2) return;
+    if (!newSubCalName.trim() || selectedDates.length < 2) {
+      alert(selectedDates.length < 2 ? 'Please select at least 2 dates first by holding on dates in the calendar.' : 'Please enter a name.');
+      return;
+    }
     const sorted = [...selectedDates].sort((a, b) => a - b);
     const startDate = getDateKey(sorted[0]);
     const endDate = getDateKey(sorted[sorted.length - 1]);
@@ -180,7 +183,11 @@ function App() {
       owner_id: user.id,
     };
     const { error } = await supabase.from('sub_calendars').insert(newSC);
-    if (error) { console.error('Error creating sub_calendar:', error); return; }
+    if (error) {
+      console.error('Error creating sub_calendar:', error);
+      alert(`Error saving: ${error.message}`);
+      return;
+    }
     setSubCalendars(prev => [...prev, newSC]);
     setShowSubCalendarModal(false);
     setNewSubCalName('');
