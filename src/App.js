@@ -2371,7 +2371,7 @@ function App() {
             )}
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 text-gray-900 dark:text-gray-100">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
             <div className="mb-4">
               {selectedDates.length > 1 ? (
                 <div className="p-4 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-xl border-2 border-purple-300 dark:border-purple-600">
@@ -2533,7 +2533,7 @@ function App() {
                   }
 
                   return (
-                    <div key={event.id} className={`${category.lightBg} rounded-xl p-3 border-2 ${event.isVirtualAnnual ? 'border-violet-300 border-dashed' : category.border} transition-all duration-200 hover:shadow-md relative`}>
+                    <div key={event.id} className={`${category.lightBg} dark:bg-gray-700 rounded-xl p-3 border-2 ${event.isVirtualAnnual ? 'border-violet-300 border-dashed dark:border-violet-600' : category.border} transition-all duration-200 hover:shadow-md relative`}>
                       {event.isPrivate && (
                         <div className="absolute top-2 right-2">
                           <Lock className="w-3 h-3 text-amber-600" />
@@ -2661,7 +2661,7 @@ function App() {
                                 </div>
                               )}
                             </div>
-                            <div className="font-medium mb-1 text-gray-900 dark:text-gray-100">{event.title}</div>
+                            <div className="font-medium mb-1 text-gray-900 dark:text-white">{event.title}</div>
                             {event.location && (
                               <a
                                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
