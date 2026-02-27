@@ -126,7 +126,6 @@ function App() {
   const [subCalInviteEmail, setSubCalInviteEmail] = useState('');
   const [subCalMembers, setSubCalMembers] = useState([]);
   const [subCalEditingEvent, setSubCalEditingEvent] = useState(null);
-  const [subCalQuickEntry, setSubCalQuickEntry] = useState('');
   const [subCalSelectedDate, setSubCalSelectedDate] = useState(null);
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
   const [subCalAddingSlot, setSubCalAddingSlot] = useState(null); // hour number being added to
@@ -3113,34 +3112,6 @@ function App() {
                   />
                   <button onClick={addSubCalNote} className="px-2.5 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs font-medium">Add</button>
                 </div>
-              </div>
-
-              {/* Quick add */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={subCalQuickEntry}
-                  onChange={e => setSubCalQuickEntry(e.target.value)}
-                  placeholder="Add event..."
-                  className="flex-1 px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
-                  onKeyPress={e => {
-                    if (e.key === 'Enter' && subCalQuickEntry.trim()) {
-                      addSubCalEvent(subCalSelectedDate, subCalQuickEntry, null, null);
-                      setSubCalQuickEntry('');
-                    }
-                  }}
-                />
-                <button
-                  onClick={() => {
-                    if (subCalQuickEntry.trim()) {
-                      addSubCalEvent(subCalSelectedDate, subCalQuickEntry, null, null);
-                      setSubCalQuickEntry('');
-                    }
-                  }}
-                  className="px-3 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
               </div>
 
               {/* Timeline */}
