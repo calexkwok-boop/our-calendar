@@ -117,6 +117,10 @@ function App() {
   const [subCalWeather, setSubCalWeather] = useState({});
   const [subCalWeatherLocation, setSubCalWeatherLocation] = useState('');
   const [subCalWeatherLoading, setSubCalWeatherLoading] = useState(false);
+  const [subCalWeatherInput, setSubCalWeatherInput] = useState('');
+  const [subCalWeatherSuggestions, setSubCalWeatherSuggestions] = useState([]);
+  const [subCalWeatherExpanded, setSubCalWeatherExpanded] = useState(false);
+  const weatherAutocompleteRef = useRef(null);
   const [draggedNoteId, setDraggedNoteId] = useState(null);
   const [subCalendarEvents, setSubCalendarEvents] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
@@ -225,7 +229,28 @@ function App() {
   const openSubCalendar = async (sc) => {
     setActiveSubCalendar(sc);
     setSubCalWeather({});
-    setSubCalWeatherLocation('');
+    setSubCalWeatherSuggestions([]);
+    setSubCalWeatherExpanded(false);
+    if (sc.weather_location && sc.weather_lat && sc.weather_lon) {
+      setSubCalWeatherLocation(sc.weather_location);
+      setSubCalWeatherInput(sc.weather_location);
+      // Re-fetch fresh forecast using saved coords
+      try {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${sc.weather_lat}&longitude=${sc.weather_lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=16`
+        );
+        const data = await res.json();
+        const weatherMap = {};
+        data.daily.time.forEach((dateStr, i) => {
+          const display = weatherDisplay(data.daily.weathercode[i]);
+          weatherMap[dateStr] = { icon: display.icon, color: display.color, high: Math.round(data.daily.temperature_2m_max[i]), low: Math.round(data.daily.temperature_2m_min[i]) };
+        });
+        setSubCalWeather(weatherMap);
+      } catch {}
+    } else {
+      setSubCalWeatherLocation('');
+      setSubCalWeatherInput('');
+    }
     await loadSubCalendarEvents(sc.id);
     await loadSubCalendarMembers(sc.id);
     await loadSubCalNotes(sc.id);
@@ -344,22 +369,22 @@ function App() {
     if (!selectedKey || selectedKey < newStart || selectedKey > newEnd) setSubCalSelectedDate(start);
   };
 
-  const fetchSubCalWeather = async (locationName) => {
-    if (!locationName.trim() || !activeSubCalendar) return;
-    setSubCalWeatherLoading(true);
+  const searchWeatherLocations = async (query) => {
+    if (query.length < 2) { setSubCalWeatherSuggestions([]); return; }
     try {
-      // Geocode the location name to lat/lon using Open-Meteo's geocoding API
-      const geoRes = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(locationName.trim())}&count=1&language=en&format=json`
-      );
-      const geoData = await geoRes.json();
-      if (!geoData.results?.length) {
-        alert(`Couldn't find "${locationName}" — try a city name like "San Francisco" or "New York"`);
-        setSubCalWeatherLoading(false);
-        return;
-      }
-      const { latitude, longitude } = geoData.results[0];
-      // Fetch forecast for the sub-calendar date range (up to 16 days out)
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=6&language=en&format=json`);
+      const data = await res.json();
+      setSubCalWeatherSuggestions(data.results || []);
+    } catch { setSubCalWeatherSuggestions([]); }
+  };
+
+  const fetchSubCalWeather = async (geoResult) => {
+    if (!activeSubCalendar) return;
+    setSubCalWeatherLoading(true);
+    setSubCalWeatherSuggestions([]);
+    try {
+      const { latitude, longitude, name, admin1, country } = geoResult;
+      const label = [name, admin1, country].filter(Boolean).join(', ');
       const res = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=16`
       );
@@ -375,7 +400,12 @@ function App() {
         };
       });
       setSubCalWeather(weatherMap);
-      setSubCalWeatherLocation(locationName.trim());
+      setSubCalWeatherLocation(label);
+      setSubCalWeatherInput(label);
+      setSubCalWeatherExpanded(false);
+      // Persist to Supabase so it reloads next time
+      await supabase.from('sub_calendars').update({ weather_location: label, weather_lat: latitude, weather_lon: longitude }).eq('id', activeSubCalendar.id);
+      setActiveSubCalendar(prev => ({ ...prev, weather_location: label, weather_lat: latitude, weather_lon: longitude }));
     } catch (err) {
       console.error('Failed to fetch sub-cal weather:', err);
     }
@@ -2933,20 +2963,59 @@ function App() {
           </div>
         </div>
 
-        {/* Weather location bar */}
-        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800">
-          <span className="text-sm">🌤️</span>
-          <input
-            type="text"
-            placeholder="Enter city for weather (e.g. San Francisco)"
-            defaultValue={subCalWeatherLocation}
-            onKeyPress={e => { if (e.key === 'Enter') fetchSubCalWeather(e.target.value); }}
-            onBlur={e => { if (e.target.value.trim() && e.target.value.trim() !== subCalWeatherLocation) fetchSubCalWeather(e.target.value); }}
-            className="flex-1 text-xs px-2 py-1 bg-white dark:bg-gray-700 dark:text-white border border-blue-200 dark:border-blue-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
-          />
-          {subCalWeatherLoading && <span className="text-xs text-blue-400 animate-pulse">Loading…</span>}
-          {subCalWeatherLocation && !subCalWeatherLoading && (
-            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium shrink-0">📍 {subCalWeatherLocation}</span>
+        {/* Weather location — collapsed pill or expanding input */}
+        <div className="relative px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2" ref={weatherAutocompleteRef}>
+          {subCalWeatherLocation && !subCalWeatherExpanded ? (
+            // Collapsed pill
+            <button
+              onClick={() => setSubCalWeatherExpanded(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-full text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-all"
+            >
+              🌤️ {subCalWeatherLocation}
+              <span className="text-blue-400 text-xs">✏️</span>
+            </button>
+          ) : (
+            // Expanded input with autocomplete
+            <div className="flex-1 relative">
+              <div className="flex items-center gap-2">
+                <span className="text-sm shrink-0">🌤️</span>
+                <input
+                  autoFocus={subCalWeatherExpanded}
+                  type="text"
+                  value={subCalWeatherInput}
+                  onChange={e => { setSubCalWeatherInput(e.target.value); searchWeatherLocations(e.target.value); }}
+                  onKeyDown={e => { if (e.key === 'Escape') { setSubCalWeatherExpanded(false); setSubCalWeatherSuggestions([]); } }}
+                  placeholder="Search city for weather…"
+                  className="flex-1 text-xs px-2.5 py-1.5 bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
+                />
+                {subCalWeatherLoading && <span className="text-xs text-blue-400 animate-pulse shrink-0">Loading…</span>}
+                {subCalWeatherLocation && (
+                  <button onClick={() => { setSubCalWeatherExpanded(false); setSubCalWeatherInput(subCalWeatherLocation); setSubCalWeatherSuggestions([]); }} className="text-xs text-gray-400 hover:text-gray-600 shrink-0">✕</button>
+                )}
+              </div>
+              {/* Suggestions dropdown */}
+              {subCalWeatherSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 z-50 overflow-hidden">
+                  {subCalWeatherSuggestions.map((result, i) => (
+                    <button
+                      key={i}
+                      onClick={() => fetchSubCalWeather(result)}
+                      className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-900/30 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                    >
+                      <span className="font-medium text-gray-800 dark:text-white">{result.name}</span>
+                      <span className="text-gray-400 ml-1">{[result.admin1, result.country].filter(Boolean).join(', ')}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {/* Show "add weather" prompt if no location yet */}
+          {!subCalWeatherLocation && !subCalWeatherExpanded && (
+            <button
+              onClick={() => setSubCalWeatherExpanded(true)}
+              className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-500 flex items-center gap-1"
+            >🌤️ Add trip weather</button>
           )}
         </div>
 
