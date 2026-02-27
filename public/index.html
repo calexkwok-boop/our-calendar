@@ -1,44 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-
-    <title>Our Calendar</title>
-
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json" />
-
-    <!-- Theme color (purple to match app) -->
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#7c3aed" />
+    <meta name="description" content="Our family calendar" />
 
-    <!-- iOS PWA meta tags -->
+    <!-- PWA / iOS specific -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Our Calendar" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/logo192.png" />
 
-    <!-- iOS icons -->
-    <link rel="apple-touch-icon" href="/logo192.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/logo192.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/logo192.png" />
-
-    <!-- Splash screen color -->
-    <meta name="msapplication-TileColor" content="#7c3aed" />
+    <title>Our Calendar</title>
+    <script>
+      function initGoogleMaps() { window.googleMapsReady = true; console.log('Google Maps loaded OK'); }
+      function gm_authFailure() { console.error('Google Maps auth failure — check API key and restrictions'); }
+    </script>
+    <script async defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDq-nH7C08A7xr5raZAuZ2W11WfKANuPk0&libraries=places&callback=initGoogleMaps"
+      onerror="console.error('Google Maps script failed to load')">
+    </script>
   </head>
   <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
 
-    <!-- Register service worker -->
+    <!-- Register service worker for PWA -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch((err) => {
-            console.log('SW registration failed:', err);
-          });
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js');
         });
       }
     </script>
