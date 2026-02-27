@@ -2014,6 +2014,41 @@ function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6">
+
+            {/* Active sub-calendar banner */}
+            {(() => {
+              const today = getDateKey(new Date());
+              const active = subCalendars
+                .filter(sc => today >= sc.start_date && today <= sc.end_date)
+                .sort((a, b) => {
+                  const todayEvents = events[today] || [];
+                  const aMatch = todayEvents.some(e => e.title.toLowerCase().includes(a.name.toLowerCase()) || a.name.toLowerCase().includes(e.title.toLowerCase()));
+                  const bMatch = todayEvents.some(e => e.title.toLowerCase().includes(b.name.toLowerCase()) || b.name.toLowerCase().includes(e.title.toLowerCase()));
+                  return (bMatch ? 1 : 0) - (aMatch ? 1 : 0);
+                });
+              if (active.length === 0) return null;
+              return (
+                <div className="mb-4 space-y-2">
+                  {active.map(sc => (
+                    <button
+                      key={sc.id}
+                      onClick={() => openSubCalendar(sc)}
+                      className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 rounded-xl border border-green-300 dark:border-green-700 hover:shadow-md transition-all text-left"
+                    >
+                      <span className="text-xl">🗓️</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm text-green-800 dark:text-green-300">{sc.name}</div>
+                        <div className="text-xs text-green-600 dark:text-green-400">
+                          Happening now · {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                      </div>
+                      <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open →</span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+
             <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-xl border border-purple-200 dark:border-purple-700">
               <p className="text-sm text-purple-700 dark:text-purple-300 text-center">
                 💡 <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
