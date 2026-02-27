@@ -579,6 +579,7 @@ function App() {
   const [shareMessage, setShareMessage] = useState('');
   const [activeCalendars, setActiveCalendars] = useState([]);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+  const [showTipBanner, setShowTipBanner] = useState(() => localStorage.getItem('hideTipBanner') !== 'true');
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
   const [showWeather, setShowWeather] = useState(true);
 
@@ -2221,11 +2222,28 @@ function App() {
               );
             })()}
 
-            <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-xl border border-purple-200 dark:border-purple-700">
-              <p className="text-sm text-purple-700 dark:text-purple-300 text-center">
-                💡 <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
-              </p>
-            </div>
+            {showTipBanner && (
+              <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-xl border border-purple-200 dark:border-purple-700 relative">
+                <button
+                  onClick={() => setShowTipBanner(false)}
+                  className="absolute top-2 right-2 text-purple-400 hover:text-purple-600 dark:text-purple-500 dark:hover:text-purple-300 leading-none"
+                >✕</button>
+                <p className="text-sm text-purple-700 dark:text-purple-300 text-center pr-4">
+                  💡 <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
+                </p>
+                <label className="flex items-center justify-center gap-1.5 mt-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="rounded"
+                    onChange={e => {
+                      if (e.target.checked) localStorage.setItem('hideTipBanner', 'true');
+                      else localStorage.removeItem('hideTipBanner');
+                    }}
+                  />
+                  <span className="text-xs text-purple-500 dark:text-purple-400">Don't show this again</span>
+                </label>
+              </div>
+            )}
 
             {/* Inline event preview — shows when a date is selected */}
             {selectedDate && selectedEvents.length > 0 && (
@@ -3463,11 +3481,13 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
   const [input, setInput] = React.useState(value || '');
   const [suggestions, setSuggestions] = React.useState([]);
   const [showSuggestions, setShowSuggestions] = React.useState(false);
-  const autocompleteService = React.useRef(null);
+  const serviceRef = React.useRef(null);
   const containerRef = React.useRef(null);
+  const debounceRef = React.useRef(null);
 
   React.useEffect(() => { setInput(value || ''); }, [value]);
 
+  // Close on outside click
   React.useEffect(() => {
     const handleClick = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -3476,33 +3496,42 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
     };
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('touchstart', handleClick);
-    return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('touchstart', handleClick); };
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+    };
   }, []);
 
+  const getService = () => {
+    if (serviceRef.current) return serviceRef.current;
+    if (!window.google?.maps?.places) return null;
+    serviceRef.current = new window.google.maps.places.AutocompleteService();
+    return serviceRef.current;
+  };
+
   const search = (query) => {
-    if (!query.trim() || query.length < 2) { setSuggestions([]); return; }
-    if (!window.google?.maps?.places) { setSuggestions([]); return; }
-    if (!autocompleteService.current) {
-      autocompleteService.current = new window.google.maps.places.AutocompleteService();
-    }
-    autocompleteService.current.getPlacePredictions(
-      { input: query },
-      (predictions, status) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+    clearTimeout(debounceRef.current);
+    if (!query || query.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    debounceRef.current = setTimeout(() => {
+      const svc = getService();
+      if (!svc) { console.warn('Google Places not ready yet'); return; }
+      svc.getPlacePredictions({ input: query }, (predictions, status) => {
+        if (predictions && status === 'OK') {
           setSuggestions(predictions);
           setShowSuggestions(true);
         } else {
           setSuggestions([]);
         }
-      }
-    );
+      });
+    }, 200);
   };
 
   const handleSelect = (prediction) => {
-    setInput(prediction.description);
+    const val = prediction.description;
+    setInput(val);
     setSuggestions([]);
     setShowSuggestions(false);
-    onSelect(prediction.description);
+    onSelect(val);
   };
 
   return (
@@ -3512,21 +3541,30 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
         value={input}
         onChange={e => { setInput(e.target.value); search(e.target.value); }}
         onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
-        onBlur={() => setTimeout(() => { setShowSuggestions(false); if (!suggestions.length) onSelect(input.trim() || null); }, 150)}
+        onBlur={() => {
+          setTimeout(() => {
+            setShowSuggestions(false);
+            // Save typed value even if no suggestion picked
+            const val = input.trim() || null;
+            if (val !== (value || null)) onSelect(val);
+          }, 200);
+        }}
         placeholder={placeholder || '📍 Add location (optional)'}
         className={className}
       />
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 z-50 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 overflow-hidden" style={{zIndex: 9999}}>
           {suggestions.map((s) => (
             <button
               key={s.place_id}
-              onMouseDown={() => handleSelect(s)}
+              onMouseDown={(e) => { e.preventDefault(); handleSelect(s); }}
               className="w-full text-left px-3 py-2 text-xs hover:bg-purple-50 dark:hover:bg-purple-900/30 border-b border-gray-100 dark:border-gray-700 last:border-0"
             >
-              <span className="text-gray-500 mr-1">📍</span>
-              <span className="font-medium text-gray-800 dark:text-white">{s.structured_formatting.main_text}</span>
-              <span className="text-gray-400 ml-1">{s.structured_formatting.secondary_text}</span>
+              <span className="text-gray-400 mr-1">📍</span>
+              <span className="font-medium text-gray-800 dark:text-white">{s.structured_formatting?.main_text}</span>
+              {s.structured_formatting?.secondary_text && (
+                <span className="text-gray-400 ml-1">{s.structured_formatting.secondary_text}</span>
+              )}
             </button>
           ))}
         </div>
