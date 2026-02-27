@@ -130,6 +130,15 @@ function App() {
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
   const [subCalAddingSlot, setSubCalAddingSlot] = useState(null); // hour number being added to
   const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', endTime: '', location: '' });
+  const [subCalTab, setSubCalTab] = useState('itinerary'); // 'itinerary' | 'photos'
+  const [tripPhotos, setTripPhotos] = useState([]);
+  const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoCaption, setPhotoCaption] = useState('');
+  const [photoEventId, setPhotoEventId] = useState(null);
+  const [photoDate, setPhotoDate] = useState(null);
+  const [lightboxPhoto, setLightboxPhoto] = useState(null);
+  const photoInputRef = useRef(null);
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
 
@@ -250,9 +259,12 @@ function App() {
       setSubCalWeatherLocation('');
       setSubCalWeatherInput('');
     }
+    setSubCalTab('itinerary');
+    setTripPhotos([]);
     await loadSubCalendarEvents(sc.id);
     await loadSubCalendarMembers(sc.id);
     await loadSubCalNotes(sc.id);
+    await loadTripPhotos(sc.id);
     const firstDate = new Date(sc.start_date + 'T00:00:00');
     setSubCalSelectedDate(firstDate);
   };
@@ -288,6 +300,52 @@ function App() {
       if (error) { console.error('Error loading notes:', error); return; }
       setSubCalNotes((data || []).map(n => ({ ...n, checklist: n.checklist ? JSON.parse(n.checklist) : [] })));
     } catch (e) { console.error(e); }
+  };
+
+  const loadTripPhotos = async (subCalId) => {
+    try {
+      const { data, error } = await supabase
+        .from('trip_photos')
+        .select('*')
+        .eq('sub_calendar_id', subCalId)
+        .order('created_at', { ascending: true });
+      if (error) { console.error('Error loading photos:', error); return; }
+      setTripPhotos(data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const uploadTripPhoto = async (file, caption, eventId, date) => {
+    if (!file || !activeSubCalendar || !user) return;
+    setUploadingPhoto(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const filename = `${activeSubCalendar.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('trip-photos').upload(filename, file, { contentType: file.type });
+      if (uploadError) { console.error('Upload error:', uploadError); setUploadingPhoto(false); return; }
+      const { data: urlData } = supabase.storage.from('trip-photos').getPublicUrl(filename);
+      const photo = {
+        id: `ph_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+        sub_calendar_id: activeSubCalendar.id,
+        event_id: eventId || null,
+        date: date || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null),
+        url: urlData.publicUrl,
+        caption: caption || null,
+        uploaded_by: currentUser,
+        user_id: user.id,
+      };
+      const { error: dbError } = await supabase.from('trip_photos').insert(photo);
+      if (dbError) { console.error('DB error:', dbError); setUploadingPhoto(false); return; }
+      setTripPhotos(prev => [...prev, photo]);
+    } catch (e) { console.error(e); }
+    setUploadingPhoto(false);
+  };
+
+  const deleteTripPhoto = async (photo) => {
+    if (!window.confirm('Delete this photo?')) return;
+    const path = photo.url.split('/trip-photos/')[1];
+    if (path) await supabase.storage.from('trip-photos').remove([path]);
+    await supabase.from('trip_photos').delete().eq('id', photo.id);
+    setTripPhotos(prev => prev.filter(p => p.id !== photo.id));
   };
 
   const renameSubCalendar = async (newName) => {
@@ -2987,8 +3045,23 @@ function App() {
           )}
         </div>
 
+        {/* Tab bar */}
+        <div className="flex bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setSubCalTab('itinerary')}
+            className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'itinerary' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+          >🗓️ Itinerary</button>
+          <button
+            onClick={() => setSubCalTab('photos')}
+            className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 relative ${subCalTab === 'photos' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+          >
+            📸 Photos
+            {tripPhotos.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{tripPhotos.length}</span>}
+          </button>
+        </div>
+
         {/* Day content */}
-        {subCalSelectedDate && (() => {
+        {subCalTab === 'itinerary' && subCalSelectedDate && (() => {
           const dk = getDateKey(subCalSelectedDate);
           const dayEvents = (subCalendarEvents[dk] || []).sort((a, b) => {
             if (!a.time) return 1;
@@ -3251,9 +3324,29 @@ function App() {
                                   </div>
                                 </div>
                                 <div className="flex gap-1 shrink-0">
+                                  <button
+                                    onClick={() => { setPhotoEventId(event.id); setPhotoDate(dk); photoInputRef.current?.click(); }}
+                                    className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-lg"
+                                    title="Add photo"
+                                  >📷</button>
                                   <button onClick={() => setSubCalEditingEvent(event.id)} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-lg"><Edit2 className="w-3.5 h-3.5 text-gray-500" /></button>
                                   <button onClick={() => deleteSubCalEvent(event.id, dk)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
                                 </div>
+                              </div>
+                              {/* Event photo thumbnails */}
+                              {tripPhotos.filter(p => p.event_id === event.id).length > 0 && (
+                                <div className="flex gap-1.5 mt-2 flex-wrap">
+                                  {tripPhotos.filter(p => p.event_id === event.id).map(photo => (
+                                    <img
+                                      key={photo.id}
+                                      src={photo.url}
+                                      alt=""
+                                      className="w-12 h-12 rounded-lg object-cover cursor-pointer border-2 border-white dark:border-gray-600 shadow-sm hover:scale-105 transition-transform"
+                                      onClick={() => setLightboxPhoto(photo)}
+                                    />
+                                  ))}
+                                </div>
+                              )}
                               </div>
                             )}
                           </div>
@@ -3378,6 +3471,189 @@ function App() {
             </div>
           );
         })()}
+
+        {/* Photos tab */}
+        {subCalTab === 'photos' && (
+          <div className="flex-1 overflow-y-auto">
+
+            {/* Upload bar */}
+            <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3">
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={async e => {
+                  const files = Array.from(e.target.files);
+                  for (const file of files) {
+                    await uploadTripPhoto(file, photoCaption, photoEventId, photoDate || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null));
+                  }
+                  setPhotoCaption('');
+                  setPhotoEventId(null);
+                  e.target.value = '';
+                }}
+              />
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl text-sm font-medium shadow hover:shadow-lg transition-all disabled:opacity-50"
+              >
+                {uploadingPhoto ? '⏳ Uploading…' : '📷 Add Photos'}
+              </button>
+              <input
+                type="text"
+                value={photoCaption}
+                onChange={e => setPhotoCaption(e.target.value)}
+                placeholder="Caption (optional)…"
+                className="flex-1 text-sm px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:outline-none focus:ring-1 focus:ring-purple-400"
+              />
+                <button
+                  onClick={() => setPhotoView('grid')}
+                  className={`p-1.5 rounded-lg transition-all ${photoView === 'grid' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
+                  title="Grid view"
+                >⊞</button>
+                <button
+                  onClick={() => setPhotoView('timeline')}
+                  className={`p-1.5 rounded-lg transition-all ${photoView === 'timeline' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
+                  title="Timeline view"
+                >☰</button>
+              </div>
+            </div>
+
+            {tripPhotos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+                <div className="text-6xl mb-4">📸</div>
+                <div className="text-gray-500 dark:text-gray-400 font-medium mb-1">No photos yet</div>
+                <div className="text-sm text-gray-400 dark:text-gray-500">Tap "Add Photos" to share memories from this trip</div>
+              </div>
+            ) : photoView === 'grid' ? (
+              /* ── GRID VIEW ── */
+              <div className="p-4">
+                {/* Group by date */}
+                {(() => {
+                  const byDate = {};
+                  tripPhotos.forEach(p => {
+                    const d = p.date || 'unlinked';
+                    if (!byDate[d]) byDate[d] = [];
+                    byDate[d].push(p);
+                  });
+                  return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b)).map(([date, photos]) => (
+                    <div key={date} className="mb-6">
+                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
+                        <span>{date !== 'unlinked' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Unlinked'}</span>
+                        {subCalWeather[date] && <span>{subCalWeather[date].icon} {subCalWeather[date].high}°</span>}
+                        <span className="text-gray-300 dark:text-gray-600">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {photos.map(photo => (
+                          <div key={photo.id} className="relative group aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer" onClick={() => setLightboxPhoto(photo)}>
+                            <img src={photo.url} alt={photo.caption || ''} className="w-full h-full object-cover" />
+                            {photo.caption && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <p className="text-white text-xs truncate">{photo.caption}</p>
+                              </div>
+                            )}
+                            {photo.uploaded_by === currentUser && (
+                              <button
+                                onClick={e => { e.stopPropagation(); deleteTripPhoto(photo); }}
+                                className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow"
+                              >✕</button>
+                            )}
+                            <div className="absolute bottom-1 left-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="bg-black/50 text-white px-1.5 py-0.5 rounded-full text-xs">{photo.uploaded_by}</span>
+                            </div>
+                          </div>
+                        ))}
+                        {/* Add more photos to this day */}
+                        <button
+                          onClick={() => { setPhotoDate(date !== 'unlinked' ? date : null); photoInputRef.current?.click(); }}
+                          className="aspect-square rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-all flex items-center justify-center text-2xl"
+                        >+</button>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            ) : (
+              /* ── TIMELINE VIEW ── */
+              <div className="p-4 space-y-8">
+                {(() => {
+                  const byDate = {};
+                  tripPhotos.forEach(p => {
+                    const d = p.date || 'unlinked';
+                    if (!byDate[d]) byDate[d] = [];
+                    byDate[d].push(p);
+                  });
+                  return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b)).map(([date, photos]) => (
+                    <div key={date} className="relative pl-6 border-l-2 border-purple-200 dark:border-purple-800">
+                      {/* Date marker */}
+                      <div className="absolute -left-3 top-0 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">{date !== 'unlinked' ? new Date(date + 'T00:00:00').getDate() : '?'}</span>
+                      </div>
+                      <div className="mb-3">
+                        <div className="font-semibold text-gray-800 dark:text-white text-sm">
+                          {date !== 'unlinked' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'Unlinked Photos'}
+                        </div>
+                        {subCalWeather[date] && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            {subCalWeather[date].icon} {subCalWeather[date].high}° / {subCalWeather[date].low}°
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-4">
+                        {photos.map(photo => (
+                          <div key={photo.id} className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
+                            <img
+                              src={photo.url}
+                              alt={photo.caption || ''}
+                              className="w-full max-h-72 object-cover cursor-pointer"
+                              onClick={() => setLightboxPhoto(photo)}
+                            />
+                            <div className="px-3 py-2 flex items-start justify-between gap-2">
+                              <div>
+                                {photo.caption && <p className="text-sm text-gray-800 dark:text-gray-200 mb-0.5">{photo.caption}</p>}
+                                <p className="text-xs text-gray-400 dark:text-gray-500">📷 {photo.uploaded_by}</p>
+                              </div>
+                              {photo.uploaded_by === currentUser && (
+                                <button onClick={() => deleteTripPhoto(photo)} className="text-red-400 hover:text-red-600 text-xs shrink-0">✕</button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => { setPhotoDate(date !== 'unlinked' ? date : null); photoInputRef.current?.click(); }}
+                          className="flex items-center gap-2 text-xs text-purple-500 hover:text-purple-700 font-medium"
+                        >+ Add photo to this day</button>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Lightbox */}
+        {lightboxPhoto && (
+          <div
+            className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4"
+            onClick={() => setLightboxPhoto(null)}
+          >
+            <button className="absolute top-4 right-4 text-white text-2xl z-10">✕</button>
+            <img
+              src={lightboxPhoto.url}
+              alt={lightboxPhoto.caption || ''}
+              className="max-w-full max-h-[80vh] rounded-xl object-contain"
+              onClick={e => e.stopPropagation()}
+            />
+            <div className="mt-3 text-center" onClick={e => e.stopPropagation()}>
+              {lightboxPhoto.caption && <p className="text-white text-sm mb-1">{lightboxPhoto.caption}</p>}
+              <p className="text-gray-400 text-xs">📷 {lightboxPhoto.uploaded_by} · {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
+            </div>
+          </div>
+        )}
+
       </div>
     )}
     </>
