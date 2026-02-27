@@ -111,7 +111,6 @@ function App() {
   const [editingNote, setEditingNote] = useState(null);
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [editingSubCalTitle, setEditingSubCalTitle] = useState(false);
-  const [editingSubCalName, setEditingSubCalName] = useState(false);
   const [draggedNoteId, setDraggedNoteId] = useState(null);
   const [subCalendarEvents, setSubCalendarEvents] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
@@ -263,8 +262,10 @@ function App() {
     await supabase.from('sub_calendars').update({ name: newName.trim() }).eq('id', activeSubCalendar.id);
     setActiveSubCalendar(prev => ({ ...prev, name: newName.trim() }));
     setSubCalendars(prev => prev.map(sc => sc.id === activeSubCalendar.id ? { ...sc, name: newName.trim() } : sc));
-    setEditingSubCalName(false);
+    setEditingSubCalTitle(false);
   };
+
+  const addSubCalNote = async () => {
     if (!newNote.trim() || !activeSubCalendar) return;
     const note = {
       id: `scn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -285,6 +286,13 @@ function App() {
     await supabase.from('sub_calendar_notes').delete().eq('id', noteId);
     setSubCalNotes(prev => prev.filter(n => n.id !== noteId));
     if (expandedNote === noteId) setExpandedNote(null);
+  };
+
+  const updateNoteText = async (noteId, newText) => {
+    if (!newText.trim()) return;
+    await supabase.from('sub_calendar_notes').update({ text: newText.trim() }).eq('id', noteId);
+    setSubCalNotes(prev => prev.map(n => n.id === noteId ? { ...n, text: newText.trim() } : n));
+    setEditingNote(null);
   };
 
   const updateSubCalTitle = async (newName) => {
