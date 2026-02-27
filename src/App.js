@@ -448,7 +448,8 @@ function App() {
   };
 
   const addSubCalEvent = async (date, title, time, endTime) => {
-    if (!title.trim() || !activeSubCalendar) return;
+    if (!title?.trim() || !activeSubCalendar) { console.log('addSubCalEvent bail: no title or no activeSubCalendar', {title, activeSubCalendar}); return; }
+    if (!user?.id) { console.log('addSubCalEvent bail: no user'); return; }
     const id = `sce_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const newEvent = {
       id,
@@ -464,6 +465,7 @@ function App() {
       reactions: null,
       location: null,
     };
+    console.log('Inserting sub_calendar_event:', newEvent);
     const { error } = await supabase.from('sub_calendar_events').insert(newEvent);
     if (error) { console.error('Error adding sub_calendar_event:', error); return; }
     const dateKey = getDateKey(date);
