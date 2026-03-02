@@ -332,21 +332,38 @@ function App() {
     setPhotoUploadError(false);
     setPhotoUploadMessage('');
     try {
+      const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
       const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
       const filename = `${activeSubCalendar.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('trip-photos').upload(filename, file, { contentType: file.type });
-      if (uploadError) {
+      let selectedBucket = null;
+      let uploadError = null;
+
+      for (const bucket of TRIP_PHOTO_BUCKETS) {
+        const { error } = await supabase.storage.from(bucket).upload(filename, file, { contentType: file.type });
+        if (!error) {
+          selectedBucket = bucket;
+          uploadError = null;
+          break;
+        }
+        uploadError = error;
+        if (!/bucket.*not found/i.test(error.message || '')) break;
+      }
+
+      if (!selectedBucket) {
         console.error('Upload error:', uploadError);
         setPhotoUploadError(true);
-        setPhotoUploadMessage(`Upload failed: ${uploadError.message}`);
-        setUploadingPhoto(false);
+        if (/bucket.*not found/i.test(uploadError?.message || '')) {
+          setPhotoUploadMessage("Upload failed: no storage bucket found. Create a public bucket named 'trip-photos' or 'trip_photos' in Supabase Storage.");
+        } else {
+          setPhotoUploadMessage(`Upload failed: ${uploadError?.message || 'Unknown upload error'}`);
+        }
         return false;
       }
-      const { data: urlData } = supabase.storage.from('trip-photos').getPublicUrl(filename);
+
+      const { data: urlData } = supabase.storage.from(selectedBucket).getPublicUrl(filename);
       if (!urlData?.publicUrl) {
         setPhotoUploadError(true);
         setPhotoUploadMessage('Upload succeeded but no public URL was generated.');
-        setUploadingPhoto(false);
         return false;
       }
       const photo = {
@@ -364,7 +381,6 @@ function App() {
         console.error('DB error:', dbError);
         setPhotoUploadError(true);
         setPhotoUploadMessage(`Saved file but failed to add photo record: ${dbError.message}`);
-        setUploadingPhoto(false);
         return false;
       }
       setTripPhotos(prev => [...prev, photo]);
@@ -383,8 +399,16 @@ function App() {
 
   const deleteTripPhoto = async (photo) => {
     if (!window.confirm('Delete this photo?')) return;
-    const path = photo.url.split('/trip-photos/')[1];
-    if (path) await supabase.storage.from('trip-photos').remove([path]);
+    const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
+    for (const bucket of TRIP_PHOTO_BUCKETS) {
+      const marker = `/object/public/${bucket}/`;
+      const idx = photo.url.indexOf(marker);
+      if (idx === -1) continue;
+      const path = decodeURIComponent(photo.url.slice(idx + marker.length));
+      if (!path) continue;
+      await supabase.storage.from(bucket).remove([path]);
+      break;
+    }
     await supabase.from('trip_photos').delete().eq('id', photo.id);
     setTripPhotos(prev => prev.filter(p => p.id !== photo.id));
   };
