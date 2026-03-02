@@ -103,6 +103,7 @@ function App() {
   const [calendarView, setCalendarView] = useState('month');
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [showDateDetailModal, setShowDateDetailModal] = useState(false);
+  const [bottomNavTab, setBottomNavTab] = useState('home');
 
   // Sub-calendar state
   const [subCalendars, setSubCalendars] = useState([]);
@@ -1973,6 +1974,14 @@ function App() {
 
   const selectedDateKey = getDateKey(selectedDate);
   const selectedEvents = getEventsForDate(selectedDate);
+  const todayKey = getDateKey(new Date());
+  const todayEvents = getEventsForDate(new Date()).filter(e => !e.isHoliday);
+  const upcomingTrips = [...subCalendars]
+    .filter(sc => sc.start_date > todayKey)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date));
+  const archivedTrips = [...subCalendars]
+    .filter(sc => sc.end_date < todayKey)
+    .sort((a, b) => b.end_date.localeCompare(a.end_date));
 
   if (isLoading) {
     return (
@@ -2158,7 +2167,7 @@ function App() {
   return (
     <>
     <style>{shakeStyle}</style>
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-2 sm:p-4" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))', paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-2 sm:p-4 pb-28" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))', paddingBottom: 'max(5.5rem, env(safe-area-inset-bottom))' }}>
       <div className="max-w-6xl mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -3313,12 +3322,149 @@ function App() {
             )}
           </div>
           </div>
+
           )}
+
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6">
+            {bottomNavTab === 'home' && (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Today At A Glance</h3>
+                  <button
+                    onClick={() => {
+                      setSelectedDate(new Date());
+                      setSelectedDates([]);
+                      setShowDateDetailModal(true);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-all"
+                  >
+                    Open Today
+                  </button>
+                </div>
+                {todayEvents.length === 0 ? (
+                  <div className="text-sm text-gray-500 dark:text-gray-400">No events today.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {todayEvents.slice(0, 6).map(event => {
+                      const category = categories[event.category || 'other'] || categories.other;
+                      return (
+                        <div key={`${event.id}-${event.date}`} className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${category.color}`} />
+                            <span className="text-sm text-gray-800 dark:text-gray-100 truncate">{event.title}</span>
+                            {event.isUrgent && <span className="text-xs">🚨</span>}
+                          </div>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                            {event.time ? formatTime(event.time) : 'All day'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {todayEvents.length > 6 && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">+{todayEvents.length - 6} more today</div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {bottomNavTab === 'upcoming' && (
+              <>
+                <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400 mb-3">Upcoming Trips</h3>
+                {upcomingTrips.length === 0 ? (
+                  <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming trips yet.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {upcomingTrips.map(sc => (
+                      <div key={sc.id} className="flex items-center justify-between p-3 rounded-xl border border-purple-200 dark:border-purple-700 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => openSubCalendar(sc)}
+                          className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-purple-500 hover:bg-purple-600 text-white"
+                        >
+                          Open
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {bottomNavTab === 'archived' && (
+              <>
+                <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400 mb-3">Archived Trips</h3>
+                {archivedTrips.length === 0 ? (
+                  <div className="text-sm text-gray-500 dark:text-gray-400">No archived trips yet.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {archivedTrips.map(sc => (
+                      <div key={sc.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/40">
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => openSubCalendar(sc)}
+                          className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-gray-600 hover:bg-gray-700 text-white"
+                        >
+                          Open
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
 
     {/* ── Create Sub-Calendar Modal ── */}
+    {!activeSubCalendar && (
+      <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-white/95 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
+            <button
+              onClick={() => {
+                setBottomNavTab('home');
+                setShowDateDetailModal(false);
+              }}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'home' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+            >
+              Home
+            </button>
+            <button
+              onClick={() => {
+                setBottomNavTab('upcoming');
+                setShowDateDetailModal(false);
+              }}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'upcoming' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+            >
+              Upcoming
+            </button>
+            <button
+              onClick={() => {
+                setBottomNavTab('archived');
+                setShowDateDetailModal(false);
+              }}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'archived' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+            >
+              Archived
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     {showSubCalendarModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
