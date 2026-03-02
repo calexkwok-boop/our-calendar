@@ -4399,7 +4399,17 @@ function App() {
             className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4"
             onClick={() => setLightboxPhoto(null)}
           >
-            <button className="absolute top-4 right-4 text-white text-2xl z-10">✕</button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxPhoto(null);
+              }}
+              className="absolute right-4 text-white text-2xl z-10 bg-black/45 hover:bg-black/60 rounded-full w-10 h-10 flex items-center justify-center"
+              style={{ top: 'max(1.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
+              aria-label="Close photo"
+            >
+              ✕
+            </button>
             <img
               src={lightboxPhoto.url}
               alt={lightboxPhoto.caption || ''}
