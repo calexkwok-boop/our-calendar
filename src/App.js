@@ -466,23 +466,53 @@ function App() {
     setSelectedPhotoIds([]);
   };
 
-  const saveSelectedPhotosToDevice = () => {
+  const saveSelectedPhotosToDevice = async () => {
     const selected = tripPhotos.filter(p => selectedPhotoIds.includes(p.id));
     if (selected.length === 0) return;
-    selected.forEach((photo, idx) => {
-      setTimeout(() => {
-        const a = document.createElement('a');
-        a.href = photo.url;
-        a.download = `photo-${idx + 1}.jpg`;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }, idx * 120);
-    });
-    setPhotoUploadError(false);
-    setPhotoUploadMessage(`Saving ${selected.length} photo${selected.length === 1 ? '' : 's'} to device...`);
+    try {
+      const files = [];
+      for (let i = 0; i < selected.length; i++) {
+        const photo = selected[i];
+        const res = await fetch(photo.url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const extFromType = blob.type?.split('/')[1] || 'jpg';
+        const baseName = `photo-${i + 1}.${extFromType}`;
+        files.push(new File([blob], baseName, { type: blob.type || 'image/jpeg' }));
+      }
+
+      if (files.length > 0 && navigator.share && navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share({
+          files,
+          title: `${files.length} photo${files.length === 1 ? '' : 's'}`,
+          text: 'Save photos',
+        });
+        setPhotoUploadError(false);
+        setPhotoUploadMessage(`Shared ${files.length} photo${files.length === 1 ? '' : 's'}.`);
+        return;
+      }
+
+      // Fallback for browsers without file-sharing support.
+      files.forEach((file, idx) => {
+        const url = URL.createObjectURL(file);
+        setTimeout(() => {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = file.name || `photo-${idx + 1}.jpg`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }, idx * 120);
+      });
+      setPhotoUploadError(false);
+      setPhotoUploadMessage(`Saving ${files.length} photo${files.length === 1 ? '' : 's'} to device...`);
+    } catch (e) {
+      if (e?.name === 'AbortError') return; // user closed share sheet
+      console.error('Save photos failed:', e);
+      setPhotoUploadError(true);
+      setPhotoUploadMessage('Could not save selected photos. Try again.');
+    }
   };
 
   const deleteSelectedPhotos = async () => {
