@@ -2881,7 +2881,7 @@ function App() {
                         const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
                         return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
                       });
-                  const primarySubTrip = subTripsOnDate[0];
+                  const hasSubCalendarRange = subTripsOnDate.length > 0;
 
                   return (
                     <div key={index} className="relative pb-2">
@@ -2900,6 +2900,12 @@ function App() {
                         `}
                         style={{ zIndex: 10 }}
                       >
+                        {hasSubCalendarRange && (
+                          <div
+                            className="absolute top-0 left-0.5 right-0.5 h-1 rounded-b bg-gradient-to-r from-emerald-300 to-green-500 opacity-90"
+                            title={`${subTripsOnDate.length} sub-calendar range${subTripsOnDate.length > 1 ? 's' : ''}`}
+                          />
+                        )}
                         <div className={`text-xs sm:text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
                           {date ? date.getDate() : ''}
                           {hasHoliday && !isSelected && !isInSelection && (
@@ -2925,19 +2931,6 @@ function App() {
                           </div>
                         )}
                       </button>
-                      {date && primarySubTrip && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openSubCalendar(primarySubTrip);
-                          }}
-                          className="absolute top-0.5 left-0.5 z-20 px-1 py-0.5 rounded bg-indigo-500/90 text-white text-[9px] sm:text-[10px] leading-none hover:bg-indigo-600"
-                          title={`Open ${primarySubTrip.name}`}
-                        >
-                          {subTripsOnDate.length > 1 ? `Trips ${subTripsOnDate.length}` : 'Trip'}
-                        </button>
-                      )}
                       {multiDayBars.map((bar, barIndex) => (
                         bar.isFirst || bar.isLast || bar.isMiddle ? (
                           <div key={barIndex} className="absolute left-0 right-0 flex items-center" style={{ top: '100%', marginTop: `${barIndex * 5}px` }}>
@@ -2968,38 +2961,31 @@ function App() {
                     const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
                     return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
                   });
-                  const primarySubTrip = subTripsOnDate[0];
+                  const hasSubCalendarRange = subTripsOnDate.length > 0;
 
                   return (
                     <div
                       key={index}
                       onClick={() => handleDateTap(date)}
                       className={`
-                        min-h-24 rounded-lg p-1.5 cursor-pointer transition-all duration-200 flex flex-col gap-1
+                        min-h-24 rounded-lg p-1.5 cursor-pointer transition-all duration-200 flex flex-col gap-1 relative
                         ${isSelected ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg ring-2 ring-purple-300' : ''}
                         ${!isSelected && isTodayDate ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : ''}
                         ${!isSelected && !isTodayDate ? 'bg-gray-50 dark:bg-gray-700 hover:bg-purple-50 dark:hover:bg-gray-600' : ''}
                         ${hasUrgentEvent && !isSelected ? 'ring-2 ring-red-500' : ''}
                       `}
-                    >
+                      >
+                      {hasSubCalendarRange && (
+                        <div
+                          className={`absolute top-0 left-1 right-1 h-1 rounded-b ${isSelected ? 'bg-white/70' : 'bg-gradient-to-r from-emerald-300 to-green-500 opacity-90'}`}
+                          title={`${subTripsOnDate.length} sub-calendar range${subTripsOnDate.length > 1 ? 's' : ''}`}
+                        />
+                      )}
                       {/* Date number */}
                       <div className={`text-xs font-bold mb-1 ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-200' : 'text-gray-700 dark:text-gray-200'}`}>
                         {date.getDate()}
                         {hasHoliday && <span className="ml-1">🇺🇸</span>}
                       </div>
-                      {primarySubTrip && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openSubCalendar(primarySubTrip);
-                          }}
-                          className={`w-fit px-1.5 py-0.5 rounded text-[10px] leading-none mb-1 ${isSelected ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'}`}
-                          title={`Open ${primarySubTrip.name}`}
-                        >
-                          {subTripsOnDate.length > 1 ? `Trips ${subTripsOnDate.length}` : 'Trip'}
-                        </button>
-                      )}
 
                       {/* Weather */}
                       {weatherData && !isSelected && (
