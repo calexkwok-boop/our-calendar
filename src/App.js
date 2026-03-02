@@ -437,19 +437,32 @@ function App() {
   };
 
   const removeTripPhotoRecord = async (photo) => {
-    const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
-    for (const bucket of TRIP_PHOTO_BUCKETS) {
-      const marker = `/object/public/${bucket}/`;
-      const idx = photo.url.indexOf(marker);
-      if (idx === -1) continue;
-      const path = decodeURIComponent(photo.url.slice(idx + marker.length));
-      if (!path) continue;
-      await supabase.storage.from(bucket).remove([path]);
-      break;
+    try {
+      const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
+      for (const bucket of TRIP_PHOTO_BUCKETS) {
+        const marker = `/object/public/${bucket}/`;
+        const idx = photo.url.indexOf(marker);
+        if (idx === -1) continue;
+        const path = decodeURIComponent(photo.url.slice(idx + marker.length));
+        if (!path) continue;
+        const { error: storageError } = await supabase.storage.from(bucket).remove([path]);
+        if (storageError) console.warn('Storage delete warning:', storageError.message);
+        break;
+      }
+      const { error: dbError } = await supabase.from('trip_photos').delete().eq('id', photo.id);
+      if (dbError) {
+        setPhotoUploadError(true);
+        setPhotoUploadMessage(`Could not delete photo: ${dbError.message}`);
+        return false;
+      }
+      setTripPhotos(prev => prev.filter(p => p.id !== photo.id));
+      return true;
+    } catch (e) {
+      console.error('Photo delete failed:', e);
+      setPhotoUploadError(true);
+      setPhotoUploadMessage(`Could not delete photo: ${e.message || 'Unknown error'}`);
+      return false;
     }
-    await supabase.from('trip_photos').delete().eq('id', photo.id);
-    setTripPhotos(prev => prev.filter(p => p.id !== photo.id));
-    return true;
   };
 
   const deleteTripPhoto = async (photo) => {
@@ -519,11 +532,13 @@ function App() {
     const selected = tripPhotos.filter(p => selectedPhotoIds.includes(p.id));
     if (selected.length === 0) return;
     if (!window.confirm(`Delete ${selected.length} selected photo${selected.length === 1 ? '' : 's'}?`)) return;
+    let deletedCount = 0;
     for (const photo of selected) {
-      await removeTripPhotoRecord(photo);
+      const ok = await removeTripPhotoRecord(photo);
+      if (ok) deletedCount += 1;
     }
     setPhotoUploadError(false);
-    setPhotoUploadMessage(`Deleted ${selected.length} photo${selected.length === 1 ? '' : 's'}.`);
+    setPhotoUploadMessage(`Deleted ${deletedCount} photo${deletedCount === 1 ? '' : 's'}.`);
     closePhotoSelectionMode();
   };
 
@@ -4509,7 +4524,7 @@ function App() {
                                 <p className="text-white text-xs truncate">{photo.caption}</p>
                               </div>
                             )}
-                            {!isPhotoSelectionMode && photo.uploaded_by === currentUser && (
+                            {!isPhotoSelectionMode && (
                               <button
                                 onClick={e => { e.stopPropagation(); deleteTripPhoto(photo); }}
                                 className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow"
@@ -4584,7 +4599,7 @@ function App() {
                                 {photo.caption && <p className="text-sm text-gray-800 dark:text-gray-200 mb-0.5">{photo.caption}</p>}
                                 <p className="text-xs text-gray-400 dark:text-gray-500">📷 {photo.uploaded_by}</p>
                               </div>
-                              {!isPhotoSelectionMode && photo.uploaded_by === currentUser && (
+                              {!isPhotoSelectionMode && (
                                 <button onClick={() => deleteTripPhoto(photo)} className="text-red-400 hover:text-red-600 text-xs shrink-0">✕</button>
                               )}
                             </div>
