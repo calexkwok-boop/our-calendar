@@ -2000,9 +2000,36 @@ function App() {
   const todayEvents = getEventsForDate(new Date()).filter(e => !e.isHoliday);
   const toDateOnlyTs = (value) => {
     if (!value) return null;
-    const normalized = typeof value === 'string' ? value.slice(0, 10) : getDateKey(new Date(value));
-    const d = new Date(`${normalized}T00:00:00`);
-    if (Number.isNaN(d.getTime())) return null;
+
+    let d = null;
+    if (value instanceof Date) {
+      d = new Date(value);
+    } else if (typeof value === 'string') {
+      const trimmed = value.trim();
+
+      // Common DB formats: YYYY-MM-DD or ISO datetime
+      if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+        d = new Date(`${trimmed.slice(0, 10)}T00:00:00`);
+      } else {
+        // Legacy UI formats like M/D/YYYY
+        const mdY = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (mdY) {
+          const month = Number(mdY[1]) - 1;
+          const day = Number(mdY[2]);
+          const year = Number(mdY[3]);
+          d = new Date(year, month, day);
+        } else {
+          // Last resort parse
+          const parsed = new Date(trimmed);
+          if (!Number.isNaN(parsed.getTime())) d = parsed;
+        }
+      }
+    } else {
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) d = parsed;
+    }
+
+    if (!d || Number.isNaN(d.getTime())) return null;
     d.setHours(0, 0, 0, 0);
     return d.getTime();
   };
