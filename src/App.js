@@ -102,6 +102,7 @@ function App() {
   const [recurrence, setRecurrence] = useState('once');
   const [calendarView, setCalendarView] = useState('month');
   const [showReactionPicker, setShowReactionPicker] = useState(null);
+  const [showDateDetailModal, setShowDateDetailModal] = useState(false);
 
   // Sub-calendar state
   const [subCalendars, setSubCalendars] = useState([]);
@@ -855,6 +856,8 @@ function App() {
   }, []);
   const handleDateTap = (date) => {
     if (!date) return;
+
+    setShowDateDetailModal(true);
 
     const now = Date.now();
     const timeSinceLastTap = now - lastTapTime;
@@ -2654,8 +2657,8 @@ function App() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6">
+        <div className="grid grid-cols-1 gap-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6">
 
             {/* Active sub-calendar banner */}
             {(() => {
@@ -2711,59 +2714,6 @@ function App() {
                   />
                   <span className="text-xs text-purple-500 dark:text-purple-400">Don't show this again</span>
                 </label>
-              </div>
-            )}
-
-            {/* Inline event preview — shows when a date is selected */}
-            {selectedDate && selectedEvents.length > 0 && (
-              <div className="mb-3 rounded-xl border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2 bg-purple-100 dark:bg-purple-900/40">
-                  <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">
-                    {selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                  </span>
-                  <span className="text-xs text-purple-500 dark:text-purple-400">{selectedEvents.length} event{selectedEvents.length !== 1 ? 's' : ''}</span>
-                </div>
-                <div className="divide-y divide-purple-100 dark:divide-purple-800 max-h-36 overflow-y-auto">
-                  {selectedEvents.map(event => {
-                    const cat = categories[event.category || 'other'] || categories.other;
-                    if (event.isHoliday) return (
-                      <div key={event.id} className="flex items-center gap-2 px-3 py-1.5">
-                        <span className="text-xs">🇺🇸</span>
-                        <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{event.title}</span>
-                      </div>
-                    );
-                    return (
-                      <div key={event.id} className="relative flex items-center gap-2 px-3 py-1.5">
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${cat.color}`} />
-                        <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1">{event.title}</span>
-                        {event.time && <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{formatTime(event.time)}</span>}
-                        {event.isUrgent && <span className="text-xs">🚨</span>}
-                        {event.isPrivate && <span className="text-xs">🔒</span>}
-                        {event.reactions && Object.entries(event.reactions).map(([emoji, users]) => (
-                          <button key={emoji} onClick={() => handleReact(event, emoji)} className="text-xs">{emoji}</button>
-                        ))}
-                        <button
-                          onClick={() => setShowReactionPicker(showReactionPicker === `preview-${event.id}` ? null : `preview-${event.id}`)}
-                          className="reaction-picker text-gray-400 hover:text-purple-500 text-xs leading-none"
-                        >＋</button>
-                        {showReactionPicker === `preview-${event.id}` && (
-                          <div className="reaction-picker absolute right-3 z-10 flex gap-1 p-1.5 bg-white dark:bg-gray-700 rounded-xl shadow-lg border border-gray-200 dark:border-gray-600">
-                            {REACTION_EMOJIS.map(emoji => (
-                              <button key={emoji} onClick={() => handleReact(event, emoji)} className="text-base hover:scale-125 transition-transform p-0.5">
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            {selectedDate && selectedEvents.length === 0 && (
-              <div className="mb-3 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/40 text-xs text-gray-500 dark:text-gray-400 text-center">
-                {selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} — no events
               </div>
             )}
 
@@ -2872,7 +2822,7 @@ function App() {
                   return (
                     <div
                       key={index}
-                      onClick={() => { setSelectedDate(date); setSelectedDates([]); }}
+                      onClick={() => handleDateTap(date)}
                       className={`
                         min-h-32 rounded-xl p-2 cursor-pointer transition-all duration-200 flex flex-col gap-1
                         ${isSelected ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg ring-2 ring-purple-300' : ''}
@@ -2931,7 +2881,25 @@ function App() {
             )}
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+          {showDateDetailModal && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 p-4 flex items-center justify-center"
+            onClick={() => setShowDateDetailModal(false)}
+          >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Date Details</h3>
+              <button
+                onClick={() => setShowDateDetailModal(false)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                aria-label="Close date details"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-300" />
+              </button>
+            </div>
             <div className="mb-4">
               {selectedDates.length > 1 ? (
                 <div className="p-4 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-xl border-2 border-purple-300 dark:border-purple-600">
@@ -3344,6 +3312,8 @@ function App() {
               </div>
             )}
           </div>
+          </div>
+          )}
         </div>
       </div>
     </div>
