@@ -146,6 +146,8 @@ function App() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUploadMessage, setPhotoUploadMessage] = useState('');
   const [photoUploadError, setPhotoUploadError] = useState(false);
+  const [isPhotoSelectionMode, setIsPhotoSelectionMode] = useState(false);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState([]);
   const [photoEventId, setPhotoEventId] = useState(null);
   const [photoDate, setPhotoDate] = useState(null);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
@@ -434,8 +436,7 @@ function App() {
     }
   };
 
-  const deleteTripPhoto = async (photo) => {
-    if (!window.confirm('Delete this photo?')) return;
+  const removeTripPhotoRecord = async (photo) => {
     const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
     for (const bucket of TRIP_PHOTO_BUCKETS) {
       const marker = `/object/public/${bucket}/`;
@@ -448,6 +449,52 @@ function App() {
     }
     await supabase.from('trip_photos').delete().eq('id', photo.id);
     setTripPhotos(prev => prev.filter(p => p.id !== photo.id));
+    return true;
+  };
+
+  const deleteTripPhoto = async (photo) => {
+    if (!window.confirm('Delete this photo?')) return;
+    await removeTripPhotoRecord(photo);
+  };
+
+  const toggleSelectedPhoto = (photoId) => {
+    setSelectedPhotoIds(prev => prev.includes(photoId) ? prev.filter(id => id !== photoId) : [...prev, photoId]);
+  };
+
+  const closePhotoSelectionMode = () => {
+    setIsPhotoSelectionMode(false);
+    setSelectedPhotoIds([]);
+  };
+
+  const saveSelectedPhotosToDevice = () => {
+    const selected = tripPhotos.filter(p => selectedPhotoIds.includes(p.id));
+    if (selected.length === 0) return;
+    selected.forEach((photo, idx) => {
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = photo.url;
+        a.download = `photo-${idx + 1}.jpg`;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }, idx * 120);
+    });
+    setPhotoUploadError(false);
+    setPhotoUploadMessage(`Saving ${selected.length} photo${selected.length === 1 ? '' : 's'} to device...`);
+  };
+
+  const deleteSelectedPhotos = async () => {
+    const selected = tripPhotos.filter(p => selectedPhotoIds.includes(p.id));
+    if (selected.length === 0) return;
+    if (!window.confirm(`Delete ${selected.length} selected photo${selected.length === 1 ? '' : 's'}?`)) return;
+    for (const photo of selected) {
+      await removeTripPhotoRecord(photo);
+    }
+    setPhotoUploadError(false);
+    setPhotoUploadMessage(`Deleted ${selected.length} photo${selected.length === 1 ? '' : 's'}.`);
+    closePhotoSelectionMode();
   };
 
   const handleTripPhotoFilesSelected = async (files, clearInput) => {
@@ -4329,11 +4376,48 @@ function App() {
             <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3">
               <button
                 onClick={() => photoInputRef.current?.click()}
-                disabled={uploadingPhoto}
+                disabled={uploadingPhoto || isPhotoSelectionMode}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl text-sm font-medium shadow hover:shadow-lg transition-all disabled:opacity-50"
               >
                 {uploadingPhoto ? '⏳ Uploading…' : '📷 Add Photos'}
               </button>
+              {isPhotoSelectionMode ? (
+                <>
+                  <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                    {selectedPhotoIds.length} selected
+                  </span>
+                  <button
+                    onClick={saveSelectedPhotosToDevice}
+                    disabled={selectedPhotoIds.length === 0}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-500 text-white disabled:opacity-40"
+                  >
+                    Save to iPhone
+                  </button>
+                  <button
+                    onClick={deleteSelectedPhotos}
+                    disabled={selectedPhotoIds.length === 0}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500 text-white disabled:opacity-40"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    onClick={closePhotoSelectionMode}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                  >
+                    Done
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setIsPhotoSelectionMode(true);
+                    setSelectedPhotoIds([]);
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                >
+                  Select
+                </button>
+              )}
               {photoUploadMessage && (
                 <span className={`text-xs ${photoUploadError ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
                   {photoUploadMessage}
@@ -4376,15 +4460,26 @@ function App() {
                         <span className="text-gray-300 dark:text-gray-600">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
-                        {photos.map(photo => (
-                          <div key={photo.id} className="relative group aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer" onClick={() => setLightboxPhoto(photo)}>
+                        {photos.map(photo => {
+                          const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
+                          return (
+                          <div
+                            key={photo.id}
+                            className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer ${isSelectedPhoto ? 'ring-2 ring-purple-500' : ''}`}
+                            onClick={() => isPhotoSelectionMode ? toggleSelectedPhoto(photo.id) : setLightboxPhoto(photo)}
+                          >
                             <img src={photo.url} alt={photo.caption || ''} className="w-full h-full object-cover" />
+                            {isPhotoSelectionMode && (
+                              <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
+                                <span className={`text-xs ${isSelectedPhoto ? 'text-emerald-300' : 'text-white/70'}`}>{isSelectedPhoto ? '✓' : ''}</span>
+                              </div>
+                            )}
                             {photo.caption && (
                               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <p className="text-white text-xs truncate">{photo.caption}</p>
                               </div>
                             )}
-                            {photo.uploaded_by === currentUser && (
+                            {!isPhotoSelectionMode && photo.uploaded_by === currentUser && (
                               <button
                                 onClick={e => { e.stopPropagation(); deleteTripPhoto(photo); }}
                                 className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow"
@@ -4394,12 +4489,14 @@ function App() {
                               <span className="bg-black/50 text-white px-1.5 py-0.5 rounded-full text-xs">{photo.uploaded_by}</span>
                             </div>
                           </div>
-                        ))}
+                        )})}
                         {/* Add more photos to this day */}
-                        <button
-                          onClick={() => { setPhotoDate(date !== 'unlinked' ? date : null); photoInputRef.current?.click(); }}
-                          className="aspect-square rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-all flex items-center justify-center text-2xl"
-                        >+</button>
+                        {!isPhotoSelectionMode && (
+                          <button
+                            onClick={() => { setPhotoDate(date !== 'unlinked' ? date : null); photoInputRef.current?.click(); }}
+                            className="aspect-square rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-all flex items-center justify-center text-2xl"
+                          >+</button>
+                        )}
                       </div>
                     </div>
                   ));
@@ -4432,29 +4529,43 @@ function App() {
                         )}
                       </div>
                       <div className="space-y-4">
-                        {photos.map(photo => (
-                          <div key={photo.id} className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
+                        {photos.map(photo => {
+                          const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
+                          return (
+                          <div key={photo.id} className={`bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'}`}>
                             <img
                               src={photo.url}
                               alt={photo.caption || ''}
                               className="w-full max-h-72 object-cover cursor-pointer"
-                              onClick={() => setLightboxPhoto(photo)}
+                              onClick={() => isPhotoSelectionMode ? toggleSelectedPhoto(photo.id) : setLightboxPhoto(photo)}
                             />
+                            {isPhotoSelectionMode && (
+                              <div className="px-3 pt-2">
+                                <button
+                                  onClick={() => toggleSelectedPhoto(photo.id)}
+                                  className={`text-xs px-2 py-1 rounded-full ${isSelectedPhoto ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'}`}
+                                >
+                                  {isSelectedPhoto ? 'Selected' : 'Select'}
+                                </button>
+                              </div>
+                            )}
                             <div className="px-3 py-2 flex items-start justify-between gap-2">
                               <div>
                                 {photo.caption && <p className="text-sm text-gray-800 dark:text-gray-200 mb-0.5">{photo.caption}</p>}
                                 <p className="text-xs text-gray-400 dark:text-gray-500">📷 {photo.uploaded_by}</p>
                               </div>
-                              {photo.uploaded_by === currentUser && (
+                              {!isPhotoSelectionMode && photo.uploaded_by === currentUser && (
                                 <button onClick={() => deleteTripPhoto(photo)} className="text-red-400 hover:text-red-600 text-xs shrink-0">✕</button>
                               )}
                             </div>
                           </div>
-                        ))}
-                        <button
-                          onClick={() => { setPhotoDate(date !== 'unlinked' ? date : null); photoInputRef.current?.click(); }}
-                          className="flex items-center gap-2 text-xs text-purple-500 hover:text-purple-700 font-medium"
-                        >+ Add photo to this day</button>
+                        )})}
+                        {!isPhotoSelectionMode && (
+                          <button
+                            onClick={() => { setPhotoDate(date !== 'unlinked' ? date : null); photoInputRef.current?.click(); }}
+                            className="flex items-center gap-2 text-xs text-purple-500 hover:text-purple-700 font-medium"
+                          >+ Add photo to this day</button>
+                        )}
                       </div>
                     </div>
                   ));
