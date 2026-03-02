@@ -3509,13 +3509,14 @@ function App() {
                     {upcomingTrips.map(sc => {
                       const canDelete = sc.owner_id === user?.id;
                       const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
+                      const isDeleteRevealed = rowOffset < 0;
                       return (
                         <div key={sc.id} className="relative rounded-xl overflow-hidden">
                           {canDelete && (
-                            <div className="absolute inset-y-0 right-0 w-[88px] bg-red-500 flex items-center justify-center">
+                            <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
                               <button
                                 onClick={() => deleteSubCalendar(sc.id)}
-                                className="w-full h-full text-white text-sm font-semibold"
+                                className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
                               >
                                 Delete
                               </button>
@@ -3560,13 +3561,14 @@ function App() {
                     {archivedTrips.map(sc => {
                       const canDelete = sc.owner_id === user?.id;
                       const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
+                      const isDeleteRevealed = rowOffset < 0;
                       return (
                         <div key={sc.id} className="relative rounded-xl overflow-hidden">
                           {canDelete && (
-                            <div className="absolute inset-y-0 right-0 w-[88px] bg-red-500 flex items-center justify-center">
+                            <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
                               <button
                                 onClick={() => deleteSubCalendar(sc.id)}
-                                className="w-full h-full text-white text-sm font-semibold"
+                                className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
                               >
                                 Delete
                               </button>
