@@ -1998,6 +1998,8 @@ function App() {
   const selectedEvents = getEventsForDate(selectedDate);
   const todayKey = getDateKey(new Date());
   const todayEvents = getEventsForDate(new Date()).filter(e => !e.isHoliday);
+  const getSubCalStartRaw = (sc) => sc?.start_date ?? sc?.startDate ?? sc?.start ?? sc?.date ?? null;
+  const getSubCalEndRaw = (sc) => sc?.end_date ?? sc?.endDate ?? sc?.end ?? getSubCalStartRaw(sc);
   const toDateOnlyTs = (value) => {
     if (!value) return null;
 
@@ -2034,18 +2036,23 @@ function App() {
     return d.getTime();
   };
   const todayTs = toDateOnlyTs(todayKey);
+  const formatTripDate = (value, withYear = false) => {
+    const ts = toDateOnlyTs(value);
+    if (ts === null) return 'Unknown date';
+    return new Date(ts).toLocaleDateString('en-US', withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
+  };
   const upcomingTrips = [...subCalendars]
     .filter(sc => {
-      const startTs = toDateOnlyTs(sc.start_date);
+      const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
       return startTs !== null && startTs > todayTs;
     })
-    .sort((a, b) => toDateOnlyTs(a.start_date) - toDateOnlyTs(b.start_date));
+    .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
   const archivedTrips = [...subCalendars]
     .filter(sc => {
-      const endTs = toDateOnlyTs(sc.end_date);
+      const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
       return endTs !== null && endTs < todayTs;
     })
-    .sort((a, b) => toDateOnlyTs(b.end_date) - toDateOnlyTs(a.end_date));
+    .sort((a, b) => toDateOnlyTs(getSubCalEndRaw(b)) - toDateOnlyTs(getSubCalEndRaw(a)));
 
   if (isLoading) {
     return (
@@ -3446,7 +3453,7 @@ function App() {
                         <div className="min-w-0">
                           <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
                           </div>
                         </div>
                         <button
@@ -3474,7 +3481,7 @@ function App() {
                         <div className="min-w-0">
                           <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
                           </div>
                         </div>
                         <button
