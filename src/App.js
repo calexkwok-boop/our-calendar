@@ -2858,6 +2858,7 @@ function App() {
                   const hasUrgentEvent = dateEvents.some(e => e.isUrgent);
                   const hasHoliday = dateEvents.some(e => e.isHoliday);
                   const weatherData = showWeather && dateKey ? weather[dateKey] : null;
+                  const dateTs = date ? toDateOnlyTs(date) : null;
 
                   const multiDayEvents = dateEvents.filter(e => e.isMultiDay);
                   const uniqueMultiDayIds = [...new Set(multiDayEvents.map(e => e.multiDayId))];
@@ -2873,6 +2874,14 @@ function App() {
                     const categoryColor = eventWithId ? categories[eventWithId.category || 'other']?.color : 'bg-purple-500';
                     return { isFirst, isLast, isMiddle, categoryColor };
                   });
+                  const subTripsOnDate = dateTs === null
+                    ? []
+                    : subCalendars.filter(sc => {
+                        const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
+                        const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
+                        return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
+                      });
+                  const primarySubTrip = subTripsOnDate[0];
 
                   return (
                     <div key={index} className="relative pb-2">
@@ -2916,6 +2925,19 @@ function App() {
                           </div>
                         )}
                       </button>
+                      {date && primarySubTrip && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openSubCalendar(primarySubTrip);
+                          }}
+                          className="absolute top-0.5 left-0.5 z-20 px-1 py-0.5 rounded bg-indigo-500/90 text-white text-[9px] sm:text-[10px] leading-none hover:bg-indigo-600"
+                          title={`Open ${primarySubTrip.name}`}
+                        >
+                          {subTripsOnDate.length > 1 ? `Trips ${subTripsOnDate.length}` : 'Trip'}
+                        </button>
+                      )}
                       {multiDayBars.map((bar, barIndex) => (
                         bar.isFirst || bar.isLast || bar.isMiddle ? (
                           <div key={barIndex} className="absolute left-0 right-0 flex items-center" style={{ top: '100%', marginTop: `${barIndex * 5}px` }}>
@@ -2940,6 +2962,13 @@ function App() {
                   const hasUrgentEvent = dateEvents.some(e => e.isUrgent);
                   const hasHoliday = dateEvents.some(e => e.isHoliday);
                   const weatherData = showWeather ? weather[dateKey] : null;
+                  const dateTs = toDateOnlyTs(date);
+                  const subTripsOnDate = subCalendars.filter(sc => {
+                    const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
+                    const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
+                    return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
+                  });
+                  const primarySubTrip = subTripsOnDate[0];
 
                   return (
                     <div
@@ -2958,6 +2987,19 @@ function App() {
                         {date.getDate()}
                         {hasHoliday && <span className="ml-1">🇺🇸</span>}
                       </div>
+                      {primarySubTrip && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openSubCalendar(primarySubTrip);
+                          }}
+                          className={`w-fit px-1.5 py-0.5 rounded text-[10px] leading-none mb-1 ${isSelected ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'}`}
+                          title={`Open ${primarySubTrip.name}`}
+                        >
+                          {subTripsOnDate.length > 1 ? `Trips ${subTripsOnDate.length}` : 'Trip'}
+                        </button>
+                      )}
 
                       {/* Weather */}
                       {weatherData && !isSelected && (
