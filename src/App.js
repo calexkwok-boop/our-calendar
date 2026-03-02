@@ -2167,13 +2167,13 @@ function App() {
   return (
     <>
     <style>{shakeStyle}</style>
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-2 sm:p-4 pb-28" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))', paddingBottom: 'max(5.5rem, env(safe-area-inset-bottom))' }}>
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-2 sm:p-3 pb-24" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))', paddingBottom: 'max(4.75rem, env(safe-area-inset-bottom))' }}>
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="p-2 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl shrink-0">
-                <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+              <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl shrink-0">
+                <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
               <div className="min-w-0">
                 {isEditingTitle ? (
@@ -2191,19 +2191,19 @@ function App() {
                         localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
                       }
                     }}
-                    className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 border-2 border-purple-300 rounded-lg w-full"
+                    className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 border-2 border-purple-300 rounded-lg w-full"
                     autoFocus
                   />
                 ) : (
                   <h1
                     onClick={() => setIsEditingTitle(true)}
-                    className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:opacity-70 transition-opacity truncate"
+                    className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:opacity-70 transition-opacity truncate"
                     title="Click to rename calendar"
                   >
                     {calendarTitle}
                   </h1>
                 )}
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                   <span className="font-semibold text-purple-600 dark:text-purple-400">{user?.email}</span>
                   <button onClick={handleLogout} className="ml-2 text-xs text-purple-500 hover:text-purple-700 underline">logout</button>
                 </p>
@@ -2262,7 +2262,7 @@ function App() {
               <ChevronLeft className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </button>
             <div className="flex flex-col items-center gap-1">
-              <h2 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-rose-600 to-purple-600 bg-clip-text text-transparent">
+              <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-r from-rose-600 to-purple-600 bg-clip-text text-transparent">
                 {calendarView === 'month'
                   ? currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
                   : (() => {
@@ -2276,13 +2276,13 @@ function App() {
               <div className="flex rounded-lg overflow-hidden border border-purple-200 dark:border-gray-600 text-xs font-medium">
                 <button
                   onClick={() => setCalendarView('month')}
-                  className={`px-3 py-1 transition-all ${calendarView === 'month' ? 'bg-purple-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? 'bg-purple-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
                 >
                   Month
                 </button>
                 <button
                   onClick={() => setCalendarView('week')}
-                  className={`px-3 py-1 transition-all ${calendarView === 'week' ? 'bg-purple-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? 'bg-purple-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
                 >
                   Week
                 </button>
@@ -2684,7 +2684,7 @@ function App() {
             {todayEvents.length === 0 ? (
               <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No events today.</div>
             ) : (
-              <div className="space-y-1.5 max-h-28 sm:max-h-32 overflow-y-auto pr-1">
+              <div className="space-y-1.5 max-h-24 sm:max-h-28 overflow-y-auto pr-1">
                 {todayEvents.slice(0, 4).map(event => {
                   const category = categories[event.category || 'other'] || categories.other;
                   return (
@@ -2708,8 +2708,8 @@ function App() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6">
+        <div className="grid grid-cols-1 gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4">
 
             {/* Active sub-calendar banner */}
             {(() => {
@@ -2769,15 +2769,15 @@ function App() {
             )}
 
             {/* Day headers */}
-            <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
+            <div className="grid grid-cols-7 gap-1 sm:gap-1.5 mb-1.5">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="text-center text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-200 py-2">{day}</div>
+                <div key={day} className="text-center text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-200 py-1">{day}</div>
               ))}
             </div>
 
             {calendarView === 'month' ? (
               /* ── MONTH VIEW ── */
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1">
                 {getDaysInMonth(currentDate).map((date, index) => {
                   const dateKey = date ? getDateKey(date) : null;
                   const dateEvents = getEventsForDate(date);
@@ -2804,12 +2804,12 @@ function App() {
                   });
 
                   return (
-                    <div key={index} className="relative pb-3">
+                    <div key={index} className="relative pb-2">
                       <button
                         onClick={() => handleDateTap(date)}
                         disabled={!date}
                         className={`
-                          w-full aspect-square rounded-xl p-2 transition-all duration-200 relative select-none
+                          w-full aspect-square rounded-lg p-1 transition-all duration-200 relative select-none
                           ${!date ? 'invisible' : 'bg-white dark:bg-gray-700'}
                           ${hasUrgentEvent && !isSelected && !isInSelection ? 'ring-2 ring-red-500 shadow-lg shadow-red-200' : ''}
                           ${isInSelection ? 'bg-gradient-to-br from-purple-400 to-indigo-400 text-white shadow-lg scale-105 ring-2 ring-purple-300' : ''}
@@ -2820,7 +2820,7 @@ function App() {
                         `}
                         style={{ zIndex: 10 }}
                       >
-                        <div className={`text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
+                        <div className={`text-xs sm:text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
                           {date ? date.getDate() : ''}
                           {hasHoliday && !isSelected && !isInSelection && (
                             <span className="absolute top-0.5 right-0.5 text-xs">🇺🇸</span>
@@ -2837,10 +2837,10 @@ function App() {
                           </div>
                         )}
                         {dateEvents.length > 0 && (
-                          <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex gap-0.5">
-                            {hasHoliday && <div className={`w-1.5 h-1.5 rounded-full ${isSelected || isInSelection ? 'bg-white' : 'bg-red-400'}`} />}
+                          <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 flex gap-0.5">
+                            {hasHoliday && <div className={`w-1 h-1 rounded-full ${isSelected || isInSelection ? 'bg-white' : 'bg-red-400'}`} />}
                             {[...new Set(dateEvents.filter(e => !e.isMultiDay && !e.isHoliday).map(e => e.category || 'other'))].slice(0, 2).map((cat, i) => (
-                              <div key={i} className={`w-1.5 h-1.5 rounded-full ${isSelected || isInSelection ? 'bg-white' : categories[cat]?.color || 'bg-gray-500'}`} />
+                              <div key={i} className={`w-1 h-1 rounded-full ${isSelected || isInSelection ? 'bg-white' : categories[cat]?.color || 'bg-gray-500'}`} />
                             ))}
                           </div>
                         )}
@@ -2860,7 +2860,7 @@ function App() {
               </div>
             ) : (
               /* ── WEEK VIEW ── */
-              <div className="grid grid-cols-7 gap-1 sm:gap-2">
+              <div className="grid grid-cols-7 gap-1">
                 {getWeekDays(currentDate).map((date, index) => {
                   const dateKey = getDateKey(date);
                   const dateEvents = getEventsForDate(date);
@@ -2875,7 +2875,7 @@ function App() {
                       key={index}
                       onClick={() => handleDateTap(date)}
                       className={`
-                        min-h-32 rounded-xl p-2 cursor-pointer transition-all duration-200 flex flex-col gap-1
+                        min-h-24 rounded-lg p-1.5 cursor-pointer transition-all duration-200 flex flex-col gap-1
                         ${isSelected ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg ring-2 ring-purple-300' : ''}
                         ${!isSelected && isTodayDate ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : ''}
                         ${!isSelected && !isTodayDate ? 'bg-gray-50 dark:bg-gray-700 hover:bg-purple-50 dark:hover:bg-gray-600' : ''}
