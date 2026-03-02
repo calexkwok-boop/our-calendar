@@ -75,6 +75,7 @@ function App() {
   const [showPrivateEvents, setShowPrivateEvents] = useState(false);
 
   const saveTimeoutRef = useRef(null);
+  const dateTapTimeoutRef = useRef(null);
   const [currentUser, setCurrentUser] = useState('');
   const [showUserSetup, setShowUserSetup] = useState(false);
   const [selectedDates, setSelectedDates] = useState([]);
@@ -858,14 +859,20 @@ function App() {
   const handleDateTap = (date) => {
     if (!date) return;
 
-    setShowDateDetailModal(true);
-
     const now = Date.now();
     const timeSinceLastTap = now - lastTapTime;
+    const isDoubleTap = timeSinceLastTap < 300 && firstTapDate && isSameDay(firstTapDate, date);
+
+    if (dateTapTimeoutRef.current) {
+      clearTimeout(dateTapTimeoutRef.current);
+      dateTapTimeoutRef.current = null;
+    }
 
     // Double tap detection (within 300ms)
-    if (timeSinceLastTap < 300 && firstTapDate && isSameDay(firstTapDate, date)) {
+    if (isDoubleTap) {
       // Double tap on same date - start multi-day selection
+      setShowDateDetailModal(false);
+      setSelectedDate(date);
       setSelectedDates([date]);
       setSelectionStart(date);
       setFirstTapDate(null);
@@ -877,14 +884,21 @@ function App() {
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         dates.push(new Date(d));
       }
+      setSelectedDate(start);
       setSelectedDates(dates);
       setSelectionStart(null);
+      setFirstTapDate(null);
+      setShowDateDetailModal(true);
     } else {
       // Single tap - select this date
       setSelectedDate(date);
       setFirstTapDate(date);
       setSelectedDates([]);
       setSelectionStart(null);
+      dateTapTimeoutRef.current = setTimeout(() => {
+        setShowDateDetailModal(true);
+        dateTapTimeoutRef.current = null;
+      }, 320);
     }
 
     setLastTapTime(now);
@@ -1754,6 +1768,14 @@ function App() {
     document.addEventListener('mouseup', handleGlobalMouseUp);
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [isSelecting]);
+
+  useEffect(() => {
+    return () => {
+      if (dateTapTimeoutRef.current) {
+        clearTimeout(dateTapTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Close reaction picker when clicking anywhere outside it
   useEffect(() => {
