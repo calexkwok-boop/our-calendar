@@ -85,6 +85,9 @@ function App() {
   const [notificationPermission, setNotificationPermission] = useState('default');
   const [isUrgent, setIsUrgent] = useState(false);
   const [onlyNotifyUrgent, setOnlyNotifyUrgent] = useState(false);
+  const [notifyOneWeek, setNotifyOneWeek] = useState(true);
+  const [notifyOneDay, setNotifyOneDay] = useState(true);
+  const [notifyOneHour, setNotifyOneHour] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
@@ -1604,47 +1607,98 @@ function App() {
     }
   };
 
+  const toggleNotificationWindow = async (key, currentValue, setter) => {
+    const next = !currentValue;
+    setter(next);
+    await window.storage.set(key, next.toString(), false);
+  };
+
   // Check for upcoming events and send notifications
   useEffect(() => {
     if (!notificationsEnabled) return;
+    if (!notifyOneWeek && !notifyOneDay && !notifyOneHour) return;
+
+    const readSentMap = () => {
+      try {
+        const raw = localStorage.getItem('notification-sent-map');
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    };
+
+    const writeSentMap = (map) => {
+      try {
+        localStorage.setItem('notification-sent-map', JSON.stringify(map));
+      } catch {}
+    };
+
     const checkNotifications = () => {
       const now = new Date();
+      const sentMap = readSentMap();
+
       Object.entries(events).forEach(([dateKey, dateEvents]) => {
-        const eventDate = new Date(dateKey + 'T00:00:00');
         dateEvents.forEach(event => {
           if (event.isPrivate && showPrivateEvents === false) return;
           if (onlyNotifyUrgent && !event.isUrgent) return;
-          const timeDiff = eventDate - now;
-          const daysUntil = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-          const urgentPrefix = event.isUrgent ? '🚨 URGENT: ' : '';
-          if (daysUntil === 7) {
-            new Notification(`${urgentPrefix}📅 Event in 1 Week`, {
-              body: `${event.title} - ${eventDate.toLocaleDateString()}`,
-              tag: `${event.id}-week`
-            });
+
+          let eventDateTime;
+          if (event.time && /^\d{2}:\d{2}$/.test(event.time)) {
+            eventDateTime = new Date(`${dateKey}T${event.time}:00`);
+          } else {
+            eventDateTime = new Date(`${dateKey}T00:00:00`);
           }
-          if (daysUntil === 1) {
-            new Notification(`${urgentPrefix}⚠️ Event Tomorrow!`, {
-              body: `${event.title} - ${eventDate.toLocaleDateString()}`,
-              tag: `${event.id}-day`
+
+          const timeDiff = eventDateTime.getTime() - now.getTime();
+          if (timeDiff <= 0) return;
+
+          const urgentPrefix = event.isUrgent ? 'URGENT: ' : '';
+          const windows = [
+            { enabled: notifyOneWeek, ms: 7 * 24 * 60 * 60 * 1000, key: 'week', title: `${urgentPrefix}Event in 1 Week` },
+            { enabled: notifyOneDay, ms: 24 * 60 * 60 * 1000, key: 'day', title: `${urgentPrefix}Event in 1 Day` },
+            { enabled: notifyOneHour, ms: 60 * 60 * 1000, key: 'hour', title: `${urgentPrefix}Event in 1 Hour` },
+          ];
+
+          windows.forEach(windowDef => {
+            if (!windowDef.enabled) return;
+            if (timeDiff > windowDef.ms) return;
+
+            const sentKey = `${event.id}-${dateKey}-${windowDef.key}`;
+            if (sentMap[sentKey]) return;
+
+            new Notification(windowDef.title, {
+              body: `${event.title} - ${eventDateTime.toLocaleString()}`,
+              tag: sentKey,
             });
-          }
+
+            sentMap[sentKey] = true;
+          });
         });
       });
+
+      writeSentMap(sentMap);
     };
+
     checkNotifications();
     const interval = setInterval(checkNotifications, 60 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent]);
-
+  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent, notifyOneWeek, notifyOneDay, notifyOneHour]);
   // Load notification preference
   useEffect(() => {
     const loadNotificationPreference = async () => {
       try {
         const result = await window.storage.get('notifications-enabled', false);
         if (result && result.value === 'true') setNotificationsEnabled(true);
-        const urgentResult = await window.storage.get('notify-urgent-only', false);
+        const urgentResult = await window.storage.get('notification-urgent-only', false);
         if (urgentResult && urgentResult.value === 'true') setOnlyNotifyUrgent(true);
+        const legacyUrgentResult = await window.storage.get('notify-urgent-only', false);
+        if (legacyUrgentResult && legacyUrgentResult.value === 'true') setOnlyNotifyUrgent(true);
+        const weekResult = await window.storage.get('notification-window-week', false);
+        if (weekResult && weekResult.value === 'false') setNotifyOneWeek(false);
+        const dayResult = await window.storage.get('notification-window-day', false);
+        if (dayResult && dayResult.value === 'false') setNotifyOneDay(false);
+        const hourResult = await window.storage.get('notification-window-hour', false);
+        if (hourResult && hourResult.value === 'true') setNotifyOneHour(true);
       } catch (error) {
         console.log('No notification preference found');
       }
@@ -2218,7 +2272,36 @@ function App() {
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                   </button>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Get notified 1 week and 1 day before events</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Choose exactly when reminders are sent.</p>
+              </div>
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">1 Week Before</span>
+                  <button
+                    onClick={() => toggleNotificationWindow('notification-window-week', notifyOneWeek, setNotifyOneWeek)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifyOneWeek ? 'bg-blue-500' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifyOneWeek ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">1 Day Before</span>
+                  <button
+                    onClick={() => toggleNotificationWindow('notification-window-day', notifyOneDay, setNotifyOneDay)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifyOneDay ? 'bg-blue-500' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifyOneDay ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">1 Hour Before</span>
+                  <button
+                    onClick={() => toggleNotificationWindow('notification-window-hour', notifyOneHour, setNotifyOneHour)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifyOneHour ? 'bg-blue-500' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifyOneHour ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
               </div>
               <div className="p-4 bg-red-50 dark:bg-red-900/30 rounded-xl border-2 border-red-200 dark:border-red-800">
                 <div className="flex items-center justify-between mb-2">
@@ -2230,7 +2313,7 @@ function App() {
                     onClick={async () => {
                       const newState = !onlyNotifyUrgent;
                       setOnlyNotifyUrgent(newState);
-                      await window.storage.set('notify-urgent-only', newState.toString(), false);
+                      await window.storage.set('notification-urgent-only', newState.toString(), false);
                     }}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${onlyNotifyUrgent ? 'bg-red-500' : 'bg-gray-300'}`}
                   >
@@ -2238,13 +2321,6 @@ function App() {
                   </button>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Only send notifications for events marked as urgent 🚨</p>
-              </div>
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-blue-800 dark:text-blue-300">
-                  <strong>📅 1 Week Before:</strong> Yellow notification<br />
-                  <strong>⚠️ 1 Day Before:</strong> Red notification<br />
-                  <strong>🚨 Urgent Events:</strong> Show "URGENT" prefix
-                </p>
               </div>
             </div>
           </div>
