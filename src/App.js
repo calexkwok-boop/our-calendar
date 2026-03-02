@@ -718,10 +718,14 @@ function App() {
       });
   }; // 'month' | 'week'
   const [holidays, setHolidays] = useState({});
-  const [showHolidays, setShowHolidays] = useState(true);
   const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
   const [myShares, setMyShares] = useState([]); // people I've shared with
   const [showSharePanel, setShowSharePanel] = useState(false);
+  const [showListPanel, setShowListPanel] = useState(false);
+  const [sharedListItems, setSharedListItems] = useState([]);
+  const [newListItemText, setNewListItemText] = useState('');
+  const [activeListOwnerId, setActiveListOwnerId] = useState(null);
+  const [listError, setListError] = useState('');
   const [shareEmailInput, setShareEmailInput] = useState('');
   const [shareMessage, setShareMessage] = useState('');
   const [activeCalendars, setActiveCalendars] = useState([]);
@@ -775,7 +779,6 @@ function App() {
 
   // Helper: get holiday info for a specific date key
   const getHolidayForDate = (dateKey) => {
-    if (!showHolidays) return null;
     const year = parseInt(dateKey.split('-')[0]);
     const yearHolidays = holidays[year] || [];
     return yearHolidays.find(h => h.date === dateKey) || null;
@@ -934,20 +937,18 @@ function App() {
     });
 
     const holidayEvents = [];
-    if (showHolidays) {
-      const holiday = getHolidayForDate(dateKey);
-      if (holiday) {
-        holidayEvents.push({
-          id: `holiday-${dateKey}`,
-          title: holiday.localName,
-          fullName: holiday.name,
-          date: dateKey,
-          time: null,
-          category: 'other',
-          isHoliday: true,
-          isReadOnly: true,
-        });
-      }
+    const holiday = getHolidayForDate(dateKey);
+    if (holiday) {
+      holidayEvents.push({
+        id: `holiday-${dateKey}`,
+        title: holiday.localName,
+        fullName: holiday.name,
+        date: dateKey,
+        time: null,
+        category: 'other',
+        isHoliday: true,
+        isReadOnly: true,
+      });
     }
 
     return [...holidayEvents, ...directEvents, ...virtualRecurrences].sort((a, b) => {
@@ -1116,6 +1117,96 @@ function App() {
       setMyShares(prev => prev.filter(s => s.shared_with_email !== shareEmail));
       setShareMessage(`Removed access for ${shareEmail}.`);
     }
+  };
+
+  const listOwnerOptions = [
+    ...(user?.id ? [{ ownerId: user.id, label: 'My List' }] : []),
+    ...Array.from(
+      new Set((sharedCalendars || []).map(s => s.owner_id).filter(id => id && id !== user?.id))
+    ).map(ownerId => ({ ownerId, label: `Shared List (${ownerId.slice(0, 8)}...)` }))
+  ];
+
+  const loadSharedListItems = async (ownerId) => {
+    if (!ownerId) return;
+    const { data, error } = await supabase
+      .from('shared_lists')
+      .select('*')
+      .eq('owner_id', ownerId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error loading shared list:', error);
+      if (error.code === '42P01') {
+        setListError('List feature needs DB setup (table shared_lists is missing).');
+      } else {
+        setListError(`Could not load list: ${error.message}`);
+      }
+      return;
+    }
+
+    setListError('');
+    setSharedListItems((data || []).map(item => ({ ...item, done: !!item.done })));
+  };
+
+  const addSharedListItem = async () => {
+    const text = newListItemText.trim();
+    if (!text || !activeListOwnerId || !user?.id) return;
+
+    const payload = {
+      owner_id: activeListOwnerId,
+      text,
+      done: false,
+      created_by: currentUser || user.email || 'User',
+      user_id: user.id,
+    };
+
+    const { data, error } = await supabase
+      .from('shared_lists')
+      .insert(payload)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Error adding list item:', error);
+      setListError(`Could not add item: ${error.message}`);
+      return;
+    }
+
+    setListError('');
+    setSharedListItems(prev => [...prev, { ...(data || payload), done: false }]);
+    setNewListItemText('');
+  };
+
+  const toggleSharedListItem = async (item) => {
+    const { error } = await supabase
+      .from('shared_lists')
+      .update({ done: !item.done })
+      .eq('id', item.id);
+
+    if (error) {
+      console.error('Error updating list item:', error);
+      setListError(`Could not update item: ${error.message}`);
+      return;
+    }
+
+    setListError('');
+    setSharedListItems(prev => prev.map(i => i.id === item.id ? { ...i, done: !i.done } : i));
+  };
+
+  const removeSharedListItem = async (itemId) => {
+    const { error } = await supabase
+      .from('shared_lists')
+      .delete()
+      .eq('id', itemId);
+
+    if (error) {
+      console.error('Error deleting list item:', error);
+      setListError(`Could not delete item: ${error.message}`);
+      return;
+    }
+
+    setListError('');
+    setSharedListItems(prev => prev.filter(i => i.id !== itemId));
   };
 
   useEffect(() => {
@@ -1369,6 +1460,20 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const ownerIds = listOwnerOptions.map(o => o.ownerId);
+    if (ownerIds.length === 0) return;
+    if (!activeListOwnerId || !ownerIds.includes(activeListOwnerId)) {
+      setActiveListOwnerId(ownerIds[0]);
+    }
+  }, [user?.id, sharedCalendars, activeListOwnerId]);
+
+  useEffect(() => {
+    if (!activeListOwnerId) return;
+    loadSharedListItems(activeListOwnerId);
+  }, [activeListOwnerId]);
 
   // Check notification permission on load
   useEffect(() => {
@@ -1921,11 +2026,11 @@ function App() {
                 {notificationsEnabled ? <Bell className="w-4 h-4 sm:w-5 sm:h-5" /> : <BellOff className="w-4 h-4 sm:w-5 sm:h-5" />}
               </button>
               <button
-                onClick={() => setShowHolidays(!showHolidays)}
-                className={`p-2 rounded-xl transition-all duration-200 text-sm ${showHolidays ? 'bg-red-100 dark:bg-red-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
-                title={showHolidays ? 'Hide US holidays' : 'Show US holidays'}
+                onClick={() => setShowListPanel(!showListPanel)}
+                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showListPanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                title="Shared list"
               >
-                🇺🇸
+                List
               </button>
               <button
                 onClick={() => setShowWeather(!showWeather)}
@@ -2120,6 +2225,81 @@ function App() {
             {myShares.length === 0 && sharedCalendars.length === 0 && (
               <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add someone's email above to get started.</p>
             )}
+          </div>
+        )}
+
+        {showListPanel && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400">Shared List</h3>
+              <button onClick={() => setShowListPanel(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              Grocery items, reminders, and quick notes shared with your calendar collaborators.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+              <select
+                value={activeListOwnerId || ''}
+                onChange={(e) => setActiveListOwnerId(e.target.value)}
+                className="px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl"
+              >
+                {listOwnerOptions.map(opt => (
+                  <option key={opt.ownerId} value={opt.ownerId}>{opt.label}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={newListItemText}
+                onChange={(e) => setNewListItemText(e.target.value)}
+                placeholder="Add item (e.g., milk, eggs, call mom)"
+                className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
+                onKeyPress={(e) => e.key === 'Enter' && addSharedListItem()}
+              />
+              <button
+                onClick={addSharedListItem}
+                className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
+                title="Add item"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+
+            {listError && (
+              <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-300">
+                {listError}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {sharedListItems.length === 0 && (
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic">No list items yet.</p>
+              )}
+              {sharedListItems.map(item => (
+                <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
+                  <button
+                    onClick={() => toggleSharedListItem(item)}
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
+                    title={item.done ? 'Mark incomplete' : 'Mark complete'}
+                  >
+                    {item.done ? '✓' : ''}
+                  </button>
+                  <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>
+                    {item.text}
+                  </span>
+                  <button
+                    onClick={() => removeSharedListItem(item.id)}
+                    className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"
+                    title="Delete item"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
