@@ -3333,11 +3333,11 @@ function App() {
                                   <button onClick={() => deleteSubCalEvent(event.id, dk)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
                                 </div>
                               </div>
-                              </div>
                             )}
                           </div>
                           </div>
                         ))}
+                    
                         {/* Click slot to add event */}
                         {subCalAddingSlot === hour ? (
                           <div className="mt-1 p-3 bg-white dark:bg-gray-700 rounded-xl border-2 border-purple-300 dark:border-purple-600 shadow-lg space-y-2">
