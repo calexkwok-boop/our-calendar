@@ -413,6 +413,29 @@ function App() {
     setTripPhotos(prev => prev.filter(p => p.id !== photo.id));
   };
 
+  const handleTripPhotoFilesSelected = async (files, clearInput) => {
+    if (!files || files.length === 0) return;
+    setPhotoUploadError(false);
+    setPhotoUploadMessage('');
+    let successCount = 0;
+    for (const file of files) {
+      const ok = await uploadTripPhoto(
+        file,
+        photoCaption,
+        photoEventId,
+        photoDate || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null)
+      );
+      if (ok) successCount += 1;
+    }
+    if (successCount > 1) {
+      setPhotoUploadError(false);
+      setPhotoUploadMessage(`Uploaded ${successCount} photos.`);
+    }
+    setPhotoCaption('');
+    setPhotoEventId(null);
+    if (clearInput) clearInput();
+  };
+
   const renameSubCalendar = async (newName) => {
     if (!newName.trim() || !activeSubCalendar) return;
     await supabase.from('sub_calendars').update({ name: newName.trim() }).eq('id', activeSubCalendar.id);
@@ -3108,6 +3131,18 @@ function App() {
           </button>
         </div>
 
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={async e => {
+            const files = Array.from(e.target.files || []);
+            await handleTripPhotoFilesSelected(files, () => { e.target.value = ''; });
+          }}
+        />
+
         {/* Day content */}
         {subCalTab === 'itinerary' && subCalSelectedDate && (() => {
           const dk = getDateKey(subCalSelectedDate);
@@ -3512,31 +3547,6 @@ function App() {
 
             {/* Upload bar */}
             <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3">
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={async e => {
-                  const files = Array.from(e.target.files);
-                  if (files.length === 0) return;
-                  setPhotoUploadError(false);
-                  setPhotoUploadMessage('');
-                  let successCount = 0;
-                  for (const file of files) {
-                    const ok = await uploadTripPhoto(file, photoCaption, photoEventId, photoDate || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null));
-                    if (ok) successCount += 1;
-                  }
-                  if (successCount > 1) {
-                    setPhotoUploadError(false);
-                    setPhotoUploadMessage(`Uploaded ${successCount} photos.`);
-                  }
-                  setPhotoCaption('');
-                  setPhotoEventId(null);
-                  e.target.value = '';
-                }}
-              />
               <button
                 onClick={() => photoInputRef.current?.click()}
                 disabled={uploadingPhoto}
