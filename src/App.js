@@ -2730,7 +2730,7 @@ function App() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-4">
+        <div className={`grid grid-cols-1 gap-4 ${bottomNavTab !== 'home' ? 'hidden' : ''}`}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4">
 
             {/* Active sub-calendar banner */}
