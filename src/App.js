@@ -3558,7 +3558,7 @@ function App() {
                       const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
                       const isDeleteRevealed = rowOffset < 0;
                       return (
-                        <div key={sc.id} className="relative rounded-xl overflow-hidden">
+                        <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-purple-200 dark:ring-purple-700">
                           {canDelete && (
                             <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
                               <button
@@ -3574,7 +3574,7 @@ function App() {
                             onTouchMove={handleTripSwipeMove}
                             onTouchEnd={handleTripSwipeEnd}
                             onTouchCancel={handleTripSwipeEnd}
-                            className="relative z-10 flex items-center justify-between p-3 border border-purple-200 dark:border-purple-700 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20"
+                            className="relative z-10 flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20"
                             style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                           >
                             <div className="min-w-0">
@@ -3610,7 +3610,7 @@ function App() {
                       const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
                       const isDeleteRevealed = rowOffset < 0;
                       return (
-                        <div key={sc.id} className="relative rounded-xl overflow-hidden">
+                        <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-gray-200 dark:ring-gray-700">
                           {canDelete && (
                             <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
                               <button
@@ -3626,7 +3626,7 @@ function App() {
                             onTouchMove={handleTripSwipeMove}
                             onTouchEnd={handleTripSwipeEnd}
                             onTouchCancel={handleTripSwipeEnd}
-                            className="relative z-10 flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/40"
+                            className="relative z-10 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/40"
                             style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                           >
                             <div className="min-w-0">
