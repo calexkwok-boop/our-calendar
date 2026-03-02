@@ -2666,6 +2666,48 @@ function App() {
           </div>
         )}
 
+        {bottomNavTab === 'home' && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base sm:text-lg font-semibold text-purple-600 dark:text-purple-400">Today At A Glance</h3>
+              <button
+                onClick={() => {
+                  setSelectedDate(new Date());
+                  setSelectedDates([]);
+                  setShowDateDetailModal(true);
+                }}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-all"
+              >
+                Open Today
+              </button>
+            </div>
+            {todayEvents.length === 0 ? (
+              <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No events today.</div>
+            ) : (
+              <div className="space-y-1.5 max-h-28 sm:max-h-32 overflow-y-auto pr-1">
+                {todayEvents.slice(0, 4).map(event => {
+                  const category = categories[event.category || 'other'] || categories.other;
+                  return (
+                    <div key={`${event.id}-${event.date}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${category.color}`} />
+                        <span className="text-xs sm:text-sm text-gray-800 dark:text-gray-100 truncate">{event.title}</span>
+                        {event.isUrgent && <span className="text-xs">🚨</span>}
+                      </div>
+                      <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                        {event.time ? formatTime(event.time) : 'All day'}
+                      </span>
+                    </div>
+                  );
+                })}
+                {todayEvents.length > 4 && (
+                  <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">+{todayEvents.length - 4} more today</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6">
 
@@ -3325,48 +3367,8 @@ function App() {
 
           )}
 
+          {bottomNavTab !== 'home' && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6">
-            {bottomNavTab === 'home' && (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Today At A Glance</h3>
-                  <button
-                    onClick={() => {
-                      setSelectedDate(new Date());
-                      setSelectedDates([]);
-                      setShowDateDetailModal(true);
-                    }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-all"
-                  >
-                    Open Today
-                  </button>
-                </div>
-                {todayEvents.length === 0 ? (
-                  <div className="text-sm text-gray-500 dark:text-gray-400">No events today.</div>
-                ) : (
-                  <div className="space-y-2">
-                    {todayEvents.slice(0, 6).map(event => {
-                      const category = categories[event.category || 'other'] || categories.other;
-                      return (
-                        <div key={`${event.id}-${event.date}`} className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${category.color}`} />
-                            <span className="text-sm text-gray-800 dark:text-gray-100 truncate">{event.title}</span>
-                            {event.isUrgent && <span className="text-xs">🚨</span>}
-                          </div>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
-                            {event.time ? formatTime(event.time) : 'All day'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    {todayEvents.length > 6 && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">+{todayEvents.length - 6} more today</div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
 
             {bottomNavTab === 'upcoming' && (
               <>
@@ -3424,6 +3426,7 @@ function App() {
               </>
             )}
           </div>
+          )}
         </div>
       </div>
     </div>
