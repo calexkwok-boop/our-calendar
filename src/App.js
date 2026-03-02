@@ -979,23 +979,6 @@ function App() {
     }
   };
 
-  const handleMagicLink = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    setAuthError('');
-    if (!email) {
-      setAuthError('Please enter your email address first.');
-      return;
-    }
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin }
-    });
-    if (error) {
-      setAuthError(error.message);
-    } else {
-      setAuthError('✅ Magic link sent! Check your email.');
-    }
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -3335,7 +3318,6 @@ function App() {
                               </div>
                             )}
                           </div>
-                          </div>
                         ))}
                     
                         {/* Click slot to add event */}
@@ -3505,7 +3487,6 @@ function App() {
                   className={`p-1.5 rounded-lg transition-all ${photoView === 'timeline' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
                   title="Timeline view"
                 >☰</button>
-              </div>
             </div>
 
             {tripPhotos.length === 0 ? (
