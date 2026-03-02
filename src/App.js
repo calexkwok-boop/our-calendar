@@ -722,7 +722,10 @@ function App() {
   const [myShares, setMyShares] = useState([]); // people I've shared with
   const [showSharePanel, setShowSharePanel] = useState(false);
   const [showListPanel, setShowListPanel] = useState(false);
+  const [sharedListGroups, setSharedListGroups] = useState([]);
   const [sharedListItems, setSharedListItems] = useState([]);
+  const [selectedSharedListId, setSelectedSharedListId] = useState(null);
+  const [newSharedListTitle, setNewSharedListTitle] = useState('');
   const [newListItemText, setNewListItemText] = useState('');
   const [listError, setListError] = useState('');
   const [shareEmailInput, setShareEmailInput] = useState('');
@@ -1122,20 +1125,55 @@ function App() {
     ? sharedCalendars[0].owner_id
     : user?.id;
 
-  const loadSharedListItems = async (ownerId) => {
+  const loadSharedListGroups = async (ownerId) => {
     if (!ownerId) return;
     const { data, error } = await supabase
-      .from('shared_lists')
+      .from('shared_list_groups')
       .select('*')
       .eq('owner_id', ownerId)
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('Error loading shared list:', error);
+      console.error('Error loading shared list groups:', error);
       if (error.code === '42P01') {
-        setListError('List feature needs DB setup (table shared_lists is missing).');
+        setListError('List feature needs DB setup (shared_list_groups/shared_lists tables are missing).');
       } else {
-        setListError(`Could not load list: ${error.message}`);
+        setListError(`Could not load lists: ${error.message}`);
+      }
+      return;
+    }
+
+    setListError('');
+    const groups = data || [];
+    setSharedListGroups(groups);
+    if (groups.length === 0) {
+      setSelectedSharedListId(null);
+      setSharedListItems([]);
+      return;
+    }
+    if (!selectedSharedListId || !groups.some(g => g.id === selectedSharedListId)) {
+      setSelectedSharedListId(groups[0].id);
+    }
+  };
+
+  const loadSharedListItems = async (ownerId, listId) => {
+    if (!ownerId || !listId) {
+      setSharedListItems([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('shared_lists')
+      .select('*')
+      .eq('owner_id', ownerId)
+      .eq('list_id', listId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error loading shared list items:', error);
+      if (error.code === '42P01') {
+        setListError('List feature needs DB setup (shared_list_groups/shared_lists tables are missing).');
+      } else {
+        setListError(`Could not load list items: ${error.message}`);
       }
       return;
     }
@@ -1144,12 +1182,76 @@ function App() {
     setSharedListItems((data || []).map(item => ({ ...item, done: !!item.done })));
   };
 
-  const addSharedListItem = async () => {
-    const text = newListItemText.trim();
-    if (!text || !primaryListOwnerId || !user?.id) return;
+  const createSharedList = async () => {
+    const title = newSharedListTitle.trim();
+    if (!title || !primaryListOwnerId || !user?.id) return;
 
     const payload = {
       owner_id: primaryListOwnerId,
+      title,
+      created_by: currentUser || user.email || 'User',
+      user_id: user.id,
+    };
+
+    const { data, error } = await supabase
+      .from('shared_list_groups')
+      .insert(payload)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Error creating shared list:', error);
+      setListError(`Could not create list: ${error.message}`);
+      return;
+    }
+
+    setListError('');
+    const created = data || payload;
+    setSharedListGroups(prev => [...prev, created]);
+    setSelectedSharedListId(created.id);
+    setNewSharedListTitle('');
+    setSharedListItems([]);
+  };
+
+  const deleteSharedList = async (listId) => {
+    if (!listId || !primaryListOwnerId) return;
+    if (!window.confirm('Delete this list and all its items?')) return;
+
+    const { error: itemDeleteError } = await supabase
+      .from('shared_lists')
+      .delete()
+      .eq('owner_id', primaryListOwnerId)
+      .eq('list_id', listId);
+
+    if (itemDeleteError) {
+      setListError(`Could not delete list items: ${itemDeleteError.message}`);
+      return;
+    }
+
+    const { error: listDeleteError } = await supabase
+      .from('shared_list_groups')
+      .delete()
+      .eq('id', listId);
+
+    if (listDeleteError) {
+      setListError(`Could not delete list: ${listDeleteError.message}`);
+      return;
+    }
+
+    setListError('');
+    const remaining = sharedListGroups.filter(g => g.id !== listId);
+    setSharedListGroups(remaining);
+    setSelectedSharedListId(remaining.length > 0 ? remaining[0].id : null);
+    if (remaining.length === 0) setSharedListItems([]);
+  };
+
+  const addSharedListItem = async () => {
+    const text = newListItemText.trim();
+    if (!text || !primaryListOwnerId || !selectedSharedListId || !user?.id) return;
+
+    const payload = {
+      owner_id: primaryListOwnerId,
+      list_id: selectedSharedListId,
       text,
       done: false,
       created_by: currentUser || user.email || 'User',
@@ -1459,8 +1561,16 @@ function App() {
 
   useEffect(() => {
     if (!primaryListOwnerId) return;
-    loadSharedListItems(primaryListOwnerId);
+    loadSharedListGroups(primaryListOwnerId);
   }, [primaryListOwnerId]);
+
+  useEffect(() => {
+    if (!primaryListOwnerId || !selectedSharedListId) {
+      setSharedListItems([]);
+      return;
+    }
+    loadSharedListItems(primaryListOwnerId, selectedSharedListId);
+  }, [primaryListOwnerId, selectedSharedListId]);
 
   // Check notification permission on load
   useEffect(() => {
@@ -2225,8 +2335,46 @@ function App() {
             </div>
 
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Grocery items, reminders, and quick notes. This list is automatically shared with your main calendar collaborators.
+              Grocery items, reminders, and quick notes. These lists are automatically shared with your main calendar collaborators.
             </p>
+
+            <div className="flex flex-col sm:flex-row gap-2 mb-2">
+              <input
+                type="text"
+                value={newSharedListTitle}
+                onChange={(e) => setNewSharedListTitle(e.target.value)}
+                placeholder="New list title (e.g., Costco, Camping)"
+                className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
+                onKeyPress={(e) => e.key === 'Enter' && createSharedList()}
+              />
+              <button
+                onClick={createSharedList}
+                className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
+                title="Create list"
+              >
+                Create List
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+              <select
+                value={selectedSharedListId || ''}
+                onChange={(e) => setSelectedSharedListId(e.target.value)}
+                className="sm:w-64 px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl"
+              >
+                {sharedListGroups.map(group => (
+                  <option key={group.id} value={group.id}>{group.title}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => deleteSharedList(selectedSharedListId)}
+                disabled={!selectedSharedListId}
+                className="px-4 py-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-200 dark:hover:bg-red-800 transition-all disabled:opacity-50"
+                title="Delete selected list"
+              >
+                Delete List
+              </button>
+            </div>
 
             <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <input
@@ -2236,11 +2384,13 @@ function App() {
                 placeholder="Add item (e.g., milk, eggs, call mom)"
                 className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
                 onKeyPress={(e) => e.key === 'Enter' && addSharedListItem()}
+                disabled={!selectedSharedListId}
               />
               <button
                 onClick={addSharedListItem}
-                className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
+                className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
                 title="Add item"
+                disabled={!selectedSharedListId}
               >
                 <Plus className="w-5 h-5" />
               </button>
@@ -2253,6 +2403,9 @@ function App() {
             )}
 
             <div className="space-y-2">
+              {sharedListGroups.length === 0 && (
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic">Create your first list title above.</p>
+              )}
               {sharedListItems.length === 0 && (
                 <p className="text-sm text-gray-400 dark:text-gray-500 italic">No list items yet.</p>
               )}
