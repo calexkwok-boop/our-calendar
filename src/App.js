@@ -3151,6 +3151,8 @@ function App() {
             if (!b.time) return -1;
             return a.time.localeCompare(b.time);
           });
+          const dayEventPhotos = tripPhotos.filter(p => p.event_id && (p.date === dk || !p.date));
+          const getEventPhotos = (eventId) => dayEventPhotos.filter(p => p.event_id === eventId);
 
           return (
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -3386,6 +3388,24 @@ function App() {
                                       onClick={e => e.stopPropagation()}
                                     >📍 {event.location}</a>
                                   )}
+                                  {getEventPhotos(event.id).length > 0 && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setLightboxPhoto(getEventPhotos(event.id)[0]); }}
+                                      className="mt-1 relative"
+                                      title="View event photo"
+                                    >
+                                      <img
+                                        src={getEventPhotos(event.id)[0].url}
+                                        alt=""
+                                        className="w-12 h-12 rounded-lg object-cover border border-purple-200 dark:border-purple-700"
+                                      />
+                                      {getEventPhotos(event.id).length > 1 && (
+                                        <span className="absolute -top-1 -right-1 text-[10px] px-1 py-0.5 rounded-full bg-purple-600 text-white">
+                                          +{getEventPhotos(event.id).length - 1}
+                                        </span>
+                                      )}
+                                    </button>
+                                  )}
                                   {event.createdBy && <div className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-0.5"><User className="w-2.5 h-2.5" />{event.createdBy}</div>}
                                   {/* Reactions */}
                                   <div className="flex flex-wrap items-center gap-1 mt-1">
@@ -3499,6 +3519,19 @@ function App() {
                     <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Unscheduled</h4>
                     {dayEvents.filter(e => !e.time).map(event => (
                       <div key={event.id} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 rounded-xl px-2.5 py-2 mb-1">
+                        {getEventPhotos(event.id).length > 0 && (
+                          <button
+                            onClick={() => setLightboxPhoto(getEventPhotos(event.id)[0])}
+                            className="shrink-0"
+                            title="View event photo"
+                          >
+                            <img
+                              src={getEventPhotos(event.id)[0].url}
+                              alt=""
+                              className="w-9 h-9 rounded-md object-cover border border-gray-200 dark:border-gray-600"
+                            />
+                          </button>
+                        )}
                         <span className="flex-1 text-sm text-gray-800 dark:text-gray-200">{event.title}</span>
                         {event.notes && <span className="text-xs text-gray-400 italic truncate max-w-[120px]">{event.notes}</span>}
                         <button onClick={() => setSubCalEditingEvent(event.id)} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-lg"><Edit2 className="w-3.5 h-3.5 text-gray-500" /></button>
