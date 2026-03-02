@@ -146,6 +146,10 @@ function App() {
   const [subCalAddingSlot, setSubCalAddingSlot] = useState(null); // hour number being added to
   const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', endTime: '', location: '' });
   const [subCalTab, setSubCalTab] = useState('itinerary'); // 'itinerary' | 'photos'
+  const [shareMyLocation, setShareMyLocation] = useState(() => localStorage.getItem('subcal-share-location') === 'true');
+  const [memberLocations, setMemberLocations] = useState({});
+  const subCalLocationChannelRef = useRef(null);
+  const subCalGeoWatchRef = useRef(null);
   const [tripPhotos, setTripPhotos] = useState([]);
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -1886,6 +1890,104 @@ function App() {
     };
     loadNotificationPreference();
   }, []);
+
+  // Live location sharing within active sub-calendar (opt-in only)
+  useEffect(() => {
+    const clearGeoWatch = () => {
+      if (subCalGeoWatchRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.clearWatch(subCalGeoWatchRef.current);
+        subCalGeoWatchRef.current = null;
+      }
+    };
+
+    if (!activeSubCalendar) {
+      clearGeoWatch();
+      setMemberLocations({});
+      return;
+    }
+
+    const todayKey = getDateKey(new Date());
+    const sharingWindowOpen = todayKey >= activeSubCalendar.start_date && todayKey <= activeSubCalendar.end_date;
+    const identity = String(user?.id || user?.email || currentUser || `guest-${Date.now()}`);
+    const displayName = currentUser || user?.email || 'Member';
+
+    let cancelled = false;
+    const channel = supabase.channel(`subcal-live-location-${activeSubCalendar.id}`, {
+      config: { presence: { key: identity } },
+    });
+    subCalLocationChannelRef.current = channel;
+
+    const publishPassivePresence = async () => {
+      try {
+        await channel.track({
+          userId: identity,
+          name: displayName,
+          email: user?.email || null,
+          sharing: false,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch {}
+    };
+
+    const startOrUpdateSharing = async () => {
+      clearGeoWatch();
+      if (!shareMyLocation || !sharingWindowOpen || !navigator?.geolocation) {
+        await publishPassivePresence();
+        return;
+      }
+      subCalGeoWatchRef.current = navigator.geolocation.watchPosition(
+        async (pos) => {
+          if (cancelled) return;
+          try {
+            await channel.track({
+              userId: identity,
+              name: displayName,
+              email: user?.email || null,
+              sharing: true,
+              lat: pos.coords.latitude,
+              lon: pos.coords.longitude,
+              accuracy: Math.round(pos.coords.accuracy || 0),
+              updatedAt: new Date().toISOString(),
+            });
+          } catch (err) {
+            console.error('Location presence update failed:', err);
+          }
+        },
+        async (err) => {
+          console.error('Geolocation watch failed:', err);
+          await publishPassivePresence();
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+      );
+    };
+
+    channel.on('presence', { event: 'sync' }, () => {
+      if (cancelled) return;
+      const state = channel.presenceState();
+      const flattened = {};
+      Object.values(state || {}).forEach((entries) => {
+        (entries || []).forEach((entry) => {
+          if (!entry?.userId) return;
+          flattened[entry.userId] = entry;
+        });
+      });
+      setMemberLocations(flattened);
+    });
+
+    channel.subscribe(async (status) => {
+      if (status !== 'SUBSCRIBED' || cancelled) return;
+      await startOrUpdateSharing();
+    });
+
+    return () => {
+      cancelled = true;
+      clearGeoWatch();
+      setMemberLocations({});
+      channel.untrack().catch(() => {});
+      channel.unsubscribe();
+      if (subCalLocationChannelRef.current === channel) subCalLocationChannelRef.current = null;
+    };
+  }, [activeSubCalendar?.id, shareMyLocation, currentUser, user?.id, user?.email]);
 
   // Global mouse up handler for selections
   useEffect(() => {
@@ -4363,6 +4465,50 @@ function App() {
                     >+ Invite</button>
                   )}
                 </div>
+                {(() => {
+                  const todayKey = getDateKey(new Date());
+                  const sharingWindowOpen = todayKey >= activeSubCalendar.start_date && todayKey <= activeSubCalendar.end_date;
+                  const liveLocations = Object.values(memberLocations).filter(loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number');
+                  return (
+                    <div className="mt-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <div className="text-xs font-semibold text-gray-700 dark:text-gray-200">Live Location Sharing</div>
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                            {sharingWindowOpen ? 'Shared only during this trip window.' : 'Trip is not active today; location stays off.'}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const next = !shareMyLocation;
+                            setShareMyLocation(next);
+                            localStorage.setItem('subcal-share-location', next.toString());
+                          }}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareMyLocation && sharingWindowOpen ? 'bg-green-500' : 'bg-gray-300'}`}
+                          title="Share my location with members"
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${shareMyLocation && sharingWindowOpen ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                      {liveLocations.length > 0 && (
+                        <div className="mt-2 space-y-1.5">
+                          {liveLocations.map((loc, idx) => (
+                            <a
+                              key={`${loc.userId}-${idx}`}
+                              href={`https://www.google.com/maps?q=${loc.lat},${loc.lon}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 hover:border-green-300"
+                            >
+                              <span className="text-gray-700 dark:text-gray-200 truncate">📍 {loc.name || loc.email || loc.userId}</span>
+                              <span className="text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           );
