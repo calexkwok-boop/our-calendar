@@ -724,7 +724,6 @@ function App() {
   const [showListPanel, setShowListPanel] = useState(false);
   const [sharedListItems, setSharedListItems] = useState([]);
   const [newListItemText, setNewListItemText] = useState('');
-  const [activeListOwnerId, setActiveListOwnerId] = useState(null);
   const [listError, setListError] = useState('');
   const [shareEmailInput, setShareEmailInput] = useState('');
   const [shareMessage, setShareMessage] = useState('');
@@ -1119,12 +1118,9 @@ function App() {
     }
   };
 
-  const listOwnerOptions = [
-    ...(user?.id ? [{ ownerId: user.id, label: 'My List' }] : []),
-    ...Array.from(
-      new Set((sharedCalendars || []).map(s => s.owner_id).filter(id => id && id !== user?.id))
-    ).map(ownerId => ({ ownerId, label: `Shared List (${ownerId.slice(0, 8)}...)` }))
-  ];
+  const primaryListOwnerId = (sharedCalendars && sharedCalendars.length > 0)
+    ? sharedCalendars[0].owner_id
+    : user?.id;
 
   const loadSharedListItems = async (ownerId) => {
     if (!ownerId) return;
@@ -1150,10 +1146,10 @@ function App() {
 
   const addSharedListItem = async () => {
     const text = newListItemText.trim();
-    if (!text || !activeListOwnerId || !user?.id) return;
+    if (!text || !primaryListOwnerId || !user?.id) return;
 
     const payload = {
-      owner_id: activeListOwnerId,
+      owner_id: primaryListOwnerId,
       text,
       done: false,
       created_by: currentUser || user.email || 'User',
@@ -1462,18 +1458,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!user?.id) return;
-    const ownerIds = listOwnerOptions.map(o => o.ownerId);
-    if (ownerIds.length === 0) return;
-    if (!activeListOwnerId || !ownerIds.includes(activeListOwnerId)) {
-      setActiveListOwnerId(ownerIds[0]);
-    }
-  }, [user?.id, sharedCalendars, activeListOwnerId]);
-
-  useEffect(() => {
-    if (!activeListOwnerId) return;
-    loadSharedListItems(activeListOwnerId);
-  }, [activeListOwnerId]);
+    if (!primaryListOwnerId) return;
+    loadSharedListItems(primaryListOwnerId);
+  }, [primaryListOwnerId]);
 
   // Check notification permission on load
   useEffect(() => {
@@ -2238,19 +2225,10 @@ function App() {
             </div>
 
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Grocery items, reminders, and quick notes shared with your calendar collaborators.
+              Grocery items, reminders, and quick notes. This list is automatically shared with your main calendar collaborators.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-2 mb-4">
-              <select
-                value={activeListOwnerId || ''}
-                onChange={(e) => setActiveListOwnerId(e.target.value)}
-                className="px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl"
-              >
-                {listOwnerOptions.map(opt => (
-                  <option key={opt.ownerId} value={opt.ownerId}>{opt.label}</option>
-                ))}
-              </select>
               <input
                 type="text"
                 value={newListItemText}
