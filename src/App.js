@@ -3348,6 +3348,7 @@ function App() {
                               )}
                             )}
                           </div>
+                          </div>
                         ))}
                         {/* Click slot to add event */}
                         {subCalAddingSlot === hour ? (
