@@ -2326,94 +2326,99 @@ function App() {
         )}
 
         {showListPanel && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400">Shared List</h3>
-              <button onClick={() => setShowListPanel(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border border-purple-100 dark:border-gray-700">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Shared Lists</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Clean space for groceries, reminders, and quick to-dos.</p>
+              </div>
+              <button onClick={() => setShowListPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
 
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Grocery items, reminders, and quick notes. These lists are automatically shared with your main calendar collaborators.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-2 mb-2">
-              <input
-                type="text"
-                value={newSharedListTitle}
-                onChange={(e) => setNewSharedListTitle(e.target.value)}
-                placeholder="New list title (e.g., Costco, Camping)"
-                className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
-                onKeyPress={(e) => e.key === 'Enter' && createSharedList()}
-              />
-              <button
-                onClick={createSharedList}
-                className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
-                title="Create list"
-              >
-                Create List
-              </button>
+            <div className="p-3 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700 border border-purple-100 dark:border-gray-600 mb-3">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={newSharedListTitle}
+                  onChange={(e) => setNewSharedListTitle(e.target.value)}
+                  placeholder="Create new list title"
+                  className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
+                  onKeyPress={(e) => e.key === 'Enter' && createSharedList()}
+                />
+                <button
+                  onClick={createSharedList}
+                  className="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  title="Create list"
+                >
+                  Create
+                </button>
+              </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 mb-4">
-              <select
-                value={selectedSharedListId || ''}
-                onChange={(e) => setSelectedSharedListId(e.target.value)}
-                className="sm:w-64 px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl"
-              >
-                {sharedListGroups.map(group => (
-                  <option key={group.id} value={group.id}>{group.title}</option>
-                ))}
-              </select>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-3">
+              {sharedListGroups.map(group => (
+                <button
+                  key={group.id}
+                  onClick={() => setSelectedSharedListId(group.id)}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    selectedSharedListId === group.id
+                      ? 'bg-purple-600 text-white border-purple-600'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                  }`}
+                >
+                  {group.title}
+                </button>
+              ))}
               <button
                 onClick={() => deleteSharedList(selectedSharedListId)}
                 disabled={!selectedSharedListId}
-                className="px-4 py-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-200 dark:hover:bg-red-800 transition-all disabled:opacity-50"
+                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 disabled:opacity-50"
                 title="Delete selected list"
               >
-                Delete List
+                Delete
               </button>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+            <div className="flex flex-col sm:flex-row gap-2 mb-3">
               <input
                 type="text"
                 value={newListItemText}
                 onChange={(e) => setNewListItemText(e.target.value)}
-                placeholder="Add item (e.g., milk, eggs, call mom)"
-                className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
+                placeholder="Add an item..."
+                className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
                 onKeyPress={(e) => e.key === 'Enter' && addSharedListItem()}
                 disabled={!selectedSharedListId}
               />
               <button
                 onClick={addSharedListItem}
-                className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
+                className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
                 title="Add item"
                 disabled={!selectedSharedListId}
               >
-                <Plus className="w-5 h-5" />
+                Add
               </button>
             </div>
 
             {listError && (
-              <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-300">
+              <div className="mb-3 p-2.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-600 dark:text-red-300">
                 {listError}
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {sharedListGroups.length === 0 && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 italic">Create your first list title above.</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic">Create your first list to get started.</p>
               )}
-              {sharedListItems.length === 0 && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 italic">No list items yet.</p>
+              {sharedListItems.length === 0 && selectedSharedListId && (
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic">No items yet.</p>
               )}
               {sharedListItems.map(item => (
-                <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
+                <div key={item.id} className="flex items-center gap-2.5 p-2.5 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600">
                   <button
                     onClick={() => toggleSharedListItem(item)}
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
+                    className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
                     title={item.done ? 'Mark incomplete' : 'Mark complete'}
                   >
                     {item.done ? '✓' : ''}
@@ -2426,7 +2431,7 @@ function App() {
                     className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"
                     title="Delete item"
                   >
-                    <Trash2 className="w-4 h-4 text-red-500" />
+                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
                   </button>
                 </div>
               ))}
