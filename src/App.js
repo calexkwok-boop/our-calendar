@@ -134,6 +134,8 @@ function App() {
   const [tripPhotos, setTripPhotos] = useState([]);
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoUploadMessage, setPhotoUploadMessage] = useState('');
+  const [photoUploadError, setPhotoUploadError] = useState(false);
   const [photoCaption, setPhotoCaption] = useState('');
   const [photoEventId, setPhotoEventId] = useState(null);
   const [photoDate, setPhotoDate] = useState(null);
@@ -315,14 +317,38 @@ function App() {
   };
 
   const uploadTripPhoto = async (file, caption, eventId, date) => {
-    if (!file || !activeSubCalendar || !user) return;
+    if (!file) return false;
+    if (!activeSubCalendar) {
+      setPhotoUploadError(true);
+      setPhotoUploadMessage('No active trip selected.');
+      return false;
+    }
+    if (!user) {
+      setPhotoUploadError(true);
+      setPhotoUploadMessage('Please sign in again, then retry uploading.');
+      return false;
+    }
     setUploadingPhoto(true);
+    setPhotoUploadError(false);
+    setPhotoUploadMessage('');
     try {
-      const ext = file.name.split('.').pop();
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
       const filename = `${activeSubCalendar.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
       const { error: uploadError } = await supabase.storage.from('trip-photos').upload(filename, file, { contentType: file.type });
-      if (uploadError) { console.error('Upload error:', uploadError); setUploadingPhoto(false); return; }
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        setPhotoUploadError(true);
+        setPhotoUploadMessage(`Upload failed: ${uploadError.message}`);
+        setUploadingPhoto(false);
+        return false;
+      }
       const { data: urlData } = supabase.storage.from('trip-photos').getPublicUrl(filename);
+      if (!urlData?.publicUrl) {
+        setPhotoUploadError(true);
+        setPhotoUploadMessage('Upload succeeded but no public URL was generated.');
+        setUploadingPhoto(false);
+        return false;
+      }
       const photo = {
         id: `ph_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
         sub_calendar_id: activeSubCalendar.id,
@@ -334,10 +360,25 @@ function App() {
         user_id: user.id,
       };
       const { error: dbError } = await supabase.from('trip_photos').insert(photo);
-      if (dbError) { console.error('DB error:', dbError); setUploadingPhoto(false); return; }
+      if (dbError) {
+        console.error('DB error:', dbError);
+        setPhotoUploadError(true);
+        setPhotoUploadMessage(`Saved file but failed to add photo record: ${dbError.message}`);
+        setUploadingPhoto(false);
+        return false;
+      }
       setTripPhotos(prev => [...prev, photo]);
-    } catch (e) { console.error(e); }
-    setUploadingPhoto(false);
+      setPhotoUploadError(false);
+      setPhotoUploadMessage(`Uploaded: ${file.name}`);
+      return true;
+    } catch (e) {
+      console.error(e);
+      setPhotoUploadError(true);
+      setPhotoUploadMessage(`Upload failed: ${e.message || 'Unknown error'}`);
+      return false;
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const deleteTripPhoto = async (photo) => {
@@ -3455,8 +3496,17 @@ function App() {
                 className="hidden"
                 onChange={async e => {
                   const files = Array.from(e.target.files);
+                  if (files.length === 0) return;
+                  setPhotoUploadError(false);
+                  setPhotoUploadMessage('');
+                  let successCount = 0;
                   for (const file of files) {
-                    await uploadTripPhoto(file, photoCaption, photoEventId, photoDate || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null));
+                    const ok = await uploadTripPhoto(file, photoCaption, photoEventId, photoDate || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null));
+                    if (ok) successCount += 1;
+                  }
+                  if (successCount > 1) {
+                    setPhotoUploadError(false);
+                    setPhotoUploadMessage(`Uploaded ${successCount} photos.`);
                   }
                   setPhotoCaption('');
                   setPhotoEventId(null);
@@ -3477,6 +3527,11 @@ function App() {
                 placeholder="Caption (optional)…"
                 className="flex-1 text-sm px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:outline-none focus:ring-1 focus:ring-purple-400"
               />
+              {photoUploadMessage && (
+                <span className={`text-xs ${photoUploadError ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                  {photoUploadMessage}
+                </span>
+              )}
                 <button
                   onClick={() => setPhotoView('grid')}
                   className={`p-1.5 rounded-lg transition-all ${photoView === 'grid' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
