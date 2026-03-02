@@ -730,6 +730,8 @@ function App() {
   const [selectedSharedListId, setSelectedSharedListId] = useState(null);
   const [newSharedListTitle, setNewSharedListTitle] = useState('');
   const [newListItemText, setNewListItemText] = useState('');
+  const [editingListItemId, setEditingListItemId] = useState(null);
+  const [editingListText, setEditingListText] = useState('');
   const [listError, setListError] = useState('');
   const [shareEmailInput, setShareEmailInput] = useState('');
   const [shareMessage, setShareMessage] = useState('');
@@ -1308,6 +1310,40 @@ function App() {
 
     setListError('');
     setSharedListItems(prev => prev.filter(i => i.id !== itemId));
+  };
+
+  const startEditingListItem = (item) => {
+    setEditingListItemId(item.id);
+    setEditingListText(item.text || '');
+  };
+
+  const saveSharedListItemText = async (item) => {
+    const nextText = editingListText.trim();
+    if (!nextText) {
+      setListError('List item text cannot be empty.');
+      return;
+    }
+    if (nextText === item.text) {
+      setEditingListItemId(null);
+      setEditingListText('');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('shared_lists')
+      .update({ text: nextText })
+      .eq('id', item.id);
+
+    if (error) {
+      console.error('Error editing list item:', error);
+      setListError(`Could not edit item: ${error.message}`);
+      return;
+    }
+
+    setListError('');
+    setSharedListItems(prev => prev.map(i => i.id === item.id ? { ...i, text: nextText } : i));
+    setEditingListItemId(null);
+    setEditingListText('');
   };
 
   useEffect(() => {
@@ -2497,11 +2533,34 @@ function App() {
                     className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
                     title={item.done ? 'Mark incomplete' : 'Mark complete'}
                   >
-                    {item.done ? '✓' : ''}
+                    {item.done ? '?' : ''}
                   </button>
-                  <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>
-                    {item.text}
-                  </span>
+                  {editingListItemId === item.id ? (
+                    <input
+                      autoFocus
+                      value={editingListText}
+                      onChange={(e) => setEditingListText(e.target.value)}
+                      onBlur={() => saveSharedListItemText(item)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') saveSharedListItemText(item);
+                        if (e.key === 'Escape') { setEditingListItemId(null); setEditingListText(''); }
+                      }}
+                      className="flex-1 text-sm px-2 py-1 border border-purple-300 dark:border-purple-600 dark:bg-gray-800 dark:text-white rounded-md focus:ring-1 focus:ring-purple-400"
+                    />
+                  ) : (
+                    <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>
+                      {item.text}
+                    </span>
+                  )}
+                  {editingListItemId !== item.id && (
+                    <button
+                      onClick={() => startEditingListItem(item)}
+                      className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900 rounded-lg"
+                      title="Edit item"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 text-purple-500" />
+                    </button>
+                  )}
                   <button
                     onClick={() => removeSharedListItem(item.id)}
                     className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"
@@ -2511,9 +2570,9 @@ function App() {
                   </button>
                 </div>
               ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {showCategoryEditor && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
