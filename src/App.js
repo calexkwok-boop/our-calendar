@@ -3283,8 +3283,8 @@ function App() {
                                 />
                                 <button onClick={() => setSubCalEditingEvent(null)} className="w-full py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg text-sm font-medium">Done</button>
                               </div>
-                            ) : (
-                              <div className="flex items-start gap-2 bg-purple-50 dark:bg-purple-900/20 rounded-xl px-2.5 py-2 mb-1 border border-purple-200 dark:border-purple-700">
+                           ) : (
+                              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl px-2.5 py-2 mb-1 border border-purple-200 dark:border-purple-700">
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium text-sm text-gray-800 dark:text-gray-200">{event.title}</div>
                                   {(event.time || event.endTime) && (
@@ -3334,18 +3334,13 @@ function App() {
                                 </div>
                               </div>
                               {tripPhotos.filter(p => p.event_id === event.id).length > 0 && (
-                                <div className="flex gap-1.5 mt-2 flex-wrap px-1">
+                                <div className="flex gap-1.5 mt-2 flex-wrap">
                                   {tripPhotos.filter(p => p.event_id === event.id).map(photo => (
-                                    <img
-                                      key={photo.id}
-                                      src={photo.url}
-                                      alt=""
-                                      className="w-12 h-12 rounded-lg object-cover cursor-pointer border-2 border-white dark:border-gray-600 shadow-sm hover:scale-105 transition-transform"
-                                      onClick={() => setLightboxPhoto(photo)}
-                                    />
+                                    <img key={photo.id} src={photo.url} alt="" className="w-12 h-12 rounded-lg object-cover cursor-pointer border-2 border-white dark:border-gray-600 shadow-sm" onClick={() => setLightboxPhoto(photo)} />
                                   ))}
                                 </div>
                               )}
+                              </div>
                             )}
                           </div>
                           </div>
