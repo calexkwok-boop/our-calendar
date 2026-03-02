@@ -105,6 +105,10 @@ function App() {
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [showDateDetailModal, setShowDateDetailModal] = useState(false);
   const [bottomNavTab, setBottomNavTab] = useState('home');
+  const [swipedTripId, setSwipedTripId] = useState(null);
+  const [tripSwipeDrag, setTripSwipeDrag] = useState({ id: null, offset: 0 });
+  const tripSwipeStartXRef = useRef(0);
+  const swipingTripIdRef = useRef(null);
 
   // Sub-calendar state
   const [subCalendars, setSubCalendars] = useState([]);
@@ -240,6 +244,34 @@ function App() {
     await supabase.from('sub_calendars').delete().eq('id', id);
     setSubCalendars(prev => prev.filter(sc => sc.id !== id));
     if (activeSubCalendar?.id === id) setActiveSubCalendar(null);
+  };
+
+  const handleTripSwipeStart = (e, tripId, canDelete) => {
+    if (!canDelete) return;
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    tripSwipeStartXRef.current = touch.clientX;
+    swipingTripIdRef.current = tripId;
+    if (swipedTripId && swipedTripId !== tripId) setSwipedTripId(null);
+  };
+
+  const handleTripSwipeMove = (e) => {
+    const tripId = swipingTripIdRef.current;
+    if (!tripId) return;
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - tripSwipeStartXRef.current;
+    const clamped = Math.max(-88, Math.min(0, deltaX));
+    setTripSwipeDrag({ id: tripId, offset: clamped });
+  };
+
+  const handleTripSwipeEnd = () => {
+    const tripId = swipingTripIdRef.current;
+    if (!tripId) return;
+    const open = tripSwipeDrag.id === tripId && tripSwipeDrag.offset <= -44;
+    setSwipedTripId(open ? tripId : null);
+    setTripSwipeDrag({ id: null, offset: 0 });
+    swipingTripIdRef.current = null;
   };
 
   const openSubCalendar = async (sc) => {
@@ -3476,22 +3508,45 @@ function App() {
                   <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming trips yet.</div>
                 ) : (
                   <div className="space-y-2">
-                    {upcomingTrips.map(sc => (
-                      <div key={sc.id} className="flex items-center justify-between p-3 rounded-xl border border-purple-200 dark:border-purple-700 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
-                        <div className="min-w-0">
-                          <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
+                    {upcomingTrips.map(sc => {
+                      const canDelete = sc.owner_id === user?.id;
+                      const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
+                      return (
+                        <div key={sc.id} className="relative rounded-xl overflow-hidden">
+                          {canDelete && (
+                            <div className="absolute inset-y-0 right-0 w-[88px] bg-red-500 flex items-center justify-center">
+                              <button
+                                onClick={() => deleteSubCalendar(sc.id)}
+                                className="w-full h-full text-white text-sm font-semibold"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                          <div
+                            onTouchStart={(e) => handleTripSwipeStart(e, sc.id, canDelete)}
+                            onTouchMove={handleTripSwipeMove}
+                            onTouchEnd={handleTripSwipeEnd}
+                            onTouchCancel={handleTripSwipeEnd}
+                            className="relative z-10 flex items-center justify-between p-3 border border-purple-200 dark:border-purple-700 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20"
+                            style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
+                          >
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => openSubCalendar(sc)}
+                              className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-purple-500 hover:bg-purple-600 text-white"
+                            >
+                              Open
+                            </button>
                           </div>
                         </div>
-                        <button
-                          onClick={() => openSubCalendar(sc)}
-                          className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-purple-500 hover:bg-purple-600 text-white"
-                        >
-                          Open
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </>
@@ -3504,22 +3559,45 @@ function App() {
                   <div className="text-sm text-gray-500 dark:text-gray-400">No archived trips yet.</div>
                 ) : (
                   <div className="space-y-2">
-                    {archivedTrips.map(sc => (
-                      <div key={sc.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/40">
-                        <div className="min-w-0">
-                          <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
+                    {archivedTrips.map(sc => {
+                      const canDelete = sc.owner_id === user?.id;
+                      const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
+                      return (
+                        <div key={sc.id} className="relative rounded-xl overflow-hidden">
+                          {canDelete && (
+                            <div className="absolute inset-y-0 right-0 w-[88px] bg-red-500 flex items-center justify-center">
+                              <button
+                                onClick={() => deleteSubCalendar(sc.id)}
+                                className="w-full h-full text-white text-sm font-semibold"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                          <div
+                            onTouchStart={(e) => handleTripSwipeStart(e, sc.id, canDelete)}
+                            onTouchMove={handleTripSwipeMove}
+                            onTouchEnd={handleTripSwipeEnd}
+                            onTouchCancel={handleTripSwipeEnd}
+                            className="relative z-10 flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/40"
+                            style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
+                          >
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => openSubCalendar(sc)}
+                              className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-gray-600 hover:bg-gray-700 text-white"
+                            >
+                              Open
+                            </button>
                           </div>
                         </div>
-                        <button
-                          onClick={() => openSubCalendar(sc)}
-                          className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-gray-600 hover:bg-gray-700 text-white"
-                        >
-                          Open
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </>
