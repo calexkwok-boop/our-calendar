@@ -146,7 +146,6 @@ function App() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUploadMessage, setPhotoUploadMessage] = useState('');
   const [photoUploadError, setPhotoUploadError] = useState(false);
-  const [photoCaption, setPhotoCaption] = useState('');
   const [photoEventId, setPhotoEventId] = useState(null);
   const [photoDate, setPhotoDate] = useState(null);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
@@ -459,7 +458,7 @@ function App() {
     for (const file of files) {
       const ok = await uploadTripPhoto(
         file,
-        photoCaption,
+        null,
         photoEventId,
         photoDate || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null)
       );
@@ -469,7 +468,6 @@ function App() {
       setPhotoUploadError(false);
       setPhotoUploadMessage(`Uploaded ${successCount} photos.`);
     }
-    setPhotoCaption('');
     setPhotoEventId(null);
     if (clearInput) clearInput();
   };
@@ -4334,13 +4332,6 @@ function App() {
               >
                 {uploadingPhoto ? '⏳ Uploading…' : '📷 Add Photos'}
               </button>
-              <input
-                type="text"
-                value={photoCaption}
-                onChange={e => setPhotoCaption(e.target.value)}
-                placeholder="Caption (optional)…"
-                className="flex-1 text-sm px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:outline-none focus:ring-1 focus:ring-purple-400"
-              />
               {photoUploadMessage && (
                 <span className={`text-xs ${photoUploadError ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
                   {photoUploadMessage}
