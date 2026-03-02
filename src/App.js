@@ -1998,12 +1998,27 @@ function App() {
   const selectedEvents = getEventsForDate(selectedDate);
   const todayKey = getDateKey(new Date());
   const todayEvents = getEventsForDate(new Date()).filter(e => !e.isHoliday);
+  const toDateOnlyTs = (value) => {
+    if (!value) return null;
+    const normalized = typeof value === 'string' ? value.slice(0, 10) : getDateKey(new Date(value));
+    const d = new Date(`${normalized}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+  const todayTs = toDateOnlyTs(todayKey);
   const upcomingTrips = [...subCalendars]
-    .filter(sc => sc.start_date > todayKey)
-    .sort((a, b) => a.start_date.localeCompare(b.start_date));
+    .filter(sc => {
+      const startTs = toDateOnlyTs(sc.start_date);
+      return startTs !== null && startTs > todayTs;
+    })
+    .sort((a, b) => toDateOnlyTs(a.start_date) - toDateOnlyTs(b.start_date));
   const archivedTrips = [...subCalendars]
-    .filter(sc => sc.end_date < todayKey)
-    .sort((a, b) => b.end_date.localeCompare(a.end_date));
+    .filter(sc => {
+      const endTs = toDateOnlyTs(sc.end_date);
+      return endTs !== null && endTs < todayTs;
+    })
+    .sort((a, b) => toDateOnlyTs(b.end_date) - toDateOnlyTs(a.end_date));
 
   if (isLoading) {
     return (
