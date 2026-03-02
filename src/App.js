@@ -3538,56 +3538,6 @@ function App() {
               )}
             </div>
 
-            {/* Sub-calendars list */}
-            {subCalendars.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">🗓️ Sub-Calendars</h4>
-                <div className="space-y-2">
-                  {[...subCalendars].sort((a, b) => {
-                    const today = getDateKey(new Date());
-                    const aActive = today >= a.start_date && today <= a.end_date;
-                    const bActive = today >= b.start_date && today <= b.end_date;
-                    // Also check if name loosely matches any event today
-                    const todayEvents = events[today] || [];
-                    const aMatches = aActive && todayEvents.some(e => e.title.toLowerCase().includes(a.name.toLowerCase()) || a.name.toLowerCase().includes(e.title.toLowerCase()));
-                    const bMatches = bActive && todayEvents.some(e => e.title.toLowerCase().includes(b.name.toLowerCase()) || b.name.toLowerCase().includes(e.title.toLowerCase()));
-                    if (aMatches && !bMatches) return -1;
-                    if (bMatches && !aMatches) return 1;
-                    if (aActive && !bActive) return -1;
-                    if (bActive && !aActive) return 1;
-                    return 0;
-                  }).map(sc => {
-                    const today = getDateKey(new Date());
-                    const isActive = today >= sc.start_date && today <= sc.end_date;
-                    return (
-                    <div key={sc.id} className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${isActive ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-300 dark:border-green-700' : 'bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-purple-200 dark:border-purple-700'}`}>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          {isActive && <span className="text-xs">🟢</span>}
-                          <div className="font-medium text-sm text-gray-800 dark:text-gray-200 truncate">{sc.name}</div>
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          {isActive && <span className="ml-1 text-green-600 dark:text-green-400 font-medium">· happening now</span>}
-                        </div>
-                      </div>
-                      <div className="flex gap-1 ml-2">
-                        <button
-                          onClick={() => openSubCalendar(sc)}
-                          className={`px-2.5 py-1 text-white text-xs rounded-lg transition-all ${isActive ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-500 hover:bg-purple-600'}`}
-                        >Open</button>
-                        {sc.owner_id === user?.id && (
-                          <button onClick={() => deleteSubCalendar(sc.id)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg">
-                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
           </div>
 
