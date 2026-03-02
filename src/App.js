@@ -11,7 +11,12 @@ const supabase = createClient(
 // Supabase storage wrapper
 const storage = {
   get: async (key, shared = false) => {
-    if (key === 'calendar-user' || key === 'calendar-title') {
+    if (
+      key === 'calendar-user' ||
+      key === 'calendar-title' ||
+      key.includes('notification') ||
+      key.startsWith('notify-')
+    ) {
       const value = localStorage.getItem(key);
       return value ? { key, value, shared } : null;
     }
