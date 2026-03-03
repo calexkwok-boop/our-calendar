@@ -185,6 +185,17 @@ function App() {
     (subCalExpenses || []).forEach(item => addParticipant(item?.payer));
     return participants;
   };
+  const getExpenseDisplayName = (identity) => {
+    const raw = String(identity || '').trim();
+    if (!raw) return 'Member';
+    const current = String(user?.email || currentUser || '').trim().toLowerCase();
+    if (current && raw.toLowerCase() === current) return 'You';
+    if (!raw.includes('@')) return raw;
+    const local = raw.split('@')[0] || raw;
+    const cleaned = local.replace(/[._-]+/g, ' ').trim();
+    if (!cleaned) return raw;
+    return cleaned.replace(/\b\w/g, c => c.toUpperCase());
+  };
 
   // ── Sub-calendar functions ──────────────────────────────────────────────
 
@@ -4757,7 +4768,7 @@ function App() {
                     {expenseParticipants.length === 0 ? (
                       <option value="">No members</option>
                     ) : (
-                      expenseParticipants.map(name => <option key={name} value={name}>{name}</option>)
+                      expenseParticipants.map(name => <option key={name} value={name}>{getExpenseDisplayName(name)}</option>)
                     )}
                   </select>
                   <input
@@ -4793,7 +4804,7 @@ function App() {
                   )}
                   {subCalExpenses.map(item => (
                     <div key={item.id} className="flex items-center gap-2 bg-white dark:bg-gray-700 border border-emerald-100 dark:border-emerald-800 rounded-lg px-2.5 py-1.5">
-                      <span className="text-xs text-gray-700 dark:text-gray-200 font-medium">{item.payer}</span>
+                      <span className="text-xs text-gray-700 dark:text-gray-200 font-medium">{getExpenseDisplayName(item.payer)}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400 flex-1 truncate">{item.description}</span>
                       <span className="text-xs text-gray-700 dark:text-gray-200 font-semibold">${(Number(item.amount) || 0).toFixed(2)}</span>
                       <button onClick={() => deleteSubCalExpense(item.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">✕</button>
@@ -4811,7 +4822,7 @@ function App() {
                 <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
                   {expenseBalances.map(row => (
                     <div key={row.name} className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600 dark:text-gray-300">{row.name}</span>
+                      <span className="text-gray-600 dark:text-gray-300">{getExpenseDisplayName(row.name)}</span>
                       <span className="text-gray-700 dark:text-gray-200">
                         Paid ${(row.paid / 100).toFixed(2)} · {row.balance >= 0 ? `Gets back $${(row.balance / 100).toFixed(2)}` : `Owes $${(Math.abs(row.balance) / 100).toFixed(2)}`}
                       </span>
@@ -4828,9 +4839,9 @@ function App() {
                   <div className="space-y-1.5">
                     {settlements.map((s, idx) => (
                       <div key={`${s.from}-${s.to}-${idx}`} className="flex items-center justify-between text-xs bg-white dark:bg-gray-700 rounded-lg border border-indigo-100 dark:border-indigo-800 px-2.5 py-1.5">
-                        <span className="text-gray-700 dark:text-gray-200">{s.from}</span>
+                        <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.from)}</span>
                         <span className="text-indigo-500 dark:text-indigo-300 font-semibold">pays ${(s.amount / 100).toFixed(2)}</span>
-                        <span className="text-gray-700 dark:text-gray-200">{s.to}</span>
+                        <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.to)}</span>
                       </div>
                     ))}
                   </div>
