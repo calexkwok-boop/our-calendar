@@ -127,6 +127,7 @@ function App() {
   const [cashAppHandles, setCashAppHandles] = useState({});
   const [cashAppHandlesNoteId, setCashAppHandlesNoteId] = useState(null);
   const [globalCashAppHandles, setGlobalCashAppHandles] = useState({});
+  const [paymentOptionPickerIdentity, setPaymentOptionPickerIdentity] = useState(null);
   const [newExpenseDraft, setNewExpenseDraft] = useState({ payer: '', description: '', amount: '' });
   const [expenseError, setExpenseError] = useState('');
   const [newNote, setNewNote] = useState('');
@@ -1084,25 +1085,6 @@ function App() {
     const ok = await saveCashAppHandleEverywhere(identity, cleaned);
     if (!ok) return;
     setExpenseError('');
-  };
-
-  const promptAddPaymentOption = async (identity) => {
-    if (!canEditVenmoIdentity(identity)) {
-      setExpenseError('You can only edit your own payment options.');
-      return;
-    }
-    const choiceRaw = window.prompt('Add payment option: type "venmo" or "cashapp"', 'venmo');
-    if (choiceRaw === null) return;
-    const choice = String(choiceRaw).trim().toLowerCase();
-    if (choice === 'venmo' || choice === 'v') {
-      await promptSetVenmoHandle(identity);
-      return;
-    }
-    if (choice === 'cashapp' || choice === 'cash app' || choice === 'cash') {
-      await promptSetCashAppHandle(identity);
-      return;
-    }
-    setExpenseError('Please type "venmo" or "cashapp".');
   };
 
   const addSubCalExpense = async () => {
@@ -5247,15 +5229,33 @@ function App() {
                           <span className="text-gray-700 dark:text-gray-200 font-medium min-w-0 truncate">{getExpenseDisplayName(name)}</span>
                           {canEdit ? (
                             <button
-                              onClick={() => promptAddPaymentOption(name)}
+                              onClick={() => setPaymentOptionPickerIdentity(prev => prev === name ? null : name)}
                               className="px-2 py-0.5 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium shrink-0"
                             >
-                              {venmoHandle || cashHandle ? 'Edit payment options' : 'Add payment option'}
+                              {paymentOptionPickerIdentity === name ? 'Done' : (venmoHandle || cashHandle ? 'Edit payment options' : 'Add payment option')}
                             </button>
                           ) : (
                             <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 shrink-0">Only they can edit</span>
                           )}
                         </div>
+                        {canEdit && paymentOptionPickerIdentity === name && (
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <button
+                              onClick={async () => { await promptSetVenmoHandle(name); }}
+                              className="px-2 py-1 rounded-md text-white font-semibold bg-[#008CFF] hover:bg-[#0078dc]"
+                              title="Set Venmo handle"
+                            >
+                              V Venmo
+                            </button>
+                            <button
+                              onClick={async () => { await promptSetCashAppHandle(name); }}
+                              className="px-2 py-1 rounded-md text-white font-semibold bg-[#00D632] hover:bg-[#00b92b]"
+                              title="Set Cash App handle"
+                            >
+                              $ Cash App
+                            </button>
+                          </div>
+                        )}
                         <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-300">
                           {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'} · {cashHandle ? `Cash App $${cashHandle}` : 'Cash App not set'}
                         </div>
