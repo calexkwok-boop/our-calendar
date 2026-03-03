@@ -348,6 +348,7 @@ function App() {
     setLocationActionTarget('');
     if (service === 'uber') {
       const appParams = new URLSearchParams({
+        action: 'setPickup',
         'pickup': 'my_location',
         'dropoff[formatted_address]': dropAddress,
         'dropoff[nickname]': 'Destination',
@@ -356,7 +357,7 @@ function App() {
         appParams.set('dropoff[latitude]', dropLat);
         appParams.set('dropoff[longitude]', dropLng);
       }
-      const appLink = `uber://riderequest?${appParams.toString()}`;
+      const appLink = `uber://?${appParams.toString()}`;
       const webParams = new URLSearchParams({
         action: 'setPickup',
         pickup: 'my_location',
