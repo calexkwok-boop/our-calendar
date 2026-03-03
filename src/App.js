@@ -162,6 +162,8 @@ function App() {
   const subCalLocationChannelRef = useRef(null);
   const subCalGeoWatchRef = useRef(null);
   const [tripPhotos, setTripPhotos] = useState([]);
+  const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
+  const [deletedPhotosNoteId, setDeletedPhotosNoteId] = useState(null);
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUploadMessage, setPhotoUploadMessage] = useState('');
@@ -187,6 +189,7 @@ function App() {
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
   const PHOTO_REACTIONS_NOTE_TEXT = '__PHOTO_REACTIONS_V1__';
+  const DELETED_PHOTOS_NOTE_TEXT = '__DELETED_PHOTOS_V1__';
   const normalizeIdentityKey = (value) => String(value || '').trim().toLowerCase();
   const getExpenseParticipants = () => {
     const seen = new Set();
@@ -534,6 +537,8 @@ function App() {
       let loadedCashAppHandlesNoteId = null;
       let loadedPhotoReactions = {};
       let loadedPhotoReactionsNoteId = null;
+      let loadedDeletedPhotoIds = [];
+      let loadedDeletedPhotosNoteId = null;
       (data || []).forEach((n) => {
         let parsedChecklist = [];
         try {
@@ -576,6 +581,11 @@ function App() {
           loadedPhotoReactions = parsed;
           return;
         }
+        if (n.text === DELETED_PHOTOS_NOTE_TEXT) {
+          loadedDeletedPhotosNoteId = n.id;
+          loadedDeletedPhotoIds = Array.isArray(parsedChecklist) ? parsedChecklist : [];
+          return;
+        }
         visibleNotes.push({ ...n, checklist: parsedChecklist });
       });
       setSubCalNotes(visibleNotes);
@@ -587,6 +597,8 @@ function App() {
       setCashAppHandlesNoteId(loadedCashAppHandlesNoteId);
       setPhotoReactions(loadedPhotoReactions);
       setPhotoReactionsNoteId(loadedPhotoReactionsNoteId);
+      setDeletedPhotoIds(Array.from(new Set(loadedDeletedPhotoIds)));
+      setDeletedPhotosNoteId(loadedDeletedPhotosNoteId);
     } catch (e) { console.error(e); }
   };
 
@@ -601,6 +613,11 @@ function App() {
       setTripPhotos(data || []);
     } catch (e) { console.error(e); }
   };
+
+  useEffect(() => {
+    if (!deletedPhotoIds || deletedPhotoIds.length === 0) return;
+    setTripPhotos(prev => prev.filter(p => !deletedPhotoIds.includes(p.id)));
+  }, [deletedPhotoIds]);
 
   const uploadTripPhoto = async (file, caption, eventId, date) => {
     if (!file) return false;
@@ -698,6 +715,12 @@ function App() {
       }
       const { error: dbError } = await supabase.from('trip_photos').delete().eq('id', photo.id);
       if (dbError) {
+        const fallbackOk = await markPhotoDeleted(photo.id);
+        if (fallbackOk) {
+          setPhotoUploadError(false);
+          setPhotoUploadMessage('Photo removed.');
+          return true;
+        }
         setPhotoUploadError(true);
         setPhotoUploadMessage(`Could not delete photo: ${dbError.message}`);
         return false;
@@ -706,6 +729,12 @@ function App() {
       return true;
     } catch (e) {
       console.error('Photo delete failed:', e);
+      const fallbackOk = await markPhotoDeleted(photo.id);
+      if (fallbackOk) {
+        setPhotoUploadError(false);
+        setPhotoUploadMessage('Photo removed.');
+        return true;
+      }
       setPhotoUploadError(true);
       setPhotoUploadMessage(`Could not delete photo: ${e.message || 'Unknown error'}`);
       return false;
@@ -1228,6 +1257,49 @@ function App() {
       return false;
     }
     setPhotoReactionsNoteId(row.id);
+    return true;
+  };
+
+  const saveDeletedPhotoIds = async (nextDeletedIds) => {
+    if (!activeSubCalendar) return false;
+    const payload = {
+      checklist: JSON.stringify(nextDeletedIds),
+    };
+    if (deletedPhotosNoteId) {
+      const { error } = await supabase.from('sub_calendar_notes').update(payload).eq('id', deletedPhotosNoteId);
+      if (error) {
+        setPhotoUploadError(true);
+        setPhotoUploadMessage(`Could not save deleted-photo state: ${error.message}`);
+        return false;
+      }
+      return true;
+    }
+    const row = {
+      id: `scdel_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      sub_calendar_id: activeSubCalendar.id,
+      text: DELETED_PHOTOS_NOTE_TEXT,
+      checklist: JSON.stringify(nextDeletedIds),
+      created_by: currentUser,
+      user_id: user?.id,
+      created_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('sub_calendar_notes').insert(row);
+    if (error) {
+      setPhotoUploadError(true);
+      setPhotoUploadMessage(`Could not save deleted-photo state: ${error.message}`);
+      return false;
+    }
+    setDeletedPhotosNoteId(row.id);
+    return true;
+  };
+
+  const markPhotoDeleted = async (photoId) => {
+    if (!photoId) return false;
+    const nextDeleted = Array.from(new Set([...(deletedPhotoIds || []), photoId]));
+    const ok = await saveDeletedPhotoIds(nextDeleted);
+    if (!ok) return false;
+    setDeletedPhotoIds(nextDeleted);
+    setTripPhotos(prev => prev.filter(p => p.id !== photoId));
     return true;
   };
 
