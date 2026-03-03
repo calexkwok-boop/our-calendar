@@ -171,12 +171,16 @@ function App() {
   const [photoEventId, setPhotoEventId] = useState(null);
   const [photoDate, setPhotoDate] = useState(null);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
+  const [photoReactions, setPhotoReactions] = useState({}); // { [photoId]: { [emoji]: [userName] } }
+  const [photoReactionsNoteId, setPhotoReactionsNoteId] = useState(null);
+  const [showPhotoReactionPicker, setShowPhotoReactionPicker] = useState(null);
   const photoInputRef = useRef(null);
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
+  const PHOTO_REACTIONS_NOTE_TEXT = '__PHOTO_REACTIONS_V1__';
   const normalizeIdentityKey = (value) => String(value || '').trim().toLowerCase();
   const getExpenseParticipants = () => {
     const seen = new Set();
@@ -504,6 +508,8 @@ function App() {
       let loadedVenmoHandlesNoteId = null;
       let loadedCashAppHandles = {};
       let loadedCashAppHandlesNoteId = null;
+      let loadedPhotoReactions = {};
+      let loadedPhotoReactionsNoteId = null;
       (data || []).forEach((n) => {
         let parsedChecklist = [];
         try {
@@ -540,6 +546,12 @@ function App() {
           loadedCashAppHandles = sanitized;
           return;
         }
+        if (n.text === PHOTO_REACTIONS_NOTE_TEXT) {
+          loadedPhotoReactionsNoteId = n.id;
+          const parsed = (parsedChecklist && typeof parsedChecklist === 'object' && !Array.isArray(parsedChecklist)) ? parsedChecklist : {};
+          loadedPhotoReactions = parsed;
+          return;
+        }
         visibleNotes.push({ ...n, checklist: parsedChecklist });
       });
       setSubCalNotes(visibleNotes);
@@ -549,6 +561,8 @@ function App() {
       setVenmoHandlesNoteId(loadedVenmoHandlesNoteId);
       setCashAppHandles({ ...globalCashAppHandles, ...loadedCashAppHandles });
       setCashAppHandlesNoteId(loadedCashAppHandlesNoteId);
+      setPhotoReactions(loadedPhotoReactions);
+      setPhotoReactionsNoteId(loadedPhotoReactionsNoteId);
     } catch (e) { console.error(e); }
   };
 
@@ -1078,6 +1092,60 @@ function App() {
     const ok = await saveCashAppHandleEverywhere(identity, cleaned);
     if (!ok) return;
     setExpenseError('');
+  };
+
+  const savePhotoReactions = async (nextReactions) => {
+    if (!activeSubCalendar) return false;
+    const payload = {
+      checklist: JSON.stringify(nextReactions),
+    };
+    if (photoReactionsNoteId) {
+      const { error } = await supabase.from('sub_calendar_notes').update(payload).eq('id', photoReactionsNoteId);
+      if (error) {
+        setPhotoUploadError(true);
+        setPhotoUploadMessage(`Could not save reactions: ${error.message}`);
+        return false;
+      }
+      return true;
+    }
+    const row = {
+      id: `screact_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      sub_calendar_id: activeSubCalendar.id,
+      text: PHOTO_REACTIONS_NOTE_TEXT,
+      checklist: JSON.stringify(nextReactions),
+      created_by: currentUser,
+      user_id: user?.id,
+      created_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('sub_calendar_notes').insert(row);
+    if (error) {
+      setPhotoUploadError(true);
+      setPhotoUploadMessage(`Could not save reactions: ${error.message}`);
+      return false;
+    }
+    setPhotoReactionsNoteId(row.id);
+    return true;
+  };
+
+  const togglePhotoReaction = async (photoId, emoji) => {
+    const who = currentUser || user?.email || 'Member';
+    if (!photoId || !emoji || !who) return;
+    const currentForPhoto = photoReactions[photoId] || {};
+    const users = Array.isArray(currentForPhoto[emoji]) ? currentForPhoto[emoji] : [];
+    const hasMine = users.includes(who);
+    const nextUsers = hasMine ? users.filter(u => u !== who) : [...users, who];
+    const nextForPhoto = { ...currentForPhoto };
+    if (nextUsers.length > 0) nextForPhoto[emoji] = nextUsers;
+    else delete nextForPhoto[emoji];
+    const nextAll = { ...photoReactions };
+    if (Object.keys(nextForPhoto).length > 0) nextAll[photoId] = nextForPhoto;
+    else delete nextAll[photoId];
+
+    const ok = await savePhotoReactions(nextAll);
+    if (!ok) return;
+    setPhotoUploadError(false);
+    setPhotoUploadMessage('');
+    setPhotoReactions(nextAll);
   };
 
   const addSubCalExpense = async () => {
@@ -5400,6 +5468,7 @@ function App() {
                       <div className="grid grid-cols-3 gap-1.5">
                         {photos.map(photo => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
+                          const reactions = photoReactions[photo.id] || {};
                           return (
                           <div
                             key={photo.id}
@@ -5422,6 +5491,44 @@ function App() {
                                 onClick={e => { e.stopPropagation(); deleteTripPhoto(photo); }}
                                 className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow"
                               >✕</button>
+                            )}
+                            {!isPhotoSelectionMode && (
+                              <button
+                                onClick={e => { e.stopPropagation(); setShowPhotoReactionPicker(showPhotoReactionPicker === photo.id ? null : photo.id); }}
+                                className="absolute top-1 left-1 px-1.5 py-0.5 bg-black/50 text-white rounded-full text-[11px]"
+                                title="React"
+                              >
+                                😀
+                              </button>
+                            )}
+                            {Object.keys(reactions).length > 0 && (
+                              <div className="absolute left-1 bottom-6 flex flex-wrap gap-1 max-w-[95%]">
+                                {Object.entries(reactions).slice(0, 3).map(([emoji, users]) => (
+                                  <button
+                                    key={emoji}
+                                    onClick={e => { e.stopPropagation(); togglePhotoReaction(photo.id, emoji); }}
+                                    className={`px-1.5 py-0.5 rounded-full text-[10px] backdrop-blur border ${Array.isArray(users) && users.includes(currentUser) ? 'bg-purple-500/80 text-white border-purple-300' : 'bg-black/55 text-white border-white/20'}`}
+                                  >
+                                    {emoji} {Array.isArray(users) ? users.length : 0}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {!isPhotoSelectionMode && showPhotoReactionPicker === photo.id && (
+                              <div
+                                className="absolute left-1 right-1 bottom-10 z-20 rounded-xl bg-black/70 p-1.5 flex flex-wrap gap-1"
+                                onClick={e => e.stopPropagation()}
+                              >
+                                {REACTION_EMOJIS.map(emoji => (
+                                  <button
+                                    key={emoji}
+                                    onClick={() => togglePhotoReaction(photo.id, emoji)}
+                                    className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/30 text-sm"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
                             )}
                             <div className="absolute bottom-1 left-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                               <span className="bg-black/50 text-white px-1.5 py-0.5 rounded-full text-xs">{photo.uploaded_by}</span>
@@ -5469,6 +5576,7 @@ function App() {
                       <div className="space-y-4">
                         {photos.map(photo => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
+                          const reactions = photoReactions[photo.id] || {};
                           return (
                           <div key={photo.id} className={`bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'}`}>
                             <img
@@ -5491,11 +5599,45 @@ function App() {
                               <div>
                                 {photo.caption && <p className="text-sm text-gray-800 dark:text-gray-200 mb-0.5">{photo.caption}</p>}
                                 <p className="text-xs text-gray-400 dark:text-gray-500">📷 {photo.uploaded_by}</p>
+                                {!isPhotoSelectionMode && (
+                                  <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                                    <button
+                                      onClick={() => setShowPhotoReactionPicker(showPhotoReactionPicker === photo.id ? null : photo.id)}
+                                      className="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                    >
+                                      😀 React
+                                    </button>
+                                    {Object.entries(reactions).map(([emoji, users]) => (
+                                      <button
+                                        key={emoji}
+                                        onClick={() => togglePhotoReaction(photo.id, emoji)}
+                                        className={`px-1.5 py-0.5 rounded-full text-[11px] border ${Array.isArray(users) && users.includes(currentUser) ? 'bg-purple-100 dark:bg-purple-900/40 border-purple-300 text-purple-700 dark:text-purple-300' : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300'}`}
+                                      >
+                                        {emoji} {Array.isArray(users) ? users.length : 0}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                               {!isPhotoSelectionMode && (
                                 <button onClick={() => deleteTripPhoto(photo)} className="text-red-400 hover:text-red-600 text-xs shrink-0">✕</button>
                               )}
                             </div>
+                            {!isPhotoSelectionMode && showPhotoReactionPicker === photo.id && (
+                              <div className="px-3 pb-2">
+                                <div className="rounded-xl bg-gray-100 dark:bg-gray-700 p-1.5 flex flex-wrap gap-1">
+                                  {REACTION_EMOJIS.map(emoji => (
+                                    <button
+                                      key={emoji}
+                                      onClick={() => togglePhotoReaction(photo.id, emoji)}
+                                      className="w-7 h-7 rounded-full hover:bg-white dark:hover:bg-gray-600 text-sm"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )})}
                         {!isPhotoSelectionMode && (
@@ -5539,6 +5681,36 @@ function App() {
             <div className="mt-3 text-center" onClick={e => e.stopPropagation()}>
               {lightboxPhoto.caption && <p className="text-white text-sm mb-1">{lightboxPhoto.caption}</p>}
               <p className="text-gray-400 text-xs">📷 {lightboxPhoto.uploaded_by} · {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+                <button
+                  onClick={() => setShowPhotoReactionPicker(showPhotoReactionPicker === lightboxPhoto.id ? null : lightboxPhoto.id)}
+                  className="px-2 py-0.5 rounded-full text-xs bg-white/15 text-white hover:bg-white/25"
+                >
+                  😀 React
+                </button>
+                {Object.entries(photoReactions[lightboxPhoto.id] || {}).map(([emoji, users]) => (
+                  <button
+                    key={emoji}
+                    onClick={() => togglePhotoReaction(lightboxPhoto.id, emoji)}
+                    className={`px-2 py-0.5 rounded-full text-xs ${Array.isArray(users) && users.includes(currentUser) ? 'bg-purple-500 text-white' : 'bg-white/20 text-white'}`}
+                  >
+                    {emoji} {Array.isArray(users) ? users.length : 0}
+                  </button>
+                ))}
+              </div>
+              {showPhotoReactionPicker === lightboxPhoto.id && (
+                <div className="mt-2 rounded-xl bg-white/10 p-1.5 flex flex-wrap justify-center gap-1">
+                  {REACTION_EMOJIS.map(emoji => (
+                    <button
+                      key={emoji}
+                      onClick={() => togglePhotoReaction(lightboxPhoto.id, emoji)}
+                      className="w-8 h-8 rounded-full hover:bg-white/20 text-base"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
