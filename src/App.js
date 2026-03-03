@@ -175,6 +175,7 @@ function App() {
   const [photoReactionsNoteId, setPhotoReactionsNoteId] = useState(null);
   const [showPhotoReactionPicker, setShowPhotoReactionPicker] = useState(null);
   const photoInputRef = useRef(null);
+  const lightboxTapRef = useRef({ id: null, at: 0 });
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
@@ -5495,15 +5496,6 @@ function App() {
                                 className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow"
                               >✕</button>
                             )}
-                            {!isPhotoSelectionMode && (
-                              <button
-                                onClick={e => { e.stopPropagation(); setShowPhotoReactionPicker(showPhotoReactionPicker === photo.id ? null : photo.id); }}
-                                className="absolute top-1 left-1 px-1.5 py-0.5 bg-black/50 text-white rounded-full text-[11px]"
-                                title="React"
-                              >
-                                😀
-                              </button>
-                            )}
                             {Object.keys(reactions).length > 0 && (
                               <div className="absolute left-1 bottom-6 flex flex-wrap gap-1 max-w-[95%]">
                                 {Object.entries(reactions).slice(0, 3).map(([emoji, users]) => (
@@ -5513,22 +5505,6 @@ function App() {
                                     className={`px-1.5 py-0.5 rounded-full text-[10px] backdrop-blur border ${Array.isArray(users) && users.includes(currentUser) ? 'bg-purple-500/80 text-white border-purple-300' : 'bg-black/55 text-white border-white/20'}`}
                                   >
                                     {emoji} {Array.isArray(users) ? users.length : 0}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                            {!isPhotoSelectionMode && showPhotoReactionPicker === photo.id && (
-                              <div
-                                className="absolute left-1 right-1 bottom-10 z-20 rounded-xl bg-black/70 p-1.5 flex flex-wrap gap-1"
-                                onClick={e => e.stopPropagation()}
-                              >
-                                {REACTION_EMOJIS.map(emoji => (
-                                  <button
-                                    key={emoji}
-                                    onClick={() => togglePhotoReaction(photo.id, emoji)}
-                                    className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/30 text-sm"
-                                  >
-                                    {emoji}
                                   </button>
                                 ))}
                               </div>
@@ -5604,12 +5580,6 @@ function App() {
                                 <p className="text-xs text-gray-400 dark:text-gray-500">📷 {photo.uploaded_by}</p>
                                 {!isPhotoSelectionMode && (
                                   <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                                    <button
-                                      onClick={() => setShowPhotoReactionPicker(showPhotoReactionPicker === photo.id ? null : photo.id)}
-                                      className="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                                    >
-                                      😀 React
-                                    </button>
                                     {Object.entries(reactions).map(([emoji, users]) => (
                                       <button
                                         key={emoji}
@@ -5626,21 +5596,6 @@ function App() {
                                 <button onClick={() => deleteTripPhoto(photo)} className="text-red-400 hover:text-red-600 text-xs shrink-0">✕</button>
                               )}
                             </div>
-                            {!isPhotoSelectionMode && showPhotoReactionPicker === photo.id && (
-                              <div className="px-3 pb-2">
-                                <div className="rounded-xl bg-gray-100 dark:bg-gray-700 p-1.5 flex flex-wrap gap-1">
-                                  {REACTION_EMOJIS.map(emoji => (
-                                    <button
-                                      key={emoji}
-                                      onClick={() => togglePhotoReaction(photo.id, emoji)}
-                                      className="w-7 h-7 rounded-full hover:bg-white dark:hover:bg-gray-600 text-sm"
-                                    >
-                                      {emoji}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
                           </div>
                         )})}
                         {!isPhotoSelectionMode && (
@@ -5662,12 +5617,13 @@ function App() {
         {lightboxPhoto && (
           <div
             className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4"
-            onClick={() => setLightboxPhoto(null)}
+            onClick={() => { setLightboxPhoto(null); setShowPhotoReactionPicker(null); }}
           >
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setLightboxPhoto(null);
+                setShowPhotoReactionPicker(null);
               }}
               className="absolute right-4 text-white text-2xl z-10 bg-black/45 hover:bg-black/60 rounded-full w-10 h-10 flex items-center justify-center"
               style={{ top: 'max(1.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
@@ -5680,17 +5636,24 @@ function App() {
               alt={lightboxPhoto.caption || ''}
               className="max-w-full max-h-[80vh] rounded-xl object-contain"
               onClick={e => e.stopPropagation()}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setShowPhotoReactionPicker(lightboxPhoto.id);
+              }}
+              onTouchEnd={(e) => {
+                e.stopPropagation();
+                const now = Date.now();
+                const last = lightboxTapRef.current;
+                if (last.id === lightboxPhoto.id && now - last.at < 320) {
+                  setShowPhotoReactionPicker(lightboxPhoto.id);
+                }
+                lightboxTapRef.current = { id: lightboxPhoto.id, at: now };
+              }}
             />
             <div className="mt-3 text-center" onClick={e => e.stopPropagation()}>
               {lightboxPhoto.caption && <p className="text-white text-sm mb-1">{lightboxPhoto.caption}</p>}
               <p className="text-gray-400 text-xs">📷 {lightboxPhoto.uploaded_by} · {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
               <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
-                <button
-                  onClick={() => setShowPhotoReactionPicker(showPhotoReactionPicker === lightboxPhoto.id ? null : lightboxPhoto.id)}
-                  className="px-2 py-0.5 rounded-full text-xs bg-white/15 text-white hover:bg-white/25"
-                >
-                  😀 React
-                </button>
                 {Object.entries(photoReactions[lightboxPhoto.id] || {}).map(([emoji, users]) => (
                   <button
                     key={emoji}
@@ -5703,14 +5666,14 @@ function App() {
               </div>
               {showPhotoReactionPicker === lightboxPhoto.id && (
                 <div className="mt-2 rounded-xl bg-white/10 p-1.5 flex flex-wrap justify-center gap-1">
-                  {REACTION_EMOJIS.map(emoji => (
-                    <button
-                      key={emoji}
-                      onClick={() => togglePhotoReaction(lightboxPhoto.id, emoji)}
-                      className="w-8 h-8 rounded-full hover:bg-white/20 text-base"
-                    >
-                      {emoji}
-                    </button>
+                                {REACTION_EMOJIS.map(emoji => (
+                                  <button
+                                    key={emoji}
+                                    onClick={async () => { await togglePhotoReaction(lightboxPhoto.id, emoji); setShowPhotoReactionPicker(null); }}
+                                    className="w-8 h-8 rounded-full hover:bg-white/20 text-base"
+                                  >
+                                    {emoji}
+                                  </button>
                   ))}
                 </div>
               )}
