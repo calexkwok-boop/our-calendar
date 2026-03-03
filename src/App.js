@@ -4992,12 +4992,20 @@ function App() {
 
             {bottomNavTab === 'active' && (
               <>
-                <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400 mb-3">Active Trips</h3>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Active Calendars</h3>
+                  <button
+                    onClick={() => setShowSubCalendarModal(true)}
+                    className="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-xs font-semibold shrink-0"
+                  >
+                    + New Calendar
+                  </button>
+                </div>
 
                 <div className="mb-4">
                   <h4 className="text-xs uppercase tracking-wide font-semibold text-green-600 dark:text-green-400 mb-2">Active</h4>
                   {activeTrips.length === 0 ? (
-                    <div className="text-sm text-gray-500 dark:text-gray-400">No active trips right now.</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">No active calendars right now.</div>
                   ) : (
                     <div className="space-y-2">
                       {activeTrips.map(sc => {
@@ -5045,9 +5053,9 @@ function App() {
                 </div>
 
                 <div>
-                  <h4 className="text-xs uppercase tracking-wide font-semibold text-purple-600 dark:text-purple-400 mb-2">Upcoming</h4>
+                  <h4 className="text-xs uppercase tracking-wide font-semibold text-purple-600 dark:text-purple-400 mb-2">Upcoming Itineraries</h4>
                   {upcomingTrips.length === 0 ? (
-                    <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming trips yet.</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming itineraries yet.</div>
                   ) : (
                     <div className="space-y-2">
                       {upcomingTrips.map(sc => {
