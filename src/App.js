@@ -4880,7 +4880,7 @@ function App() {
               )}
 
               {/* Notes / Reminders */}
-              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-700">
+              <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-xl border border-yellow-300 dark:border-yellow-700">
                 <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📝 Reminders &amp; Notes</h4>
                 <div className="space-y-1.5 mb-2">
                   {subCalNotes.length === 0 && (
@@ -4907,7 +4907,7 @@ function App() {
                         });
                       }}
                       onDragEnd={() => setDraggedNoteId(null)}
-                      className={`bg-white dark:bg-gray-700 rounded-lg border border-yellow-200 dark:border-yellow-700 overflow-hidden transition-opacity ${draggedNoteId === note.id ? 'opacity-40' : 'opacity-100'}`}
+                      className={`bg-yellow-50 dark:bg-gray-700 rounded-lg border border-yellow-300 dark:border-yellow-700 overflow-hidden transition-opacity ${draggedNoteId === note.id ? 'opacity-40' : 'opacity-100'}`}
                     >
                       <div className="flex items-center gap-2 px-2.5 py-2">
                         {/* Drag handle */}
@@ -4938,7 +4938,7 @@ function App() {
                         <button onClick={() => deleteSubCalNote(note.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">✕</button>
                       </div>
                       {expandedNote === note.id && (
-                        <div className="px-3 pb-2.5 space-y-1.5 border-t border-yellow-100 dark:border-yellow-800 pt-2">
+                        <div className="px-3 pb-2.5 space-y-1.5 border-t border-yellow-200 dark:border-yellow-800 pt-2">
                           {(note.checklist || []).map(item => (
                             <div key={item.id} className="flex items-center gap-2">
                               <button
