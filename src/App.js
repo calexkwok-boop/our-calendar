@@ -2832,17 +2832,16 @@ function App() {
           });
           updateCursor('subCalEvents', subCalEvents);
 
+          const photoCursor = inAppSyncCursorRef.current.tripPhotos || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
           const { data: tripPhotoRows } = await supabase
             .from('trip_photos')
             .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at')
             .in('sub_calendar_id', subCalIds)
+            .or(`created_at.gt.${photoCursor},created_at.is.null`)
             .order('created_at', { ascending: false, nullsFirst: false })
             .limit(200);
-          const photoCutoff = Date.now() - (24 * 60 * 60 * 1000);
           (tripPhotoRows || []).forEach(row => {
             if (isOwnRow(row)) return;
-            const createdAtMs = row?.created_at ? Date.parse(row.created_at) : null;
-            if (Number.isFinite(createdAtMs) && createdAtMs < photoCutoff) return;
             const subCalId = String(row.sub_calendar_id || '');
             const who = String(row.uploaded_by || row.created_by || 'Someone');
             addInAppNotification({
