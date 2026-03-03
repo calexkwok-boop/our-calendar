@@ -180,6 +180,7 @@ function App() {
   const lightboxTapRef = useRef({ id: null, at: 0 });
   const photoDeleteHoldTimerRef = useRef(null);
   const photoTapRef = useRef({ id: null, at: 0, timer: null });
+  const photoReactionHoldSuppressRef = useRef({ id: null, until: 0 });
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
@@ -716,7 +717,7 @@ function App() {
     await removeTripPhotoRecord(photo);
   };
 
-  const clearPhotoDeleteHold = () => {
+  const clearPhotoReactionHold = () => {
     if (photoDeleteHoldTimerRef.current) {
       clearTimeout(photoDeleteHoldTimerRef.current);
       photoDeleteHoldTimerRef.current = null;
@@ -730,13 +731,13 @@ function App() {
     }
   };
 
-  const startPhotoDeleteHold = () => {
-    if (isPhotoSelectionMode || photoDeleteMode) return;
-    clearPhotoDeleteHold();
+  const startPhotoReactionHold = (photo) => {
+    if (!photo || isPhotoSelectionMode || photoDeleteMode) return;
+    clearPhotoReactionHold();
     photoDeleteHoldTimerRef.current = setTimeout(() => {
-      setPhotoDeleteMode(true);
-      setShowPhotoReactionPicker(null);
-      clearPhotoDeleteHold();
+      photoReactionHoldSuppressRef.current = { id: photo.id, until: Date.now() + 500 };
+      setShowPhotoReactionPicker(photo.id);
+      clearPhotoReactionHold();
     }, 550);
   };
 
@@ -747,25 +748,25 @@ function App() {
       return;
     }
     if (photoDeleteMode) return;
+    const suppress = photoReactionHoldSuppressRef.current;
+    if (suppress.id === photo.id && Date.now() < suppress.until) return;
     const now = Date.now();
     const prev = photoTapRef.current;
     if (prev.id === photo.id && now - prev.at < 300) {
       clearPhotoTapTimer();
       photoTapRef.current = { id: null, at: 0, timer: null };
-      setShowPhotoReactionPicker(photo.id);
+      setLightboxPhoto(photo);
       return;
     }
     clearPhotoTapTimer();
     const timer = setTimeout(() => {
-      setShowPhotoReactionPicker(null);
-      setLightboxPhoto(photo);
       photoTapRef.current = { id: null, at: 0, timer: null };
-    }, 230);
+    }, 260);
     photoTapRef.current = { id: photo.id, at: now, timer };
   };
 
   useEffect(() => () => {
-    clearPhotoDeleteHold();
+    clearPhotoReactionHold();
     clearPhotoTapTimer();
   }, []);
 
@@ -5502,16 +5503,28 @@ function App() {
                   Done
                 </button>
               ) : (
-                <button
-                  onClick={() => {
-                    setPhotoDeleteMode(false);
-                    setIsPhotoSelectionMode(true);
-                    setSelectedPhotoIds([]);
-                  }}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-                >
-                  Select
-                </button>
+                <>
+                  <button
+                    onClick={() => {
+                      setPhotoDeleteMode(false);
+                      setIsPhotoSelectionMode(true);
+                      setSelectedPhotoIds([]);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                  >
+                    Select
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsPhotoSelectionMode(false);
+                      setPhotoDeleteMode(true);
+                      setShowPhotoReactionPicker(null);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300"
+                  >
+                    Edit
+                  </button>
+                </>
               )}
               {photoUploadMessage && (
                 <span className={`text-xs ${photoUploadError ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
@@ -5563,12 +5576,12 @@ function App() {
                             key={photo.id}
                             className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer ${isSelectedPhoto ? 'ring-2 ring-purple-500' : ''} ${photoDeleteMode ? 'shake-wiggle' : ''}`}
                             onClick={() => handlePhotoTap(photo)}
-                            onMouseDown={() => startPhotoDeleteHold()}
-                            onMouseUp={clearPhotoDeleteHold}
-                            onMouseLeave={clearPhotoDeleteHold}
-                            onTouchStart={() => startPhotoDeleteHold()}
-                            onTouchEnd={clearPhotoDeleteHold}
-                            onTouchCancel={clearPhotoDeleteHold}
+                            onMouseDown={() => startPhotoReactionHold(photo)}
+                            onMouseUp={clearPhotoReactionHold}
+                            onMouseLeave={clearPhotoReactionHold}
+                            onTouchStart={() => startPhotoReactionHold(photo)}
+                            onTouchEnd={clearPhotoReactionHold}
+                            onTouchCancel={clearPhotoReactionHold}
                           >
                             <img src={photo.url} alt={photo.caption || ''} className="w-full h-full object-cover" />
                             {isPhotoSelectionMode && (
@@ -5672,12 +5685,12 @@ function App() {
                               alt={photo.caption || ''}
                               className="w-full max-h-72 object-cover cursor-pointer"
                               onClick={() => handlePhotoTap(photo)}
-                              onMouseDown={() => startPhotoDeleteHold()}
-                              onMouseUp={clearPhotoDeleteHold}
-                              onMouseLeave={clearPhotoDeleteHold}
-                              onTouchStart={() => startPhotoDeleteHold()}
-                              onTouchEnd={clearPhotoDeleteHold}
-                              onTouchCancel={clearPhotoDeleteHold}
+                              onMouseDown={() => startPhotoReactionHold(photo)}
+                              onMouseUp={clearPhotoReactionHold}
+                              onMouseLeave={clearPhotoReactionHold}
+                              onTouchStart={() => startPhotoReactionHold(photo)}
+                              onTouchEnd={clearPhotoReactionHold}
+                              onTouchCancel={clearPhotoReactionHold}
                             />
                             {isPhotoSelectionMode && (
                               <div className="px-3 pt-2">
