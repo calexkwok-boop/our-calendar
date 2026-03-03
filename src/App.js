@@ -196,6 +196,27 @@ function App() {
     if (!cleaned) return raw;
     return cleaned.replace(/\b\w/g, c => c.toUpperCase());
   };
+  const openVenmoPayment = (recipient, amountCents, note = '') => {
+    const cleanRecipient = String(recipient || '').trim();
+    const amount = (Number(amountCents) || 0) / 100;
+    if (!cleanRecipient || amount <= 0) return;
+    const params = new URLSearchParams({
+      txn: 'pay',
+      recipients: cleanRecipient,
+      amount: amount.toFixed(2),
+      note: note || 'Trip expense settlement',
+    });
+    const deepLink = `venmo://paycharge?${params.toString()}`;
+    const webFallback = `https://venmo.com/?${params.toString()}`;
+    try {
+      window.location.href = deepLink;
+      setTimeout(() => {
+        window.open(webFallback, '_blank', 'noopener,noreferrer');
+      }, 700);
+    } catch {
+      window.open(webFallback, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   // ── Sub-calendar functions ──────────────────────────────────────────────
 
@@ -4838,10 +4859,22 @@ function App() {
                 ) : (
                   <div className="space-y-1.5">
                     {settlements.map((s, idx) => (
-                      <div key={`${s.from}-${s.to}-${idx}`} className="flex items-center justify-between text-xs bg-white dark:bg-gray-700 rounded-lg border border-indigo-100 dark:border-indigo-800 px-2.5 py-1.5">
-                        <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.from)}</span>
-                        <span className="text-indigo-500 dark:text-indigo-300 font-semibold">pays ${(s.amount / 100).toFixed(2)}</span>
-                        <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.to)}</span>
+                      <div key={`${s.from}-${s.to}-${idx}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-indigo-100 dark:border-indigo-800 px-2.5 py-1.5">
+                        <div className="min-w-0">
+                          <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.from)}</span>
+                          <span className="text-indigo-500 dark:text-indigo-300 font-semibold"> pays ${(s.amount / 100).toFixed(2)} </span>
+                          <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.to)}</span>
+                        </div>
+                        <button
+                          onClick={() => openVenmoPayment(
+                            s.to,
+                            s.amount,
+                            `${getExpenseDisplayName(s.from)} pays ${getExpenseDisplayName(s.to)} for ${activeSubCalendar?.name || 'trip'}`
+                          )}
+                          className="shrink-0 px-2.5 py-1 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium"
+                        >
+                          Pay in Venmo
+                        </button>
                       </div>
                     ))}
                   </div>
