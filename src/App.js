@@ -119,6 +119,10 @@ function App() {
   const [subCalendars, setSubCalendars] = useState([]);
   const [activeSubCalendar, setActiveSubCalendar] = useState(null);
   const [subCalNotes, setSubCalNotes] = useState([]); // [{id, text, checklist, createdBy, createdAt}]
+  const [subCalExpenses, setSubCalExpenses] = useState([]); // [{id, payer, description, amount, createdAt}]
+  const [expenseLedgerNoteId, setExpenseLedgerNoteId] = useState(null);
+  const [newExpenseDraft, setNewExpenseDraft] = useState({ payer: '', description: '', amount: '' });
+  const [expenseError, setExpenseError] = useState('');
   const [newNote, setNewNote] = useState('');
   const [expandedNote, setExpandedNote] = useState(null);
   const [editingNote, setEditingNote] = useState(null);
@@ -163,6 +167,23 @@ function App() {
   const photoInputRef = useRef(null);
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
+  const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
+  const getExpenseParticipants = () => {
+    const seen = new Set();
+    const participants = [];
+    const addParticipant = (value) => {
+      const trimmed = String(value || '').trim();
+      if (!trimmed) return;
+      const key = trimmed.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      participants.push(trimmed);
+    };
+    if (user?.email) addParticipant(user.email);
+    else addParticipant(currentUser);
+    (subCalMembers || []).forEach(m => addParticipant(m?.email));
+    return participants;
+  };
 
   // ── Sub-calendar functions ──────────────────────────────────────────────
 
@@ -348,7 +369,26 @@ function App() {
         .eq('sub_calendar_id', subCalId)
         .order('created_at', { ascending: true });
       if (error) { console.error('Error loading notes:', error); return; }
-      setSubCalNotes((data || []).map(n => ({ ...n, checklist: n.checklist ? JSON.parse(n.checklist) : [] })));
+      const visibleNotes = [];
+      let loadedExpenses = [];
+      let loadedLedgerId = null;
+      (data || []).forEach((n) => {
+        let parsedChecklist = [];
+        try {
+          parsedChecklist = n.checklist ? JSON.parse(n.checklist) : [];
+        } catch {
+          parsedChecklist = [];
+        }
+        if (n.text === EXPENSE_LEDGER_NOTE_TEXT) {
+          loadedLedgerId = n.id;
+          loadedExpenses = Array.isArray(parsedChecklist) ? parsedChecklist : [];
+          return;
+        }
+        visibleNotes.push({ ...n, checklist: parsedChecklist });
+      });
+      setSubCalNotes(visibleNotes);
+      setSubCalExpenses(loadedExpenses);
+      setExpenseLedgerNoteId(loadedLedgerId);
     } catch (e) { console.error(e); }
   };
 
@@ -617,6 +657,69 @@ function App() {
     setActiveSubCalendar(prev => ({ ...prev, name: newName.trim() }));
     setSubCalendars(prev => prev.map(sc => sc.id === activeSubCalendar.id ? { ...sc, name: newName.trim() } : sc));
     setEditingSubCalTitle(false);
+  };
+
+  const saveExpenseLedger = async (expenses) => {
+    if (!activeSubCalendar) return false;
+    const payload = {
+      checklist: JSON.stringify(expenses),
+    };
+    if (expenseLedgerNoteId) {
+      const { error } = await supabase.from('sub_calendar_notes').update(payload).eq('id', expenseLedgerNoteId);
+      if (error) {
+        setExpenseError(`Could not save expenses: ${error.message}`);
+        return false;
+      }
+      return true;
+    }
+    const row = {
+      id: `scexp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      sub_calendar_id: activeSubCalendar.id,
+      text: EXPENSE_LEDGER_NOTE_TEXT,
+      checklist: JSON.stringify(expenses),
+      created_by: currentUser,
+      user_id: user?.id,
+      created_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('sub_calendar_notes').insert(row);
+    if (error) {
+      setExpenseError(`Could not save expenses: ${error.message}`);
+      return false;
+    }
+    setExpenseLedgerNoteId(row.id);
+    return true;
+  };
+
+  const addSubCalExpense = async () => {
+    const participants = getExpenseParticipants();
+    const payer = (newExpenseDraft.payer || participants[0] || '').trim();
+    const description = newExpenseDraft.description.trim();
+    const amount = Number.parseFloat(newExpenseDraft.amount);
+    if (!payer || !description || !Number.isFinite(amount) || amount <= 0) {
+      setExpenseError('Enter payer, description, and a valid amount.');
+      return;
+    }
+    const expense = {
+      id: `exp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      payer,
+      description,
+      amount: Math.round(amount * 100) / 100,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...subCalExpenses, expense];
+    const ok = await saveExpenseLedger(updated);
+    if (!ok) return;
+    setExpenseError('');
+    setSubCalExpenses(updated);
+    setNewExpenseDraft({ payer, description: '', amount: '' });
+  };
+
+  const deleteSubCalExpense = async (expenseId) => {
+    const updated = subCalExpenses.filter(e => e.id !== expenseId);
+    const ok = await saveExpenseLedger(updated);
+    if (!ok) return;
+    setExpenseError('');
+    setSubCalExpenses(updated);
   };
 
   const extendSubCalDates = async (direction) => {
@@ -4116,6 +4219,26 @@ function App() {
           });
           const dayEventPhotos = tripPhotos.filter(p => p.event_id && (p.date === dk || !p.date));
           const getEventPhotos = (eventId) => dayEventPhotos.filter(p => p.event_id === eventId);
+          const expenseParticipants = getExpenseParticipants();
+          const expenseTotal = subCalExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+          const expensePerPerson = expenseParticipants.length > 0 ? expenseTotal / expenseParticipants.length : 0;
+          const paidBy = {};
+          expenseParticipants.forEach(name => { paidBy[name] = 0; });
+          subCalExpenses.forEach(item => {
+            const payer = String(item.payer || '').trim();
+            if (!payer) return;
+            if (typeof paidBy[payer] !== 'number') paidBy[payer] = 0;
+            paidBy[payer] += Number(item.amount) || 0;
+          });
+          const expenseBalances = expenseParticipants.map(name => {
+            const paid = paidBy[name] || 0;
+            return {
+              name,
+              paid,
+              balance: paid - expensePerPerson,
+            };
+          });
+          const selectedPayer = newExpenseDraft.payer || expenseParticipants[0] || '';
 
           return (
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -4134,6 +4257,78 @@ function App() {
                   </div>
                 </div>
               )}
+
+              {/* Expense Splitter */}
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-700">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">💸 Expense Splitter</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-2">
+                  <select
+                    value={selectedPayer}
+                    onChange={e => setNewExpenseDraft(prev => ({ ...prev, payer: e.target.value }))}
+                    className="px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                  >
+                    {expenseParticipants.length === 0 ? (
+                      <option value="">No members</option>
+                    ) : (
+                      expenseParticipants.map(name => <option key={name} value={name}>{name}</option>)
+                    )}
+                  </select>
+                  <input
+                    type="text"
+                    value={newExpenseDraft.description}
+                    onChange={e => setNewExpenseDraft(prev => ({ ...prev, description: e.target.value }))}
+                    onKeyPress={e => e.key === 'Enter' && addSubCalExpense()}
+                    placeholder="What was paid?"
+                    className="sm:col-span-2 px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={newExpenseDraft.amount}
+                    onChange={e => setNewExpenseDraft(prev => ({ ...prev, amount: e.target.value }))}
+                    onKeyPress={e => e.key === 'Enter' && addSubCalExpense()}
+                    placeholder="Amount"
+                    className="px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                  />
+                </div>
+                <button
+                  onClick={addSubCalExpense}
+                  className="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium"
+                >
+                  Add Expense
+                </button>
+                {expenseError && <p className="mt-2 text-xs text-red-500">{expenseError}</p>}
+
+                <div className="mt-3 space-y-1.5">
+                  {subCalExpenses.length === 0 && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 italic">No expenses yet</p>
+                  )}
+                  {subCalExpenses.map(item => (
+                    <div key={item.id} className="flex items-center gap-2 bg-white dark:bg-gray-700 border border-emerald-100 dark:border-emerald-800 rounded-lg px-2.5 py-1.5">
+                      <span className="text-xs text-gray-700 dark:text-gray-200 font-medium">{item.payer}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-1 truncate">{item.description}</span>
+                      <span className="text-xs text-gray-700 dark:text-gray-200 font-semibold">${(Number(item.amount) || 0).toFixed(2)}</span>
+                      <button onClick={() => deleteSubCalExpense(item.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">✕</button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-3 pt-2 border-t border-emerald-200 dark:border-emerald-800 space-y-1">
+                  <div className="text-xs text-gray-700 dark:text-gray-300">Total: <span className="font-semibold">${expenseTotal.toFixed(2)}</span></div>
+                  <div className="text-xs text-gray-700 dark:text-gray-300">Per member ({expenseParticipants.length}): <span className="font-semibold">${expensePerPerson.toFixed(2)}</span></div>
+                  <div className="pt-1 space-y-1">
+                    {expenseBalances.map(row => (
+                      <div key={row.name} className="flex items-center justify-between text-xs">
+                        <span className="text-gray-600 dark:text-gray-300">{row.name}</span>
+                        <span className="text-gray-700 dark:text-gray-200">
+                          Paid ${row.paid.toFixed(2)} · {row.balance >= 0 ? `Gets back $${row.balance.toFixed(2)}` : `Owes $${Math.abs(row.balance).toFixed(2)}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
               {/* Notes / Reminders */}
               <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-700">
