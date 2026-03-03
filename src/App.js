@@ -1086,6 +1086,25 @@ function App() {
     setExpenseError('');
   };
 
+  const promptAddPaymentOption = async (identity) => {
+    if (!canEditVenmoIdentity(identity)) {
+      setExpenseError('You can only edit your own payment options.');
+      return;
+    }
+    const choiceRaw = window.prompt('Add payment option: type "venmo" or "cashapp"', 'venmo');
+    if (choiceRaw === null) return;
+    const choice = String(choiceRaw).trim().toLowerCase();
+    if (choice === 'venmo' || choice === 'v') {
+      await promptSetVenmoHandle(identity);
+      return;
+    }
+    if (choice === 'cashapp' || choice === 'cash app' || choice === 'cash') {
+      await promptSetCashAppHandle(identity);
+      return;
+    }
+    setExpenseError('Please type "venmo" or "cashapp".');
+  };
+
   const addSubCalExpense = async () => {
     const participants = getExpenseParticipants();
     const payer = (newExpenseDraft.payer || participants[0] || '').trim();
@@ -5223,33 +5242,23 @@ function App() {
                     const cashHandle = getCashAppHandleForIdentity(name);
                     const canEdit = canEditVenmoIdentity(name);
                     return (
-                      <div key={`payment-${name}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-sky-100 dark:border-sky-800 px-2.5 py-1.5">
-                        <span className="text-gray-700 dark:text-gray-200 min-w-0 truncate">{getExpenseDisplayName(name)}</span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-gray-500 dark:text-gray-300">Venmo: {venmoHandle ? `@${venmoHandle}` : 'Not set'}</span>
+                      <div key={`payment-${name}`} className="text-xs bg-white dark:bg-gray-700 rounded-lg border border-sky-100 dark:border-sky-800 px-2.5 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-gray-700 dark:text-gray-200 font-medium min-w-0 truncate">{getExpenseDisplayName(name)}</span>
                           {canEdit ? (
                             <button
-                              onClick={() => promptSetVenmoHandle(name)}
-                              className="px-2 py-0.5 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium"
+                              onClick={() => promptAddPaymentOption(name)}
+                              className="px-2 py-0.5 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium shrink-0"
                             >
-                              {venmoHandle ? 'Edit' : 'Set'}
+                              {venmoHandle || cashHandle ? 'Edit payment options' : 'Add payment option'}
                             </button>
-                          ) : null}
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 shrink-0">Only they can edit</span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-gray-500 dark:text-gray-300">Cash App: {cashHandle ? `$${cashHandle}` : 'Not set'}</span>
-                          {canEdit ? (
-                            <button
-                              onClick={() => promptSetCashAppHandle(name)}
-                              className="px-2 py-0.5 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white font-medium"
-                            >
-                              {cashHandle ? 'Edit' : 'Set'}
-                            </button>
-                          ) : null}
+                        <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-300">
+                          {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'} · {cashHandle ? `Cash App $${cashHandle}` : 'Cash App not set'}
                         </div>
-                        {!canEdit && (
-                          <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300">Only they can edit</span>
-                        )}
                       </div>
                     );
                   })}
