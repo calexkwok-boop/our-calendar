@@ -5335,23 +5335,26 @@ function App() {
                     {settlements.map((s, idx) => {
                       const venmoHandle = getVenmoHandleForIdentity(s.to);
                       const cashHandle = getCashAppHandleForIdentity(s.to);
+                      const fromDisplay = getExpenseDisplayName(s.from);
+                      const toDisplay = getExpenseDisplayName(s.to);
+                      const payVerb = fromDisplay === 'You' ? 'pay' : 'pays';
                       return (
                         <div key={`${s.from}-${s.to}-${idx}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-indigo-100 dark:border-indigo-800 px-2.5 py-1.5">
                           <div className="min-w-0">
-                            <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.from)}</span>
-                            <span className="text-indigo-500 dark:text-indigo-300 font-semibold"> pays ${(s.amount / 100).toFixed(2)} </span>
-                            <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.to)}</span>
+                            <span className="text-gray-700 dark:text-gray-200">{fromDisplay}</span>
+                            <span className="text-indigo-500 dark:text-indigo-300 font-semibold"> {payVerb} ${(s.amount / 100).toFixed(2)} </span>
+                            <span className="text-gray-700 dark:text-gray-200">{toDisplay}</span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             <button
                               onClick={() => openVenmoPayment(
                                 venmoHandle,
                                 s.amount,
-                                `${getExpenseDisplayName(s.from)} pays ${getExpenseDisplayName(s.to)} for ${activeSubCalendar?.name || 'trip'}`
+                                `${fromDisplay} ${payVerb} ${toDisplay} for ${activeSubCalendar?.name || 'trip'}`
                               )}
                               disabled={!venmoHandle}
                               className="px-2.5 py-1 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                              title={venmoHandle ? `Pay @${venmoHandle}` : `${getExpenseDisplayName(s.to)} has not set a Venmo handle yet`}
+                              title={venmoHandle ? `Pay @${venmoHandle}` : `${toDisplay} has not set a Venmo handle yet`}
                             >
                               {venmoHandle ? 'Venmo' : 'No Venmo'}
                             </button>
@@ -5359,7 +5362,7 @@ function App() {
                               onClick={() => openCashAppPayment(cashHandle, s.amount)}
                               disabled={!cashHandle}
                               className="px-2.5 py-1 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                              title={cashHandle ? `Pay $${cashHandle}` : `${getExpenseDisplayName(s.to)} has not set a Cash App handle yet`}
+                              title={cashHandle ? `Pay $${cashHandle}` : `${toDisplay} has not set a Cash App handle yet`}
                             >
                               {cashHandle ? 'Cash App' : 'No Cash App'}
                             </button>
