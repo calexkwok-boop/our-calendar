@@ -123,6 +123,7 @@ function App() {
   const [expenseLedgerNoteId, setExpenseLedgerNoteId] = useState(null);
   const [venmoHandles, setVenmoHandles] = useState({});
   const [venmoHandlesNoteId, setVenmoHandlesNoteId] = useState(null);
+  const [globalVenmoHandles, setGlobalVenmoHandles] = useState({});
   const [newExpenseDraft, setNewExpenseDraft] = useState({ payer: '', description: '', amount: '' });
   const [expenseError, setExpenseError] = useState('');
   const [newNote, setNewNote] = useState('');
@@ -202,7 +203,7 @@ function App() {
   };
   const getVenmoHandleForIdentity = (identity) => {
     const key = normalizeIdentityKey(identity);
-    return venmoHandles[key] || '';
+    return venmoHandles[key] || globalVenmoHandles[key] || '';
   };
   const cleanVenmoHandle = (value) => String(value || '').trim().replace(/^@+/, '').replace(/\s+/g, '');
   const openVenmoPayment = (recipient, amountCents, note = '') => {
@@ -272,6 +273,36 @@ function App() {
         .select('*')
         .eq('sub_calendar_id', subCalId);
       setSubCalMembers(data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const loadGlobalVenmoHandles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sub_calendar_notes')
+        .select('checklist')
+        .eq('text', VENMO_HANDLES_NOTE_TEXT)
+        .order('created_at', { ascending: true });
+      if (error) {
+        console.error('Error loading global Venmo handles:', error);
+        return;
+      }
+      const merged = {};
+      (data || []).forEach((row) => {
+        let parsed = {};
+        try {
+          parsed = row?.checklist ? JSON.parse(row.checklist) : {};
+        } catch {
+          parsed = {};
+        }
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return;
+        Object.entries(parsed).forEach(([k, v]) => {
+          const key = normalizeIdentityKey(k);
+          const handle = cleanVenmoHandle(v);
+          if (key && handle) merged[key] = handle;
+        });
+      });
+      setGlobalVenmoHandles(merged);
     } catch (e) { console.error(e); }
   };
 
@@ -374,6 +405,7 @@ function App() {
     }
     setSubCalTab('itinerary');
     setTripPhotos([]);
+    await loadGlobalVenmoHandles();
     await loadSubCalendarEvents(sc.id);
     await loadSubCalendarMembers(sc.id);
     await loadSubCalNotes(sc.id);
@@ -445,7 +477,7 @@ function App() {
       setSubCalNotes(visibleNotes);
       setSubCalExpenses(loadedExpenses);
       setExpenseLedgerNoteId(loadedLedgerId);
-      setVenmoHandles(loadedVenmoHandles);
+      setVenmoHandles({ ...globalVenmoHandles, ...loadedVenmoHandles });
       setVenmoHandlesNoteId(loadedVenmoHandlesNoteId);
     } catch (e) { console.error(e); }
   };
@@ -779,6 +811,74 @@ function App() {
     return true;
   };
 
+  const saveVenmoHandleEverywhere = async (identity, handle) => {
+    const key = normalizeIdentityKey(identity);
+    if (!key || !activeSubCalendar) return false;
+    const cleaned = cleanVenmoHandle(handle);
+    const { data, error } = await supabase
+      .from('sub_calendar_notes')
+      .select('id,sub_calendar_id,checklist')
+      .eq('text', VENMO_HANDLES_NOTE_TEXT);
+    if (error) {
+      setExpenseError(`Could not save Venmo handle: ${error.message}`);
+      return false;
+    }
+
+    const rows = data || [];
+    if (rows.length === 0) {
+      if (!cleaned) return true;
+      const initial = { ...globalVenmoHandles, [key]: cleaned };
+      const ok = await saveVenmoHandles(initial);
+      if (!ok) return false;
+      setGlobalVenmoHandles(initial);
+      setVenmoHandles(initial);
+      return true;
+    }
+
+    let foundActiveRow = false;
+    for (const row of rows) {
+      let parsed = {};
+      try {
+        parsed = row?.checklist ? JSON.parse(row.checklist) : {};
+      } catch {
+        parsed = {};
+      }
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) parsed = {};
+      if (cleaned) parsed[key] = cleaned;
+      else delete parsed[key];
+
+      const { error: updateError } = await supabase
+        .from('sub_calendar_notes')
+        .update({ checklist: JSON.stringify(parsed) })
+        .eq('id', row.id);
+      if (updateError) {
+        setExpenseError(`Could not save Venmo handle: ${updateError.message}`);
+        return false;
+      }
+      if (row.sub_calendar_id === activeSubCalendar.id) {
+        foundActiveRow = true;
+        setVenmoHandles(parsed);
+        setVenmoHandlesNoteId(row.id);
+      }
+    }
+
+    if (!foundActiveRow && cleaned) {
+      const nextCurrent = { ...globalVenmoHandles };
+      nextCurrent[key] = cleaned;
+      const ok = await saveVenmoHandles(nextCurrent);
+      if (!ok) return false;
+      setVenmoHandles(nextCurrent);
+    }
+
+    setGlobalVenmoHandles(prev => {
+      const next = { ...prev };
+      if (cleaned) next[key] = cleaned;
+      else delete next[key];
+      return next;
+    });
+    return true;
+  };
+
   const promptSetVenmoHandle = async (identity) => {
     const key = normalizeIdentityKey(identity);
     if (!key) return;
@@ -786,13 +886,9 @@ function App() {
     const value = window.prompt(`Set Venmo username for ${getExpenseDisplayName(identity)} (without @):`, currentHandle);
     if (value === null) return;
     const cleaned = cleanVenmoHandle(value);
-    const nextHandles = { ...venmoHandles };
-    if (!cleaned) delete nextHandles[key];
-    else nextHandles[key] = cleaned;
-    const ok = await saveVenmoHandles(nextHandles);
+    const ok = await saveVenmoHandleEverywhere(identity, cleaned);
     if (!ok) return;
     setExpenseError('');
-    setVenmoHandles(nextHandles);
   };
 
   const addSubCalExpense = async () => {
