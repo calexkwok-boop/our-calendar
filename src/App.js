@@ -98,6 +98,7 @@ function App() {
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [inAppNotifications, setInAppNotifications] = useState([]);
   const seenInAppNotificationKeysRef = useRef(new Set());
+  const inAppSyncCursorRef = useRef({ events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null });
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
@@ -2593,10 +2594,12 @@ function App() {
   useEffect(() => {
     if (!user?.id) {
       seenInAppNotificationKeysRef.current = new Set();
+      inAppSyncCursorRef.current = { events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null };
       setInAppNotifications([]);
       return;
     }
     const storageKey = `in-app-notifications-${user.id}`;
+    const cursorKey = `in-app-notification-cursor-${user.id}`;
     try {
       const raw = localStorage.getItem(storageKey);
       const parsed = raw ? JSON.parse(raw) : [];
@@ -2610,8 +2613,19 @@ function App() {
       })).filter(item => item.key && item.message) : [];
       seenInAppNotificationKeysRef.current = new Set(normalized.map(item => item.key));
       setInAppNotifications(normalized);
+      const cursorRaw = localStorage.getItem(cursorKey);
+      const parsedCursor = cursorRaw ? JSON.parse(cursorRaw) : null;
+      const fallbackTs = new Date(Date.now() - (5 * 60 * 1000)).toISOString();
+      inAppSyncCursorRef.current = {
+        events: parsedCursor?.events || fallbackTs,
+        subCalEvents: parsedCursor?.subCalEvents || fallbackTs,
+        tripPhotos: parsedCursor?.tripPhotos || fallbackTs,
+        sharedListItems: parsedCursor?.sharedListItems || fallbackTs,
+      };
     } catch {
       seenInAppNotificationKeysRef.current = new Set();
+      const fallbackTs = new Date(Date.now() - (5 * 60 * 1000)).toISOString();
+      inAppSyncCursorRef.current = { events: fallbackTs, subCalEvents: fallbackTs, tripPhotos: fallbackTs, sharedListItems: fallbackTs };
       setInAppNotifications([]);
     }
   }, [user?.id]);
@@ -2619,8 +2633,10 @@ function App() {
   useEffect(() => {
     if (!user?.id) return;
     const storageKey = `in-app-notifications-${user.id}`;
+    const cursorKey = `in-app-notification-cursor-${user.id}`;
     try {
       localStorage.setItem(storageKey, JSON.stringify(inAppNotifications.slice(0, 75)));
+      localStorage.setItem(cursorKey, JSON.stringify(inAppSyncCursorRef.current));
     } catch {}
   }, [user?.id, inAppNotifications]);
 
@@ -2693,6 +2709,142 @@ function App() {
 
     return () => {
       updatesChannel.unsubscribe();
+    };
+  }, [user?.id, user?.email, currentUser, subCalendars]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const me = String(user.id);
+    const myEmail = String(user?.email || '').trim().toLowerCase();
+    const myName = String(currentUser || '').trim().toLowerCase();
+    const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
+    const subCalNameMap = {};
+    (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
+
+    const isOwnRow = (row) => {
+      const rowUserId = row?.user_id ? String(row.user_id) : '';
+      const rowCreatedBy = String(row?.created_by || '').trim().toLowerCase();
+      return (rowUserId && rowUserId === me) || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName));
+    };
+
+    const updateCursor = (key, rows) => {
+      if (!Array.isArray(rows) || rows.length === 0) return;
+      const maxCreatedAt = rows.reduce((max, row) => {
+        const ts = String(row?.created_at || '');
+        if (!ts) return max;
+        return !max || ts > max ? ts : max;
+      }, inAppSyncCursorRef.current[key] || null);
+      if (maxCreatedAt) inAppSyncCursorRef.current[key] = maxCreatedAt;
+    };
+
+    const pollInAppUpdates = async () => {
+      try {
+        const { data: sharedData } = await supabase
+          .from('shared_access')
+          .select('owner_id')
+          .or(`shared_with_email.eq.${user.email},shared_with_id.eq.${user.id}`);
+        const ownerIds = Array.from(new Set((sharedData || []).map(s => String(s.owner_id || '')).filter(Boolean)));
+
+        if (ownerIds.length > 0) {
+          const { data: sharedEvents } = await supabase
+            .from('events')
+            .select('id,title,created_by,user_id,created_at')
+            .in('user_id', ownerIds)
+            .gt('created_at', inAppSyncCursorRef.current.events || new Date(Date.now() - (5 * 60 * 1000)).toISOString())
+            .order('created_at', { ascending: true })
+            .limit(200);
+          (sharedEvents || []).forEach(row => {
+            if (isOwnRow(row)) return;
+            const who = String(row.created_by || 'Someone');
+            addInAppNotification({
+              key: `events:${row.id}`,
+              type: 'event',
+              message: `${who} added "${row.title || 'an event'}" to the calendar.`,
+              createdAt: row.created_at,
+            });
+          });
+          updateCursor('events', sharedEvents);
+
+          const { data: sharedListItems } = await supabase
+            .from('shared_lists')
+            .select('id,text,created_by,user_id,created_at')
+            .in('owner_id', ownerIds)
+            .gt('created_at', inAppSyncCursorRef.current.sharedListItems || new Date(Date.now() - (5 * 60 * 1000)).toISOString())
+            .order('created_at', { ascending: true })
+            .limit(200);
+          (sharedListItems || []).forEach(row => {
+            if (isOwnRow(row)) return;
+            const who = String(row.created_by || 'Someone');
+            const itemText = String(row.text || '').trim();
+            const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
+            addInAppNotification({
+              key: `shared_lists:${row.id}`,
+              type: 'list',
+              message: `${who} added "${preview || 'a list item'}" to the list.`,
+              createdAt: row.created_at,
+            });
+          });
+          updateCursor('sharedListItems', sharedListItems);
+        }
+
+        if (subCalIdSet.size > 0) {
+          const subCalIds = Array.from(subCalIdSet);
+          const { data: subCalEvents } = await supabase
+            .from('sub_calendar_events')
+            .select('id,title,created_by,user_id,sub_calendar_id,created_at')
+            .in('sub_calendar_id', subCalIds)
+            .gt('created_at', inAppSyncCursorRef.current.subCalEvents || new Date(Date.now() - (5 * 60 * 1000)).toISOString())
+            .order('created_at', { ascending: true })
+            .limit(200);
+          (subCalEvents || []).forEach(row => {
+            if (isOwnRow(row)) return;
+            const subCalId = String(row.sub_calendar_id || '');
+            const who = String(row.created_by || 'Someone');
+            addInAppNotification({
+              key: `sub_calendar_events:${row.id}`,
+              type: 'event',
+              message: `${who} added "${row.title || 'an event'}" in ${subCalNameMap[subCalId] || 'trip'}.`,
+              createdAt: row.created_at,
+            });
+          });
+          updateCursor('subCalEvents', subCalEvents);
+
+          const { data: tripPhotoRows } = await supabase
+            .from('trip_photos')
+            .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at')
+            .in('sub_calendar_id', subCalIds)
+            .gt('created_at', inAppSyncCursorRef.current.tripPhotos || new Date(Date.now() - (5 * 60 * 1000)).toISOString())
+            .order('created_at', { ascending: true })
+            .limit(200);
+          (tripPhotoRows || []).forEach(row => {
+            if (isOwnRow(row)) return;
+            const subCalId = String(row.sub_calendar_id || '');
+            const who = String(row.uploaded_by || row.created_by || 'Someone');
+            addInAppNotification({
+              key: `trip_photos:${row.id}`,
+              type: 'photo',
+              message: `${who} added a photo in ${subCalNameMap[subCalId] || 'trip'}.`,
+              createdAt: row.created_at,
+            });
+          });
+          updateCursor('tripPhotos', tripPhotoRows);
+        }
+      } catch (err) {
+        console.error('In-app notification sync failed:', err);
+      }
+    };
+
+    pollInAppUpdates();
+    const interval = setInterval(pollInAppUpdates, 60 * 1000);
+    window.addEventListener('focus', pollInAppUpdates);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') pollInAppUpdates();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', pollInAppUpdates);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [user?.id, user?.email, currentUser, subCalendars]);
 
