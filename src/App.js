@@ -99,6 +99,7 @@ function App() {
   const [inAppNotifications, setInAppNotifications] = useState([]);
   const seenInAppNotificationKeysRef = useRef(new Set());
   const inAppSyncCursorRef = useRef({ events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null });
+  const seenExpenseIdsRef = useRef(new Set());
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
@@ -2608,11 +2609,13 @@ function App() {
   useEffect(() => {
     if (!user?.id) {
       seenInAppNotificationKeysRef.current = new Set();
+      seenExpenseIdsRef.current = new Set();
       inAppSyncCursorRef.current = { events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null };
       setInAppNotifications([]);
       return;
     }
     const storageKey = `in-app-notifications-${user.id}`;
+    const expenseSeenKey = `in-app-seen-expenses-${user.id}`;
     const cursorKey = `in-app-notification-cursor-${user.id}`;
     try {
       const raw = localStorage.getItem(storageKey);
@@ -2629,7 +2632,10 @@ function App() {
       setInAppNotifications(normalized);
       const cursorRaw = localStorage.getItem(cursorKey);
       const parsedCursor = cursorRaw ? JSON.parse(cursorRaw) : null;
+      const seenExpensesRaw = localStorage.getItem(expenseSeenKey);
+      const parsedSeenExpenses = seenExpensesRaw ? JSON.parse(seenExpensesRaw) : [];
       const fallbackTs = new Date(Date.now() - (5 * 60 * 1000)).toISOString();
+      seenExpenseIdsRef.current = new Set(Array.isArray(parsedSeenExpenses) ? parsedSeenExpenses.map(v => String(v)) : []);
       inAppSyncCursorRef.current = {
         events: parsedCursor?.events || fallbackTs,
         subCalEvents: parsedCursor?.subCalEvents || fallbackTs,
@@ -2638,6 +2644,7 @@ function App() {
       };
     } catch {
       seenInAppNotificationKeysRef.current = new Set();
+      seenExpenseIdsRef.current = new Set();
       const fallbackTs = new Date(Date.now() - (5 * 60 * 1000)).toISOString();
       inAppSyncCursorRef.current = { events: fallbackTs, subCalEvents: fallbackTs, tripPhotos: fallbackTs, sharedListItems: fallbackTs };
       setInAppNotifications([]);
@@ -2648,9 +2655,11 @@ function App() {
     if (!user?.id) return;
     const storageKey = `in-app-notifications-${user.id}`;
     const cursorKey = `in-app-notification-cursor-${user.id}`;
+    const expenseSeenKey = `in-app-seen-expenses-${user.id}`;
     try {
       localStorage.setItem(storageKey, JSON.stringify(inAppNotifications.slice(0, 75)));
       localStorage.setItem(cursorKey, JSON.stringify(inAppSyncCursorRef.current));
+      localStorage.setItem(expenseSeenKey, JSON.stringify(Array.from(seenExpenseIdsRef.current).slice(-300)));
     } catch {}
   }, [user?.id, inAppNotifications]);
 
@@ -2844,6 +2853,44 @@ function App() {
             });
           });
           updateCursor('tripPhotos', tripPhotoRows);
+
+          const { data: expenseLedgerNotes } = await supabase
+            .from('sub_calendar_notes')
+            .select('id,sub_calendar_id,checklist,created_at')
+            .eq('text', EXPENSE_LEDGER_NOTE_TEXT)
+            .in('sub_calendar_id', subCalIds)
+            .limit(200);
+          (expenseLedgerNotes || []).forEach(note => {
+            let parsed = [];
+            try {
+              parsed = note?.checklist ? JSON.parse(note.checklist) : [];
+            } catch {
+              parsed = [];
+            }
+            if (!Array.isArray(parsed)) return;
+            parsed.forEach(item => {
+              const expenseId = String(item?.id || '');
+              if (!expenseId) return;
+              const expenseKey = `${note.sub_calendar_id}:${expenseId}`;
+              if (seenExpenseIdsRef.current.has(expenseKey)) return;
+              seenExpenseIdsRef.current.add(expenseKey);
+              const payerKey = normalizeIdentityKey(item?.payer);
+              const mineEmailKey = normalizeIdentityKey(user?.email);
+              const mineNameKey = normalizeIdentityKey(currentUser);
+              if (payerKey && (payerKey === mineEmailKey || payerKey === mineNameKey)) return;
+              const amount = Number(item?.amount);
+              const amountLabel = Number.isFinite(amount) ? `$${amount.toFixed(2)}` : 'an amount';
+              const desc = String(item?.description || 'an expense');
+              const preview = desc.length > 38 ? `${desc.slice(0, 38)}...` : desc;
+              const tripName = subCalNameMap[String(note.sub_calendar_id)] || 'trip';
+              addInAppNotification({
+                key: `expense:${expenseKey}`,
+                type: 'expense',
+                message: `${getExpenseDisplayName(item?.payer)} added ${amountLabel} for "${preview}" in ${tripName}.`,
+                createdAt: item?.createdAt || note?.created_at,
+              });
+            });
+          });
         }
       } catch (err) {
         console.error('In-app notification sync failed:', err);
