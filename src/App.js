@@ -174,9 +174,6 @@ function App() {
   const [photoEventId, setPhotoEventId] = useState(null);
   const [photoDate, setPhotoDate] = useState(null);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
-  const [photoReactions, setPhotoReactions] = useState({}); // unused legacy
-  const [photoReactionsNoteId, setPhotoReactionsNoteId] = useState(null); // unused legacy
-  const [showPhotoReactionPicker, setShowPhotoReactionPicker] = useState(null); // unused legacy
   const [locationActionTarget, setLocationActionTarget] = useState('');
   const photoInputRef = useRef(null);
   const lightboxTapRef = useRef({ id: null, at: 0 });
@@ -188,7 +185,6 @@ function App() {
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
-  const PHOTO_REACTIONS_NOTE_TEXT = '__PHOTO_REACTIONS_V1__';
   const DELETED_PHOTOS_NOTE_TEXT = '__DELETED_PHOTOS_V1__';
   const normalizeIdentityKey = (value) => String(value || '').trim().toLowerCase();
   const getExpenseParticipants = () => {
@@ -535,8 +531,6 @@ function App() {
       let loadedVenmoHandlesNoteId = null;
       let loadedCashAppHandles = {};
       let loadedCashAppHandlesNoteId = null;
-      let loadedPhotoReactions = {};
-      let loadedPhotoReactionsNoteId = null;
       let loadedDeletedPhotoIds = [];
       let loadedDeletedPhotosNoteId = null;
       (data || []).forEach((n) => {
@@ -575,12 +569,6 @@ function App() {
           loadedCashAppHandles = sanitized;
           return;
         }
-        if (n.text === PHOTO_REACTIONS_NOTE_TEXT) {
-          loadedPhotoReactionsNoteId = n.id;
-          const parsed = (parsedChecklist && typeof parsedChecklist === 'object' && !Array.isArray(parsedChecklist)) ? parsedChecklist : {};
-          loadedPhotoReactions = parsed;
-          return;
-        }
         if (n.text === DELETED_PHOTOS_NOTE_TEXT) {
           loadedDeletedPhotosNoteId = n.id;
           loadedDeletedPhotoIds = Array.isArray(parsedChecklist) ? parsedChecklist : [];
@@ -595,8 +583,6 @@ function App() {
       setVenmoHandlesNoteId(loadedVenmoHandlesNoteId);
       setCashAppHandles({ ...globalCashAppHandles, ...loadedCashAppHandles });
       setCashAppHandlesNoteId(loadedCashAppHandlesNoteId);
-      setPhotoReactions(loadedPhotoReactions);
-      setPhotoReactionsNoteId(loadedPhotoReactionsNoteId);
       setDeletedPhotoIds(Array.from(new Set(loadedDeletedPhotoIds)));
       setDeletedPhotosNoteId(loadedDeletedPhotosNoteId);
     } catch (e) { console.error(e); }
@@ -1227,39 +1213,6 @@ function App() {
     setExpenseError('');
   };
 
-  const savePhotoReactions = async (nextReactions) => {
-    if (!activeSubCalendar) return false;
-    const payload = {
-      checklist: JSON.stringify(nextReactions),
-    };
-    if (photoReactionsNoteId) {
-      const { error } = await supabase.from('sub_calendar_notes').update(payload).eq('id', photoReactionsNoteId);
-      if (error) {
-        setPhotoUploadError(true);
-        setPhotoUploadMessage(`Could not save reactions: ${error.message}`);
-        return false;
-      }
-      return true;
-    }
-    const row = {
-      id: `screact_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      sub_calendar_id: activeSubCalendar.id,
-      text: PHOTO_REACTIONS_NOTE_TEXT,
-      checklist: JSON.stringify(nextReactions),
-      created_by: currentUser,
-      user_id: user?.id,
-      created_at: new Date().toISOString(),
-    };
-    const { error } = await supabase.from('sub_calendar_notes').insert(row);
-    if (error) {
-      setPhotoUploadError(true);
-      setPhotoUploadMessage(`Could not save reactions: ${error.message}`);
-      return false;
-    }
-    setPhotoReactionsNoteId(row.id);
-    return true;
-  };
-
   const saveDeletedPhotoIds = async (nextDeletedIds) => {
     if (!activeSubCalendar) return false;
     const payload = {
@@ -1301,27 +1254,6 @@ function App() {
     setDeletedPhotoIds(nextDeleted);
     setTripPhotos(prev => prev.filter(p => p.id !== photoId));
     return true;
-  };
-
-  const togglePhotoReaction = async (photoId, emoji) => {
-    const who = currentUser || user?.email || 'Member';
-    if (!photoId || !emoji || !who) return;
-    const currentForPhoto = photoReactions[photoId] || {};
-    const users = Array.isArray(currentForPhoto[emoji]) ? currentForPhoto[emoji] : [];
-    const hasMine = users.includes(who);
-    const nextUsers = hasMine ? users.filter(u => u !== who) : [...users, who];
-    const nextForPhoto = { ...currentForPhoto };
-    if (nextUsers.length > 0) nextForPhoto[emoji] = nextUsers;
-    else delete nextForPhoto[emoji];
-    const nextAll = { ...photoReactions };
-    if (Object.keys(nextForPhoto).length > 0) nextAll[photoId] = nextForPhoto;
-    else delete nextAll[photoId];
-
-    const ok = await savePhotoReactions(nextAll);
-    if (!ok) return;
-    setPhotoUploadError(false);
-    setPhotoUploadMessage('');
-    setPhotoReactions(nextAll);
   };
 
   const addSubCalExpense = async () => {
@@ -5596,7 +5528,7 @@ function App() {
                 </>
               ) : photoDeleteMode ? (
                 <button
-                  onClick={() => { setPhotoDeleteMode(false); setShowPhotoReactionPicker(null); }}
+                  onClick={() => { setPhotoDeleteMode(false); }}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
                 >
                   Done
@@ -5617,7 +5549,6 @@ function App() {
                     onClick={() => {
                       setIsPhotoSelectionMode(false);
                       setPhotoDeleteMode(true);
-                      setShowPhotoReactionPicker(null);
                     }}
                     className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300"
                   >
@@ -5851,13 +5782,12 @@ function App() {
         {lightboxPhoto && (
           <div
             className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4"
-            onClick={() => { setLightboxPhoto(null); setShowPhotoReactionPicker(null); }}
+            onClick={() => { setLightboxPhoto(null); }}
           >
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setLightboxPhoto(null);
-                setShowPhotoReactionPicker(null);
               }}
               className="absolute right-4 text-white text-2xl z-10 bg-black/45 hover:bg-black/60 rounded-full w-10 h-10 flex items-center justify-center"
               style={{ top: 'max(1.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
