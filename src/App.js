@@ -307,27 +307,88 @@ function App() {
     if (!destination) return;
     setLocationActionTarget(destination);
   };
-  const handleLocationActionSelect = (service) => {
+  const geocodeDestination = async (destination) => {
+    if (!destination || !window.google?.maps?.Geocoder) return null;
+    try {
+      const geocoder = new window.google.maps.Geocoder();
+      const result = await new Promise((resolve, reject) => {
+        geocoder.geocode({ address: destination }, (results, status) => {
+          if (status === 'OK' && results && results[0]) resolve(results[0]);
+          else reject(new Error(`geocode status: ${status}`));
+        });
+      });
+      const loc = result.geometry?.location;
+      const lat = typeof loc?.lat === 'function' ? loc.lat() : null;
+      const lng = typeof loc?.lng === 'function' ? loc.lng() : null;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      return {
+        lat,
+        lng,
+        formattedAddress: result.formatted_address || destination,
+      };
+    } catch {
+      return null;
+    }
+  };
+  const handleLocationActionSelect = async (service) => {
     const destination = String(locationActionTarget || '').trim();
     if (!destination) return;
     const encoded = encodeURIComponent(destination);
+    const geo = await geocodeDestination(destination);
+    const dropLat = geo ? String(geo.lat) : '';
+    const dropLng = geo ? String(geo.lng) : '';
+    const dropAddress = geo?.formattedAddress || destination;
+    const dropAddressEncoded = encodeURIComponent(dropAddress);
     setLocationActionTarget('');
     if (service === 'uber') {
-      const primary = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encoded}&dropoff[nickname]=Destination`;
-      const fallback = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encoded}`;
-      window.location.href = primary;
+      const appParams = new URLSearchParams({
+        'pickup': 'my_location',
+        'dropoff[formatted_address]': dropAddress,
+        'dropoff[nickname]': 'Destination',
+      });
+      if (dropLat && dropLng) {
+        appParams.set('dropoff[latitude]', dropLat);
+        appParams.set('dropoff[longitude]', dropLng);
+      }
+      const appLink = `uber://riderequest?${appParams.toString()}`;
+      const webParams = new URLSearchParams({
+        action: 'setPickup',
+        pickup: 'my_location',
+        'dropoff[formatted_address]': dropAddress,
+        'dropoff[nickname]': 'Destination',
+      });
+      if (dropLat && dropLng) {
+        webParams.set('dropoff[latitude]', dropLat);
+        webParams.set('dropoff[longitude]', dropLng);
+      }
+      const primary = `https://m.uber.com/ul/?${webParams.toString()}`;
+      window.location.href = appLink;
       setTimeout(() => {
-        if (document.visibilityState === 'visible') window.location.href = fallback;
+        if (document.visibilityState === 'visible') window.location.href = primary;
       }, 900);
       return;
     }
     if (service === 'lyft') {
-      const primary = `https://ride.lyft.com/?id=lyft&pickup=my_location&destination[formatted_address]=${encoded}`;
-      const fallback = `https://ride.lyft.com/?destination[address]=${encoded}`;
-      window.location.href = primary;
+      // Inference: Lyft app URI supports ridetype with destination fields.
+      const appParams = new URLSearchParams({
+        id: 'lyft',
+        pickup: 'my_location',
+        'destination[address]': dropAddress,
+      });
+      if (dropLat && dropLng) {
+        appParams.set('destination[latitude]', dropLat);
+        appParams.set('destination[longitude]', dropLng);
+      }
+      const appLink = `lyft://ridetype?${appParams.toString()}`;
+      const primary = `https://ride.lyft.com/?${appParams.toString()}`;
+      const fallback = `https://ride.lyft.com/?destination[address]=${dropAddressEncoded}`;
+      window.location.href = appLink;
+      setTimeout(() => {
+        if (document.visibilityState === 'visible') window.location.href = primary;
+      }, 900);
       setTimeout(() => {
         if (document.visibilityState === 'visible') window.location.href = fallback;
-      }, 900);
+      }, 1700);
       return;
     }
     const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
