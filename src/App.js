@@ -2629,8 +2629,6 @@ function App() {
     const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
-    const listOwner = primaryListOwnerId ? String(primaryListOwnerId) : '';
-    const eventOwnerIdSet = new Set([me, ...((sharedCalendars || []).map(sc => String(sc.owner_id || '')).filter(Boolean))]);
 
     const isOwnRow = (row) => {
       const rowUserId = row?.user_id ? String(row.user_id) : '';
@@ -2644,8 +2642,6 @@ function App() {
       .channel(`in-app-updates-${me}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'events' }, ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
-        const rowOwnerId = String(row.user_id || '');
-        if (eventOwnerIdSet.size > 0 && rowOwnerId && !eventOwnerIdSet.has(rowOwnerId)) return;
         const who = String(row.created_by || 'Someone');
         addInAppNotification({
           key: `events:${row.id}`,
@@ -2682,7 +2678,6 @@ function App() {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_lists' }, ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
-        if (listOwner && String(row.owner_id || '') !== listOwner) return;
         const who = String(row.created_by || 'Someone');
         const itemText = String(row.text || '').trim();
         const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
@@ -2698,7 +2693,7 @@ function App() {
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, currentUser, subCalendars, sharedCalendars, primaryListOwnerId]);
+  }, [user?.id, user?.email, currentUser, subCalendars]);
 
   // Check notification permission on load
   useEffect(() => {
