@@ -5983,13 +5983,13 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
 const shakeStyle = `
 @keyframes wiggle {
   0%, 100% { transform: rotate(0deg); }
-  20% { transform: rotate(-4deg); }
-  40% { transform: rotate(4deg); }
-  60% { transform: rotate(-3deg); }
-  80% { transform: rotate(3deg); }
+  20% { transform: rotate(-1.5deg) translateX(-0.5px); }
+  40% { transform: rotate(1.5deg) translateX(0.5px); }
+  60% { transform: rotate(-1deg) translateX(-0.5px); }
+  80% { transform: rotate(1deg) translateX(0.5px); }
 }
 .shake-wiggle {
-  animation: wiggle 0.5s ease-in-out infinite;
+  animation: wiggle 0.9s ease-in-out infinite;
   transform-origin: center;
 }
 `;
