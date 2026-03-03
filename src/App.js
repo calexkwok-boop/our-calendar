@@ -274,25 +274,18 @@ function App() {
     const amount = (Number(amountCents) || 0) / 100;
     if (!cleanRecipient || amount <= 0) return;
     const amt = amount.toFixed(2);
-    const appParams = new URLSearchParams({
-      cash_tag: cleanRecipient,
-      amount: amt,
-    });
-    const appDeepLink = `cashapp://pay?${appParams.toString()}`;
-    // Universal fallback: prefer cash.app profile link with amount query.
+    // Universal Cash App links work in Safari and can hand off to the app when available.
     const webFallback = `https://cash.app/$${encodeURIComponent(cleanRecipient)}?amount=${encodeURIComponent(amt)}`;
-    // Secondary fallback used by some clients.
-    const webAlt = `https://cash.app/pay?${appParams.toString()}`;
+    const webAlt = `https://cash.app/pay?cash_tag=${encodeURIComponent(cleanRecipient)}&amount=${encodeURIComponent(amt)}`;
     try {
-      window.location.href = appDeepLink;
+      window.location.href = webFallback;
       setTimeout(() => {
-        window.open(webFallback, '_blank', 'noopener,noreferrer');
-      }, 700);
-      setTimeout(() => {
-        window.open(webAlt, '_blank', 'noopener,noreferrer');
-      }, 1400);
+        if (document.visibilityState === 'visible') {
+          window.location.href = webAlt;
+        }
+      }, 900);
     } catch {
-      window.open(webFallback, '_blank', 'noopener,noreferrer');
+      window.location.href = webFallback;
     }
   };
   const openLocationActionChooser = (location) => {
