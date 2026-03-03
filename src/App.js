@@ -172,15 +172,15 @@ function App() {
   const [photoEventId, setPhotoEventId] = useState(null);
   const [photoDate, setPhotoDate] = useState(null);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
-  const [photoReactions, setPhotoReactions] = useState({}); // { [photoId]: { [emoji]: [userName] } }
-  const [photoReactionsNoteId, setPhotoReactionsNoteId] = useState(null);
-  const [showPhotoReactionPicker, setShowPhotoReactionPicker] = useState(null);
+  const [photoReactions, setPhotoReactions] = useState({}); // unused legacy
+  const [photoReactionsNoteId, setPhotoReactionsNoteId] = useState(null); // unused legacy
+  const [showPhotoReactionPicker, setShowPhotoReactionPicker] = useState(null); // unused legacy
   const [locationActionTarget, setLocationActionTarget] = useState('');
   const photoInputRef = useRef(null);
   const lightboxTapRef = useRef({ id: null, at: 0 });
   const photoDeleteHoldTimerRef = useRef(null);
   const photoTapRef = useRef({ id: null, at: 0, timer: null });
-  const photoReactionHoldSuppressRef = useRef({ id: null, until: 0 });
+  const photoHoldSuppressRef = useRef({ id: null, until: 0 });
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
@@ -731,12 +731,43 @@ function App() {
     }
   };
 
-  const startPhotoReactionHold = (photo) => {
+  const saveSinglePhotoToDevice = async (photo) => {
+    if (!photo?.url) return;
+    try {
+      const res = await fetch(photo.url);
+      if (!res.ok) throw new Error('fetch failed');
+      const blob = await res.blob();
+      const extFromType = blob.type?.split('/')[1] || 'jpg';
+      const file = new File([blob], `photo.${extFromType}`, { type: blob.type || 'image/jpeg' });
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Photo', text: 'Save photo' });
+      } else {
+        const url = URL.createObjectURL(file);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
+      setPhotoUploadError(false);
+      setPhotoUploadMessage('Photo ready to save.');
+    } catch (e) {
+      console.error('Save photo failed:', e);
+      setPhotoUploadError(true);
+      setPhotoUploadMessage('Could not save photo.');
+    }
+  };
+
+  const startPhotoHoldAction = (photo) => {
     if (!photo || isPhotoSelectionMode || photoDeleteMode) return;
     clearPhotoReactionHold();
     photoDeleteHoldTimerRef.current = setTimeout(() => {
-      photoReactionHoldSuppressRef.current = { id: photo.id, until: Date.now() + 500 };
-      setShowPhotoReactionPicker(photo.id);
+      photoHoldSuppressRef.current = { id: photo.id, until: Date.now() + 500 };
+      if (window.confirm('Save this photo to your device?')) {
+        saveSinglePhotoToDevice(photo);
+      }
       clearPhotoReactionHold();
     }, 550);
   };
@@ -748,7 +779,7 @@ function App() {
       return;
     }
     if (photoDeleteMode) return;
-    const suppress = photoReactionHoldSuppressRef.current;
+    const suppress = photoHoldSuppressRef.current;
     if (suppress.id === photo.id && Date.now() < suppress.until) return;
     const now = Date.now();
     const prev = photoTapRef.current;
@@ -758,11 +789,7 @@ function App() {
       setLightboxPhoto(photo);
       return;
     }
-    clearPhotoTapTimer();
-    const timer = setTimeout(() => {
-      photoTapRef.current = { id: null, at: 0, timer: null };
-    }, 260);
-    photoTapRef.current = { id: photo.id, at: now, timer };
+    photoTapRef.current = { id: photo.id, at: now, timer: null };
   };
 
   useEffect(() => () => {
@@ -5570,16 +5597,15 @@ function App() {
                       <div className="grid grid-cols-3 gap-1.5">
                         {photos.map(photo => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
-                          const reactions = photoReactions[photo.id] || {};
                           return (
                           <div
                             key={photo.id}
                             className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer ${isSelectedPhoto ? 'ring-2 ring-purple-500' : ''} ${photoDeleteMode ? 'shake-wiggle' : ''}`}
                             onClick={() => handlePhotoTap(photo)}
-                            onMouseDown={() => startPhotoReactionHold(photo)}
+                            onMouseDown={() => startPhotoHoldAction(photo)}
                             onMouseUp={clearPhotoReactionHold}
                             onMouseLeave={clearPhotoReactionHold}
-                            onTouchStart={() => startPhotoReactionHold(photo)}
+                            onTouchStart={() => startPhotoHoldAction(photo)}
                             onTouchEnd={clearPhotoReactionHold}
                             onTouchCancel={clearPhotoReactionHold}
                           >
@@ -5592,35 +5618,6 @@ function App() {
                             {photo.caption && (
                               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <p className="text-white text-xs truncate">{photo.caption}</p>
-                              </div>
-                            )}
-                            {Object.keys(reactions).length > 0 && (
-                              <div className="absolute left-1 bottom-6 flex flex-wrap gap-1 max-w-[95%]">
-                                {Object.entries(reactions).slice(0, 3).map(([emoji, users]) => (
-                                  <button
-                                    key={emoji}
-                                    onClick={e => { e.stopPropagation(); togglePhotoReaction(photo.id, emoji); }}
-                                    className={`px-1.5 py-0.5 rounded-full text-[10px] backdrop-blur border ${Array.isArray(users) && users.includes(currentUser) ? 'bg-purple-500/80 text-white border-purple-300' : 'bg-black/55 text-white border-white/20'}`}
-                                  >
-                                    {emoji} {Array.isArray(users) ? users.length : 0}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                            {!isPhotoSelectionMode && !photoDeleteMode && showPhotoReactionPicker === photo.id && (
-                              <div
-                                className="absolute left-1 right-1 bottom-10 z-20 rounded-xl bg-black/70 p-1.5 flex flex-wrap gap-1"
-                                onClick={e => e.stopPropagation()}
-                              >
-                                {REACTION_EMOJIS.map(emoji => (
-                                  <button
-                                    key={emoji}
-                                    onClick={async () => { await togglePhotoReaction(photo.id, emoji); setShowPhotoReactionPicker(null); }}
-                                    className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/30 text-sm"
-                                  >
-                                    {emoji}
-                                  </button>
-                                ))}
                               </div>
                             )}
                             {!isPhotoSelectionMode && photoDeleteMode && (
@@ -5677,7 +5674,6 @@ function App() {
                       <div className="space-y-4">
                         {photos.map(photo => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
-                          const reactions = photoReactions[photo.id] || {};
                           return (
                           <div key={photo.id} className={`relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'} ${photoDeleteMode ? 'shake-wiggle' : ''}`}>
                             <img
@@ -5685,10 +5681,10 @@ function App() {
                               alt={photo.caption || ''}
                               className="w-full max-h-72 object-cover cursor-pointer"
                               onClick={() => handlePhotoTap(photo)}
-                              onMouseDown={() => startPhotoReactionHold(photo)}
+                              onMouseDown={() => startPhotoHoldAction(photo)}
                               onMouseUp={clearPhotoReactionHold}
                               onMouseLeave={clearPhotoReactionHold}
-                              onTouchStart={() => startPhotoReactionHold(photo)}
+                              onTouchStart={() => startPhotoHoldAction(photo)}
                               onTouchEnd={clearPhotoReactionHold}
                               onTouchCancel={clearPhotoReactionHold}
                             />
@@ -5706,19 +5702,6 @@ function App() {
                               <div>
                                 {photo.caption && <p className="text-sm text-gray-800 dark:text-gray-200 mb-0.5">{photo.caption}</p>}
                                 <p className="text-xs text-gray-400 dark:text-gray-500">📷 {photo.uploaded_by}</p>
-                                {!isPhotoSelectionMode && (
-                                  <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                                    {Object.entries(reactions).map(([emoji, users]) => (
-                                      <button
-                                        key={emoji}
-                                        onClick={() => togglePhotoReaction(photo.id, emoji)}
-                                        className={`px-1.5 py-0.5 rounded-full text-[11px] border ${Array.isArray(users) && users.includes(currentUser) ? 'bg-purple-100 dark:bg-purple-900/40 border-purple-300 text-purple-700 dark:text-purple-300' : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300'}`}
-                                      >
-                                        {emoji} {Array.isArray(users) ? users.length : 0}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
                               </div>
                               {!isPhotoSelectionMode && photoDeleteMode && <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Delete mode</span>}
                             </div>
@@ -5729,21 +5712,6 @@ function App() {
                               >
                                 ✕
                               </button>
-                            )}
-                            {!isPhotoSelectionMode && !photoDeleteMode && showPhotoReactionPicker === photo.id && (
-                              <div className="px-3 pb-2">
-                                <div className="rounded-xl bg-gray-100 dark:bg-gray-700 p-1.5 flex flex-wrap gap-1">
-                                  {REACTION_EMOJIS.map(emoji => (
-                                    <button
-                                      key={emoji}
-                                      onClick={async () => { await togglePhotoReaction(photo.id, emoji); setShowPhotoReactionPicker(null); }}
-                                      className="w-7 h-7 rounded-full hover:bg-white dark:hover:bg-gray-600 text-sm"
-                                    >
-                                      {emoji}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
                             )}
                           </div>
                         )})}
@@ -5829,47 +5797,11 @@ function App() {
               src={lightboxPhoto.url}
               alt={lightboxPhoto.caption || ''}
               className="max-w-full max-h-[80vh] rounded-xl object-contain"
-              onClick={(e) => {
-                e.stopPropagation();
-                const now = Date.now();
-                const last = lightboxTapRef.current;
-                if (last.id === lightboxPhoto.id && now - last.at < 320) {
-                  setShowPhotoReactionPicker(lightboxPhoto.id);
-                }
-                lightboxTapRef.current = { id: lightboxPhoto.id, at: now };
-              }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                setShowPhotoReactionPicker(lightboxPhoto.id);
-              }}
+              onClick={e => e.stopPropagation()}
             />
             <div className="mt-3 text-center" onClick={e => e.stopPropagation()}>
               {lightboxPhoto.caption && <p className="text-white text-sm mb-1">{lightboxPhoto.caption}</p>}
               <p className="text-gray-400 text-xs">📷 {lightboxPhoto.uploaded_by} · {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
-              <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
-                {Object.entries(photoReactions[lightboxPhoto.id] || {}).map(([emoji, users]) => (
-                  <button
-                    key={emoji}
-                    onClick={() => togglePhotoReaction(lightboxPhoto.id, emoji)}
-                    className={`px-2 py-0.5 rounded-full text-xs ${Array.isArray(users) && users.includes(currentUser) ? 'bg-purple-500 text-white' : 'bg-white/20 text-white'}`}
-                  >
-                    {emoji} {Array.isArray(users) ? users.length : 0}
-                  </button>
-                ))}
-              </div>
-              {showPhotoReactionPicker === lightboxPhoto.id && (
-                <div className="mt-2 rounded-xl bg-white/10 p-1.5 flex flex-wrap justify-center gap-1">
-                                {REACTION_EMOJIS.map(emoji => (
-                                  <button
-                                    key={emoji}
-                                    onClick={async () => { await togglePhotoReaction(lightboxPhoto.id, emoji); setShowPhotoReactionPicker(null); }}
-                                    className="w-8 h-8 rounded-full hover:bg-white/20 text-base"
-                                  >
-                                    {emoji}
-                                  </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         )}
