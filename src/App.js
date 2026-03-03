@@ -3943,6 +3943,38 @@ function App() {
           )}
         </div>
 
+        {/* Location sharing quick controls (mobile-friendly placement) */}
+        {(() => {
+          const todayKey = getDateKey(new Date());
+          const sharingWindowOpen = todayKey >= activeSubCalendar.start_date && todayKey <= activeSubCalendar.end_date;
+          const liveLocations = Object.values(memberLocations).filter(
+            loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number'
+          );
+          return (
+            <div className="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">📍 Live Location</div>
+                  <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                    {sharingWindowOpen ? `${liveLocations.length} member${liveLocations.length === 1 ? '' : 's'} sharing now` : 'Available only during trip dates'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const next = !shareMyLocation;
+                    setShareMyLocation(next);
+                    localStorage.setItem('subcal-share-location', next.toString());
+                  }}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareMyLocation && sharingWindowOpen ? 'bg-green-500' : 'bg-gray-300'}`}
+                  title="Share my location with trip members"
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${shareMyLocation && sharingWindowOpen ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Day tabs */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div
