@@ -187,6 +187,23 @@ function App() {
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
   const DELETED_PHOTOS_NOTE_TEXT = '__DELETED_PHOTOS_V1__';
+  const getDeletedPhotosLocalKey = (subCalId) => `subcal-deleted-photos-${subCalId}`;
+  const readLocalDeletedPhotoIds = (subCalId) => {
+    try {
+      const raw = localStorage.getItem(getDeletedPhotosLocalKey(subCalId));
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return Array.from(new Set(parsed.map(id => String(id)).filter(Boolean)));
+    } catch {
+      return [];
+    }
+  };
+  const writeLocalDeletedPhotoIds = (subCalId, ids) => {
+    try {
+      const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
+      localStorage.setItem(getDeletedPhotosLocalKey(subCalId), JSON.stringify(normalized));
+    } catch {}
+  };
   const normalizeIdentityKey = (value) => String(value || '').trim().toLowerCase();
   const getExpenseParticipants = () => {
     const seen = new Set();
@@ -504,6 +521,8 @@ function App() {
     }
     setSubCalTab('itinerary');
     setTripPhotos([]);
+    setDeletedPhotoIds([]);
+    setDeletedPhotosNoteId(null);
     await loadGlobalVenmoHandles();
     await loadGlobalCashAppHandles();
     await loadSubCalendarEvents(sc.id);
@@ -602,7 +621,8 @@ function App() {
       setVenmoHandlesNoteId(loadedVenmoHandlesNoteId);
       setCashAppHandles({ ...globalCashAppHandles, ...loadedCashAppHandles });
       setCashAppHandlesNoteId(loadedCashAppHandlesNoteId);
-      setDeletedPhotoIds(Array.from(new Set(loadedDeletedPhotoIds)));
+      const localDeleted = readLocalDeletedPhotoIds(subCalId);
+      setDeletedPhotoIds(Array.from(new Set([...(loadedDeletedPhotoIds || []).map(id => String(id)), ...localDeleted])));
       setDeletedPhotosNoteId(loadedDeletedPhotosNoteId);
     } catch (e) { console.error(e); }
   };
@@ -710,17 +730,19 @@ function App() {
 
   const removeTripPhotoRecord = async (photo) => {
     try {
-      const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
-      for (const bucket of TRIP_PHOTO_BUCKETS) {
-        const marker = `/object/public/${bucket}/`;
-        const idx = photo.url.indexOf(marker);
-        if (idx === -1) continue;
-        const path = decodeURIComponent(photo.url.slice(idx + marker.length));
-        if (!path) continue;
-        const { error: storageError } = await supabase.storage.from(bucket).remove([path]);
-        if (storageError) console.warn('Storage delete warning:', storageError.message);
-        break;
-      }
+      const removeFromStorage = async () => {
+        const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
+        for (const bucket of TRIP_PHOTO_BUCKETS) {
+          const marker = `/object/public/${bucket}/`;
+          const idx = photo.url.indexOf(marker);
+          if (idx === -1) continue;
+          const path = decodeURIComponent(photo.url.slice(idx + marker.length));
+          if (!path) continue;
+          const { error: storageError } = await supabase.storage.from(bucket).remove([path]);
+          if (storageError) console.warn('Storage delete warning:', storageError.message);
+          break;
+        }
+      };
       const { data: deletedRows, error: dbError } = await supabase
         .from('trip_photos')
         .delete()
@@ -739,6 +761,7 @@ function App() {
         return false;
       }
       setTripPhotos(prev => prev.filter(p => p.id !== photo.id));
+      await removeFromStorage();
       return true;
     } catch (e) {
       console.error('Photo delete failed:', e);
@@ -1242,15 +1265,18 @@ function App() {
 
   const saveDeletedPhotoIds = async (nextDeletedIds) => {
     if (!activeSubCalendar) return false;
+    const subCalId = activeSubCalendar.id;
+    const normalizedDeleted = Array.from(new Set((nextDeletedIds || []).map(id => String(id)).filter(Boolean)));
+    writeLocalDeletedPhotoIds(subCalId, normalizedDeleted);
     const payload = {
-      checklist: JSON.stringify(nextDeletedIds),
+      checklist: JSON.stringify(normalizedDeleted),
     };
     if (deletedPhotosNoteId) {
       const { error } = await supabase.from('sub_calendar_notes').update(payload).eq('id', deletedPhotosNoteId);
       if (error) {
-        setPhotoUploadError(true);
-        setPhotoUploadMessage(`Could not save deleted-photo state: ${error.message}`);
-        return false;
+        setPhotoUploadError(false);
+        setPhotoUploadMessage(`Photo hidden on this device. Could not sync deleted-photo state: ${error.message}`);
+        return true;
       }
       return true;
     }
@@ -1258,16 +1284,16 @@ function App() {
       id: `scdel_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       sub_calendar_id: activeSubCalendar.id,
       text: DELETED_PHOTOS_NOTE_TEXT,
-      checklist: JSON.stringify(nextDeletedIds),
+      checklist: JSON.stringify(normalizedDeleted),
       created_by: currentUser,
       user_id: user?.id,
       created_at: new Date().toISOString(),
     };
     const { error } = await supabase.from('sub_calendar_notes').insert(row);
     if (error) {
-      setPhotoUploadError(true);
-      setPhotoUploadMessage(`Could not save deleted-photo state: ${error.message}`);
-      return false;
+      setPhotoUploadError(false);
+      setPhotoUploadMessage(`Photo hidden on this device. Could not sync deleted-photo state: ${error.message}`);
+      return true;
     }
     setDeletedPhotosNoteId(row.id);
     return true;
@@ -5700,7 +5726,12 @@ function App() {
                             onTouchEnd={clearPhotoReactionHold}
                             onTouchCancel={clearPhotoReactionHold}
                           >
-                            <img src={photo.url} alt={photo.caption || ''} className="w-full h-full object-cover" />
+                            <img
+                              src={photo.url}
+                              alt={photo.caption || ''}
+                              className="w-full h-full object-cover"
+                              onError={() => { markPhotoDeleted(photo.id); }}
+                            />
                             {isPhotoSelectionMode && (
                               <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
                                 <span className={`text-xs ${isSelectedPhoto ? 'text-emerald-300' : 'text-white/70'}`}>{isSelectedPhoto ? '✓' : ''}</span>
@@ -5771,6 +5802,7 @@ function App() {
                               src={photo.url}
                               alt={photo.caption || ''}
                               className="w-full max-h-72 object-cover cursor-pointer"
+                              onError={() => { markPhotoDeleted(photo.id); }}
                               onClick={() => handlePhotoTap(photo)}
                               onMouseDown={() => startPhotoHoldAction(photo)}
                               onMouseUp={clearPhotoReactionHold}
