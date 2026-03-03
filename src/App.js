@@ -124,6 +124,9 @@ function App() {
   const [venmoHandles, setVenmoHandles] = useState({});
   const [venmoHandlesNoteId, setVenmoHandlesNoteId] = useState(null);
   const [globalVenmoHandles, setGlobalVenmoHandles] = useState({});
+  const [cashAppHandles, setCashAppHandles] = useState({});
+  const [cashAppHandlesNoteId, setCashAppHandlesNoteId] = useState(null);
+  const [globalCashAppHandles, setGlobalCashAppHandles] = useState({});
   const [newExpenseDraft, setNewExpenseDraft] = useState({ payer: '', description: '', amount: '' });
   const [expenseError, setExpenseError] = useState('');
   const [newNote, setNewNote] = useState('');
@@ -172,6 +175,7 @@ function App() {
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
+  const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
   const normalizeIdentityKey = (value) => String(value || '').trim().toLowerCase();
   const getExpenseParticipants = () => {
     const seen = new Set();
@@ -205,12 +209,17 @@ function App() {
     const key = normalizeIdentityKey(identity);
     return venmoHandles[key] || globalVenmoHandles[key] || '';
   };
+  const getCashAppHandleForIdentity = (identity) => {
+    const key = normalizeIdentityKey(identity);
+    return cashAppHandles[key] || globalCashAppHandles[key] || '';
+  };
   const canEditVenmoIdentity = (identity) => {
     const mine = normalizeIdentityKey(user?.email || currentUser);
     if (!mine) return false;
     return normalizeIdentityKey(identity) === mine;
   };
   const cleanVenmoHandle = (value) => String(value || '').trim().replace(/^@+/, '').replace(/\s+/g, '');
+  const cleanCashAppHandle = (value) => String(value || '').trim().replace(/^\$+/, '').replace(/\s+/g, '');
   const openVenmoPayment = (recipient, amountCents, note = '') => {
     const cleanRecipient = cleanVenmoHandle(recipient);
     const amount = (Number(amountCents) || 0) / 100;
@@ -223,6 +232,21 @@ function App() {
     });
     const deepLink = `venmo://paycharge?${params.toString()}`;
     const webFallback = `https://venmo.com/?${params.toString()}`;
+    try {
+      window.location.href = deepLink;
+      setTimeout(() => {
+        window.open(webFallback, '_blank', 'noopener,noreferrer');
+      }, 700);
+    } catch {
+      window.open(webFallback, '_blank', 'noopener,noreferrer');
+    }
+  };
+  const openCashAppPayment = (recipient, amountCents) => {
+    const cleanRecipient = cleanCashAppHandle(recipient);
+    const amount = (Number(amountCents) || 0) / 100;
+    if (!cleanRecipient || amount <= 0) return;
+    const deepLink = `cashapp://pay?recipient=$${encodeURIComponent(cleanRecipient)}&amount=${encodeURIComponent(amount.toFixed(2))}`;
+    const webFallback = `https://cash.app/$${encodeURIComponent(cleanRecipient)}?amount=${encodeURIComponent(amount.toFixed(2))}`;
     try {
       window.location.href = deepLink;
       setTimeout(() => {
@@ -308,6 +332,36 @@ function App() {
         });
       });
       setGlobalVenmoHandles(merged);
+    } catch (e) { console.error(e); }
+  };
+
+  const loadGlobalCashAppHandles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sub_calendar_notes')
+        .select('checklist')
+        .eq('text', CASHAPP_HANDLES_NOTE_TEXT)
+        .order('created_at', { ascending: true });
+      if (error) {
+        console.error('Error loading global Cash App handles:', error);
+        return;
+      }
+      const merged = {};
+      (data || []).forEach((row) => {
+        let parsed = {};
+        try {
+          parsed = row?.checklist ? JSON.parse(row.checklist) : {};
+        } catch {
+          parsed = {};
+        }
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return;
+        Object.entries(parsed).forEach(([k, v]) => {
+          const key = normalizeIdentityKey(k);
+          const handle = cleanCashAppHandle(v);
+          if (key && handle) merged[key] = handle;
+        });
+      });
+      setGlobalCashAppHandles(merged);
     } catch (e) { console.error(e); }
   };
 
@@ -411,6 +465,7 @@ function App() {
     setSubCalTab('itinerary');
     setTripPhotos([]);
     await loadGlobalVenmoHandles();
+    await loadGlobalCashAppHandles();
     await loadSubCalendarEvents(sc.id);
     await loadSubCalendarMembers(sc.id);
     await loadSubCalNotes(sc.id);
@@ -453,6 +508,8 @@ function App() {
       let loadedLedgerId = null;
       let loadedVenmoHandles = {};
       let loadedVenmoHandlesNoteId = null;
+      let loadedCashAppHandles = {};
+      let loadedCashAppHandlesNoteId = null;
       (data || []).forEach((n) => {
         let parsedChecklist = [];
         try {
@@ -477,6 +534,18 @@ function App() {
           loadedVenmoHandles = sanitized;
           return;
         }
+        if (n.text === CASHAPP_HANDLES_NOTE_TEXT) {
+          loadedCashAppHandlesNoteId = n.id;
+          const parsed = (parsedChecklist && typeof parsedChecklist === 'object' && !Array.isArray(parsedChecklist)) ? parsedChecklist : {};
+          const sanitized = {};
+          Object.entries(parsed).forEach(([k, v]) => {
+            const key = normalizeIdentityKey(k);
+            const handle = cleanCashAppHandle(v);
+            if (key && handle) sanitized[key] = handle;
+          });
+          loadedCashAppHandles = sanitized;
+          return;
+        }
         visibleNotes.push({ ...n, checklist: parsedChecklist });
       });
       setSubCalNotes(visibleNotes);
@@ -484,6 +553,8 @@ function App() {
       setExpenseLedgerNoteId(loadedLedgerId);
       setVenmoHandles({ ...globalVenmoHandles, ...loadedVenmoHandles });
       setVenmoHandlesNoteId(loadedVenmoHandlesNoteId);
+      setCashAppHandles({ ...globalCashAppHandles, ...loadedCashAppHandles });
+      setCashAppHandlesNoteId(loadedCashAppHandlesNoteId);
     } catch (e) { console.error(e); }
   };
 
@@ -884,6 +955,105 @@ function App() {
     return true;
   };
 
+  const saveCashAppHandles = async (nextHandles) => {
+    if (!activeSubCalendar) return false;
+    const payload = {
+      checklist: JSON.stringify(nextHandles),
+    };
+    if (cashAppHandlesNoteId) {
+      const { error } = await supabase.from('sub_calendar_notes').update(payload).eq('id', cashAppHandlesNoteId);
+      if (error) {
+        setExpenseError(`Could not save Cash App handle: ${error.message}`);
+        return false;
+      }
+      return true;
+    }
+    const row = {
+      id: `sccash_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      sub_calendar_id: activeSubCalendar.id,
+      text: CASHAPP_HANDLES_NOTE_TEXT,
+      checklist: JSON.stringify(nextHandles),
+      created_by: currentUser,
+      user_id: user?.id,
+      created_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('sub_calendar_notes').insert(row);
+    if (error) {
+      setExpenseError(`Could not save Cash App handle: ${error.message}`);
+      return false;
+    }
+    setCashAppHandlesNoteId(row.id);
+    return true;
+  };
+
+  const saveCashAppHandleEverywhere = async (identity, handle) => {
+    const key = normalizeIdentityKey(identity);
+    if (!key || !activeSubCalendar) return false;
+    const cleaned = cleanCashAppHandle(handle);
+    const { data, error } = await supabase
+      .from('sub_calendar_notes')
+      .select('id,sub_calendar_id,checklist')
+      .eq('text', CASHAPP_HANDLES_NOTE_TEXT);
+    if (error) {
+      setExpenseError(`Could not save Cash App handle: ${error.message}`);
+      return false;
+    }
+
+    const rows = data || [];
+    if (rows.length === 0) {
+      if (!cleaned) return true;
+      const initial = { ...globalCashAppHandles, [key]: cleaned };
+      const ok = await saveCashAppHandles(initial);
+      if (!ok) return false;
+      setGlobalCashAppHandles(initial);
+      setCashAppHandles(initial);
+      return true;
+    }
+
+    let foundActiveRow = false;
+    for (const row of rows) {
+      let parsed = {};
+      try {
+        parsed = row?.checklist ? JSON.parse(row.checklist) : {};
+      } catch {
+        parsed = {};
+      }
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) parsed = {};
+      if (cleaned) parsed[key] = cleaned;
+      else delete parsed[key];
+
+      const { error: updateError } = await supabase
+        .from('sub_calendar_notes')
+        .update({ checklist: JSON.stringify(parsed) })
+        .eq('id', row.id);
+      if (updateError) {
+        setExpenseError(`Could not save Cash App handle: ${updateError.message}`);
+        return false;
+      }
+      if (row.sub_calendar_id === activeSubCalendar.id) {
+        foundActiveRow = true;
+        setCashAppHandles(parsed);
+        setCashAppHandlesNoteId(row.id);
+      }
+    }
+
+    if (!foundActiveRow && cleaned) {
+      const nextCurrent = { ...globalCashAppHandles };
+      nextCurrent[key] = cleaned;
+      const ok = await saveCashAppHandles(nextCurrent);
+      if (!ok) return false;
+      setCashAppHandles(nextCurrent);
+    }
+
+    setGlobalCashAppHandles(prev => {
+      const next = { ...prev };
+      if (cleaned) next[key] = cleaned;
+      else delete next[key];
+      return next;
+    });
+    return true;
+  };
+
   const promptSetVenmoHandle = async (identity) => {
     const key = normalizeIdentityKey(identity);
     if (!key) return;
@@ -896,6 +1066,22 @@ function App() {
     if (value === null) return;
     const cleaned = cleanVenmoHandle(value);
     const ok = await saveVenmoHandleEverywhere(identity, cleaned);
+    if (!ok) return;
+    setExpenseError('');
+  };
+
+  const promptSetCashAppHandle = async (identity) => {
+    const key = normalizeIdentityKey(identity);
+    if (!key) return;
+    if (!canEditVenmoIdentity(identity)) {
+      setExpenseError('You can only edit your own Cash App handle.');
+      return;
+    }
+    const currentHandle = getCashAppHandleForIdentity(identity);
+    const value = window.prompt(`Set Cash App cashtag for ${getExpenseDisplayName(identity)} (without $):`, currentHandle);
+    if (value === null) return;
+    const cleaned = cleanCashAppHandle(value);
+    const ok = await saveCashAppHandleEverywhere(identity, cleaned);
     if (!ok) return;
     setExpenseError('');
   };
