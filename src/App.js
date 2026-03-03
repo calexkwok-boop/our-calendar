@@ -5216,27 +5216,40 @@ function App() {
               </div>
 
               <div className="p-3 bg-sky-50 dark:bg-sky-900/20 rounded-xl border border-sky-200 dark:border-sky-700">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">💳 Venmo Handles</h4>
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">💳 Payment Handles</h4>
                 <div className="space-y-1.5">
                   {sortedParticipants.map(name => {
-                    const handle = getVenmoHandleForIdentity(name);
+                    const venmoHandle = getVenmoHandleForIdentity(name);
+                    const cashHandle = getCashAppHandleForIdentity(name);
                     const canEdit = canEditVenmoIdentity(name);
                     return (
-                      <div key={`venmo-${name}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-sky-100 dark:border-sky-800 px-2.5 py-1.5">
-                        <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(name)}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-500 dark:text-gray-300">{handle ? `@${handle}` : 'Not set'}</span>
+                      <div key={`payment-${name}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-sky-100 dark:border-sky-800 px-2.5 py-1.5">
+                        <span className="text-gray-700 dark:text-gray-200 min-w-0 truncate">{getExpenseDisplayName(name)}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-gray-500 dark:text-gray-300">Venmo: {venmoHandle ? `@${venmoHandle}` : 'Not set'}</span>
                           {canEdit ? (
                             <button
                               onClick={() => promptSetVenmoHandle(name)}
                               className="px-2 py-0.5 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium"
                             >
-                              {handle ? 'Edit' : 'Set'}
+                              {venmoHandle ? 'Edit' : 'Set'}
                             </button>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300">Only they can edit</span>
-                          )}
+                          ) : null}
                         </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-gray-500 dark:text-gray-300">Cash App: {cashHandle ? `$${cashHandle}` : 'Not set'}</span>
+                          {canEdit ? (
+                            <button
+                              onClick={() => promptSetCashAppHandle(name)}
+                              className="px-2 py-0.5 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white font-medium"
+                            >
+                              {cashHandle ? 'Edit' : 'Set'}
+                            </button>
+                          ) : null}
+                        </div>
+                        {!canEdit && (
+                          <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300">Only they can edit</span>
+                        )}
                       </div>
                     );
                   })}
@@ -5251,6 +5264,7 @@ function App() {
                   <div className="space-y-1.5">
                     {settlements.map((s, idx) => {
                       const venmoHandle = getVenmoHandleForIdentity(s.to);
+                      const cashHandle = getCashAppHandleForIdentity(s.to);
                       return (
                         <div key={`${s.from}-${s.to}-${idx}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-indigo-100 dark:border-indigo-800 px-2.5 py-1.5">
                           <div className="min-w-0">
@@ -5258,18 +5272,28 @@ function App() {
                             <span className="text-indigo-500 dark:text-indigo-300 font-semibold"> pays ${(s.amount / 100).toFixed(2)} </span>
                             <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.to)}</span>
                           </div>
-                          <button
-                            onClick={() => openVenmoPayment(
-                              venmoHandle,
-                              s.amount,
-                              `${getExpenseDisplayName(s.from)} pays ${getExpenseDisplayName(s.to)} for ${activeSubCalendar?.name || 'trip'}`
-                            )}
-                            disabled={!venmoHandle}
-                            className="shrink-0 px-2.5 py-1 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                            title={venmoHandle ? `Pay @${venmoHandle}` : `${getExpenseDisplayName(s.to)} has not set a Venmo handle yet`}
-                          >
-                            {venmoHandle ? 'Pay in Venmo' : 'No Venmo'}
-                          </button>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={() => openVenmoPayment(
+                                venmoHandle,
+                                s.amount,
+                                `${getExpenseDisplayName(s.from)} pays ${getExpenseDisplayName(s.to)} for ${activeSubCalendar?.name || 'trip'}`
+                              )}
+                              disabled={!venmoHandle}
+                              className="px-2.5 py-1 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={venmoHandle ? `Pay @${venmoHandle}` : `${getExpenseDisplayName(s.to)} has not set a Venmo handle yet`}
+                            >
+                              {venmoHandle ? 'Venmo' : 'No Venmo'}
+                            </button>
+                            <button
+                              onClick={() => openCashAppPayment(cashHandle, s.amount)}
+                              disabled={!cashHandle}
+                              className="px-2.5 py-1 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={cashHandle ? `Pay $${cashHandle}` : `${getExpenseDisplayName(s.to)} has not set a Cash App handle yet`}
+                            >
+                              {cashHandle ? 'Cash App' : 'No Cash App'}
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
