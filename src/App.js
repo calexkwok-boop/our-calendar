@@ -309,14 +309,27 @@ function App() {
     const destination = String(locationActionTarget || '').trim();
     if (!destination) return;
     const encoded = encodeURIComponent(destination);
-    let url = `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
-    if (service === 'uber') {
-      url = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encoded}`;
-    } else if (service === 'lyft') {
-      url = `https://ride.lyft.com/?destination[formatted_address]=${encoded}`;
-    }
     setLocationActionTarget('');
-    window.open(url, '_blank', 'noopener,noreferrer');
+    if (service === 'uber') {
+      const primary = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encoded}&dropoff[nickname]=Destination`;
+      const fallback = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encoded}`;
+      window.location.href = primary;
+      setTimeout(() => {
+        if (document.visibilityState === 'visible') window.location.href = fallback;
+      }, 900);
+      return;
+    }
+    if (service === 'lyft') {
+      const primary = `https://ride.lyft.com/?id=lyft&pickup=my_location&destination[formatted_address]=${encoded}`;
+      const fallback = `https://ride.lyft.com/?destination[address]=${encoded}`;
+      window.location.href = primary;
+      setTimeout(() => {
+        if (document.visibilityState === 'visible') window.location.href = fallback;
+      }, 900);
+      return;
+    }
+    const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
+    window.open(googleUrl, '_blank', 'noopener,noreferrer');
   };
 
   // ── Sub-calendar functions ──────────────────────────────────────────────
