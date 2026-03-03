@@ -257,6 +257,24 @@ function App() {
     const universalUrl = `https://cash.app/$${encodeURIComponent(cleanRecipient)}?amount=${encodeURIComponent(amount.toFixed(2))}`;
     window.location.href = universalUrl;
   };
+  const openLocationActionChooser = (location) => {
+    const destination = String(location || '').trim();
+    if (!destination) return;
+    const encoded = encodeURIComponent(destination);
+    const choice = window.prompt(
+      'Choose an option:\n1) Google Maps directions\n2) Uber\n3) Lyft',
+      '1'
+    );
+    if (choice === null) return;
+    const normalized = String(choice).trim().toLowerCase();
+    let url = `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
+    if (normalized === '2' || normalized === 'uber') {
+      url = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encoded}`;
+    } else if (normalized === '3' || normalized === 'lyft') {
+      url = `https://ride.lyft.com/?destination[formatted_address]=${encoded}`;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   // ── Sub-calendar functions ──────────────────────────────────────────────
 
@@ -4166,15 +4184,16 @@ function App() {
                             </div>
                             <div className="font-medium mb-1 text-gray-900 dark:text-white">{event.title}</div>
                             {event.location && (
-                              <a
-                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                type="button"
                                 className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 mb-1"
-                                onClick={e => e.stopPropagation()}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  openLocationActionChooser(event.location);
+                                }}
                               >
                                 📍 {event.location}
-                              </a>
+                              </button>
                             )}
                             {event.createdBy && (
                               <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
@@ -4927,13 +4946,14 @@ function App() {
                                   )}
                                   {event.notes && <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 italic">{event.notes}</div>}
                                   {event.location && (
-                                    <a
-                                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
+                                    <button
+                                      type="button"
                                       className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 mt-0.5"
-                                      onClick={e => e.stopPropagation()}
-                                    >📍 {event.location}</a>
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                        openLocationActionChooser(event.location);
+                                      }}
+                                    >📍 {event.location}</button>
                                   )}
                                   {getEventPhotos(event.id).length > 0 && (
                                     <button
