@@ -597,13 +597,16 @@ function App() {
         .eq('sub_calendar_id', subCalId)
         .order('created_at', { ascending: true });
       if (error) { console.error('Error loading photos:', error); return; }
-      setTripPhotos(data || []);
+      const deletedSet = new Set((deletedPhotoIds || []).map(id => String(id)));
+      const filtered = (data || []).filter(p => !deletedSet.has(String(p.id)));
+      setTripPhotos(filtered);
     } catch (e) { console.error(e); }
   };
 
   useEffect(() => {
     if (!deletedPhotoIds || deletedPhotoIds.length === 0) return;
-    setTripPhotos(prev => prev.filter(p => !deletedPhotoIds.includes(p.id)));
+    const deletedSet = new Set((deletedPhotoIds || []).map(id => String(id)));
+    setTripPhotos(prev => prev.filter(p => !deletedSet.has(String(p.id))));
   }, [deletedPhotoIds]);
 
   const uploadTripPhoto = async (file, caption, eventId, date) => {
@@ -700,8 +703,12 @@ function App() {
         if (storageError) console.warn('Storage delete warning:', storageError.message);
         break;
       }
-      const { error: dbError } = await supabase.from('trip_photos').delete().eq('id', photo.id);
-      if (dbError) {
+      const { data: deletedRows, error: dbError } = await supabase
+        .from('trip_photos')
+        .delete()
+        .eq('id', photo.id)
+        .select('id');
+      if (dbError || !Array.isArray(deletedRows) || deletedRows.length === 0) {
         const fallbackOk = await markPhotoDeleted(photo.id);
         if (fallbackOk) {
           setPhotoUploadError(false);
@@ -709,7 +716,8 @@ function App() {
           return true;
         }
         setPhotoUploadError(true);
-        setPhotoUploadMessage(`Could not delete photo: ${dbError.message}`);
+        if (dbError) setPhotoUploadMessage(`Could not delete photo: ${dbError.message}`);
+        else setPhotoUploadMessage('Could not delete photo from database; saved local hidden state instead.');
         return false;
       }
       setTripPhotos(prev => prev.filter(p => p.id !== photo.id));
@@ -1249,11 +1257,11 @@ function App() {
 
   const markPhotoDeleted = async (photoId) => {
     if (!photoId) return false;
-    const nextDeleted = Array.from(new Set([...(deletedPhotoIds || []), photoId]));
+    const nextDeleted = Array.from(new Set([...(deletedPhotoIds || []).map(id => String(id)), String(photoId)]));
     const ok = await saveDeletedPhotoIds(nextDeleted);
     if (!ok) return false;
     setDeletedPhotoIds(nextDeleted);
-    setTripPhotos(prev => prev.filter(p => p.id !== photoId));
+    setTripPhotos(prev => prev.filter(p => String(p.id) !== String(photoId)));
     return true;
   };
 
