@@ -370,10 +370,27 @@ function App() {
         webParams.set('dropoff[longitude]', dropLng);
       }
       const primary = `https://m.uber.com/ul/?${webParams.toString()}`;
+      let handedOff = false;
+      let timer = null;
+      const cleanup = () => {
+        window.removeEventListener('blur', onHidden);
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+        if (timer) clearTimeout(timer);
+      };
+      const onHidden = () => {
+        handedOff = true;
+        cleanup();
+      };
+      const onVisibilityChange = () => {
+        if (document.visibilityState === 'hidden') onHidden();
+      };
+      window.addEventListener('blur', onHidden);
+      document.addEventListener('visibilitychange', onVisibilityChange);
       window.location.href = appLink;
-      setTimeout(() => {
-        if (document.visibilityState === 'visible') window.location.href = primary;
-      }, 900);
+      timer = setTimeout(() => {
+        cleanup();
+        if (!handedOff && document.visibilityState === 'visible') window.location.href = primary;
+      }, 1600);
       return;
     }
     if (service === 'lyft') {
