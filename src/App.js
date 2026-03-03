@@ -96,6 +96,8 @@ function App() {
   const [notifyOneHour, setNotifyOneHour] = useState(false);
   const [notifyAtEventTime, setNotifyAtEventTime] = useState(true);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [inAppNotifications, setInAppNotifications] = useState([]);
+  const seenInAppNotificationKeysRef = useRef(new Set());
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
@@ -2504,6 +2506,104 @@ function App() {
     loadSharedListItems(primaryListOwnerId, selectedSharedListId);
   }, [primaryListOwnerId, selectedSharedListId]);
 
+  useEffect(() => {
+    if (!user?.id) {
+      seenInAppNotificationKeysRef.current = new Set();
+      setInAppNotifications([]);
+      return;
+    }
+    const storageKey = `in-app-notifications-${user.id}`;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const normalized = Array.isArray(parsed) ? parsed.slice(0, 75).map(item => ({
+        id: item.id || `ian_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        key: String(item.key || ''),
+        type: item.type || 'update',
+        message: item.message || '',
+        createdAt: item.createdAt || new Date().toISOString(),
+        read: Boolean(item.read),
+      })).filter(item => item.key && item.message) : [];
+      seenInAppNotificationKeysRef.current = new Set(normalized.map(item => item.key));
+      setInAppNotifications(normalized);
+    } catch {
+      seenInAppNotificationKeysRef.current = new Set();
+      setInAppNotifications([]);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const storageKey = `in-app-notifications-${user.id}`;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(inAppNotifications.slice(0, 75)));
+    } catch {}
+  }, [user?.id, inAppNotifications]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const me = String(user.id);
+    const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
+    const subCalNameMap = {};
+    (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
+    const listOwner = primaryListOwnerId ? String(primaryListOwnerId) : '';
+
+    const isOwnRow = (row) => {
+      const rowUserId = row?.user_id ? String(row.user_id) : '';
+      const rowCreatedBy = String(row?.created_by || '').trim().toLowerCase();
+      const myEmail = String(user?.email || '').trim().toLowerCase();
+      const myName = String(currentUser || '').trim().toLowerCase();
+      return (rowUserId && rowUserId === me) || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName));
+    };
+
+    const updatesChannel = supabase
+      .channel(`in-app-updates-${me}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sub_calendar_events' }, ({ new: row }) => {
+        if (!row || isOwnRow(row)) return;
+        const subCalId = String(row.sub_calendar_id || '');
+        if (subCalIdSet.size > 0 && !subCalIdSet.has(subCalId)) return;
+        const who = String(row.created_by || 'Someone');
+        const tripName = subCalNameMap[subCalId] || 'trip';
+        addInAppNotification({
+          key: `sub_calendar_events:${row.id}`,
+          type: 'event',
+          message: `${who} added "${row.title || 'an event'}" in ${tripName}.`,
+          createdAt: row.created_at,
+        });
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_photos' }, ({ new: row }) => {
+        if (!row || isOwnRow(row)) return;
+        const subCalId = String(row.sub_calendar_id || '');
+        if (subCalIdSet.size > 0 && !subCalIdSet.has(subCalId)) return;
+        const who = String(row.uploaded_by || row.created_by || 'Someone');
+        const tripName = subCalNameMap[subCalId] || 'trip';
+        addInAppNotification({
+          key: `trip_photos:${row.id}`,
+          type: 'photo',
+          message: `${who} added a photo in ${tripName}.`,
+          createdAt: row.created_at,
+        });
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_lists' }, ({ new: row }) => {
+        if (!row || isOwnRow(row)) return;
+        if (listOwner && String(row.owner_id || '') !== listOwner) return;
+        const who = String(row.created_by || 'Someone');
+        const itemText = String(row.text || '').trim();
+        const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
+        addInAppNotification({
+          key: `shared_lists:${row.id}`,
+          type: 'list',
+          message: `${who} added "${preview || 'a list item'}" to the list.`,
+          createdAt: row.created_at,
+        });
+      })
+      .subscribe();
+
+    return () => {
+      updatesChannel.unsubscribe();
+    };
+  }, [user?.id, user?.email, currentUser, subCalendars, primaryListOwnerId]);
+
   // Check notification permission on load
   useEffect(() => {
     if ('Notification' in window) setNotificationPermission(Notification.permission);
@@ -2540,6 +2640,33 @@ function App() {
     const next = !currentValue;
     setter(next);
     await window.storage.set(key, next.toString(), false);
+  };
+
+  const addInAppNotification = ({ key, type, message, createdAt }) => {
+    if (!key || !message) return;
+    const normalizedKey = String(key);
+    if (seenInAppNotificationKeysRef.current.has(normalizedKey)) return;
+    seenInAppNotificationKeysRef.current.add(normalizedKey);
+    setInAppNotifications(prev => {
+      if (prev.some(n => n.key === normalizedKey)) return prev;
+      const next = [{
+        id: `ian_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        key: normalizedKey,
+        type: type || 'update',
+        message,
+        createdAt: createdAt || new Date().toISOString(),
+        read: false,
+      }, ...prev];
+      return next.slice(0, 75);
+    });
+  };
+
+  const markInAppNotificationRead = (notificationId) => {
+    setInAppNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
+  };
+
+  const markAllInAppNotificationsRead = () => {
+    setInAppNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
   const sendTestNotification = () => {
@@ -3246,6 +3373,8 @@ function App() {
     );
   }
 
+  const unreadInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 0 : 1), 0);
+
   return (
     <>
     <style>{shakeStyle}</style>
@@ -3301,10 +3430,15 @@ function App() {
               </button>
               <button
                 onClick={() => setShowNotificationSettings(!showNotificationSettings)}
-                className={`p-2 rounded-xl transition-all duration-200 ${notificationsEnabled ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                className={`relative p-2 rounded-xl transition-all duration-200 ${notificationsEnabled ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
                 title={notificationsEnabled ? 'Notifications enabled' : 'Enable notifications'}
               >
                 {notificationsEnabled ? <Bell className="w-4 h-4 sm:w-5 sm:h-5" /> : <BellOff className="w-4 h-4 sm:w-5 sm:h-5" />}
+                {unreadInAppCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                    {unreadInAppCount > 99 ? '99+' : unreadInAppCount}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setShowListPanel(!showListPanel)}
@@ -3389,6 +3523,45 @@ function App() {
               </button>
             </div>
             <div className="space-y-4">
+              <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-indigo-600" />
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">In-App Updates</span>
+                    {unreadInAppCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">{unreadInAppCount}</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={markAllInAppNotificationsRead}
+                    disabled={unreadInAppCount === 0}
+                    className="px-2 py-1 rounded-md text-xs font-medium bg-indigo-500 hover:bg-indigo-600 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Mark all read
+                  </button>
+                </div>
+                <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                  {inAppNotifications.length === 0 ? (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 italic">No updates yet.</p>
+                  ) : (
+                    inAppNotifications.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => markInAppNotificationRead(item.id)}
+                        className={`w-full text-left rounded-lg border px-2.5 py-2 transition-colors ${item.read ? 'bg-white/70 dark:bg-gray-800 border-indigo-100 dark:border-indigo-800' : 'bg-white dark:bg-gray-800 border-indigo-300 dark:border-indigo-600'}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className={`text-xs ${item.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-800 dark:text-gray-100 font-medium'}`}>{item.message}</span>
+                          {!item.read && <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1" />}
+                        </div>
+                        <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                          {new Date(item.createdAt).toLocaleString()}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
               <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
