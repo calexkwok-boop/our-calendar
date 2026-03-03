@@ -166,6 +166,7 @@ function App() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUploadMessage, setPhotoUploadMessage] = useState('');
   const [photoUploadError, setPhotoUploadError] = useState(false);
+  const [photoDeleteMode, setPhotoDeleteMode] = useState(false);
   const [isPhotoSelectionMode, setIsPhotoSelectionMode] = useState(false);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState([]);
   const [photoEventId, setPhotoEventId] = useState(null);
@@ -177,7 +178,7 @@ function App() {
   const photoInputRef = useRef(null);
   const lightboxTapRef = useRef({ id: null, at: 0 });
   const photoDeleteHoldTimerRef = useRef(null);
-  const photoDeleteSuppressRef = useRef({ id: null, until: 0 });
+  const photoTapRef = useRef({ id: null, at: 0, timer: null });
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
@@ -721,17 +722,51 @@ function App() {
     }
   };
 
-  const startPhotoDeleteHold = (photo) => {
-    if (!photo || isPhotoSelectionMode) return;
-    clearPhotoDeleteHold();
-    photoDeleteHoldTimerRef.current = setTimeout(() => {
-      photoDeleteSuppressRef.current = { id: photo.id, until: Date.now() + 700 };
-      deleteTripPhoto(photo);
-      clearPhotoDeleteHold();
-    }, 650);
+  const clearPhotoTapTimer = () => {
+    if (photoTapRef.current.timer) {
+      clearTimeout(photoTapRef.current.timer);
+      photoTapRef.current.timer = null;
+    }
   };
 
-  useEffect(() => () => clearPhotoDeleteHold(), []);
+  const startPhotoDeleteHold = () => {
+    if (isPhotoSelectionMode || photoDeleteMode) return;
+    clearPhotoDeleteHold();
+    photoDeleteHoldTimerRef.current = setTimeout(() => {
+      setPhotoDeleteMode(true);
+      setShowPhotoReactionPicker(null);
+      clearPhotoDeleteHold();
+    }, 550);
+  };
+
+  const handlePhotoTap = (photo) => {
+    if (!photo) return;
+    if (isPhotoSelectionMode) {
+      toggleSelectedPhoto(photo.id);
+      return;
+    }
+    if (photoDeleteMode) return;
+    const now = Date.now();
+    const prev = photoTapRef.current;
+    if (prev.id === photo.id && now - prev.at < 300) {
+      clearPhotoTapTimer();
+      photoTapRef.current = { id: null, at: 0, timer: null };
+      setShowPhotoReactionPicker(photo.id);
+      return;
+    }
+    clearPhotoTapTimer();
+    const timer = setTimeout(() => {
+      setShowPhotoReactionPicker(null);
+      setLightboxPhoto(photo);
+      photoTapRef.current = { id: null, at: 0, timer: null };
+    }, 230);
+    photoTapRef.current = { id: photo.id, at: now, timer };
+  };
+
+  useEffect(() => () => {
+    clearPhotoDeleteHold();
+    clearPhotoTapTimer();
+  }, []);
 
   const toggleSelectedPhoto = (photoId) => {
     setSelectedPhotoIds(prev => prev.includes(photoId) ? prev.filter(id => id !== photoId) : [...prev, photoId]);
@@ -5427,7 +5462,7 @@ function App() {
             <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3">
               <button
                 onClick={() => photoInputRef.current?.click()}
-                disabled={uploadingPhoto || isPhotoSelectionMode}
+                disabled={uploadingPhoto || isPhotoSelectionMode || photoDeleteMode}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl text-sm font-medium shadow hover:shadow-lg transition-all disabled:opacity-50"
               >
                 {uploadingPhoto ? '⏳ Uploading…' : '📷 Add Photos'}
@@ -5458,9 +5493,17 @@ function App() {
                     Done
                   </button>
                 </>
+              ) : photoDeleteMode ? (
+                <button
+                  onClick={() => { setPhotoDeleteMode(false); setShowPhotoReactionPicker(null); }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                >
+                  Done
+                </button>
               ) : (
                 <button
                   onClick={() => {
+                    setPhotoDeleteMode(false);
                     setIsPhotoSelectionMode(true);
                     setSelectedPhotoIds([]);
                   }}
@@ -5517,20 +5560,12 @@ function App() {
                           return (
                           <div
                             key={photo.id}
-                            className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer ${isSelectedPhoto ? 'ring-2 ring-purple-500' : ''}`}
-                            onClick={() => {
-                              if (isPhotoSelectionMode) {
-                                toggleSelectedPhoto(photo.id);
-                                return;
-                              }
-                              const s = photoDeleteSuppressRef.current;
-                              if (s.id === photo.id && Date.now() < s.until) return;
-                              setLightboxPhoto(photo);
-                            }}
-                            onMouseDown={() => startPhotoDeleteHold(photo)}
+                            className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer ${isSelectedPhoto ? 'ring-2 ring-purple-500' : ''} ${photoDeleteMode ? 'shake-wiggle' : ''}`}
+                            onClick={() => handlePhotoTap(photo)}
+                            onMouseDown={() => startPhotoDeleteHold()}
                             onMouseUp={clearPhotoDeleteHold}
                             onMouseLeave={clearPhotoDeleteHold}
-                            onTouchStart={() => startPhotoDeleteHold(photo)}
+                            onTouchStart={() => startPhotoDeleteHold()}
                             onTouchEnd={clearPhotoDeleteHold}
                             onTouchCancel={clearPhotoDeleteHold}
                           >
@@ -5557,6 +5592,30 @@ function App() {
                                   </button>
                                 ))}
                               </div>
+                            )}
+                            {!isPhotoSelectionMode && !photoDeleteMode && showPhotoReactionPicker === photo.id && (
+                              <div
+                                className="absolute left-1 right-1 bottom-10 z-20 rounded-xl bg-black/70 p-1.5 flex flex-wrap gap-1"
+                                onClick={e => e.stopPropagation()}
+                              >
+                                {REACTION_EMOJIS.map(emoji => (
+                                  <button
+                                    key={emoji}
+                                    onClick={async () => { await togglePhotoReaction(photo.id, emoji); setShowPhotoReactionPicker(null); }}
+                                    className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/30 text-sm"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {!isPhotoSelectionMode && photoDeleteMode && (
+                              <button
+                                onClick={e => { e.stopPropagation(); deleteTripPhoto(photo); }}
+                                className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center shadow"
+                              >
+                                ✕
+                              </button>
                             )}
                             <div className="absolute bottom-1 left-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                               <span className="bg-black/50 text-white px-1.5 py-0.5 rounded-full text-xs">{photo.uploaded_by}</span>
@@ -5606,24 +5665,16 @@ function App() {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
                           const reactions = photoReactions[photo.id] || {};
                           return (
-                          <div key={photo.id} className={`bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'}`}>
+                          <div key={photo.id} className={`relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'} ${photoDeleteMode ? 'shake-wiggle' : ''}`}>
                             <img
                               src={photo.url}
                               alt={photo.caption || ''}
                               className="w-full max-h-72 object-cover cursor-pointer"
-                              onClick={() => {
-                                if (isPhotoSelectionMode) {
-                                  toggleSelectedPhoto(photo.id);
-                                  return;
-                                }
-                                const s = photoDeleteSuppressRef.current;
-                                if (s.id === photo.id && Date.now() < s.until) return;
-                                setLightboxPhoto(photo);
-                              }}
-                              onMouseDown={() => startPhotoDeleteHold(photo)}
+                              onClick={() => handlePhotoTap(photo)}
+                              onMouseDown={() => startPhotoDeleteHold()}
                               onMouseUp={clearPhotoDeleteHold}
                               onMouseLeave={clearPhotoDeleteHold}
-                              onTouchStart={() => startPhotoDeleteHold(photo)}
+                              onTouchStart={() => startPhotoDeleteHold()}
                               onTouchEnd={clearPhotoDeleteHold}
                               onTouchCancel={clearPhotoDeleteHold}
                             />
@@ -5655,8 +5706,31 @@ function App() {
                                   </div>
                                 )}
                               </div>
-                              {!isPhotoSelectionMode && <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Hold to delete</span>}
+                              {!isPhotoSelectionMode && photoDeleteMode && <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Delete mode</span>}
                             </div>
+                            {!isPhotoSelectionMode && photoDeleteMode && (
+                              <button
+                                onClick={() => deleteTripPhoto(photo)}
+                                className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow"
+                              >
+                                ✕
+                              </button>
+                            )}
+                            {!isPhotoSelectionMode && !photoDeleteMode && showPhotoReactionPicker === photo.id && (
+                              <div className="px-3 pb-2">
+                                <div className="rounded-xl bg-gray-100 dark:bg-gray-700 p-1.5 flex flex-wrap gap-1">
+                                  {REACTION_EMOJIS.map(emoji => (
+                                    <button
+                                      key={emoji}
+                                      onClick={async () => { await togglePhotoReaction(photo.id, emoji); setShowPhotoReactionPicker(null); }}
+                                      className="w-7 h-7 rounded-full hover:bg-white dark:hover:bg-gray-600 text-sm"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )})}
                         {!isPhotoSelectionMode && (
