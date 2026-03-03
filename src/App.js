@@ -824,6 +824,7 @@ function App() {
         caption: caption || null,
         uploaded_by: currentUser,
         user_id: user.id,
+        created_at: new Date().toISOString(),
       };
       const { error: dbError } = await supabase.from('trip_photos').insert(photo);
       if (dbError) {
@@ -833,11 +834,6 @@ function App() {
         return false;
       }
       setTripPhotos(prev => [...prev, photo]);
-      addInAppNotification({
-        key: `trip_photos:${photo.id}`,
-        type: 'photo',
-        message: `You added a photo in ${activeSubCalendar?.name || 'trip'}.`,
-      });
       setPhotoUploadError(false);
       setPhotoUploadMessage(`Uploaded: ${file.name}`);
       return true;
@@ -1609,11 +1605,6 @@ function App() {
         location: location || null,
       }]
     }));
-    addInAppNotification({
-      key: `sub_calendar_events:${id}`,
-      type: 'event',
-      message: `You added "${newEvent.title}" in ${activeSubCalendar?.name || 'trip'}.`,
-    });
   };
 
   const updateSubCalEvent = async (eventId, updates) => {
@@ -2281,12 +2272,6 @@ function App() {
     setListError('');
     setSharedListItems(prev => [...prev, { ...(data || payload), done: false }]);
     setNewListItemText('');
-    addInAppNotification({
-      key: `shared_lists:${data?.id || payload.list_id}:${payload.text}`,
-      type: 'list',
-      message: `You added "${payload.text}" to the list.`,
-      createdAt: data?.created_at,
-    });
   };
 
   const toggleSharedListItem = async (item) => {
@@ -2842,11 +2827,13 @@ function App() {
             .from('trip_photos')
             .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at')
             .in('sub_calendar_id', subCalIds)
-            .gt('created_at', inAppSyncCursorRef.current.tripPhotos || new Date(Date.now() - (5 * 60 * 1000)).toISOString())
-            .order('created_at', { ascending: true })
+            .order('created_at', { ascending: false, nullsFirst: false })
             .limit(200);
+          const photoCutoff = Date.now() - (24 * 60 * 60 * 1000);
           (tripPhotoRows || []).forEach(row => {
             if (isOwnRow(row)) return;
+            const createdAtMs = row?.created_at ? Date.parse(row.created_at) : null;
+            if (Number.isFinite(createdAtMs) && createdAtMs < photoCutoff) return;
             const subCalId = String(row.sub_calendar_id || '');
             const who = String(row.uploaded_by || row.created_by || 'Someone');
             addInAppNotification({
@@ -2936,6 +2923,10 @@ function App() {
 
   const markInAppNotificationRead = (notificationId) => {
     setInAppNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
+  };
+
+  const deleteInAppNotification = (notificationId) => {
+    setInAppNotifications(prev => prev.filter(n => n.id !== notificationId));
   };
 
   const markAllInAppNotificationsRead = () => {
@@ -3825,7 +3816,18 @@ function App() {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <span className={`text-xs ${item.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-800 dark:text-gray-100 font-medium'}`}>{item.message}</span>
-                          {!item.read && <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1" />}
+                          <div className="flex items-center gap-2 shrink-0">
+                            {!item.read && <span className="w-2 h-2 rounded-full bg-red-500 mt-1" />}
+                            {item.read && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteInAppNotification(item.id); }}
+                                className="text-gray-400 hover:text-red-500 text-xs leading-none"
+                                title="Remove notification"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
                         </div>
                         <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
                           {new Date(item.createdAt).toLocaleString()}
