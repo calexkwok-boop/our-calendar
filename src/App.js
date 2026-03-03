@@ -2833,14 +2833,28 @@ function App() {
           updateCursor('subCalEvents', subCalEvents);
 
           const photoCursor = inAppSyncCursorRef.current.tripPhotos || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
-          const { data: tripPhotoRows } = await supabase
+          const { data: datedTripPhotoRows, error: datedTripPhotoError } = await supabase
             .from('trip_photos')
             .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at')
             .in('sub_calendar_id', subCalIds)
-            .or(`created_at.gt.${photoCursor},created_at.is.null`)
-            .order('created_at', { ascending: false, nullsFirst: false })
+            .gt('created_at', photoCursor)
+            .order('created_at', { ascending: true })
             .limit(200);
-          (tripPhotoRows || []).forEach(row => {
+          if (datedTripPhotoError) {
+            console.error('trip_photos dated poll failed:', datedTripPhotoError);
+          }
+          const { data: nullTripPhotoRows, error: nullTripPhotoError } = await supabase
+            .from('trip_photos')
+            .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at')
+            .in('sub_calendar_id', subCalIds)
+            .is('created_at', null)
+            .limit(200);
+          if (nullTripPhotoError) {
+            console.error('trip_photos null-created_at poll failed:', nullTripPhotoError);
+          }
+          const mergedTripPhotoRows = [...(datedTripPhotoRows || []), ...(nullTripPhotoRows || [])];
+          const uniqueTripPhotoRows = Array.from(new Map(mergedTripPhotoRows.map(row => [String(row.id), row])).values());
+          uniqueTripPhotoRows.forEach(row => {
             if (isOwnRow(row)) return;
             const subCalId = String(row.sub_calendar_id || '');
             const who = String(row.uploaded_by || row.created_by || 'Someone');
@@ -2851,7 +2865,7 @@ function App() {
               createdAt: row.created_at,
             });
           });
-          updateCursor('tripPhotos', tripPhotoRows);
+          updateCursor('tripPhotos', datedTripPhotoRows);
 
           const { data: expenseLedgerNotes } = await supabase
             .from('sub_calendar_notes')
