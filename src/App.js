@@ -274,18 +274,24 @@ function App() {
     const amount = (Number(amountCents) || 0) / 100;
     if (!cleanRecipient || amount <= 0) return;
     const amt = amount.toFixed(2);
-    // Universal Cash App links work in Safari and can hand off to the app when available.
+    // Prefer path-based amount format first; it is more reliable on mobile handoff.
+    const webPrimary = `https://cash.app/$${encodeURIComponent(cleanRecipient)}/${encodeURIComponent(amt)}`;
     const webFallback = `https://cash.app/$${encodeURIComponent(cleanRecipient)}?amount=${encodeURIComponent(amt)}`;
     const webAlt = `https://cash.app/pay?cash_tag=${encodeURIComponent(cleanRecipient)}&amount=${encodeURIComponent(amt)}`;
     try {
-      window.location.href = webFallback;
+      window.location.href = webPrimary;
+      setTimeout(() => {
+        if (document.visibilityState === 'visible') {
+          window.location.href = webFallback;
+        }
+      }, 900);
       setTimeout(() => {
         if (document.visibilityState === 'visible') {
           window.location.href = webAlt;
         }
-      }, 900);
+      }, 1700);
     } catch {
-      window.location.href = webFallback;
+      window.location.href = webPrimary;
     }
   };
   const openLocationActionChooser = (location) => {
