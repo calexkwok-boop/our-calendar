@@ -345,7 +345,6 @@ function App() {
     const dropLat = geo ? String(geo.lat) : '';
     const dropLng = geo ? String(geo.lng) : '';
     const dropAddress = geo?.formattedAddress || destination;
-    const dropAddressEncoded = encodeURIComponent(dropAddress);
     setLocationActionTarget('');
     if (service === 'uber') {
       const appParams = new URLSearchParams({
@@ -406,14 +405,27 @@ function App() {
       }
       const appLink = `lyft://ridetype?${appParams.toString()}`;
       const primary = `https://ride.lyft.com/?${appParams.toString()}`;
-      const fallback = `https://ride.lyft.com/?destination[address]=${dropAddressEncoded}`;
+      let handedOff = false;
+      let timer = null;
+      const cleanup = () => {
+        window.removeEventListener('blur', onHidden);
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+        if (timer) clearTimeout(timer);
+      };
+      const onHidden = () => {
+        handedOff = true;
+        cleanup();
+      };
+      const onVisibilityChange = () => {
+        if (document.visibilityState === 'hidden') onHidden();
+      };
+      window.addEventListener('blur', onHidden);
+      document.addEventListener('visibilitychange', onVisibilityChange);
       window.location.href = appLink;
-      setTimeout(() => {
-        if (document.visibilityState === 'visible') window.location.href = primary;
-      }, 900);
-      setTimeout(() => {
-        if (document.visibilityState === 'visible') window.location.href = fallback;
-      }, 1700);
+      timer = setTimeout(() => {
+        cleanup();
+        if (!handedOff && document.visibilityState === 'visible') window.location.href = primary;
+      }, 1600);
       return;
     }
     const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
