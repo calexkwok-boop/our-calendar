@@ -121,6 +121,8 @@ function App() {
   const [subCalNotes, setSubCalNotes] = useState([]); // [{id, text, checklist, createdBy, createdAt}]
   const [subCalExpenses, setSubCalExpenses] = useState([]); // [{id, payer, description, amount, createdAt}]
   const [expenseLedgerNoteId, setExpenseLedgerNoteId] = useState(null);
+  const [venmoHandles, setVenmoHandles] = useState({});
+  const [venmoHandlesNoteId, setVenmoHandlesNoteId] = useState(null);
   const [newExpenseDraft, setNewExpenseDraft] = useState({ payer: '', description: '', amount: '' });
   const [expenseError, setExpenseError] = useState('');
   const [newNote, setNewNote] = useState('');
@@ -168,6 +170,8 @@ function App() {
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
+  const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
+  const normalizeIdentityKey = (value) => String(value || '').trim().toLowerCase();
   const getExpenseParticipants = () => {
     const seen = new Set();
     const participants = [];
@@ -196,8 +200,13 @@ function App() {
     if (!cleaned) return raw;
     return cleaned.replace(/\b\w/g, c => c.toUpperCase());
   };
+  const getVenmoHandleForIdentity = (identity) => {
+    const key = normalizeIdentityKey(identity);
+    return venmoHandles[key] || '';
+  };
+  const cleanVenmoHandle = (value) => String(value || '').trim().replace(/^@+/, '').replace(/\s+/g, '');
   const openVenmoPayment = (recipient, amountCents, note = '') => {
-    const cleanRecipient = String(recipient || '').trim();
+    const cleanRecipient = cleanVenmoHandle(recipient);
     const amount = (Number(amountCents) || 0) / 100;
     if (!cleanRecipient || amount <= 0) return;
     const params = new URLSearchParams({
@@ -405,6 +414,8 @@ function App() {
       const visibleNotes = [];
       let loadedExpenses = [];
       let loadedLedgerId = null;
+      let loadedVenmoHandles = {};
+      let loadedVenmoHandlesNoteId = null;
       (data || []).forEach((n) => {
         let parsedChecklist = [];
         try {
@@ -417,11 +428,25 @@ function App() {
           loadedExpenses = Array.isArray(parsedChecklist) ? parsedChecklist : [];
           return;
         }
+        if (n.text === VENMO_HANDLES_NOTE_TEXT) {
+          loadedVenmoHandlesNoteId = n.id;
+          const parsed = (parsedChecklist && typeof parsedChecklist === 'object' && !Array.isArray(parsedChecklist)) ? parsedChecklist : {};
+          const sanitized = {};
+          Object.entries(parsed).forEach(([k, v]) => {
+            const key = normalizeIdentityKey(k);
+            const handle = cleanVenmoHandle(v);
+            if (key && handle) sanitized[key] = handle;
+          });
+          loadedVenmoHandles = sanitized;
+          return;
+        }
         visibleNotes.push({ ...n, checklist: parsedChecklist });
       });
       setSubCalNotes(visibleNotes);
       setSubCalExpenses(loadedExpenses);
       setExpenseLedgerNoteId(loadedLedgerId);
+      setVenmoHandles(loadedVenmoHandles);
+      setVenmoHandlesNoteId(loadedVenmoHandlesNoteId);
     } catch (e) { console.error(e); }
   };
 
@@ -721,6 +746,53 @@ function App() {
     }
     setExpenseLedgerNoteId(row.id);
     return true;
+  };
+
+  const saveVenmoHandles = async (nextHandles) => {
+    if (!activeSubCalendar) return false;
+    const payload = {
+      checklist: JSON.stringify(nextHandles),
+    };
+    if (venmoHandlesNoteId) {
+      const { error } = await supabase.from('sub_calendar_notes').update(payload).eq('id', venmoHandlesNoteId);
+      if (error) {
+        setExpenseError(`Could not save Venmo handle: ${error.message}`);
+        return false;
+      }
+      return true;
+    }
+    const row = {
+      id: `scvenmo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      sub_calendar_id: activeSubCalendar.id,
+      text: VENMO_HANDLES_NOTE_TEXT,
+      checklist: JSON.stringify(nextHandles),
+      created_by: currentUser,
+      user_id: user?.id,
+      created_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('sub_calendar_notes').insert(row);
+    if (error) {
+      setExpenseError(`Could not save Venmo handle: ${error.message}`);
+      return false;
+    }
+    setVenmoHandlesNoteId(row.id);
+    return true;
+  };
+
+  const promptSetVenmoHandle = async (identity) => {
+    const key = normalizeIdentityKey(identity);
+    if (!key) return;
+    const currentHandle = getVenmoHandleForIdentity(identity);
+    const value = window.prompt(`Set Venmo username for ${getExpenseDisplayName(identity)} (without @):`, currentHandle);
+    if (value === null) return;
+    const cleaned = cleanVenmoHandle(value);
+    const nextHandles = { ...venmoHandles };
+    if (!cleaned) delete nextHandles[key];
+    else nextHandles[key] = cleaned;
+    const ok = await saveVenmoHandles(nextHandles);
+    if (!ok) return;
+    setExpenseError('');
+    setVenmoHandles(nextHandles);
   };
 
   const addSubCalExpense = async () => {
@@ -4852,31 +4924,59 @@ function App() {
                 </div>
               </div>
 
+              <div className="p-3 bg-sky-50 dark:bg-sky-900/20 rounded-xl border border-sky-200 dark:border-sky-700">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">💳 Venmo Handles</h4>
+                <div className="space-y-1.5">
+                  {sortedParticipants.map(name => {
+                    const handle = getVenmoHandleForIdentity(name);
+                    return (
+                      <div key={`venmo-${name}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-sky-100 dark:border-sky-800 px-2.5 py-1.5">
+                        <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(name)}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 dark:text-gray-300">{handle ? `@${handle}` : 'Not set'}</span>
+                          <button
+                            onClick={() => promptSetVenmoHandle(name)}
+                            className="px-2 py-0.5 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium"
+                          >
+                            {handle ? 'Edit' : 'Set'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-700">
                 <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">🔄 Who Pays Whom</h4>
                 {settlements.length === 0 ? (
                   <p className="text-xs text-gray-500 dark:text-gray-400">No transfers needed.</p>
                 ) : (
                   <div className="space-y-1.5">
-                    {settlements.map((s, idx) => (
-                      <div key={`${s.from}-${s.to}-${idx}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-indigo-100 dark:border-indigo-800 px-2.5 py-1.5">
-                        <div className="min-w-0">
-                          <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.from)}</span>
-                          <span className="text-indigo-500 dark:text-indigo-300 font-semibold"> pays ${(s.amount / 100).toFixed(2)} </span>
-                          <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.to)}</span>
+                    {settlements.map((s, idx) => {
+                      const venmoHandle = getVenmoHandleForIdentity(s.to);
+                      return (
+                        <div key={`${s.from}-${s.to}-${idx}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-indigo-100 dark:border-indigo-800 px-2.5 py-1.5">
+                          <div className="min-w-0">
+                            <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.from)}</span>
+                            <span className="text-indigo-500 dark:text-indigo-300 font-semibold"> pays ${(s.amount / 100).toFixed(2)} </span>
+                            <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(s.to)}</span>
+                          </div>
+                          <button
+                            onClick={() => openVenmoPayment(
+                              venmoHandle,
+                              s.amount,
+                              `${getExpenseDisplayName(s.from)} pays ${getExpenseDisplayName(s.to)} for ${activeSubCalendar?.name || 'trip'}`
+                            )}
+                            disabled={!venmoHandle}
+                            className="shrink-0 px-2.5 py-1 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={venmoHandle ? `Pay @${venmoHandle}` : `Set Venmo for ${getExpenseDisplayName(s.to)}`}
+                          >
+                            {venmoHandle ? 'Pay in Venmo' : 'Set Venmo'}
+                          </button>
                         </div>
-                        <button
-                          onClick={() => openVenmoPayment(
-                            s.to,
-                            s.amount,
-                            `${getExpenseDisplayName(s.from)} pays ${getExpenseDisplayName(s.to)} for ${activeSubCalendar?.name || 'trip'}`
-                          )}
-                          className="shrink-0 px-2.5 py-1 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium"
-                        >
-                          Pay in Venmo
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
