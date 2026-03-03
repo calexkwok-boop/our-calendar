@@ -2674,9 +2674,12 @@ function App() {
     const isOwnRow = (row) => {
       const rowUserId = row?.user_id ? String(row.user_id) : '';
       const rowCreatedBy = String(row?.created_by || '').trim().toLowerCase();
+      const rowUploadedBy = String(row?.uploaded_by || '').trim().toLowerCase();
       const myEmail = String(user?.email || '').trim().toLowerCase();
       const myName = String(currentUser || '').trim().toLowerCase();
-      return (rowUserId && rowUserId === me) || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName));
+      return (rowUserId && rowUserId === me)
+        || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName))
+        || (rowUploadedBy && (rowUploadedBy === myEmail || rowUploadedBy === myName));
     };
 
     const updatesChannel = supabase
@@ -2748,7 +2751,10 @@ function App() {
     const isOwnRow = (row) => {
       const rowUserId = row?.user_id ? String(row.user_id) : '';
       const rowCreatedBy = String(row?.created_by || '').trim().toLowerCase();
-      return (rowUserId && rowUserId === me) || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName));
+      const rowUploadedBy = String(row?.uploaded_by || '').trim().toLowerCase();
+      return (rowUserId && rowUserId === me)
+        || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName))
+        || (rowUploadedBy && (rowUploadedBy === myEmail || rowUploadedBy === myName));
     };
 
     const updateCursor = (key, rows) => {
@@ -2836,7 +2842,7 @@ function App() {
           const photoCursor = inAppSyncCursorRef.current.tripPhotos || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
           const { data: datedTripPhotoRows, error: datedTripPhotoError } = await supabase
             .from('trip_photos')
-            .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at')
+            .select('id,uploaded_by,user_id,sub_calendar_id,created_at')
             .in('sub_calendar_id', subCalIds)
             .gt('created_at', photoCursor)
             .order('created_at', { ascending: true })
@@ -2846,7 +2852,7 @@ function App() {
           }
           const { data: nullTripPhotoRows, error: nullTripPhotoError } = await supabase
             .from('trip_photos')
-            .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at')
+            .select('id,uploaded_by,user_id,sub_calendar_id,created_at')
             .in('sub_calendar_id', subCalIds)
             .is('created_at', null)
             .limit(200);
