@@ -3025,22 +3025,43 @@ function App() {
               if (active.length === 0) return null;
               return (
                 <div className="mb-4 space-y-2">
-                  {active.map(sc => (
-                    <button
-                      key={sc.id}
-                      onClick={() => openSubCalendar(sc)}
-                      className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 rounded-xl border border-green-300 dark:border-green-700 hover:shadow-md transition-all text-left"
-                    >
-                      <span className="text-xl">🗓️</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm text-green-800 dark:text-green-300">{sc.name}</div>
-                        <div className="text-xs text-green-600 dark:text-green-400">
-                          Happening now · {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {active.map(sc => {
+                    const canDelete = sc.owner_id === user?.id;
+                    const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
+                    const isDeleteRevealed = rowOffset < 0;
+                    return (
+                      <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-green-300 dark:ring-green-700">
+                        {canDelete && (
+                          <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
+                            <button
+                              onClick={() => deleteSubCalendar(sc.id)}
+                              className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                        <div
+                          onTouchStart={(e) => handleTripSwipeStart(e, sc.id, canDelete)}
+                          onTouchMove={handleTripSwipeMove}
+                          onTouchEnd={handleTripSwipeEnd}
+                          onTouchCancel={handleTripSwipeEnd}
+                          onClick={() => openSubCalendar(sc)}
+                          className="relative z-10 w-full flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 hover:shadow-md transition-all text-left cursor-pointer"
+                          style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
+                        >
+                          <span className="text-xl">🗓️</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-sm text-green-800 dark:text-green-300">{sc.name}</div>
+                            <div className="text-xs text-green-600 dark:text-green-400">
+                              Happening now · {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </div>
+                          </div>
+                          <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open →</span>
                         </div>
                       </div>
-                      <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open →</span>
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })()}
