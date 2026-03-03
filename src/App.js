@@ -149,7 +149,7 @@ function App() {
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
   const [subCalAddingSlot, setSubCalAddingSlot] = useState(null); // hour number being added to
   const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', endTime: '', location: '' });
-  const [subCalTab, setSubCalTab] = useState('itinerary'); // 'itinerary' | 'photos'
+  const [subCalTab, setSubCalTab] = useState('itinerary'); // 'itinerary' | 'expenses' | 'photos'
   const [shareMyLocation, setShareMyLocation] = useState(() => localStorage.getItem('subcal-share-location') === 'true');
   const [memberLocations, setMemberLocations] = useState({});
   const subCalLocationChannelRef = useRef(null);
@@ -182,6 +182,7 @@ function App() {
     if (user?.email) addParticipant(user.email);
     else addParticipant(currentUser);
     (subCalMembers || []).forEach(m => addParticipant(m?.email));
+    (subCalExpenses || []).forEach(item => addParticipant(item?.payer));
     return participants;
   };
 
@@ -4189,6 +4190,10 @@ function App() {
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'itinerary' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >🗓️ Itinerary</button>
           <button
+            onClick={() => setSubCalTab('expenses')}
+            className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'expenses' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+          >💸 Expenses</button>
+          <button
             onClick={() => setSubCalTab('photos')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 relative ${subCalTab === 'photos' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >
@@ -4219,26 +4224,6 @@ function App() {
           });
           const dayEventPhotos = tripPhotos.filter(p => p.event_id && (p.date === dk || !p.date));
           const getEventPhotos = (eventId) => dayEventPhotos.filter(p => p.event_id === eventId);
-          const expenseParticipants = getExpenseParticipants();
-          const expenseTotal = subCalExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-          const expensePerPerson = expenseParticipants.length > 0 ? expenseTotal / expenseParticipants.length : 0;
-          const paidBy = {};
-          expenseParticipants.forEach(name => { paidBy[name] = 0; });
-          subCalExpenses.forEach(item => {
-            const payer = String(item.payer || '').trim();
-            if (!payer) return;
-            if (typeof paidBy[payer] !== 'number') paidBy[payer] = 0;
-            paidBy[payer] += Number(item.amount) || 0;
-          });
-          const expenseBalances = expenseParticipants.map(name => {
-            const paid = paidBy[name] || 0;
-            return {
-              name,
-              paid,
-              balance: paid - expensePerPerson,
-            };
-          });
-          const selectedPayer = newExpenseDraft.payer || expenseParticipants[0] || '';
 
           return (
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -4257,78 +4242,6 @@ function App() {
                   </div>
                 </div>
               )}
-
-              {/* Expense Splitter */}
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-700">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">💸 Expense Splitter</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-2">
-                  <select
-                    value={selectedPayer}
-                    onChange={e => setNewExpenseDraft(prev => ({ ...prev, payer: e.target.value }))}
-                    className="px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                  >
-                    {expenseParticipants.length === 0 ? (
-                      <option value="">No members</option>
-                    ) : (
-                      expenseParticipants.map(name => <option key={name} value={name}>{name}</option>)
-                    )}
-                  </select>
-                  <input
-                    type="text"
-                    value={newExpenseDraft.description}
-                    onChange={e => setNewExpenseDraft(prev => ({ ...prev, description: e.target.value }))}
-                    onKeyPress={e => e.key === 'Enter' && addSubCalExpense()}
-                    placeholder="What was paid?"
-                    className="sm:col-span-2 px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={newExpenseDraft.amount}
-                    onChange={e => setNewExpenseDraft(prev => ({ ...prev, amount: e.target.value }))}
-                    onKeyPress={e => e.key === 'Enter' && addSubCalExpense()}
-                    placeholder="Amount"
-                    className="px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                  />
-                </div>
-                <button
-                  onClick={addSubCalExpense}
-                  className="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium"
-                >
-                  Add Expense
-                </button>
-                {expenseError && <p className="mt-2 text-xs text-red-500">{expenseError}</p>}
-
-                <div className="mt-3 space-y-1.5">
-                  {subCalExpenses.length === 0 && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 italic">No expenses yet</p>
-                  )}
-                  {subCalExpenses.map(item => (
-                    <div key={item.id} className="flex items-center gap-2 bg-white dark:bg-gray-700 border border-emerald-100 dark:border-emerald-800 rounded-lg px-2.5 py-1.5">
-                      <span className="text-xs text-gray-700 dark:text-gray-200 font-medium">{item.payer}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-1 truncate">{item.description}</span>
-                      <span className="text-xs text-gray-700 dark:text-gray-200 font-semibold">${(Number(item.amount) || 0).toFixed(2)}</span>
-                      <button onClick={() => deleteSubCalExpense(item.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">✕</button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-3 pt-2 border-t border-emerald-200 dark:border-emerald-800 space-y-1">
-                  <div className="text-xs text-gray-700 dark:text-gray-300">Total: <span className="font-semibold">${expenseTotal.toFixed(2)}</span></div>
-                  <div className="text-xs text-gray-700 dark:text-gray-300">Per member ({expenseParticipants.length}): <span className="font-semibold">${expensePerPerson.toFixed(2)}</span></div>
-                  <div className="pt-1 space-y-1">
-                    {expenseBalances.map(row => (
-                      <div key={row.name} className="flex items-center justify-between text-xs">
-                        <span className="text-gray-600 dark:text-gray-300">{row.name}</span>
-                        <span className="text-gray-700 dark:text-gray-200">
-                          Paid ${row.paid.toFixed(2)} · {row.balance >= 0 ? `Gets back $${row.balance.toFixed(2)}` : `Owes $${Math.abs(row.balance).toFixed(2)}`}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
 
               {/* Notes / Reminders */}
               <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-700">
@@ -4768,6 +4681,160 @@ function App() {
                     </div>
                   );
                 })()}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Expenses tab */}
+        {subCalTab === 'expenses' && (() => {
+          const expenseParticipants = getExpenseParticipants();
+          const selectedPayer = newExpenseDraft.payer || expenseParticipants[0] || '';
+
+          const paidByCents = {};
+          expenseParticipants.forEach(name => { paidByCents[name] = 0; });
+          subCalExpenses.forEach(item => {
+            const payer = String(item.payer || '').trim();
+            if (!payer) return;
+            const cents = Math.round((Number(item.amount) || 0) * 100);
+            if (!Number.isFinite(cents) || cents <= 0) return;
+            if (typeof paidByCents[payer] !== 'number') paidByCents[payer] = 0;
+            paidByCents[payer] += cents;
+          });
+
+          const totalCents = Object.values(paidByCents).reduce((sum, cents) => sum + cents, 0);
+          const sortedParticipants = [...expenseParticipants].sort((a, b) => a.localeCompare(b));
+          const memberCount = sortedParticipants.length || 1;
+          const baseShare = Math.floor(totalCents / memberCount);
+          const extraPennies = totalCents - (baseShare * memberCount);
+
+          const shareByCents = {};
+          sortedParticipants.forEach((name, idx) => {
+            shareByCents[name] = baseShare + (idx < extraPennies ? 1 : 0);
+          });
+
+          const expenseBalances = sortedParticipants.map(name => {
+            const paid = paidByCents[name] || 0;
+            const share = shareByCents[name] || 0;
+            return { name, paid, balance: paid - share };
+          });
+
+          const creditors = expenseBalances
+            .filter(row => row.balance > 0)
+            .map(row => ({ ...row }))
+            .sort((a, b) => b.balance - a.balance);
+          const debtors = expenseBalances
+            .filter(row => row.balance < 0)
+            .map(row => ({ ...row, balance: Math.abs(row.balance) }))
+            .sort((a, b) => b.balance - a.balance);
+
+          const settlements = [];
+          let credIdx = 0;
+          let debtIdx = 0;
+          while (credIdx < creditors.length && debtIdx < debtors.length) {
+            const credit = creditors[credIdx];
+            const debt = debtors[debtIdx];
+            const transfer = Math.min(credit.balance, debt.balance);
+            if (transfer > 0) {
+              settlements.push({ from: debt.name, to: credit.name, amount: transfer });
+            }
+            credit.balance -= transfer;
+            debt.balance -= transfer;
+            if (credit.balance === 0) credIdx += 1;
+            if (debt.balance === 0) debtIdx += 1;
+          }
+
+          return (
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-700">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">💸 Expense Splitter</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-2">
+                  <select
+                    value={selectedPayer}
+                    onChange={e => setNewExpenseDraft(prev => ({ ...prev, payer: e.target.value }))}
+                    className="px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                  >
+                    {expenseParticipants.length === 0 ? (
+                      <option value="">No members</option>
+                    ) : (
+                      expenseParticipants.map(name => <option key={name} value={name}>{name}</option>)
+                    )}
+                  </select>
+                  <input
+                    type="text"
+                    value={newExpenseDraft.description}
+                    onChange={e => setNewExpenseDraft(prev => ({ ...prev, description: e.target.value }))}
+                    onKeyPress={e => e.key === 'Enter' && addSubCalExpense()}
+                    placeholder="What was paid?"
+                    className="sm:col-span-2 px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={newExpenseDraft.amount}
+                    onChange={e => setNewExpenseDraft(prev => ({ ...prev, amount: e.target.value }))}
+                    onKeyPress={e => e.key === 'Enter' && addSubCalExpense()}
+                    placeholder="Amount"
+                    className="px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                  />
+                </div>
+                <button
+                  onClick={addSubCalExpense}
+                  className="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium"
+                >
+                  Add Expense
+                </button>
+                {expenseError && <p className="mt-2 text-xs text-red-500">{expenseError}</p>}
+
+                <div className="mt-3 space-y-1.5">
+                  {subCalExpenses.length === 0 && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 italic">No expenses yet</p>
+                  )}
+                  {subCalExpenses.map(item => (
+                    <div key={item.id} className="flex items-center gap-2 bg-white dark:bg-gray-700 border border-emerald-100 dark:border-emerald-800 rounded-lg px-2.5 py-1.5">
+                      <span className="text-xs text-gray-700 dark:text-gray-200 font-medium">{item.payer}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-1 truncate">{item.description}</span>
+                      <span className="text-xs text-gray-700 dark:text-gray-200 font-semibold">${(Number(item.amount) || 0).toFixed(2)}</span>
+                      <button onClick={() => deleteSubCalExpense(item.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">✕</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📊 Split Summary</h4>
+                <div className="space-y-1 text-xs">
+                  <div className="text-gray-700 dark:text-gray-300">Total: <span className="font-semibold">${(totalCents / 100).toFixed(2)}</span></div>
+                  <div className="text-gray-700 dark:text-gray-300">Per member ({sortedParticipants.length}): <span className="font-semibold">${(sortedParticipants.length > 0 ? totalCents / 100 / sortedParticipants.length : 0).toFixed(2)}</span></div>
+                </div>
+                <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
+                  {expenseBalances.map(row => (
+                    <div key={row.name} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-600 dark:text-gray-300">{row.name}</span>
+                      <span className="text-gray-700 dark:text-gray-200">
+                        Paid ${(row.paid / 100).toFixed(2)} · {row.balance >= 0 ? `Gets back $${(row.balance / 100).toFixed(2)}` : `Owes $${(Math.abs(row.balance) / 100).toFixed(2)}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-700">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">🔄 Who Pays Whom</h4>
+                {settlements.length === 0 ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">No transfers needed.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {settlements.map((s, idx) => (
+                      <div key={`${s.from}-${s.to}-${idx}`} className="flex items-center justify-between text-xs bg-white dark:bg-gray-700 rounded-lg border border-indigo-100 dark:border-indigo-800 px-2.5 py-1.5">
+                        <span className="text-gray-700 dark:text-gray-200">{s.from}</span>
+                        <span className="text-indigo-500 dark:text-indigo-300 font-semibold">pays ${(s.amount / 100).toFixed(2)}</span>
+                        <span className="text-gray-700 dark:text-gray-200">{s.to}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           );
