@@ -176,6 +176,8 @@ function App() {
   const [showPhotoReactionPicker, setShowPhotoReactionPicker] = useState(null);
   const photoInputRef = useRef(null);
   const lightboxTapRef = useRef({ id: null, at: 0 });
+  const photoDeleteHoldTimerRef = useRef(null);
+  const photoDeleteSuppressRef = useRef({ id: null, until: 0 });
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
@@ -693,6 +695,25 @@ function App() {
     if (!window.confirm('Delete this photo?')) return;
     await removeTripPhotoRecord(photo);
   };
+
+  const clearPhotoDeleteHold = () => {
+    if (photoDeleteHoldTimerRef.current) {
+      clearTimeout(photoDeleteHoldTimerRef.current);
+      photoDeleteHoldTimerRef.current = null;
+    }
+  };
+
+  const startPhotoDeleteHold = (photo) => {
+    if (!photo || isPhotoSelectionMode) return;
+    clearPhotoDeleteHold();
+    photoDeleteHoldTimerRef.current = setTimeout(() => {
+      photoDeleteSuppressRef.current = { id: photo.id, until: Date.now() + 700 };
+      deleteTripPhoto(photo);
+      clearPhotoDeleteHold();
+    }, 650);
+  };
+
+  useEffect(() => () => clearPhotoDeleteHold(), []);
 
   const toggleSelectedPhoto = (photoId) => {
     setSelectedPhotoIds(prev => prev.includes(photoId) ? prev.filter(id => id !== photoId) : [...prev, photoId]);
@@ -5477,7 +5498,21 @@ function App() {
                           <div
                             key={photo.id}
                             className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer ${isSelectedPhoto ? 'ring-2 ring-purple-500' : ''}`}
-                            onClick={() => isPhotoSelectionMode ? toggleSelectedPhoto(photo.id) : setLightboxPhoto(photo)}
+                            onClick={() => {
+                              if (isPhotoSelectionMode) {
+                                toggleSelectedPhoto(photo.id);
+                                return;
+                              }
+                              const s = photoDeleteSuppressRef.current;
+                              if (s.id === photo.id && Date.now() < s.until) return;
+                              setLightboxPhoto(photo);
+                            }}
+                            onMouseDown={() => startPhotoDeleteHold(photo)}
+                            onMouseUp={clearPhotoDeleteHold}
+                            onMouseLeave={clearPhotoDeleteHold}
+                            onTouchStart={() => startPhotoDeleteHold(photo)}
+                            onTouchEnd={clearPhotoDeleteHold}
+                            onTouchCancel={clearPhotoDeleteHold}
                           >
                             <img src={photo.url} alt={photo.caption || ''} className="w-full h-full object-cover" />
                             {isPhotoSelectionMode && (
@@ -5489,12 +5524,6 @@ function App() {
                               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <p className="text-white text-xs truncate">{photo.caption}</p>
                               </div>
-                            )}
-                            {!isPhotoSelectionMode && (
-                              <button
-                                onClick={e => { e.stopPropagation(); deleteTripPhoto(photo); }}
-                                className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow"
-                              >✕</button>
                             )}
                             {Object.keys(reactions).length > 0 && (
                               <div className="absolute left-1 bottom-6 flex flex-wrap gap-1 max-w-[95%]">
@@ -5562,7 +5591,21 @@ function App() {
                               src={photo.url}
                               alt={photo.caption || ''}
                               className="w-full max-h-72 object-cover cursor-pointer"
-                              onClick={() => isPhotoSelectionMode ? toggleSelectedPhoto(photo.id) : setLightboxPhoto(photo)}
+                              onClick={() => {
+                                if (isPhotoSelectionMode) {
+                                  toggleSelectedPhoto(photo.id);
+                                  return;
+                                }
+                                const s = photoDeleteSuppressRef.current;
+                                if (s.id === photo.id && Date.now() < s.until) return;
+                                setLightboxPhoto(photo);
+                              }}
+                              onMouseDown={() => startPhotoDeleteHold(photo)}
+                              onMouseUp={clearPhotoDeleteHold}
+                              onMouseLeave={clearPhotoDeleteHold}
+                              onTouchStart={() => startPhotoDeleteHold(photo)}
+                              onTouchEnd={clearPhotoDeleteHold}
+                              onTouchCancel={clearPhotoDeleteHold}
                             />
                             {isPhotoSelectionMode && (
                               <div className="px-3 pt-2">
@@ -5592,9 +5635,7 @@ function App() {
                                   </div>
                                 )}
                               </div>
-                              {!isPhotoSelectionMode && (
-                                <button onClick={() => deleteTripPhoto(photo)} className="text-red-400 hover:text-red-600 text-xs shrink-0">✕</button>
-                              )}
+                              {!isPhotoSelectionMode && <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Hold to delete</span>}
                             </div>
                           </div>
                         )})}
@@ -5635,12 +5676,7 @@ function App() {
               src={lightboxPhoto.url}
               alt={lightboxPhoto.caption || ''}
               className="max-w-full max-h-[80vh] rounded-xl object-contain"
-              onClick={e => e.stopPropagation()}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                setShowPhotoReactionPicker(lightboxPhoto.id);
-              }}
-              onTouchEnd={(e) => {
+              onClick={(e) => {
                 e.stopPropagation();
                 const now = Date.now();
                 const last = lightboxTapRef.current;
@@ -5648,6 +5684,10 @@ function App() {
                   setShowPhotoReactionPicker(lightboxPhoto.id);
                 }
                 lightboxTapRef.current = { id: lightboxPhoto.id, at: now };
+              }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setShowPhotoReactionPicker(lightboxPhoto.id);
               }}
             />
             <div className="mt-3 text-center" onClick={e => e.stopPropagation()}>
