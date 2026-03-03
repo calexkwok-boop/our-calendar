@@ -4437,13 +4437,10 @@ function App() {
                   const timeStr = `${String(hour).padStart(2,'0')}:00`;
                   const nextHour = (hour + 1) % 24;
                   const nextStr = `${String(nextHour).padStart(2,'0')}:00`;
-                  // For overnight hours (0-5), events with time < "06:00" belong here
                   const slotEvents = dayEvents.filter(e => {
                     if (!e.time) return false;
-                    if (hour < 6) {
-                      // overnight slot: time must be >= timeStr AND < nextStr (both < 06:00)
-                      return e.time >= timeStr && e.time < nextStr;
-                    }
+                    // Handle midnight wrap (23:00 -> 00:00) correctly.
+                    if (nextHour <= hour) return e.time >= timeStr || e.time < nextStr;
                     return e.time >= timeStr && e.time < nextStr;
                   });
                   const label = hour === 0 ? '12am' : hour === 12 ? '12pm' : hour > 12 ? `${hour-12}pm` : `${hour}am`;
