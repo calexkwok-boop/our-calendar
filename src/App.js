@@ -334,6 +334,12 @@ function App() {
     const destination = String(locationActionTarget || '').trim();
     if (!destination) return;
     const encoded = encodeURIComponent(destination);
+    if (service === 'google') {
+      const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
+      setLocationActionTarget('');
+      window.open(googleUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
     const geo = await geocodeDestination(destination);
     const dropLat = geo ? String(geo.lat) : '';
     const dropLng = geo ? String(geo.lng) : '';
