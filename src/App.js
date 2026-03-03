@@ -205,6 +205,11 @@ function App() {
     const key = normalizeIdentityKey(identity);
     return venmoHandles[key] || globalVenmoHandles[key] || '';
   };
+  const canEditVenmoIdentity = (identity) => {
+    const mine = normalizeIdentityKey(user?.email || currentUser);
+    if (!mine) return false;
+    return normalizeIdentityKey(identity) === mine;
+  };
   const cleanVenmoHandle = (value) => String(value || '').trim().replace(/^@+/, '').replace(/\s+/g, '');
   const openVenmoPayment = (recipient, amountCents, note = '') => {
     const cleanRecipient = cleanVenmoHandle(recipient);
@@ -882,6 +887,10 @@ function App() {
   const promptSetVenmoHandle = async (identity) => {
     const key = normalizeIdentityKey(identity);
     if (!key) return;
+    if (!canEditVenmoIdentity(identity)) {
+      setExpenseError('You can only edit your own Venmo handle.');
+      return;
+    }
     const currentHandle = getVenmoHandleForIdentity(identity);
     const value = window.prompt(`Set Venmo username for ${getExpenseDisplayName(identity)} (without @):`, currentHandle);
     if (value === null) return;
@@ -5025,17 +5034,22 @@ function App() {
                 <div className="space-y-1.5">
                   {sortedParticipants.map(name => {
                     const handle = getVenmoHandleForIdentity(name);
+                    const canEdit = canEditVenmoIdentity(name);
                     return (
                       <div key={`venmo-${name}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-sky-100 dark:border-sky-800 px-2.5 py-1.5">
                         <span className="text-gray-700 dark:text-gray-200">{getExpenseDisplayName(name)}</span>
                         <div className="flex items-center gap-2">
                           <span className="text-gray-500 dark:text-gray-300">{handle ? `@${handle}` : 'Not set'}</span>
-                          <button
-                            onClick={() => promptSetVenmoHandle(name)}
-                            className="px-2 py-0.5 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium"
-                          >
-                            {handle ? 'Edit' : 'Set'}
-                          </button>
+                          {canEdit ? (
+                            <button
+                              onClick={() => promptSetVenmoHandle(name)}
+                              className="px-2 py-0.5 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium"
+                            >
+                              {handle ? 'Edit' : 'Set'}
+                            </button>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300">Only they can edit</span>
+                          )}
                         </div>
                       </div>
                     );
@@ -5066,9 +5080,9 @@ function App() {
                             )}
                             disabled={!venmoHandle}
                             className="shrink-0 px-2.5 py-1 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                            title={venmoHandle ? `Pay @${venmoHandle}` : `Set Venmo for ${getExpenseDisplayName(s.to)}`}
+                            title={venmoHandle ? `Pay @${venmoHandle}` : `${getExpenseDisplayName(s.to)} has not set a Venmo handle yet`}
                           >
-                            {venmoHandle ? 'Pay in Venmo' : 'Set Venmo'}
+                            {venmoHandle ? 'Pay in Venmo' : 'No Venmo'}
                           </button>
                         </div>
                       );
