@@ -130,6 +130,12 @@ function App() {
   const [globalCashAppHandles, setGlobalCashAppHandles] = useState({});
   const [paymentOptionPickerIdentity, setPaymentOptionPickerIdentity] = useState(null);
   const [newExpenseDraft, setNewExpenseDraft] = useState({ payer: '', description: '', amount: '' });
+  const [expensePanels, setExpensePanels] = useState({
+    splitter: true,
+    summary: true,
+    handles: true,
+    settlements: true,
+  });
   const [expenseError, setExpenseError] = useState('');
   const [newNote, setNewNote] = useState('');
   const [expandedNote, setExpandedNote] = useState(null);
@@ -1306,6 +1312,10 @@ function App() {
     setDeletedPhotoIds(nextDeleted);
     setTripPhotos(prev => prev.filter(p => String(p.id) !== String(photoId)));
     return true;
+  };
+
+  const toggleExpensePanel = (panelKey) => {
+    setExpensePanels(prev => ({ ...prev, [panelKey]: !prev[panelKey] }));
   };
 
   const addSubCalExpense = async () => {
@@ -5427,173 +5437,217 @@ function App() {
           return (
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
               <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-700">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">💸 Expense Splitter</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-2">
-                  <select
-                    value={selectedPayer}
-                    onChange={e => setNewExpenseDraft(prev => ({ ...prev, payer: e.target.value }))}
-                    className="px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                  >
-                    {expenseParticipants.length === 0 ? (
-                      <option value="">No members</option>
-                    ) : (
-                      expenseParticipants.map(name => <option key={name} value={name}>{getExpenseDisplayName(name)}</option>)
-                    )}
-                  </select>
-                  <input
-                    type="text"
-                    value={newExpenseDraft.description}
-                    onChange={e => setNewExpenseDraft(prev => ({ ...prev, description: e.target.value }))}
-                    onKeyPress={e => e.key === 'Enter' && addSubCalExpense()}
-                    placeholder="What was paid?"
-                    className="sm:col-span-2 px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={newExpenseDraft.amount}
-                    onChange={e => setNewExpenseDraft(prev => ({ ...prev, amount: e.target.value }))}
-                    onKeyPress={e => e.key === 'Enter' && addSubCalExpense()}
-                    placeholder="Amount"
-                    className="px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                  />
-                </div>
                 <button
-                  onClick={addSubCalExpense}
-                  className="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium"
+                  onClick={() => toggleExpensePanel('splitter')}
+                  className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  Add Expense
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">💸 Expense Splitter</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.splitter ? '−' : '+'}</span>
                 </button>
-                {expenseError && <p className="mt-2 text-xs text-red-500">{expenseError}</p>}
-
-                <div className="mt-3 space-y-1.5">
-                  {subCalExpenses.length === 0 && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 italic">No expenses yet</p>
-                  )}
-                  {subCalExpenses.map(item => (
-                    <div key={item.id} className="flex items-center gap-2 bg-white dark:bg-gray-700 border border-emerald-100 dark:border-emerald-800 rounded-lg px-2.5 py-1.5">
-                      <span className="text-xs text-gray-700 dark:text-gray-200 font-medium">{getExpenseDisplayName(item.payer)}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-1 truncate">{item.description}</span>
-                      <span className="text-xs text-gray-700 dark:text-gray-200 font-semibold">${(Number(item.amount) || 0).toFixed(2)}</span>
-                      <button onClick={() => deleteSubCalExpense(item.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">✕</button>
+                {expensePanels.splitter ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-2">
+                      <select
+                        value={selectedPayer}
+                        onChange={e => setNewExpenseDraft(prev => ({ ...prev, payer: e.target.value }))}
+                        className="px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                      >
+                        {expenseParticipants.length === 0 ? (
+                          <option value="">No members</option>
+                        ) : (
+                          expenseParticipants.map(name => <option key={name} value={name}>{getExpenseDisplayName(name)}</option>)
+                        )}
+                      </select>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={newExpenseDraft.amount}
+                        onChange={e => setNewExpenseDraft(prev => ({ ...prev, amount: e.target.value }))}
+                        onKeyPress={e => e.key === 'Enter' && addSubCalExpense()}
+                        placeholder="Amount"
+                        className="px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                      />
+                      <input
+                        type="text"
+                        value={newExpenseDraft.description}
+                        onChange={e => setNewExpenseDraft(prev => ({ ...prev, description: e.target.value }))}
+                        onKeyPress={e => e.key === 'Enter' && addSubCalExpense()}
+                        placeholder="What was paid?"
+                        className="sm:col-span-2 px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                      />
                     </div>
-                  ))}
-                </div>
+                    <button
+                      onClick={addSubCalExpense}
+                      className="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium"
+                    >
+                      Add Expense
+                    </button>
+                    {expenseError && <p className="mt-2 text-xs text-red-500">{expenseError}</p>}
+
+                    <div className="mt-3 space-y-1.5">
+                      {subCalExpenses.length === 0 && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500 italic">No expenses yet</p>
+                      )}
+                      {subCalExpenses.map(item => (
+                        <div key={item.id} className="flex items-center gap-2 bg-white dark:bg-gray-700 border border-emerald-100 dark:border-emerald-800 rounded-lg px-2.5 py-1.5">
+                          <span className="text-xs text-gray-700 dark:text-gray-200 font-medium">{getExpenseDisplayName(item.payer)}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 flex-1 truncate">{item.description}</span>
+                          <span className="text-xs text-gray-700 dark:text-gray-200 font-semibold">${(Number(item.amount) || 0).toFixed(2)}</span>
+                          <button onClick={() => deleteSubCalExpense(item.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{subCalExpenses.length} expense{subCalExpenses.length === 1 ? '' : 's'} recorded</p>
+                )}
               </div>
 
               <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📊 Split Summary</h4>
-                <div className="space-y-1 text-xs">
-                  <div className="text-gray-700 dark:text-gray-300">Total: <span className="font-semibold">${(totalCents / 100).toFixed(2)}</span></div>
-                  <div className="text-gray-700 dark:text-gray-300">Per member ({sortedParticipants.length}): <span className="font-semibold">${(sortedParticipants.length > 0 ? totalCents / 100 / sortedParticipants.length : 0).toFixed(2)}</span></div>
-                </div>
-                <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
-                  {expenseBalances.map(row => (
-                    <div key={row.name} className="flex items-center justify-between text-xs">
-                      <span className="text-gray-600 dark:text-gray-300">{getExpenseDisplayName(row.name)}</span>
-                      <span className="text-gray-700 dark:text-gray-200">
-                        Paid ${(row.paid / 100).toFixed(2)} · {row.balance >= 0 ? `Gets back $${(row.balance / 100).toFixed(2)}` : `Owes $${(Math.abs(row.balance) / 100).toFixed(2)}`}
-                      </span>
+                <button
+                  onClick={() => toggleExpensePanel('summary')}
+                  className="w-full flex items-center justify-between mb-2 text-left"
+                >
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">📊 Split Summary</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.summary ? '−' : '+'}</span>
+                </button>
+                {expensePanels.summary ? (
+                  <>
+                    <div className="space-y-1 text-xs">
+                      <div className="text-gray-700 dark:text-gray-300">Total: <span className="font-semibold">${(totalCents / 100).toFixed(2)}</span></div>
+                      <div className="text-gray-700 dark:text-gray-300">Per member ({sortedParticipants.length}): <span className="font-semibold">${(sortedParticipants.length > 0 ? totalCents / 100 / sortedParticipants.length : 0).toFixed(2)}</span></div>
                     </div>
-                  ))}
-                </div>
+                    <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
+                      {expenseBalances.map(row => (
+                        <div key={row.name} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600 dark:text-gray-300">{getExpenseDisplayName(row.name)}</span>
+                          <span className="text-gray-700 dark:text-gray-200">
+                            Paid ${(row.paid / 100).toFixed(2)} · {row.balance >= 0 ? `Gets back $${(row.balance / 100).toFixed(2)}` : `Owes $${(Math.abs(row.balance) / 100).toFixed(2)}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Total ${(totalCents / 100).toFixed(2)}</p>
+                )}
               </div>
 
               <div className="p-3 bg-sky-50 dark:bg-sky-900/20 rounded-xl border border-sky-200 dark:border-sky-700">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">💳 Payment Handles</h4>
-                <div className="space-y-1.5">
-                  {sortedParticipants.map(name => {
-                    const venmoHandle = getVenmoHandleForIdentity(name);
-                    const cashHandle = getCashAppHandleForIdentity(name);
-                    const canEdit = canEditVenmoIdentity(name);
-                    return (
-                      <div key={`payment-${name}`} className="text-xs bg-white dark:bg-gray-700 rounded-lg border border-sky-100 dark:border-sky-800 px-2.5 py-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-gray-700 dark:text-gray-200 font-medium min-w-0 truncate">{getExpenseDisplayName(name)}</span>
-                          {canEdit ? (
-                            <button
-                              onClick={() => setPaymentOptionPickerIdentity(prev => prev === name ? null : name)}
-                              className="px-2 py-0.5 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium shrink-0"
-                            >
-                              {paymentOptionPickerIdentity === name ? 'Done' : (venmoHandle || cashHandle ? 'Edit payment options' : 'Add payment option')}
-                            </button>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 shrink-0">Only they can edit</span>
-                          )}
-                        </div>
-                        {canEdit && paymentOptionPickerIdentity === name && (
-                          <div className="mt-1.5 flex items-center gap-1.5">
-                            <button
-                              onClick={async () => { await promptSetVenmoHandle(name); }}
-                              className="px-2 py-1 rounded-md text-white font-semibold bg-[#008CFF] hover:bg-[#0078dc]"
-                              title="Set Venmo handle"
-                            >
-                              V Venmo
-                            </button>
-                            <button
-                              onClick={async () => { await promptSetCashAppHandle(name); }}
-                              className="px-2 py-1 rounded-md text-white font-semibold bg-[#00D632] hover:bg-[#00b92b]"
-                              title="Set Cash App handle"
-                            >
-                              $ Cash App
-                            </button>
-                          </div>
-                        )}
-                        <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-300">
-                          {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'} · {cashHandle ? `Cash App $${cashHandle}` : 'Cash App not set'}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-700">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">🔄 Who Pays Whom</h4>
-                {settlements.length === 0 ? (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">No transfers needed.</p>
-                ) : (
+                <button
+                  onClick={() => toggleExpensePanel('handles')}
+                  className="w-full flex items-center justify-between mb-2 text-left"
+                >
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">💳 Payment Handles</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.handles ? '−' : '+'}</span>
+                </button>
+                {expensePanels.handles ? (
                   <div className="space-y-1.5">
-                    {settlements.map((s, idx) => {
-                      const venmoHandle = getVenmoHandleForIdentity(s.to);
-                      const cashHandle = getCashAppHandleForIdentity(s.to);
-                      const fromDisplay = getExpenseDisplayName(s.from);
-                      const toDisplay = getExpenseDisplayName(s.to);
-                      const payVerb = fromDisplay === 'You' ? 'pay' : 'pays';
+                    {sortedParticipants.map(name => {
+                      const venmoHandle = getVenmoHandleForIdentity(name);
+                      const cashHandle = getCashAppHandleForIdentity(name);
+                      const canEdit = canEditVenmoIdentity(name);
                       return (
-                        <div key={`${s.from}-${s.to}-${idx}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-indigo-100 dark:border-indigo-800 px-2.5 py-1.5">
-                          <div className="min-w-0">
-                            <span className="text-gray-700 dark:text-gray-200">{fromDisplay}</span>
-                            <span className="text-indigo-500 dark:text-indigo-300 font-semibold"> {payVerb} ${(s.amount / 100).toFixed(2)} </span>
-                            <span className="text-gray-700 dark:text-gray-200">{toDisplay}</span>
+                        <div key={`payment-${name}`} className="text-xs bg-white dark:bg-gray-700 rounded-lg border border-sky-100 dark:border-sky-800 px-2.5 py-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-gray-700 dark:text-gray-200 font-medium min-w-0 truncate">{getExpenseDisplayName(name)}</span>
+                            {canEdit ? (
+                              <button
+                                onClick={() => setPaymentOptionPickerIdentity(prev => prev === name ? null : name)}
+                                className="px-2 py-0.5 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium shrink-0"
+                              >
+                                {paymentOptionPickerIdentity === name ? 'Done' : (venmoHandle || cashHandle ? 'Edit payment options' : 'Add payment option')}
+                              </button>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 shrink-0">Only they can edit</span>
+                            )}
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <button
-                              onClick={() => openVenmoPayment(
-                                venmoHandle,
-                                s.amount,
-                                `${fromDisplay} ${payVerb} ${toDisplay} for ${activeSubCalendar?.name || 'trip'}`
-                              )}
-                              disabled={!venmoHandle}
-                              className="px-2.5 py-1 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                              title={venmoHandle ? `Pay @${venmoHandle}` : `${toDisplay} has not set a Venmo handle yet`}
-                            >
-                              {venmoHandle ? 'Venmo' : 'No Venmo'}
-                            </button>
-                            <button
-                              onClick={() => openCashAppPayment(cashHandle, s.amount)}
-                              disabled={!cashHandle}
-                              className="px-2.5 py-1 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                              title={cashHandle ? `Pay $${cashHandle}` : `${toDisplay} has not set a Cash App handle yet`}
-                            >
-                              {cashHandle ? 'Cash App' : 'No Cash App'}
-                            </button>
+                          {canEdit && paymentOptionPickerIdentity === name && (
+                            <div className="mt-1.5 flex items-center gap-1.5">
+                              <button
+                                onClick={async () => { await promptSetVenmoHandle(name); }}
+                                className="px-2 py-1 rounded-md text-white font-semibold bg-[#008CFF] hover:bg-[#0078dc]"
+                                title="Set Venmo handle"
+                              >
+                                V Venmo
+                              </button>
+                              <button
+                                onClick={async () => { await promptSetCashAppHandle(name); }}
+                                className="px-2 py-1 rounded-md text-white font-semibold bg-[#00D632] hover:bg-[#00b92b]"
+                                title="Set Cash App handle"
+                              >
+                                $ Cash App
+                              </button>
+                            </div>
+                          )}
+                          <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-300">
+                            {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'} · {cashHandle ? `Cash App $${cashHandle}` : 'Cash App not set'}
                           </div>
                         </div>
                       );
                     })}
                   </div>
+                ) : (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{sortedParticipants.length} member{sortedParticipants.length === 1 ? '' : 's'}</p>
+                )}
+              </div>
+
+              <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-700">
+                <button
+                  onClick={() => toggleExpensePanel('settlements')}
+                  className="w-full flex items-center justify-between mb-2 text-left"
+                >
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">🔄 Who Pays Whom</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.settlements ? '−' : '+'}</span>
+                </button>
+                {expensePanels.settlements ? (
+                  settlements.length === 0 ? (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">No transfers needed.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {settlements.map((s, idx) => {
+                        const venmoHandle = getVenmoHandleForIdentity(s.to);
+                        const cashHandle = getCashAppHandleForIdentity(s.to);
+                        const fromDisplay = getExpenseDisplayName(s.from);
+                        const toDisplay = getExpenseDisplayName(s.to);
+                        const payVerb = fromDisplay === 'You' ? 'pay' : 'pays';
+                        return (
+                          <div key={`${s.from}-${s.to}-${idx}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-indigo-100 dark:border-indigo-800 px-2.5 py-1.5">
+                            <div className="min-w-0">
+                              <span className="text-gray-700 dark:text-gray-200">{fromDisplay}</span>
+                              <span className="text-indigo-500 dark:text-indigo-300 font-semibold"> {payVerb} ${(s.amount / 100).toFixed(2)} </span>
+                              <span className="text-gray-700 dark:text-gray-200">{toDisplay}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                onClick={() => openVenmoPayment(
+                                  venmoHandle,
+                                  s.amount,
+                                  `${fromDisplay} ${payVerb} ${toDisplay} for ${activeSubCalendar?.name || 'trip'}`
+                                )}
+                                disabled={!venmoHandle}
+                                className="px-2.5 py-1 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={venmoHandle ? `Pay @${venmoHandle}` : `${toDisplay} has not set a Venmo handle yet`}
+                              >
+                                {venmoHandle ? 'Venmo' : 'No Venmo'}
+                              </button>
+                              <button
+                                onClick={() => openCashAppPayment(cashHandle, s.amount)}
+                                disabled={!cashHandle}
+                                className="px-2.5 py-1 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={cashHandle ? `Pay $${cashHandle}` : `${toDisplay} has not set a Cash App handle yet`}
+                              >
+                                {cashHandle ? 'Cash App' : 'No Cash App'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{settlements.length} transfer{settlements.length === 1 ? '' : 's'}</p>
                 )}
               </div>
             </div>
