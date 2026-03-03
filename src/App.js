@@ -796,6 +796,11 @@ function App() {
         return false;
       }
       setTripPhotos(prev => [...prev, photo]);
+      addInAppNotification({
+        key: `trip_photos:${photo.id}`,
+        type: 'photo',
+        message: `You added a photo in ${activeSubCalendar?.name || 'trip'}.`,
+      });
       setPhotoUploadError(false);
       setPhotoUploadMessage(`Uploaded: ${file.name}`);
       return true;
@@ -1567,6 +1572,11 @@ function App() {
         location: location || null,
       }]
     }));
+    addInAppNotification({
+      key: `sub_calendar_events:${id}`,
+      type: 'event',
+      message: `You added "${newEvent.title}" in ${activeSubCalendar?.name || 'trip'}.`,
+    });
   };
 
   const updateSubCalEvent = async (eventId, updates) => {
@@ -2234,6 +2244,12 @@ function App() {
     setListError('');
     setSharedListItems(prev => [...prev, { ...(data || payload), done: false }]);
     setNewListItemText('');
+    addInAppNotification({
+      key: `shared_lists:${data?.id || payload.list_id}:${payload.text}`,
+      type: 'list',
+      message: `You added "${payload.text}" to the list.`,
+      createdAt: data?.created_at,
+    });
   };
 
   const toggleSharedListItem = async (item) => {
@@ -2608,6 +2624,7 @@ function App() {
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
     const listOwner = primaryListOwnerId ? String(primaryListOwnerId) : '';
+    const eventOwnerIdSet = new Set([me, ...((sharedCalendars || []).map(sc => String(sc.owner_id || '')).filter(Boolean))]);
 
     const isOwnRow = (row) => {
       const rowUserId = row?.user_id ? String(row.user_id) : '';
@@ -2619,6 +2636,18 @@ function App() {
 
     const updatesChannel = supabase
       .channel(`in-app-updates-${me}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'events' }, ({ new: row }) => {
+        if (!row || isOwnRow(row)) return;
+        const rowOwnerId = String(row.user_id || '');
+        if (eventOwnerIdSet.size > 0 && rowOwnerId && !eventOwnerIdSet.has(rowOwnerId)) return;
+        const who = String(row.created_by || 'Someone');
+        addInAppNotification({
+          key: `events:${row.id}`,
+          type: 'event',
+          message: `${who} added "${row.title || 'an event'}" to the calendar.`,
+          createdAt: row.created_at,
+        });
+      })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sub_calendar_events' }, ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
         const subCalId = String(row.sub_calendar_id || '');
@@ -2663,7 +2692,7 @@ function App() {
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, currentUser, subCalendars, primaryListOwnerId]);
+  }, [user?.id, user?.email, currentUser, subCalendars, sharedCalendars, primaryListOwnerId]);
 
   // Check notification permission on load
   useEffect(() => {
