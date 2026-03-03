@@ -3111,6 +3111,7 @@ function App() {
                         return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
                       });
                   const hasSubCalendarRange = subTripsOnDate.length > 0;
+                  const hasSecondarySubCalendarRange = subTripsOnDate.length > 1;
 
                   return (
                     <div key={index} className="relative pb-2">
@@ -3133,6 +3134,12 @@ function App() {
                           <div
                             className="absolute top-0 left-0.5 right-0.5 h-1 rounded-b bg-gradient-to-r from-emerald-300 to-green-500 opacity-90"
                             title={`${subTripsOnDate.length} sub-calendar range${subTripsOnDate.length > 1 ? 's' : ''}`}
+                          />
+                        )}
+                        {hasSecondarySubCalendarRange && (
+                          <div
+                            className="absolute top-1.5 right-0.5 bottom-1.5 w-1 rounded-l bg-gradient-to-b from-cyan-300 to-blue-500 opacity-90"
+                            title="Additional overlapping multi-day range"
                           />
                         )}
                         <div className={`text-xs sm:text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
@@ -3191,6 +3198,7 @@ function App() {
                     return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
                   });
                   const hasSubCalendarRange = subTripsOnDate.length > 0;
+                  const hasSecondarySubCalendarRange = subTripsOnDate.length > 1;
 
                   return (
                     <div
@@ -3208,6 +3216,12 @@ function App() {
                         <div
                           className={`absolute top-0 left-1 right-1 h-1 rounded-b ${isSelected ? 'bg-white/70' : 'bg-gradient-to-r from-emerald-300 to-green-500 opacity-90'}`}
                           title={`${subTripsOnDate.length} sub-calendar range${subTripsOnDate.length > 1 ? 's' : ''}`}
+                        />
+                      )}
+                      {hasSecondarySubCalendarRange && (
+                        <div
+                          className={`absolute top-1.5 right-0.5 bottom-1.5 w-1 rounded-l ${isSelected ? 'bg-white/60' : 'bg-gradient-to-b from-cyan-300 to-blue-500 opacity-90'}`}
+                          title="Additional overlapping multi-day range"
                         />
                       )}
                       {/* Date number */}
