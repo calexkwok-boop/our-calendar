@@ -246,16 +246,9 @@ function App() {
     const cleanRecipient = cleanCashAppHandle(recipient);
     const amount = (Number(amountCents) || 0) / 100;
     if (!cleanRecipient || amount <= 0) return;
-    const deepLink = `cashapp://pay?recipient=$${encodeURIComponent(cleanRecipient)}&amount=${encodeURIComponent(amount.toFixed(2))}`;
-    const webFallback = `https://cash.app/$${encodeURIComponent(cleanRecipient)}?amount=${encodeURIComponent(amount.toFixed(2))}`;
-    try {
-      window.location.href = deepLink;
-      setTimeout(() => {
-        window.open(webFallback, '_blank', 'noopener,noreferrer');
-      }, 700);
-    } catch {
-      window.open(webFallback, '_blank', 'noopener,noreferrer');
-    }
+    // Universal Cash App link works on iOS Safari and will open app when available.
+    const universalUrl = `https://cash.app/$${encodeURIComponent(cleanRecipient)}?amount=${encodeURIComponent(amount.toFixed(2))}`;
+    window.location.href = universalUrl;
   };
 
   // ── Sub-calendar functions ──────────────────────────────────────────────
