@@ -2666,16 +2666,72 @@ function App() {
   useEffect(() => {
     if (!user?.id) return;
     const me = String(user.id);
+    const myEmail = String(user?.email || '').trim().toLowerCase();
     const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
+    const accessibleSubCalIdCache = new Set(subCalIdSet);
 
     const isOwnRow = (row) => {
       const rowUserId = row?.user_id ? String(row.user_id) : '';
       const rowCreatedBy = String(row?.created_by || '').trim().toLowerCase();
-      const myEmail = String(user?.email || '').trim().toLowerCase();
       const myName = String(currentUser || '').trim().toLowerCase();
       return (rowUserId && rowUserId === me) || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName));
+    };
+
+    const canAccessSubCalId = async (subCalId) => {
+      const normalizedId = String(subCalId || '');
+      if (!normalizedId) return false;
+      if (accessibleSubCalIdCache.has(normalizedId)) return true;
+
+      const { data: memberRows, error: memberErr } = await supabase
+        .from('sub_calendar_members')
+        .select('sub_calendar_id')
+        .eq('sub_calendar_id', normalizedId)
+        .ilike('email', myEmail)
+        .limit(1);
+      if (!memberErr && (memberRows || []).length > 0) {
+        accessibleSubCalIdCache.add(normalizedId);
+        return true;
+      }
+
+      const { data: scRow, error: scErr } = await supabase
+        .from('sub_calendars')
+        .select('id,owner_id')
+        .eq('id', normalizedId)
+        .maybeSingle();
+      if (scErr || !scRow) return false;
+      if (String(scRow.owner_id || '') === me) {
+        accessibleSubCalIdCache.add(normalizedId);
+        return true;
+      }
+
+      const ownerId = String(scRow.owner_id || '');
+      if (!ownerId) return false;
+
+      const { data: shareById, error: shareByIdErr } = await supabase
+        .from('shared_access')
+        .select('id')
+        .eq('owner_id', ownerId)
+        .eq('shared_with_id', me)
+        .limit(1);
+      if (!shareByIdErr && (shareById || []).length > 0) {
+        accessibleSubCalIdCache.add(normalizedId);
+        return true;
+      }
+
+      const { data: shareByEmail, error: shareByEmailErr } = await supabase
+        .from('shared_access')
+        .select('id')
+        .eq('owner_id', ownerId)
+        .ilike('shared_with_email', myEmail)
+        .limit(1);
+      if (!shareByEmailErr && (shareByEmail || []).length > 0) {
+        accessibleSubCalIdCache.add(normalizedId);
+        return true;
+      }
+
+      return false;
     };
 
     const updatesChannel = supabase
@@ -2690,10 +2746,10 @@ function App() {
           createdAt: row.created_at,
         });
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sub_calendar_events' }, ({ new: row }) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sub_calendar_events' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
         const subCalId = String(row.sub_calendar_id || '');
-        if (subCalIdSet.size > 0 && !subCalIdSet.has(subCalId)) return;
+        if (!(await canAccessSubCalId(subCalId))) return;
         const who = String(row.created_by || 'Someone');
         const tripName = subCalNameMap[subCalId] || 'trip';
         addInAppNotification({
@@ -2703,10 +2759,10 @@ function App() {
           createdAt: row.created_at,
         });
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_photos' }, ({ new: row }) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_photos' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
         const subCalId = String(row.sub_calendar_id || '');
-        if (subCalIdSet.size > 0 && !subCalIdSet.has(subCalId)) return;
+        if (!(await canAccessSubCalId(subCalId))) return;
         const who = String(row.uploaded_by || row.created_by || 'Someone');
         const tripName = subCalNameMap[subCalId] || 'trip';
         addInAppNotification({
@@ -2810,8 +2866,47 @@ function App() {
           updateCursor('sharedListItems', sharedListItems);
         }
 
-        if (subCalIdSet.size > 0) {
-          const subCalIds = Array.from(subCalIdSet);
+        const getAccessibleSubCalIds = async () => {
+          const ids = new Set(Array.from(subCalIdSet));
+
+          const { data: ownedRows, error: ownedErr } = await supabase
+            .from('sub_calendars')
+            .select('id')
+            .eq('owner_id', me);
+          if (!ownedErr) (ownedRows || []).forEach(r => { if (r?.id) ids.add(String(r.id)); });
+
+          const { data: memberRows, error: memberErr } = await supabase
+            .from('sub_calendar_members')
+            .select('sub_calendar_id')
+            .ilike('email', myEmail);
+          if (!memberErr) (memberRows || []).forEach(r => { if (r?.sub_calendar_id) ids.add(String(r.sub_calendar_id)); });
+
+          const { data: sharesById, error: sharesByIdErr } = await supabase
+            .from('shared_access')
+            .select('owner_id')
+            .eq('shared_with_id', me);
+          const { data: sharesByEmail, error: sharesByEmailErr } = await supabase
+            .from('shared_access')
+            .select('owner_id')
+            .ilike('shared_with_email', myEmail);
+
+          const ownerIds = new Set();
+          if (!sharesByIdErr) (sharesById || []).forEach(s => { if (s?.owner_id) ownerIds.add(String(s.owner_id)); });
+          if (!sharesByEmailErr) (sharesByEmail || []).forEach(s => { if (s?.owner_id) ownerIds.add(String(s.owner_id)); });
+
+          if (ownerIds.size > 0) {
+            const { data: sharedOwnerSubCals, error: sharedOwnerErr } = await supabase
+              .from('sub_calendars')
+              .select('id')
+              .in('owner_id', Array.from(ownerIds));
+            if (!sharedOwnerErr) (sharedOwnerSubCals || []).forEach(r => { if (r?.id) ids.add(String(r.id)); });
+          }
+
+          return Array.from(ids);
+        };
+
+        const subCalIds = await getAccessibleSubCalIds();
+        if (subCalIds.length > 0) {
           const { data: subCalEvents } = await supabase
             .from('sub_calendar_events')
             .select('id,title,created_by,user_id,sub_calendar_id,created_at')
