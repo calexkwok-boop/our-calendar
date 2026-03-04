@@ -103,6 +103,7 @@ function App() {
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
+  const [mainCalendarTitle, setMainCalendarTitle] = useState('Our Calendar');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(true);
@@ -778,6 +779,7 @@ function App() {
 
   async function openFullCalendar(sc) {
     if (!sc?.id) return;
+    setIsEditingTitle(false);
     setActiveSubCalendar(null);
     activeSubCalendarRef.current = null;
     setActiveFullCalendar(sc);
@@ -785,7 +787,9 @@ function App() {
     setShowSharePanel(false);
     setShowListPanel(false);
     setBottomNavTab('home');
-    setCalendarTitle(sc.name || 'Calendar');
+    const fullTitleKey = `calendar-title-${user?.id}-full-${sc.id}`;
+    const savedFullTitle = localStorage.getItem(fullTitleKey);
+    setCalendarTitle(savedFullTitle || sc.name || 'Calendar');
     const { data, error } = await supabase
       .from('sub_calendar_events')
       .select('*')
@@ -830,15 +834,14 @@ function App() {
   }
 
   async function returnToMainCalendar() {
+    setIsEditingTitle(false);
     setActiveFullCalendar(null);
     activeFullCalendarRef.current = null;
     setShowSharePanel(false);
     setShowListPanel(false);
     if (user?.id) {
       await loadMainCalendarEventsForUser(user.id, user.email);
-      const titleKey = `calendar-title-${user.id}`;
-      const savedTitle = localStorage.getItem(titleKey);
-      setCalendarTitle(savedTitle || 'Our Calendar');
+      setCalendarTitle(mainCalendarTitle || 'Our Calendar');
     } else {
       setEvents(mainCalendarEventsRef.current || {});
     }
@@ -2730,9 +2733,11 @@ function App() {
         }
 
         const titleKey = `calendar-title-${userId}`;
-        const savedTitle = localStorage.getItem(titleKey);
-        if (savedTitle) setCalendarTitle(savedTitle);
-        else setCalendarTitle('Our Calendar');
+        const savedTitle = localStorage.getItem(titleKey) || 'Our Calendar';
+        setMainCalendarTitle(savedTitle);
+        if (!activeFullCalendarRef.current && !activeSubCalendarRef.current) {
+          setCalendarTitle(savedTitle);
+        }
 
         const userResult = await window.storage.get('calendar-user', false);
         if (userResult && userResult.value) {
@@ -3786,10 +3791,7 @@ function App() {
     })
     .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
   const activeFullCalendars = subCalendars.filter(sc => isFullCalendarRange(sc));
-  const mainCalendarListTitle = (() => {
-    const key = `calendar-title-${user?.id}`;
-    return localStorage.getItem(key) || 'Our Calendar';
-  })();
+  const mainCalendarListTitle = mainCalendarTitle || 'Our Calendar';
   const activeCalendarsForList = [
     { id: '__main__', isMainCalendar: true, name: mainCalendarListTitle },
     ...activeFullCalendars,
@@ -4004,12 +4006,22 @@ function App() {
                     onChange={(e) => setCalendarTitle(e.target.value)}
                     onBlur={async () => {
                       setIsEditingTitle(false);
-                      localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
+                      if (activeFullCalendar?.id) {
+                        localStorage.setItem(`calendar-title-${user?.id}-full-${activeFullCalendar.id}`, calendarTitle);
+                      } else {
+                        localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
+                        setMainCalendarTitle(calendarTitle);
+                      }
                     }}
                     onKeyPress={async (e) => {
                       if (e.key === 'Enter') {
                         setIsEditingTitle(false);
-                        localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
+                        if (activeFullCalendar?.id) {
+                          localStorage.setItem(`calendar-title-${user?.id}-full-${activeFullCalendar.id}`, calendarTitle);
+                        } else {
+                          localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
+                          setMainCalendarTitle(calendarTitle);
+                        }
                       }
                     }}
                     className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 border-2 border-purple-300 rounded-lg w-full"
