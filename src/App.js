@@ -123,6 +123,10 @@ function App() {
   // Sub-calendar state
   const [subCalendars, setSubCalendars] = useState([]);
   const [activeSubCalendar, setActiveSubCalendar] = useState(null);
+  const [activeFullCalendar, setActiveFullCalendar] = useState(null);
+  const mainCalendarEventsRef = useRef({});
+  const activeFullCalendarRef = useRef(null);
+  const activeSubCalendarRef = useRef(null);
   const [subCalNotes, setSubCalNotes] = useState([]); // [{id, text, checklist, createdBy, createdAt}]
   const [subCalExpenses, setSubCalExpenses] = useState([]); // [{id, payer, description, amount, createdAt}]
   const [expenseLedgerNoteId, setExpenseLedgerNoteId] = useState(null);
@@ -312,6 +316,10 @@ function App() {
     if (!destination) return;
     setLocationActionTarget(destination);
   };
+  const isFullCalendarRange = (sc) => (
+    String(sc?.start_date || '') === FULL_CALENDAR_START
+    && String(sc?.end_date || '') === FULL_CALENDAR_END
+  );
   const geocodeDestination = async (destination) => {
     if (!destination || !window.google?.maps?.Geocoder) return null;
     try {
@@ -585,7 +593,11 @@ function App() {
     setShowSubCalendarModal(false);
     setNewSubCalName('');
     setNewCalendarType('sub');
-    openSubCalendar(newSC);
+    if (newCalendarType === 'full') {
+      await openFullCalendar(newSC);
+    } else {
+      await openSubCalendar(newSC);
+    }
   };
 
   const deleteSubCalendar = async (id) => {
@@ -626,6 +638,8 @@ function App() {
   };
 
   const openSubCalendar = async (sc) => {
+    setActiveFullCalendar(null);
+    activeFullCalendarRef.current = null;
     setActiveSubCalendar(sc);
     setSubCalWeather({});
     setSubCalWeatherSuggestions([]);
@@ -663,6 +677,181 @@ function App() {
     const firstDate = new Date(sc.start_date + 'T00:00:00');
     setSubCalSelectedDate(firstDate);
   };
+
+  async function loadMainCalendarEventsForUser(userId, userEmail) {
+    if (!userId) return;
+    const { data: eventsData, error: eventsError } = await supabase
+      .from('events')
+      .select('*')
+      .eq('user_id', userId);
+
+    const { data: sharedWithMe } = await supabase
+      .from('shared_access')
+      .select('*')
+      .eq('shared_with_email', userEmail);
+
+    if (sharedWithMe && sharedWithMe.length > 0) {
+      for (const share of sharedWithMe) {
+        if (!share.shared_with_id) {
+          await supabase
+            .from('shared_access')
+            .update({ shared_with_id: userId })
+            .eq('id', share.id);
+        }
+      }
+      setSharedCalendars(sharedWithMe);
+      const ownerIds = sharedWithMe.map(s => s.owner_id);
+      setActiveCalendars(ownerIds);
+      const { data: sharedEventsData } = await supabase
+        .from('events')
+        .select('*')
+        .in('user_id', ownerIds);
+      const allEventsData = [...(eventsData || []), ...(sharedEventsData || [])];
+      const eventsObj = {};
+      allEventsData.forEach(event => {
+        if (!eventsObj[event.date]) eventsObj[event.date] = [];
+        eventsObj[event.date].push({
+          id: event.id,
+          title: event.title,
+          time: event.time,
+          date: event.date,
+          category: event.category,
+          isPrivate: event.is_private,
+          isUrgent: event.is_urgent,
+          isMultiDay: event.is_multi_day,
+          multiDayId: event.multi_day_id,
+          isAnnual: event.is_annual || false,
+          annualMonth: event.annual_month || null,
+          annualDay: event.annual_day || null,
+          recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
+          exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
+          reactions: event.reactions ? JSON.parse(event.reactions) : {},
+          location: event.location || null,
+          createdBy: event.created_by,
+          createdAt: event.created_at,
+          userId: event.user_id,
+          isShared: event.user_id !== userId
+        });
+      });
+      setEvents(eventsObj);
+      if (typeof window !== 'undefined') window.events = eventsObj;
+      mainCalendarEventsRef.current = eventsObj;
+      return;
+    }
+
+    setSharedCalendars([]);
+    setActiveCalendars([]);
+    if (eventsError) {
+      console.error('Error loading events:', eventsError);
+      return;
+    }
+    const eventsObj = {};
+    (eventsData || []).forEach(event => {
+      if (!eventsObj[event.date]) eventsObj[event.date] = [];
+      eventsObj[event.date].push({
+        id: event.id,
+        title: event.title,
+        time: event.time,
+        date: event.date,
+        category: event.category,
+        isPrivate: event.is_private,
+        isUrgent: event.is_urgent,
+        isMultiDay: event.is_multi_day,
+        multiDayId: event.multi_day_id,
+        isAnnual: event.is_annual || false,
+        annualMonth: event.annual_month || null,
+        annualDay: event.annual_day || null,
+        recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
+        exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
+        reactions: event.reactions ? JSON.parse(event.reactions) : {},
+        location: event.location || null,
+        createdBy: event.created_by,
+        createdAt: event.created_at,
+        userId: event.user_id,
+        isShared: false
+      });
+    });
+    setEvents(eventsObj);
+    if (typeof window !== 'undefined') window.events = eventsObj;
+    mainCalendarEventsRef.current = eventsObj;
+  }
+
+  async function openFullCalendar(sc) {
+    if (!sc?.id) return;
+    setActiveSubCalendar(null);
+    activeSubCalendarRef.current = null;
+    setActiveFullCalendar(sc);
+    activeFullCalendarRef.current = sc;
+    setShowSharePanel(false);
+    setShowListPanel(false);
+    setBottomNavTab('home');
+    setCalendarTitle(sc.name || 'Calendar');
+    const { data, error } = await supabase
+      .from('sub_calendar_events')
+      .select('*')
+      .eq('sub_calendar_id', sc.id);
+    if (error) {
+      console.error('Error loading full calendar events:', error);
+      setEvents({});
+      return;
+    }
+    const grouped = {};
+    (data || []).forEach((e) => {
+      if (!grouped[e.date]) grouped[e.date] = [];
+      let meta = {};
+      try { meta = e?.notes ? JSON.parse(e.notes) : {}; } catch { meta = {}; }
+      let reactions = {};
+      try { reactions = e?.reactions ? JSON.parse(e.reactions) : {}; } catch { reactions = {}; }
+      grouped[e.date].push({
+        id: e.id,
+        title: e.title,
+        time: e.time,
+        date: e.date,
+        category: e.category || 'other',
+        isPrivate: Boolean(meta.isPrivate),
+        isUrgent: Boolean(meta.isUrgent),
+        isMultiDay: Boolean(meta.isMultiDay),
+        multiDayId: meta.multiDayId || null,
+        isAnnual: Boolean(meta.isAnnual),
+        annualMonth: meta.annualMonth || null,
+        annualDay: meta.annualDay || null,
+        recurrence: meta.recurrence || 'once',
+        exceptions: Array.isArray(meta.exceptions) ? meta.exceptions : [],
+        reactions,
+        location: e.location || null,
+        createdBy: e.created_by,
+        createdAt: e.created_at,
+        userId: e.user_id,
+        isShared: false,
+      });
+    });
+    setEvents(grouped);
+    if (typeof window !== 'undefined') window.events = grouped;
+  }
+
+  async function returnToMainCalendar() {
+    setActiveFullCalendar(null);
+    activeFullCalendarRef.current = null;
+    setShowSharePanel(false);
+    setShowListPanel(false);
+    if (user?.id) {
+      await loadMainCalendarEventsForUser(user.id, user.email);
+      const titleKey = `calendar-title-${user.id}`;
+      const savedTitle = localStorage.getItem(titleKey);
+      setCalendarTitle(savedTitle || 'Our Calendar');
+    } else {
+      setEvents(mainCalendarEventsRef.current || {});
+    }
+    setBottomNavTab('home');
+  }
+
+  async function openCalendarFromActiveList(sc) {
+    if (isFullCalendarRange(sc)) {
+      await openFullCalendar(sc);
+      return;
+    }
+    await openSubCalendar(sc);
+  }
 
   const inviteToSubCalendar = async (emailOverride) => {
     const emailToInvite = (emailOverride || subCalInviteEmail).trim().toLowerCase();
@@ -1704,13 +1893,24 @@ function App() {
     setShowReactionPicker(null);
 
     // Save only the reactions field directly to DB — bypass saveEvents entirely
-    supabase
-      .from('events')
-      .update({ reactions: JSON.stringify(updatedReactions) })
-      .eq('id', event.id)
-      .then(({ error }) => {
-        if (error) console.error('Error saving reaction:', error);
-      });
+    if (activeFullCalendarRef.current?.id) {
+      supabase
+        .from('sub_calendar_events')
+        .update({ reactions: JSON.stringify(updatedReactions) })
+        .eq('id', event.id)
+        .eq('sub_calendar_id', activeFullCalendarRef.current.id)
+        .then(({ error }) => {
+          if (error) console.error('Error saving reaction:', error);
+        });
+    } else {
+      supabase
+        .from('events')
+        .update({ reactions: JSON.stringify(updatedReactions) })
+        .eq('id', event.id)
+        .then(({ error }) => {
+          if (error) console.error('Error saving reaction:', error);
+        });
+    }
   }; // 'month' | 'week'
   const [holidays, setHolidays] = useState({});
   const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
@@ -1981,6 +2181,47 @@ function App() {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(async () => {
         try {
+          if (activeFullCalendarRef.current?.id) {
+            const subCalId = activeFullCalendarRef.current.id;
+            const fullRows = [];
+            Object.entries(newEvents).forEach(([date, dateEvents]) => {
+              (dateEvents || []).forEach(event => {
+                if (event.isHoliday || event.isReadOnly || event.isVirtualAnnual || event.isVirtualRecurrence) return;
+                const meta = {
+                  isPrivate: event.isPrivate || false,
+                  isUrgent: event.isUrgent || false,
+                  isMultiDay: event.isMultiDay || false,
+                  multiDayId: event.multiDayId || null,
+                  isAnnual: event.isAnnual || false,
+                  annualMonth: event.annualMonth || null,
+                  annualDay: event.annualDay || null,
+                  recurrence: event.recurrence || 'once',
+                  exceptions: Array.isArray(event.exceptions) ? event.exceptions : [],
+                };
+                fullRows.push({
+                  id: event.id,
+                  sub_calendar_id: subCalId,
+                  date: event.date || date,
+                  title: event.title,
+                  time: event.time || null,
+                  end_time: event.endTime || null,
+                  notes: JSON.stringify(meta),
+                  category: event.category || 'other',
+                  created_by: event.createdBy || currentUser || user?.email || 'User',
+                  user_id: user?.id,
+                  reactions: event.reactions ? JSON.stringify(event.reactions) : null,
+                  location: event.location || null,
+                });
+              });
+            });
+            await supabase.from('sub_calendar_events').delete().eq('sub_calendar_id', subCalId);
+            if (fullRows.length > 0) {
+              const { error: fullSaveError } = await supabase.from('sub_calendar_events').insert(fullRows);
+              if (fullSaveError) console.error('Error saving full calendar events:', fullSaveError);
+            }
+            return;
+          }
+
           const myEvents = [];
           const sharedUpdates = []; // events owned by others that we've edited
 
@@ -2517,6 +2758,7 @@ function App() {
     // and merges it with local state — never triggers a save
     const loadSharedEvents = async () => {
       try {
+        if (activeSubCalendarRef.current || activeFullCalendarRef.current) return;
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
         const userEmail = session?.user?.email;
@@ -2604,6 +2846,20 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    activeFullCalendarRef.current = activeFullCalendar;
+  }, [activeFullCalendar]);
+
+  useEffect(() => {
+    activeSubCalendarRef.current = activeSubCalendar;
+  }, [activeSubCalendar]);
+
+  useEffect(() => {
+    if (!activeFullCalendar && !activeSubCalendar) {
+      mainCalendarEventsRef.current = events;
+    }
+  }, [events, activeFullCalendar, activeSubCalendar]);
 
   useEffect(() => {
     if (!primaryListOwnerId) return;
@@ -3754,27 +4010,35 @@ function App() {
                   />
                 ) : (
                   <h1
-                    onClick={() => setIsEditingTitle(true)}
-                    className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:opacity-70 transition-opacity truncate"
-                    title="Click to rename calendar"
+                    onClick={() => { if (!activeFullCalendar) setIsEditingTitle(true); }}
+                    className={`text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent ${activeFullCalendar ? '' : 'cursor-pointer hover:opacity-70'} transition-opacity truncate`}
+                    title={activeFullCalendar ? '' : 'Click to rename calendar'}
                   >
                     {calendarTitle}
                   </h1>
                 )}
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                   <span className="font-semibold text-purple-600 dark:text-purple-400">{user?.email}</span>
+                  {activeFullCalendar && (
+                    <span className="ml-2 text-xs text-indigo-600 dark:text-indigo-300">Viewing: {activeFullCalendar.name}</span>
+                  )}
+                  {activeFullCalendar && (
+                    <button onClick={returnToMainCalendar} className="ml-2 text-xs text-indigo-500 hover:text-indigo-700 underline">back to Main</button>
+                  )}
                   <button onClick={handleLogout} className="ml-2 text-xs text-purple-500 hover:text-purple-700 underline">logout</button>
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => setShowSharePanel(!showSharePanel)}
-                className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                title="Share calendar"
-              >
-                <User className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
+              {!activeFullCalendar && (
+                <button
+                  onClick={() => setShowSharePanel(!showSharePanel)}
+                  className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                  title="Share calendar"
+                >
+                  <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              )}
               <button
                 onClick={() => setShowNotificationSettings(!showNotificationSettings)}
                 className={`relative p-2 rounded-xl transition-all duration-200 ${notificationsEnabled ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
@@ -3787,13 +4051,15 @@ function App() {
                   </span>
                 )}
               </button>
-              <button
-                onClick={() => setShowListPanel(!showListPanel)}
-                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showListPanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                title="Shared list"
-              >
-                List
-              </button>
+              {!activeFullCalendar && (
+                <button
+                  onClick={() => setShowListPanel(!showListPanel)}
+                  className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showListPanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                  title="Shared list"
+                >
+                  List
+                </button>
+              )}
               <button
                 onClick={() => setShowWeather(!showWeather)}
                 className={`p-2 rounded-xl transition-all duration-200 text-sm ${showWeather ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
@@ -4010,7 +4276,7 @@ function App() {
           </div>
         )}
 
-        {showSharePanel && (
+        {!activeFullCalendar && showSharePanel && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400">
@@ -4085,7 +4351,7 @@ function App() {
           </div>
         )}
 
-        {showListPanel && (
+        {!activeFullCalendar && showListPanel && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border border-purple-100 dark:border-gray-700">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
@@ -4382,7 +4648,7 @@ function App() {
                           onTouchMove={handleTripSwipeMove}
                           onTouchEnd={handleTripSwipeEnd}
                           onTouchCancel={handleTripSwipeEnd}
-                          onClick={() => openSubCalendar(sc)}
+                          onClick={() => openCalendarFromActiveList(sc)}
                           className="relative z-10 w-full flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 hover:shadow-md transition-all text-left cursor-pointer"
                           style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                         >
@@ -5054,7 +5320,7 @@ function App() {
                                   <div className="text-xs text-gray-500 dark:text-gray-400">Main calendar · always active</div>
                                 </div>
                                 <button
-                                  onClick={() => { setActiveSubCalendar(null); setBottomNavTab('home'); }}
+                                  onClick={returnToMainCalendar}
                                   className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white"
                                 >
                                   Open
@@ -5089,11 +5355,13 @@ function App() {
                               <div className="min-w-0">
                                 <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  Happening now · {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
+                                  {isFullCalendarRange(sc)
+                                    ? 'Separate full calendar'
+                                    : `Happening now · ${formatTripDate(getSubCalStartRaw(sc))} - ${formatTripDate(getSubCalEndRaw(sc), true)}`}
                                 </div>
                               </div>
                               <button
-                                onClick={() => openSubCalendar(sc)}
+                                onClick={() => openCalendarFromActiveList(sc)}
                                 className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white"
                               >
                                 Open
@@ -5143,7 +5411,7 @@ function App() {
                               </div>
                             </div>
                             <button
-                              onClick={() => openSubCalendar(sc)}
+                              onClick={() => openCalendarFromActiveList(sc)}
                               className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-purple-500 hover:bg-purple-600 text-white"
                             >
                               Open
@@ -5196,7 +5464,7 @@ function App() {
                               </div>
                             </div>
                             <button
-                              onClick={() => openSubCalendar(sc)}
+                              onClick={() => openCalendarFromActiveList(sc)}
                               className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-gray-600 hover:bg-gray-700 text-white"
                             >
                               Open
