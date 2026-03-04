@@ -168,6 +168,9 @@ function App() {
   const [newCalendarType, setNewCalendarType] = useState('sub'); // 'sub' | 'full'
   const [subCalInviteEmail, setSubCalInviteEmail] = useState('');
   const [subCalMembers, setSubCalMembers] = useState([]);
+  const [fullCalInviteEmail, setFullCalInviteEmail] = useState('');
+  const [fullCalMembers, setFullCalMembers] = useState([]);
+  const [fullCalShareMessage, setFullCalShareMessage] = useState('');
   const [subCalEditingEvent, setSubCalEditingEvent] = useState(null);
   const [subCalSelectedDate, setSubCalSelectedDate] = useState(null);
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
@@ -520,6 +523,22 @@ function App() {
     } catch (e) { console.error(e); }
   };
 
+  const loadFullCalendarMembers = async (subCalId) => {
+    try {
+      const { data, error } = await supabase
+        .from('sub_calendar_members')
+        .select('*')
+        .eq('sub_calendar_id', subCalId);
+      if (error) {
+        console.error('Error loading full calendar members:', error);
+        return;
+      }
+      setFullCalMembers(data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const loadGlobalVenmoHandles = async () => {
     try {
       const { data, error } = await supabase
@@ -833,6 +852,9 @@ function App() {
     const fullTitleKey = `calendar-title-${user?.id}-full-${sc.id}`;
     const savedFullTitle = localStorage.getItem(fullTitleKey);
     setCalendarTitle(savedFullTitle || sc.name || 'Calendar');
+    setFullCalInviteEmail('');
+    setFullCalShareMessage('');
+    await loadFullCalendarMembers(sc.id);
     const { data, error } = await supabase
       .from('sub_calendar_events')
       .select('*')
@@ -882,6 +904,9 @@ function App() {
     activeFullCalendarRef.current = null;
     setShowSharePanel(false);
     setShowListPanel(false);
+    setFullCalInviteEmail('');
+    setFullCalShareMessage('');
+    setFullCalMembers([]);
     if (user?.id) {
       await loadMainCalendarEventsForUser(user.id, user.email);
       setCalendarTitle(mainCalendarTitle || 'Our Calendar');
@@ -913,10 +938,18 @@ function App() {
   };
 
   const inviteToFullCalendar = async (emailOverride) => {
-    const emailToInvite = (emailOverride || '').trim().toLowerCase();
+    const emailToInvite = (emailOverride || fullCalInviteEmail).trim().toLowerCase();
     if (!emailToInvite || !activeFullCalendar) return;
+    if (activeFullCalendar.owner_id !== user?.id) {
+      setFullCalShareMessage('Only the calendar owner can share this calendar.');
+      return;
+    }
     if (emailToInvite === (user?.email || '').toLowerCase()) {
-      alert("You can't invite yourself.");
+      setFullCalShareMessage("You can't invite yourself.");
+      return;
+    }
+    if (fullCalMembers.some(m => String(m.email || '').toLowerCase() === emailToInvite)) {
+      setFullCalShareMessage(`${emailToInvite} already has access.`);
       return;
     }
     const { error } = await supabase.from('sub_calendar_members').insert({
@@ -926,14 +959,32 @@ function App() {
     });
     if (error) {
       if (error.code === '23505') {
-        alert(`${emailToInvite} is already invited to this calendar.`);
+        setFullCalShareMessage(`${emailToInvite} already has access.`);
       } else {
         console.error('Error inviting full calendar member:', error);
-        alert('Could not share this calendar. Try again.');
+        setFullCalShareMessage('Could not share this calendar. Try again.');
       }
       return;
     }
-    alert(`Shared "${activeFullCalendar.name}" with ${emailToInvite}.`);
+    setFullCalMembers(prev => [...prev, { email: emailToInvite, sub_calendar_id: activeFullCalendar.id }]);
+    setFullCalInviteEmail('');
+    setFullCalShareMessage(`✅ Shared "${activeFullCalendar.name}" with ${emailToInvite}.`);
+  };
+
+  const removeMemberFromFullCal = async (email) => {
+    if (!activeFullCalendar?.id || activeFullCalendar.owner_id !== user?.id) return;
+    const { error } = await supabase
+      .from('sub_calendar_members')
+      .delete()
+      .eq('sub_calendar_id', activeFullCalendar.id)
+      .eq('email', email);
+    if (error) {
+      console.error('Error removing full calendar member:', error);
+      setFullCalShareMessage('Could not remove access. Try again.');
+      return;
+    }
+    setFullCalMembers(prev => prev.filter(m => m.email !== email));
+    setFullCalShareMessage(`Removed access for ${email}.`);
   };
 
   const removeMemberFromSubCal = async (email) => {
@@ -4257,16 +4308,10 @@ function App() {
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => {
-                  if (activeFullCalendar) {
-                    if (activeFullCalendar.owner_id !== user?.id) return;
-                    const email = window.prompt(`Share "${activeFullCalendar.name}" with email:`);
-                    if (email) inviteToFullCalendar(email);
-                    return;
-                  }
                   setShowSharePanel(!showSharePanel);
                 }}
-                className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel && !activeFullCalendar ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'} ${activeFullCalendar && activeFullCalendar.owner_id !== user?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                title={activeFullCalendar ? (activeFullCalendar.owner_id === user?.id ? 'Share this calendar' : 'Only owner can share') : 'Share calendar'}
+                className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                title="Share calendar"
               >
                 <User className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
@@ -4576,6 +4621,72 @@ function App() {
             )}
             {myShares.length === 0 && sharedCalendars.length === 0 && (
               <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add someone's email above to get started.</p>
+            )}
+          </div>
+        )}
+
+        {activeFullCalendar && showSharePanel && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400">
+                Share {activeFullCalendar.name}
+              </h3>
+              <button onClick={() => { setShowSharePanel(false); setFullCalShareMessage(''); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+            </div>
+            <div className="mb-5">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Add an email to share this calendar.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={fullCalInviteEmail}
+                  onChange={(e) => { setFullCalInviteEmail(e.target.value); setFullCalShareMessage(''); }}
+                  placeholder="friend@gmail.com"
+                  disabled={activeFullCalendar.owner_id !== user?.id}
+                  className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 disabled:opacity-60"
+                  onKeyPress={(e) => e.key === 'Enter' && inviteToFullCalendar()}
+                />
+                <button
+                  onClick={() => inviteToFullCalendar()}
+                  disabled={activeFullCalendar.owner_id !== user?.id}
+                  className="px-4 py-2 bg-gradient-to-br from-indigo-500 to-blue-500 text-white rounded-xl hover:shadow-lg transition-all disabled:opacity-60"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+              {fullCalShareMessage && (
+                <p className={`text-sm mt-2 ${fullCalShareMessage.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>
+                  {fullCalShareMessage}
+                </p>
+              )}
+            </div>
+            {fullCalMembers.length > 0 && (
+              <div className="mb-2">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Shared with:</h4>
+                <div className="space-y-2">
+                  {fullCalMembers.map((member, i) => (
+                    <div key={`${member.email}-${i}`} className="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl border border-indigo-200 dark:border-indigo-700">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-indigo-400 flex items-center justify-center text-white text-xs font-bold">
+                          {String(member.email || '?')[0]?.toUpperCase()}
+                        </div>
+                        <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{member.email}</span>
+                      </div>
+                      {activeFullCalendar.owner_id === user?.id && (
+                        <button onClick={() => removeMemberFromFullCal(member.email)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all" title="Remove access">
+                          <X className="w-4 h-4 text-red-500" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {fullCalMembers.length === 0 && (
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add an email above to get started.</p>
             )}
           </div>
         )}
