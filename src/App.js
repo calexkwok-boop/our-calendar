@@ -2697,16 +2697,15 @@ function App() {
 
       const { data: scRow, error: scErr } = await supabase
         .from('sub_calendars')
-        .select('id,owner_id')
+        .select('id,owner_id,user_id')
         .eq('id', normalizedId)
         .maybeSingle();
       if (scErr || !scRow) return false;
-      if (String(scRow.owner_id || '') === me) {
+      const ownerId = String(scRow.owner_id || scRow.user_id || '');
+      if (ownerId === me) {
         accessibleSubCalIdCache.add(normalizedId);
         return true;
       }
-
-      const ownerId = String(scRow.owner_id || '');
       if (!ownerId) return false;
 
       const { data: shareById, error: shareByIdErr } = await supabase
@@ -2900,6 +2899,13 @@ function App() {
               .select('id')
               .in('owner_id', Array.from(ownerIds));
             if (!sharedOwnerErr) (sharedOwnerSubCals || []).forEach(r => { if (r?.id) ids.add(String(r.id)); });
+
+            // Legacy fallback: older rows may store ownership in user_id instead of owner_id.
+            const { data: sharedLegacySubCals, error: sharedLegacyErr } = await supabase
+              .from('sub_calendars')
+              .select('id')
+              .in('user_id', Array.from(ownerIds));
+            if (!sharedLegacyErr) (sharedLegacySubCals || []).forEach(r => { if (r?.id) ids.add(String(r.id)); });
           }
 
           return Array.from(ids);
