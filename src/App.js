@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Eye, EyeOff, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase
@@ -77,7 +77,7 @@ function App() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState(COLOR_OPTIONS[0]);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [showPrivateEvents, setShowPrivateEvents] = useState(false);
+  const [showPrivateEvents] = useState(false);
 
   const saveTimeoutRef = useRef(null);
   const dateTapTimeoutRef = useRef(null);
@@ -109,7 +109,6 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [firstTapDate, setFirstTapDate] = useState(null);
   const [lastTapTime, setLastTapTime] = useState(0);
-  const [isAnnual, setIsAnnual] = useState(false);
   const [recurrence, setRecurrence] = useState('once');
   const [calendarView, setCalendarView] = useState('month');
   const [showReactionPicker, setShowReactionPicker] = useState(null);
@@ -146,7 +145,6 @@ function App() {
   const [editingNote, setEditingNote] = useState(null);
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [editingSubCalTitle, setEditingSubCalTitle] = useState(false);
-  const [editingSubCalDates, setEditingSubCalDates] = useState(false);
   const [shakingDates, setShakingDates] = useState(false);
   const shakingTimeoutRef = useRef(null);
   const [subCalWeather, setSubCalWeather] = useState({});
@@ -187,7 +185,6 @@ function App() {
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [locationActionTarget, setLocationActionTarget] = useState('');
   const photoInputRef = useRef(null);
-  const lightboxTapRef = useRef({ id: null, at: 0 });
   const photoDeleteHoldTimerRef = useRef(null);
   const photoTapRef = useRef({ id: null, at: 0, timer: null });
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
@@ -1076,14 +1073,6 @@ function App() {
     if (clearInput) clearInput();
   };
 
-  const renameSubCalendar = async (newName) => {
-    if (!newName.trim() || !activeSubCalendar) return;
-    await supabase.from('sub_calendars').update({ name: newName.trim() }).eq('id', activeSubCalendar.id);
-    setActiveSubCalendar(prev => ({ ...prev, name: newName.trim() }));
-    setSubCalendars(prev => prev.map(sc => sc.id === activeSubCalendar.id ? { ...sc, name: newName.trim() } : sc));
-    setEditingSubCalTitle(false);
-  };
-
   const addSubCalNote = async () => {
     if (!newNote.trim() || !activeSubCalendar) return;
     const note = {
@@ -1540,19 +1529,6 @@ function App() {
     setSubCalWeatherLoading(false);
   };
 
-  const reorderNote = async (noteId, direction) => {
-    const idx = subCalNotes.findIndex(n => n.id === noteId);
-    if (direction === 'up' && idx === 0) return;
-    if (direction === 'down' && idx === subCalNotes.length - 1) return;
-    const newNotes = [...subCalNotes];
-    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-    [newNotes[idx], newNotes[swapIdx]] = [newNotes[swapIdx], newNotes[idx]];
-    setSubCalNotes(newNotes);
-    // Save new order by updating a sort_order field or re-inserting — simplest: update created_at timestamps
-    await supabase.from('sub_calendar_notes').update({ created_at: new Date(Date.now() - 1000).toISOString() }).eq('id', newNotes[swapIdx].id);
-    await supabase.from('sub_calendar_notes').update({ created_at: new Date().toISOString() }).eq('id', newNotes[idx].id);
-  };
-
   const addChecklistItem = async (noteId, itemText) => {
     if (!itemText.trim()) return;
     const note = subCalNotes.find(n => n.id === noteId);
@@ -1715,7 +1691,6 @@ function App() {
   const [listError, setListError] = useState('');
   const [shareEmailInput, setShareEmailInput] = useState('');
   const [shareMessage, setShareMessage] = useState('');
-  const [activeCalendars, setActiveCalendars] = useState([]);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [showTipBanner, setShowTipBanner] = useState(() => localStorage.getItem('hideTipBanner') !== 'true');
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
@@ -1879,24 +1854,6 @@ function App() {
     }
 
     setLastTapTime(now);
-  };
-
-  const handleDateMouseEnter = (date) => {
-    if (!date || !isSelecting || !selectionStart) return;
-    const start = new Date(Math.min(selectionStart, date));
-    const end = new Date(Math.max(selectionStart, date));
-    const dates = [];
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      dates.push(new Date(d));
-    }
-    setSelectedDates(dates);
-  };
-
-  const handleDateMouseUp = () => {
-    setIsSelecting(false);
-    if (selectedDates.length > 0) {
-      setSelectedDate(selectedDates[0]);
-    }
   };
 
   const getEventsForDate = (date) => {
@@ -2375,8 +2332,6 @@ function App() {
 
           // Load events from all owners who shared with me
           const ownerIds = sharedWithMe.map(s => s.owner_id);
-          setActiveCalendars(ownerIds);
-
           const { data: sharedEventsData } = await supabase
             .from('events')
             .select('*')
@@ -3389,12 +3344,6 @@ function App() {
     saveCategories(updatedCategories);
   };
 
-  const handleUpdateCategoryAndClose = (key, updates) => {
-    const updatedCategories = { ...categories, [key]: { ...categories[key], ...updates } };
-    saveCategories(updatedCategories);
-    setEditingCategory(null);
-  };
-
   const handleQuickAdd = () => {
     if (!quickEntry.trim()) return;
     const title = quickEntry.trim();
@@ -3437,7 +3386,6 @@ function App() {
     });
     saveEvents(updatedEvents);
     setSelectedDates([]);
-    setIsAnnual(false);
     setRecurrence('once');
     setShowTimePrompt(false);
     setPendingEvent(null);
@@ -3487,22 +3435,6 @@ function App() {
       if (updatedEvents[dateKey].length === 0) delete updatedEvents[dateKey];
       saveEvents(updatedEvents);
     }
-  };
-
-  const handleUpdateEvent = (dateKey, eventId, updates) => {
-    // Find the actual date key where this event is stored
-    const actualDateKey = Object.keys(events).find(k => events[k].some(e => e.id === eventId)) || dateKey;
-    const updatedEvents = {
-      ...events,
-      [actualDateKey]: events[actualDateKey].map(e => e.id === eventId ? { ...e, ...updates } : e)
-        .sort((a, b) => {
-          if (!a.time) return 1;
-          if (!b.time) return -1;
-          return a.time.localeCompare(b.time);
-        })
-    };
-    saveEvents(updatedEvents);
-    setEditingEvent(null);
   };
 
   // Update a field without closing the edit form (for toggles)
@@ -4806,7 +4738,6 @@ function App() {
                       key={opt.value}
                       onClick={() => {
                         setRecurrence(opt.value);
-                        setIsAnnual(opt.value === 'annual');
                       }}
                       className={`px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                         recurrence === opt.value
