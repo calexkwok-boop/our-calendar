@@ -1326,6 +1326,23 @@ function App() {
     setEditingSubCalTitle(false);
   };
 
+  const renameFullCalendar = async (newName) => {
+    const trimmedName = (newName || '').trim();
+    if (!trimmedName || !activeFullCalendar?.id) return;
+    const { error } = await supabase
+      .from('sub_calendars')
+      .update({ name: trimmedName })
+      .eq('id', activeFullCalendar.id);
+    if (error) {
+      console.error('Error renaming full calendar:', error);
+      return;
+    }
+    setActiveFullCalendar(prev => (prev ? { ...prev, name: trimmedName } : prev));
+    setSubCalendars(prev => prev.map(sc => sc.id === activeFullCalendar.id ? { ...sc, name: trimmedName } : sc));
+    setCalendarTitle(trimmedName);
+    localStorage.setItem(`calendar-title-${user?.id}-full-${activeFullCalendar.id}`, trimmedName);
+  };
+
   const saveExpenseLedger = async (expenses) => {
     if (!activeSubCalendar) return false;
     const payload = {
@@ -4007,7 +4024,7 @@ function App() {
                     onBlur={async () => {
                       setIsEditingTitle(false);
                       if (activeFullCalendar?.id) {
-                        localStorage.setItem(`calendar-title-${user?.id}-full-${activeFullCalendar.id}`, calendarTitle);
+                        await renameFullCalendar(calendarTitle);
                       } else {
                         localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
                         setMainCalendarTitle(calendarTitle);
@@ -4017,7 +4034,7 @@ function App() {
                       if (e.key === 'Enter') {
                         setIsEditingTitle(false);
                         if (activeFullCalendar?.id) {
-                          localStorage.setItem(`calendar-title-${user?.id}-full-${activeFullCalendar.id}`, calendarTitle);
+                          await renameFullCalendar(calendarTitle);
                         } else {
                           localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
                           setMainCalendarTitle(calendarTitle);
@@ -4029,9 +4046,9 @@ function App() {
                   />
                 ) : (
                   <h1
-                    onClick={() => { if (!activeFullCalendar) setIsEditingTitle(true); }}
-                    className={`text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent ${activeFullCalendar ? '' : 'cursor-pointer hover:opacity-70'} transition-opacity truncate`}
-                    title={activeFullCalendar ? '' : 'Click to rename calendar'}
+                    onClick={() => setIsEditingTitle(true)}
+                    className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:opacity-70 transition-opacity truncate"
+                    title="Click to rename calendar"
                   >
                     {calendarTitle}
                   </h1>
