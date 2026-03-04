@@ -1996,6 +1996,7 @@ function App() {
   const [editingListItemId, setEditingListItemId] = useState(null);
   const [editingListText, setEditingListText] = useState('');
   const [listError, setListError] = useState('');
+  const [listSubCalScopeSupported, setListSubCalScopeSupported] = useState(true);
   const [shareEmailInput, setShareEmailInput] = useState('');
   const [shareMessage, setShareMessage] = useState('');
   const [activeCalendars, setActiveCalendars] = useState([]);
@@ -2450,6 +2451,9 @@ function App() {
     : user?.id;
   const activeListScopeSubCalId = activeFullCalendar?.id || null;
   const effectiveListOwnerId = activeFullCalendar?.owner_id || primaryListOwnerId;
+  const isMissingListScopeColumn = (error) => (
+    error?.code === '42703' && /sub_calendar_id/i.test(String(error?.message || ''))
+  );
 
   const loadSharedListGroups = async (ownerId, subCalId = null) => {
     if (!ownerId) return;
@@ -2458,8 +2462,20 @@ function App() {
       .select('*')
       .eq('owner_id', ownerId)
       .order('created_at', { ascending: true });
-    query = subCalId ? query.eq('sub_calendar_id', subCalId) : query.is('sub_calendar_id', null);
-    const { data, error } = await query;
+    if (listSubCalScopeSupported) {
+      query = subCalId ? query.eq('sub_calendar_id', subCalId) : query.is('sub_calendar_id', null);
+    }
+    let { data, error } = await query;
+    if (error && isMissingListScopeColumn(error) && listSubCalScopeSupported) {
+      setListSubCalScopeSupported(false);
+      const fallback = await supabase
+        .from('shared_list_groups')
+        .select('*')
+        .eq('owner_id', ownerId)
+        .order('created_at', { ascending: true });
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       console.error('Error loading shared list groups:', error);
@@ -2495,8 +2511,21 @@ function App() {
       .eq('owner_id', ownerId)
       .eq('list_id', listId)
       .order('created_at', { ascending: true });
-    query = subCalId ? query.eq('sub_calendar_id', subCalId) : query.is('sub_calendar_id', null);
-    const { data, error } = await query;
+    if (listSubCalScopeSupported) {
+      query = subCalId ? query.eq('sub_calendar_id', subCalId) : query.is('sub_calendar_id', null);
+    }
+    let { data, error } = await query;
+    if (error && isMissingListScopeColumn(error) && listSubCalScopeSupported) {
+      setListSubCalScopeSupported(false);
+      const fallback = await supabase
+        .from('shared_lists')
+        .select('*')
+        .eq('owner_id', ownerId)
+        .eq('list_id', listId)
+        .order('created_at', { ascending: true });
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       console.error('Error loading shared list items:', error);
@@ -2521,14 +2550,26 @@ function App() {
       title,
       created_by: currentUser || user.email || 'User',
       user_id: user.id,
-      sub_calendar_id: activeListScopeSubCalId,
     };
+    if (listSubCalScopeSupported) payload.sub_calendar_id = activeListScopeSubCalId;
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('shared_list_groups')
       .insert(payload)
       .select('*')
       .single();
+    if (error && isMissingListScopeColumn(error) && listSubCalScopeSupported) {
+      setListSubCalScopeSupported(false);
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.sub_calendar_id;
+      const fallback = await supabase
+        .from('shared_list_groups')
+        .insert(fallbackPayload)
+        .select('*')
+        .single();
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       console.error('Error creating shared list:', error);
@@ -2553,10 +2594,21 @@ function App() {
       .delete()
       .eq('owner_id', effectiveListOwnerId)
       .eq('list_id', listId);
-    deleteItems = activeListScopeSubCalId
-      ? deleteItems.eq('sub_calendar_id', activeListScopeSubCalId)
-      : deleteItems.is('sub_calendar_id', null);
-    const { error: itemDeleteError } = await deleteItems;
+    if (listSubCalScopeSupported) {
+      deleteItems = activeListScopeSubCalId
+        ? deleteItems.eq('sub_calendar_id', activeListScopeSubCalId)
+        : deleteItems.is('sub_calendar_id', null);
+    }
+    let { error: itemDeleteError } = await deleteItems;
+    if (itemDeleteError && isMissingListScopeColumn(itemDeleteError) && listSubCalScopeSupported) {
+      setListSubCalScopeSupported(false);
+      const fallbackDelete = await supabase
+        .from('shared_lists')
+        .delete()
+        .eq('owner_id', effectiveListOwnerId)
+        .eq('list_id', listId);
+      itemDeleteError = fallbackDelete.error;
+    }
 
     if (itemDeleteError) {
       setListError(`Could not delete list items: ${itemDeleteError.message}`);
@@ -2591,14 +2643,26 @@ function App() {
       done: false,
       created_by: currentUser || user.email || 'User',
       user_id: user.id,
-      sub_calendar_id: activeListScopeSubCalId,
     };
+    if (listSubCalScopeSupported) payload.sub_calendar_id = activeListScopeSubCalId;
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('shared_lists')
       .insert(payload)
       .select('*')
       .single();
+    if (error && isMissingListScopeColumn(error) && listSubCalScopeSupported) {
+      setListSubCalScopeSupported(false);
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.sub_calendar_id;
+      const fallback = await supabase
+        .from('shared_lists')
+        .insert(fallbackPayload)
+        .select('*')
+        .single();
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       console.error('Error adding list item:', error);
@@ -3020,6 +3084,10 @@ function App() {
     if (!user?.id) return;
     const me = String(user.id);
     const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
+    const mainOwnerIdSet = new Set([
+      me,
+      ...(sharedCalendars || []).map(s => String(s.owner_id || '')).filter(Boolean),
+    ]);
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
 
@@ -3071,6 +3139,13 @@ function App() {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_lists' }, ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
+        const subCalId = String(row.sub_calendar_id || '');
+        const ownerId = String(row.owner_id || '');
+        if (subCalId) {
+          if (subCalIdSet.size > 0 && !subCalIdSet.has(subCalId)) return;
+        } else if (mainOwnerIdSet.size > 0 && !mainOwnerIdSet.has(ownerId)) {
+          return;
+        }
         const who = String(row.created_by || 'Someone');
         const itemText = String(row.text || '').trim();
         const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
@@ -3086,7 +3161,7 @@ function App() {
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, currentUser, subCalendars]);
+  }, [user?.id, user?.email, currentUser, subCalendars, sharedCalendars]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -3094,6 +3169,7 @@ function App() {
     const myEmail = String(user?.email || '').trim().toLowerCase();
     const myName = String(currentUser || '').trim().toLowerCase();
     const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
+    const subCalOwnerIds = Array.from(new Set((subCalendars || []).map(sc => String(sc.owner_id || '')).filter(Boolean)));
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
 
@@ -3119,7 +3195,11 @@ function App() {
           .from('shared_access')
           .select('owner_id')
           .or(`shared_with_email.eq.${user.email},shared_with_id.eq.${user.id}`);
-        const ownerIds = Array.from(new Set((sharedData || []).map(s => String(s.owner_id || '')).filter(Boolean)));
+        const ownerIds = Array.from(new Set([
+          me,
+          ...(sharedData || []).map(s => String(s.owner_id || '')).filter(Boolean),
+          ...subCalOwnerIds,
+        ]));
 
         if (ownerIds.length > 0) {
           const { data: sharedEvents } = await supabase
@@ -3143,13 +3223,15 @@ function App() {
 
           const { data: sharedListItems } = await supabase
             .from('shared_lists')
-            .select('id,text,created_by,user_id,created_at')
+            .select('id,text,created_by,user_id,created_at,owner_id,sub_calendar_id')
             .in('owner_id', ownerIds)
             .gt('created_at', inAppSyncCursorRef.current.sharedListItems || new Date(Date.now() - (5 * 60 * 1000)).toISOString())
             .order('created_at', { ascending: true })
             .limit(200);
           (sharedListItems || []).forEach(row => {
             if (isOwnRow(row)) return;
+            const subCalId = String(row.sub_calendar_id || '');
+            if (subCalId && subCalIdSet.size > 0 && !subCalIdSet.has(subCalId)) return;
             const who = String(row.created_by || 'Someone');
             const itemText = String(row.text || '').trim();
             const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
