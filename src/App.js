@@ -2761,7 +2761,7 @@ function App() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_photos' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
         const subCalId = String(row.sub_calendar_id || '');
-        const who = String(row.uploaded_by || row.created_by || 'Someone');
+        const who = String(row.uploaded_by || 'Someone');
         const tripName = subCalNameMap[subCalId] || 'trip';
         addInAppNotification({
           key: `trip_photos:${row.id}`,
@@ -2974,7 +2974,7 @@ function App() {
         const photoCursor = inAppSyncCursorRef.current.tripPhotos || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
         const tripPhotoBase = supabase
           .from('trip_photos')
-          .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at');
+          .select('id,uploaded_by,user_id,sub_calendar_id,created_at');
         const { data: datedTripPhotoRows, error: datedTripPhotoError } = await (subCalIds.length > 0
           ? tripPhotoBase
               .in('sub_calendar_id', subCalIds)
@@ -2990,7 +2990,7 @@ function App() {
         }
         const nullTripPhotoBase = supabase
           .from('trip_photos')
-          .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at');
+          .select('id,uploaded_by,user_id,sub_calendar_id,created_at');
         const { data: nullTripPhotoRows, error: nullTripPhotoError } = await (subCalIds.length > 0
           ? nullTripPhotoBase
               .in('sub_calendar_id', subCalIds)
@@ -3007,7 +3007,7 @@ function App() {
         uniqueTripPhotoRows.forEach(row => {
           if (isOwnRow(row)) return;
           const subCalId = String(row.sub_calendar_id || '');
-          const who = String(row.uploaded_by || row.created_by || 'Someone');
+          const who = String(row.uploaded_by || 'Someone');
           addInAppNotification({
             key: `trip_photos:${row.id}`,
             type: 'photo',
