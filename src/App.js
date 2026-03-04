@@ -706,6 +706,25 @@ function App() {
     setSubCalSelectedDate(firstDate);
   };
 
+  async function loadSharedAccessForUser(userId, userEmail) {
+    const normalizedEmail = String(userEmail || '').trim().toLowerCase();
+    if (!userId && !normalizedEmail) return [];
+    let query = supabase.from('shared_access').select('*');
+    if (userId && normalizedEmail) {
+      query = query.or(`shared_with_email.eq.${normalizedEmail},shared_with_id.eq.${userId}`);
+    } else if (normalizedEmail) {
+      query = query.eq('shared_with_email', normalizedEmail);
+    } else {
+      query = query.eq('shared_with_id', userId);
+    }
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error loading shared access:', error);
+      return [];
+    }
+    return data || [];
+  }
+
   async function loadMainCalendarEventsForUser(userId, userEmail) {
     if (!userId) return;
     const { data: eventsData, error: eventsError } = await supabase
@@ -713,10 +732,7 @@ function App() {
       .select('*')
       .eq('user_id', userId);
 
-    const { data: sharedWithMe } = await supabase
-      .from('shared_access')
-      .select('*')
-      .eq('shared_with_email', userEmail);
+    const sharedWithMe = await loadSharedAccessForUser(userId, userEmail);
 
     if (sharedWithMe && sharedWithMe.length > 0) {
       for (const share of sharedWithMe) {
@@ -2756,10 +2772,7 @@ function App() {
           .eq('user_id', userId);
 
         // Load calendars shared WITH me (by email)
-        const { data: sharedWithMe } = await supabase
-          .from('shared_access')
-          .select('*')
-          .eq('shared_with_email', userEmail);
+        const sharedWithMe = await loadSharedAccessForUser(userId, userEmail);
 
         // Update shared_with_id if not yet set (first time they log in)
         if (sharedWithMe && sharedWithMe.length > 0) {
@@ -3003,6 +3016,37 @@ function App() {
   useEffect(() => {
     activeSubCalendarRef.current = activeSubCalendar;
   }, [activeSubCalendar]);
+
+  useEffect(() => {
+    if (!user?.id || !user?.email) return;
+    const myId = String(user.id);
+    const myEmail = String(user.email).trim().toLowerCase();
+    const refreshSharedData = async () => {
+      await loadSubCalendars();
+      if (!activeSubCalendarRef.current && !activeFullCalendarRef.current) {
+        await loadMainCalendarEventsForUser(user.id, user.email);
+      }
+    };
+    const sharesChannel = supabase
+      .channel(`share-and-member-sync-${myId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_access' }, async ({ new: row, old }) => {
+        const newEmail = String(row?.shared_with_email || '').trim().toLowerCase();
+        const oldEmail = String(old?.shared_with_email || '').trim().toLowerCase();
+        const newId = String(row?.shared_with_id || '');
+        const oldId = String(old?.shared_with_id || '');
+        if (newEmail !== myEmail && oldEmail !== myEmail && newId !== myId && oldId !== myId) return;
+        await refreshSharedData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sub_calendar_members' }, async ({ new: row, old }) => {
+        const newEmail = String(row?.email || '').trim().toLowerCase();
+        const oldEmail = String(old?.email || '').trim().toLowerCase();
+        if (newEmail !== myEmail && oldEmail !== myEmail) return;
+        await refreshSharedData();
+      })
+      .subscribe();
+
+    return () => sharesChannel.unsubscribe();
+  }, [user?.id, user?.email]);
 
   useEffect(() => {
     if (!activeFullCalendar && !activeSubCalendar) {
