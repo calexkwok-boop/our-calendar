@@ -3771,24 +3771,27 @@ function App() {
     if (ts === null) return 'Unknown date';
     return new Date(ts).toLocaleDateString('en-US', withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
   };
-  const upcomingTrips = [...subCalendars]
+  const dateRangeCalendars = subCalendars.filter(sc => !isFullCalendarRange(sc));
+  const upcomingTrips = [...dateRangeCalendars]
     .filter(sc => {
       const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
       return startTs !== null && startTs > todayTs;
     })
     .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
-  const activeTrips = [...subCalendars]
+  const activeTrips = [...dateRangeCalendars]
     .filter(sc => {
       const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
       const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
       return startTs !== null && endTs !== null && todayTs >= startTs && todayTs <= endTs;
     })
     .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
+  const activeFullCalendars = subCalendars.filter(sc => isFullCalendarRange(sc));
   const activeCalendarsForList = [
     { id: '__main__', isMainCalendar: true, name: calendarTitle || 'Main' },
+    ...activeFullCalendars,
     ...activeTrips,
   ];
-  const archivedTrips = [...subCalendars]
+  const archivedTrips = [...dateRangeCalendars]
     .filter(sc => {
       const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
       return endTs !== null && endTs < todayTs;
@@ -4616,7 +4619,7 @@ function App() {
             {/* Active sub-calendar banner */}
             {(() => {
               const today = getDateKey(new Date());
-              const active = subCalendars
+              const active = dateRangeCalendars
                 .filter(sc => today >= sc.start_date && today <= sc.end_date)
                 .sort((a, b) => {
                   const todayEvents = events[today] || [];
@@ -4728,7 +4731,7 @@ function App() {
                   });
                   const subTripsOnDate = dateTs === null
                     ? []
-                    : subCalendars.filter(sc => {
+                    : dateRangeCalendars.filter(sc => {
                         const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
                         const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
                         return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
@@ -4815,7 +4818,7 @@ function App() {
                   const hasHoliday = dateEvents.some(e => e.isHoliday);
                   const weatherData = showWeather ? weather[dateKey] : null;
                   const dateTs = toDateOnlyTs(date);
-                  const subTripsOnDate = subCalendars.filter(sc => {
+                  const subTripsOnDate = dateRangeCalendars.filter(sc => {
                     const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
                     const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
                     return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
