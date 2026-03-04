@@ -542,15 +542,14 @@ function App() {
   };
 
   const createSubCalendar = async () => {
-    console.log('createSubCalendar called', { name: newSubCalName, user: user?.id });
-    if (!newSubCalName.trim()) {
-      alert('Please enter a calendar name.');
+    console.log('createSubCalendar called', { name: newSubCalName, dates: selectedDates.length, user: user?.id });
+    if (!newSubCalName.trim() || selectedDates.length < 2) {
+      alert(selectedDates.length < 2 ? `Please select at least 2 dates first. Currently selected: ${selectedDates.length}` : 'Please enter a name.');
       return;
     }
-    const now = new Date();
-    const startDate = getDateKey(now);
-    const defaultEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 6);
-    const endDate = getDateKey(defaultEnd);
+    const sorted = [...selectedDates].sort((a, b) => a - b);
+    const startDate = getDateKey(sorted[0]);
+    const endDate = getDateKey(sorted[sorted.length - 1]);
     const id = `sc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const newSC = {
       id,
@@ -2674,12 +2673,9 @@ function App() {
     const isOwnRow = (row) => {
       const rowUserId = row?.user_id ? String(row.user_id) : '';
       const rowCreatedBy = String(row?.created_by || '').trim().toLowerCase();
-      const rowUploadedBy = String(row?.uploaded_by || '').trim().toLowerCase();
       const myEmail = String(user?.email || '').trim().toLowerCase();
       const myName = String(currentUser || '').trim().toLowerCase();
-      return (rowUserId && rowUserId === me)
-        || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName))
-        || (rowUploadedBy && (rowUploadedBy === myEmail || rowUploadedBy === myName));
+      return (rowUserId && rowUserId === me) || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName));
     };
 
     const updatesChannel = supabase
@@ -2751,10 +2747,7 @@ function App() {
     const isOwnRow = (row) => {
       const rowUserId = row?.user_id ? String(row.user_id) : '';
       const rowCreatedBy = String(row?.created_by || '').trim().toLowerCase();
-      const rowUploadedBy = String(row?.uploaded_by || '').trim().toLowerCase();
-      return (rowUserId && rowUserId === me)
-        || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName))
-        || (rowUploadedBy && (rowUploadedBy === myEmail || rowUploadedBy === myName));
+      return (rowUserId && rowUserId === me) || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName));
     };
 
     const updateCursor = (key, rows) => {
@@ -2842,7 +2835,7 @@ function App() {
           const photoCursor = inAppSyncCursorRef.current.tripPhotos || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
           const { data: datedTripPhotoRows, error: datedTripPhotoError } = await supabase
             .from('trip_photos')
-            .select('id,uploaded_by,user_id,sub_calendar_id,created_at')
+            .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at')
             .in('sub_calendar_id', subCalIds)
             .gt('created_at', photoCursor)
             .order('created_at', { ascending: true })
@@ -2852,7 +2845,7 @@ function App() {
           }
           const { data: nullTripPhotoRows, error: nullTripPhotoError } = await supabase
             .from('trip_photos')
-            .select('id,uploaded_by,user_id,sub_calendar_id,created_at')
+            .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at')
             .in('sub_calendar_id', subCalIds)
             .is('created_at', null)
             .limit(200);
@@ -5024,20 +5017,6 @@ function App() {
                 </div>
 
                 <div className="mb-4">
-                  <div className="mb-2 rounded-xl overflow-hidden ring-1 ring-inset ring-purple-300 dark:ring-purple-700">
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
-                      <div className="min-w-0">
-                        <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">Main</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Primary calendar</div>
-                      </div>
-                      <button
-                        onClick={() => { setBottomNavTab('home'); setShowDateDetailModal(false); setActiveSubCalendar(null); }}
-                        className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-purple-500 hover:bg-purple-600 text-white"
-                      >
-                        Open
-                      </button>
-                    </div>
-                  </div>
                   <h4 className="text-xs uppercase tracking-wide font-semibold text-green-600 dark:text-green-400 mb-2">Active</h4>
                   {activeTrips.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No active calendars right now.</div>
@@ -5237,16 +5216,19 @@ function App() {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">New Calendar</h3>
+            <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">New Sub-Calendar</h3>
             <button onClick={() => setShowSubCalendarModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <X className="w-5 h-5 text-gray-500" />
             </button>
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {selectedDates.length > 0 && `${selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${selectedDates[selectedDates.length-1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${selectedDates.length} days)`}
           </div>
           <input
             type="text"
             value={newSubCalName}
             onChange={e => setNewSubCalName(e.target.value)}
-            placeholder="e.g. Work, Family, Fitness"
+            placeholder="e.g. SF Trip 🌁, Cabo 2026 🌊"
             className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
             autoFocus
             onKeyPress={e => e.key === 'Enter' && createSubCalendar()}
@@ -5254,7 +5236,7 @@ function App() {
           <button
             onClick={createSubCalendar}
             className="w-full py-2.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl font-medium"
-          >Create Calendar</button>
+          >Create Sub-Calendar</button>
         </div>
       </div>
     )}
