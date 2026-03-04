@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import SharePanel from './components/SharePanel';
+import SharedListPanel from './components/SharedListPanel';
 
 // Initialize Supabase
 const supabase = createClient(
@@ -564,7 +566,7 @@ function App() {
       return;
     }
     if (!insertData || insertData.length === 0) {
-      alert('Saved silently failed — check Supabase RLS policies. Run the SQL fix in the console.');
+      alert('Saved silently failed â€” check Supabase RLS policies. Run the SQL fix in the console.');
       return;
     }
     setSubCalendars(prev => [...prev, newSC]);
@@ -1640,7 +1642,7 @@ function App() {
   };
 
   // Hours to show in timeline
-  const TIMELINE_HOURS = Array.from({ length: 24 }, (_, i) => (i + 6) % 24); // 6am–5am
+  const TIMELINE_HOURS = Array.from({ length: 24 }, (_, i) => (i + 6) % 24); // 6amâ€“5am
 
   const handleReact = (event, emoji) => {
     const actualDateKey = Object.keys(events).find(k => events[k].some(e => e.id === event.id));
@@ -1658,7 +1660,7 @@ function App() {
       if (updatedReactions[k].length === 0) delete updatedReactions[k];
     });
 
-    // Update local state immediately — single setEvents call, no saveEvents
+    // Update local state immediately â€” single setEvents call, no saveEvents
     setEvents(prev => ({
       ...prev,
       [actualDateKey]: prev[actualDateKey].map(e =>
@@ -1667,7 +1669,7 @@ function App() {
     }));
     setShowReactionPicker(null);
 
-    // Save only the reactions field directly to DB — bypass saveEvents entirely
+    // Save only the reactions field directly to DB â€” bypass saveEvents entirely
     supabase
       .from('events')
       .update({ reactions: JSON.stringify(updatedReactions) })
@@ -1870,7 +1872,7 @@ function App() {
           return () => clearInterval(interval);
         },
         () => {
-          // User denied or error — fallback to Fresno
+          // User denied or error â€” fallback to Fresno
           fetchWeather(36.7378, -119.7871);
         },
         { timeout: 10000 }
@@ -2002,7 +2004,7 @@ function App() {
           Object.entries(newEvents).forEach(([date, dateEvents]) => {
             dateEvents.forEach(event => {
               if (event.userId && event.userId !== user?.id) {
-                // Shared event — do a targeted update on just the fields we allow editing
+                // Shared event â€” do a targeted update on just the fields we allow editing
                 sharedUpdates.push(event);
                 return;
               }
@@ -2529,7 +2531,7 @@ function App() {
 
     // Listen for changes to OTHER users' events (shared calendars)
     // We use a separate loadSharedEvents function that only fetches shared data
-    // and merges it with local state — never triggers a save
+    // and merges it with local state â€” never triggers a save
     const loadSharedEvents = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -3970,7 +3972,7 @@ function App() {
                       const days = getWeekDays(currentDate);
                       const start = days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                       const end = days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                      return `${start} – ${end}`;
+                      return `${start} â€“ ${end}`;
                     })()
                 }
               </h2>
@@ -4149,216 +4151,48 @@ function App() {
         )}
 
         {showSharePanel && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400">
-                Share Calendar
-              </h3>
-              <button onClick={() => { setShowSharePanel(false); setShareMessage(''); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
-            </div>
-            <div className="mb-5">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Enter someone's email to give them access to your calendar. They'll see and be able to edit your events when they log in.
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  value={shareEmailInput}
-                  onChange={(e) => { setShareEmailInput(e.target.value); setShareMessage(''); }}
-                  placeholder="wife@gmail.com"
-                  className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
-                  onKeyPress={(e) => e.key === 'Enter' && handleShareCalendar()}
-                />
-                <button
-                  onClick={handleShareCalendar}
-                  className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-              </div>
-              {shareMessage && (
-                <p className={`text-sm mt-2 ${shareMessage.startsWith('?') ? 'text-green-600' : 'text-red-500'}`}>
-                  {shareMessage}
-                </p>
-              )}
-            </div>
-            {myShares.length > 0 && (
-              <div className="mb-5">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Shared with:</h4>
-                <div className="space-y-2">
-                  {myShares.map((share, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-200 dark:border-purple-700">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-purple-400 flex items-center justify-center text-white text-xs font-bold">
-                          {share.shared_with_email[0].toUpperCase()}
-                        </div>
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{share.shared_with_email}</span>
-                      </div>
-                      <button onClick={() => handleRemoveShare(share.shared_with_email)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all" title="Remove access">
-                        <X className="w-4 h-4 text-red-500" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {sharedCalendars.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Calendars shared with you:</h4>
-                <div className="space-y-2">
-                  {sharedCalendars.map((share, i) => (
-                    <div key={i} className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-700">
-                      <div className="w-7 h-7 rounded-full bg-green-400 flex items-center justify-center text-white text-xs">??</div>
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Shared by <strong>{sharedOwnerLabels[String(share.owner_id || '')] || fallbackOwnerLabel(share.owner_id)}</strong></span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {myShares.length === 0 && sharedCalendars.length === 0 && (
-              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add someone's email above to get started.</p>
-            )}
-          </div>
+          <SharePanel
+            showSharePanel={showSharePanel}
+            setShowSharePanel={setShowSharePanel}
+            setShareMessage={setShareMessage}
+            shareEmailInput={shareEmailInput}
+            setShareEmailInput={setShareEmailInput}
+            handleShareCalendar={handleShareCalendar}
+            shareMessage={shareMessage}
+            myShares={myShares}
+            handleRemoveShare={handleRemoveShare}
+            sharedCalendars={sharedCalendars}
+            sharedOwnerLabels={sharedOwnerLabels}
+            fallbackOwnerLabel={fallbackOwnerLabel}
+          />
         )}
 
         {showListPanel && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border border-purple-100 dark:border-gray-700">
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div>
-                <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Shared Lists</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Clean space for groceries, reminders, and quick to-dos.</p>
-              </div>
-              <button onClick={() => setShowListPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-              </button>
-            </div>
-
-            <div className="p-3 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700 border border-purple-100 dark:border-gray-600 mb-3">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  value={newSharedListTitle}
-                  onChange={(e) => setNewSharedListTitle(e.target.value)}
-                  placeholder="Create new list title"
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
-                  onKeyPress={(e) => e.key === 'Enter' && createSharedList()}
-                />
-                <button
-                  onClick={createSharedList}
-                  className="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                  title="Create list"
-                >
-                  Create
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-3">
-              {sharedListGroups.map(group => (
-                <button
-                  key={group.id}
-                  onClick={() => setSelectedSharedListId(group.id)}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                    selectedSharedListId === group.id
-                      ? 'bg-purple-600 text-white border-purple-600'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
-                  }`}
-                >
-                  {group.title}
-                </button>
-              ))}
-              <button
-                onClick={() => deleteSharedList(selectedSharedListId)}
-                disabled={!selectedSharedListId}
-                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 disabled:opacity-50"
-                title="Delete selected list"
-              >
-                Delete
-              </button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 mb-3">
-              <input
-                type="text"
-                value={newListItemText}
-                onChange={(e) => setNewListItemText(e.target.value)}
-                placeholder="Add an item..."
-                className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
-                onKeyPress={(e) => e.key === 'Enter' && addSharedListItem()}
-                disabled={!selectedSharedListId}
-              />
-              <button
-                onClick={addSharedListItem}
-                className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                title="Add item"
-                disabled={!selectedSharedListId}
-              >
-                Add
-              </button>
-            </div>
-
-            {listError && (
-              <div className="mb-3 p-2.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-600 dark:text-red-300">
-                {listError}
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              {sharedListGroups.length === 0 && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 italic">Create your first list to get started.</p>
-              )}
-              {sharedListItems.length === 0 && selectedSharedListId && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 italic">No items yet.</p>
-              )}
-              {sharedListItems.map(item => (
-                <div key={item.id} className="flex items-center gap-2.5 p-2.5 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600">
-                  <button
-                    onClick={() => toggleSharedListItem(item)}
-                    className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
-                    title={item.done ? 'Mark incomplete' : 'Mark complete'}
-                  >
-                    {item.done ? '?' : ''}
-                  </button>
-                  {editingListItemId === item.id ? (
-                    <input
-                      autoFocus
-                      value={editingListText}
-                      onChange={(e) => setEditingListText(e.target.value)}
-                      onBlur={() => saveSharedListItemText(item)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') saveSharedListItemText(item);
-                        if (e.key === 'Escape') { setEditingListItemId(null); setEditingListText(''); }
-                      }}
-                      className="flex-1 text-sm px-2 py-1 border border-purple-300 dark:border-purple-600 dark:bg-gray-800 dark:text-white rounded-md focus:ring-1 focus:ring-purple-400"
-                    />
-                  ) : (
-                    <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>
-                      {item.text}
-                    </span>
-                  )}
-                  {editingListItemId !== item.id && (
-                    <button
-                      onClick={() => startEditingListItem(item)}
-                      className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900 rounded-lg"
-                      title="Edit item"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-purple-500" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => removeSharedListItem(item.id)}
-                    className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"
-                    title="Delete item"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                  </button>
-                </div>
-              ))}
-              </div>
-            </div>
-          )}
+          <SharedListPanel
+            showListPanel={showListPanel}
+            setShowListPanel={setShowListPanel}
+            newSharedListTitle={newSharedListTitle}
+            setNewSharedListTitle={setNewSharedListTitle}
+            createSharedList={createSharedList}
+            sharedListGroups={sharedListGroups}
+            selectedSharedListId={selectedSharedListId}
+            setSelectedSharedListId={setSelectedSharedListId}
+            deleteSharedList={deleteSharedList}
+            newListItemText={newListItemText}
+            setNewListItemText={setNewListItemText}
+            addSharedListItem={addSharedListItem}
+            listError={listError}
+            sharedListItems={sharedListItems}
+            toggleSharedListItem={toggleSharedListItem}
+            editingListItemId={editingListItemId}
+            editingListText={editingListText}
+            setEditingListText={setEditingListText}
+            saveSharedListItemText={saveSharedListItemText}
+            setEditingListItemId={setEditingListItemId}
+            startEditingListItem={startEditingListItem}
+            removeSharedListItem={removeSharedListItem}
+          />
+        )}
 
         {showCategoryEditor && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
@@ -4528,7 +4362,7 @@ function App() {
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-sm text-green-800 dark:text-green-300">{sc.name}</div>
                             <div className="text-xs text-green-600 dark:text-green-400">
-                              Happening now · {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              Happening now Â· {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} â€“ {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </div>
                           </div>
                           <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open ?</span>
@@ -4635,7 +4469,7 @@ function App() {
                               {weatherData.icon}
                             </span>
                             <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
-                              {weatherData.high}°/{weatherData.low}°
+                              {weatherData.high}Â°/{weatherData.low}Â°
                             </span>
                           </div>
                         )}
@@ -4706,7 +4540,7 @@ function App() {
                       {weatherData && !isSelected && (
                         <div className="flex items-center gap-0.5 mb-1">
                           <span style={{ fontSize: '0.7rem' }}>{weatherData.icon.length > 2 ? <span className={`text-xs font-bold ${weatherData.color}`}>{weatherData.icon}</span> : weatherData.icon}</span>
-                          <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{weatherData.high}°/{weatherData.low}°</span>
+                          <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{weatherData.high}Â°/{weatherData.low}Â°</span>
                         </div>
                       )}
 
@@ -5179,7 +5013,7 @@ function App() {
                               <div className="min-w-0">
                                 <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  Happening now · {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
+                                  Happening now Â· {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
                                 </div>
                               </div>
                               <button
@@ -5352,7 +5186,7 @@ function App() {
             </button>
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {selectedDates.length > 0 && `${selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${selectedDates[selectedDates.length-1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${selectedDates.length} days)`}
+            {selectedDates.length > 0 && `${selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} â€“ ${selectedDates[selectedDates.length-1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${selectedDates.length} days)`}
           </div>
           <input
             type="text"
@@ -5396,7 +5230,7 @@ function App() {
               >{activeSubCalendar.name} ??</div>
             )}
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} â€“ {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -5421,7 +5255,7 @@ function App() {
           </div>
         </div>
 
-        {/* Weather location — collapsed pill or expanding input */}
+        {/* Weather location â€” collapsed pill or expanding input */}
         <div className="relative px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2" ref={weatherAutocompleteRef}>
           {subCalWeatherLocation && !subCalWeatherExpanded ? (
             // Collapsed pill
@@ -5443,10 +5277,10 @@ function App() {
                   value={subCalWeatherInput}
                   onChange={e => { setSubCalWeatherInput(e.target.value); searchWeatherLocations(e.target.value); }}
                   onKeyDown={e => { if (e.key === 'Escape') { setSubCalWeatherExpanded(false); setSubCalWeatherSuggestions([]); } }}
-                  placeholder="Search city for weather…"
+                  placeholder="Search city for weatherâ€¦"
                   className="flex-1 text-xs px-2.5 py-1.5 bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
                 />
-                {subCalWeatherLoading && <span className="text-xs text-blue-400 animate-pulse shrink-0">Loading…</span>}
+                {subCalWeatherLoading && <span className="text-xs text-blue-400 animate-pulse shrink-0">Loadingâ€¦</span>}
                 {subCalWeatherLocation && (
                   <button onClick={() => { setSubCalWeatherExpanded(false); setSubCalWeatherInput(subCalWeatherLocation); setSubCalWeatherSuggestions([]); }} className="text-xs text-gray-400 hover:text-gray-600 shrink-0">?</button>
                 )}
@@ -5558,13 +5392,13 @@ function App() {
                     )}
                     {subCalWeather[dk] && (
                       <span className={`text-xs leading-none ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
-                        {subCalWeather[dk].high}°
+                        {subCalWeather[dk].high}Â°
                       </span>
                     )}
                     {hasEvents && !shakingDates && !subCalWeather[dk] && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
                     {hasEvents && !shakingDates && subCalWeather[dk] && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
                   </button>
-                  {/* Minus badge — only on first/last when shaking */}
+                  {/* Minus badge â€” only on first/last when shaking */}
                   {shakingDates && canRemove && (
                     <button
                       onClick={e => { e.stopPropagation(); shrinkSubCalDate(isFirst ? 'before' : 'after'); if (allDates.length <= 2) setShakingDates(false); }}
@@ -5646,7 +5480,7 @@ function App() {
                       {subCalSelectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                     </div>
                     <div className="text-xs text-gray-600 dark:text-gray-300">
-                      {subCalWeatherLocation} · High {subCalWeather[dk].high}° / Low {subCalWeather[dk].low}°
+                      {subCalWeatherLocation} Â· High {subCalWeather[dk].high}Â° / Low {subCalWeather[dk].low}Â°
                     </div>
                   </div>
                 </div>
@@ -5852,7 +5686,7 @@ function App() {
                                   {(event.time || event.endTime) && (
                                     <div className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1">
                                       <Clock className="w-3 h-3" />
-                                      {event.time && formatTime(event.time)}{event.endTime && ` – ${formatTime(event.endTime)}`}
+                                      {event.time && formatTime(event.time)}{event.endTime && ` â€“ ${formatTime(event.endTime)}`}
                                     </div>
                                   )}
                                   {event.notes && <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 italic">{event.notes}</div>}
@@ -6033,7 +5867,7 @@ function App() {
                     <span key={m.email} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
                       {m.email}
                       {activeSubCalendar.owner_id === user?.id && (
-                        <button onClick={() => removeMemberFromSubCal(m.email)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
+                        <button onClick={() => removeMemberFromSubCal(m.email)} className="ml-0.5 text-gray-400 hover:text-red-500">Ã—</button>
                       )}
                     </span>
                   ))}
@@ -6243,7 +6077,7 @@ function App() {
                         <div key={row.name} className="flex items-center justify-between text-xs">
                           <span className="text-gray-600 dark:text-gray-300">{getExpenseDisplayName(row.name)}</span>
                           <span className="text-gray-700 dark:text-gray-200">
-                            Paid ${(row.paid / 100).toFixed(2)} · {row.balance >= 0 ? `Gets back $${(row.balance / 100).toFixed(2)}` : `Owes $${(Math.abs(row.balance) / 100).toFixed(2)}`}
+                            Paid ${(row.paid / 100).toFixed(2)} Â· {row.balance >= 0 ? `Gets back $${(row.balance / 100).toFixed(2)}` : `Owes $${(Math.abs(row.balance) / 100).toFixed(2)}`}
                           </span>
                         </div>
                       ))}
@@ -6302,7 +6136,7 @@ function App() {
                             </div>
                           )}
                           <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-300">
-                            {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'} · {cashHandle ? `Cash App $${cashHandle}` : 'Cash App not set'}
+                            {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'} Â· {cashHandle ? `Cash App $${cashHandle}` : 'Cash App not set'}
                           </div>
                         </div>
                       );
@@ -6385,7 +6219,7 @@ function App() {
                 disabled={uploadingPhoto || isPhotoSelectionMode || photoDeleteMode}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl text-sm font-medium shadow hover:shadow-lg transition-all disabled:opacity-50"
               >
-                {uploadingPhoto ? '? Uploading…' : '?? Add Photos'}
+                {uploadingPhoto ? '? Uploadingâ€¦' : '?? Add Photos'}
               </button>
               {isPhotoSelectionMode ? (
                 <>
@@ -6481,7 +6315,7 @@ function App() {
                     <div key={date} className="mb-6">
                       <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
                         <span>{date !== 'unlinked' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Unlinked'}</span>
-                        {subCalWeather[date] && <span>{subCalWeather[date].icon} {subCalWeather[date].high}°</span>}
+                        {subCalWeather[date] && <span>{subCalWeather[date].icon} {subCalWeather[date].high}Â°</span>}
                         <span className="text-gray-300 dark:text-gray-600">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -6562,7 +6396,7 @@ function App() {
                         </div>
                         {subCalWeather[date] && (
                           <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                            {subCalWeather[date].icon} {subCalWeather[date].high}° / {subCalWeather[date].low}°
+                            {subCalWeather[date].icon} {subCalWeather[date].high}Â° / {subCalWeather[date].low}Â°
                           </div>
                         )}
                       </div>
@@ -6696,7 +6530,7 @@ function App() {
             />
             <div className="mt-3 text-center" onClick={e => e.stopPropagation()}>
               {lightboxPhoto.caption && <p className="text-white text-sm mb-1">{lightboxPhoto.caption}</p>}
-              <p className="text-gray-400 text-xs">?? {lightboxPhoto.uploaded_by} · {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
+              <p className="text-gray-400 text-xs">?? {lightboxPhoto.uploaded_by} Â· {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
             </div>
           </div>
         )}
