@@ -103,7 +103,6 @@ function App() {
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
-  const [mainCalendarTitle, setMainCalendarTitle] = useState('Our Calendar');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(true);
@@ -124,10 +123,6 @@ function App() {
   // Sub-calendar state
   const [subCalendars, setSubCalendars] = useState([]);
   const [activeSubCalendar, setActiveSubCalendar] = useState(null);
-  const [activeFullCalendar, setActiveFullCalendar] = useState(null);
-  const mainCalendarEventsRef = useRef({});
-  const activeFullCalendarRef = useRef(null);
-  const activeSubCalendarRef = useRef(null);
   const [subCalNotes, setSubCalNotes] = useState([]); // [{id, text, checklist, createdBy, createdAt}]
   const [subCalExpenses, setSubCalExpenses] = useState([]); // [{id, payer, description, amount, createdAt}]
   const [expenseLedgerNoteId, setExpenseLedgerNoteId] = useState(null);
@@ -165,12 +160,8 @@ function App() {
   const [subCalendarEvents, setSubCalendarEvents] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
   const [newSubCalName, setNewSubCalName] = useState('');
-  const [newCalendarType, setNewCalendarType] = useState('sub'); // 'sub' | 'full'
   const [subCalInviteEmail, setSubCalInviteEmail] = useState('');
   const [subCalMembers, setSubCalMembers] = useState([]);
-  const [fullCalInviteEmail, setFullCalInviteEmail] = useState('');
-  const [fullCalMembers, setFullCalMembers] = useState([]);
-  const [fullCalShareMessage, setFullCalShareMessage] = useState('');
   const [subCalEditingEvent, setSubCalEditingEvent] = useState(null);
   const [subCalSelectedDate, setSubCalSelectedDate] = useState(null);
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
@@ -200,8 +191,6 @@ function App() {
   const photoDeleteHoldTimerRef = useRef(null);
   const photoTapRef = useRef({ id: null, at: 0, timer: null });
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
-  const FULL_CALENDAR_START = '2000-01-01';
-  const FULL_CALENDAR_END = '2100-12-31';
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
@@ -320,10 +309,6 @@ function App() {
     if (!destination) return;
     setLocationActionTarget(destination);
   };
-  const isFullCalendarRange = (sc) => (
-    String(sc?.start_date || '') === FULL_CALENDAR_START
-    && String(sc?.end_date || '') === FULL_CALENDAR_END
-  );
   const geocodeDestination = async (destination) => {
     if (!destination || !window.google?.maps?.Geocoder) return null;
     try {
@@ -452,103 +437,9 @@ function App() {
 
   const loadSubCalendars = async () => {
     try {
-      if (!user?.id || !user?.email) {
-        setSubCalendars([]);
-        return;
-      }
-      const normalizedEmail = String(user.email || '').trim().toLowerCase();
-      const normalizedName = String(currentUser || '').trim().toLowerCase();
-
-      const { data: ownedData, error: ownedError } = await supabase
-        .from('sub_calendars')
-        .select('*')
-        .eq('owner_id', user.id);
-      if (ownedError) { console.error('Error loading owned sub_calendars:', ownedError); return; }
-
-      // Backward compatibility: older rows may not have owner_id populated.
-      const { data: legacyOwnedByEmail, error: legacyOwnedErr } = await supabase
-        .from('sub_calendars')
-        .select('*')
-        .is('owner_id', null)
-        .ilike('created_by', normalizedEmail);
-      if (legacyOwnedErr) { console.error('Error loading legacy-owned sub_calendars:', legacyOwnedErr); return; }
-
-      let legacyOwnedByName = [];
-      if (normalizedName) {
-        const { data: byNameData, error: byNameErr } = await supabase
-          .from('sub_calendars')
-          .select('*')
-          .is('owner_id', null)
-          .ilike('created_by', normalizedName);
-        if (byNameErr) {
-          console.error('Error loading legacy-owned sub_calendars by name:', byNameErr);
-          return;
-        }
-        legacyOwnedByName = byNameData || [];
-      }
-
-      // Extra compatibility: some older rows used user_id instead of owner_id.
-      let ownedByUserId = [];
-      {
-        const { data: byUserIdData, error: byUserIdErr } = await supabase
-          .from('sub_calendars')
-          .select('*')
-          .eq('user_id', user.id);
-        if (byUserIdErr) {
-          if (byUserIdErr.code !== '42703') {
-            console.error('Error loading sub_calendars by user_id:', byUserIdErr);
-            return;
-          }
-        } else {
-          ownedByUserId = byUserIdData || [];
-        }
-      }
-
-      // Compatibility: if someone shared their main calendar with me, include their sub-calendars too.
-      let sharedOwnerCalendars = [];
-      {
-        const sharedWithMe = await loadSharedAccessForUser(user.id, user.email);
-        const sharedOwnerIds = Array.from(new Set((sharedWithMe || []).map(s => String(s.owner_id || '')).filter(Boolean)));
-        if (sharedOwnerIds.length > 0) {
-          const { data: sharedOwnerData, error: sharedOwnerErr } = await supabase
-            .from('sub_calendars')
-            .select('*')
-            .in('owner_id', sharedOwnerIds);
-          if (sharedOwnerErr) {
-            console.error('Error loading sub_calendars by shared owner ids:', sharedOwnerErr);
-            return;
-          }
-          sharedOwnerCalendars = sharedOwnerData || [];
-        }
-      }
-
-      const { data: memberRows, error: memberErr } = await supabase
-        .from('sub_calendar_members')
-        .select('sub_calendar_id')
-        .ilike('email', normalizedEmail);
-      if (memberErr) { console.error('Error loading sub_calendar_members:', memberErr); return; }
-
-      const memberIds = Array.from(new Set((memberRows || []).map(r => r.sub_calendar_id).filter(Boolean)));
-      let memberCalendars = [];
-      if (memberIds.length > 0) {
-        const { data: sharedData, error: sharedErr } = await supabase
-          .from('sub_calendars')
-          .select('*')
-          .in('id', memberIds);
-        if (sharedErr) { console.error('Error loading shared sub_calendars:', sharedErr); return; }
-        memberCalendars = sharedData || [];
-      }
-
-      const mergedById = new Map();
-      [
-        ...(ownedData || []),
-        ...(ownedByUserId || []),
-        ...(legacyOwnedByEmail || []),
-        ...(legacyOwnedByName || []),
-        ...(sharedOwnerCalendars || []),
-        ...memberCalendars,
-      ].forEach(sc => mergedById.set(sc.id, sc));
-      setSubCalendars(Array.from(mergedById.values()));
+      const { data, error } = await supabase.from('sub_calendars').select('*');
+      if (error) { console.error('Error loading sub_calendars:', error); return; }
+      setSubCalendars(data || []);
     } catch (e) { console.error(e); }
   };
 
@@ -588,22 +479,6 @@ function App() {
         .eq('sub_calendar_id', subCalId);
       setSubCalMembers(data || []);
     } catch (e) { console.error(e); }
-  };
-
-  const loadFullCalendarMembers = async (subCalId) => {
-    try {
-      const { data, error } = await supabase
-        .from('sub_calendar_members')
-        .select('*')
-        .eq('sub_calendar_id', subCalId);
-      if (error) {
-        console.error('Error loading full calendar members:', error);
-        return;
-      }
-      setFullCalMembers(data || []);
-    } catch (e) {
-      console.error(e);
-    }
   };
 
   const loadGlobalVenmoHandles = async () => {
@@ -667,22 +542,14 @@ function App() {
   };
 
   const createSubCalendar = async () => {
-    console.log('createSubCalendar called', { name: newSubCalName, dates: selectedDates.length, type: newCalendarType, user: user?.id });
-    if (!newSubCalName.trim()) {
-      alert('Please enter a name.');
+    console.log('createSubCalendar called', { name: newSubCalName, dates: selectedDates.length, user: user?.id });
+    if (!newSubCalName.trim() || selectedDates.length < 2) {
+      alert(selectedDates.length < 2 ? `Please select at least 2 dates first. Currently selected: ${selectedDates.length}` : 'Please enter a name.');
       return;
     }
-    let startDate = FULL_CALENDAR_START;
-    let endDate = FULL_CALENDAR_END;
-    if (newCalendarType === 'sub') {
-      if (selectedDates.length < 2) {
-        alert(`Please select at least 2 dates first. Currently selected: ${selectedDates.length}`);
-        return;
-      }
-      const sorted = [...selectedDates].sort((a, b) => a - b);
-      startDate = getDateKey(sorted[0]);
-      endDate = getDateKey(sorted[sorted.length - 1]);
-    }
+    const sorted = [...selectedDates].sort((a, b) => a - b);
+    const startDate = getDateKey(sorted[0]);
+    const endDate = getDateKey(sorted[sorted.length - 1]);
     const id = `sc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const newSC = {
       id,
@@ -706,12 +573,7 @@ function App() {
     setSubCalendars(prev => [...prev, newSC]);
     setShowSubCalendarModal(false);
     setNewSubCalName('');
-    setNewCalendarType('sub');
-    if (newCalendarType === 'full') {
-      await openFullCalendar(newSC);
-    } else {
-      await openSubCalendar(newSC);
-    }
+    openSubCalendar(newSC);
   };
 
   const deleteSubCalendar = async (id) => {
@@ -752,8 +614,6 @@ function App() {
   };
 
   const openSubCalendar = async (sc) => {
-    setActiveFullCalendar(null);
-    activeFullCalendarRef.current = null;
     setActiveSubCalendar(sc);
     setSubCalWeather({});
     setSubCalWeatherSuggestions([]);
@@ -792,214 +652,6 @@ function App() {
     setSubCalSelectedDate(firstDate);
   };
 
-  async function loadSharedAccessForUser(userId, userEmail) {
-    const normalizedEmail = String(userEmail || '').trim().toLowerCase();
-    if (!userId && !normalizedEmail) return [];
-    let byIdData = [];
-    let byEmailData = [];
-    if (userId) {
-      const { data, error } = await supabase
-        .from('shared_access')
-        .select('*')
-        .eq('shared_with_id', userId);
-      if (error) console.error('Error loading shared access by id:', error);
-      byIdData = data || [];
-    }
-    if (normalizedEmail) {
-      const { data, error } = await supabase
-        .from('shared_access')
-        .select('*')
-        .ilike('shared_with_email', normalizedEmail);
-      if (error) console.error('Error loading shared access by email:', error);
-      byEmailData = data || [];
-    }
-    const merged = new Map();
-    [...byIdData, ...byEmailData].forEach((row) => {
-      if (row?.id) merged.set(row.id, row);
-    });
-    return Array.from(merged.values());
-  }
-
-  async function loadMainCalendarEventsForUser(userId, userEmail) {
-    if (!userId) return;
-    const { data: eventsData, error: eventsError } = await supabase
-      .from('events')
-      .select('*')
-      .eq('user_id', userId);
-
-    const sharedWithMe = await loadSharedAccessForUser(userId, userEmail);
-
-    if (sharedWithMe && sharedWithMe.length > 0) {
-      for (const share of sharedWithMe) {
-        if (!share.shared_with_id) {
-          await supabase
-            .from('shared_access')
-            .update({ shared_with_id: userId })
-            .eq('id', share.id);
-        }
-      }
-      setSharedCalendars(sharedWithMe);
-      const ownerIds = sharedWithMe.map(s => s.owner_id);
-      setActiveCalendars(ownerIds);
-      const { data: sharedEventsData } = await supabase
-        .from('events')
-        .select('*')
-        .in('user_id', ownerIds);
-      const allEventsData = [...(eventsData || []), ...(sharedEventsData || [])];
-      const eventsObj = {};
-      allEventsData.forEach(event => {
-        if (!eventsObj[event.date]) eventsObj[event.date] = [];
-        eventsObj[event.date].push({
-          id: event.id,
-          title: event.title,
-          time: event.time,
-          date: event.date,
-          category: event.category,
-          isPrivate: event.is_private,
-          isUrgent: event.is_urgent,
-          isMultiDay: event.is_multi_day,
-          multiDayId: event.multi_day_id,
-          isAnnual: event.is_annual || false,
-          annualMonth: event.annual_month || null,
-          annualDay: event.annual_day || null,
-          recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
-          exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
-          reactions: event.reactions ? JSON.parse(event.reactions) : {},
-          location: event.location || null,
-          createdBy: event.created_by,
-          createdAt: event.created_at,
-          userId: event.user_id,
-          isShared: event.user_id !== userId
-        });
-      });
-      setEvents(eventsObj);
-      if (typeof window !== 'undefined') window.events = eventsObj;
-      mainCalendarEventsRef.current = eventsObj;
-      return;
-    }
-
-    setSharedCalendars([]);
-    setActiveCalendars([]);
-    if (eventsError) {
-      console.error('Error loading events:', eventsError);
-      return;
-    }
-    const eventsObj = {};
-    (eventsData || []).forEach(event => {
-      if (!eventsObj[event.date]) eventsObj[event.date] = [];
-      eventsObj[event.date].push({
-        id: event.id,
-        title: event.title,
-        time: event.time,
-        date: event.date,
-        category: event.category,
-        isPrivate: event.is_private,
-        isUrgent: event.is_urgent,
-        isMultiDay: event.is_multi_day,
-        multiDayId: event.multi_day_id,
-        isAnnual: event.is_annual || false,
-        annualMonth: event.annual_month || null,
-        annualDay: event.annual_day || null,
-        recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
-        exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
-        reactions: event.reactions ? JSON.parse(event.reactions) : {},
-        location: event.location || null,
-        createdBy: event.created_by,
-        createdAt: event.created_at,
-        userId: event.user_id,
-        isShared: false
-      });
-    });
-    setEvents(eventsObj);
-    if (typeof window !== 'undefined') window.events = eventsObj;
-    mainCalendarEventsRef.current = eventsObj;
-  }
-
-  async function openFullCalendar(sc) {
-    if (!sc?.id) return;
-    setIsEditingTitle(false);
-    setActiveSubCalendar(null);
-    activeSubCalendarRef.current = null;
-    setActiveFullCalendar(sc);
-    activeFullCalendarRef.current = sc;
-    setShowSharePanel(false);
-    setShowListPanel(false);
-    setBottomNavTab('home');
-    const fullTitleKey = `calendar-title-${user?.id}-full-${sc.id}`;
-    const savedFullTitle = localStorage.getItem(fullTitleKey);
-    setCalendarTitle(savedFullTitle || sc.name || 'Calendar');
-    setFullCalInviteEmail('');
-    setFullCalShareMessage('');
-    await loadFullCalendarMembers(sc.id);
-    const { data, error } = await supabase
-      .from('sub_calendar_events')
-      .select('*')
-      .eq('sub_calendar_id', sc.id);
-    if (error) {
-      console.error('Error loading full calendar events:', error);
-      setEvents({});
-      return;
-    }
-    const grouped = {};
-    (data || []).forEach((e) => {
-      if (!grouped[e.date]) grouped[e.date] = [];
-      let meta = {};
-      try { meta = e?.notes ? JSON.parse(e.notes) : {}; } catch { meta = {}; }
-      let reactions = {};
-      try { reactions = e?.reactions ? JSON.parse(e.reactions) : {}; } catch { reactions = {}; }
-      grouped[e.date].push({
-        id: e.id,
-        title: e.title,
-        time: e.time,
-        date: e.date,
-        category: e.category || 'other',
-        isPrivate: Boolean(meta.isPrivate),
-        isUrgent: Boolean(meta.isUrgent),
-        isMultiDay: Boolean(meta.isMultiDay),
-        multiDayId: meta.multiDayId || null,
-        isAnnual: Boolean(meta.isAnnual),
-        annualMonth: meta.annualMonth || null,
-        annualDay: meta.annualDay || null,
-        recurrence: meta.recurrence || 'once',
-        exceptions: Array.isArray(meta.exceptions) ? meta.exceptions : [],
-        reactions,
-        location: e.location || null,
-        createdBy: e.created_by,
-        createdAt: e.created_at,
-        userId: e.user_id,
-        isShared: false,
-      });
-    });
-    setEvents(grouped);
-    if (typeof window !== 'undefined') window.events = grouped;
-  }
-
-  async function returnToMainCalendar() {
-    setIsEditingTitle(false);
-    setActiveFullCalendar(null);
-    activeFullCalendarRef.current = null;
-    setShowSharePanel(false);
-    setShowListPanel(false);
-    setFullCalInviteEmail('');
-    setFullCalShareMessage('');
-    setFullCalMembers([]);
-    if (user?.id) {
-      await loadMainCalendarEventsForUser(user.id, user.email);
-      setCalendarTitle(mainCalendarTitle || 'Our Calendar');
-    } else {
-      setEvents(mainCalendarEventsRef.current || {});
-    }
-    setBottomNavTab('home');
-  }
-
-  async function openCalendarFromActiveList(sc) {
-    if (isFullCalendarRange(sc)) {
-      await openFullCalendar(sc);
-      return;
-    }
-    await openSubCalendar(sc);
-  }
-
   const inviteToSubCalendar = async (emailOverride) => {
     const emailToInvite = (emailOverride || subCalInviteEmail).trim().toLowerCase();
     if (!emailToInvite || !activeSubCalendar) return;
@@ -1011,56 +663,6 @@ function App() {
     if (error) { console.error('Error inviting member:', error); return; }
     setSubCalMembers(prev => [...prev, { email: emailToInvite, sub_calendar_id: activeSubCalendar.id }]);
     setSubCalInviteEmail('');
-  };
-
-  const inviteToFullCalendar = async (emailOverride) => {
-    const emailToInvite = (emailOverride || fullCalInviteEmail).trim().toLowerCase();
-    if (!emailToInvite || !activeFullCalendar) return;
-    if (activeFullCalendar.owner_id !== user?.id) {
-      setFullCalShareMessage('Only the calendar owner can share this calendar.');
-      return;
-    }
-    if (emailToInvite === (user?.email || '').toLowerCase()) {
-      setFullCalShareMessage("You can't invite yourself.");
-      return;
-    }
-    if (fullCalMembers.some(m => String(m.email || '').toLowerCase() === emailToInvite)) {
-      setFullCalShareMessage(`${emailToInvite} already has access.`);
-      return;
-    }
-    const { error } = await supabase.from('sub_calendar_members').insert({
-      sub_calendar_id: activeFullCalendar.id,
-      email: emailToInvite,
-      added_by: user.id,
-    });
-    if (error) {
-      if (error.code === '23505') {
-        setFullCalShareMessage(`${emailToInvite} already has access.`);
-      } else {
-        console.error('Error inviting full calendar member:', error);
-        setFullCalShareMessage('Could not share this calendar. Try again.');
-      }
-      return;
-    }
-    setFullCalMembers(prev => [...prev, { email: emailToInvite, sub_calendar_id: activeFullCalendar.id }]);
-    setFullCalInviteEmail('');
-    setFullCalShareMessage(`✅ Shared "${activeFullCalendar.name}" with ${emailToInvite}.`);
-  };
-
-  const removeMemberFromFullCal = async (email) => {
-    if (!activeFullCalendar?.id || activeFullCalendar.owner_id !== user?.id) return;
-    const { error } = await supabase
-      .from('sub_calendar_members')
-      .delete()
-      .eq('sub_calendar_id', activeFullCalendar.id)
-      .eq('email', email);
-    if (error) {
-      console.error('Error removing full calendar member:', error);
-      setFullCalShareMessage('Could not remove access. Try again.');
-      return;
-    }
-    setFullCalMembers(prev => prev.filter(m => m.email !== email));
-    setFullCalShareMessage(`Removed access for ${email}.`);
   };
 
   const removeMemberFromSubCal = async (email) => {
@@ -1518,23 +1120,6 @@ function App() {
     setActiveSubCalendar(prev => ({ ...prev, name: newName.trim() }));
     setSubCalendars(prev => prev.map(sc => sc.id === activeSubCalendar.id ? { ...sc, name: newName.trim() } : sc));
     setEditingSubCalTitle(false);
-  };
-
-  const renameFullCalendar = async (newName) => {
-    const trimmedName = (newName || '').trim();
-    if (!trimmedName || !activeFullCalendar?.id) return;
-    const { error } = await supabase
-      .from('sub_calendars')
-      .update({ name: trimmedName })
-      .eq('id', activeFullCalendar.id);
-    if (error) {
-      console.error('Error renaming full calendar:', error);
-      return;
-    }
-    setActiveFullCalendar(prev => (prev ? { ...prev, name: trimmedName } : prev));
-    setSubCalendars(prev => prev.map(sc => sc.id === activeFullCalendar.id ? { ...sc, name: trimmedName } : sc));
-    setCalendarTitle(trimmedName);
-    localStorage.setItem(`calendar-title-${user?.id}-full-${activeFullCalendar.id}`, trimmedName);
   };
 
   const saveExpenseLedger = async (expenses) => {
@@ -2107,24 +1692,13 @@ function App() {
     setShowReactionPicker(null);
 
     // Save only the reactions field directly to DB — bypass saveEvents entirely
-    if (activeFullCalendarRef.current?.id) {
-      supabase
-        .from('sub_calendar_events')
-        .update({ reactions: JSON.stringify(updatedReactions) })
-        .eq('id', event.id)
-        .eq('sub_calendar_id', activeFullCalendarRef.current.id)
-        .then(({ error }) => {
-          if (error) console.error('Error saving reaction:', error);
-        });
-    } else {
-      supabase
-        .from('events')
-        .update({ reactions: JSON.stringify(updatedReactions) })
-        .eq('id', event.id)
-        .then(({ error }) => {
-          if (error) console.error('Error saving reaction:', error);
-        });
-    }
+    supabase
+      .from('events')
+      .update({ reactions: JSON.stringify(updatedReactions) })
+      .eq('id', event.id)
+      .then(({ error }) => {
+        if (error) console.error('Error saving reaction:', error);
+      });
   }; // 'month' | 'week'
   const [holidays, setHolidays] = useState({});
   const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
@@ -2139,7 +1713,6 @@ function App() {
   const [editingListItemId, setEditingListItemId] = useState(null);
   const [editingListText, setEditingListText] = useState('');
   const [listError, setListError] = useState('');
-  const [listSubCalScopeSupported, setListSubCalScopeSupported] = useState(true);
   const [shareEmailInput, setShareEmailInput] = useState('');
   const [shareMessage, setShareMessage] = useState('');
   const [activeCalendars, setActiveCalendars] = useState([]);
@@ -2396,47 +1969,6 @@ function App() {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(async () => {
         try {
-          if (activeFullCalendarRef.current?.id) {
-            const subCalId = activeFullCalendarRef.current.id;
-            const fullRows = [];
-            Object.entries(newEvents).forEach(([date, dateEvents]) => {
-              (dateEvents || []).forEach(event => {
-                if (event.isHoliday || event.isReadOnly || event.isVirtualAnnual || event.isVirtualRecurrence) return;
-                const meta = {
-                  isPrivate: event.isPrivate || false,
-                  isUrgent: event.isUrgent || false,
-                  isMultiDay: event.isMultiDay || false,
-                  multiDayId: event.multiDayId || null,
-                  isAnnual: event.isAnnual || false,
-                  annualMonth: event.annualMonth || null,
-                  annualDay: event.annualDay || null,
-                  recurrence: event.recurrence || 'once',
-                  exceptions: Array.isArray(event.exceptions) ? event.exceptions : [],
-                };
-                fullRows.push({
-                  id: event.id,
-                  sub_calendar_id: subCalId,
-                  date: event.date || date,
-                  title: event.title,
-                  time: event.time || null,
-                  end_time: event.endTime || null,
-                  notes: JSON.stringify(meta),
-                  category: event.category || 'other',
-                  created_by: event.createdBy || currentUser || user?.email || 'User',
-                  user_id: user?.id,
-                  reactions: event.reactions ? JSON.stringify(event.reactions) : null,
-                  location: event.location || null,
-                });
-              });
-            });
-            await supabase.from('sub_calendar_events').delete().eq('sub_calendar_id', subCalId);
-            if (fullRows.length > 0) {
-              const { error: fullSaveError } = await supabase.from('sub_calendar_events').insert(fullRows);
-              if (fullSaveError) console.error('Error saving full calendar events:', fullSaveError);
-            }
-            return;
-          }
-
           const myEvents = [];
           const sharedUpdates = []; // events owned by others that we've edited
 
@@ -2592,33 +2124,14 @@ function App() {
   const primaryListOwnerId = (sharedCalendars && sharedCalendars.length > 0)
     ? sharedCalendars[0].owner_id
     : user?.id;
-  const activeListScopeSubCalId = activeFullCalendar?.id || null;
-  const effectiveListOwnerId = activeFullCalendar?.owner_id || primaryListOwnerId;
-  const isMissingListScopeColumn = (error) => (
-    error?.code === '42703' && /sub_calendar_id/i.test(String(error?.message || ''))
-  );
 
-  const loadSharedListGroups = async (ownerId, subCalId = null) => {
+  const loadSharedListGroups = async (ownerId) => {
     if (!ownerId) return;
-    let query = supabase
+    const { data, error } = await supabase
       .from('shared_list_groups')
       .select('*')
       .eq('owner_id', ownerId)
       .order('created_at', { ascending: true });
-    if (listSubCalScopeSupported) {
-      query = subCalId ? query.eq('sub_calendar_id', subCalId) : query.is('sub_calendar_id', null);
-    }
-    let { data, error } = await query;
-    if (error && isMissingListScopeColumn(error) && listSubCalScopeSupported) {
-      setListSubCalScopeSupported(false);
-      const fallback = await supabase
-        .from('shared_list_groups')
-        .select('*')
-        .eq('owner_id', ownerId)
-        .order('created_at', { ascending: true });
-      data = fallback.data;
-      error = fallback.error;
-    }
 
     if (error) {
       console.error('Error loading shared list groups:', error);
@@ -2631,19 +2144,7 @@ function App() {
     }
 
     setListError('');
-    let groups = data || [];
-    // Backward compatibility: older rows may not have sub_calendar_id set.
-    if (listSubCalScopeSupported && subCalId && groups.length === 0) {
-      const legacy = await supabase
-        .from('shared_list_groups')
-        .select('*')
-        .eq('owner_id', ownerId)
-        .is('sub_calendar_id', null)
-        .order('created_at', { ascending: true });
-      if (!legacy.error && Array.isArray(legacy.data) && legacy.data.length > 0) {
-        groups = legacy.data;
-      }
-    }
+    const groups = data || [];
     setSharedListGroups(groups);
     if (groups.length === 0) {
       setSelectedSharedListId(null);
@@ -2655,32 +2156,17 @@ function App() {
     }
   };
 
-  const loadSharedListItems = async (ownerId, listId, subCalId = null) => {
+  const loadSharedListItems = async (ownerId, listId) => {
     if (!ownerId || !listId) {
       setSharedListItems([]);
       return;
     }
-    let query = supabase
+    const { data, error } = await supabase
       .from('shared_lists')
       .select('*')
       .eq('owner_id', ownerId)
       .eq('list_id', listId)
       .order('created_at', { ascending: true });
-    if (listSubCalScopeSupported) {
-      query = subCalId ? query.eq('sub_calendar_id', subCalId) : query.is('sub_calendar_id', null);
-    }
-    let { data, error } = await query;
-    if (error && isMissingListScopeColumn(error) && listSubCalScopeSupported) {
-      setListSubCalScopeSupported(false);
-      const fallback = await supabase
-        .from('shared_lists')
-        .select('*')
-        .eq('owner_id', ownerId)
-        .eq('list_id', listId)
-        .order('created_at', { ascending: true });
-      data = fallback.data;
-      error = fallback.error;
-    }
 
     if (error) {
       console.error('Error loading shared list items:', error);
@@ -2693,52 +2179,25 @@ function App() {
     }
 
     setListError('');
-    let items = data || [];
-    // Backward compatibility: older rows may not have sub_calendar_id set.
-    if (listSubCalScopeSupported && subCalId && items.length === 0) {
-      const legacy = await supabase
-        .from('shared_lists')
-        .select('*')
-        .eq('owner_id', ownerId)
-        .eq('list_id', listId)
-        .is('sub_calendar_id', null)
-        .order('created_at', { ascending: true });
-      if (!legacy.error && Array.isArray(legacy.data) && legacy.data.length > 0) {
-        items = legacy.data;
-      }
-    }
-    setSharedListItems(items.map(item => ({ ...item, done: !!item.done })));
+    setSharedListItems((data || []).map(item => ({ ...item, done: !!item.done })));
   };
 
   const createSharedList = async () => {
     const title = newSharedListTitle.trim();
-    if (!title || !effectiveListOwnerId || !user?.id) return;
+    if (!title || !primaryListOwnerId || !user?.id) return;
 
     const payload = {
-      owner_id: effectiveListOwnerId,
+      owner_id: primaryListOwnerId,
       title,
       created_by: currentUser || user.email || 'User',
       user_id: user.id,
     };
-    if (listSubCalScopeSupported) payload.sub_calendar_id = activeListScopeSubCalId;
 
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('shared_list_groups')
       .insert(payload)
       .select('*')
       .single();
-    if (error && isMissingListScopeColumn(error) && listSubCalScopeSupported) {
-      setListSubCalScopeSupported(false);
-      const fallbackPayload = { ...payload };
-      delete fallbackPayload.sub_calendar_id;
-      const fallback = await supabase
-        .from('shared_list_groups')
-        .insert(fallbackPayload)
-        .select('*')
-        .single();
-      data = fallback.data;
-      error = fallback.error;
-    }
 
     if (error) {
       console.error('Error creating shared list:', error);
@@ -2755,29 +2214,14 @@ function App() {
   };
 
   const deleteSharedList = async (listId) => {
-    if (!listId || !effectiveListOwnerId) return;
+    if (!listId || !primaryListOwnerId) return;
     if (!window.confirm('Delete this list and all its items?')) return;
 
-    let deleteItems = supabase
+    const { error: itemDeleteError } = await supabase
       .from('shared_lists')
       .delete()
-      .eq('owner_id', effectiveListOwnerId)
+      .eq('owner_id', primaryListOwnerId)
       .eq('list_id', listId);
-    if (listSubCalScopeSupported) {
-      deleteItems = activeListScopeSubCalId
-        ? deleteItems.eq('sub_calendar_id', activeListScopeSubCalId)
-        : deleteItems.is('sub_calendar_id', null);
-    }
-    let { error: itemDeleteError } = await deleteItems;
-    if (itemDeleteError && isMissingListScopeColumn(itemDeleteError) && listSubCalScopeSupported) {
-      setListSubCalScopeSupported(false);
-      const fallbackDelete = await supabase
-        .from('shared_lists')
-        .delete()
-        .eq('owner_id', effectiveListOwnerId)
-        .eq('list_id', listId);
-      itemDeleteError = fallbackDelete.error;
-    }
 
     if (itemDeleteError) {
       setListError(`Could not delete list items: ${itemDeleteError.message}`);
@@ -2803,35 +2247,22 @@ function App() {
 
   const addSharedListItem = async () => {
     const text = newListItemText.trim();
-    if (!text || !effectiveListOwnerId || !selectedSharedListId || !user?.id) return;
+    if (!text || !primaryListOwnerId || !selectedSharedListId || !user?.id) return;
 
     const payload = {
-      owner_id: effectiveListOwnerId,
+      owner_id: primaryListOwnerId,
       list_id: selectedSharedListId,
       text,
       done: false,
       created_by: currentUser || user.email || 'User',
       user_id: user.id,
     };
-    if (listSubCalScopeSupported) payload.sub_calendar_id = activeListScopeSubCalId;
 
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('shared_lists')
       .insert(payload)
       .select('*')
       .single();
-    if (error && isMissingListScopeColumn(error) && listSubCalScopeSupported) {
-      setListSubCalScopeSupported(false);
-      const fallbackPayload = { ...payload };
-      delete fallbackPayload.sub_calendar_id;
-      const fallback = await supabase
-        .from('shared_lists')
-        .insert(fallbackPayload)
-        .select('*')
-        .single();
-      data = fallback.data;
-      error = fallback.error;
-    }
 
     if (error) {
       console.error('Error adding list item:', error);
@@ -2925,7 +2356,10 @@ function App() {
           .eq('user_id', userId);
 
         // Load calendars shared WITH me (by email)
-        const sharedWithMe = await loadSharedAccessForUser(userId, userEmail);
+        const { data: sharedWithMe } = await supabase
+          .from('shared_access')
+          .select('*')
+          .eq('shared_with_email', userEmail);
 
         // Update shared_with_id if not yet set (first time they log in)
         if (sharedWithMe && sharedWithMe.length > 0) {
@@ -3043,11 +2477,9 @@ function App() {
         }
 
         const titleKey = `calendar-title-${userId}`;
-        const savedTitle = localStorage.getItem(titleKey) || 'Our Calendar';
-        setMainCalendarTitle(savedTitle);
-        if (!activeFullCalendarRef.current && !activeSubCalendarRef.current) {
-          setCalendarTitle(savedTitle);
-        }
+        const savedTitle = localStorage.getItem(titleKey);
+        if (savedTitle) setCalendarTitle(savedTitle);
+        else setCalendarTitle('Our Calendar');
 
         const userResult = await window.storage.get('calendar-user', false);
         if (userResult && userResult.value) {
@@ -3073,14 +2505,16 @@ function App() {
     // and merges it with local state — never triggers a save
     const loadSharedEvents = async () => {
       try {
-        if (activeSubCalendarRef.current || activeFullCalendarRef.current) return;
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
         const userEmail = session?.user?.email;
         if (!userId) return;
 
         // Get calendars shared with me
-        const sharedData = await loadSharedAccessForUser(userId, userEmail);
+        const { data: sharedData } = await supabase
+          .from('shared_access')
+          .select('*')
+          .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`);
 
         if (!sharedData || sharedData.length === 0) return;
 
@@ -3160,62 +2594,17 @@ function App() {
   }, []);
 
   useEffect(() => {
-    activeFullCalendarRef.current = activeFullCalendar;
-  }, [activeFullCalendar]);
+    if (!primaryListOwnerId) return;
+    loadSharedListGroups(primaryListOwnerId);
+  }, [primaryListOwnerId]);
 
   useEffect(() => {
-    activeSubCalendarRef.current = activeSubCalendar;
-  }, [activeSubCalendar]);
-
-  useEffect(() => {
-    if (!user?.id || !user?.email) return;
-    const myId = String(user.id);
-    const myEmail = String(user.email).trim().toLowerCase();
-    const refreshSharedData = async () => {
-      await loadSubCalendars();
-      if (!activeSubCalendarRef.current && !activeFullCalendarRef.current) {
-        await loadMainCalendarEventsForUser(user.id, user.email);
-      }
-    };
-    const sharesChannel = supabase
-      .channel(`share-and-member-sync-${myId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_access' }, async ({ new: row, old }) => {
-        const newEmail = String(row?.shared_with_email || '').trim().toLowerCase();
-        const oldEmail = String(old?.shared_with_email || '').trim().toLowerCase();
-        const newId = String(row?.shared_with_id || '');
-        const oldId = String(old?.shared_with_id || '');
-        if (newEmail !== myEmail && oldEmail !== myEmail && newId !== myId && oldId !== myId) return;
-        await refreshSharedData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sub_calendar_members' }, async ({ new: row, old }) => {
-        const newEmail = String(row?.email || '').trim().toLowerCase();
-        const oldEmail = String(old?.email || '').trim().toLowerCase();
-        if (newEmail !== myEmail && oldEmail !== myEmail) return;
-        await refreshSharedData();
-      })
-      .subscribe();
-
-    return () => sharesChannel.unsubscribe();
-  }, [user?.id, user?.email]);
-
-  useEffect(() => {
-    if (!activeFullCalendar && !activeSubCalendar) {
-      mainCalendarEventsRef.current = events;
-    }
-  }, [events, activeFullCalendar, activeSubCalendar]);
-
-  useEffect(() => {
-    if (!effectiveListOwnerId) return;
-    loadSharedListGroups(effectiveListOwnerId, activeListScopeSubCalId);
-  }, [effectiveListOwnerId, activeListScopeSubCalId]);
-
-  useEffect(() => {
-    if (!effectiveListOwnerId || !selectedSharedListId) {
+    if (!primaryListOwnerId || !selectedSharedListId) {
       setSharedListItems([]);
       return;
     }
-    loadSharedListItems(effectiveListOwnerId, selectedSharedListId, activeListScopeSubCalId);
-  }, [effectiveListOwnerId, selectedSharedListId, activeListScopeSubCalId]);
+    loadSharedListItems(primaryListOwnerId, selectedSharedListId);
+  }, [primaryListOwnerId, selectedSharedListId]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -3278,10 +2667,6 @@ function App() {
     if (!user?.id) return;
     const me = String(user.id);
     const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
-    const mainOwnerIdSet = new Set([
-      me,
-      ...(sharedCalendars || []).map(s => String(s.owner_id || '')).filter(Boolean),
-    ]);
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
 
@@ -3333,13 +2718,6 @@ function App() {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_lists' }, ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
-        const subCalId = String(row.sub_calendar_id || '');
-        const ownerId = String(row.owner_id || '');
-        if (subCalId) {
-          if (subCalIdSet.size > 0 && !subCalIdSet.has(subCalId)) return;
-        } else if (mainOwnerIdSet.size > 0 && !mainOwnerIdSet.has(ownerId)) {
-          return;
-        }
         const who = String(row.created_by || 'Someone');
         const itemText = String(row.text || '').trim();
         const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
@@ -3355,7 +2733,7 @@ function App() {
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, currentUser, subCalendars, sharedCalendars]);
+  }, [user?.id, user?.email, currentUser, subCalendars]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -3363,7 +2741,6 @@ function App() {
     const myEmail = String(user?.email || '').trim().toLowerCase();
     const myName = String(currentUser || '').trim().toLowerCase();
     const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
-    const subCalOwnerIds = Array.from(new Set((subCalendars || []).map(sc => String(sc.owner_id || '')).filter(Boolean)));
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
 
@@ -3385,12 +2762,11 @@ function App() {
 
     const pollInAppUpdates = async () => {
       try {
-        const sharedData = await loadSharedAccessForUser(user.id, user.email);
-        const ownerIds = Array.from(new Set([
-          me,
-          ...(sharedData || []).map(s => String(s.owner_id || '')).filter(Boolean),
-          ...subCalOwnerIds,
-        ]));
+        const { data: sharedData } = await supabase
+          .from('shared_access')
+          .select('owner_id')
+          .or(`shared_with_email.eq.${user.email},shared_with_id.eq.${user.id}`);
+        const ownerIds = Array.from(new Set((sharedData || []).map(s => String(s.owner_id || '')).filter(Boolean)));
 
         if (ownerIds.length > 0) {
           const { data: sharedEvents } = await supabase
@@ -3414,15 +2790,13 @@ function App() {
 
           const { data: sharedListItems } = await supabase
             .from('shared_lists')
-            .select('id,text,created_by,user_id,created_at,owner_id,sub_calendar_id')
+            .select('id,text,created_by,user_id,created_at')
             .in('owner_id', ownerIds)
             .gt('created_at', inAppSyncCursorRef.current.sharedListItems || new Date(Date.now() - (5 * 60 * 1000)).toISOString())
             .order('created_at', { ascending: true })
             .limit(200);
           (sharedListItems || []).forEach(row => {
             if (isOwnRow(row)) return;
-            const subCalId = String(row.sub_calendar_id || '');
-            if (subCalId && subCalIdSet.size > 0 && !subCalIdSet.has(subCalId)) return;
             const who = String(row.created_by || 'Someone');
             const itemText = String(row.text || '').trim();
             const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
@@ -4129,28 +3503,20 @@ function App() {
     if (ts === null) return 'Unknown date';
     return new Date(ts).toLocaleDateString('en-US', withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
   };
-  const dateRangeCalendars = subCalendars.filter(sc => !isFullCalendarRange(sc));
-  const upcomingTrips = [...dateRangeCalendars]
+  const upcomingTrips = [...subCalendars]
     .filter(sc => {
       const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
       return startTs !== null && startTs > todayTs;
     })
     .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
-  const activeTrips = [...dateRangeCalendars]
+  const activeTrips = [...subCalendars]
     .filter(sc => {
       const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
       const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
       return startTs !== null && endTs !== null && todayTs >= startTs && todayTs <= endTs;
     })
     .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
-  const activeFullCalendars = subCalendars.filter(sc => isFullCalendarRange(sc));
-  const mainCalendarListTitle = mainCalendarTitle || 'Our Calendar';
-  const activeCalendarsForList = [
-    { id: '__main__', isMainCalendar: true, name: mainCalendarListTitle },
-    ...activeFullCalendars,
-    ...activeTrips,
-  ];
-  const archivedTrips = [...dateRangeCalendars]
+  const archivedTrips = [...subCalendars]
     .filter(sc => {
       const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
       return endTs !== null && endTs < todayTs;
@@ -4359,22 +3725,12 @@ function App() {
                     onChange={(e) => setCalendarTitle(e.target.value)}
                     onBlur={async () => {
                       setIsEditingTitle(false);
-                      if (activeFullCalendar?.id) {
-                        await renameFullCalendar(calendarTitle);
-                      } else {
-                        localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
-                        setMainCalendarTitle(calendarTitle);
-                      }
+                      localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
                     }}
                     onKeyPress={async (e) => {
                       if (e.key === 'Enter') {
                         setIsEditingTitle(false);
-                        if (activeFullCalendar?.id) {
-                          await renameFullCalendar(calendarTitle);
-                        } else {
-                          localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
-                          setMainCalendarTitle(calendarTitle);
-                        }
+                        localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
                       }
                     }}
                     className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 border-2 border-purple-300 rounded-lg w-full"
@@ -4391,21 +3747,13 @@ function App() {
                 )}
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                   <span className="font-semibold text-purple-600 dark:text-purple-400">{user?.email}</span>
-                  {activeFullCalendar && (
-                    <span className="ml-2 text-xs text-indigo-600 dark:text-indigo-300">Viewing: {activeFullCalendar.name}</span>
-                  )}
-                  {activeFullCalendar && (
-                    <button onClick={returnToMainCalendar} className="ml-2 text-xs text-indigo-500 hover:text-indigo-700 underline">back to Main</button>
-                  )}
                   <button onClick={handleLogout} className="ml-2 text-xs text-purple-500 hover:text-purple-700 underline">logout</button>
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <button
-                onClick={() => {
-                  setShowSharePanel(!showSharePanel);
-                }}
+                onClick={() => setShowSharePanel(!showSharePanel)}
                 className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
                 title="Share calendar"
               >
@@ -4646,7 +3994,7 @@ function App() {
           </div>
         )}
 
-        {!activeFullCalendar && showSharePanel && (
+        {showSharePanel && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400">
@@ -4717,72 +4065,6 @@ function App() {
             )}
             {myShares.length === 0 && sharedCalendars.length === 0 && (
               <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add someone's email above to get started.</p>
-            )}
-          </div>
-        )}
-
-        {activeFullCalendar && showSharePanel && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400">
-                Share {activeFullCalendar.name}
-              </h3>
-              <button onClick={() => { setShowSharePanel(false); setFullCalShareMessage(''); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
-            </div>
-            <div className="mb-5">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Add an email to share this calendar.
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  value={fullCalInviteEmail}
-                  onChange={(e) => { setFullCalInviteEmail(e.target.value); setFullCalShareMessage(''); }}
-                  placeholder="friend@gmail.com"
-                  disabled={activeFullCalendar.owner_id !== user?.id}
-                  className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 disabled:opacity-60"
-                  onKeyPress={(e) => e.key === 'Enter' && inviteToFullCalendar()}
-                />
-                <button
-                  onClick={() => inviteToFullCalendar()}
-                  disabled={activeFullCalendar.owner_id !== user?.id}
-                  className="px-4 py-2 bg-gradient-to-br from-indigo-500 to-blue-500 text-white rounded-xl hover:shadow-lg transition-all disabled:opacity-60"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-              </div>
-              {fullCalShareMessage && (
-                <p className={`text-sm mt-2 ${fullCalShareMessage.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>
-                  {fullCalShareMessage}
-                </p>
-              )}
-            </div>
-            {fullCalMembers.length > 0 && (
-              <div className="mb-2">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Shared with:</h4>
-                <div className="space-y-2">
-                  {fullCalMembers.map((member, i) => (
-                    <div key={`${member.email}-${i}`} className="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl border border-indigo-200 dark:border-indigo-700">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-7 h-7 rounded-full bg-indigo-400 flex items-center justify-center text-white text-xs font-bold">
-                          {String(member.email || '?')[0]?.toUpperCase()}
-                        </div>
-                        <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{member.email}</span>
-                      </div>
-                      {activeFullCalendar.owner_id === user?.id && (
-                        <button onClick={() => removeMemberFromFullCal(member.email)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all" title="Remove access">
-                          <X className="w-4 h-4 text-red-500" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {fullCalMembers.length === 0 && (
-              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add an email above to get started.</p>
             )}
           </div>
         )}
@@ -5052,7 +4334,7 @@ function App() {
             {/* Active sub-calendar banner */}
             {(() => {
               const today = getDateKey(new Date());
-              const active = dateRangeCalendars
+              const active = subCalendars
                 .filter(sc => today >= sc.start_date && today <= sc.end_date)
                 .sort((a, b) => {
                   const todayEvents = events[today] || [];
@@ -5084,7 +4366,7 @@ function App() {
                           onTouchMove={handleTripSwipeMove}
                           onTouchEnd={handleTripSwipeEnd}
                           onTouchCancel={handleTripSwipeEnd}
-                          onClick={() => openCalendarFromActiveList(sc)}
+                          onClick={() => openSubCalendar(sc)}
                           className="relative z-10 w-full flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 hover:shadow-md transition-all text-left cursor-pointer"
                           style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                         >
@@ -5164,7 +4446,7 @@ function App() {
                   });
                   const subTripsOnDate = dateTs === null
                     ? []
-                    : dateRangeCalendars.filter(sc => {
+                    : subCalendars.filter(sc => {
                         const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
                         const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
                         return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
@@ -5251,7 +4533,7 @@ function App() {
                   const hasHoliday = dateEvents.some(e => e.isHoliday);
                   const weatherData = showWeather ? weather[dateKey] : null;
                   const dateTs = toDateOnlyTs(date);
-                  const subTripsOnDate = dateRangeCalendars.filter(sc => {
+                  const subTripsOnDate = subCalendars.filter(sc => {
                     const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
                     const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
                     return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
@@ -5365,10 +4647,7 @@ function App() {
                   <div className="flex items-center gap-3">
                     <button onClick={() => setSelectedDates([])} className="text-xs text-purple-700 dark:text-purple-300 hover:text-purple-900 underline font-medium">Clear selection</button>
                     <button
-                      onClick={() => {
-                        setNewCalendarType('sub');
-                        setShowSubCalendarModal(true);
-                      }}
+                      onClick={() => setShowSubCalendarModal(true)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-xs rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
                     >
                       🗓️ Create Sub-Calendar
@@ -5730,10 +5009,7 @@ function App() {
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Active Calendars</h3>
                   <button
-                    onClick={() => {
-                      setNewCalendarType('sub');
-                      setShowSubCalendarModal(true);
-                    }}
+                    onClick={() => setShowSubCalendarModal(true)}
                     className="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-xs font-semibold shrink-0"
                   >
                     + New Calendar
@@ -5742,28 +5018,11 @@ function App() {
 
                 <div className="mb-4">
                   <h4 className="text-xs uppercase tracking-wide font-semibold text-green-600 dark:text-green-400 mb-2">Active</h4>
-                  {activeCalendarsForList.length === 0 ? (
+                  {activeTrips.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No active calendars right now.</div>
                   ) : (
                     <div className="space-y-2">
-                      {activeCalendarsForList.map(sc => {
-                        if (sc.isMainCalendar) {
-                          return (
-                            <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-green-300 dark:ring-green-700">
-                              <div className="relative z-10 flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
-                                <div className="min-w-0">
-                                  <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
-                                </div>
-                                <button
-                                  onClick={returnToMainCalendar}
-                                  className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white"
-                                >
-                                  Open
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        }
+                      {activeTrips.map(sc => {
                         const canDelete = sc.owner_id === user?.id;
                         const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
                         const isDeleteRevealed = rowOffset < 0;
@@ -5789,14 +5048,12 @@ function App() {
                             >
                               <div className="min-w-0">
                                 <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
-                                {!isFullCalendarRange(sc) && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    {`Happening now · ${formatTripDate(getSubCalStartRaw(sc))} - ${formatTripDate(getSubCalEndRaw(sc), true)}`}
-                                  </div>
-                                )}
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  Happening now · {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
+                                </div>
                               </div>
                               <button
-                                onClick={() => openCalendarFromActiveList(sc)}
+                                onClick={() => openSubCalendar(sc)}
                                 className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white"
                               >
                                 Open
@@ -5846,7 +5103,7 @@ function App() {
                               </div>
                             </div>
                             <button
-                              onClick={() => openCalendarFromActiveList(sc)}
+                              onClick={() => openSubCalendar(sc)}
                               className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-purple-500 hover:bg-purple-600 text-white"
                             >
                               Open
@@ -5899,7 +5156,7 @@ function App() {
                               </div>
                             </div>
                             <button
-                              onClick={() => openCalendarFromActiveList(sc)}
+                              onClick={() => openSubCalendar(sc)}
                               className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-gray-600 hover:bg-gray-700 text-white"
                             >
                               Open
@@ -5959,45 +5216,19 @@ function App() {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">New Calendar</h3>
-            <button onClick={() => { setShowSubCalendarModal(false); setNewCalendarType('sub'); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">New Sub-Calendar</h3>
+            <button onClick={() => setShowSubCalendarModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
-          <div className="mb-3 grid grid-cols-2 gap-2">
-            <button
-              onClick={() => setNewCalendarType('sub')}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                newCalendarType === 'sub'
-                  ? 'bg-purple-500 text-white border-purple-500'
-                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
-              }`}
-            >
-              Sub Calendar
-            </button>
-            <button
-              onClick={() => setNewCalendarType('full')}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                newCalendarType === 'full'
-                  ? 'bg-indigo-500 text-white border-indigo-500'
-                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
-              }`}
-            >
-              New Full Calendar
-            </button>
-          </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {newCalendarType === 'sub'
-              ? (selectedDates.length > 0
-                ? `${selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${selectedDates[selectedDates.length-1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${selectedDates.length} days)`
-                : 'Select date range on calendar first.')
-              : 'Creates a separate full calendar (not date-ranged).'}
+            {selectedDates.length > 0 && `${selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${selectedDates[selectedDates.length-1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${selectedDates.length} days)`}
           </div>
           <input
             type="text"
             value={newSubCalName}
             onChange={e => setNewSubCalName(e.target.value)}
-            placeholder={newCalendarType === 'sub' ? 'e.g. SF Trip 🌁, Cabo 2026 🌊' : 'e.g. Work, Team, School'}
+            placeholder="e.g. SF Trip 🌁, Cabo 2026 🌊"
             className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
             autoFocus
             onKeyPress={e => e.key === 'Enter' && createSubCalendar()}
@@ -6005,7 +5236,7 @@ function App() {
           <button
             onClick={createSubCalendar}
             className="w-full py-2.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl font-medium"
-          >{newCalendarType === 'sub' ? 'Create Sub-Calendar' : 'Create New Calendar'}</button>
+          >Create Sub-Calendar</button>
         </div>
       </div>
     )}
