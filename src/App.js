@@ -504,6 +504,24 @@ function App() {
         }
       }
 
+      // Compatibility: if someone shared their main calendar with me, include their sub-calendars too.
+      let sharedOwnerCalendars = [];
+      {
+        const sharedWithMe = await loadSharedAccessForUser(user.id, user.email);
+        const sharedOwnerIds = Array.from(new Set((sharedWithMe || []).map(s => String(s.owner_id || '')).filter(Boolean)));
+        if (sharedOwnerIds.length > 0) {
+          const { data: sharedOwnerData, error: sharedOwnerErr } = await supabase
+            .from('sub_calendars')
+            .select('*')
+            .in('owner_id', sharedOwnerIds);
+          if (sharedOwnerErr) {
+            console.error('Error loading sub_calendars by shared owner ids:', sharedOwnerErr);
+            return;
+          }
+          sharedOwnerCalendars = sharedOwnerData || [];
+        }
+      }
+
       const { data: memberRows, error: memberErr } = await supabase
         .from('sub_calendar_members')
         .select('sub_calendar_id')
@@ -527,6 +545,7 @@ function App() {
         ...(ownedByUserId || []),
         ...(legacyOwnedByEmail || []),
         ...(legacyOwnedByName || []),
+        ...(sharedOwnerCalendars || []),
         ...memberCalendars,
       ].forEach(sc => mergedById.set(sc.id, sc));
       setSubCalendars(Array.from(mergedById.values()));
