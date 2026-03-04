@@ -160,6 +160,7 @@ function App() {
   const [subCalendarEvents, setSubCalendarEvents] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
   const [newSubCalName, setNewSubCalName] = useState('');
+  const [newCalendarType, setNewCalendarType] = useState('sub'); // 'sub' | 'full'
   const [subCalInviteEmail, setSubCalInviteEmail] = useState('');
   const [subCalMembers, setSubCalMembers] = useState([]);
   const [subCalEditingEvent, setSubCalEditingEvent] = useState(null);
@@ -191,6 +192,8 @@ function App() {
   const photoDeleteHoldTimerRef = useRef(null);
   const photoTapRef = useRef({ id: null, at: 0, timer: null });
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
+  const FULL_CALENDAR_START = '2000-01-01';
+  const FULL_CALENDAR_END = '2100-12-31';
 
   const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
@@ -542,14 +545,22 @@ function App() {
   };
 
   const createSubCalendar = async () => {
-    console.log('createSubCalendar called', { name: newSubCalName, dates: selectedDates.length, user: user?.id });
-    if (!newSubCalName.trim() || selectedDates.length < 2) {
-      alert(selectedDates.length < 2 ? `Please select at least 2 dates first. Currently selected: ${selectedDates.length}` : 'Please enter a name.');
+    console.log('createSubCalendar called', { name: newSubCalName, dates: selectedDates.length, type: newCalendarType, user: user?.id });
+    if (!newSubCalName.trim()) {
+      alert('Please enter a name.');
       return;
     }
-    const sorted = [...selectedDates].sort((a, b) => a - b);
-    const startDate = getDateKey(sorted[0]);
-    const endDate = getDateKey(sorted[sorted.length - 1]);
+    let startDate = FULL_CALENDAR_START;
+    let endDate = FULL_CALENDAR_END;
+    if (newCalendarType === 'sub') {
+      if (selectedDates.length < 2) {
+        alert(`Please select at least 2 dates first. Currently selected: ${selectedDates.length}`);
+        return;
+      }
+      const sorted = [...selectedDates].sort((a, b) => a - b);
+      startDate = getDateKey(sorted[0]);
+      endDate = getDateKey(sorted[sorted.length - 1]);
+    }
     const id = `sc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const newSC = {
       id,
@@ -573,6 +584,7 @@ function App() {
     setSubCalendars(prev => [...prev, newSC]);
     setShowSubCalendarModal(false);
     setNewSubCalName('');
+    setNewCalendarType('sub');
     openSubCalendar(newSC);
   };
 
@@ -4651,7 +4663,10 @@ function App() {
                   <div className="flex items-center gap-3">
                     <button onClick={() => setSelectedDates([])} className="text-xs text-purple-700 dark:text-purple-300 hover:text-purple-900 underline font-medium">Clear selection</button>
                     <button
-                      onClick={() => setShowSubCalendarModal(true)}
+                      onClick={() => {
+                        setNewCalendarType('sub');
+                        setShowSubCalendarModal(true);
+                      }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-xs rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
                     >
                       🗓️ Create Sub-Calendar
@@ -5013,7 +5028,10 @@ function App() {
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Active Calendars</h3>
                   <button
-                    onClick={() => setShowSubCalendarModal(true)}
+                    onClick={() => {
+                      setNewCalendarType('sub');
+                      setShowSubCalendarModal(true);
+                    }}
                     className="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-xs font-semibold shrink-0"
                   >
                     + New Calendar
@@ -5238,19 +5256,45 @@ function App() {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">New Sub-Calendar</h3>
-            <button onClick={() => setShowSubCalendarModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">New Calendar</h3>
+            <button onClick={() => { setShowSubCalendarModal(false); setNewCalendarType('sub'); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setNewCalendarType('sub')}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                newCalendarType === 'sub'
+                  ? 'bg-purple-500 text-white border-purple-500'
+                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+              }`}
+            >
+              Sub Calendar
+            </button>
+            <button
+              onClick={() => setNewCalendarType('full')}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                newCalendarType === 'full'
+                  ? 'bg-indigo-500 text-white border-indigo-500'
+                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+              }`}
+            >
+              New Full Calendar
+            </button>
+          </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {selectedDates.length > 0 && `${selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${selectedDates[selectedDates.length-1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${selectedDates.length} days)`}
+            {newCalendarType === 'sub'
+              ? (selectedDates.length > 0
+                ? `${selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${selectedDates[selectedDates.length-1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${selectedDates.length} days)`
+                : 'Select date range on calendar first.')
+              : 'Creates a separate full calendar (not date-ranged).'}
           </div>
           <input
             type="text"
             value={newSubCalName}
             onChange={e => setNewSubCalName(e.target.value)}
-            placeholder="e.g. SF Trip 🌁, Cabo 2026 🌊"
+            placeholder={newCalendarType === 'sub' ? 'e.g. SF Trip 🌁, Cabo 2026 🌊' : 'e.g. Work, Team, School'}
             className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
             autoFocus
             onKeyPress={e => e.key === 'Enter' && createSubCalendar()}
@@ -5258,7 +5302,7 @@ function App() {
           <button
             onClick={createSubCalendar}
             className="w-full py-2.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl font-medium"
-          >Create Sub-Calendar</button>
+          >{newCalendarType === 'sub' ? 'Create Sub-Calendar' : 'Create New Calendar'}</button>
         </div>
       </div>
     )}
