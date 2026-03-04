@@ -462,10 +462,18 @@ function App() {
         .eq('owner_id', user.id);
       if (ownedError) { console.error('Error loading owned sub_calendars:', ownedError); return; }
 
+      // Backward compatibility: older rows may not have owner_id populated.
+      const { data: legacyOwnedByEmail, error: legacyOwnedErr } = await supabase
+        .from('sub_calendars')
+        .select('*')
+        .is('owner_id', null)
+        .ilike('created_by', user.email);
+      if (legacyOwnedErr) { console.error('Error loading legacy-owned sub_calendars:', legacyOwnedErr); return; }
+
       const { data: memberRows, error: memberErr } = await supabase
         .from('sub_calendar_members')
         .select('sub_calendar_id')
-        .eq('email', user.email.toLowerCase());
+        .ilike('email', user.email.toLowerCase());
       if (memberErr) { console.error('Error loading sub_calendar_members:', memberErr); return; }
 
       const memberIds = Array.from(new Set((memberRows || []).map(r => r.sub_calendar_id).filter(Boolean)));
@@ -480,7 +488,7 @@ function App() {
       }
 
       const mergedById = new Map();
-      [...(ownedData || []), ...memberCalendars].forEach(sc => mergedById.set(sc.id, sc));
+      [...(ownedData || []), ...(legacyOwnedByEmail || []), ...memberCalendars].forEach(sc => mergedById.set(sc.id, sc));
       setSubCalendars(Array.from(mergedById.values()));
     } catch (e) { console.error(e); }
   };
