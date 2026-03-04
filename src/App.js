@@ -2626,6 +2626,7 @@ function App() {
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
     const accessibleSubCalIdCache = new Set(subCalIdSet);
+    const accessibleOwnerIdCache = new Set([me]);
 
     const isOwnRow = (row) => {
       const rowUserId = row?.user_id ? String(row.user_id) : '';
@@ -2688,10 +2689,41 @@ function App() {
       return false;
     };
 
+    const canAccessOwnerId = async (ownerIdValue) => {
+      const ownerId = String(ownerIdValue || '');
+      if (!ownerId) return false;
+      if (accessibleOwnerIdCache.has(ownerId)) return true;
+
+      const { data: shareById, error: shareByIdErr } = await supabase
+        .from('shared_access')
+        .select('id')
+        .eq('owner_id', ownerId)
+        .eq('shared_with_id', me)
+        .limit(1);
+      if (!shareByIdErr && (shareById || []).length > 0) {
+        accessibleOwnerIdCache.add(ownerId);
+        return true;
+      }
+
+      const { data: shareByEmail, error: shareByEmailErr } = await supabase
+        .from('shared_access')
+        .select('id')
+        .eq('owner_id', ownerId)
+        .ilike('shared_with_email', myEmail)
+        .limit(1);
+      if (!shareByEmailErr && (shareByEmail || []).length > 0) {
+        accessibleOwnerIdCache.add(ownerId);
+        return true;
+      }
+
+      return false;
+    };
+
     const updatesChannel = supabase
       .channel(`in-app-updates-${me}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'events' }, ({ new: row }) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'events' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
+        if (!(await canAccessOwnerId(row.user_id))) return;
         const who = String(row.created_by || 'Someone');
         addInAppNotification({
           key: `events:${row.id}`,
@@ -2725,8 +2757,9 @@ function App() {
           createdAt: row.created_at,
         });
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_lists' }, ({ new: row }) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_lists' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
+        if (!(await canAccessOwnerId(row.owner_id))) return;
         const who = String(row.created_by || 'Someone');
         const itemText = String(row.text || '').trim();
         const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
