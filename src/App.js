@@ -4430,20 +4430,6 @@ function App() {
                   const weatherData = showWeather && dateKey ? weather[dateKey] : null;
                   const dateTs = date ? toDateOnlyTs(date) : null;
 
-                  const multiDayEvents = dateEvents.filter(e => e.isMultiDay);
-                  const uniqueMultiDayIds = [...new Set(multiDayEvents.map(e => e.multiDayId))];
-                  const multiDayBars = uniqueMultiDayIds.map(multiDayId => {
-                    const allDatesForEvent = Object.entries(events)
-                      .filter(([_, evts]) => evts.some(e => e.multiDayId === multiDayId))
-                      .map(([dk]) => { const [y,m,d] = dk.split('-').map(Number); return new Date(y,m-1,d); })
-                      .sort((a, b) => a - b);
-                    const isFirst = date && allDatesForEvent[0] && isSameDay(date, allDatesForEvent[0]);
-                    const isLast = date && allDatesForEvent[allDatesForEvent.length-1] && isSameDay(date, allDatesForEvent[allDatesForEvent.length-1]);
-                    const isMiddle = date && allDatesForEvent.some(d => isSameDay(d, date)) && !isFirst && !isLast;
-                    const eventWithId = dateEvents.find(e => e.multiDayId === multiDayId);
-                    const categoryColor = eventWithId ? categories[eventWithId.category || 'other']?.color : 'bg-purple-500';
-                    return { isFirst, isLast, isMiddle, categoryColor };
-                  });
                   const subTripsOnDate = dateTs === null
                     ? []
                     : subCalendars.filter(sc => {
@@ -4455,7 +4441,7 @@ function App() {
                   const hasSecondarySubCalendarRange = subTripsOnDate.length > 1;
 
                   return (
-                    <div key={index} className="relative pb-2">
+                    <div key={index} className="relative">
                       <button
                         onClick={() => handleDateTap(date)}
                         disabled={!date}
@@ -4508,15 +4494,6 @@ function App() {
                           </div>
                         )}
                       </button>
-                      {multiDayBars.map((bar, barIndex) => (
-                        bar.isFirst || bar.isLast || bar.isMiddle ? (
-                          <div key={barIndex} className="absolute left-0 right-0 flex items-center" style={{ top: '100%', marginTop: `${barIndex * 5}px` }}>
-                            {bar.isFirst && <div className={`h-2 ${bar.categoryColor} rounded-l-full`} style={{ width: '85%', marginLeft: '15%' }} />}
-                            {bar.isMiddle && <div className={`h-2 ${bar.categoryColor} w-full`} />}
-                            {bar.isLast && <div className={`h-2 ${bar.categoryColor} rounded-r-full`} style={{ width: '85%' }} />}
-                          </div>
-                        ) : null
-                      ))}
                     </div>
                   );
                 })}
