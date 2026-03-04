@@ -2761,7 +2761,6 @@ function App() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_photos' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
         const subCalId = String(row.sub_calendar_id || '');
-        if (!(await canAccessSubCalId(subCalId))) return;
         const who = String(row.uploaded_by || row.created_by || 'Someone');
         const tripName = subCalNameMap[subCalId] || 'trip';
         addInAppNotification({
@@ -2934,22 +2933,33 @@ function App() {
           updateCursor('subCalEvents', subCalEvents);
 
           const photoCursor = inAppSyncCursorRef.current.tripPhotos || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
-          const { data: datedTripPhotoRows, error: datedTripPhotoError } = await supabase
+          const tripPhotoBase = supabase
             .from('trip_photos')
-            .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at')
-            .in('sub_calendar_id', subCalIds)
-            .gt('created_at', photoCursor)
-            .order('created_at', { ascending: true })
-            .limit(200);
+            .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at');
+          const { data: datedTripPhotoRows, error: datedTripPhotoError } = await (subCalIds.length > 0
+            ? tripPhotoBase
+                .in('sub_calendar_id', subCalIds)
+                .gt('created_at', photoCursor)
+                .order('created_at', { ascending: true })
+                .limit(200)
+            : tripPhotoBase
+                .gt('created_at', photoCursor)
+                .order('created_at', { ascending: true })
+                .limit(200));
           if (datedTripPhotoError) {
             console.error('trip_photos dated poll failed:', datedTripPhotoError);
           }
-          const { data: nullTripPhotoRows, error: nullTripPhotoError } = await supabase
+          const nullTripPhotoBase = supabase
             .from('trip_photos')
-            .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at')
-            .in('sub_calendar_id', subCalIds)
-            .is('created_at', null)
-            .limit(200);
+            .select('id,uploaded_by,created_by,user_id,sub_calendar_id,created_at');
+          const { data: nullTripPhotoRows, error: nullTripPhotoError } = await (subCalIds.length > 0
+            ? nullTripPhotoBase
+                .in('sub_calendar_id', subCalIds)
+                .is('created_at', null)
+                .limit(200)
+            : nullTripPhotoBase
+                .is('created_at', null)
+                .limit(200));
           if (nullTripPhotoError) {
             console.error('trip_photos null-created_at poll failed:', nullTripPhotoError);
           }
