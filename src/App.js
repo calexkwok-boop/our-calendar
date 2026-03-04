@@ -306,6 +306,11 @@ function App() {
     if (!destination) return;
     setLocationActionTarget(destination);
   };
+  const handleLocationLinkClick = (e, location) => {
+    if (e?.preventDefault) e.preventDefault();
+    if (e?.stopPropagation) e.stopPropagation();
+    openLocationActionChooser(location);
+  };
   const geocodeDestination = async (destination) => {
     if (!destination || !window.google?.maps?.Geocoder) return null;
     try {
@@ -5036,10 +5041,7 @@ function App() {
                               <button
                                 type="button"
                                 className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 mb-1"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  openLocationActionChooser(event.location);
-                                }}
+                                onClick={(e) => handleLocationLinkClick(e, event.location)}
                               >
                                 📍 {event.location}
                               </button>
@@ -5860,10 +5862,7 @@ function App() {
                                     <button
                                       type="button"
                                       className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 mt-0.5"
-                                      onClick={e => {
-                                        e.stopPropagation();
-                                        openLocationActionChooser(event.location);
-                                      }}
+                                      onClick={(e) => handleLocationLinkClick(e, event.location)}
                                     >📍 {event.location}</button>
                                   )}
                                   {getEventPhotos(event.id).length > 0 && (
