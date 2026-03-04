@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -189,7 +189,7 @@ function App() {
   const photoTapRef = useRef({ id: null, at: 0, timer: null });
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
 
-  const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
+  const REACTION_EMOJIS = ['??', '??', '??', '??', '??', '??', '??', '??', '??'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
@@ -229,7 +229,7 @@ function App() {
     (subCalExpenses || []).forEach(item => addParticipant(item?.payer));
     return participants;
   };
-  const getExpenseDisplayName = (identity) => {
+  const getExpenseDisplayName = useCallback((identity) => {
     const raw = String(identity || '').trim();
     if (!raw) return 'Member';
     const current = String(user?.email || currentUser || '').trim().toLowerCase();
@@ -239,7 +239,7 @@ function App() {
     const cleaned = local.replace(/[._-]+/g, ' ').trim();
     if (!cleaned) return raw;
     return cleaned.replace(/\b\w/g, c => c.toUpperCase());
-  };
+  }, [user?.email, currentUser]);
   const getVenmoHandleForIdentity = (identity) => {
     const key = normalizeIdentityKey(identity);
     return venmoHandles[key] || globalVenmoHandles[key] || '';
@@ -430,7 +430,7 @@ function App() {
     window.open(googleUrl, '_blank', 'noopener,noreferrer');
   };
 
-  // ── Sub-calendar functions ──────────────────────────────────────────────
+  // -- Sub-calendar functions ----------------------------------------------
 
   const loadSubCalendars = async () => {
     try {
@@ -1697,20 +1697,20 @@ function App() {
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
   const [showWeather, setShowWeather] = useState(true);
 
-  const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || '').trim());
-  const cleanOwnerLabel = (value) => {
+  const isUuidLike = useCallback((value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || '').trim()), []);
+  const cleanOwnerLabel = useCallback((value) => {
     const raw = String(value || '').trim();
     if (!raw) return '';
     if (isUuidLike(raw)) return '';
     return raw;
-  };
-  const fallbackOwnerLabel = (ownerId) => {
+  }, [isUuidLike]);
+  const fallbackOwnerLabel = useCallback((ownerId) => {
     const id = String(ownerId || '');
     if (!id) return 'another user';
     return isUuidLike(id) ? `User ${id.slice(0, 8)}` : id;
-  };
+  }, [isUuidLike]);
 
-  const resolveSharedOwnerLabels = async (shares) => {
+  const resolveSharedOwnerLabels = useCallback(async (shares) => {
     const ownerIds = Array.from(new Set((shares || []).map(s => String(s?.owner_id || '')).filter(Boolean)));
     if (ownerIds.length === 0) {
       setSharedOwnerLabels({});
@@ -1764,7 +1764,7 @@ function App() {
       });
       return merged;
     });
-  };
+  }, [cleanOwnerLabel, fallbackOwnerLabel]);
 
   // Apply dark mode to document
   useEffect(() => {
@@ -1787,7 +1787,7 @@ function App() {
       date1.getFullYear() === date2.getFullYear();
   };
 
-  const fetchHolidays = async (year) => {
+  const fetchHolidays = useCallback(async (year) => {
     if (holidays[year]) return; // already fetched
     try {
       const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/US`);
@@ -1797,7 +1797,7 @@ function App() {
     } catch (err) {
       console.error('Failed to fetch holidays:', err);
     }
-  };
+  }, [holidays]);
 
   // Fetch holidays for visible years whenever month changes
   useEffect(() => {
@@ -1807,7 +1807,7 @@ function App() {
     const month = currentDate.getMonth();
     if (month === 11) fetchHolidays(year + 1);
     if (month === 0) fetchHolidays(year - 1);
-  }, [currentDate]);
+  }, [currentDate, fetchHolidays]);
 
   // Helper: get holiday info for a specific date key
   const getHolidayForDate = (dateKey) => {
@@ -1816,21 +1816,21 @@ function App() {
     return yearHolidays.find(h => h.date === dateKey) || null;
   };
 
-  // Weather code → display object with emoji/label and a color
-  const weatherDisplay = (code) => {
-    if (code === 0) return { icon: '☀️', color: 'text-yellow-500' };
-    if (code <= 2) return { icon: '⛅', color: 'text-yellow-400' };
-    if (code <= 3) return { icon: '☁️', color: 'text-gray-400' };
+  // Weather code ? display object with emoji/label and a color
+  const weatherDisplay = useCallback((code) => {
+    if (code === 0) return { icon: '\u2600\uFE0F', color: 'text-yellow-500' };
+    if (code <= 2) return { icon: '\u26C5', color: 'text-yellow-400' };
+    if (code <= 3) return { icon: '\u2601\uFE0F', color: 'text-gray-400' };
     if (code <= 49) return { icon: 'FOG', color: 'text-gray-400' };
-    if (code <= 59) return { icon: '🌦️', color: 'text-blue-400' };
-    if (code <= 67) return { icon: '🌧️', color: 'text-blue-500' };
-    if (code <= 77) return { icon: '🌨️', color: 'text-blue-200' };
-    if (code <= 84) return { icon: '🌧️', color: 'text-blue-500' };
-    if (code <= 99) return { icon: '⛈️', color: 'text-purple-500' };
-    return { icon: '⛈️', color: 'text-purple-500' };
-  };
+    if (code <= 59) return { icon: '\uD83C\uDF26\uFE0F', color: 'text-blue-400' };
+    if (code <= 67) return { icon: '\uD83C\uDF27\uFE0F', color: 'text-blue-500' };
+    if (code <= 77) return { icon: '\uD83C\uDF28\uFE0F', color: 'text-blue-200' };
+    if (code <= 84) return { icon: '\uD83C\uDF27\uFE0F', color: 'text-blue-500' };
+    if (code <= 99) return { icon: '\u26C8\uFE0F', color: 'text-purple-500' };
+    return { icon: '\u26C8\uFE0F', color: 'text-purple-500' };
+  }, []);
 
-  const fetchWeather = async (lat, lon) => {
+  const fetchWeather = useCallback(async (lat, lon) => {
     try {
       const res = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=14`
@@ -1851,7 +1851,7 @@ function App() {
     } catch (err) {
       console.error('Failed to fetch weather:', err);
     }
-  };
+  }, [weatherDisplay]);
 
   // Get user location then fetch weather
   useEffect(() => {
@@ -1877,7 +1877,7 @@ function App() {
       );
     };
     initWeather();
-  }, []);
+  }, [fetchWeather]);
   const handleDateTap = (date) => {
     if (!date) return;
 
@@ -2131,7 +2131,7 @@ function App() {
     } else {
       setMyShares(prev => [...prev, { owner_id: user.id, shared_with_email: email }]);
       setShareEmailInput('');
-      setShareMessage(`✅ Shared! When ${email} logs in they'll see your calendar.`);
+      setShareMessage(`? Shared! When ${email} logs in they'll see your calendar.`);
     }
   };
 
@@ -2152,7 +2152,7 @@ function App() {
     ? sharedCalendars[0].owner_id
     : user?.id;
 
-  const loadSharedListGroups = async (ownerId) => {
+  const loadSharedListGroups = useCallback(async (ownerId) => {
     if (!ownerId) return;
     const { data, error } = await supabase
       .from('shared_list_groups')
@@ -2181,7 +2181,7 @@ function App() {
     if (!selectedSharedListId || !groups.some(g => g.id === selectedSharedListId)) {
       setSelectedSharedListId(groups[0].id);
     }
-  };
+  }, [selectedSharedListId]);
 
   const loadSharedListItems = async (ownerId, listId) => {
     if (!ownerId || !listId) {
@@ -2601,7 +2601,7 @@ function App() {
       .subscribe();
 
     return () => sharedSubscription.unsubscribe();
-  }, []);
+  }, [resolveSharedOwnerLabels]);
 
   // Check auth session
   useEffect(() => {
@@ -2623,12 +2623,12 @@ function App() {
   useEffect(() => {
     if (!primaryListOwnerId) return;
     loadSharedListGroups(primaryListOwnerId);
-  }, [primaryListOwnerId]);
+  }, [primaryListOwnerId, loadSharedListGroups]);
 
   useEffect(() => {
     if (!sharedCalendars || sharedCalendars.length === 0) return;
     resolveSharedOwnerLabels(sharedCalendars);
-  }, [sharedCalendars]);
+  }, [sharedCalendars, resolveSharedOwnerLabels]);
 
   useEffect(() => {
     if (!primaryListOwnerId || !selectedSharedListId) {
@@ -2851,7 +2851,7 @@ function App() {
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, currentUser, subCalendars]);
+  }, [user?.id, user?.email, currentUser, subCalendars, getExpenseDisplayName]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -3099,7 +3099,7 @@ function App() {
       window.removeEventListener('focus', pollInAppUpdates);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [user?.id, user?.email, currentUser, subCalendars]);
+  }, [user?.id, user?.email, currentUser, subCalendars, getExpenseDisplayName]);
 
   // Check notification permission on load
   useEffect(() => {
@@ -3397,7 +3397,7 @@ function App() {
       channel.unsubscribe();
       if (subCalLocationChannelRef.current === channel) subCalLocationChannelRef.current = null;
     };
-  }, [activeSubCalendar?.id, shareMyLocation, currentUser, user?.id, user?.email]);
+  }, [activeSubCalendar, activeSubCalendar?.id, shareMyLocation, currentUser, user?.id, user?.email]);
 
   // Global mouse up handler for selections
   useEffect(() => {
@@ -3746,7 +3746,7 @@ function App() {
             {pendingEvent.isMultiDay ? "Multi-day events don't need a time" : 'Enter a time or skip to add without time'}
             {recurrence !== 'once' && (
               <span className="ml-2 px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
-                {recurrence === 'weekly' ? '🔁 Weekly' : recurrence === 'monthly' ? '🔁 Monthly' : '🔁 Annual'}
+                {recurrence === 'weekly' ? '?? Weekly' : recurrence === 'monthly' ? '?? Monthly' : '?? Annual'}
               </span>
             )}
           </p>
@@ -3937,7 +3937,7 @@ function App() {
                 className={`p-2 rounded-xl transition-all duration-200 text-sm ${showWeather ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
                 title={showWeather ? 'Hide weather' : 'Show weather'}
               >
-                🌤️
+                ???
               </button>
               <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
@@ -4045,7 +4045,7 @@ function App() {
                                 className="text-gray-400 hover:text-red-500 text-xs leading-none"
                                 title="Remove notification"
                               >
-                                ✕
+                                ?
                               </button>
                             )}
                           </div>
@@ -4142,7 +4142,7 @@ function App() {
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${onlyNotifyUrgent ? 'translate-x-6' : 'translate-x-1'}`} />
                   </button>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Only send notifications for events marked as urgent 🚨</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Only send notifications for events marked as urgent ??</p>
               </div>
             </div>
           </div>
@@ -4179,7 +4179,7 @@ function App() {
                 </button>
               </div>
               {shareMessage && (
-                <p className={`text-sm mt-2 ${shareMessage.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>
+                <p className={`text-sm mt-2 ${shareMessage.startsWith('?') ? 'text-green-600' : 'text-red-500'}`}>
                   {shareMessage}
                 </p>
               )}
@@ -4210,7 +4210,7 @@ function App() {
                 <div className="space-y-2">
                   {sharedCalendars.map((share, i) => (
                     <div key={i} className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-700">
-                      <div className="w-7 h-7 rounded-full bg-green-400 flex items-center justify-center text-white text-xs">📅</div>
+                      <div className="w-7 h-7 rounded-full bg-green-400 flex items-center justify-center text-white text-xs">??</div>
                       <span className="text-sm text-gray-700 dark:text-gray-300">Shared by <strong>{sharedOwnerLabels[String(share.owner_id || '')] || fallbackOwnerLabel(share.owner_id)}</strong></span>
                     </div>
                   ))}
@@ -4466,7 +4466,7 @@ function App() {
                       <div className="flex items-center gap-1.5 min-w-0">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${category.color}`} />
                         <span className="text-xs sm:text-sm text-gray-800 dark:text-gray-100 truncate">{event.title}</span>
-                        {event.isUrgent && <span className="text-xs">🚨</span>}
+                        {event.isUrgent && <span className="text-xs">??</span>}
                       </div>
                       <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 shrink-0">
                         {event.time ? formatTime(event.time) : 'All day'}
@@ -4524,14 +4524,14 @@ function App() {
                           className="relative z-10 w-full flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 hover:shadow-md transition-all text-left cursor-pointer"
                           style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                         >
-                          <span className="text-xl">🗓️</span>
+                          <span className="text-xl">???</span>
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-sm text-green-800 dark:text-green-300">{sc.name}</div>
                             <div className="text-xs text-green-600 dark:text-green-400">
                               Happening now · {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </div>
                           </div>
-                          <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open →</span>
+                          <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open ?</span>
                         </div>
                       </div>
                     );
@@ -4545,9 +4545,9 @@ function App() {
                 <button
                   onClick={() => setShowTipBanner(false)}
                   className="absolute top-2 right-2 text-purple-400 hover:text-purple-600 dark:text-purple-500 dark:hover:text-purple-300 leading-none"
-                >✕</button>
+                >?</button>
                 <p className="text-sm text-purple-700 dark:text-purple-300 text-center pr-4">
-                  💡 <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
+                  ?? <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
                 </p>
                 <label className="flex items-center justify-center gap-1.5 mt-2 cursor-pointer">
                   <input
@@ -4571,7 +4571,7 @@ function App() {
             </div>
 
             {calendarView === 'month' ? (
-              /* ── MONTH VIEW ── */
+              /* -- MONTH VIEW -- */
               <div className="grid grid-cols-7 gap-1">
                 {getDaysInMonth(currentDate).map((date, index) => {
                   const dateKey = date ? getDateKey(date) : null;
@@ -4626,7 +4626,7 @@ function App() {
                         <div className={`text-xs sm:text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
                           {date ? date.getDate() : ''}
                           {hasHoliday && !isSelected && !isInSelection && (
-                            <span className="absolute top-0.5 right-0.5 text-xs">🇺🇸</span>
+                            <span className="absolute top-0.5 right-0.5 text-xs">????</span>
                           )}
                         </div>
                         {weatherData && !isSelected && !isInSelection && (
@@ -4653,7 +4653,7 @@ function App() {
                 })}
               </div>
             ) : (
-              /* ── WEEK VIEW ── */
+              /* -- WEEK VIEW -- */
               <div className="grid grid-cols-7 gap-1">
                 {getWeekDays(currentDate).map((date, index) => {
                   const dateKey = getDateKey(date);
@@ -4699,7 +4699,7 @@ function App() {
                       {/* Date number */}
                       <div className={`text-xs font-bold mb-1 ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-200' : 'text-gray-700 dark:text-gray-200'}`}>
                         {date.getDate()}
-                        {hasHoliday && <span className="ml-1">🇺🇸</span>}
+                        {hasHoliday && <span className="ml-1">????</span>}
                       </div>
 
                       {/* Weather */}
@@ -4716,7 +4716,7 @@ function App() {
                           const cat = categories[event.category || 'other'] || categories.other;
                           if (event.isHoliday) return (
                             <div key={event.id} className="text-xs px-1.5 py-1 rounded-md bg-red-500 text-white truncate font-medium shadow-sm">
-                              🇺🇸 {event.title}
+                              ???? {event.title}
                             </div>
                           );
                           return (
@@ -4728,7 +4728,7 @@ function App() {
                               `}
                             >
                               {event.time && <span className="opacity-80 mr-1">{formatTime(event.time)}</span>}
-                              {event.isPrivate && '🔒 '}
+                              {event.isPrivate && '?? '}
                               {event.title}
                             </div>
                           );
@@ -4781,7 +4781,7 @@ function App() {
                       onClick={() => setShowSubCalendarModal(true)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-xs rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
                     >
-                      🗓️ Create Sub-Calendar
+                      ??? Create Sub-Calendar
                     </button>
                   </div>
                 </div>
@@ -4829,7 +4829,7 @@ function App() {
                 }`}
               >
                 <AlertTriangle className="w-4 h-4" />
-                {isUrgent ? '🚨 Urgent Event' : 'Normal Event'}
+                {isUrgent ? '?? Urgent Event' : 'Normal Event'}
               </button>
               <div className="w-full">
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
@@ -4838,10 +4838,10 @@ function App() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: 'once', label: '🗓️ One-time' },
-                    { value: 'weekly', label: '🔁 Weekly' },
-                    { value: 'monthly', label: '📅 Monthly' },
-                    { value: 'annual', label: '🎉 Annual' },
+                    { value: 'once', label: '??? One-time' },
+                    { value: 'weekly', label: '?? Weekly' },
+                    { value: 'monthly', label: '?? Monthly' },
+                    { value: 'annual', label: '?? Annual' },
                   ].map(opt => (
                     <button
                       key={opt.value}
@@ -4890,7 +4890,7 @@ function App() {
                       <div key={event.id} className="bg-red-50 dark:bg-red-900/30 rounded-xl p-3 border-2 border-red-200 dark:border-red-700 transition-all duration-200 hover:shadow-md">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">🇺🇸</span>
+                            <span className="text-lg">????</span>
                             <div>
                               <div className="text-gray-800 dark:text-gray-200 font-medium">{event.title}</div>
                               {event.fullName !== event.title && (
@@ -4946,7 +4946,7 @@ function App() {
                                 handleUpdateEventField(event.date, event.id, { location: val });
                               }
                             }}
-                            placeholder="📍 Add location (optional)"
+                            placeholder="?? Add location (optional)"
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
                           <select
@@ -4993,7 +4993,7 @@ function App() {
                               })}
                               className="rounded"
                             />
-                            🔁 Annual (repeats every year)
+                            ?? Annual (repeats every year)
                           </label>
                           <button
                             onClick={() => setEditingEvent(null)}
@@ -5041,7 +5041,7 @@ function App() {
                                   openLocationActionChooser(event.location);
                                 }}
                               >
-                                📍 {event.location}
+                                ?? {event.location}
                               </button>
                             )}
                             {event.createdBy && (
@@ -5076,7 +5076,7 @@ function App() {
                                 className="reaction-picker text-gray-400 dark:text-gray-500 hover:text-purple-500 text-sm px-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition-all"
                                 title="Add reaction"
                               >
-                                {showReactionPicker === event.id ? '✕' : '＋'}
+                                {showReactionPicker === event.id ? '?' : '+'}
                               </button>
                             </div>
                             {showReactionPicker === event.id && (
@@ -5305,7 +5305,7 @@ function App() {
       </div>
     </div>
 
-    {/* ── Create Sub-Calendar Modal ── */}
+    {/* -- Create Sub-Calendar Modal -- */}
     {!activeSubCalendar && (
       <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <div className="max-w-6xl mx-auto">
@@ -5358,7 +5358,7 @@ function App() {
             type="text"
             value={newSubCalName}
             onChange={e => setNewSubCalName(e.target.value)}
-            placeholder="e.g. SF Trip 🌁, Cabo 2026 🌊"
+            placeholder="e.g. SF Trip ??, Cabo 2026 ??"
             className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
             autoFocus
             onKeyPress={e => e.key === 'Enter' && createSubCalendar()}
@@ -5371,7 +5371,7 @@ function App() {
       </div>
     )}
 
-    {/* ── Sub-Calendar Full View ── */}
+    {/* -- Sub-Calendar Full View -- */}
     {activeSubCalendar && (
       <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden">
 
@@ -5393,7 +5393,7 @@ function App() {
               <div
                 className="font-bold text-gray-800 dark:text-white cursor-pointer hover:text-purple-600 dark:hover:text-purple-400"
                 onClick={() => setEditingSubCalTitle(true)}
-              >{activeSubCalendar.name} ✏️</div>
+              >{activeSubCalendar.name} ??</div>
             )}
             <div className="text-xs text-gray-500 dark:text-gray-400">
               {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -5429,14 +5429,14 @@ function App() {
               onClick={() => setSubCalWeatherExpanded(true)}
               className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-full text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-all"
             >
-              🌤️ {subCalWeatherLocation}
-              <span className="text-blue-400 text-xs">✏️</span>
+              ??? {subCalWeatherLocation}
+              <span className="text-blue-400 text-xs">??</span>
             </button>
           ) : (
             // Expanded input with autocomplete
             <div className="flex-1 relative">
               <div className="flex items-center gap-2">
-                <span className="text-sm shrink-0">🌤️</span>
+                <span className="text-sm shrink-0">???</span>
                 <input
                   autoFocus={subCalWeatherExpanded}
                   type="text"
@@ -5448,7 +5448,7 @@ function App() {
                 />
                 {subCalWeatherLoading && <span className="text-xs text-blue-400 animate-pulse shrink-0">Loading…</span>}
                 {subCalWeatherLocation && (
-                  <button onClick={() => { setSubCalWeatherExpanded(false); setSubCalWeatherInput(subCalWeatherLocation); setSubCalWeatherSuggestions([]); }} className="text-xs text-gray-400 hover:text-gray-600 shrink-0">✕</button>
+                  <button onClick={() => { setSubCalWeatherExpanded(false); setSubCalWeatherInput(subCalWeatherLocation); setSubCalWeatherSuggestions([]); }} className="text-xs text-gray-400 hover:text-gray-600 shrink-0">?</button>
                 )}
               </div>
               {/* Suggestions dropdown */}
@@ -5473,7 +5473,7 @@ function App() {
             <button
               onClick={() => setSubCalWeatherExpanded(true)}
               className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-500 flex items-center gap-1"
-            >🌤️ Add trip weather</button>
+            >??? Add trip weather</button>
           )}
         </div>
 
@@ -5488,7 +5488,7 @@ function App() {
             <div className="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">📍 Live Location</div>
+                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">?? Live Location</div>
                   <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
                     {sharingWindowOpen ? `${liveLocations.length} member${liveLocations.length === 1 ? '' : 's'} sharing now` : 'Available only during trip dates'}
                   </div>
@@ -5569,7 +5569,7 @@ function App() {
                     <button
                       onClick={e => { e.stopPropagation(); shrinkSubCalDate(isFirst ? 'before' : 'after'); if (allDates.length <= 2) setShakingDates(false); }}
                       className="absolute -top-2 -left-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md border-2 border-white dark:border-gray-800 leading-none"
-                    >−</button>
+                    >-</button>
                   )}
                 </div>
               );
@@ -5586,7 +5586,7 @@ function App() {
           {/* Tap hint when shaking */}
           {shakingDates && (
             <div className="flex items-center justify-between px-4 pb-2">
-              <span className="text-xs text-red-400">Tap − to remove a day</span>
+              <span className="text-xs text-red-400">Tap - to remove a day</span>
               <button onClick={() => setShakingDates(false)} className="text-xs text-gray-400 hover:text-gray-600 underline">Done</button>
             </div>
           )}
@@ -5597,18 +5597,18 @@ function App() {
           <button
             onClick={() => setSubCalTab('itinerary')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'itinerary' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-          >🗓️ Itinerary</button>
+          >??? Itinerary</button>
           <button
             onClick={() => setSubCalTab('photos')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 relative ${subCalTab === 'photos' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >
-            📸 Photos
+            ?? Photos
             {tripPhotos.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{tripPhotos.length}</span>}
           </button>
           <button
             onClick={() => setSubCalTab('expenses')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'expenses' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-          >💸 Expenses</button>
+          >?? Expenses</button>
         </div>
 
         <input
@@ -5654,7 +5654,7 @@ function App() {
 
               {/* Notes / Reminders */}
               <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-xl border border-yellow-300 dark:border-yellow-700">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📝 Reminders &amp; Notes</h4>
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">?? Reminders &amp; Notes</h4>
                 <div className="space-y-1.5 mb-2">
                   {subCalNotes.length === 0 && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 italic">No reminders yet</p>
@@ -5684,11 +5684,11 @@ function App() {
                     >
                       <div className="flex items-center gap-2 px-2.5 py-2">
                         {/* Drag handle */}
-                        <span className="text-gray-300 dark:text-gray-500 cursor-grab active:cursor-grabbing shrink-0 select-none text-sm">⠿</span>
+                        <span className="text-gray-300 dark:text-gray-500 cursor-grab active:cursor-grabbing shrink-0 select-none text-sm">?</span>
                         <button onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)} className="text-xs text-gray-400 shrink-0 w-3">
-                          {expandedNote === note.id ? '◂' : '▸'}
+                          {expandedNote === note.id ? '?' : '?'}
                         </button>
-                        <span className="text-xs">📌</span>
+                        <span className="text-xs">??</span>
                         {editingNote === note.id ? (
                           <input
                             autoFocus
@@ -5708,7 +5708,7 @@ function App() {
                             {(note.checklist || []).filter(i => i.done).length}/{(note.checklist || []).length}
                           </span>
                         )}
-                        <button onClick={() => deleteSubCalNote(note.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">✕</button>
+                        <button onClick={() => deleteSubCalNote(note.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">?</button>
                       </div>
                       {expandedNote === note.id && (
                         <div className="px-3 pb-2.5 space-y-1.5 border-t border-yellow-200 dark:border-yellow-800 pt-2">
@@ -5718,10 +5718,10 @@ function App() {
                                 onClick={() => toggleChecklistItem(note.id, item.id)}
                                 className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
                               >
-                                {item.done && <span className="text-xs leading-none">✓</span>}
+                                {item.done && <span className="text-xs leading-none">?</span>}
                               </button>
                               <span className={`text-xs flex-1 ${item.done ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>{item.text}</span>
-                              <button onClick={() => deleteChecklistItem(note.id, item.id)} className="text-gray-300 hover:text-red-400 text-xs">✕</button>
+                              <button onClick={() => deleteChecklistItem(note.id, item.id)} className="text-gray-300 hover:text-red-400 text-xs">?</button>
                             </div>
                           ))}
                           <div className="flex gap-1.5 mt-1">
@@ -5840,7 +5840,7 @@ function App() {
                                 <PlacesAutocomplete
                                   value={event.location || ''}
                                   onSelect={(val) => updateSubCalEvent(event.id, { location: val })}
-                                  placeholder="📍 Add location (optional)"
+                                  placeholder="?? Add location (optional)"
                                   className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-sm"
                                 />
                                 <button onClick={() => setSubCalEditingEvent(null)} className="w-full py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg text-sm font-medium">Done</button>
@@ -5864,7 +5864,7 @@ function App() {
                                         e.stopPropagation();
                                         openLocationActionChooser(event.location);
                                       }}
-                                    >📍 {event.location}</button>
+                                    >?? {event.location}</button>
                                   )}
                                   {getEventPhotos(event.id).length > 0 && (
                                     <button
@@ -5894,7 +5894,7 @@ function App() {
                                       ><span>{emoji}</span><span className="text-gray-600 dark:text-gray-300">{users.length}</span></button>
                                     ))}
                                     <button onClick={() => setSubCalShowReactionPicker(subCalShowReactionPicker === event.id ? null : event.id)}
-                                      className="reaction-picker text-gray-400 hover:text-purple-500 text-xs">＋</button>
+                                      className="reaction-picker text-gray-400 hover:text-purple-500 text-xs">+</button>
                                     {subCalShowReactionPicker === event.id && (
                                       <div className="reaction-picker flex gap-1 p-1.5 bg-white dark:bg-gray-700 rounded-xl shadow-lg border border-gray-200 dark:border-gray-600">
                                         {REACTION_EMOJIS.map(emoji => (
@@ -5909,7 +5909,7 @@ function App() {
                                     onClick={() => { setPhotoEventId(event.id); setPhotoDate(dk); photoInputRef.current?.click(); }}
                                     className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-lg"
                                     title="Add photo"
-                                  >📷</button>
+                                  >??</button>
                                   <button onClick={() => setSubCalEditingEvent(event.id)} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-lg"><Edit2 className="w-3.5 h-3.5 text-gray-500" /></button>
                                   <button onClick={() => deleteSubCalEvent(event.id, dk)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
                                 </div>
@@ -5947,7 +5947,7 @@ function App() {
                             <PlacesAutocomplete
                               value={subCalNewEventForm.location}
                               onSelect={val => setSubCalNewEventForm(f => ({ ...f, location: val || '' }))}
-                              placeholder="📍 Add location (optional)"
+                              placeholder="?? Add location (optional)"
                               className="w-full text-xs px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
                             />
                             <div className="flex gap-2">
@@ -5982,7 +5982,7 @@ function App() {
                         ) : (
                           slotEvents.length === 0 && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                              <span className="text-xs text-purple-300 dark:text-purple-700 group-hover:text-purple-400 dark:group-hover:text-purple-500 transition-colors">＋</span>
+                              <span className="text-xs text-purple-300 dark:text-purple-700 group-hover:text-purple-400 dark:group-hover:text-purple-500 transition-colors">+</span>
                             </div>
                           )
                         )}
@@ -6027,7 +6027,7 @@ function App() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full text-xs flex items-center gap-1">
-                    👑 {currentUser} (you)
+                    ?? {currentUser} (you)
                   </span>
                   {subCalMembers.map(m => (
                     <span key={m.email} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
@@ -6082,7 +6082,7 @@ function App() {
                               rel="noopener noreferrer"
                               className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 hover:border-green-300"
                             >
-                              <span className="text-gray-700 dark:text-gray-200 truncate">📍 {loc.name || loc.email || loc.userId}</span>
+                              <span className="text-gray-700 dark:text-gray-200 truncate">?? {loc.name || loc.email || loc.userId}</span>
                               <span className="text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
                             </a>
                           ))}
@@ -6161,8 +6161,8 @@ function App() {
                   onClick={() => toggleExpensePanel('splitter')}
                   className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">💸 Expense Splitter</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.splitter ? '−' : '+'}</span>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">?? Expense Splitter</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.splitter ? '-' : '+'}</span>
                 </button>
                 {expensePanels.splitter ? (
                   <>
@@ -6214,7 +6214,7 @@ function App() {
                           <span className="text-xs text-gray-700 dark:text-gray-200 font-medium">{getExpenseDisplayName(item.payer)}</span>
                           <span className="text-xs text-gray-500 dark:text-gray-400 flex-1 truncate">{item.description}</span>
                           <span className="text-xs text-gray-700 dark:text-gray-200 font-semibold">${(Number(item.amount) || 0).toFixed(2)}</span>
-                          <button onClick={() => deleteSubCalExpense(item.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">✕</button>
+                          <button onClick={() => deleteSubCalExpense(item.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">?</button>
                         </div>
                       ))}
                     </div>
@@ -6229,8 +6229,8 @@ function App() {
                   onClick={() => toggleExpensePanel('summary')}
                   className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">📊 Split Summary</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.summary ? '−' : '+'}</span>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">?? Split Summary</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.summary ? '-' : '+'}</span>
                 </button>
                 {expensePanels.summary ? (
                   <>
@@ -6259,8 +6259,8 @@ function App() {
                   onClick={() => toggleExpensePanel('handles')}
                   className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">💳 Payment Handles</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.handles ? '−' : '+'}</span>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">?? Payment Handles</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.handles ? '-' : '+'}</span>
                 </button>
                 {expensePanels.handles ? (
                   <div className="space-y-1.5">
@@ -6318,8 +6318,8 @@ function App() {
                   onClick={() => toggleExpensePanel('settlements')}
                   className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">🔄 Who Pays Whom</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.settlements ? '−' : '+'}</span>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">?? Who Pays Whom</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.settlements ? '-' : '+'}</span>
                 </button>
                 {expensePanels.settlements ? (
                   settlements.length === 0 ? (
@@ -6385,7 +6385,7 @@ function App() {
                 disabled={uploadingPhoto || isPhotoSelectionMode || photoDeleteMode}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl text-sm font-medium shadow hover:shadow-lg transition-all disabled:opacity-50"
               >
-                {uploadingPhoto ? '⏳ Uploading…' : '📷 Add Photos'}
+                {uploadingPhoto ? '? Uploading…' : '?? Add Photos'}
               </button>
               {isPhotoSelectionMode ? (
                 <>
@@ -6452,22 +6452,22 @@ function App() {
                   onClick={() => setPhotoView('grid')}
                   className={`p-1.5 rounded-lg transition-all ${photoView === 'grid' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
                   title="Grid view"
-                >⊞</button>
+                >?</button>
                 <button
                   onClick={() => setPhotoView('timeline')}
                   className={`p-1.5 rounded-lg transition-all ${photoView === 'timeline' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
                   title="Timeline view"
-                >☰</button>
+                >?</button>
             </div>
 
             {tripPhotos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center px-8">
-                <div className="text-6xl mb-4">📸</div>
+                <div className="text-6xl mb-4">??</div>
                 <div className="text-gray-500 dark:text-gray-400 font-medium mb-1">No photos yet</div>
                 <div className="text-sm text-gray-400 dark:text-gray-500">Tap "Add Photos" to share memories from this trip</div>
               </div>
             ) : photoView === 'grid' ? (
-              /* ── GRID VIEW ── */
+              /* -- GRID VIEW -- */
               <div className="p-4">
                 {/* Group by date */}
                 {(() => {
@@ -6507,7 +6507,7 @@ function App() {
                             />
                             {isPhotoSelectionMode && (
                               <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
-                                <span className={`text-xs ${isSelectedPhoto ? 'text-emerald-300' : 'text-white/70'}`}>{isSelectedPhoto ? '✓' : ''}</span>
+                                <span className={`text-xs ${isSelectedPhoto ? 'text-emerald-300' : 'text-white/70'}`}>{isSelectedPhoto ? '?' : ''}</span>
                               </div>
                             )}
                             {photo.caption && (
@@ -6520,7 +6520,7 @@ function App() {
                                 onClick={e => { e.stopPropagation(); deleteTripPhoto(photo); }}
                                 className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center shadow"
                               >
-                                ✕
+                                ?
                               </button>
                             )}
                             <div className="absolute bottom-1 left-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
@@ -6541,7 +6541,7 @@ function App() {
                 })()}
               </div>
             ) : (
-              /* ── TIMELINE VIEW ── */
+              /* -- TIMELINE VIEW -- */
               <div className="p-4 space-y-8">
                 {(() => {
                   const byDate = {};
@@ -6597,7 +6597,7 @@ function App() {
                             <div className="px-3 py-2 flex items-start justify-between gap-2">
                               <div>
                                 {photo.caption && <p className="text-sm text-gray-800 dark:text-gray-200 mb-0.5">{photo.caption}</p>}
-                                <p className="text-xs text-gray-400 dark:text-gray-500">📷 {photo.uploaded_by}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500">?? {photo.uploaded_by}</p>
                               </div>
                               {!isPhotoSelectionMode && photoDeleteMode && <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Delete mode</span>}
                             </div>
@@ -6606,7 +6606,7 @@ function App() {
                                 onClick={() => deleteTripPhoto(photo)}
                                 className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow"
                               >
-                                ✕
+                                ?
                               </button>
                             )}
                           </div>
@@ -6686,7 +6686,7 @@ function App() {
               style={{ top: 'max(1.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
               aria-label="Close photo"
             >
-              ✕
+              ?
             </button>
             <img
               src={lightboxPhoto.url}
@@ -6696,7 +6696,7 @@ function App() {
             />
             <div className="mt-3 text-center" onClick={e => e.stopPropagation()}>
               {lightboxPhoto.caption && <p className="text-white text-sm mb-1">{lightboxPhoto.caption}</p>}
-              <p className="text-gray-400 text-xs">📷 {lightboxPhoto.uploaded_by} · {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
+              <p className="text-gray-400 text-xs">?? {lightboxPhoto.uploaded_by} · {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
             </div>
           </div>
         )}
@@ -6779,7 +6779,7 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
             if (val !== (value || null)) onSelect(val);
           }, 200);
         }}
-        placeholder={placeholder || '📍 Add location (optional)'}
+        placeholder={placeholder || '?? Add location (optional)'}
         className={className}
       />
       {showSuggestions && suggestions.length > 0 && (
@@ -6790,7 +6790,7 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
               onMouseDown={(e) => { e.preventDefault(); handleSelect(s); }}
               className="w-full text-left px-3 py-2 text-xs hover:bg-purple-50 dark:hover:bg-purple-900/30 border-b border-gray-100 dark:border-gray-700 last:border-0"
             >
-              <span className="text-gray-400 mr-1">📍</span>
+              <span className="text-gray-400 mr-1">??</span>
               <span className="font-medium text-gray-800 dark:text-white">{s.structured_formatting?.main_text}</span>
               {s.structured_formatting?.secondary_text && (
                 <span className="text-gray-400 ml-1">{s.structured_formatting.secondary_text}</span>
@@ -6818,3 +6818,5 @@ const shakeStyle = `
 `;
 
 export default App;
+
+
