@@ -869,6 +869,30 @@ function App() {
     setSubCalInviteEmail('');
   };
 
+  const inviteToFullCalendar = async (emailOverride) => {
+    const emailToInvite = (emailOverride || '').trim().toLowerCase();
+    if (!emailToInvite || !activeFullCalendar) return;
+    if (emailToInvite === (user?.email || '').toLowerCase()) {
+      alert("You can't invite yourself.");
+      return;
+    }
+    const { error } = await supabase.from('sub_calendar_members').insert({
+      sub_calendar_id: activeFullCalendar.id,
+      email: emailToInvite,
+      added_by: user.id,
+    });
+    if (error) {
+      if (error.code === '23505') {
+        alert(`${emailToInvite} is already invited to this calendar.`);
+      } else {
+        console.error('Error inviting full calendar member:', error);
+        alert('Could not share this calendar. Try again.');
+      }
+      return;
+    }
+    alert(`Shared "${activeFullCalendar.name}" with ${emailToInvite}.`);
+  };
+
   const removeMemberFromSubCal = async (email) => {
     await supabase.from('sub_calendar_members')
       .delete()
@@ -4066,15 +4090,21 @@ function App() {
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              {!activeFullCalendar && (
-                <button
-                  onClick={() => setShowSharePanel(!showSharePanel)}
-                  className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                  title="Share calendar"
-                >
-                  <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  if (activeFullCalendar) {
+                    if (activeFullCalendar.owner_id !== user?.id) return;
+                    const email = window.prompt(`Share "${activeFullCalendar.name}" with email:`);
+                    if (email) inviteToFullCalendar(email);
+                    return;
+                  }
+                  setShowSharePanel(!showSharePanel);
+                }}
+                className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel && !activeFullCalendar ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'} ${activeFullCalendar && activeFullCalendar.owner_id !== user?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={activeFullCalendar ? (activeFullCalendar.owner_id === user?.id ? 'Share this calendar' : 'Only owner can share') : 'Share calendar'}
+              >
+                <User className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
               <button
                 onClick={() => setShowNotificationSettings(!showNotificationSettings)}
                 className={`relative p-2 rounded-xl transition-all duration-200 ${notificationsEnabled ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
