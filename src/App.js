@@ -5353,7 +5353,6 @@ function App() {
                               <div className="relative z-10 flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
                                 <div className="min-w-0">
                                   <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">Main calendar · always active</div>
                                 </div>
                                 <button
                                   onClick={returnToMainCalendar}
@@ -5390,11 +5389,11 @@ function App() {
                             >
                               <div className="min-w-0">
                                 <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  {isFullCalendarRange(sc)
-                                    ? 'Separate full calendar'
-                                    : `Happening now · ${formatTripDate(getSubCalStartRaw(sc))} - ${formatTripDate(getSubCalEndRaw(sc), true)}`}
-                                </div>
+                                {!isFullCalendarRange(sc) && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {`Happening now · ${formatTripDate(getSubCalStartRaw(sc))} - ${formatTripDate(getSubCalEndRaw(sc), true)}`}
+                                  </div>
+                                )}
                               </div>
                               <button
                                 onClick={() => openCalendarFromActiveList(sc)}
