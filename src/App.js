@@ -4087,15 +4087,13 @@ function App() {
                   </span>
                 )}
               </button>
-              {!activeFullCalendar && (
-                <button
-                  onClick={() => setShowListPanel(!showListPanel)}
-                  className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showListPanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                  title="Shared list"
-                >
-                  List
-                </button>
-              )}
+              <button
+                onClick={() => setShowListPanel(!showListPanel)}
+                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showListPanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                title="Shared list"
+              >
+                List
+              </button>
               <button
                 onClick={() => setShowWeather(!showWeather)}
                 className={`p-2 rounded-xl transition-all duration-200 text-sm ${showWeather ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
@@ -4387,7 +4385,7 @@ function App() {
           </div>
         )}
 
-        {!activeFullCalendar && showListPanel && (
+        {showListPanel && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border border-purple-100 dark:border-gray-700">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
