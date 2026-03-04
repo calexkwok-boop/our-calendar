@@ -728,20 +728,29 @@ function App() {
   async function loadSharedAccessForUser(userId, userEmail) {
     const normalizedEmail = String(userEmail || '').trim().toLowerCase();
     if (!userId && !normalizedEmail) return [];
-    let query = supabase.from('shared_access').select('*');
-    if (userId && normalizedEmail) {
-      query = query.or(`shared_with_email.eq.${normalizedEmail},shared_with_id.eq.${userId}`);
-    } else if (normalizedEmail) {
-      query = query.eq('shared_with_email', normalizedEmail);
-    } else {
-      query = query.eq('shared_with_id', userId);
+    let byIdData = [];
+    let byEmailData = [];
+    if (userId) {
+      const { data, error } = await supabase
+        .from('shared_access')
+        .select('*')
+        .eq('shared_with_id', userId);
+      if (error) console.error('Error loading shared access by id:', error);
+      byIdData = data || [];
     }
-    const { data, error } = await query;
-    if (error) {
-      console.error('Error loading shared access:', error);
-      return [];
+    if (normalizedEmail) {
+      const { data, error } = await supabase
+        .from('shared_access')
+        .select('*')
+        .ilike('shared_with_email', normalizedEmail);
+      if (error) console.error('Error loading shared access by email:', error);
+      byEmailData = data || [];
     }
-    return data || [];
+    const merged = new Map();
+    [...byIdData, ...byEmailData].forEach((row) => {
+      if (row?.id) merged.set(row.id, row);
+    });
+    return Array.from(merged.values());
   }
 
   async function loadMainCalendarEventsForUser(userId, userEmail) {
@@ -3004,10 +3013,7 @@ function App() {
         if (!userId) return;
 
         // Get calendars shared with me
-        const { data: sharedData } = await supabase
-          .from('shared_access')
-          .select('*')
-          .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`);
+        const sharedData = await loadSharedAccessForUser(userId, userEmail);
 
         if (!sharedData || sharedData.length === 0) return;
 
@@ -3312,10 +3318,7 @@ function App() {
 
     const pollInAppUpdates = async () => {
       try {
-        const { data: sharedData } = await supabase
-          .from('shared_access')
-          .select('owner_id')
-          .or(`shared_with_email.eq.${user.email},shared_with_id.eq.${user.id}`);
+        const sharedData = await loadSharedAccessForUser(user.id, user.email);
         const ownerIds = Array.from(new Set([
           me,
           ...(sharedData || []).map(s => String(s.owner_id || '')).filter(Boolean),
