@@ -4047,7 +4047,7 @@ function App() {
                                 className="text-gray-400 hover:text-red-500 text-xs leading-none"
                                 title="Remove notification"
                               >
-                                ?
+                                x
                               </button>
                             )}
                           </div>
