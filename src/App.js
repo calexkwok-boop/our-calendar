@@ -449,9 +449,36 @@ function App() {
 
   const loadSubCalendars = async () => {
     try {
-      const { data, error } = await supabase.from('sub_calendars').select('*');
-      if (error) { console.error('Error loading sub_calendars:', error); return; }
-      setSubCalendars(data || []);
+      if (!user?.id || !user?.email) {
+        setSubCalendars([]);
+        return;
+      }
+      const { data: ownedData, error: ownedError } = await supabase
+        .from('sub_calendars')
+        .select('*')
+        .eq('owner_id', user.id);
+      if (ownedError) { console.error('Error loading owned sub_calendars:', ownedError); return; }
+
+      const { data: memberRows, error: memberErr } = await supabase
+        .from('sub_calendar_members')
+        .select('sub_calendar_id')
+        .eq('email', user.email.toLowerCase());
+      if (memberErr) { console.error('Error loading sub_calendar_members:', memberErr); return; }
+
+      const memberIds = Array.from(new Set((memberRows || []).map(r => r.sub_calendar_id).filter(Boolean)));
+      let memberCalendars = [];
+      if (memberIds.length > 0) {
+        const { data: sharedData, error: sharedErr } = await supabase
+          .from('sub_calendars')
+          .select('*')
+          .in('id', memberIds);
+        if (sharedErr) { console.error('Error loading shared sub_calendars:', sharedErr); return; }
+        memberCalendars = sharedData || [];
+      }
+
+      const mergedById = new Map();
+      [...(ownedData || []), ...memberCalendars].forEach(sc => mergedById.set(sc.id, sc));
+      setSubCalendars(Array.from(mergedById.values()));
     } catch (e) { console.error(e); }
   };
 
@@ -2421,14 +2448,18 @@ function App() {
   const primaryListOwnerId = (sharedCalendars && sharedCalendars.length > 0)
     ? sharedCalendars[0].owner_id
     : user?.id;
+  const activeListScopeSubCalId = activeFullCalendar?.id || null;
+  const effectiveListOwnerId = activeFullCalendar?.owner_id || primaryListOwnerId;
 
-  const loadSharedListGroups = async (ownerId) => {
+  const loadSharedListGroups = async (ownerId, subCalId = null) => {
     if (!ownerId) return;
-    const { data, error } = await supabase
+    let query = supabase
       .from('shared_list_groups')
       .select('*')
       .eq('owner_id', ownerId)
       .order('created_at', { ascending: true });
+    query = subCalId ? query.eq('sub_calendar_id', subCalId) : query.is('sub_calendar_id', null);
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error loading shared list groups:', error);
@@ -2453,17 +2484,19 @@ function App() {
     }
   };
 
-  const loadSharedListItems = async (ownerId, listId) => {
+  const loadSharedListItems = async (ownerId, listId, subCalId = null) => {
     if (!ownerId || !listId) {
       setSharedListItems([]);
       return;
     }
-    const { data, error } = await supabase
+    let query = supabase
       .from('shared_lists')
       .select('*')
       .eq('owner_id', ownerId)
       .eq('list_id', listId)
       .order('created_at', { ascending: true });
+    query = subCalId ? query.eq('sub_calendar_id', subCalId) : query.is('sub_calendar_id', null);
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error loading shared list items:', error);
@@ -2481,13 +2514,14 @@ function App() {
 
   const createSharedList = async () => {
     const title = newSharedListTitle.trim();
-    if (!title || !primaryListOwnerId || !user?.id) return;
+    if (!title || !effectiveListOwnerId || !user?.id) return;
 
     const payload = {
-      owner_id: primaryListOwnerId,
+      owner_id: effectiveListOwnerId,
       title,
       created_by: currentUser || user.email || 'User',
       user_id: user.id,
+      sub_calendar_id: activeListScopeSubCalId,
     };
 
     const { data, error } = await supabase
@@ -2511,14 +2545,18 @@ function App() {
   };
 
   const deleteSharedList = async (listId) => {
-    if (!listId || !primaryListOwnerId) return;
+    if (!listId || !effectiveListOwnerId) return;
     if (!window.confirm('Delete this list and all its items?')) return;
 
-    const { error: itemDeleteError } = await supabase
+    let deleteItems = supabase
       .from('shared_lists')
       .delete()
-      .eq('owner_id', primaryListOwnerId)
+      .eq('owner_id', effectiveListOwnerId)
       .eq('list_id', listId);
+    deleteItems = activeListScopeSubCalId
+      ? deleteItems.eq('sub_calendar_id', activeListScopeSubCalId)
+      : deleteItems.is('sub_calendar_id', null);
+    const { error: itemDeleteError } = await deleteItems;
 
     if (itemDeleteError) {
       setListError(`Could not delete list items: ${itemDeleteError.message}`);
@@ -2544,15 +2582,16 @@ function App() {
 
   const addSharedListItem = async () => {
     const text = newListItemText.trim();
-    if (!text || !primaryListOwnerId || !selectedSharedListId || !user?.id) return;
+    if (!text || !effectiveListOwnerId || !selectedSharedListId || !user?.id) return;
 
     const payload = {
-      owner_id: primaryListOwnerId,
+      owner_id: effectiveListOwnerId,
       list_id: selectedSharedListId,
       text,
       done: false,
       created_by: currentUser || user.email || 'User',
       user_id: user.id,
+      sub_calendar_id: activeListScopeSubCalId,
     };
 
     const { data, error } = await supabase
@@ -2908,17 +2947,17 @@ function App() {
   }, [events, activeFullCalendar, activeSubCalendar]);
 
   useEffect(() => {
-    if (!primaryListOwnerId) return;
-    loadSharedListGroups(primaryListOwnerId);
-  }, [primaryListOwnerId]);
+    if (!effectiveListOwnerId) return;
+    loadSharedListGroups(effectiveListOwnerId, activeListScopeSubCalId);
+  }, [effectiveListOwnerId, activeListScopeSubCalId]);
 
   useEffect(() => {
-    if (!primaryListOwnerId || !selectedSharedListId) {
+    if (!effectiveListOwnerId || !selectedSharedListId) {
       setSharedListItems([]);
       return;
     }
-    loadSharedListItems(primaryListOwnerId, selectedSharedListId);
-  }, [primaryListOwnerId, selectedSharedListId]);
+    loadSharedListItems(effectiveListOwnerId, selectedSharedListId, activeListScopeSubCalId);
+  }, [effectiveListOwnerId, selectedSharedListId, activeListScopeSubCalId]);
 
   useEffect(() => {
     if (!user?.id) {
