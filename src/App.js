@@ -1678,6 +1678,7 @@ function App() {
   }; // 'month' | 'week'
   const [holidays, setHolidays] = useState({});
   const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
+  const [sharedOwnerLabels, setSharedOwnerLabels] = useState({});
   const [myShares, setMyShares] = useState([]); // people I've shared with
   const [showSharePanel, setShowSharePanel] = useState(false);
   const [showListPanel, setShowListPanel] = useState(false);
@@ -1695,6 +1696,75 @@ function App() {
   const [showTipBanner, setShowTipBanner] = useState(() => localStorage.getItem('hideTipBanner') !== 'true');
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
   const [showWeather, setShowWeather] = useState(true);
+
+  const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || '').trim());
+  const cleanOwnerLabel = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (isUuidLike(raw)) return '';
+    return raw;
+  };
+  const fallbackOwnerLabel = (ownerId) => {
+    const id = String(ownerId || '');
+    if (!id) return 'another user';
+    return isUuidLike(id) ? `User ${id.slice(0, 8)}` : id;
+  };
+
+  const resolveSharedOwnerLabels = async (shares) => {
+    const ownerIds = Array.from(new Set((shares || []).map(s => String(s?.owner_id || '')).filter(Boolean)));
+    if (ownerIds.length === 0) {
+      setSharedOwnerLabels({});
+      return;
+    }
+
+    const nextLabels = {};
+    ownerIds.forEach(id => { nextLabels[id] = ''; });
+
+    try {
+      const { data: eventRows, error: eventErr } = await supabase
+        .from('events')
+        .select('user_id,created_by,created_at')
+        .in('user_id', ownerIds)
+        .order('created_at', { ascending: false })
+        .limit(500);
+      if (!eventErr) {
+        (eventRows || []).forEach(row => {
+          const ownerId = String(row?.user_id || '');
+          if (!ownerId || nextLabels[ownerId]) return;
+          const label = cleanOwnerLabel(row?.created_by);
+          if (label) nextLabels[ownerId] = label;
+        });
+      }
+    } catch {}
+
+    const missingAfterEvents = ownerIds.filter(id => !nextLabels[id]);
+    if (missingAfterEvents.length > 0) {
+      try {
+        const { data: subCalRows, error: subCalErr } = await supabase
+          .from('sub_calendars')
+          .select('owner_id,created_by,created_at')
+          .in('owner_id', missingAfterEvents)
+          .order('created_at', { ascending: false })
+          .limit(500);
+        if (!subCalErr) {
+          (subCalRows || []).forEach(row => {
+            const ownerId = String(row?.owner_id || '');
+            if (!ownerId || nextLabels[ownerId]) return;
+            const label = cleanOwnerLabel(row?.created_by);
+            if (label) nextLabels[ownerId] = label;
+          });
+        }
+      } catch {}
+    }
+
+    setSharedOwnerLabels(prev => {
+      const merged = { ...prev };
+      ownerIds.forEach(id => {
+        merged[id] = nextLabels[id] || prev[id] || fallbackOwnerLabel(id);
+      });
+      return merged;
+    });
+  };
 
   // Apply dark mode to document
   useEffect(() => {
@@ -2329,6 +2399,7 @@ function App() {
             }
           }
           setSharedCalendars(sharedWithMe);
+          await resolveSharedOwnerLabels(sharedWithMe);
 
           // Load events from all owners who shared with me
           const ownerIds = sharedWithMe.map(s => s.owner_id);
@@ -2369,6 +2440,7 @@ function App() {
           if (typeof window !== 'undefined') window.events = eventsObj;
         } else {
           setSharedCalendars([]);
+          setSharedOwnerLabels({});
           if (eventsError) {
             console.error('Error loading events:', eventsError);
           } else if (eventsData) {
@@ -2552,6 +2624,11 @@ function App() {
     if (!primaryListOwnerId) return;
     loadSharedListGroups(primaryListOwnerId);
   }, [primaryListOwnerId]);
+
+  useEffect(() => {
+    if (!sharedCalendars || sharedCalendars.length === 0) return;
+    resolveSharedOwnerLabels(sharedCalendars);
+  }, [sharedCalendars]);
 
   useEffect(() => {
     if (!primaryListOwnerId || !selectedSharedListId) {
@@ -4134,7 +4211,7 @@ function App() {
                   {sharedCalendars.map((share, i) => (
                     <div key={i} className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-700">
                       <div className="w-7 h-7 rounded-full bg-green-400 flex items-center justify-center text-white text-xs">📅</div>
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Shared by <strong>{share.shared_with_email === user?.email ? share.owner_id : 'another user'}</strong></span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Shared by <strong>{sharedOwnerLabels[String(share.owner_id || '')] || fallbackOwnerLabel(share.owner_id)}</strong></span>
                     </div>
                   ))}
                 </div>
