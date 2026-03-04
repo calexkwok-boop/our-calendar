@@ -456,6 +456,9 @@ function App() {
         setSubCalendars([]);
         return;
       }
+      const normalizedEmail = String(user.email || '').trim().toLowerCase();
+      const normalizedName = String(currentUser || '').trim().toLowerCase();
+
       const { data: ownedData, error: ownedError } = await supabase
         .from('sub_calendars')
         .select('*')
@@ -467,13 +470,44 @@ function App() {
         .from('sub_calendars')
         .select('*')
         .is('owner_id', null)
-        .ilike('created_by', user.email);
+        .ilike('created_by', normalizedEmail);
       if (legacyOwnedErr) { console.error('Error loading legacy-owned sub_calendars:', legacyOwnedErr); return; }
+
+      let legacyOwnedByName = [];
+      if (normalizedName) {
+        const { data: byNameData, error: byNameErr } = await supabase
+          .from('sub_calendars')
+          .select('*')
+          .is('owner_id', null)
+          .ilike('created_by', normalizedName);
+        if (byNameErr) {
+          console.error('Error loading legacy-owned sub_calendars by name:', byNameErr);
+          return;
+        }
+        legacyOwnedByName = byNameData || [];
+      }
+
+      // Extra compatibility: some older rows used user_id instead of owner_id.
+      let ownedByUserId = [];
+      {
+        const { data: byUserIdData, error: byUserIdErr } = await supabase
+          .from('sub_calendars')
+          .select('*')
+          .eq('user_id', user.id);
+        if (byUserIdErr) {
+          if (byUserIdErr.code !== '42703') {
+            console.error('Error loading sub_calendars by user_id:', byUserIdErr);
+            return;
+          }
+        } else {
+          ownedByUserId = byUserIdData || [];
+        }
+      }
 
       const { data: memberRows, error: memberErr } = await supabase
         .from('sub_calendar_members')
         .select('sub_calendar_id')
-        .ilike('email', user.email.toLowerCase());
+        .ilike('email', normalizedEmail);
       if (memberErr) { console.error('Error loading sub_calendar_members:', memberErr); return; }
 
       const memberIds = Array.from(new Set((memberRows || []).map(r => r.sub_calendar_id).filter(Boolean)));
@@ -488,7 +522,13 @@ function App() {
       }
 
       const mergedById = new Map();
-      [...(ownedData || []), ...(legacyOwnedByEmail || []), ...memberCalendars].forEach(sc => mergedById.set(sc.id, sc));
+      [
+        ...(ownedData || []),
+        ...(ownedByUserId || []),
+        ...(legacyOwnedByEmail || []),
+        ...(legacyOwnedByName || []),
+        ...memberCalendars,
+      ].forEach(sc => mergedById.set(sc.id, sc));
       setSubCalendars(Array.from(mergedById.values()));
     } catch (e) { console.error(e); }
   };
