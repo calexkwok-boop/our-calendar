@@ -2697,11 +2697,11 @@ function App() {
 
       const { data: scRow, error: scErr } = await supabase
         .from('sub_calendars')
-        .select('id,owner_id,user_id')
+        .select('id,owner_id')
         .eq('id', normalizedId)
         .maybeSingle();
       if (scErr || !scRow) return false;
-      const ownerId = String(scRow.owner_id || scRow.user_id || '');
+      const ownerId = String(scRow.owner_id || '');
       if (ownerId === me) {
         accessibleSubCalIdCache.add(normalizedId);
         return true;
@@ -2814,6 +2814,138 @@ function App() {
       if (maxCreatedAt) inAppSyncCursorRef.current[key] = maxCreatedAt;
     };
 
+    const getCursor = (key) => inAppSyncCursorRef.current[key] || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
+
+    const notifySharedEvents = (rows) => {
+      (rows || []).forEach(row => {
+        if (isOwnRow(row)) return;
+        const who = String(row.created_by || 'Someone');
+        addInAppNotification({
+          key: `events:${row.id}`,
+          type: 'event',
+          message: `${who} added "${row.title || 'an event'}" to the calendar.`,
+          createdAt: row.created_at,
+        });
+      });
+    };
+
+    const notifySharedListItems = (rows) => {
+      (rows || []).forEach(row => {
+        if (isOwnRow(row)) return;
+        const who = String(row.created_by || 'Someone');
+        const itemText = String(row.text || '').trim();
+        const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
+        addInAppNotification({
+          key: `shared_lists:${row.id}`,
+          type: 'list',
+          message: `${who} added "${preview || 'a list item'}" to the list.`,
+          createdAt: row.created_at,
+        });
+      });
+    };
+
+    const notifySubCalEvents = (rows) => {
+      (rows || []).forEach(row => {
+        if (isOwnRow(row)) return;
+        const subCalId = String(row.sub_calendar_id || '');
+        const who = String(row.created_by || 'Someone');
+        addInAppNotification({
+          key: `sub_calendar_events:${row.id}`,
+          type: 'event',
+          message: `${who} added "${row.title || 'an event'}" in ${subCalNameMap[subCalId] || 'trip'}.`,
+          createdAt: row.created_at,
+        });
+      });
+    };
+
+    const notifyExpenseNotes = (notes) => {
+      (notes || []).forEach(note => {
+        let parsed = [];
+        try {
+          parsed = note?.checklist ? JSON.parse(note.checklist) : [];
+        } catch {
+          parsed = [];
+        }
+        if (!Array.isArray(parsed)) return;
+        parsed.forEach(item => {
+          const expenseId = String(item?.id || '');
+          if (!expenseId) return;
+          const expenseKey = `${note.sub_calendar_id}:${expenseId}`;
+          if (seenExpenseIdsRef.current.has(expenseKey)) return;
+          seenExpenseIdsRef.current.add(expenseKey);
+          const payerKey = normalizeIdentityKey(item?.payer);
+          const mineEmailKey = normalizeIdentityKey(user?.email);
+          const mineNameKey = normalizeIdentityKey(currentUser);
+          if (payerKey && (payerKey === mineEmailKey || payerKey === mineNameKey)) return;
+          const amount = Number(item?.amount);
+          const amountLabel = Number.isFinite(amount) ? `$${amount.toFixed(2)}` : 'an amount';
+          const desc = String(item?.description || 'an expense');
+          const preview = desc.length > 38 ? `${desc.slice(0, 38)}...` : desc;
+          const tripName = subCalNameMap[String(note.sub_calendar_id)] || 'trip';
+          addInAppNotification({
+            key: `expense:${expenseKey}`,
+            type: 'expense',
+            message: `${getExpenseDisplayName(item?.payer)} added ${amountLabel} for "${preview}" in ${tripName}.`,
+            createdAt: item?.createdAt || note?.created_at,
+          });
+        });
+      });
+    };
+
+    const notifyTripPhotos = (rows) => {
+      const uniqueRows = Array.from(new Map((rows || []).map(row => [String(row.id), row])).values());
+      uniqueRows.forEach(row => {
+        if (isOwnRow(row)) return;
+        const subCalId = String(row.sub_calendar_id || '');
+        const who = String(row.uploaded_by || 'Someone');
+        addInAppNotification({
+          key: `trip_photos:${row.id}`,
+          type: 'photo',
+          message: `${who} added a photo in ${subCalNameMap[subCalId] || 'trip'}.`,
+          createdAt: row.created_at,
+        });
+      });
+    };
+
+    const getAccessibleSubCalIds = async () => {
+      const ids = new Set(Array.from(subCalIdSet));
+
+      const { data: ownedRows, error: ownedErr } = await supabase
+        .from('sub_calendars')
+        .select('id')
+        .eq('owner_id', me);
+      if (!ownedErr) (ownedRows || []).forEach(r => { if (r?.id) ids.add(String(r.id)); });
+
+      const { data: memberRows, error: memberErr } = await supabase
+        .from('sub_calendar_members')
+        .select('sub_calendar_id')
+        .ilike('email', myEmail);
+      if (!memberErr) (memberRows || []).forEach(r => { if (r?.sub_calendar_id) ids.add(String(r.sub_calendar_id)); });
+
+      const { data: sharesById, error: sharesByIdErr } = await supabase
+        .from('shared_access')
+        .select('owner_id')
+        .eq('shared_with_id', me);
+      const { data: sharesByEmail, error: sharesByEmailErr } = await supabase
+        .from('shared_access')
+        .select('owner_id')
+        .ilike('shared_with_email', myEmail);
+
+      const ownerIds = new Set();
+      if (!sharesByIdErr) (sharesById || []).forEach(s => { if (s?.owner_id) ownerIds.add(String(s.owner_id)); });
+      if (!sharesByEmailErr) (sharesByEmail || []).forEach(s => { if (s?.owner_id) ownerIds.add(String(s.owner_id)); });
+
+      if (ownerIds.size > 0) {
+        const { data: sharedOwnerSubCals, error: sharedOwnerErr } = await supabase
+          .from('sub_calendars')
+          .select('id')
+          .in('owner_id', Array.from(ownerIds));
+        if (!sharedOwnerErr) (sharedOwnerSubCals || []).forEach(r => { if (r?.id) ids.add(String(r.id)); });
+      }
+
+      return Array.from(ids);
+    };
+
     const pollInAppUpdates = async () => {
       try {
         const { data: sharedData } = await supabase
@@ -2827,88 +2959,22 @@ function App() {
             .from('events')
             .select('id,title,created_by,user_id,created_at')
             .in('user_id', ownerIds)
-            .gt('created_at', inAppSyncCursorRef.current.events || new Date(Date.now() - (5 * 60 * 1000)).toISOString())
+            .gt('created_at', getCursor('events'))
             .order('created_at', { ascending: true })
             .limit(200);
-          (sharedEvents || []).forEach(row => {
-            if (isOwnRow(row)) return;
-            const who = String(row.created_by || 'Someone');
-            addInAppNotification({
-              key: `events:${row.id}`,
-              type: 'event',
-              message: `${who} added "${row.title || 'an event'}" to the calendar.`,
-              createdAt: row.created_at,
-            });
-          });
+          notifySharedEvents(sharedEvents);
           updateCursor('events', sharedEvents);
 
           const { data: sharedListItems } = await supabase
             .from('shared_lists')
             .select('id,text,created_by,user_id,created_at')
             .in('owner_id', ownerIds)
-            .gt('created_at', inAppSyncCursorRef.current.sharedListItems || new Date(Date.now() - (5 * 60 * 1000)).toISOString())
+            .gt('created_at', getCursor('sharedListItems'))
             .order('created_at', { ascending: true })
             .limit(200);
-          (sharedListItems || []).forEach(row => {
-            if (isOwnRow(row)) return;
-            const who = String(row.created_by || 'Someone');
-            const itemText = String(row.text || '').trim();
-            const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
-            addInAppNotification({
-              key: `shared_lists:${row.id}`,
-              type: 'list',
-              message: `${who} added "${preview || 'a list item'}" to the list.`,
-              createdAt: row.created_at,
-            });
-          });
+          notifySharedListItems(sharedListItems);
           updateCursor('sharedListItems', sharedListItems);
         }
-
-        const getAccessibleSubCalIds = async () => {
-          const ids = new Set(Array.from(subCalIdSet));
-
-          const { data: ownedRows, error: ownedErr } = await supabase
-            .from('sub_calendars')
-            .select('id')
-            .eq('owner_id', me);
-          if (!ownedErr) (ownedRows || []).forEach(r => { if (r?.id) ids.add(String(r.id)); });
-
-          const { data: memberRows, error: memberErr } = await supabase
-            .from('sub_calendar_members')
-            .select('sub_calendar_id')
-            .ilike('email', myEmail);
-          if (!memberErr) (memberRows || []).forEach(r => { if (r?.sub_calendar_id) ids.add(String(r.sub_calendar_id)); });
-
-          const { data: sharesById, error: sharesByIdErr } = await supabase
-            .from('shared_access')
-            .select('owner_id')
-            .eq('shared_with_id', me);
-          const { data: sharesByEmail, error: sharesByEmailErr } = await supabase
-            .from('shared_access')
-            .select('owner_id')
-            .ilike('shared_with_email', myEmail);
-
-          const ownerIds = new Set();
-          if (!sharesByIdErr) (sharesById || []).forEach(s => { if (s?.owner_id) ownerIds.add(String(s.owner_id)); });
-          if (!sharesByEmailErr) (sharesByEmail || []).forEach(s => { if (s?.owner_id) ownerIds.add(String(s.owner_id)); });
-
-          if (ownerIds.size > 0) {
-            const { data: sharedOwnerSubCals, error: sharedOwnerErr } = await supabase
-              .from('sub_calendars')
-              .select('id')
-              .in('owner_id', Array.from(ownerIds));
-            if (!sharedOwnerErr) (sharedOwnerSubCals || []).forEach(r => { if (r?.id) ids.add(String(r.id)); });
-
-            // Legacy fallback: older rows may store ownership in user_id instead of owner_id.
-            const { data: sharedLegacySubCals, error: sharedLegacyErr } = await supabase
-              .from('sub_calendars')
-              .select('id')
-              .in('user_id', Array.from(ownerIds));
-            if (!sharedLegacyErr) (sharedLegacySubCals || []).forEach(r => { if (r?.id) ids.add(String(r.id)); });
-          }
-
-          return Array.from(ids);
-        };
 
         const subCalIds = await getAccessibleSubCalIds();
         if (subCalIds.length > 0) {
@@ -2916,20 +2982,10 @@ function App() {
             .from('sub_calendar_events')
             .select('id,title,created_by,user_id,sub_calendar_id,created_at')
             .in('sub_calendar_id', subCalIds)
-            .gt('created_at', inAppSyncCursorRef.current.subCalEvents || new Date(Date.now() - (5 * 60 * 1000)).toISOString())
+            .gt('created_at', getCursor('subCalEvents'))
             .order('created_at', { ascending: true })
             .limit(200);
-          (subCalEvents || []).forEach(row => {
-            if (isOwnRow(row)) return;
-            const subCalId = String(row.sub_calendar_id || '');
-            const who = String(row.created_by || 'Someone');
-            addInAppNotification({
-              key: `sub_calendar_events:${row.id}`,
-              type: 'event',
-              message: `${who} added "${row.title || 'an event'}" in ${subCalNameMap[subCalId] || 'trip'}.`,
-              createdAt: row.created_at,
-            });
-          });
+          notifySubCalEvents(subCalEvents);
           updateCursor('subCalEvents', subCalEvents);
 
           const { data: expenseLedgerNotes } = await supabase
@@ -2938,83 +2994,29 @@ function App() {
             .eq('text', EXPENSE_LEDGER_NOTE_TEXT)
             .in('sub_calendar_id', subCalIds)
             .limit(200);
-          (expenseLedgerNotes || []).forEach(note => {
-            let parsed = [];
-            try {
-              parsed = note?.checklist ? JSON.parse(note.checklist) : [];
-            } catch {
-              parsed = [];
-            }
-            if (!Array.isArray(parsed)) return;
-            parsed.forEach(item => {
-              const expenseId = String(item?.id || '');
-              if (!expenseId) return;
-              const expenseKey = `${note.sub_calendar_id}:${expenseId}`;
-              if (seenExpenseIdsRef.current.has(expenseKey)) return;
-              seenExpenseIdsRef.current.add(expenseKey);
-              const payerKey = normalizeIdentityKey(item?.payer);
-              const mineEmailKey = normalizeIdentityKey(user?.email);
-              const mineNameKey = normalizeIdentityKey(currentUser);
-              if (payerKey && (payerKey === mineEmailKey || payerKey === mineNameKey)) return;
-              const amount = Number(item?.amount);
-              const amountLabel = Number.isFinite(amount) ? `$${amount.toFixed(2)}` : 'an amount';
-              const desc = String(item?.description || 'an expense');
-              const preview = desc.length > 38 ? `${desc.slice(0, 38)}...` : desc;
-              const tripName = subCalNameMap[String(note.sub_calendar_id)] || 'trip';
-              addInAppNotification({
-                key: `expense:${expenseKey}`,
-                type: 'expense',
-                message: `${getExpenseDisplayName(item?.payer)} added ${amountLabel} for "${preview}" in ${tripName}.`,
-                createdAt: item?.createdAt || note?.created_at,
-              });
-            });
-          });
+          notifyExpenseNotes(expenseLedgerNotes);
         }
 
-        const photoCursor = inAppSyncCursorRef.current.tripPhotos || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
-        const tripPhotoBase = supabase
-          .from('trip_photos')
-          .select('id,uploaded_by,user_id,sub_calendar_id,created_at');
-        const { data: datedTripPhotoRows, error: datedTripPhotoError } = await (subCalIds.length > 0
-          ? tripPhotoBase
-              .in('sub_calendar_id', subCalIds)
-              .gt('created_at', photoCursor)
-              .order('created_at', { ascending: true })
-              .limit(200)
-          : tripPhotoBase
-              .gt('created_at', photoCursor)
-              .order('created_at', { ascending: true })
-              .limit(200));
+        const buildTripPhotoQuery = () => {
+          const base = supabase
+            .from('trip_photos')
+            .select('id,uploaded_by,user_id,sub_calendar_id,created_at');
+          return subCalIds.length > 0 ? base.in('sub_calendar_id', subCalIds) : base;
+        };
+        const { data: datedTripPhotoRows, error: datedTripPhotoError } = await buildTripPhotoQuery()
+          .gt('created_at', getCursor('tripPhotos'))
+          .order('created_at', { ascending: true })
+          .limit(200);
         if (datedTripPhotoError) {
           console.error('trip_photos dated poll failed:', datedTripPhotoError);
         }
-        const nullTripPhotoBase = supabase
-          .from('trip_photos')
-          .select('id,uploaded_by,user_id,sub_calendar_id,created_at');
-        const { data: nullTripPhotoRows, error: nullTripPhotoError } = await (subCalIds.length > 0
-          ? nullTripPhotoBase
-              .in('sub_calendar_id', subCalIds)
-              .is('created_at', null)
-              .limit(200)
-          : nullTripPhotoBase
-              .is('created_at', null)
-              .limit(200));
+        const { data: nullTripPhotoRows, error: nullTripPhotoError } = await buildTripPhotoQuery()
+          .is('created_at', null)
+          .limit(200);
         if (nullTripPhotoError) {
           console.error('trip_photos null-created_at poll failed:', nullTripPhotoError);
         }
-        const mergedTripPhotoRows = [...(datedTripPhotoRows || []), ...(nullTripPhotoRows || [])];
-        const uniqueTripPhotoRows = Array.from(new Map(mergedTripPhotoRows.map(row => [String(row.id), row])).values());
-        uniqueTripPhotoRows.forEach(row => {
-          if (isOwnRow(row)) return;
-          const subCalId = String(row.sub_calendar_id || '');
-          const who = String(row.uploaded_by || 'Someone');
-          addInAppNotification({
-            key: `trip_photos:${row.id}`,
-            type: 'photo',
-            message: `${who} added a photo in ${subCalNameMap[subCalId] || 'trip'}.`,
-            createdAt: row.created_at,
-          });
-        });
+        notifyTripPhotos([...(datedTripPhotoRows || []), ...(nullTripPhotoRows || [])]);
         updateCursor('tripPhotos', datedTripPhotoRows);
       } catch (err) {
         console.error('In-app notification sync failed:', err);
