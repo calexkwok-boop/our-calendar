@@ -2759,7 +2759,6 @@ function App() {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_lists' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
-        if (!(await canAccessOwnerId(row.owner_id))) return;
         const who = String(row.created_by || 'Someone');
         const itemText = String(row.text || '').trim();
         const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
