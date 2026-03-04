@@ -3786,8 +3786,12 @@ function App() {
     })
     .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
   const activeFullCalendars = subCalendars.filter(sc => isFullCalendarRange(sc));
+  const mainCalendarListTitle = (() => {
+    const key = `calendar-title-${user?.id}`;
+    return localStorage.getItem(key) || 'Our Calendar';
+  })();
   const activeCalendarsForList = [
-    { id: '__main__', isMainCalendar: true, name: calendarTitle || 'Main' },
+    { id: '__main__', isMainCalendar: true, name: mainCalendarListTitle },
     ...activeFullCalendars,
     ...activeTrips,
   ];
