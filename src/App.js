@@ -2555,7 +2555,19 @@ function App() {
     }
 
     setListError('');
-    const groups = data || [];
+    let groups = data || [];
+    // Backward compatibility: older rows may not have sub_calendar_id set.
+    if (listSubCalScopeSupported && subCalId && groups.length === 0) {
+      const legacy = await supabase
+        .from('shared_list_groups')
+        .select('*')
+        .eq('owner_id', ownerId)
+        .is('sub_calendar_id', null)
+        .order('created_at', { ascending: true });
+      if (!legacy.error && Array.isArray(legacy.data) && legacy.data.length > 0) {
+        groups = legacy.data;
+      }
+    }
     setSharedListGroups(groups);
     if (groups.length === 0) {
       setSelectedSharedListId(null);
@@ -2605,7 +2617,21 @@ function App() {
     }
 
     setListError('');
-    setSharedListItems((data || []).map(item => ({ ...item, done: !!item.done })));
+    let items = data || [];
+    // Backward compatibility: older rows may not have sub_calendar_id set.
+    if (listSubCalScopeSupported && subCalId && items.length === 0) {
+      const legacy = await supabase
+        .from('shared_lists')
+        .select('*')
+        .eq('owner_id', ownerId)
+        .eq('list_id', listId)
+        .is('sub_calendar_id', null)
+        .order('created_at', { ascending: true });
+      if (!legacy.error && Array.isArray(legacy.data) && legacy.data.length > 0) {
+        items = legacy.data;
+      }
+    }
+    setSharedListItems(items.map(item => ({ ...item, done: !!item.done })));
   };
 
   const createSharedList = async () => {
