@@ -3543,6 +3543,21 @@ function App() {
           createdAt: row.created_at,
         });
       })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sub_calendar_members' }, async ({ new: row }) => {
+        if (!row) return;
+        const inviteEmail = String(row.email || '').trim().toLowerCase();
+        if (!inviteEmail || inviteEmail !== myEmail) return;
+        const subCalId = String(row.sub_calendar_id || '');
+        if (!subCalId) return;
+        const tripName = subCalNameMap[subCalId] || 'a trip';
+        const createdAt = row.invited_at || row.created_at || new Date().toISOString();
+        addInAppNotification({
+          key: `trip_invite:${subCalId}:${inviteEmail}`,
+          type: 'invite',
+          message: `You were invited to ${tripName}.`,
+          createdAt,
+        });
+      })
       .subscribe();
 
     return () => {
@@ -3973,6 +3988,16 @@ function App() {
         return !grantedKeys.has(key);
       });
       setPendingTripInvites(visibleInvites);
+      visibleInvites.forEach((invite) => {
+        const inviteEmail = String(invite.email || myEmail).trim().toLowerCase();
+        const inviteKey = `trip_invite:${String(invite.subCalendarId)}:${inviteEmail}`;
+        addInAppNotification({
+          key: inviteKey,
+          type: 'invite',
+          message: `You were invited to ${invite.tripName || 'a trip'}.`,
+          createdAt: invite.invitedAt || new Date().toISOString(),
+        });
+      });
     } catch (error) {
       console.error('loadPendingTripInvites failed:', error);
       setPendingTripInvites([]);
