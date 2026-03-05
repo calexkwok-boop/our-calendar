@@ -6002,10 +6002,6 @@ function App() {
                 Add
               </button>
             </div>
-            {selectedSharedListId && (
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3 px-1">Tip: press Enter to add quickly.</p>
-            )}
-
             {listError && (
               <div className="mb-3 p-2.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-600 dark:text-red-300">
                 {listError}
