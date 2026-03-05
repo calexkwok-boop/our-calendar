@@ -563,10 +563,19 @@ function App() {
 
       const { data: subCalRow } = await supabase
         .from('sub_calendars')
-        .select('layer_id')
+        .select('layer_id,owner_id,created_by')
         .eq('id', subCalId)
         .maybeSingle();
       const layerId = String(subCalRow?.layer_id || '').trim();
+      const subCalOwnerLabel = String(subCalRow?.created_by || '').trim();
+      if (subCalOwnerLabel) {
+        addMember(subCalOwnerLabel, { status: 'accepted', source: 'subcal_owner', removable: false });
+      }
+      const subCalOwnerId = String(subCalRow?.owner_id || '').trim();
+      if (subCalOwnerId) {
+        const ownerLabel = String(sharedOwnerLabels?.[subCalOwnerId] || '').trim();
+        if (ownerLabel) addMember(ownerLabel, { status: 'accepted', source: 'subcal_owner', removable: false });
+      }
       if (layerId) {
         const { data: sharedRows } = await supabase
           .from('shared_access')
@@ -590,7 +599,31 @@ function App() {
             }
           }
         });
+
+        // Fallback: infer collaborators from visible layer events.
+        const { data: layerEventRows } = await supabase
+          .from('events')
+          .select('created_by,user_id')
+          .eq('layer_id', layerId)
+          .limit(500);
+        (layerEventRows || []).forEach((row) => {
+          const createdBy = String(row?.created_by || '').trim();
+          if (createdBy) addMember(createdBy, { status: 'accepted', source: 'layer_events', removable: false });
+          const ownerLabel = String(sharedOwnerLabels?.[String(row?.user_id || '')] || '').trim();
+          if (ownerLabel) addMember(ownerLabel, { status: 'accepted', source: 'layer_events_owner', removable: false });
+        });
       }
+
+      // Fallback: infer collaborators from trip itinerary events.
+      const { data: subCalEventRows } = await supabase
+        .from('sub_calendar_events')
+        .select('created_by')
+        .eq('sub_calendar_id', subCalId)
+        .limit(500);
+      (subCalEventRows || []).forEach((row) => {
+        const createdBy = String(row?.created_by || '').trim();
+        if (createdBy) addMember(createdBy, { status: 'accepted', source: 'trip_events', removable: false });
+      });
 
       setSubCalMembers(Array.from(merged.values()));
     } catch (e) { console.error(e); }
