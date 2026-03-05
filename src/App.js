@@ -72,6 +72,7 @@ function App() {
   const [showScanHelpModal, setShowScanHelpModal] = useState(false);
   const [suggestedTime, setSuggestedTime] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [smartLeavePrompt, setSmartLeavePrompt] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('other');
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
@@ -86,6 +87,9 @@ function App() {
   const dateTapTimeoutRef = useRef(null);
   const scanReminderInputRef = useRef(null);
   const scanReminderUploadInputRef = useRef(null);
+  const smartLeaveGeoCacheRef = useRef(new Map());
+  const smartLeaveTravelCacheRef = useRef(new Map());
+  const smartLeavePositionRef = useRef({ at: 0, lat: null, lng: null });
   const [currentUser, setCurrentUser] = useState('');
   const [showUserSetup, setShowUserSetup] = useState(false);
   const [selectedDates, setSelectedDates] = useState([]);
@@ -4632,6 +4636,127 @@ function App() {
     return new Date(yy, mm - 1, dd, 9, 0, 0, 0);
   };
 
+  const readSmartLeaveMap = () => {
+    try {
+      const raw = localStorage.getItem('smart-leave-sent-map');
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const writeSmartLeaveMap = (map) => {
+    try {
+      localStorage.setItem('smart-leave-sent-map', JSON.stringify(map));
+    } catch {}
+  };
+
+  const getCurrentPositionForSmartLeave = async () => {
+    const cached = smartLeavePositionRef.current;
+    const now = Date.now();
+    if (cached.lat && cached.lng && (now - cached.at) < 60 * 1000) {
+      return { lat: cached.lat, lng: cached.lng };
+    }
+    if (!navigator?.geolocation) return null;
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false,
+          timeout: 7000,
+          maximumAge: 60 * 1000,
+        });
+      });
+      const lat = position?.coords?.latitude;
+      const lng = position?.coords?.longitude;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      smartLeavePositionRef.current = { at: now, lat, lng };
+      return { lat, lng };
+    } catch {
+      return null;
+    }
+  };
+
+  const geocodeDestinationForSmartLeave = async (destination) => {
+    const key = String(destination || '').trim().toLowerCase();
+    if (!key) return null;
+    if (smartLeaveGeoCacheRef.current.has(key)) return smartLeaveGeoCacheRef.current.get(key);
+
+    const googleGeo = await geocodeDestination(destination);
+    if (googleGeo?.lat && googleGeo?.lng) {
+      smartLeaveGeoCacheRef.current.set(key, googleGeo);
+      return googleGeo;
+    }
+
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1`);
+      const data = await res.json();
+      const first = Array.isArray(data) ? data[0] : null;
+      const lat = first ? Number(first.lat) : null;
+      const lng = first ? Number(first.lon) : null;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      const fallback = { lat, lng, formattedAddress: first.display_name || destination };
+      smartLeaveGeoCacheRef.current.set(key, fallback);
+      return fallback;
+    } catch {
+      return null;
+    }
+  };
+
+  const estimateDriveTimeMs = async (fromLat, fromLng, toLat, toLng) => {
+    const cacheKey = `${fromLat.toFixed(3)},${fromLng.toFixed(3)}=>${toLat.toFixed(3)},${toLng.toFixed(3)}`;
+    const cached = smartLeaveTravelCacheRef.current.get(cacheKey);
+    if (cached && (Date.now() - cached.at) < 5 * 60 * 1000) return cached.ms;
+
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=false`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const seconds = data?.routes?.[0]?.duration;
+      if (!Number.isFinite(seconds) || seconds <= 0) return null;
+      const ms = Math.round(seconds * 1000);
+      smartLeaveTravelCacheRef.current.set(cacheKey, { at: Date.now(), ms });
+      return ms;
+    } catch {
+      return null;
+    }
+  };
+
+  const openGoogleNavigation = (destination) => {
+    const encoded = encodeURIComponent(String(destination || '').trim());
+    if (!encoded) return;
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${encoded}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const dismissSmartLeavePrompt = () => {
+    setSmartLeavePrompt(null);
+  };
+
+  const snoozeSmartLeavePrompt = (minutes = 5) => {
+    if (!smartLeavePrompt?.id) {
+      setSmartLeavePrompt(null);
+      return;
+    }
+    const map = readSmartLeaveMap();
+    const snooze = map.__snooze || {};
+    snooze[smartLeavePrompt.id] = Date.now() + (minutes * 60 * 1000);
+    delete map[smartLeavePrompt.id];
+    map.__snooze = snooze;
+    writeSmartLeaveMap(map);
+    setSmartLeavePrompt(null);
+  };
+
+  const handleSmartLeaveNavigate = () => {
+    if (!smartLeavePrompt?.destination) return;
+    openGoogleNavigation(smartLeavePrompt.destination);
+    setSmartLeavePrompt(null);
+  };
+
+  const handleSmartLeaveRideOptions = () => {
+    if (!smartLeavePrompt?.destination) return;
+    openLocationActionChooser(smartLeavePrompt.destination);
+    setSmartLeavePrompt(null);
+  };
+
   // Check for upcoming events and send notifications
   useEffect(() => {
     if (!notificationsEnabled) return;
@@ -4711,6 +4836,83 @@ function App() {
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent, notifyOneWeek, notifyOneDay, notifyOneHour, notifyAtEventTime]);
+
+  // Smart leave assistant: estimate travel time and prompt a few minutes before leaving.
+  useEffect(() => {
+    if (!notificationsEnabled) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    const checkSmartLeave = async () => {
+      const now = new Date();
+      const sentMap = readSmartLeaveMap();
+      const snoozeMap = sentMap.__snooze || {};
+      const ownCandidates = [];
+
+      Object.entries(events).forEach(([dateKey, dateEvents]) => {
+        dateEvents.forEach(event => {
+          if (!event?.time || !event?.location) return;
+          if (event.isPrivate && showPrivateEvents === false) return;
+          if (onlyNotifyUrgent && !event.isUrgent) return;
+          const eventDateTime = getEventDateTime(dateKey, event.time);
+          if (!eventDateTime || Number.isNaN(eventDateTime.getTime())) return;
+          const diffMs = eventDateTime.getTime() - now.getTime();
+          if (diffMs < -15 * 60 * 1000) return;
+          if (diffMs > 6 * 60 * 60 * 1000) return;
+          ownCandidates.push({ dateKey, event, eventDateTime });
+        });
+      });
+
+      ownCandidates.sort((a, b) => a.eventDateTime.getTime() - b.eventDateTime.getTime());
+      for (const candidate of ownCandidates.slice(0, 3)) {
+        const sentKey = `${candidate.event.id}-${candidate.dateKey}-smart-leave`;
+        const snoozeUntil = Number(snoozeMap[sentKey] || 0);
+        if (sentMap[sentKey]) continue;
+        if (snoozeUntil && Date.now() < snoozeUntil) continue;
+
+        const currentPos = await getCurrentPositionForSmartLeave();
+        if (!currentPos) return;
+        const destinationGeo = await geocodeDestinationForSmartLeave(candidate.event.location);
+        if (!destinationGeo) continue;
+        const travelMs = await estimateDriveTimeMs(currentPos.lat, currentPos.lng, destinationGeo.lat, destinationGeo.lng);
+        if (!travelMs) continue;
+
+        const leaveAtMs = candidate.eventDateTime.getTime() - travelMs - (5 * 60 * 1000);
+        const deltaToLeaveMs = leaveAtMs - now.getTime();
+        const graceMs = 4 * 60 * 1000;
+        if (deltaToLeaveMs > 0 || deltaToLeaveMs < -graceMs) continue;
+
+        const minutes = Math.max(1, Math.round(travelMs / 60000));
+        new Notification('Time to leave soon', {
+          body: `${candidate.event.title}: ~${minutes} min to ${candidate.event.location}.`,
+          tag: sentKey,
+        });
+        setSmartLeavePrompt({
+          id: sentKey,
+          title: candidate.event.title,
+          destination: candidate.event.location,
+          eventTime: candidate.eventDateTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+          travelMinutes: minutes,
+        });
+        sentMap[sentKey] = true;
+        writeSmartLeaveMap(sentMap);
+        break;
+      }
+    };
+
+    checkSmartLeave();
+    const interval = setInterval(checkSmartLeave, 60 * 1000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') checkSmartLeave();
+    };
+    window.addEventListener('focus', checkSmartLeave);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', checkSmartLeave);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent]);
   // Load notification preference
   useEffect(() => {
     const loadNotificationPreference = async () => {
@@ -8475,6 +8677,57 @@ function App() {
                 })()}
               </div>
             )}
+          </div>
+        )}
+
+        {smartLeavePrompt && (
+          <div
+            className="fixed inset-0 z-[60] bg-black/45 flex items-end sm:items-center justify-center"
+            onClick={dismissSmartLeavePrompt}
+          >
+            <div
+              className="w-full sm:w-[28rem] bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-sm font-semibold text-gray-800 dark:text-white">Leave now?</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {smartLeavePrompt.title} at {smartLeavePrompt.eventTime}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {smartLeavePrompt.destination}
+              </div>
+              <div className="mt-1 text-xs text-indigo-600 dark:text-indigo-300">
+                Estimated drive: about {smartLeavePrompt.travelMinutes} min + 5 min buffer.
+              </div>
+              <div className="mt-3 space-y-2">
+                <button
+                  onClick={handleSmartLeaveNavigate}
+                  className="w-full px-3 py-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-sm font-semibold"
+                >
+                  Navigate
+                </button>
+                <button
+                  onClick={handleSmartLeaveRideOptions}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-200"
+                >
+                  Call Uber/Lyft
+                </button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => snoozeSmartLeavePrompt(5)}
+                  className="py-2 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                >
+                  Snooze 5m
+                </button>
+                <button
+                  onClick={dismissSmartLeavePrompt}
+                  className="py-2 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
