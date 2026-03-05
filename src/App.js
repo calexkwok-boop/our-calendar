@@ -3006,12 +3006,13 @@ function App() {
           .eq('user_id', userId)
           .eq('layer_id', selectedLayerId);
 
-        // Load calendars shared WITH me (by email)
-        const { data: sharedWithMe } = await supabase
+        // Load calendars shared WITH me (by email/id)
+        const { data: sharedWithMeRaw } = await supabase
           .from('shared_access')
           .select('*')
           .eq('layer_id', selectedLayerId)
           .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`);
+        const sharedWithMe = (sharedWithMeRaw || []).filter(s => String(s?.owner_id || '') !== String(userId));
 
         // Update shared_with_id if not yet set (first time they log in)
         if (sharedWithMe && sharedWithMe.length > 0) {
@@ -3027,7 +3028,7 @@ function App() {
           await resolveSharedOwnerLabels(sharedWithMe, selectedLayerId);
 
           // Load events from all owners who shared with me
-          const ownerIds = sharedWithMe.map(s => s.owner_id);
+          const ownerIds = Array.from(new Set(sharedWithMe.map(s => s.owner_id).filter(Boolean)));
           const { data: sharedEventsData } = await supabase
             .from('events')
             .select('*')
@@ -3035,7 +3036,9 @@ function App() {
             .eq('layer_id', selectedLayerId);
 
           // Merge own events + shared events
-          const allEventsData = [...(eventsData || []), ...(sharedEventsData || [])];
+          const allEventsData = Array.from(
+            new Map([...(eventsData || []), ...(sharedEventsData || [])].map(evt => [String(evt.id), evt])).values()
+          );
           const eventsObj = {};
           allEventsData.forEach(event => {
             if (!eventsObj[event.date]) eventsObj[event.date] = [];
@@ -3163,15 +3166,16 @@ function App() {
         if (!userId || !activeLayerId) return;
 
         // Get calendars shared with me
-        const { data: sharedData } = await supabase
+        const { data: sharedDataRaw } = await supabase
           .from('shared_access')
           .select('*')
           .eq('layer_id', activeLayerId)
           .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`);
+        const sharedData = (sharedDataRaw || []).filter(s => String(s?.owner_id || '') !== String(userId));
 
         if (!sharedData || sharedData.length === 0) return;
 
-        const ownerIds = sharedData.map(s => s.owner_id);
+        const ownerIds = Array.from(new Set(sharedData.map(s => s.owner_id).filter(Boolean)));
         const { data: sharedEventsData } = await supabase
           .from('events')
           .select('*')
