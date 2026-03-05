@@ -720,6 +720,7 @@ function App() {
       sub_calendar_id: activeSubCalendar.id,
       email: emailToInvite,
       added_by: user.id,
+      created_at: new Date().toISOString(),
     });
     if (error) { console.error('Error inviting member:', error); return; }
     setSubCalMembers(prev => [...prev, { email: emailToInvite, sub_calendar_id: activeSubCalendar.id }]);
@@ -3825,7 +3826,7 @@ function App() {
         notifyTripPhotos([...(datedTripPhotoRows || []), ...(nullTripPhotoRows || [])]);
         updateCursor('tripPhotos', datedTripPhotoRows);
 
-        const { data: inviteRows, error: inviteErr } = await supabase
+        const { data: datedInviteRows, error: inviteErr } = await supabase
           .from('sub_calendar_members')
           .select('sub_calendar_id,email,added_by,created_at')
           .ilike('email', myEmail)
@@ -3834,7 +3835,18 @@ function App() {
           .limit(200);
         if (inviteErr) {
           console.error('sub_calendar_members invite poll failed:', inviteErr);
-        } else if (Array.isArray(inviteRows) && inviteRows.length > 0) {
+        }
+        const { data: nullInviteRows, error: nullInviteErr } = await supabase
+          .from('sub_calendar_members')
+          .select('sub_calendar_id,email,added_by,created_at')
+          .ilike('email', myEmail)
+          .is('created_at', null)
+          .limit(200);
+        if (nullInviteErr) {
+          console.error('sub_calendar_members null-created_at invite poll failed:', nullInviteErr);
+        }
+        const inviteRows = Array.from(new Map([...(datedInviteRows || []), ...(nullInviteRows || [])].map(row => [`${String(row?.sub_calendar_id || '')}|${String(row?.email || '').toLowerCase()}`, row])).values());
+        if (inviteRows.length > 0) {
           const inviteTripIds = Array.from(new Set(inviteRows.map(row => String(row?.sub_calendar_id || '')).filter(Boolean)));
           const inviteNameMap = {};
           if (inviteTripIds.length > 0) {
@@ -3855,7 +3867,7 @@ function App() {
             sub_calendar_name: inviteNameMap[String(row?.sub_calendar_id || '')] || subCalNameMap[String(row?.sub_calendar_id || '')] || 'trip',
           }));
           notifyTripInvites(inviteRowsWithNames);
-          updateCursor('tripInvites', inviteRows);
+          updateCursor('tripInvites', datedInviteRows);
         }
       } catch (err) {
         console.error('In-app notification sync failed:', err);
