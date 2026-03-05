@@ -730,9 +730,7 @@ function App() {
 
     let error = null;
     try {
-      const primary = await supabase
-        .from('sub_calendar_members')
-        .upsert(payload, { onConflict: 'sub_calendar_id,email', ignoreDuplicates: true });
+      const primary = await supabase.from('sub_calendar_members').insert(payload);
       error = primary.error;
 
       if (error && /column .*created_at|schema cache/i.test(String(error.message || ''))) {
@@ -741,10 +739,13 @@ function App() {
           email: emailToInvite,
           added_by: user.id,
         };
-        const fallback = await supabase
-          .from('sub_calendar_members')
-          .upsert(fallbackPayload, { onConflict: 'sub_calendar_id,email', ignoreDuplicates: true });
+        const fallback = await supabase.from('sub_calendar_members').insert(fallbackPayload);
         error = fallback.error;
+      }
+
+      // Duplicate invite is acceptable; treat as success.
+      if (error && /duplicate key|already exists|unique constraint/i.test(String(error.message || ''))) {
+        error = null;
       }
     } catch (e) {
       error = e;
