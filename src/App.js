@@ -2643,15 +2643,13 @@ function App() {
         .eq('layer_id', sourceLayerId);
       if (srcSharesErr) throw srcSharesErr;
       const participantRows = [...(sourceShares || [])];
-      participantRows.push({
-        shared_with_id: sourceLayer?.owner_id ? String(sourceLayer.owner_id) : null,
-        shared_with_email: null,
-      });
 
       for (const row of participantRows) {
         const sharedWithId = row?.shared_with_id ? String(row.shared_with_id) : null;
-        const sharedWithEmail = row?.shared_with_email ? String(row.shared_with_email).trim().toLowerCase() : null;
-        if (!sharedWithId && !sharedWithEmail) continue;
+        const sharedWithEmail = row?.shared_with_email ? String(row.shared_with_email).trim().toLowerCase() : '';
+        // In this project schema, shared_with_email is NOT NULL.
+        // Skip rows that do not have a valid email instead of failing the whole merge.
+        if (!sharedWithEmail) continue;
         if (sharedWithId === String(user.id)) continue;
         if (sharedWithEmail && sharedWithEmail === String(user.email || '').trim().toLowerCase()) continue;
         const payload = {
@@ -2662,7 +2660,11 @@ function App() {
           shared_with_email: sharedWithEmail,
         };
         const { error: insertShareErr } = await supabase.from('shared_access').insert(payload);
-        if (insertShareErr && !/duplicate key/i.test(String(insertShareErr.message || ''))) {
+        if (
+          insertShareErr &&
+          !/duplicate key/i.test(String(insertShareErr.message || '')) &&
+          String(insertShareErr.code || '') !== '23505'
+        ) {
           throw insertShareErr;
         }
       }
