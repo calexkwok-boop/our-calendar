@@ -6606,7 +6606,22 @@ function App() {
                                     Owned by you
                                   </div>
                                 </div>
-                                {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
+                                  {canDeleteLayer && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        deleteLayerCalendar(layer.id);
+                                      }}
+                                      className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 text-xs font-medium"
+                                      title="Delete calendar"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      Delete
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </button>
                           </div>
