@@ -4530,6 +4530,95 @@ function App() {
     if ('Notification' in window) setNotificationPermission(Notification.permission);
   }, []);
 
+  const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    return Uint8Array.from([...rawData].map((ch) => ch.charCodeAt(0)));
+  };
+
+  const getPushPublicKey = () => String(process.env.REACT_APP_VAPID_PUBLIC_KEY || '').trim();
+
+  const getPushServiceWorkerRegistration = async () => {
+    if (!('serviceWorker' in navigator)) return null;
+    const existing = await navigator.serviceWorker.getRegistration('/');
+    if (existing) return existing;
+    try {
+      return await navigator.serviceWorker.register('/sw.js');
+    } catch (err) {
+      console.error('Service worker registration failed:', err);
+      return null;
+    }
+  };
+
+  const savePushSubscription = async (subscription) => {
+    if (!user?.id || !subscription?.endpoint) return;
+    const json = subscription.toJSON ? subscription.toJSON() : {};
+    const endpoint = String(json.endpoint || subscription.endpoint || '').trim();
+    const p256dh = String(json?.keys?.p256dh || '').trim();
+    const auth = String(json?.keys?.auth || '').trim();
+    if (!endpoint || !p256dh || !auth) return;
+    const payload = {
+      user_id: user.id,
+      endpoint,
+      p256dh,
+      auth,
+      enabled: true,
+      user_agent: navigator.userAgent || null,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .upsert(payload, { onConflict: 'endpoint' });
+    if (error) console.error('Saving push subscription failed:', error);
+  };
+
+  const removePushSubscription = async () => {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      const registration = await navigator.serviceWorker.getRegistration('/');
+      if (!registration) return;
+      const sub = await registration.pushManager.getSubscription();
+      if (!sub) return;
+      const endpoint = String(sub.endpoint || '').trim();
+      try {
+        await sub.unsubscribe();
+      } catch {}
+      if (endpoint) {
+        await supabase
+          .from('push_subscriptions')
+          .delete()
+          .eq('endpoint', endpoint);
+      }
+    } catch (err) {
+      console.error('Failed to remove push subscription:', err);
+    }
+  };
+
+  const ensurePushSubscription = async () => {
+    if (!user?.id) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const vapidPublicKey = getPushPublicKey();
+    if (!vapidPublicKey) {
+      console.warn('Missing REACT_APP_VAPID_PUBLIC_KEY; push subscription skipped.');
+      return;
+    }
+    const registration = await getPushServiceWorkerRegistration();
+    if (!registration) return;
+    try {
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        });
+      }
+      await savePushSubscription(subscription);
+    } catch (err) {
+      console.error('Push subscribe failed:', err);
+    }
+  };
+
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
       alert('This browser does not support notifications');
@@ -4541,6 +4630,7 @@ function App() {
       if (permission === 'granted') {
         setNotificationsEnabled(true);
         await window.storage.set('notifications-enabled', 'true', false);
+        await ensurePushSubscription();
       }
     } catch (error) {
       console.error('Error requesting notification permission:', error);
@@ -4554,8 +4644,16 @@ function App() {
       const newState = !notificationsEnabled;
       setNotificationsEnabled(newState);
       await window.storage.set('notifications-enabled', newState.toString(), false);
+      if (newState) await ensurePushSubscription();
+      else await removePushSubscription();
     }
   };
+
+  useEffect(() => {
+    if (!notificationsEnabled) return;
+    if (notificationPermission !== 'granted') return;
+    ensurePushSubscription();
+  }, [notificationsEnabled, notificationPermission, user?.id]);
 
   const toggleNotificationWindow = async (key, currentValue, setter) => {
     const next = !currentValue;

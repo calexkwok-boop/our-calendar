@@ -1,39 +1,45 @@
-const CACHE_NAME = 'our-calendar-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
-  );
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
+  event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener('fetch', (event) => {
-  // Network first, fall back to cache for navigation requests
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() =>
-        caches.match('/index.html')
-      )
-    );
-    return;
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { body: event.data ? event.data.text() : '' };
   }
-  // Cache first for static assets
-  event.respondWith(
-    caches.match(event.request).then((cached) =>
-      cached || fetch(event.request)
-    )
-  );
+
+  const title = payload.title || 'Calendar Reminder';
+  const options = {
+    body: payload.body || 'You have an upcoming calendar event.',
+    icon: payload.icon || '/logo192.png',
+    badge: payload.badge || '/logo192.png',
+    data: payload.data || {},
+    tag: payload.tag || undefined,
+    renotify: !!payload.renotify,
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification?.data?.url || '/';
+  event.waitUntil((async () => {
+    const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const matching = allClients.find((client) => client.url.includes(self.location.origin));
+    if (matching) {
+      await matching.focus();
+      try {
+        matching.postMessage({ type: 'open-url', url: targetUrl });
+      } catch {}
+      return;
+    }
+    await clients.openWindow(targetUrl);
+  })());
 });
