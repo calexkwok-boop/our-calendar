@@ -2008,6 +2008,8 @@ function App() {
   const [selectedSharedListId, setSelectedSharedListId] = useState(null);
   const [newSharedListTitle, setNewSharedListTitle] = useState('');
   const [newListItemText, setNewListItemText] = useState('');
+  const [editingListGroupId, setEditingListGroupId] = useState(null);
+  const [editingListGroupTitle, setEditingListGroupTitle] = useState('');
   const [editingListItemId, setEditingListItemId] = useState(null);
   const [editingListText, setEditingListText] = useState('');
   const [listError, setListError] = useState('');
@@ -3190,16 +3192,12 @@ function App() {
     if (remaining.length === 0) setSharedListItems([]);
   };
 
-  const renameSharedList = async (listId) => {
-    if (!listId || !primaryListOwnerId || !activeLayerId) return;
-    const existing = sharedListGroups.find(g => g.id === listId);
-    const currentTitle = existing?.title || '';
-    const value = window.prompt('Rename list:', currentTitle);
-    if (value === null) return;
-    const nextTitle = value.trim();
+  const renameSharedList = async (listId, nextTitleRaw) => {
+    if (!listId || !primaryListOwnerId || !activeLayerId) return false;
+    const nextTitle = String(nextTitleRaw || '').trim();
     if (!nextTitle) {
       setListError('List name cannot be empty.');
-      return;
+      return false;
     }
 
     const { error } = await supabase
@@ -3211,11 +3209,29 @@ function App() {
 
     if (error) {
       setListError(`Could not rename list: ${error.message}`);
-      return;
+      return false;
     }
 
     setListError('');
     setSharedListGroups(prev => prev.map(g => g.id === listId ? { ...g, title: nextTitle } : g));
+    return true;
+  };
+
+  const startEditingListGroup = (group) => {
+    if (!group?.id) return;
+    setEditingListGroupId(group.id);
+    setEditingListGroupTitle(group.title || '');
+  };
+
+  const cancelEditingListGroup = () => {
+    setEditingListGroupId(null);
+    setEditingListGroupTitle('');
+  };
+
+  const submitEditingListGroup = async () => {
+    if (!editingListGroupId) return;
+    const ok = await renameSharedList(editingListGroupId, editingListGroupTitle);
+    if (ok) cancelEditingListGroup();
   };
 
   const addSharedListItem = async () => {
@@ -5389,6 +5405,11 @@ function App() {
 
   const unreadInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 0 : 1), 0);
   const readInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 1 : 0), 0);
+  const selectedSharedListGroup = sharedListGroups.find(group => group.id === selectedSharedListId) || null;
+  const incompleteSharedListItems = sharedListItems.filter(item => !item.done);
+  const completedSharedListItems = sharedListItems.filter(item => item.done);
+  const totalSharedListItems = sharedListItems.length;
+  const completedSharedListCount = completedSharedListItems.length;
 
   return (
     <>
@@ -5896,22 +5917,51 @@ function App() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-3">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-2">
               {sharedListGroups.map(group => (
-                <button
-                  key={group.id}
-                  onClick={() => setSelectedSharedListId(group.id)}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                    selectedSharedListId === group.id
-                      ? 'bg-purple-600 text-white border-purple-600'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
-                  }`}
-                >
-                  {group.title}
-                </button>
+                editingListGroupId === group.id ? (
+                  <div key={group.id} className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-full border border-purple-300 bg-white dark:bg-gray-700 dark:border-purple-700">
+                    <input
+                      autoFocus
+                      value={editingListGroupTitle}
+                      onChange={(e) => setEditingListGroupTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') submitEditingListGroup();
+                        if (e.key === 'Escape') cancelEditingListGroup();
+                      }}
+                      onBlur={submitEditingListGroup}
+                      className="w-36 px-2 py-1 text-xs border border-purple-200 dark:border-purple-600 rounded-md bg-white dark:bg-gray-800 dark:text-white"
+                    />
+                    <button
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={submitEditingListGroup}
+                      className="px-2 py-1 text-[11px] rounded-md bg-purple-600 text-white"
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    key={group.id}
+                    onClick={() => {
+                      setSelectedSharedListId(group.id);
+                      cancelEditingListGroup();
+                    }}
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      selectedSharedListId === group.id
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                    }`}
+                  >
+                    {group.title}
+                  </button>
+                )
               ))}
               <button
-                onClick={() => renameSharedList(selectedSharedListId)}
+                onClick={() => {
+                  const selected = sharedListGroups.find(group => group.id === selectedSharedListId);
+                  if (selected) startEditingListGroup(selected);
+                }}
                 disabled={!selectedSharedListId}
                 className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800 disabled:opacity-50"
                 title="Rename selected list"
@@ -5927,6 +5977,11 @@ function App() {
                 Delete
               </button>
             </div>
+            {selectedSharedListGroup && (
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3 px-1">
+                {selectedSharedListGroup.title}: {totalSharedListItems} item{totalSharedListItems === 1 ? '' : 's'} · {completedSharedListCount} done
+              </p>
+            )}
 
             <div className="flex flex-col sm:flex-row gap-2 mb-3">
               <input
@@ -5942,11 +5997,14 @@ function App() {
                 onClick={addSharedListItem}
                 className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
                 title="Add item"
-                disabled={!selectedSharedListId}
+                disabled={!selectedSharedListId || !newListItemText.trim()}
               >
                 Add
               </button>
             </div>
+            {selectedSharedListId && (
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3 px-1">Tip: press Enter to add quickly.</p>
+            )}
 
             {listError && (
               <div className="mb-3 p-2.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-600 dark:text-red-300">
@@ -5956,12 +6014,15 @@ function App() {
 
             <div className="space-y-1.5">
               {sharedListGroups.length === 0 && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 italic">Create your first list to get started.</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic">Create a list above, then add items below.</p>
               )}
-              {sharedListItems.length === 0 && selectedSharedListId && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 italic">No items yet.</p>
+              {sharedListGroups.length > 0 && !selectedSharedListId && (
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic">Pick a list to start adding items.</p>
               )}
-              {sharedListItems.map(item => (
+              {selectedSharedListId && totalSharedListItems === 0 && (
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic">No items yet. Add your first one above.</p>
+              )}
+              {incompleteSharedListItems.map(item => (
                 <div key={item.id} className="flex items-center gap-2.5 p-2.5 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600">
                   <button
                     onClick={() => toggleSharedListItem(item)}
@@ -6005,6 +6066,59 @@ function App() {
                   </button>
                 </div>
               ))}
+              {completedSharedListItems.length > 0 && (
+                <div className="pt-2">
+                  <div className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Completed ({completedSharedListItems.length})
+                  </div>
+                  <div className="space-y-1.5">
+                    {completedSharedListItems.map(item => (
+                      <div key={item.id} className="flex items-center gap-2.5 p-2.5 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600">
+                        <button
+                          onClick={() => toggleSharedListItem(item)}
+                          className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
+                          title={item.done ? 'Mark incomplete' : 'Mark complete'}
+                        >
+                          {item.done ? '?' : ''}
+                        </button>
+                        {editingListItemId === item.id ? (
+                          <input
+                            autoFocus
+                            value={editingListText}
+                            onChange={(e) => setEditingListText(e.target.value)}
+                            onBlur={() => saveSharedListItemText(item)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') saveSharedListItemText(item);
+                              if (e.key === 'Escape') { setEditingListItemId(null); setEditingListText(''); }
+                            }}
+                            className="flex-1 text-sm px-2 py-1 border border-purple-300 dark:border-purple-600 dark:bg-gray-800 dark:text-white rounded-md focus:ring-1 focus:ring-purple-400"
+                          />
+                        ) : (
+                          <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>
+                            {item.text}
+                          </span>
+                        )}
+                        {editingListItemId !== item.id && (
+                          <button
+                            onClick={() => startEditingListItem(item)}
+                            className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900 rounded-lg"
+                            title="Edit item"
+                          >
+                            <Edit2 className="w-3.5 h-3.5 text-purple-500" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => removeSharedListItem(item.id)}
+                          className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"
+                          title="Delete item"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               </div>
             </div>
           )}
