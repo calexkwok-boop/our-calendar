@@ -5407,6 +5407,22 @@ function App() {
     }
   };
 
+  const getNextRecurringDateKey = (event, fromDateKey) => {
+    const base = new Date(`${fromDateKey}T00:00:00`);
+    if (Number.isNaN(base.getTime())) return null;
+    const next = new Date(base);
+    if (event?.recurrence === 'weekly') {
+      next.setDate(next.getDate() + 7);
+    } else if (event?.recurrence === 'monthly') {
+      next.setMonth(next.getMonth() + 1);
+    } else if (event?.recurrence === 'annual' || event?.isAnnual) {
+      next.setFullYear(next.getFullYear() + 1);
+    } else {
+      return null;
+    }
+    return getDateKey(next);
+  };
+
   const handleDeleteEvent = async (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false, skipOnce = false) => {
     const actualDateKey = Object.keys(events).find(k => events[k]?.some(e => e.id === eventId)) || dateKey;
     const eventToDelete = events[actualDateKey]?.find(e => e.id === eventId);
@@ -5422,6 +5438,24 @@ function App() {
       if (!originalDateKey || !originalEvent) return;
 
       if (skipOnce) {
+        if (dateKey === originalDateKey) {
+          // Source occurrence is stored as a direct event, so "skip once" must move
+          // the series anchor forward instead of only adding an exception.
+          const nextDateKey = getNextRecurringDateKey(originalEvent, originalDateKey);
+          if (!nextDateKey) return;
+          const movedEvent = { ...originalEvent, date: nextDateKey };
+          const updatedEvents = { ...events };
+          updatedEvents[originalDateKey] = (updatedEvents[originalDateKey] || []).filter(e => e.id !== eventId);
+          if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
+          updatedEvents[nextDateKey] = [...(updatedEvents[nextDateKey] || []), movedEvent].sort((a, b) => {
+            if (!a.time) return 1;
+            if (!b.time) return -1;
+            return a.time.localeCompare(b.time);
+          });
+          saveEvents(updatedEvents);
+          return;
+        }
+
         // Add this date as an exception so it's skipped in future renders
         const updatedExceptions = [...(originalEvent.exceptions || []), dateKey];
         const updatedEvents = {
