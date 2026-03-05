@@ -725,6 +725,7 @@ function App() {
       sub_calendar_id: activeSubCalendar.id,
       email: emailToInvite,
       added_by: user.id,
+      status: 'pending',
       created_at: new Date().toISOString(),
     };
 
@@ -738,6 +739,7 @@ function App() {
           sub_calendar_id: activeSubCalendar.id,
           email: emailToInvite,
           added_by: user.id,
+          status: 'pending',
         };
         const fallback = await supabase.from('sub_calendar_members').insert(fallbackPayload);
         error = fallback.error;
