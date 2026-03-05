@@ -629,6 +629,70 @@ function App() {
     } catch (e) { console.error(e); }
   };
 
+  const syncSubCalendarMembersFromLayer = async (subCal) => {
+    try {
+      const subCalId = String(subCal?.id || '').trim();
+      const layerId = String(subCal?.layer_id || '').trim();
+      if (!subCalId || !layerId || !user?.id) return;
+
+      // Only owner should maintain canonical trip member mirror from layer shares.
+      if (String(subCal?.owner_id || '') !== String(user.id)) return;
+
+      const { data: sharedRows, error: sharedErr } = await supabase
+        .from('shared_access')
+        .select('shared_with_email')
+        .eq('layer_id', layerId);
+      if (sharedErr) {
+        console.error('syncSubCalendarMembersFromLayer shared_access error:', sharedErr);
+        return;
+      }
+
+      const sharedEmails = Array.from(
+        new Set(
+          (sharedRows || [])
+            .map((r) => String(r?.shared_with_email || '').trim().toLowerCase())
+            .filter(Boolean)
+        )
+      );
+      if (sharedEmails.length === 0) return;
+
+      const { data: existingRows, error: existingErr } = await supabase
+        .from('sub_calendar_members')
+        .select('email')
+        .eq('sub_calendar_id', subCalId);
+      if (existingErr) {
+        console.error('syncSubCalendarMembersFromLayer existing members error:', existingErr);
+        return;
+      }
+      const existingEmails = new Set((existingRows || []).map((r) => String(r?.email || '').trim().toLowerCase()).filter(Boolean));
+      const missingEmails = sharedEmails.filter((email) => !existingEmails.has(email));
+      if (missingEmails.length === 0) return;
+
+      const nowIso = new Date().toISOString();
+      const rows = missingEmails.map((email) => ({
+        sub_calendar_id: subCalId,
+        email,
+        added_by: user.id,
+        status: 'accepted',
+        invited_at: nowIso,
+        accepted_at: nowIso,
+        created_at: nowIso,
+      }));
+
+      let { error: insertErr } = await supabase.from('sub_calendar_members').insert(rows);
+      if (insertErr && /column .*created_at|schema cache/i.test(String(insertErr.message || ''))) {
+        const fallbackRows = rows.map(({ created_at, ...rest }) => rest);
+        const fallback = await supabase.from('sub_calendar_members').insert(fallbackRows);
+        insertErr = fallback.error;
+      }
+      if (insertErr && !/duplicate key|already exists|unique constraint/i.test(String(insertErr.message || ''))) {
+        console.error('syncSubCalendarMembersFromLayer insert error:', insertErr);
+      }
+    } catch (e) {
+      console.error('syncSubCalendarMembersFromLayer exception:', e);
+    }
+  };
+
   const loadGlobalVenmoHandles = async () => {
     try {
       const { data, error } = await supabase
@@ -794,6 +858,7 @@ function App() {
     setDeletedPhotosNoteId(null);
     await loadGlobalVenmoHandles();
     await loadGlobalCashAppHandles();
+    await syncSubCalendarMembersFromLayer(sc);
     await loadSubCalendarEvents(sc.id);
     await loadSubCalendarMembers(sc.id);
     await loadSubCalNotes(sc.id);
