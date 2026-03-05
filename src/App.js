@@ -6917,6 +6917,35 @@ function App() {
           )}
         </div>
 
+        {/* Members (quick access near top) */}
+        <div className="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">Members ({subCalMembers.length + 1})</h4>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full text-xs flex items-center gap-1">
+              👑 {currentUser} (you)
+            </span>
+            {subCalMembers.map(m => (
+              <span key={m.email} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
+                {m.email}
+                {activeSubCalendar.owner_id === user?.id && m.removable !== false && (
+                  <button onClick={() => removeMemberFromSubCal(m.email)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
+                )}
+              </span>
+            ))}
+            {activeSubCalendar.owner_id === user?.id && (
+              <button
+                onClick={() => {
+                  const email = window.prompt('Invite by email:');
+                  if (email) { inviteToSubCalendar(email); }
+                }}
+                className="px-2 py-1 border border-dashed border-purple-300 dark:border-purple-600 text-purple-500 rounded-full text-xs hover:bg-purple-50 dark:hover:bg-purple-900/20"
+              >+ Invite</button>
+            )}
+          </div>
+        </div>
+
         {/* Location sharing quick controls (mobile-friendly placement) */}
         {(() => {
           const todayKey = getDateKey(new Date());
@@ -7457,33 +7486,8 @@ function App() {
                 )}
               </div>
 
-              {/* Members */}
+              {/* Live location details */}
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">Members ({subCalMembers.length + 1})</h4>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full text-xs flex items-center gap-1">
-                    👑 {currentUser} (you)
-                  </span>
-                  {subCalMembers.map(m => (
-                    <span key={m.email} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
-                      {m.email}
-                      {activeSubCalendar.owner_id === user?.id && m.removable !== false && (
-                        <button onClick={() => removeMemberFromSubCal(m.email)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
-                      )}
-                    </span>
-                  ))}
-                  {activeSubCalendar.owner_id === user?.id && (
-                    <button
-                      onClick={() => {
-                        const email = window.prompt('Invite by email:');
-                        if (email) { inviteToSubCalendar(email); }
-                      }}
-                      className="px-2 py-1 border border-dashed border-purple-300 dark:border-purple-600 text-purple-500 rounded-full text-xs hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                    >+ Invite</button>
-                  )}
-                </div>
                 {(() => {
                   const todayKey = getDateKey(new Date());
                   const sharingWindowOpen = todayKey >= activeSubCalendar.start_date && todayKey <= activeSubCalendar.end_date;
