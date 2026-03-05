@@ -4636,18 +4636,18 @@ function App() {
     return new Date(yy, mm - 1, dd, 9, 0, 0, 0);
   };
 
-  const readSmartLeaveMap = () => {
+  const readSmartLeaveMap = (uid) => {
     try {
-      const raw = localStorage.getItem('smart-leave-sent-map');
+      const raw = localStorage.getItem(`smart-leave-sent-map-${uid || 'anon'}`);
       return raw ? JSON.parse(raw) : {};
     } catch {
       return {};
     }
   };
 
-  const writeSmartLeaveMap = (map) => {
+  const writeSmartLeaveMap = (uid, map) => {
     try {
-      localStorage.setItem('smart-leave-sent-map', JSON.stringify(map));
+      localStorage.setItem(`smart-leave-sent-map-${uid || 'anon'}`, JSON.stringify(map));
     } catch {}
   };
 
@@ -4736,12 +4736,12 @@ function App() {
       setSmartLeavePrompt(null);
       return;
     }
-    const map = readSmartLeaveMap();
+    const map = readSmartLeaveMap(user?.id);
     const snooze = map.__snooze || {};
     snooze[smartLeavePrompt.id] = Date.now() + (minutes * 60 * 1000);
     delete map[smartLeavePrompt.id];
     map.__snooze = snooze;
-    writeSmartLeaveMap(map);
+    writeSmartLeaveMap(user?.id, map);
     setSmartLeavePrompt(null);
   };
 
@@ -4766,7 +4766,7 @@ function App() {
 
     const readSentMap = () => {
       try {
-        const raw = localStorage.getItem('notification-sent-map');
+        const raw = localStorage.getItem(`notification-sent-map-${user?.id || 'anon'}`);
         return raw ? JSON.parse(raw) : {};
       } catch {
         return {};
@@ -4775,7 +4775,7 @@ function App() {
 
     const writeSentMap = (map) => {
       try {
-        localStorage.setItem('notification-sent-map', JSON.stringify(map));
+        localStorage.setItem(`notification-sent-map-${user?.id || 'anon'}`, JSON.stringify(map));
       } catch {}
     };
 
@@ -4835,7 +4835,7 @@ function App() {
       window.removeEventListener('focus', checkNotifications);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent, notifyOneWeek, notifyOneDay, notifyOneHour, notifyAtEventTime]);
+  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent, notifyOneWeek, notifyOneDay, notifyOneHour, notifyAtEventTime, user?.id]);
 
   // Smart leave assistant: estimate travel time and prompt a few minutes before leaving.
   useEffect(() => {
@@ -4845,7 +4845,7 @@ function App() {
 
     const checkSmartLeave = async () => {
       const now = new Date();
-      const sentMap = readSmartLeaveMap();
+      const sentMap = readSmartLeaveMap(user?.id);
       const snoozeMap = sentMap.__snooze || {};
       const ownCandidates = [];
 
@@ -4895,7 +4895,7 @@ function App() {
           travelMinutes: minutes,
         });
         sentMap[sentKey] = true;
-        writeSmartLeaveMap(sentMap);
+        writeSmartLeaveMap(user?.id, sentMap);
         break;
       }
     };
@@ -4912,7 +4912,7 @@ function App() {
       window.removeEventListener('focus', checkSmartLeave);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent]);
+  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent, user?.id]);
   // Load notification preference
   useEffect(() => {
     const loadNotificationPreference = async () => {
