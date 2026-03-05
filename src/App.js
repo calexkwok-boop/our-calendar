@@ -82,6 +82,7 @@ function App() {
   const saveTimeoutRef = useRef(null);
   const dateTapTimeoutRef = useRef(null);
   const [currentUser, setCurrentUser] = useState('');
+  const [userAvatar, setUserAvatar] = useState('');
   const [showUserSetup, setShowUserSetup] = useState(false);
   const [selectedDates, setSelectedDates] = useState([]);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -191,6 +192,7 @@ function App() {
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [locationActionTarget, setLocationActionTarget] = useState('');
   const photoInputRef = useRef(null);
+  const avatarInputRef = useRef(null);
   const photoDeleteHoldTimerRef = useRef(null);
   const photoTapRef = useRef({ id: null, at: 0, timer: null });
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
@@ -2733,6 +2735,61 @@ function App() {
     return { icon: '⛈️', color: 'text-purple-500' };
   };
 
+  const getAvatarStorageKey = (uid) => `calendar-avatar-${uid}`;
+
+  const resizeAvatarDataUrl = (dataUrl) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const size = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(dataUrl); return; }
+        const srcW = img.width || size;
+        const srcH = img.height || size;
+        const scale = Math.max(size / srcW, size / srcH);
+        const drawW = srcW * scale;
+        const drawH = srcH * scale;
+        const dx = (size - drawW) / 2;
+        const dy = (size - drawH) / 2;
+        ctx.clearRect(0, 0, size, size);
+        ctx.drawImage(img, dx, dy, drawW, drawH);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    img.onerror = () => reject(new Error('Could not read image'));
+    img.src = dataUrl;
+  });
+
+  const handleAvatarFileChange = async (e) => {
+    const file = e?.target?.files?.[0];
+    if (!file || !user?.id) return;
+    if (!String(file.type || '').startsWith('image/')) {
+      alert('Please choose an image file.');
+      return;
+    }
+    try {
+      const rawDataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Failed to read image'));
+        reader.readAsDataURL(file);
+      });
+      const resizedDataUrl = await resizeAvatarDataUrl(rawDataUrl);
+      setUserAvatar(resizedDataUrl);
+      localStorage.setItem(getAvatarStorageKey(user.id), resizedDataUrl);
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+      alert('Could not set profile image.');
+    } finally {
+      if (e?.target) e.target.value = '';
+    }
+  };
+
   const fetchWeather = async (lat, lon) => {
     try {
       const res = await fetch(
@@ -3603,6 +3660,19 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setUserAvatar('');
+      return;
+    }
+    try {
+      const stored = localStorage.getItem(getAvatarStorageKey(user.id)) || '';
+      setUserAvatar(stored);
+    } catch {
+      setUserAvatar('');
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (!primaryListOwnerId) return;
@@ -5256,9 +5326,26 @@ function App() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl shrink-0">
-                <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-              </div>
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                className="p-0.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl shrink-0 hover:opacity-90 transition-opacity"
+                title="Upload calendar icon"
+              >
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-[10px] overflow-hidden bg-white/10 flex items-center justify-center">
+                  {userAvatar ? (
+                    <img src={userAvatar} alt="Calendar icon" className="w-full h-full object-cover" />
+                  ) : (
+                    <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                  )}
+                </div>
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarFileChange}
+              />
               <div className="min-w-0">
                 {isEditingTitle ? (
                   <input
