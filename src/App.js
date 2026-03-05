@@ -2475,7 +2475,7 @@ function App() {
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
         const userEmail = session?.user?.email;
-        if (!userId || !activeLayerId) return;
+        if (!userId) return;
         const loadedLayers = await loadLayersForUser(userId, userEmail);
         if (!loadedLayers || loadedLayers.length === 0) {
           setLayers([]);
@@ -2659,7 +2659,7 @@ function App() {
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
         const userEmail = session?.user?.email;
-        if (!userId) return;
+        if (!userId || !activeLayerId) return;
 
         // Get calendars shared with me
         const { data: sharedData } = await supabase
