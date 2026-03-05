@@ -3271,19 +3271,7 @@ function App() {
         setMergeTargetLayerId(resolvedTargetId);
       }
 
-      const { data: myShareRows, error: myShareErr } = await supabase
-        .from('shared_access')
-        .select('shared_with_id,shared_with_email')
-        .eq('owner_id', user.id);
-      if (myShareErr) return;
-      const sharedWithIdSet = new Set((myShareRows || []).map(r => String(r?.shared_with_id || '')).filter(Boolean));
-      const sharedWithEmailSet = new Set((myShareRows || []).map(r => String(r?.shared_with_email || '').trim().toLowerCase()).filter(Boolean));
-
       for (const sharedLayer of shared) {
-        const ownerId = String(sharedLayer.owner_id || '');
-        const ownerEmailGuess = String(sharedLayer.created_by || '').trim().toLowerCase();
-        const isMutual = sharedWithIdSet.has(ownerId) || (ownerEmailGuess.includes('@') && sharedWithEmailSet.has(ownerEmailGuess));
-        if (!isMutual) continue;
         const autoKey = `${String(user.id)}:${String(sharedLayer.id)}->${resolvedTargetId}`;
         if (autoMergeSeenRef.current.has(autoKey)) continue;
         autoMergeSeenRef.current.add(autoKey);
