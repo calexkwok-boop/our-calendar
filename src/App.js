@@ -118,6 +118,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(true);
   const [authError, setAuthError] = useState('');
+  const saveRequestIdRef = useRef(0);
   const [firstTapDate, setFirstTapDate] = useState(null);
   const [lastTapTime, setLastTapTime] = useState(0);
   const [recurrence, setRecurrence] = useState('once');
@@ -2906,18 +2907,23 @@ function App() {
   const saveEvents = async (newEvents, options = {}) => {
     const { immediate = false } = options;
     try {
-      if (!activeLayerId) return;
+      if (!activeLayerId || !user?.id) return;
       setEvents(newEvents);
+
+      const requestId = ++saveRequestIdRef.current;
+      const saveLayerId = activeLayerId;
+      const saveUserId = user.id;
 
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       const persist = async () => {
         try {
+          if (requestId !== saveRequestIdRef.current) return;
           const myEvents = [];
           const sharedUpdates = []; // events owned by others that we've edited
 
           Object.entries(newEvents).forEach(([date, dateEvents]) => {
             dateEvents.forEach(event => {
-              if (event.userId && event.userId !== user?.id) {
+              if (event.userId && event.userId !== saveUserId) {
                 // Shared event — do a targeted update on just the fields we allow editing
                 sharedUpdates.push(event);
                 return;
@@ -2942,15 +2948,21 @@ function App() {
                 location: event.location || null,
                 created_by: event.createdBy,
                 created_at: event.createdAt,
-                user_id: user?.id,
-                layer_id: activeLayerId,
-                calendar_id: activeLayerId
+                user_id: saveUserId,
+                layer_id: saveLayerId,
+                calendar_id: saveLayerId
               });
             });
           });
 
+          if (requestId !== saveRequestIdRef.current) return;
           // Save own events via delete+reinsert
-          await supabase.from('events').delete().eq('user_id', user?.id).eq('layer_id', activeLayerId);
+          const { error: deleteError } = await supabase.from('events').delete().eq('user_id', saveUserId).eq('layer_id', saveLayerId);
+          if (deleteError) {
+            console.error('Error deleting existing events in Supabase:', deleteError);
+            return;
+          }
+          if (requestId !== saveRequestIdRef.current) return;
           if (myEvents.length > 0) {
             const { error } = await supabase.from('events').insert(myEvents);
             if (error) console.error('Error saving events to Supabase:', error);
@@ -2958,6 +2970,7 @@ function App() {
 
           // Save shared event edits via targeted UPDATE on each row
           for (const event of sharedUpdates) {
+            if (requestId !== saveRequestIdRef.current) return;
             await supabase.from('events').update({
               title: event.title,
               time: event.time,
@@ -2971,7 +2984,7 @@ function App() {
               exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
               reactions: event.reactions ? JSON.stringify(event.reactions) : null,
               location: event.location || null,
-            }).eq('id', event.id).eq('layer_id', activeLayerId);
+            }).eq('id', event.id).eq('layer_id', saveLayerId);
           }
         } catch (err) {
           console.error('Error writing to Supabase:', err);
@@ -5414,6 +5427,28 @@ function App() {
     }
   };
 
+  const deleteOwnedEventsFromDb = async (eventsToDelete) => {
+    try {
+      if (!activeLayerId || !Array.isArray(eventsToDelete) || eventsToDelete.length === 0) return;
+      const ownedEventIds = Array.from(
+        new Set(
+          eventsToDelete
+            .filter(e => e && e.id && (!e.userId || String(e.userId) === String(user?.id)))
+            .map(e => e.id)
+        )
+      );
+      if (ownedEventIds.length === 0) return;
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .in('id', ownedEventIds)
+        .eq('layer_id', activeLayerId);
+      if (error) console.error('Error deleting own events from Supabase:', error);
+    } catch (error) {
+      console.error('Error deleting own events:', error);
+    }
+  };
+
   const getNextRecurringDateKey = (event, fromDateKey) => {
     const base = new Date(`${fromDateKey}T00:00:00`);
     if (Number.isNaN(base.getTime())) return null;
@@ -5431,6 +5466,13 @@ function App() {
   };
 
   const handleDeleteEvent = async (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false, skipOnce = false) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    // Invalidate any in-flight save that could reinsert stale state.
+    saveRequestIdRef.current += 1;
+
     const actualDateKey = Object.keys(events).find(k => events[k]?.some(e => e.id === eventId)) || dateKey;
     const eventToDelete = events[actualDateKey]?.find(e => e.id === eventId);
 
@@ -5474,10 +5516,11 @@ function App() {
         await saveEvents(updatedEvents, { immediate: true });
       } else {
         // Delete the whole recurring event
+        await deleteOwnedEventsFromDb([originalEvent]);
         await deleteSharedEventsFromDb([originalEvent]);
         const updatedEvents = { ...events, [originalDateKey]: events[originalDateKey].filter(e => e.id !== eventId) };
         if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
-        await saveEvents(updatedEvents, { immediate: true });
+        setEvents(updatedEvents);
       }
       return;
     }
@@ -5490,16 +5533,18 @@ function App() {
         updatedEvents[key] = updatedEvents[key].filter(e => e.multiDayId !== eventToDelete.multiDayId);
         if (updatedEvents[key].length === 0) delete updatedEvents[key];
       });
+      await deleteOwnedEventsFromDb(toDelete);
       await deleteSharedEventsFromDb(toDelete);
-      await saveEvents(updatedEvents, { immediate: true });
+      setEvents(updatedEvents);
     } else {
+      await deleteOwnedEventsFromDb(eventToDelete ? [eventToDelete] : []);
       await deleteSharedEventsFromDb(eventToDelete ? [eventToDelete] : []);
       const updatedEvents = {
         ...events,
         [actualDateKey]: (events[actualDateKey] || []).filter(e => e.id !== eventId)
       };
       if (updatedEvents[actualDateKey].length === 0) delete updatedEvents[actualDateKey];
-      await saveEvents(updatedEvents, { immediate: true });
+      setEvents(updatedEvents);
     }
   };
 
