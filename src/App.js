@@ -1930,6 +1930,7 @@ function App() {
           created_at: row.created_at || new Date().toISOString(),
           user_id: user.id,
           layer_id: mergeTargetLayerId,
+          calendar_id: mergeTargetLayerId,
         });
       });
       if (eventsToInsert.length > 0) {
@@ -1964,6 +1965,7 @@ function App() {
         const payload = {
           owner_id: user.id,
           layer_id: mergeTargetLayerId,
+          calendar_id: mergeTargetLayerId,
           title: srcGroup.title || 'List',
           created_by: srcGroup.created_by || currentUser || user.email || 'User',
           user_id: user.id,
@@ -2000,6 +2002,7 @@ function App() {
         itemsToInsert.push({
           owner_id: user.id,
           layer_id: mergeTargetLayerId,
+          calendar_id: mergeTargetLayerId,
           list_id: mappedListId,
           text: item.text || '',
           done: !!item.done,
@@ -2033,6 +2036,7 @@ function App() {
         const payload = {
           owner_id: user.id,
           layer_id: mergeTargetLayerId,
+          calendar_id: mergeTargetLayerId,
           shared_with_id: sharedWithId,
           shared_with_email: sharedWithEmail,
         };
@@ -2315,7 +2319,8 @@ function App() {
                 created_by: event.createdBy,
                 created_at: event.createdAt,
                 user_id: user?.id,
-                layer_id: activeLayerId
+                layer_id: activeLayerId,
+                calendar_id: activeLayerId
               });
             });
           });
@@ -2412,6 +2417,7 @@ function App() {
     const { error } = await supabase.from('shared_access').insert({
       owner_id: user.id,
       layer_id: activeLayerId,
+      calendar_id: activeLayerId,
       shared_with_email: email,
     });
 
@@ -2507,6 +2513,7 @@ function App() {
     const payload = {
       owner_id: primaryListOwnerId,
       layer_id: activeLayerId,
+      calendar_id: activeLayerId,
       title,
       created_by: currentUser || user.email || 'User',
       user_id: user.id,
@@ -2573,6 +2580,7 @@ function App() {
     const payload = {
       owner_id: primaryListOwnerId,
       layer_id: activeLayerId,
+      calendar_id: activeLayerId,
       list_id: selectedSharedListId,
       text,
       done: false,
