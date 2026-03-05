@@ -118,6 +118,10 @@ function App() {
   const [tripSwipeDrag, setTripSwipeDrag] = useState({ id: null, offset: 0 });
   const tripSwipeStartXRef = useRef(0);
   const swipingTripIdRef = useRef(null);
+  const [swipedLayerId, setSwipedLayerId] = useState(null);
+  const [layerSwipeDrag, setLayerSwipeDrag] = useState({ id: null, offset: 0 });
+  const layerSwipeStartXRef = useRef(0);
+  const swipingLayerIdRef = useRef(null);
 
   // Sub-calendar state
   const [subCalendars, setSubCalendars] = useState([]);
@@ -1848,6 +1852,84 @@ function App() {
     localStorage.setItem(`active-layer-${user.id}`, created.id);
     setNewLayerName('');
     setShowLayerModal(false);
+  };
+
+  const deleteLayerCalendar = async (layerId) => {
+    const normalizedLayerId = String(layerId || '');
+    if (!normalizedLayerId || !user?.id) return;
+    const layer = layers.find(item => String(item.id) === normalizedLayerId);
+    if (!layer || String(layer.owner_id) !== String(user.id)) return;
+    const ownedCount = (layers || []).filter(item => String(item.owner_id) === String(user.id)).length;
+    if (ownedCount <= 1) {
+      alert('You must keep at least one calendar.');
+      return;
+    }
+    if (!window.confirm(`Delete "${layer.name || 'this calendar'}" and all of its events, lists, shares, and trips?`)) return;
+
+    try {
+      const { data: subCalRows } = await supabase
+        .from('sub_calendars')
+        .select('id')
+        .eq('layer_id', normalizedLayerId);
+      const subCalIds = (subCalRows || []).map(row => String(row.id)).filter(Boolean);
+
+      if (subCalIds.length > 0) {
+        await supabase.from('sub_calendar_events').delete().in('sub_calendar_id', subCalIds);
+        await supabase.from('sub_calendar_members').delete().in('sub_calendar_id', subCalIds);
+        await supabase.from('sub_calendar_notes').delete().in('sub_calendar_id', subCalIds);
+        await supabase.from('trip_photos').delete().in('sub_calendar_id', subCalIds);
+      }
+
+      await supabase.from('sub_calendars').delete().eq('layer_id', normalizedLayerId);
+      await supabase.from('events').delete().eq('layer_id', normalizedLayerId);
+      await supabase.from('shared_lists').delete().eq('layer_id', normalizedLayerId);
+      await supabase.from('shared_list_groups').delete().eq('layer_id', normalizedLayerId);
+      await supabase.from('shared_access').delete().eq('layer_id', normalizedLayerId);
+      await supabase.from('calendar_layers').delete().eq('id', normalizedLayerId).eq('owner_id', user.id);
+
+      const remainingLayers = layers.filter(item => String(item.id) !== normalizedLayerId);
+      setLayers(remainingLayers);
+      setSwipedLayerId(null);
+      setLayerSwipeDrag({ id: null, offset: 0 });
+      if (String(activeLayerId) === normalizedLayerId) {
+        const nextOwned = remainingLayers.find(item => String(item.owner_id) === String(user.id));
+        const fallback = nextOwned || remainingLayers[0] || null;
+        const nextLayerId = fallback ? String(fallback.id) : null;
+        setActiveLayerId(nextLayerId);
+        if (nextLayerId) localStorage.setItem(`active-layer-${user.id}`, nextLayerId);
+      }
+    } catch (error) {
+      console.error('Error deleting calendar layer:', error);
+      alert(`Could not delete calendar: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleLayerSwipeStart = (e, layerId, canDelete) => {
+    if (!canDelete) return;
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    layerSwipeStartXRef.current = touch.clientX;
+    swipingLayerIdRef.current = layerId;
+    if (swipedLayerId && swipedLayerId !== layerId) setSwipedLayerId(null);
+  };
+
+  const handleLayerSwipeMove = (e) => {
+    const layerId = swipingLayerIdRef.current;
+    if (!layerId) return;
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - layerSwipeStartXRef.current;
+    const clamped = Math.max(-88, Math.min(0, deltaX));
+    setLayerSwipeDrag({ id: layerId, offset: clamped });
+  };
+
+  const handleLayerSwipeEnd = () => {
+    const layerId = swipingLayerIdRef.current;
+    if (!layerId) return;
+    const open = layerSwipeDrag.id === layerId && layerSwipeDrag.offset <= -44;
+    setSwipedLayerId(open ? layerId : null);
+    setLayerSwipeDrag({ id: null, offset: 0 });
+    swipingLayerIdRef.current = null;
   };
 
   const renameActiveLayer = async (nextName) => {
@@ -5540,25 +5622,47 @@ function App() {
                     <div className="space-y-2">
                       {ownedLayerCalendars.map(layer => {
                         const isActiveLayer = String(layer.id) === String(activeLayerId);
+                        const canDeleteLayer = ownedLayerCalendars.length > 1;
+                        const layerRowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
+                        const isLayerDeleteRevealed = layerRowOffset < 0;
                         return (
-                          <button
-                            key={layer.id}
-                            onClick={() => {
-                              setActiveLayerId(layer.id);
-                              if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layer.id);
-                            }}
-                            className={`w-full text-left p-3 rounded-xl border transition-all ${isActiveLayer ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300'}`}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="min-w-0">
-                                <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{layer.name || 'Calendar'}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                  Owned by you
-                                </div>
+                          <div key={layer.id} className="relative rounded-xl overflow-hidden">
+                            {canDeleteLayer && (
+                              <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isLayerDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteLayerCalendar(layer.id);
+                                  }}
+                                  className={`w-full h-full text-sm font-semibold transition-opacity ${isLayerDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+                                >
+                                  Delete
+                                </button>
                               </div>
-                              {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
-                            </div>
-                          </button>
+                            )}
+                            <button
+                              onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canDeleteLayer)}
+                              onTouchMove={handleLayerSwipeMove}
+                              onTouchEnd={handleLayerSwipeEnd}
+                              onTouchCancel={handleLayerSwipeEnd}
+                              onClick={() => {
+                                setActiveLayerId(layer.id);
+                                if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layer.id);
+                              }}
+                              className={`relative z-10 w-full text-left p-3 rounded-xl border transition-all ${isActiveLayer ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300'}`}
+                              style={{ transform: `translateX(${layerRowOffset}px)`, transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease' }}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{layer.name || 'Calendar'}</div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                    Owned by you
+                                  </div>
+                                </div>
+                                {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
+                              </div>
+                            </button>
+                          </div>
                         );
                       })}
                     </div>
