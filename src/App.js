@@ -7407,6 +7407,7 @@ function App() {
                         const isActiveLayer = String(layer.id) === String(activeLayerId);
                         const isOwnedLayer = String(layer?.owner_id) === String(user?.id);
                         const canDeleteLayer = isOwnedLayer && layers.length > 1;
+                        const canLeaveLayer = !isOwnedLayer;
                         const layerRowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
                         const isLayerDeleteRevealed = layerRowOffset < 0;
                         return (
@@ -7460,6 +7461,18 @@ function App() {
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                       Delete
+                                    </button>
+                                  )}
+                                  {canLeaveLayer && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        leaveSharedLayerCalendar(layer.id);
+                                      }}
+                                      className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-xs font-medium"
+                                      title="Leave shared calendar"
+                                    >
+                                      Leave
                                     </button>
                                   )}
                                 </div>
