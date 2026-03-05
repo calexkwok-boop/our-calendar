@@ -5134,6 +5134,47 @@ function App() {
     return '';
   };
 
+  const parseTimeInput = (rawValue) => {
+    const value = String(rawValue || '').trim().toLowerCase();
+    if (!value) return null;
+
+    const compact = value.replace(/\s+/g, '');
+
+    // Supports: 5pm, 5:30pm, 17:30, 1730, 5.30pm
+    let match = compact.match(/^(\d{1,2})(?::|\.|h)?(\d{2})?(am|pm)?$/i);
+    if (!match) {
+      // Supports: 530pm / 0930
+      match = compact.match(/^(\d{1,2})(\d{2})(am|pm)?$/i);
+      if (!match) return null;
+      const h = Number(match[1]);
+      const m = Number(match[2]);
+      const period = String(match[3] || '').toLowerCase();
+      if (!Number.isFinite(h) || !Number.isFinite(m) || m < 0 || m > 59) return null;
+      if (period) {
+        if (h < 1 || h > 12) return null;
+        let hh = h;
+        if (period === 'pm' && hh < 12) hh += 12;
+        if (period === 'am' && hh === 12) hh = 0;
+        return `${String(hh).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+      if (h < 0 || h > 23) return null;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    let h = Number(match[1]);
+    const m = Number(match[2] || '0');
+    const period = String(match[3] || '').toLowerCase();
+    if (!Number.isFinite(h) || !Number.isFinite(m) || m < 0 || m > 59) return null;
+    if (period) {
+      if (h < 1 || h > 12) return null;
+      if (period === 'pm' && h < 12) h += 12;
+      if (period === 'am' && h === 12) h = 0;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+    if (h < 0 || h > 23) return null;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
   const parseScannedLocation = (rawText) => {
     const lines = String(rawText || '').split('\n').map(line => line.trim()).filter(Boolean);
     const withPin = lines.find(line => /^(📍|@)\s*/.test(line));
@@ -5506,18 +5547,10 @@ function App() {
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
                   const val = e.target.value;
-                  // parse "3pm", "3:30pm", "15:00" etc into HH:MM
-                  const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
-                  if (match) {
-                    let h = parseInt(match[1]);
-                    const m = match[2] ? parseInt(match[2]) : 0;
-                    const period = match[3]?.toLowerCase();
-                    if (period === 'pm' && h < 12) h += 12;
-                    if (period === 'am' && h === 12) h = 0;
-                    handleTimeSubmit(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
-                  } else {
-                    handleTimeSubmit(null);
-                  }
+                  const parsed = parseTimeInput(val);
+                  if (parsed) handleTimeSubmit(parsed);
+                  else if (!String(val || '').trim()) handleTimeSubmit(null);
+                  else window.alert("Couldn't read that time. Try 5:30 PM or 17:30.");
                 }
               }}
             />
@@ -5528,17 +5561,9 @@ function App() {
                 const input = document.getElementById('timeInput');
                 const val = input.value.trim();
                 if (!val) { handleTimeSubmit(null); return; }
-                const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
-                if (match) {
-                  let h = parseInt(match[1]);
-                  const m = match[2] ? parseInt(match[2]) : 0;
-                  const period = match[3]?.toLowerCase();
-                  if (period === 'pm' && h < 12) h += 12;
-                  if (period === 'am' && h === 12) h = 0;
-                  handleTimeSubmit(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
-                } else {
-                  handleTimeSubmit(null);
-                }
+                const parsed = parseTimeInput(val);
+                if (parsed) handleTimeSubmit(parsed);
+                else window.alert("Couldn't read that time. Try 5:30 PM or 17:30.");
               }}
               className="flex-1 px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all font-medium"
             >
@@ -6888,15 +6913,9 @@ function App() {
                             onBlur={(e) => {
                               const val = e.target.value.trim();
                               if (!val) { handleUpdateEventField(event.date, event.id, { time: null }); return; }
-                              const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
-                              if (match) {
-                                let h = parseInt(match[1]);
-                                const m = match[2] ? parseInt(match[2]) : 0;
-                                const period = match[3]?.toLowerCase();
-                                if (period === 'pm' && h < 12) h += 12;
-                                if (period === 'am' && h === 12) h = 0;
-                                handleUpdateEventField(event.date, event.id, { time: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` });
-                              }
+                              const parsed = parseTimeInput(val);
+                              if (parsed) handleUpdateEventField(event.date, event.id, { time: parsed });
+                              else window.alert("Couldn't read that time. Try 5:30 PM or 17:30.");
                             }}
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
