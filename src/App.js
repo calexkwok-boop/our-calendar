@@ -7005,7 +7005,7 @@ function App() {
                                 </span>
                               )}
                               {event.time && (
-                                <div className={`flex items-center gap-1 ${category.text} text-sm font-medium`}>
+                                <div className="flex items-center gap-1 text-gray-700 dark:text-gray-200 text-sm font-medium">
                                   <Clock className="w-3 h-3" />
                                   {formatTime(event.time)}
                                 </div>
