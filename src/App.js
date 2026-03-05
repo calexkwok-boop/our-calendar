@@ -446,7 +446,7 @@ function App() {
   const loadSubCalendars = async () => {
     if (!activeLayerId) {
       setSubCalendars([]);
-      return;
+      return [];
     }
     try {
       const myUserId = String(user?.id || '');
@@ -507,7 +507,9 @@ function App() {
 
       const mergedRows = Array.from(new Map([...(directRows || []), ...legacyRows, ...memberRows].map(sc => [String(sc.id), sc])).values());
       setSubCalendars(mergedRows);
+      return mergedRows;
     } catch (e) { console.error(e); }
+    return [];
   };
 
   const loadSubCalendarEvents = async (subCalId) => {
@@ -4124,21 +4126,57 @@ function App() {
         return;
       }
 
-      const { data: tripRow, error: tripErr } = await supabase
+      let tripRow = null;
+      const { data: tripData, error: tripErr } = await supabase
         .from('sub_calendars')
         .select('*')
         .eq('id', invite.subCalendarId)
         .maybeSingle();
       if (tripErr) {
         console.error('Accept invite trip load failed:', tripErr);
-      } else if (tripRow) {
+      } else if (tripData) {
+        tripRow = tripData;
+      }
+
+      if (!tripRow) {
+        const refreshed = await loadSubCalendars();
+        tripRow = (refreshed || []).find(sc => String(sc?.id || '') === String(invite.subCalendarId || '')) || null;
+      }
+
+      if (!tripRow) {
+        tripRow = pendingTripInvites.find(sc => String(sc?.subCalendarId || '') === String(invite.subCalendarId || '')) || null;
+      }
+
+      if (!tripRow && invite?.subCalendarId) {
+        const fallbackDate = getDateKey(new Date());
+        tripRow = {
+          id: invite.subCalendarId,
+          name: invite.tripName || 'Trip',
+          start_date: invite.startDate || fallbackDate,
+          end_date: invite.endDate || invite.startDate || fallbackDate,
+          layer_id: invite.layerId || null,
+          owner_id: invite.ownerId || null,
+        };
+      }
+
+      if (tripRow) {
+        const openTarget = {
+          ...tripRow,
+          id: tripRow.id || invite.subCalendarId,
+          start_date: tripRow.start_date || tripRow.startDate,
+          end_date: tripRow.end_date || tripRow.endDate || tripRow.start_date || tripRow.startDate,
+          name: tripRow.name || tripRow.tripName || 'Trip',
+        };
         setSubCalendars(prev => {
           const existing = new Map((prev || []).map(sc => [String(sc.id), sc]));
-          existing.set(String(tripRow.id), tripRow);
+          existing.set(String(openTarget.id), openTarget);
           return Array.from(existing.values());
         });
-        await openSubCalendar(tripRow);
+        await openSubCalendar(openTarget);
         setBottomNavTab('home');
+        setShowNotificationSettings(false);
+      } else {
+        setBottomNavTab('active');
         setShowNotificationSettings(false);
       }
 
@@ -5183,16 +5221,18 @@ function App() {
                         {item.type === 'invite' && (() => {
                           const parsedInvite = parseInviteNotification(item);
                           if (!parsedInvite) return null;
+                          const pendingInvite = pendingTripInvites.find(
+                            inv => String(inv?.subCalendarId || '') === String(parsedInvite.subCalendarId || '')
+                          );
                           return (
                             <div className="mt-2 flex gap-2">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  acceptTripInvite({
+                                  acceptTripInvite(pendingInvite || {
                                     subCalendarId: parsedInvite.subCalendarId,
                                     email: parsedInvite.email,
-                                    ownerId: '',
-                                    layerId: '',
+                                    tripName: 'Trip Invite',
                                   });
                                   markInAppNotificationRead(item.id);
                                 }}
@@ -5203,7 +5243,7 @@ function App() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  declineTripInvite({
+                                  declineTripInvite(pendingInvite || {
                                     subCalendarId: parsedInvite.subCalendarId,
                                     email: parsedInvite.email,
                                   });
