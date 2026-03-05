@@ -7184,7 +7184,7 @@ function App() {
                 setShowScanHelpModal(false);
                 scanReminderUploadInputRef.current?.click();
               }}
-              className="flex-1 px-3 py-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-sm font-semibold"
+              className="flex-1 px-3 py-2 rounded-xl bg-indigo-50 dark:bg-gray-700 border border-indigo-200 dark:border-gray-600 text-indigo-600 dark:text-gray-200 text-sm font-semibold hover:bg-indigo-100 dark:hover:bg-gray-600"
             >
               Upload Photo
             </button>
