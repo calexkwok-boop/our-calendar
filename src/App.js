@@ -68,6 +68,7 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState({});
   const [locallyDeletedEventIds, setLocallyDeletedEventIds] = useState([]);
+  const [locallyDeletedListItemIds, setLocallyDeletedListItemIds] = useState([]);
   const [quickEntry, setQuickEntry] = useState('');
   const [isScanningReminder, setIsScanningReminder] = useState(false);
   const [showScanHelpModal, setShowScanHelpModal] = useState(false);
@@ -173,6 +174,7 @@ function App() {
   const weatherAutocompleteRef = useRef(null);
   const [draggedNoteId, setDraggedNoteId] = useState(null);
   const [subCalendarEvents, setSubCalendarEvents] = useState({});
+  const [locallyDeletedSubCalEventIds, setLocallyDeletedSubCalEventIds] = useState([]);
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
   const [newSubCalName, setNewSubCalName] = useState('');
   const [subCalInviteEmail, setSubCalInviteEmail] = useState('');
@@ -228,6 +230,44 @@ function App() {
       if (!uid || !layerId) return;
       const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
       localStorage.setItem(getDeletedEventsLocalKey(uid, layerId), JSON.stringify(normalized));
+    } catch {}
+  };
+  const getDeletedListItemsLocalKey = (uid, layerId) => `calendar-deleted-list-items-${uid}-${layerId}`;
+  const readLocalDeletedListItemIds = (uid, layerId) => {
+    try {
+      if (!uid || !layerId) return [];
+      const raw = localStorage.getItem(getDeletedListItemsLocalKey(uid, layerId));
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return Array.from(new Set(parsed.map(id => String(id)).filter(Boolean)));
+    } catch {
+      return [];
+    }
+  };
+  const writeLocalDeletedListItemIds = (uid, layerId, ids) => {
+    try {
+      if (!uid || !layerId) return;
+      const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
+      localStorage.setItem(getDeletedListItemsLocalKey(uid, layerId), JSON.stringify(normalized));
+    } catch {}
+  };
+  const getDeletedSubCalEventsLocalKey = (uid, subCalId) => `calendar-deleted-subcal-events-${uid}-${subCalId}`;
+  const readLocalDeletedSubCalEventIds = (uid, subCalId) => {
+    try {
+      if (!uid || !subCalId) return [];
+      const raw = localStorage.getItem(getDeletedSubCalEventsLocalKey(uid, subCalId));
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return Array.from(new Set(parsed.map(id => String(id)).filter(Boolean)));
+    } catch {
+      return [];
+    }
+  };
+  const writeLocalDeletedSubCalEventIds = (uid, subCalId, ids) => {
+    try {
+      if (!uid || !subCalId) return;
+      const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
+      localStorage.setItem(getDeletedSubCalEventsLocalKey(uid, subCalId), JSON.stringify(normalized));
     } catch {}
   };
   const getDeletedPhotosLocalKey = (subCalId) => `subcal-deleted-photos-${subCalId}`;
@@ -593,7 +633,9 @@ function App() {
         .eq('sub_calendar_id', subCalId);
       if (error) { console.error('Error loading sub_calendar_events:', error); return; }
       const grouped = {};
+      const deletedSet = new Set((readLocalDeletedSubCalEventIds(user?.id, subCalId) || []).map(id => String(id)));
       (data || []).forEach(e => {
+        if (deletedSet.has(String(e?.id))) return;
         if (!grouped[e.date]) grouped[e.date] = [];
         grouped[e.date].push({
           id: e.id,
@@ -1947,7 +1989,13 @@ function App() {
   };
 
   const deleteSubCalEvent = async (eventId, dateKey) => {
-    await supabase.from('sub_calendar_events').delete().eq('id', eventId);
+    addLocalDeletedSubCalEventIds([eventId]);
+    const { error } = await supabase.from('sub_calendar_events').delete().eq('id', eventId);
+    if (error) {
+      console.error('Error deleting sub-calendar event:', error);
+      setPhotoUploadError(true);
+      setPhotoUploadMessage(`Could not delete trip event on server: ${error.message}. Hidden locally on this device.`);
+    }
     setSubCalendarEvents(prev => ({
       ...prev,
       [dateKey]: (prev[dateKey] || []).filter(e => e.id !== eventId)
@@ -2058,6 +2106,26 @@ function App() {
     });
   };
 
+  const addLocalDeletedListItemIds = (ids) => {
+    const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
+    if (normalized.length === 0) return;
+    setLocallyDeletedListItemIds(prev => {
+      const next = Array.from(new Set([...(prev || []), ...normalized]));
+      writeLocalDeletedListItemIds(user?.id, activeLayerId, next);
+      return next;
+    });
+  };
+
+  const addLocalDeletedSubCalEventIds = (ids) => {
+    const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
+    if (normalized.length === 0) return;
+    setLocallyDeletedSubCalEventIds(prev => {
+      const next = Array.from(new Set([...(prev || []), ...normalized]));
+      writeLocalDeletedSubCalEventIds(user?.id, activeSubCalendar?.id, next);
+      return next;
+    });
+  };
+
   const filterEventsMapByLocalDeletes = (eventsMap) => {
     if (!eventsMap || typeof eventsMap !== 'object') return {};
     if (!locallyDeletedEventIds || locallyDeletedEventIds.length === 0) return eventsMap;
@@ -2082,6 +2150,41 @@ function App() {
     if (!locallyDeletedEventIds || locallyDeletedEventIds.length === 0) return;
     setEvents(prev => filterEventsMapByLocalDeletes(prev));
   }, [locallyDeletedEventIds]);
+
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) {
+      setLocallyDeletedListItemIds([]);
+      return;
+    }
+    setLocallyDeletedListItemIds(readLocalDeletedListItemIds(user.id, activeLayerId));
+  }, [user?.id, activeLayerId]);
+
+  useEffect(() => {
+    if (!user?.id || !activeSubCalendar?.id) {
+      setLocallyDeletedSubCalEventIds([]);
+      return;
+    }
+    setLocallyDeletedSubCalEventIds(readLocalDeletedSubCalEventIds(user.id, activeSubCalendar.id));
+  }, [user?.id, activeSubCalendar?.id]);
+
+  useEffect(() => {
+    if (!locallyDeletedListItemIds || locallyDeletedListItemIds.length === 0) return;
+    const deletedSet = new Set(locallyDeletedListItemIds.map(id => String(id)));
+    setSharedListItems(prev => (prev || []).filter(item => !deletedSet.has(String(item?.id))));
+  }, [locallyDeletedListItemIds]);
+
+  useEffect(() => {
+    if (!locallyDeletedSubCalEventIds || locallyDeletedSubCalEventIds.length === 0) return;
+    const deletedSet = new Set(locallyDeletedSubCalEventIds.map(id => String(id)));
+    setSubCalendarEvents(prev => {
+      const next = {};
+      Object.entries(prev || {}).forEach(([dateKey, dateEvents]) => {
+        const kept = (dateEvents || []).filter(event => !deletedSet.has(String(event?.id)));
+        if (kept.length > 0) next[dateKey] = kept;
+      });
+      return next;
+    });
+  }, [locallyDeletedSubCalEventIds]);
 
   const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || '').trim());
   const cleanOwnerLabel = (value) => {
@@ -3204,7 +3307,14 @@ function App() {
     }
 
     setListError('');
-    setSharedListItems((data || []).map(item => ({ ...item, done: !!item.done })));
+    const deletedSet = new Set(
+      (readLocalDeletedListItemIds(user?.id, activeLayerId) || []).map(id => String(id))
+    );
+    setSharedListItems(
+      (data || [])
+        .filter(item => !deletedSet.has(String(item?.id)))
+        .map(item => ({ ...item, done: !!item.done }))
+    );
   };
 
   const createSharedList = async () => {
@@ -3366,6 +3476,7 @@ function App() {
   };
 
   const removeSharedListItem = async (itemId) => {
+    addLocalDeletedListItemIds([itemId]);
     const { error } = await supabase
       .from('shared_lists')
       .delete()
@@ -3374,11 +3485,10 @@ function App() {
 
     if (error) {
       console.error('Error deleting list item:', error);
-      setListError(`Could not delete item: ${error.message}`);
-      return;
+      setListError(`Could not delete item on server: ${error.message}. Hidden locally on this device.`);
     }
 
-    setListError('');
+    if (!error) setListError('');
     setSharedListItems(prev => prev.filter(i => i.id !== itemId));
   };
 
