@@ -2903,13 +2903,14 @@ function App() {
     });
   };
 
-  const saveEvents = async (newEvents) => {
+  const saveEvents = async (newEvents, options = {}) => {
+    const { immediate = false } = options;
     try {
       if (!activeLayerId) return;
       setEvents(newEvents);
 
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(async () => {
+      const persist = async () => {
         try {
           const myEvents = [];
           const sharedUpdates = []; // events owned by others that we've edited
@@ -2975,7 +2976,13 @@ function App() {
         } catch (err) {
           console.error('Error writing to Supabase:', err);
         }
-      }, 800);
+      };
+
+      if (immediate) {
+        await persist();
+      } else {
+        saveTimeoutRef.current = setTimeout(persist, 800);
+      }
     } catch (error) {
       console.error('Error saving events:', error);
     }
@@ -5452,7 +5459,7 @@ function App() {
             if (!b.time) return -1;
             return a.time.localeCompare(b.time);
           });
-          saveEvents(updatedEvents);
+          await saveEvents(updatedEvents, { immediate: true });
           return;
         }
 
@@ -5464,13 +5471,13 @@ function App() {
             e.id === eventId ? { ...e, exceptions: updatedExceptions } : e
           )
         };
-        saveEvents(updatedEvents);
+        await saveEvents(updatedEvents, { immediate: true });
       } else {
         // Delete the whole recurring event
         await deleteSharedEventsFromDb([originalEvent]);
         const updatedEvents = { ...events, [originalDateKey]: events[originalDateKey].filter(e => e.id !== eventId) };
         if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
-        saveEvents(updatedEvents);
+        await saveEvents(updatedEvents, { immediate: true });
       }
       return;
     }
@@ -5484,7 +5491,7 @@ function App() {
         if (updatedEvents[key].length === 0) delete updatedEvents[key];
       });
       await deleteSharedEventsFromDb(toDelete);
-      saveEvents(updatedEvents);
+      await saveEvents(updatedEvents, { immediate: true });
     } else {
       await deleteSharedEventsFromDb(eventToDelete ? [eventToDelete] : []);
       const updatedEvents = {
@@ -5492,7 +5499,7 @@ function App() {
         [actualDateKey]: (events[actualDateKey] || []).filter(e => e.id !== eventId)
       };
       if (updatedEvents[actualDateKey].length === 0) delete updatedEvents[actualDateKey];
-      saveEvents(updatedEvents);
+      await saveEvents(updatedEvents, { immediate: true });
     }
   };
 
