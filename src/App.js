@@ -1927,7 +1927,20 @@ function App() {
   };
 
   const deleteSubCalEvent = async (eventId, dateKey) => {
-    await supabase.from('sub_calendar_events').delete().eq('id', eventId);
+    const { data, error } = await supabase
+      .from('sub_calendar_events')
+      .delete()
+      .select('id')
+      .eq('id', eventId);
+    if (error) {
+      console.error('Error deleting sub-calendar event:', error);
+      alert(`Could not delete trip event: ${error.message}`);
+      return;
+    }
+    if (!data || data.length === 0) {
+      alert('Could not delete trip event (no rows affected). Check DB permissions.');
+      return;
+    }
     setSubCalendarEvents(prev => ({
       ...prev,
       [dateKey]: (prev[dateKey] || []).filter(e => e.id !== eventId)
@@ -3306,15 +3319,20 @@ function App() {
   };
 
   const removeSharedListItem = async (itemId) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('shared_lists')
       .delete()
+      .select('id')
       .eq('layer_id', activeLayerId)
       .eq('id', itemId);
 
     if (error) {
       console.error('Error deleting list item:', error);
       setListError(`Could not delete item: ${error.message}`);
+      return;
+    }
+    if (!data || data.length === 0) {
+      setListError('Could not delete item (no rows affected). Check DB permissions.');
       return;
     }
 
@@ -5265,14 +5283,21 @@ function App() {
   const deleteEventsByIds = async (eventIds) => {
     const ids = Array.from(new Set((eventIds || []).map(id => String(id)).filter(Boolean)));
     if (!activeLayerId || ids.length === 0) return true;
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('events')
       .delete()
+      .select('id')
       .in('id', ids)
       .eq('layer_id', activeLayerId);
     if (error) {
       console.error('Error deleting events:', error);
       alert(`Could not delete event(s): ${error.message}`);
+      return false;
+    }
+    const deletedIds = new Set((data || []).map(row => String(row.id)));
+    if (deletedIds.size === 0 || ids.some(id => !deletedIds.has(String(id)))) {
+      const missing = ids.filter(id => !deletedIds.has(String(id)));
+      alert(`Delete blocked by permissions or ownership. Missing IDs: ${missing.join(', ')}`);
       return false;
     }
     return true;
