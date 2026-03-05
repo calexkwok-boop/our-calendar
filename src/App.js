@@ -4123,6 +4123,25 @@ function App() {
         alert(`Accept failed: ${updateErr.message || 'Could not update invite status.'}`);
         return;
       }
+
+      const { data: tripRow, error: tripErr } = await supabase
+        .from('sub_calendars')
+        .select('*')
+        .eq('id', invite.subCalendarId)
+        .maybeSingle();
+      if (tripErr) {
+        console.error('Accept invite trip load failed:', tripErr);
+      } else if (tripRow) {
+        setSubCalendars(prev => {
+          const existing = new Map((prev || []).map(sc => [String(sc.id), sc]));
+          existing.set(String(tripRow.id), tripRow);
+          return Array.from(existing.values());
+        });
+        await openSubCalendar(tripRow);
+        setBottomNavTab('home');
+        setShowNotificationSettings(false);
+      }
+
       setPendingTripInvites(prev => prev.filter(item => item.subCalendarId !== invite.subCalendarId));
       setLayerRefreshToken(prev => prev + 1);
     } catch (err) {
