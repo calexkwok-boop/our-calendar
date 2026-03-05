@@ -67,6 +67,7 @@ function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState({});
+  const [locallyDeletedEventIds, setLocallyDeletedEventIds] = useState([]);
   const [quickEntry, setQuickEntry] = useState('');
   const [isScanningReminder, setIsScanningReminder] = useState(false);
   const [showScanHelpModal, setShowScanHelpModal] = useState(false);
@@ -210,6 +211,25 @@ function App() {
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
   const DELETED_PHOTOS_NOTE_TEXT = '__DELETED_PHOTOS_V1__';
+  const getDeletedEventsLocalKey = (uid, layerId) => `calendar-deleted-events-${uid}-${layerId}`;
+  const readLocalDeletedEventIds = (uid, layerId) => {
+    try {
+      if (!uid || !layerId) return [];
+      const raw = localStorage.getItem(getDeletedEventsLocalKey(uid, layerId));
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return Array.from(new Set(parsed.map(id => String(id)).filter(Boolean)));
+    } catch {
+      return [];
+    }
+  };
+  const writeLocalDeletedEventIds = (uid, layerId, ids) => {
+    try {
+      if (!uid || !layerId) return;
+      const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
+      localStorage.setItem(getDeletedEventsLocalKey(uid, layerId), JSON.stringify(normalized));
+    } catch {}
+  };
   const getDeletedPhotosLocalKey = (subCalId) => `subcal-deleted-photos-${subCalId}`;
   const readLocalDeletedPhotoIds = (subCalId) => {
     try {
@@ -2028,6 +2048,41 @@ function App() {
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
   const [showWeather, setShowWeather] = useState(true);
 
+  const addLocalDeletedEventIds = (ids) => {
+    const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
+    if (normalized.length === 0) return;
+    setLocallyDeletedEventIds(prev => {
+      const next = Array.from(new Set([...(prev || []), ...normalized]));
+      writeLocalDeletedEventIds(user?.id, activeLayerId, next);
+      return next;
+    });
+  };
+
+  const filterEventsMapByLocalDeletes = (eventsMap) => {
+    if (!eventsMap || typeof eventsMap !== 'object') return {};
+    if (!locallyDeletedEventIds || locallyDeletedEventIds.length === 0) return eventsMap;
+    const deletedSet = new Set(locallyDeletedEventIds.map(id => String(id)));
+    const filtered = {};
+    Object.entries(eventsMap).forEach(([dateKey, dateEvents]) => {
+      const kept = (dateEvents || []).filter(e => !deletedSet.has(String(e?.id)));
+      if (kept.length > 0) filtered[dateKey] = kept;
+    });
+    return filtered;
+  };
+
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) {
+      setLocallyDeletedEventIds([]);
+      return;
+    }
+    setLocallyDeletedEventIds(readLocalDeletedEventIds(user.id, activeLayerId));
+  }, [user?.id, activeLayerId]);
+
+  useEffect(() => {
+    if (!locallyDeletedEventIds || locallyDeletedEventIds.length === 0) return;
+    setEvents(prev => filterEventsMapByLocalDeletes(prev));
+  }, [locallyDeletedEventIds]);
+
   const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || '').trim());
   const cleanOwnerLabel = (value) => {
     const raw = String(value || '').trim();
@@ -2844,7 +2899,8 @@ function App() {
   const getEventsForDate = (date) => {
     if (!date) return [];
     const dateKey = getDateKey(date);
-    const directEvents = events[dateKey] || [];
+    const deletedSet = new Set((locallyDeletedEventIds || []).map(id => String(id)));
+    const directEvents = (events[dateKey] || []).filter(e => !deletedSet.has(String(e?.id)));
 
     const month = date.getMonth() + 1;
     const day = date.getDate();
@@ -2853,6 +2909,7 @@ function App() {
 
     Object.values(events).forEach(dateEvents => {
       dateEvents.forEach(event => {
+        if (deletedSet.has(String(event?.id))) return;
         const alreadyDirect = directEvents.some(e => e.id === event.id);
         if (alreadyDirect) return;
 
@@ -2908,7 +2965,7 @@ function App() {
     const { immediate = false } = options;
     try {
       if (!activeLayerId || !user?.id) return;
-      setEvents(newEvents);
+      setEvents(filterEventsMapByLocalDeletes(newEvents));
 
       const requestId = ++saveRequestIdRef.current;
       const saveLayerId = activeLayerId;
@@ -2923,6 +2980,7 @@ function App() {
 
           Object.entries(newEvents).forEach(([date, dateEvents]) => {
             dateEvents.forEach(event => {
+              if ((locallyDeletedEventIds || []).includes(String(event?.id))) return;
               if (event.userId && event.userId !== saveUserId) {
                 // Shared event — do a targeted update on just the fields we allow editing
                 sharedUpdates.push(event);
@@ -3491,7 +3549,7 @@ function App() {
               isShared: event.user_id !== userId
             });
           });
-          setEvents(eventsObj);
+          setEvents(filterEventsMapByLocalDeletes(eventsObj));
           if (typeof window !== 'undefined') window.events = eventsObj;
         } else {
           setSharedCalendars([]);
@@ -3525,7 +3583,7 @@ function App() {
                 isShared: false
               });
             });
-            setEvents(eventsObj);
+            setEvents(filterEventsMapByLocalDeletes(eventsObj));
             if (typeof window !== 'undefined') window.events = eventsObj;
           }
         }
@@ -3643,7 +3701,7 @@ function App() {
               isShared: true
             });
           });
-          return merged;
+          return filterEventsMapByLocalDeletes(merged);
         });
       } catch (err) {
         console.error('Error refreshing shared events:', err);
@@ -5516,6 +5574,7 @@ function App() {
         await saveEvents(updatedEvents, { immediate: true });
       } else {
         // Delete the whole recurring event
+        addLocalDeletedEventIds([eventId]);
         await deleteOwnedEventsFromDb([originalEvent]);
         await deleteSharedEventsFromDb([originalEvent]);
         const updatedEvents = { ...events, [originalDateKey]: events[originalDateKey].filter(e => e.id !== eventId) };
@@ -5533,10 +5592,12 @@ function App() {
         updatedEvents[key] = updatedEvents[key].filter(e => e.multiDayId !== eventToDelete.multiDayId);
         if (updatedEvents[key].length === 0) delete updatedEvents[key];
       });
+      addLocalDeletedEventIds(toDelete.map(e => e.id));
       await deleteOwnedEventsFromDb(toDelete);
       await deleteSharedEventsFromDb(toDelete);
       setEvents(updatedEvents);
     } else {
+      addLocalDeletedEventIds(eventToDelete ? [eventToDelete.id] : [eventId]);
       await deleteOwnedEventsFromDb(eventToDelete ? [eventToDelete] : []);
       await deleteSharedEventsFromDb(eventToDelete ? [eventToDelete] : []);
       const updatedEvents = {
