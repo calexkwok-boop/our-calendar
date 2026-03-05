@@ -3744,36 +3744,39 @@ function App() {
 
       const { data: scRow, error: scErr } = await supabase
         .from('sub_calendars')
-        .select('id,owner_id')
+        .select('id,owner_id,layer_id')
         .eq('id', normalizedId)
         .maybeSingle();
       if (scErr || !scRow) return false;
       const ownerId = String(scRow.owner_id || '');
+      const scLayerId = String(scRow.layer_id || '');
       if (ownerId === me) {
         accessibleSubCalIdCache.add(normalizedId);
         return true;
       }
       if (!ownerId) return false;
 
-      const { data: shareById, error: shareByIdErr } = await supabase
+      let shareByIdQuery = supabase
         .from('shared_access')
         .select('id')
         .eq('owner_id', ownerId)
-        .eq('layer_id', activeLayerId)
         .eq('shared_with_id', me)
         .limit(1);
+      if (scLayerId) shareByIdQuery = shareByIdQuery.eq('layer_id', scLayerId);
+      const { data: shareById, error: shareByIdErr } = await shareByIdQuery;
       if (!shareByIdErr && (shareById || []).length > 0) {
         accessibleSubCalIdCache.add(normalizedId);
         return true;
       }
 
-      const { data: shareByEmail, error: shareByEmailErr } = await supabase
+      let shareByEmailQuery = supabase
         .from('shared_access')
         .select('id')
         .eq('owner_id', ownerId)
-        .eq('layer_id', activeLayerId)
         .ilike('shared_with_email', myEmail)
         .limit(1);
+      if (scLayerId) shareByEmailQuery = shareByEmailQuery.eq('layer_id', scLayerId);
+      const { data: shareByEmail, error: shareByEmailErr } = await shareByEmailQuery;
       if (!shareByEmailErr && (shareByEmail || []).length > 0) {
         accessibleSubCalIdCache.add(normalizedId);
         return true;
@@ -3816,7 +3819,6 @@ function App() {
       .channel(`in-app-updates-${me}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'events' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
-        if (String(row.layer_id || '') !== String(activeLayerId)) return;
         if (!(await canAccessOwnerId(row.user_id))) return;
         const who = String(row.created_by || 'Someone');
         addInAppNotification({
@@ -3853,7 +3855,7 @@ function App() {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_lists' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
-        if (String(row.layer_id || '') !== String(activeLayerId)) return;
+        if (!(await canAccessOwnerId(row.owner_id || row.user_id))) return;
         const who = String(row.created_by || 'Someone');
         const itemText = String(row.text || '').trim();
         const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
@@ -3884,10 +3886,10 @@ function App() {
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, currentUser, subCalendars, activeLayerId]);
+  }, [user?.id, user?.email, currentUser, subCalendars]);
 
   useEffect(() => {
-    if (!user?.id || !activeLayerId) return;
+    if (!user?.id) return;
     const me = String(user.id);
     const myEmail = String(user?.email || '').trim().toLowerCase();
     const myName = String(currentUser || '').trim().toLowerCase();
@@ -4065,7 +4067,6 @@ function App() {
         const { data: sharedData } = await supabase
           .from('shared_access')
           .select('owner_id')
-          .eq('layer_id', activeLayerId)
           .or(`shared_with_email.eq.${user.email},shared_with_id.eq.${user.id}`);
         const ownerIds = Array.from(new Set((sharedData || []).map(s => String(s.owner_id || '')).filter(Boolean)));
 
@@ -4074,7 +4075,6 @@ function App() {
             .from('events')
             .select('id,title,created_by,user_id,created_at')
             .in('user_id', ownerIds)
-            .eq('layer_id', activeLayerId)
             .gt('created_at', getCursor('events'))
             .order('created_at', { ascending: true })
             .limit(200);
@@ -4085,7 +4085,6 @@ function App() {
             .from('shared_lists')
             .select('id,text,created_by,user_id,created_at')
             .in('owner_id', ownerIds)
-            .eq('layer_id', activeLayerId)
             .gt('created_at', getCursor('sharedListItems'))
             .order('created_at', { ascending: true })
             .limit(200);
@@ -4196,7 +4195,7 @@ function App() {
       window.removeEventListener('focus', pollInAppUpdates);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [user?.id, user?.email, currentUser, subCalendars, activeLayerId]);
+  }, [user?.id, user?.email, currentUser, subCalendars]);
 
   // Invite notifications must work even when no active layer is selected yet.
   useEffect(() => {
