@@ -2247,8 +2247,8 @@ function App() {
     }
   };
 
-  const handleLayerSwipeStart = (e, layerId, canDelete) => {
-    if (!canDelete) return;
+  const handleLayerSwipeStart = (e, layerId, canSwipeAction) => {
+    if (!canSwipeAction) return;
     const touch = e.touches?.[0];
     if (!touch) return;
     layerSwipeStartXRef.current = touch.clientX;
@@ -7436,25 +7436,31 @@ function App() {
                         const isOwnedLayer = String(layer?.owner_id) === String(user?.id);
                         const canDeleteLayer = isOwnedLayer && layers.length > 1;
                         const canLeaveLayer = !isOwnedLayer;
+                        const canSwipeLayerAction = canDeleteLayer || canLeaveLayer;
                         const layerRowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
-                        const isLayerDeleteRevealed = layerRowOffset < 0;
+                        const isLayerActionRevealed = layerRowOffset < 0;
                         return (
                           <div key={layer.id} className="relative rounded-xl overflow-hidden">
-                            {canDeleteLayer && (
-                              <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isLayerDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
+                            {canSwipeLayerAction && (
+                              <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${
+                                isLayerActionRevealed
+                                  ? (canDeleteLayer ? 'bg-red-500' : 'bg-amber-500')
+                                  : 'bg-transparent'
+                              }`}>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    deleteLayerCalendar(layer.id);
+                                    if (canDeleteLayer) deleteLayerCalendar(layer.id);
+                                    else if (canLeaveLayer) leaveSharedLayerCalendar(layer.id);
                                   }}
-                                  className={`w-full h-full text-sm font-semibold transition-opacity ${isLayerDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+                                  className={`w-full h-full text-sm font-semibold transition-opacity ${isLayerActionRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
                                 >
-                                  Delete
+                                  {canDeleteLayer ? 'Delete' : 'Leave'}
                                 </button>
                               </div>
                             )}
                             <button
-                              onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canDeleteLayer)}
+                              onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canSwipeLayerAction)}
                               onTouchMove={handleLayerSwipeMove}
                               onTouchEnd={handleLayerSwipeEnd}
                               onTouchCancel={handleLayerSwipeEnd}
