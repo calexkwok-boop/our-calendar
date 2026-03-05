@@ -3250,7 +3250,44 @@ function App() {
         const userId = session?.user?.id;
         const userEmail = session?.user?.email;
         if (!userId) return;
-        const loadedLayers = await loadLayersForUser(userId, userEmail);
+        let loadedLayers = await loadLayersForUser(userId, userEmail);
+        if (!loadedLayers || loadedLayers.length === 0) {
+          // Hard fallback bootstrap for new accounts if layer preload returns empty.
+          const fallbackPayload = {
+            owner_id: userId,
+            name: 'Main Calendar',
+            is_default: true,
+            created_by: currentUser || userEmail || 'User',
+          };
+          let bootstrapOk = false;
+          let bootstrapError = null;
+
+          const bootstrapInsert = await supabase
+            .from('calendar_layers')
+            .insert(fallbackPayload)
+            .select('*')
+            .single();
+          bootstrapError = bootstrapInsert.error;
+          if (!bootstrapError) bootstrapOk = true;
+
+          if (bootstrapError && /column .*is_default|schema cache/i.test(String(bootstrapError.message || ''))) {
+            const { is_default, ...fallbackNoDefault } = fallbackPayload;
+            const secondTry = await supabase
+              .from('calendar_layers')
+              .insert(fallbackNoDefault)
+              .select('*')
+              .single();
+            bootstrapError = secondTry.error;
+            if (!bootstrapError) bootstrapOk = true;
+          }
+
+          if (!bootstrapOk && bootstrapError) {
+            console.error('Default calendar bootstrap failed:', bootstrapError);
+          }
+
+          loadedLayers = await loadLayersForUser(userId, userEmail);
+        }
+
         if (!loadedLayers || loadedLayers.length === 0) {
           setLayers([]);
           setActiveLayerId(null);
