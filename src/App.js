@@ -449,16 +449,70 @@ function App() {
       return;
     }
     try {
-      const ownerIdForLayer = String(activeLayerOwnerId || user?.id || '');
-      const { data, error } = await supabase
+      const myUserId = String(user?.id || '');
+      const myEmail = String(user?.email || '').trim().toLowerCase();
+      const ownerIdForLayer = String(activeLayerOwnerId || myUserId || '');
+
+      const { data: sharedRows } = await supabase
+        .from('shared_access')
+        .select('owner_id')
+        .eq('layer_id', activeLayerId)
+        .or(`shared_with_id.eq.${myUserId},shared_with_email.eq.${myEmail}`);
+      const accessibleOwnerIds = Array.from(new Set([
+        ...[ownerIdForLayer, myUserId].filter(Boolean),
+        ...(sharedRows || []).map(r => String(r?.owner_id || '')).filter(Boolean),
+      ]));
+
+      const { data: directRows, error } = await supabase
         .from('sub_calendars')
         .select('*')
-        .or(`layer_id.eq.${activeLayerId},and(layer_id.is.null,owner_id.eq.${ownerIdForLayer})`);
+        .eq('layer_id', activeLayerId);
       if (error) {
         console.error('Error loading sub_calendars:', error);
         return;
       }
-      const rows = data || [];
+
+      let legacyRows = [];
+      if (accessibleOwnerIds.length > 0) {
+        const { data: legacyData, error: legacyError } = await supabase
+          .from('sub_calendars')
+          .select('*')
+          .is('layer_id', null)
+          .in('owner_id', accessibleOwnerIds);
+        if (legacyError) {
+          console.error('Error loading legacy sub_calendars:', legacyError);
+        } else {
+          legacyRows = legacyData || [];
+        }
+      }
+
+      let memberRows = [];
+      if (myEmail) {
+        const { data: membershipRows, error: membershipError } = await supabase
+          .from('sub_calendar_members')
+          .select('sub_calendar_id')
+          .eq('email', myEmail);
+        if (membershipError) {
+          console.error('Error loading sub_calendar memberships:', membershipError);
+        } else {
+          const memberTripIds = Array.from(new Set((membershipRows || []).map(r => String(r?.sub_calendar_id || '')).filter(Boolean)));
+          if (memberTripIds.length > 0) {
+            const { data: memberTrips, error: memberTripsError } = await supabase
+              .from('sub_calendars')
+              .select('*')
+              .in('id', memberTripIds);
+            if (memberTripsError) {
+              console.error('Error loading member sub_calendars:', memberTripsError);
+            } else {
+              memberRows = memberTrips || [];
+            }
+          }
+        }
+      }
+
+      const rows = Array.from(
+        new Map([...(directRows || []), ...legacyRows, ...memberRows].map(sc => [String(sc.id), sc])).values()
+      );
       setSubCalendars(rows);
 
       // Auto-heal legacy trips that predate layer_id by attaching them to current layer.
