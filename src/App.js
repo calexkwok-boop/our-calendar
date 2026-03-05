@@ -747,9 +747,19 @@ function App() {
         error = fallback.error;
       }
 
-      // Duplicate invite is acceptable; treat as success.
+      // If already invited, refresh invite timestamp/status so recipient gets a fresh invite notification.
       if (error && /duplicate key|already exists|unique constraint/i.test(String(error.message || ''))) {
-        error = null;
+        const refreshPayload = {
+          added_by: user.id,
+          status: 'pending',
+          invited_at: new Date().toISOString(),
+        };
+        const refresh = await supabase
+          .from('sub_calendar_members')
+          .update(refreshPayload)
+          .eq('sub_calendar_id', activeSubCalendar.id)
+          .ilike('email', emailToInvite);
+        error = refresh.error;
       }
     } catch (e) {
       error = e;
@@ -3933,11 +3943,11 @@ function App() {
     const myEmail = String(user.email).trim().toLowerCase();
 
     const notifyInvites = async (rows) => {
-      const inviteRows = (rows || []).filter(row => {
-        const inviteEmail = String(row?.email || '').trim().toLowerCase();
-        if (!inviteEmail || inviteEmail !== myEmail) return false;
-        if (String(row?.added_by || '') === me) return false;
-        return Boolean(row?.sub_calendar_id);
+        const inviteRows = (rows || []).filter(row => {
+          const inviteEmail = String(row?.email || '').trim().toLowerCase();
+          if (!inviteEmail || inviteEmail !== myEmail) return false;
+          if (String(row?.added_by || '') === me) return false;
+          return Boolean(row?.sub_calendar_id);
       });
       if (inviteRows.length === 0) return;
 
@@ -3953,40 +3963,41 @@ function App() {
         });
       }
 
-      inviteRows.forEach(row => {
-        const subCalId = String(row.sub_calendar_id);
-        const inviteKey = `trip_invite:${subCalId}:${myEmail}`;
-        addInAppNotification({
-          key: inviteKey,
-          type: 'invite',
-          message: `You were invited to ${nameMap[subCalId] || 'a trip'}.`,
-          createdAt: row.created_at || new Date().toISOString(),
+        inviteRows.forEach(row => {
+          const subCalId = String(row.sub_calendar_id);
+          const stamp = String(row?.invited_at || row?.created_at || '');
+          const inviteKey = `trip_invite:${subCalId}:${myEmail}:${stamp}`;
+          addInAppNotification({
+            key: inviteKey,
+            type: 'invite',
+            message: `You were invited to ${nameMap[subCalId] || 'a trip'}.`,
+            createdAt: row.invited_at || row.created_at || new Date().toISOString(),
+          });
         });
-      });
-    };
+      };
 
     const pollInviteRows = async () => {
       try {
         const cursor = inAppSyncCursorRef.current.tripInvites || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
         const { data: datedRows } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,created_at')
+          .select('sub_calendar_id,email,added_by,created_at,invited_at')
           .ilike('email', myEmail)
-          .gt('created_at', cursor)
-          .order('created_at', { ascending: true })
+          .or(`created_at.gt.${cursor},invited_at.gt.${cursor}`)
+          .order('invited_at', { ascending: true, nullsFirst: false })
           .limit(200);
         const { data: nullRows } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,created_at')
+          .select('sub_calendar_id,email,added_by,created_at,invited_at')
           .ilike('email', myEmail)
-          .is('created_at', null)
+          .is('invited_at', null)
           .limit(200);
         const merged = Array.from(new Map([...(datedRows || []), ...(nullRows || [])].map(row => [`${String(row?.sub_calendar_id || '')}|${String(row?.email || '').toLowerCase()}`, row])).values());
         await notifyInvites(merged);
 
         if (Array.isArray(datedRows) && datedRows.length > 0) {
           const maxCreatedAt = datedRows.reduce((max, row) => {
-            const ts = String(row?.created_at || '');
+            const ts = String(row?.invited_at || row?.created_at || '');
             if (!ts) return max;
             return !max || ts > max ? ts : max;
           }, inAppSyncCursorRef.current.tripInvites || null);
@@ -3999,7 +4010,7 @@ function App() {
 
     const inviteChannel = supabase
       .channel(`invite-updates-${me}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sub_calendar_members' }, async ({ new: row }) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sub_calendar_members' }, async ({ new: row }) => {
         if (!row) return;
         await notifyInvites([row]);
       })
