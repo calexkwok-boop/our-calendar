@@ -3189,6 +3189,34 @@ function App() {
     if (remaining.length === 0) setSharedListItems([]);
   };
 
+  const renameSharedList = async (listId) => {
+    if (!listId || !primaryListOwnerId || !activeLayerId) return;
+    const existing = sharedListGroups.find(g => g.id === listId);
+    const currentTitle = existing?.title || '';
+    const value = window.prompt('Rename list:', currentTitle);
+    if (value === null) return;
+    const nextTitle = value.trim();
+    if (!nextTitle) {
+      setListError('List name cannot be empty.');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('shared_list_groups')
+      .update({ title: nextTitle })
+      .eq('owner_id', primaryListOwnerId)
+      .eq('layer_id', activeLayerId)
+      .eq('id', listId);
+
+    if (error) {
+      setListError(`Could not rename list: ${error.message}`);
+      return;
+    }
+
+    setListError('');
+    setSharedListGroups(prev => prev.map(g => g.id === listId ? { ...g, title: nextTitle } : g));
+  };
+
   const addSharedListItem = async () => {
     const text = newListItemText.trim();
     if (!text || !primaryListOwnerId || !selectedSharedListId || !user?.id || !activeLayerId) return;
@@ -5870,6 +5898,14 @@ function App() {
                   {group.title}
                 </button>
               ))}
+              <button
+                onClick={() => renameSharedList(selectedSharedListId)}
+                disabled={!selectedSharedListId}
+                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800 disabled:opacity-50"
+                title="Rename selected list"
+              >
+                Rename
+              </button>
               <button
                 onClick={() => deleteSharedList(selectedSharedListId)}
                 disabled={!selectedSharedListId}
