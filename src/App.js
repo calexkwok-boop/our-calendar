@@ -5260,6 +5260,22 @@ function App() {
     setPendingEvent(null);
   };
 
+  const deleteEventsByIds = async (eventIds) => {
+    const ids = Array.from(new Set((eventIds || []).map(id => String(id)).filter(Boolean)));
+    if (!activeLayerId || ids.length === 0) return true;
+    const { error } = await supabase
+      .from('events')
+      .delete()
+      .in('id', ids)
+      .eq('layer_id', activeLayerId);
+    if (error) {
+      console.error('Error deleting events:', error);
+      alert(`Could not delete event(s): ${error.message}`);
+      return false;
+    }
+    return true;
+  };
+
   const handleDeleteEvent = async (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false, skipOnce = false) => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -5284,33 +5300,50 @@ function App() {
       if (skipOnce) {
         // Add this date as an exception so it's skipped in future renders
         const updatedExceptions = [...(originalEvent.exceptions || []), dateKey];
-        const updatedEvents = {
-          ...events,
-          [originalDateKey]: events[originalDateKey].map(e =>
+        const { error } = await supabase
+          .from('events')
+          .update({ exceptions: JSON.stringify(updatedExceptions) })
+          .eq('id', eventId)
+          .eq('layer_id', activeLayerId);
+        if (error) {
+          console.error('Error updating recurrence exceptions:', error);
+          alert(`Could not update recurring event: ${error.message}`);
+          return;
+        }
+        setEvents(prev => ({
+          ...prev,
+          [originalDateKey]: (prev[originalDateKey] || []).map(e =>
             e.id === eventId ? { ...e, exceptions: updatedExceptions } : e
           )
-        };
-        await saveEvents(updatedEvents, { immediate: true });
+        }));
       } else {
         // Delete the whole recurring event
-        const updatedEvents = { ...events, [originalDateKey]: events[originalDateKey].filter(e => e.id !== eventId) };
+        const ok = await deleteEventsByIds([eventId]);
+        if (!ok) return;
+        const updatedEvents = { ...events, [originalDateKey]: (events[originalDateKey] || []).filter(e => e.id !== eventId) };
         if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
-        await saveEvents(updatedEvents, { immediate: true });
+        setEvents(updatedEvents);
       }
       return;
     }
 
     if (eventToDelete?.isMultiDay && eventToDelete.multiDayId) {
       const updatedEvents = { ...events };
+      const idsToDelete = [];
       Object.keys(updatedEvents).forEach(key => {
+        idsToDelete.push(...updatedEvents[key].filter(e => e.multiDayId === eventToDelete.multiDayId).map(e => e.id));
         updatedEvents[key] = updatedEvents[key].filter(e => e.multiDayId !== eventToDelete.multiDayId);
         if (updatedEvents[key].length === 0) delete updatedEvents[key];
       });
-      await saveEvents(updatedEvents, { immediate: true });
+      const ok = await deleteEventsByIds(idsToDelete);
+      if (!ok) return;
+      setEvents(updatedEvents);
     } else {
       const updatedEvents = { ...events, [actualDateKey]: (events[actualDateKey] || []).filter(e => e.id !== eventId) };
       if (updatedEvents[actualDateKey].length === 0) delete updatedEvents[actualDateKey];
-      await saveEvents(updatedEvents, { immediate: true });
+      const ok = await deleteEventsByIds([eventId]);
+      if (!ok) return;
+      setEvents(updatedEvents);
     }
   };
 
