@@ -4242,6 +4242,17 @@ function App() {
     });
   };
 
+  const parseInviteNotification = (item) => {
+    const key = String(item?.key || '');
+    if (!key.startsWith('trip_invite:')) return null;
+    const parts = key.split(':');
+    if (parts.length < 3) return null;
+    const subCalendarId = String(parts[1] || '').trim();
+    const email = String(parts[2] || '').trim().toLowerCase();
+    if (!subCalendarId || !email) return null;
+    return { subCalendarId, email };
+  };
+
   const markInAppNotificationRead = (notificationId) => {
     setInAppNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
   };
@@ -5171,6 +5182,42 @@ function App() {
                         <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
                           {new Date(item.createdAt).toLocaleString()}
                         </div>
+                        {item.type === 'invite' && (() => {
+                          const parsedInvite = parseInviteNotification(item);
+                          if (!parsedInvite) return null;
+                          return (
+                            <div className="mt-2 flex gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  acceptTripInvite({
+                                    subCalendarId: parsedInvite.subCalendarId,
+                                    email: parsedInvite.email,
+                                    ownerId: '',
+                                    layerId: '',
+                                  });
+                                  markInAppNotificationRead(item.id);
+                                }}
+                                className="px-2.5 py-1.5 rounded-md text-[11px] font-semibold bg-violet-500 hover:bg-violet-600 text-white"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  declineTripInvite({
+                                    subCalendarId: parsedInvite.subCalendarId,
+                                    email: parsedInvite.email,
+                                  });
+                                  markInAppNotificationRead(item.id);
+                                }}
+                                className="px-2.5 py-1.5 rounded-md text-[11px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                              >
+                                Decline
+                              </button>
+                            </div>
+                          );
+                        })()}
                       </button>
                     ))
                   )}
