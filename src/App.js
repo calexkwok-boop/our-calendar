@@ -104,8 +104,6 @@ function App() {
   const [pendingEvent, setPendingEvent] = useState(null);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [fullCalendars, setFullCalendars] = useState([]);
-  const [activeCalendarId, setActiveCalendarId] = useState(null);
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(true);
   const [authError, setAuthError] = useState('');
@@ -191,7 +189,7 @@ function App() {
   const photoTapRef = useRef({ id: null, at: 0, timer: null });
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
 
-  const REACTION_EMOJIS = ['â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ‘', 'ðŸŽ‰', 'ðŸ˜¢', 'ðŸ’°', 'ðŸ˜˜', 'ðŸ’¯'];
+  const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
@@ -437,100 +435,7 @@ function App() {
     window.open(googleUrl, '_blank', 'noopener,noreferrer');
   };
 
-  // Full calendar functions (main calendar + additional full calendars)
-  const loadFullCalendars = async (userId, userEmail) => {
-    if (!userId) return [];
-    const ownedRes = await supabase
-      .from('full_calendars')
-      .select('*')
-      .eq('owner_id', userId)
-      .order('created_at', { ascending: true });
-    if (ownedRes.error) {
-      console.error('Error loading full_calendars:', ownedRes.error);
-      return [];
-    }
-    let owned = ownedRes.data || [];
-    if (owned.length === 0) {
-      const createRes = await supabase
-        .from('full_calendars')
-        .insert({
-          owner_id: userId,
-          name: 'Main Calendar',
-          created_by: currentUser || userEmail || 'User',
-        })
-        .select('*')
-        .single();
-      if (createRes.error) {
-        console.error('Error creating default full calendar:', createRes.error);
-      } else if (createRes.data) {
-        owned = [createRes.data];
-      }
-    }
-
-    const sharedRes = await supabase
-      .from('shared_access')
-      .select('calendar_id')
-      .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`)
-      .not('calendar_id', 'is', null);
-    if (sharedRes.error) {
-      console.error('Error loading shared calendar ids:', sharedRes.error);
-      setFullCalendars(owned);
-      return owned;
-    }
-    const sharedIds = Array.from(new Set((sharedRes.data || []).map(r => String(r.calendar_id || '')).filter(Boolean)));
-    let shared = [];
-    if (sharedIds.length > 0) {
-      const sharedCalendarsRes = await supabase
-        .from('full_calendars')
-        .select('*')
-        .in('id', sharedIds);
-      if (!sharedCalendarsRes.error) shared = sharedCalendarsRes.data || [];
-    }
-    const merged = Array.from(new Map([...owned, ...shared].map(c => [String(c.id), c])).values());
-    setFullCalendars(merged);
-    return merged;
-  };
-
-  const createFullCalendar = async () => {
-    const name = newSubCalName.trim();
-    if (!name || !user?.id) return;
-    const { data, error } = await supabase
-      .from('full_calendars')
-      .insert({
-        owner_id: user.id,
-        name,
-        created_by: currentUser || user.email || 'User',
-      })
-      .select('*')
-      .single();
-    if (error) {
-      console.error('Error creating full calendar:', error);
-      setShareMessage(`Could not create calendar: ${error.message}`);
-      return;
-    }
-    setFullCalendars(prev => [...prev, data]);
-    setActiveCalendarId(data.id);
-    setCalendarTitle(data.name || 'Main Calendar');
-    setShowSubCalendarModal(false);
-    setNewSubCalName('');
-  };
-
-  const renameFullCalendar = async (calendarId, nextName) => {
-    const name = String(nextName || '').trim();
-    if (!calendarId || !name) return;
-    const { error } = await supabase
-      .from('full_calendars')
-      .update({ name })
-      .eq('id', calendarId);
-    if (error) {
-      console.error('Error renaming full calendar:', error);
-      return;
-    }
-    setFullCalendars(prev => prev.map(c => String(c.id) === String(calendarId) ? { ...c, name } : c));
-    setCalendarTitle(name);
-  };
-
-  // â”€â”€ Sub-calendar functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Sub-calendar functions ──────────────────────────────────────────────
 
   const loadSubCalendars = async () => {
     try {
@@ -638,10 +543,9 @@ function App() {
     } catch (e) { console.error(e); }
   };
 
-  const createSubCalendar = async (nameOverride = '') => {
-    const nextName = String(nameOverride || newSubCalName || '').trim();
-    console.log('createSubCalendar called', { name: nextName, dates: selectedDates.length, user: user?.id });
-    if (!nextName || selectedDates.length < 2) {
+  const createSubCalendar = async () => {
+    console.log('createSubCalendar called', { name: newSubCalName, dates: selectedDates.length, user: user?.id });
+    if (!newSubCalName.trim() || selectedDates.length < 2) {
       alert(selectedDates.length < 2 ? `Please select at least 2 dates first. Currently selected: ${selectedDates.length}` : 'Please enter a name.');
       return;
     }
@@ -651,7 +555,7 @@ function App() {
     const id = `sc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const newSC = {
       id,
-      name: nextName,
+      name: newSubCalName.trim(),
       start_date: startDate,
       end_date: endDate,
       created_by: currentUser,
@@ -665,7 +569,7 @@ function App() {
       return;
     }
     if (!insertData || insertData.length === 0) {
-      alert('Saved silently failed â€” check Supabase RLS policies. Run the SQL fix in the console.');
+      alert('Saved silently failed — check Supabase RLS policies. Run the SQL fix in the console.');
       return;
     }
     setSubCalendars(prev => [...prev, newSC]);
@@ -1741,7 +1645,7 @@ function App() {
   };
 
   // Hours to show in timeline
-  const TIMELINE_HOURS = Array.from({ length: 24 }, (_, i) => (i + 6) % 24); // 6amâ€“5am
+  const TIMELINE_HOURS = Array.from({ length: 24 }, (_, i) => (i + 6) % 24); // 6am–5am
 
   const handleReact = (event, emoji) => {
     const actualDateKey = Object.keys(events).find(k => events[k].some(e => e.id === event.id));
@@ -1759,7 +1663,7 @@ function App() {
       if (updatedReactions[k].length === 0) delete updatedReactions[k];
     });
 
-    // Update local state immediately â€” single setEvents call, no saveEvents
+    // Update local state immediately — single setEvents call, no saveEvents
     setEvents(prev => ({
       ...prev,
       [actualDateKey]: prev[actualDateKey].map(e =>
@@ -1768,7 +1672,7 @@ function App() {
     }));
     setShowReactionPicker(null);
 
-    // Save only the reactions field directly to DB â€” bypass saveEvents entirely
+    // Save only the reactions field directly to DB — bypass saveEvents entirely
     supabase
       .from('events')
       .update({ reactions: JSON.stringify(updatedReactions) })
@@ -1797,9 +1701,6 @@ function App() {
   const [showTipBanner, setShowTipBanner] = useState(() => localStorage.getItem('hideTipBanner') !== 'true');
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
   const [showWeather, setShowWeather] = useState(true);
-  const activeFullCalendar = fullCalendars.find(c => c.id === activeCalendarId) || null;
-  const activeCalendarOwnerId = activeFullCalendar?.owner_id || user?.id;
-  const isActiveCalendarOwner = !activeFullCalendar || String(activeFullCalendar.owner_id || '') === String(user?.id || '');
 
   const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || '').trim());
   const cleanOwnerLabel = (value) => {
@@ -1920,18 +1821,18 @@ function App() {
     return yearHolidays.find(h => h.date === dateKey) || null;
   };
 
-  // Weather code â†’ display object with emoji/label and a color
+  // Weather code → display object with emoji/label and a color
   const weatherDisplay = (code) => {
-    if (code === 0) return { icon: 'â˜€ï¸', color: 'text-yellow-500' };
-    if (code <= 2) return { icon: 'â›…', color: 'text-yellow-400' };
-    if (code <= 3) return { icon: 'â˜ï¸', color: 'text-gray-400' };
+    if (code === 0) return { icon: '☀️', color: 'text-yellow-500' };
+    if (code <= 2) return { icon: '⛅', color: 'text-yellow-400' };
+    if (code <= 3) return { icon: '☁️', color: 'text-gray-400' };
     if (code <= 49) return { icon: 'FOG', color: 'text-gray-400' };
-    if (code <= 59) return { icon: 'ðŸŒ¦ï¸', color: 'text-blue-400' };
-    if (code <= 67) return { icon: 'ðŸŒ§ï¸', color: 'text-blue-500' };
-    if (code <= 77) return { icon: 'ðŸŒ¨ï¸', color: 'text-blue-200' };
-    if (code <= 84) return { icon: 'ðŸŒ§ï¸', color: 'text-blue-500' };
-    if (code <= 99) return { icon: 'â›ˆï¸', color: 'text-purple-500' };
-    return { icon: 'â›ˆï¸', color: 'text-purple-500' };
+    if (code <= 59) return { icon: '🌦️', color: 'text-blue-400' };
+    if (code <= 67) return { icon: '🌧️', color: 'text-blue-500' };
+    if (code <= 77) return { icon: '🌨️', color: 'text-blue-200' };
+    if (code <= 84) return { icon: '🌧️', color: 'text-blue-500' };
+    if (code <= 99) return { icon: '⛈️', color: 'text-purple-500' };
+    return { icon: '⛈️', color: 'text-purple-500' };
   };
 
   const fetchWeather = async (lat, lon) => {
@@ -1974,7 +1875,7 @@ function App() {
           return () => clearInterval(interval);
         },
         () => {
-          // User denied or error â€” fallback to Fresno
+          // User denied or error — fallback to Fresno
           fetchWeather(36.7378, -119.7871);
         },
         { timeout: 10000 }
@@ -2095,7 +1996,6 @@ function App() {
 
   const saveEvents = async (newEvents) => {
     try {
-      if (!activeCalendarId) return;
       setEvents(newEvents);
 
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -2107,7 +2007,7 @@ function App() {
           Object.entries(newEvents).forEach(([date, dateEvents]) => {
             dateEvents.forEach(event => {
               if (event.userId && event.userId !== user?.id) {
-                // Shared event â€” do a targeted update on just the fields we allow editing
+                // Shared event — do a targeted update on just the fields we allow editing
                 sharedUpdates.push(event);
                 return;
               }
@@ -2131,14 +2031,13 @@ function App() {
                 location: event.location || null,
                 created_by: event.createdBy,
                 created_at: event.createdAt,
-                user_id: user?.id,
-                calendar_id: activeCalendarId,
+                user_id: user?.id
               });
             });
           });
 
           // Save own events via delete+reinsert
-          await supabase.from('events').delete().eq('user_id', user?.id).eq('calendar_id', activeCalendarId);
+          await supabase.from('events').delete().eq('user_id', user?.id);
           if (myEvents.length > 0) {
             const { error } = await supabase.from('events').insert(myEvents);
             if (error) console.error('Error saving events to Supabase:', error);
@@ -2159,7 +2058,7 @@ function App() {
               exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
               reactions: event.reactions ? JSON.stringify(event.reactions) : null,
               location: event.location || null,
-            }).eq('id', event.id).eq('calendar_id', activeCalendarId);
+            }).eq('id', event.id);
           }
         } catch (err) {
           console.error('Error writing to Supabase:', err);
@@ -2211,14 +2110,6 @@ function App() {
   };
 
   const handleShareCalendar = async () => {
-    if (!activeCalendarId) {
-      setShareMessage('Select a calendar first.');
-      return;
-    }
-    if (!isActiveCalendarOwner) {
-      setShareMessage('Only the calendar owner can manage sharing.');
-      return;
-    }
     if (!shareEmailInput.trim()) return;
     const email = shareEmailInput.trim().toLowerCase();
 
@@ -2237,26 +2128,23 @@ function App() {
     const { error } = await supabase.from('shared_access').insert({
       owner_id: user.id,
       shared_with_email: email,
-      calendar_id: activeCalendarId,
     });
 
     if (error) {
       setShareMessage('Error sharing calendar. Try again.');
       console.error(error);
     } else {
-      setMyShares(prev => [...prev, { owner_id: user.id, shared_with_email: email, calendar_id: activeCalendarId }]);
+      setMyShares(prev => [...prev, { owner_id: user.id, shared_with_email: email }]);
       setShareEmailInput('');
-      setShareMessage(`âœ… Shared! When ${email} logs in they'll see your calendar.`);
+      setShareMessage(`✅ Shared! When ${email} logs in they'll see your calendar.`);
     }
   };
 
   const handleRemoveShare = async (shareEmail) => {
-    if (!activeCalendarId || !isActiveCalendarOwner) return;
     const { error } = await supabase
       .from('shared_access')
       .delete()
       .eq('owner_id', user.id)
-      .eq('calendar_id', activeCalendarId)
       .eq('shared_with_email', shareEmail);
 
     if (!error) {
@@ -2265,15 +2153,16 @@ function App() {
     }
   };
 
-  const primaryListOwnerId = activeCalendarOwnerId;
+  const primaryListOwnerId = (sharedCalendars && sharedCalendars.length > 0)
+    ? sharedCalendars[0].owner_id
+    : user?.id;
 
   const loadSharedListGroups = async (ownerId) => {
-    if (!ownerId || !activeCalendarId) return;
+    if (!ownerId) return;
     const { data, error } = await supabase
       .from('shared_list_groups')
       .select('*')
       .eq('owner_id', ownerId)
-      .eq('calendar_id', activeCalendarId)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -2300,7 +2189,7 @@ function App() {
   };
 
   const loadSharedListItems = async (ownerId, listId) => {
-    if (!ownerId || !listId || !activeCalendarId) {
+    if (!ownerId || !listId) {
       setSharedListItems([]);
       return;
     }
@@ -2308,7 +2197,6 @@ function App() {
       .from('shared_lists')
       .select('*')
       .eq('owner_id', ownerId)
-      .eq('calendar_id', activeCalendarId)
       .eq('list_id', listId)
       .order('created_at', { ascending: true });
 
@@ -2328,11 +2216,10 @@ function App() {
 
   const createSharedList = async () => {
     const title = newSharedListTitle.trim();
-    if (!title || !primaryListOwnerId || !user?.id || !activeCalendarId) return;
+    if (!title || !primaryListOwnerId || !user?.id) return;
 
     const payload = {
       owner_id: primaryListOwnerId,
-      calendar_id: activeCalendarId,
       title,
       created_by: currentUser || user.email || 'User',
       user_id: user.id,
@@ -2359,14 +2246,13 @@ function App() {
   };
 
   const deleteSharedList = async (listId) => {
-    if (!listId || !primaryListOwnerId || !activeCalendarId) return;
+    if (!listId || !primaryListOwnerId) return;
     if (!window.confirm('Delete this list and all its items?')) return;
 
     const { error: itemDeleteError } = await supabase
       .from('shared_lists')
       .delete()
       .eq('owner_id', primaryListOwnerId)
-      .eq('calendar_id', activeCalendarId)
       .eq('list_id', listId);
 
     if (itemDeleteError) {
@@ -2377,7 +2263,6 @@ function App() {
     const { error: listDeleteError } = await supabase
       .from('shared_list_groups')
       .delete()
-      .eq('calendar_id', activeCalendarId)
       .eq('id', listId);
 
     if (listDeleteError) {
@@ -2394,11 +2279,10 @@ function App() {
 
   const addSharedListItem = async () => {
     const text = newListItemText.trim();
-    if (!text || !primaryListOwnerId || !selectedSharedListId || !user?.id || !activeCalendarId) return;
+    if (!text || !primaryListOwnerId || !selectedSharedListId || !user?.id) return;
 
     const payload = {
       owner_id: primaryListOwnerId,
-      calendar_id: activeCalendarId,
       list_id: selectedSharedListId,
       text,
       done: false,
@@ -2489,87 +2373,6 @@ function App() {
     setEditingListText('');
   };
 
-  const mapDbEventToUi = (event, currentUserId, sharedOverride = null) => ({
-    id: event.id,
-    title: event.title,
-    time: event.time,
-    date: event.date,
-    category: event.category,
-    isPrivate: event.is_private,
-    isUrgent: event.is_urgent,
-    isMultiDay: event.is_multi_day,
-    multiDayId: event.multi_day_id,
-    isAnnual: event.is_annual || false,
-    annualMonth: event.annual_month || null,
-    annualDay: event.annual_day || null,
-    recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
-    exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
-    reactions: event.reactions ? JSON.parse(event.reactions) : {},
-    location: event.location || null,
-    createdBy: event.created_by,
-    createdAt: event.created_at,
-    userId: event.user_id,
-    isShared: sharedOverride !== null ? sharedOverride : event.user_id !== currentUserId,
-  });
-
-  const loadActiveCalendarData = async (calendarIdOverride = null) => {
-    const userId = user?.id;
-    const userEmail = user?.email;
-    const calendarId = calendarIdOverride || activeCalendarId;
-    if (!userId || !userEmail || !calendarId) return;
-    try {
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('calendar_id', calendarId);
-
-      const { data: sharedWithMe } = await supabase
-        .from('shared_access')
-        .select('*')
-        .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`)
-        .eq('calendar_id', calendarId);
-
-      let sharedEventsData = [];
-      if (sharedWithMe && sharedWithMe.length > 0) {
-        const ownerIds = Array.from(new Set(sharedWithMe.map(s => s.owner_id).filter(Boolean)));
-        if (ownerIds.length > 0) {
-          const { data } = await supabase
-            .from('events')
-            .select('*')
-            .in('user_id', ownerIds)
-            .eq('calendar_id', calendarId);
-          sharedEventsData = data || [];
-        }
-      }
-
-      if (eventsError) console.error('Error loading events:', eventsError);
-      const allEventsData = [...(eventsData || []), ...sharedEventsData];
-      const eventsObj = {};
-      allEventsData.forEach((event) => {
-        if (!eventsObj[event.date]) eventsObj[event.date] = [];
-        eventsObj[event.date].push(mapDbEventToUi(event, userId));
-      });
-      setEvents(eventsObj);
-      if (typeof window !== 'undefined') window.events = eventsObj;
-      setSharedCalendars(sharedWithMe || []);
-      if (sharedWithMe && sharedWithMe.length > 0) await resolveSharedOwnerLabels(sharedWithMe);
-      else setSharedOwnerLabels({});
-
-      const { data: mySharesData } = await supabase
-        .from('shared_access')
-        .select('*')
-        .eq('owner_id', userId)
-        .eq('calendar_id', calendarId);
-      setMyShares(mySharesData || []);
-
-      const selected = fullCalendars.find(c => String(c.id) === String(calendarId));
-      setCalendarTitle(selected?.name || 'Main Calendar');
-    } catch (error) {
-      console.error('Error loading active full calendar data:', error);
-    }
-  };
-
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -2578,28 +2381,17 @@ function App() {
         const userEmail = session?.user?.email;
         if (!userId) return;
 
-        const loadedFullCalendars = await loadFullCalendars(userId, userEmail);
-        const calendarStorageKey = `active-full-calendar-${userId}`;
-        const savedCalendarId = localStorage.getItem(calendarStorageKey);
-        const defaultCalendarId = (savedCalendarId && loadedFullCalendars.some(c => String(c.id) === String(savedCalendarId)))
-          ? savedCalendarId
-          : (loadedFullCalendars[0]?.id || null);
-        setActiveCalendarId(defaultCalendarId);
-        if (defaultCalendarId) localStorage.setItem(calendarStorageKey, String(defaultCalendarId));
-
         // Load my own events
         const { data: eventsData, error: eventsError } = await supabase
           .from('events')
           .select('*')
-          .eq('user_id', userId)
-          .eq('calendar_id', defaultCalendarId);
+          .eq('user_id', userId);
 
         // Load calendars shared WITH me (by email)
         const { data: sharedWithMe } = await supabase
           .from('shared_access')
           .select('*')
-          .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`)
-          .eq('calendar_id', defaultCalendarId);
+          .eq('shared_with_email', userEmail);
 
         // Update shared_with_id if not yet set (first time they log in)
         if (sharedWithMe && sharedWithMe.length > 0) {
@@ -2619,8 +2411,7 @@ function App() {
           const { data: sharedEventsData } = await supabase
             .from('events')
             .select('*')
-            .in('user_id', ownerIds)
-            .eq('calendar_id', defaultCalendarId);
+            .in('user_id', ownerIds);
 
           // Merge own events + shared events
           const allEventsData = [...(eventsData || []), ...(sharedEventsData || [])];
@@ -2693,8 +2484,7 @@ function App() {
         const { data: mySharesData } = await supabase
           .from('shared_access')
           .select('*')
-          .eq('owner_id', userId)
-          .eq('calendar_id', defaultCalendarId);
+          .eq('owner_id', userId);
         setMyShares(mySharesData || []);
 
         const { data: categoriesData } = await supabase
@@ -2718,8 +2508,10 @@ function App() {
           setCategories(DEFAULT_CATEGORIES);
         }
 
-        const activeCalendar = loadedFullCalendars.find(c => String(c.id) === String(defaultCalendarId));
-        setCalendarTitle(activeCalendar?.name || 'Main Calendar');
+        const titleKey = `calendar-title-${userId}`;
+        const savedTitle = localStorage.getItem(titleKey);
+        if (savedTitle) setCalendarTitle(savedTitle);
+        else setCalendarTitle('Our Calendar');
 
         const userResult = await window.storage.get('calendar-user', false);
         if (userResult && userResult.value) {
@@ -2742,10 +2534,9 @@ function App() {
 
     // Listen for changes to OTHER users' events (shared calendars)
     // We use a separate loadSharedEvents function that only fetches shared data
-    // and merges it with local state â€” never triggers a save
+    // and merges it with local state — never triggers a save
     const loadSharedEvents = async () => {
       try {
-        if (!activeCalendarId) return;
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
         const userEmail = session?.user?.email;
@@ -2755,8 +2546,7 @@ function App() {
         const { data: sharedData } = await supabase
           .from('shared_access')
           .select('*')
-          .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`)
-          .eq('calendar_id', activeCalendarId);
+          .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`);
 
         if (!sharedData || sharedData.length === 0) return;
 
@@ -2764,8 +2554,7 @@ function App() {
         const { data: sharedEventsData } = await supabase
           .from('events')
           .select('*')
-          .in('user_id', ownerIds)
-          .eq('calendar_id', activeCalendarId);
+          .in('user_id', ownerIds);
 
         if (!sharedEventsData) return;
 
@@ -2817,7 +2606,7 @@ function App() {
       .subscribe();
 
     return () => sharedSubscription.unsubscribe();
-  }, [activeCalendarId]);
+  }, []);
 
   // Check auth session
   useEffect(() => {
@@ -2839,7 +2628,7 @@ function App() {
   useEffect(() => {
     if (!primaryListOwnerId) return;
     loadSharedListGroups(primaryListOwnerId);
-  }, [primaryListOwnerId, activeCalendarId]);
+  }, [primaryListOwnerId]);
 
   useEffect(() => {
     if (!sharedCalendars || sharedCalendars.length === 0) return;
@@ -2852,13 +2641,7 @@ function App() {
       return;
     }
     loadSharedListItems(primaryListOwnerId, selectedSharedListId);
-  }, [primaryListOwnerId, selectedSharedListId, activeCalendarId]);
-
-  useEffect(() => {
-    if (!user?.id || !activeCalendarId) return;
-    localStorage.setItem(`active-full-calendar-${user.id}`, String(activeCalendarId));
-    loadActiveCalendarData(activeCalendarId);
-  }, [user?.id, activeCalendarId]);
+  }, [primaryListOwnerId, selectedSharedListId]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -3968,7 +3751,7 @@ function App() {
             {pendingEvent.isMultiDay ? "Multi-day events don't need a time" : 'Enter a time or skip to add without time'}
             {recurrence !== 'once' && (
               <span className="ml-2 px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
-                {recurrence === 'weekly' ? 'ðŸ” Weekly' : recurrence === 'monthly' ? 'ðŸ” Monthly' : 'ðŸ” Annual'}
+                {recurrence === 'weekly' ? '🔁 Weekly' : recurrence === 'monthly' ? '🔁 Monthly' : '🔁 Annual'}
               </span>
             )}
           </p>
@@ -4101,12 +3884,12 @@ function App() {
                     onChange={(e) => setCalendarTitle(e.target.value)}
                     onBlur={async () => {
                       setIsEditingTitle(false);
-                      if (activeCalendarId) await renameFullCalendar(activeCalendarId, calendarTitle);
+                      localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
                     }}
                     onKeyPress={async (e) => {
                       if (e.key === 'Enter') {
                         setIsEditingTitle(false);
-                        if (activeCalendarId) await renameFullCalendar(activeCalendarId, calendarTitle);
+                        localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
                       }
                     }}
                     className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 border-2 border-purple-300 rounded-lg w-full"
@@ -4114,9 +3897,9 @@ function App() {
                   />
                 ) : (
                   <h1
-                    onClick={() => { if (isActiveCalendarOwner) setIsEditingTitle(true); }}
+                    onClick={() => setIsEditingTitle(true)}
                     className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:opacity-70 transition-opacity truncate"
-                    title={isActiveCalendarOwner ? 'Click to rename calendar' : 'Shared calendar'}
+                    title="Click to rename calendar"
                   >
                     {calendarTitle}
                   </h1>
@@ -4159,7 +3942,7 @@ function App() {
                 className={`p-2 rounded-xl transition-all duration-200 text-sm ${showWeather ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
                 title={showWeather ? 'Hide weather' : 'Show weather'}
               >
-                ðŸŒ¤ï¸
+                🌤️
               </button>
               <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
@@ -4192,7 +3975,7 @@ function App() {
                       const days = getWeekDays(currentDate);
                       const start = days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                       const end = days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                      return `${start} â€“ ${end}`;
+                      return `${start} – ${end}`;
                     })()
                 }
               </h2>
@@ -4267,7 +4050,7 @@ function App() {
                                 className="text-gray-400 hover:text-red-500 text-xs leading-none"
                                 title="Remove notification"
                               >
-                                âœ•
+                                ✕
                               </button>
                             )}
                           </div>
@@ -4364,7 +4147,7 @@ function App() {
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${onlyNotifyUrgent ? 'translate-x-6' : 'translate-x-1'}`} />
                   </button>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Only send notifications for events marked as urgent ðŸš¨</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Only send notifications for events marked as urgent 🚨</p>
               </div>
             </div>
           </div>
@@ -4401,7 +4184,7 @@ function App() {
                 </button>
               </div>
               {shareMessage && (
-                <p className={`text-sm mt-2 ${shareMessage.startsWith('âœ…') ? 'text-green-600' : 'text-red-500'}`}>
+                <p className={`text-sm mt-2 ${shareMessage.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>
                   {shareMessage}
                 </p>
               )}
@@ -4432,7 +4215,7 @@ function App() {
                 <div className="space-y-2">
                   {sharedCalendars.map((share, i) => (
                     <div key={i} className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-700">
-                      <div className="w-7 h-7 rounded-full bg-green-400 flex items-center justify-center text-white text-xs">ðŸ“…</div>
+                      <div className="w-7 h-7 rounded-full bg-green-400 flex items-center justify-center text-white text-xs">📅</div>
                       <span className="text-sm text-gray-700 dark:text-gray-300">Shared by <strong>{sharedOwnerLabels[String(share.owner_id || '')] || fallbackOwnerLabel(share.owner_id)}</strong></span>
                     </div>
                   ))}
@@ -4688,7 +4471,7 @@ function App() {
                       <div className="flex items-center gap-1.5 min-w-0">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${category.color}`} />
                         <span className="text-xs sm:text-sm text-gray-800 dark:text-gray-100 truncate">{event.title}</span>
-                        {event.isUrgent && <span className="text-xs">ðŸš¨</span>}
+                        {event.isUrgent && <span className="text-xs">🚨</span>}
                       </div>
                       <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 shrink-0">
                         {event.time ? formatTime(event.time) : 'All day'}
@@ -4746,14 +4529,14 @@ function App() {
                           className="relative z-10 w-full flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 hover:shadow-md transition-all text-left cursor-pointer"
                           style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                         >
-                          <span className="text-xl">ðŸ—“ï¸</span>
+                          <span className="text-xl">🗓️</span>
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-sm text-green-800 dark:text-green-300">{sc.name}</div>
                             <div className="text-xs text-green-600 dark:text-green-400">
-                              Happening now Â· {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} â€“ {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              Happening now · {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </div>
                           </div>
-                          <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open â†’</span>
+                          <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open →</span>
                         </div>
                       </div>
                     );
@@ -4767,9 +4550,9 @@ function App() {
                 <button
                   onClick={() => setShowTipBanner(false)}
                   className="absolute top-2 right-2 text-purple-400 hover:text-purple-600 dark:text-purple-500 dark:hover:text-purple-300 leading-none"
-                >âœ•</button>
+                >✕</button>
                 <p className="text-sm text-purple-700 dark:text-purple-300 text-center pr-4">
-                  ðŸ’¡ <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
+                  💡 <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
                 </p>
                 <label className="flex items-center justify-center gap-1.5 mt-2 cursor-pointer">
                   <input
@@ -4793,7 +4576,7 @@ function App() {
             </div>
 
             {calendarView === 'month' ? (
-              /* â”€â”€ MONTH VIEW â”€â”€ */
+              /* ── MONTH VIEW ── */
               <div className="grid grid-cols-7 gap-1">
                 {getDaysInMonth(currentDate).map((date, index) => {
                   const dateKey = date ? getDateKey(date) : null;
@@ -4848,7 +4631,7 @@ function App() {
                         <div className={`text-xs sm:text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
                           {date ? date.getDate() : ''}
                           {hasHoliday && !isSelected && !isInSelection && (
-                            <span className="absolute top-0.5 right-0.5 text-xs">ðŸ‡ºðŸ‡¸</span>
+                            <span className="absolute top-0.5 right-0.5 text-xs">🇺🇸</span>
                           )}
                         </div>
                         {weatherData && !isSelected && !isInSelection && (
@@ -4857,7 +4640,7 @@ function App() {
                               {weatherData.icon}
                             </span>
                             <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
-                              {weatherData.high}Â°/{weatherData.low}Â°
+                              {weatherData.high}°/{weatherData.low}°
                             </span>
                           </div>
                         )}
@@ -4875,7 +4658,7 @@ function App() {
                 })}
               </div>
             ) : (
-              /* â”€â”€ WEEK VIEW â”€â”€ */
+              /* ── WEEK VIEW ── */
               <div className="grid grid-cols-7 gap-1">
                 {getWeekDays(currentDate).map((date, index) => {
                   const dateKey = getDateKey(date);
@@ -4921,14 +4704,14 @@ function App() {
                       {/* Date number */}
                       <div className={`text-xs font-bold mb-1 ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-200' : 'text-gray-700 dark:text-gray-200'}`}>
                         {date.getDate()}
-                        {hasHoliday && <span className="ml-1">ðŸ‡ºðŸ‡¸</span>}
+                        {hasHoliday && <span className="ml-1">🇺🇸</span>}
                       </div>
 
                       {/* Weather */}
                       {weatherData && !isSelected && (
                         <div className="flex items-center gap-0.5 mb-1">
                           <span style={{ fontSize: '0.7rem' }}>{weatherData.icon.length > 2 ? <span className={`text-xs font-bold ${weatherData.color}`}>{weatherData.icon}</span> : weatherData.icon}</span>
-                          <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{weatherData.high}Â°/{weatherData.low}Â°</span>
+                          <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{weatherData.high}°/{weatherData.low}°</span>
                         </div>
                       )}
 
@@ -4938,7 +4721,7 @@ function App() {
                           const cat = categories[event.category || 'other'] || categories.other;
                           if (event.isHoliday) return (
                             <div key={event.id} className="text-xs px-1.5 py-1 rounded-md bg-red-500 text-white truncate font-medium shadow-sm">
-                              ðŸ‡ºðŸ‡¸ {event.title}
+                              🇺🇸 {event.title}
                             </div>
                           );
                           return (
@@ -4950,7 +4733,7 @@ function App() {
                               `}
                             >
                               {event.time && <span className="opacity-80 mr-1">{formatTime(event.time)}</span>}
-                              {event.isPrivate && 'ðŸ”’ '}
+                              {event.isPrivate && '🔒 '}
                               {event.title}
                             </div>
                           );
@@ -5000,14 +4783,10 @@ function App() {
                   <div className="flex items-center gap-3">
                     <button onClick={() => setSelectedDates([])} className="text-xs text-purple-700 dark:text-purple-300 hover:text-purple-900 underline font-medium">Clear selection</button>
                     <button
-                      onClick={async () => {
-                        const name = window.prompt('Name this itinerary:');
-                        if (!name) return;
-                        await createSubCalendar(name);
-                      }}
+                      onClick={() => setShowSubCalendarModal(true)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-xs rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
                     >
-                      ðŸ—“ï¸ Create Sub-Calendar
+                      🗓️ Create Sub-Calendar
                     </button>
                   </div>
                 </div>
@@ -5055,7 +4834,7 @@ function App() {
                 }`}
               >
                 <AlertTriangle className="w-4 h-4" />
-                {isUrgent ? 'ðŸš¨ Urgent Event' : 'Normal Event'}
+                {isUrgent ? '🚨 Urgent Event' : 'Normal Event'}
               </button>
               <div className="w-full">
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
@@ -5064,10 +4843,10 @@ function App() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: 'once', label: 'ðŸ—“ï¸ One-time' },
-                    { value: 'weekly', label: 'ðŸ” Weekly' },
-                    { value: 'monthly', label: 'ðŸ“… Monthly' },
-                    { value: 'annual', label: 'ðŸŽ‰ Annual' },
+                    { value: 'once', label: '🗓️ One-time' },
+                    { value: 'weekly', label: '🔁 Weekly' },
+                    { value: 'monthly', label: '📅 Monthly' },
+                    { value: 'annual', label: '🎉 Annual' },
                   ].map(opt => (
                     <button
                       key={opt.value}
@@ -5116,7 +4895,7 @@ function App() {
                       <div key={event.id} className="bg-red-50 dark:bg-red-900/30 rounded-xl p-3 border-2 border-red-200 dark:border-red-700 transition-all duration-200 hover:shadow-md">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">ðŸ‡ºðŸ‡¸</span>
+                            <span className="text-lg">🇺🇸</span>
                             <div>
                               <div className="text-gray-800 dark:text-gray-200 font-medium">{event.title}</div>
                               {event.fullName !== event.title && (
@@ -5172,7 +4951,7 @@ function App() {
                                 handleUpdateEventField(event.date, event.id, { location: val });
                               }
                             }}
-                            placeholder="ðŸ“ Add location (optional)"
+                            placeholder="📍 Add location (optional)"
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
                           <select
@@ -5219,7 +4998,7 @@ function App() {
                               })}
                               className="rounded"
                             />
-                            ðŸ” Annual (repeats every year)
+                            🔁 Annual (repeats every year)
                           </label>
                           <button
                             onClick={() => setEditingEvent(null)}
@@ -5264,7 +5043,7 @@ function App() {
                                 className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 mb-1"
                                 onClick={(e) => handleLocationLinkClick(e, event.location)}
                               >
-                                ðŸ“ {event.location}
+                                📍 {event.location}
                               </button>
                             )}
                             {event.createdBy && (
@@ -5299,7 +5078,7 @@ function App() {
                                 className="reaction-picker text-gray-400 dark:text-gray-500 hover:text-purple-500 text-sm px-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition-all"
                                 title="Add reaction"
                               >
-                                {showReactionPicker === event.id ? 'âœ•' : 'ï¼‹'}
+                                {showReactionPicker === event.id ? '✕' : '＋'}
                               </button>
                             </div>
                             {showReactionPicker === event.id && (
@@ -5370,32 +5149,6 @@ function App() {
                 </div>
 
                 <div className="mb-4">
-                  <h4 className="text-xs uppercase tracking-wide font-semibold text-indigo-600 dark:text-indigo-400 mb-2">Full Calendars</h4>
-                  {fullCalendars.length === 0 ? (
-                    <div className="text-sm text-gray-500 dark:text-gray-400">No calendars yet.</div>
-                  ) : (
-                    <div className="space-y-2 mb-4">
-                      {fullCalendars.map(cal => {
-                        const isSelected = String(cal.id) === String(activeCalendarId);
-                        const isOwner = String(cal.owner_id || '') === String(user?.id || '');
-                        return (
-                          <div key={cal.id} className={`rounded-xl border p-3 flex items-center justify-between ${isSelected ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}>
-                            <div className="min-w-0">
-                              <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{cal.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">{isOwner ? 'Owned by you' : `Shared by ${sharedOwnerLabels[String(cal.owner_id || '')] || fallbackOwnerLabel(cal.owner_id)}`}</div>
-                            </div>
-                            <button
-                              onClick={() => setActiveCalendarId(cal.id)}
-                              className={`ml-3 px-3 py-1.5 text-xs rounded-lg text-white ${isSelected ? 'bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600'}`}
-                            >
-                              {isSelected ? 'Open' : 'Switch'}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
                   <h4 className="text-xs uppercase tracking-wide font-semibold text-green-600 dark:text-green-400 mb-2">Active</h4>
                   {activeTrips.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No active calendars right now.</div>
@@ -5428,7 +5181,7 @@ function App() {
                               <div className="min-w-0">
                                 <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  Happening now Â· {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
+                                  Happening now · {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
                                 </div>
                               </div>
                               <button
@@ -5554,7 +5307,7 @@ function App() {
       </div>
     </div>
 
-    {/* â”€â”€ Create Sub-Calendar Modal â”€â”€ */}
+    {/* ── Create Sub-Calendar Modal ── */}
     {!activeSubCalendar && (
       <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <div className="max-w-6xl mx-auto">
@@ -5595,32 +5348,32 @@ function App() {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">New Calendar</h3>
+            <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">New Sub-Calendar</h3>
             <button onClick={() => setShowSubCalendarModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            Create a separate full calendar.
+            {selectedDates.length > 0 && `${selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${selectedDates[selectedDates.length-1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${selectedDates.length} days)`}
           </div>
           <input
             type="text"
             value={newSubCalName}
             onChange={e => setNewSubCalName(e.target.value)}
-            placeholder="e.g. Ellie & Miles, Work, Family"
+            placeholder="e.g. SF Trip 🌁, Cabo 2026 🌊"
             className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
             autoFocus
-            onKeyPress={e => e.key === 'Enter' && createFullCalendar()}
+            onKeyPress={e => e.key === 'Enter' && createSubCalendar()}
           />
           <button
-            onClick={createFullCalendar}
+            onClick={createSubCalendar}
             className="w-full py-2.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl font-medium"
-          >Create Calendar</button>
+          >Create Sub-Calendar</button>
         </div>
       </div>
     )}
 
-    {/* â”€â”€ Sub-Calendar Full View â”€â”€ */}
+    {/* ── Sub-Calendar Full View ── */}
     {activeSubCalendar && (
       <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden">
 
@@ -5642,10 +5395,10 @@ function App() {
               <div
                 className="font-bold text-gray-800 dark:text-white cursor-pointer hover:text-purple-600 dark:hover:text-purple-400"
                 onClick={() => setEditingSubCalTitle(true)}
-              >{activeSubCalendar.name} âœï¸</div>
+              >{activeSubCalendar.name} ✏️</div>
             )}
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} â€“ {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -5670,7 +5423,7 @@ function App() {
           </div>
         </div>
 
-        {/* Weather location â€” collapsed pill or expanding input */}
+        {/* Weather location — collapsed pill or expanding input */}
         <div className="relative px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2" ref={weatherAutocompleteRef}>
           {subCalWeatherLocation && !subCalWeatherExpanded ? (
             // Collapsed pill
@@ -5678,26 +5431,26 @@ function App() {
               onClick={() => setSubCalWeatherExpanded(true)}
               className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-full text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-all"
             >
-              ðŸŒ¤ï¸ {subCalWeatherLocation}
-              <span className="text-blue-400 text-xs">âœï¸</span>
+              🌤️ {subCalWeatherLocation}
+              <span className="text-blue-400 text-xs">✏️</span>
             </button>
           ) : (
             // Expanded input with autocomplete
             <div className="flex-1 relative">
               <div className="flex items-center gap-2">
-                <span className="text-sm shrink-0">ðŸŒ¤ï¸</span>
+                <span className="text-sm shrink-0">🌤️</span>
                 <input
                   autoFocus={subCalWeatherExpanded}
                   type="text"
                   value={subCalWeatherInput}
                   onChange={e => { setSubCalWeatherInput(e.target.value); searchWeatherLocations(e.target.value); }}
                   onKeyDown={e => { if (e.key === 'Escape') { setSubCalWeatherExpanded(false); setSubCalWeatherSuggestions([]); } }}
-                  placeholder="Search city for weatherâ€¦"
+                  placeholder="Search city for weather…"
                   className="flex-1 text-xs px-2.5 py-1.5 bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
                 />
-                {subCalWeatherLoading && <span className="text-xs text-blue-400 animate-pulse shrink-0">Loadingâ€¦</span>}
+                {subCalWeatherLoading && <span className="text-xs text-blue-400 animate-pulse shrink-0">Loading…</span>}
                 {subCalWeatherLocation && (
-                  <button onClick={() => { setSubCalWeatherExpanded(false); setSubCalWeatherInput(subCalWeatherLocation); setSubCalWeatherSuggestions([]); }} className="text-xs text-gray-400 hover:text-gray-600 shrink-0">âœ•</button>
+                  <button onClick={() => { setSubCalWeatherExpanded(false); setSubCalWeatherInput(subCalWeatherLocation); setSubCalWeatherSuggestions([]); }} className="text-xs text-gray-400 hover:text-gray-600 shrink-0">✕</button>
                 )}
               </div>
               {/* Suggestions dropdown */}
@@ -5722,7 +5475,7 @@ function App() {
             <button
               onClick={() => setSubCalWeatherExpanded(true)}
               className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-500 flex items-center gap-1"
-            >ðŸŒ¤ï¸ Add trip weather</button>
+            >🌤️ Add trip weather</button>
           )}
         </div>
 
@@ -5737,7 +5490,7 @@ function App() {
             <div className="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">ðŸ“ Live Location</div>
+                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">📍 Live Location</div>
                   <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
                     {sharingWindowOpen ? `${liveLocations.length} member${liveLocations.length === 1 ? '' : 's'} sharing now` : 'Available only during trip dates'}
                   </div>
@@ -5807,18 +5560,18 @@ function App() {
                     )}
                     {subCalWeather[dk] && (
                       <span className={`text-xs leading-none ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
-                        {subCalWeather[dk].high}Â°
+                        {subCalWeather[dk].high}°
                       </span>
                     )}
                     {hasEvents && !shakingDates && !subCalWeather[dk] && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
                     {hasEvents && !shakingDates && subCalWeather[dk] && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
                   </button>
-                  {/* Minus badge â€” only on first/last when shaking */}
+                  {/* Minus badge — only on first/last when shaking */}
                   {shakingDates && canRemove && (
                     <button
                       onClick={e => { e.stopPropagation(); shrinkSubCalDate(isFirst ? 'before' : 'after'); if (allDates.length <= 2) setShakingDates(false); }}
                       className="absolute -top-2 -left-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md border-2 border-white dark:border-gray-800 leading-none"
-                    >âˆ’</button>
+                    >−</button>
                   )}
                 </div>
               );
@@ -5835,7 +5588,7 @@ function App() {
           {/* Tap hint when shaking */}
           {shakingDates && (
             <div className="flex items-center justify-between px-4 pb-2">
-              <span className="text-xs text-red-400">Tap âˆ’ to remove a day</span>
+              <span className="text-xs text-red-400">Tap − to remove a day</span>
               <button onClick={() => setShakingDates(false)} className="text-xs text-gray-400 hover:text-gray-600 underline">Done</button>
             </div>
           )}
@@ -5846,18 +5599,18 @@ function App() {
           <button
             onClick={() => setSubCalTab('itinerary')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'itinerary' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-          >ðŸ—“ï¸ Itinerary</button>
+          >🗓️ Itinerary</button>
           <button
             onClick={() => setSubCalTab('photos')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 relative ${subCalTab === 'photos' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >
-            ðŸ“¸ Photos
+            📸 Photos
             {tripPhotos.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{tripPhotos.length}</span>}
           </button>
           <button
             onClick={() => setSubCalTab('expenses')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'expenses' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-          >ðŸ’¸ Expenses</button>
+          >💸 Expenses</button>
         </div>
 
         <input
@@ -5895,7 +5648,7 @@ function App() {
                       {subCalSelectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                     </div>
                     <div className="text-xs text-gray-600 dark:text-gray-300">
-                      {subCalWeatherLocation} Â· High {subCalWeather[dk].high}Â° / Low {subCalWeather[dk].low}Â°
+                      {subCalWeatherLocation} · High {subCalWeather[dk].high}° / Low {subCalWeather[dk].low}°
                     </div>
                   </div>
                 </div>
@@ -5903,7 +5656,7 @@ function App() {
 
               {/* Notes / Reminders */}
               <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-xl border border-yellow-300 dark:border-yellow-700">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">ðŸ“ Reminders &amp; Notes</h4>
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📝 Reminders &amp; Notes</h4>
                 <div className="space-y-1.5 mb-2">
                   {subCalNotes.length === 0 && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 italic">No reminders yet</p>
@@ -5933,11 +5686,11 @@ function App() {
                     >
                       <div className="flex items-center gap-2 px-2.5 py-2">
                         {/* Drag handle */}
-                        <span className="text-gray-300 dark:text-gray-500 cursor-grab active:cursor-grabbing shrink-0 select-none text-sm">â ¿</span>
+                        <span className="text-gray-300 dark:text-gray-500 cursor-grab active:cursor-grabbing shrink-0 select-none text-sm">⠿</span>
                         <button onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)} className="text-xs text-gray-400 shrink-0 w-3">
-                          {expandedNote === note.id ? 'â—‚' : 'â–¸'}
+                          {expandedNote === note.id ? '◂' : '▸'}
                         </button>
-                        <span className="text-xs">ðŸ“Œ</span>
+                        <span className="text-xs">📌</span>
                         {editingNote === note.id ? (
                           <input
                             autoFocus
@@ -5957,7 +5710,7 @@ function App() {
                             {(note.checklist || []).filter(i => i.done).length}/{(note.checklist || []).length}
                           </span>
                         )}
-                        <button onClick={() => deleteSubCalNote(note.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">âœ•</button>
+                        <button onClick={() => deleteSubCalNote(note.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">✕</button>
                       </div>
                       {expandedNote === note.id && (
                         <div className="px-3 pb-2.5 space-y-1.5 border-t border-yellow-200 dark:border-yellow-800 pt-2">
@@ -5967,10 +5720,10 @@ function App() {
                                 onClick={() => toggleChecklistItem(note.id, item.id)}
                                 className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
                               >
-                                {item.done && <span className="text-xs leading-none">âœ“</span>}
+                                {item.done && <span className="text-xs leading-none">✓</span>}
                               </button>
                               <span className={`text-xs flex-1 ${item.done ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>{item.text}</span>
-                              <button onClick={() => deleteChecklistItem(note.id, item.id)} className="text-gray-300 hover:text-red-400 text-xs">âœ•</button>
+                              <button onClick={() => deleteChecklistItem(note.id, item.id)} className="text-gray-300 hover:text-red-400 text-xs">✕</button>
                             </div>
                           ))}
                           <div className="flex gap-1.5 mt-1">
@@ -6089,7 +5842,7 @@ function App() {
                                 <PlacesAutocomplete
                                   value={event.location || ''}
                                   onSelect={(val) => updateSubCalEvent(event.id, { location: val })}
-                                  placeholder="ðŸ“ Add location (optional)"
+                                  placeholder="📍 Add location (optional)"
                                   className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-sm"
                                 />
                                 <button onClick={() => setSubCalEditingEvent(null)} className="w-full py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg text-sm font-medium">Done</button>
@@ -6101,7 +5854,7 @@ function App() {
                                   {(event.time || event.endTime) && (
                                     <div className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1">
                                       <Clock className="w-3 h-3" />
-                                      {event.time && formatTime(event.time)}{event.endTime && ` â€“ ${formatTime(event.endTime)}`}
+                                      {event.time && formatTime(event.time)}{event.endTime && ` – ${formatTime(event.endTime)}`}
                                     </div>
                                   )}
                                   {event.notes && <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 italic">{event.notes}</div>}
@@ -6110,7 +5863,7 @@ function App() {
                                       type="button"
                                       className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 mt-0.5"
                                       onClick={(e) => handleLocationLinkClick(e, event.location)}
-                                    >ðŸ“ {event.location}</button>
+                                    >📍 {event.location}</button>
                                   )}
                                   {getEventPhotos(event.id).length > 0 && (
                                     <button
@@ -6140,7 +5893,7 @@ function App() {
                                       ><span>{emoji}</span><span className="text-gray-600 dark:text-gray-300">{users.length}</span></button>
                                     ))}
                                     <button onClick={() => setSubCalShowReactionPicker(subCalShowReactionPicker === event.id ? null : event.id)}
-                                      className="reaction-picker text-gray-400 hover:text-purple-500 text-xs">ï¼‹</button>
+                                      className="reaction-picker text-gray-400 hover:text-purple-500 text-xs">＋</button>
                                     {subCalShowReactionPicker === event.id && (
                                       <div className="reaction-picker flex gap-1 p-1.5 bg-white dark:bg-gray-700 rounded-xl shadow-lg border border-gray-200 dark:border-gray-600">
                                         {REACTION_EMOJIS.map(emoji => (
@@ -6155,7 +5908,7 @@ function App() {
                                     onClick={() => { setPhotoEventId(event.id); setPhotoDate(dk); photoInputRef.current?.click(); }}
                                     className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-lg"
                                     title="Add photo"
-                                  >ðŸ“·</button>
+                                  >📷</button>
                                   <button onClick={() => setSubCalEditingEvent(event.id)} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-lg"><Edit2 className="w-3.5 h-3.5 text-gray-500" /></button>
                                   <button onClick={() => deleteSubCalEvent(event.id, dk)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
                                 </div>
@@ -6193,7 +5946,7 @@ function App() {
                             <PlacesAutocomplete
                               value={subCalNewEventForm.location}
                               onSelect={val => setSubCalNewEventForm(f => ({ ...f, location: val || '' }))}
-                              placeholder="ðŸ“ Add location (optional)"
+                              placeholder="📍 Add location (optional)"
                               className="w-full text-xs px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
                             />
                             <div className="flex gap-2">
@@ -6228,7 +5981,7 @@ function App() {
                         ) : (
                           slotEvents.length === 0 && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                              <span className="text-xs text-purple-300 dark:text-purple-700 group-hover:text-purple-400 dark:group-hover:text-purple-500 transition-colors">ï¼‹</span>
+                              <span className="text-xs text-purple-300 dark:text-purple-700 group-hover:text-purple-400 dark:group-hover:text-purple-500 transition-colors">＋</span>
                             </div>
                           )
                         )}
@@ -6273,13 +6026,13 @@ function App() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full text-xs flex items-center gap-1">
-                    ðŸ‘‘ {currentUser} (you)
+                    👑 {currentUser} (you)
                   </span>
                   {subCalMembers.map(m => (
                     <span key={m.email} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
                       {m.email}
                       {activeSubCalendar.owner_id === user?.id && (
-                        <button onClick={() => removeMemberFromSubCal(m.email)} className="ml-0.5 text-gray-400 hover:text-red-500">Ã—</button>
+                        <button onClick={() => removeMemberFromSubCal(m.email)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
                       )}
                     </span>
                   ))}
@@ -6328,7 +6081,7 @@ function App() {
                               rel="noopener noreferrer"
                               className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 hover:border-green-300"
                             >
-                              <span className="text-gray-700 dark:text-gray-200 truncate">ðŸ“ {loc.name || loc.email || loc.userId}</span>
+                              <span className="text-gray-700 dark:text-gray-200 truncate">📍 {loc.name || loc.email || loc.userId}</span>
                               <span className="text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
                             </a>
                           ))}
@@ -6407,8 +6160,8 @@ function App() {
                   onClick={() => toggleExpensePanel('splitter')}
                   className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">ðŸ’¸ Expense Splitter</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.splitter ? 'âˆ’' : '+'}</span>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">💸 Expense Splitter</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.splitter ? '−' : '+'}</span>
                 </button>
                 {expensePanels.splitter ? (
                   <>
@@ -6460,7 +6213,7 @@ function App() {
                           <span className="text-xs text-gray-700 dark:text-gray-200 font-medium">{getExpenseDisplayName(item.payer)}</span>
                           <span className="text-xs text-gray-500 dark:text-gray-400 flex-1 truncate">{item.description}</span>
                           <span className="text-xs text-gray-700 dark:text-gray-200 font-semibold">${(Number(item.amount) || 0).toFixed(2)}</span>
-                          <button onClick={() => deleteSubCalExpense(item.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">âœ•</button>
+                          <button onClick={() => deleteSubCalExpense(item.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">✕</button>
                         </div>
                       ))}
                     </div>
@@ -6475,8 +6228,8 @@ function App() {
                   onClick={() => toggleExpensePanel('summary')}
                   className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">ðŸ“Š Split Summary</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.summary ? 'âˆ’' : '+'}</span>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">📊 Split Summary</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.summary ? '−' : '+'}</span>
                 </button>
                 {expensePanels.summary ? (
                   <>
@@ -6489,7 +6242,7 @@ function App() {
                         <div key={row.name} className="flex items-center justify-between text-xs">
                           <span className="text-gray-600 dark:text-gray-300">{getExpenseDisplayName(row.name)}</span>
                           <span className="text-gray-700 dark:text-gray-200">
-                            Paid ${(row.paid / 100).toFixed(2)} Â· {row.balance >= 0 ? `Gets back $${(row.balance / 100).toFixed(2)}` : `Owes $${(Math.abs(row.balance) / 100).toFixed(2)}`}
+                            Paid ${(row.paid / 100).toFixed(2)} · {row.balance >= 0 ? `Gets back $${(row.balance / 100).toFixed(2)}` : `Owes $${(Math.abs(row.balance) / 100).toFixed(2)}`}
                           </span>
                         </div>
                       ))}
@@ -6505,8 +6258,8 @@ function App() {
                   onClick={() => toggleExpensePanel('handles')}
                   className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">ðŸ’³ Payment Handles</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.handles ? 'âˆ’' : '+'}</span>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">💳 Payment Handles</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.handles ? '−' : '+'}</span>
                 </button>
                 {expensePanels.handles ? (
                   <div className="space-y-1.5">
@@ -6548,7 +6301,7 @@ function App() {
                             </div>
                           )}
                           <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-300">
-                            {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'} Â· {cashHandle ? `Cash App $${cashHandle}` : 'Cash App not set'}
+                            {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'} · {cashHandle ? `Cash App $${cashHandle}` : 'Cash App not set'}
                           </div>
                         </div>
                       );
@@ -6564,8 +6317,8 @@ function App() {
                   onClick={() => toggleExpensePanel('settlements')}
                   className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">ðŸ”„ Who Pays Whom</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.settlements ? 'âˆ’' : '+'}</span>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">🔄 Who Pays Whom</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.settlements ? '−' : '+'}</span>
                 </button>
                 {expensePanels.settlements ? (
                   settlements.length === 0 ? (
@@ -6631,7 +6384,7 @@ function App() {
                 disabled={uploadingPhoto || isPhotoSelectionMode || photoDeleteMode}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl text-sm font-medium shadow hover:shadow-lg transition-all disabled:opacity-50"
               >
-                {uploadingPhoto ? 'â³ Uploadingâ€¦' : 'ðŸ“· Add Photos'}
+                {uploadingPhoto ? '⏳ Uploading…' : '📷 Add Photos'}
               </button>
               {isPhotoSelectionMode ? (
                 <>
@@ -6698,22 +6451,22 @@ function App() {
                   onClick={() => setPhotoView('grid')}
                   className={`p-1.5 rounded-lg transition-all ${photoView === 'grid' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
                   title="Grid view"
-                >âŠž</button>
+                >⊞</button>
                 <button
                   onClick={() => setPhotoView('timeline')}
                   className={`p-1.5 rounded-lg transition-all ${photoView === 'timeline' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
                   title="Timeline view"
-                >â˜°</button>
+                >☰</button>
             </div>
 
             {tripPhotos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center px-8">
-                <div className="text-6xl mb-4">ðŸ“¸</div>
+                <div className="text-6xl mb-4">📸</div>
                 <div className="text-gray-500 dark:text-gray-400 font-medium mb-1">No photos yet</div>
                 <div className="text-sm text-gray-400 dark:text-gray-500">Tap "Add Photos" to share memories from this trip</div>
               </div>
             ) : photoView === 'grid' ? (
-              /* â”€â”€ GRID VIEW â”€â”€ */
+              /* ── GRID VIEW ── */
               <div className="p-4">
                 {/* Group by date */}
                 {(() => {
@@ -6727,7 +6480,7 @@ function App() {
                     <div key={date} className="mb-6">
                       <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
                         <span>{date !== 'unlinked' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Unlinked'}</span>
-                        {subCalWeather[date] && <span>{subCalWeather[date].icon} {subCalWeather[date].high}Â°</span>}
+                        {subCalWeather[date] && <span>{subCalWeather[date].icon} {subCalWeather[date].high}°</span>}
                         <span className="text-gray-300 dark:text-gray-600">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -6753,7 +6506,7 @@ function App() {
                             />
                             {isPhotoSelectionMode && (
                               <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
-                                <span className={`text-xs ${isSelectedPhoto ? 'text-emerald-300' : 'text-white/70'}`}>{isSelectedPhoto ? 'âœ“' : ''}</span>
+                                <span className={`text-xs ${isSelectedPhoto ? 'text-emerald-300' : 'text-white/70'}`}>{isSelectedPhoto ? '✓' : ''}</span>
                               </div>
                             )}
                             {photo.caption && (
@@ -6766,7 +6519,7 @@ function App() {
                                 onClick={e => { e.stopPropagation(); deleteTripPhoto(photo); }}
                                 className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center shadow"
                               >
-                                âœ•
+                                ✕
                               </button>
                             )}
                             <div className="absolute bottom-1 left-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
@@ -6787,7 +6540,7 @@ function App() {
                 })()}
               </div>
             ) : (
-              /* â”€â”€ TIMELINE VIEW â”€â”€ */
+              /* ── TIMELINE VIEW ── */
               <div className="p-4 space-y-8">
                 {(() => {
                   const byDate = {};
@@ -6808,7 +6561,7 @@ function App() {
                         </div>
                         {subCalWeather[date] && (
                           <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                            {subCalWeather[date].icon} {subCalWeather[date].high}Â° / {subCalWeather[date].low}Â°
+                            {subCalWeather[date].icon} {subCalWeather[date].high}° / {subCalWeather[date].low}°
                           </div>
                         )}
                       </div>
@@ -6843,7 +6596,7 @@ function App() {
                             <div className="px-3 py-2 flex items-start justify-between gap-2">
                               <div>
                                 {photo.caption && <p className="text-sm text-gray-800 dark:text-gray-200 mb-0.5">{photo.caption}</p>}
-                                <p className="text-xs text-gray-400 dark:text-gray-500">ðŸ“· {photo.uploaded_by}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500">📷 {photo.uploaded_by}</p>
                               </div>
                               {!isPhotoSelectionMode && photoDeleteMode && <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Delete mode</span>}
                             </div>
@@ -6852,7 +6605,7 @@ function App() {
                                 onClick={() => deleteTripPhoto(photo)}
                                 className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow"
                               >
-                                âœ•
+                                ✕
                               </button>
                             )}
                           </div>
@@ -6932,7 +6685,7 @@ function App() {
               style={{ top: 'max(1.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
               aria-label="Close photo"
             >
-              âœ•
+              ✕
             </button>
             <img
               src={lightboxPhoto.url}
@@ -6942,7 +6695,7 @@ function App() {
             />
             <div className="mt-3 text-center" onClick={e => e.stopPropagation()}>
               {lightboxPhoto.caption && <p className="text-white text-sm mb-1">{lightboxPhoto.caption}</p>}
-              <p className="text-gray-400 text-xs">ðŸ“· {lightboxPhoto.uploaded_by} Â· {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
+              <p className="text-gray-400 text-xs">📷 {lightboxPhoto.uploaded_by} · {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
             </div>
           </div>
         )}
@@ -7068,7 +6821,7 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
             if (val !== (value || null)) onSelect(val);
           }, 200);
         }}
-        placeholder={placeholder || 'ðŸ“ Add location (optional)'}
+        placeholder={placeholder || '📍 Add location (optional)'}
         className={className}
       />
       {showSuggestions && suggestions.length > 0 && (
@@ -7079,7 +6832,7 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
               onMouseDown={(e) => { e.preventDefault(); handleSelect(s); }}
               className="w-full text-left px-3 py-2 text-xs hover:bg-purple-50 dark:hover:bg-purple-900/30 border-b border-gray-100 dark:border-gray-700 last:border-0"
             >
-              <span className="text-gray-400 mr-1">ðŸ“</span>
+              <span className="text-gray-400 mr-1">📍</span>
               <span className="font-medium text-gray-800 dark:text-white">{s.structured_formatting?.main_text}</span>
               {s.structured_formatting?.secondary_text && (
                 <span className="text-gray-400 ml-1">{s.structured_formatting.secondary_text}</span>
@@ -7107,4 +6860,3 @@ const shakeStyle = `
 `;
 
 export default App;
-
