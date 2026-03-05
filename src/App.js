@@ -2174,6 +2174,15 @@ function App() {
   const createLayerCalendar = async () => {
     const name = newLayerName.trim();
     if (!name || !user?.id) return;
+    const normalizedName = name.toLowerCase();
+    const duplicateOwned = (layers || []).some(layer =>
+      String(layer?.owner_id) === String(user.id) &&
+      String(layer?.name || '').trim().toLowerCase() === normalizedName
+    );
+    if (duplicateOwned) {
+      setShareMessage('You already have a calendar with this name.');
+      return;
+    }
     const payload = {
       owner_id: user.id,
       name,
@@ -3450,39 +3459,7 @@ function App() {
         if (!userId) return;
         let loadedLayers = await loadLayersForUser(userId, userEmail);
         if (!loadedLayers || loadedLayers.length === 0) {
-          // Hard fallback bootstrap for new accounts if layer preload returns empty.
-          const fallbackPayload = {
-            owner_id: userId,
-            name: 'Main Calendar',
-            is_default: true,
-            created_by: currentUser || userEmail || 'User',
-          };
-          let bootstrapOk = false;
-          let bootstrapError = null;
-
-          const bootstrapInsert = await supabase
-            .from('calendar_layers')
-            .insert(fallbackPayload)
-            .select('*')
-            .single();
-          bootstrapError = bootstrapInsert.error;
-          if (!bootstrapError) bootstrapOk = true;
-
-          if (bootstrapError && /column .*is_default|schema cache/i.test(String(bootstrapError.message || ''))) {
-            const { is_default, ...fallbackNoDefault } = fallbackPayload;
-            const secondTry = await supabase
-              .from('calendar_layers')
-              .insert(fallbackNoDefault)
-              .select('*')
-              .single();
-            bootstrapError = secondTry.error;
-            if (!bootstrapError) bootstrapOk = true;
-          }
-
-          if (!bootstrapOk && bootstrapError) {
-            console.error('Default calendar bootstrap failed:', bootstrapError);
-          }
-
+          // Retry once; loadLayersForUser already contains bootstrap logic.
           loadedLayers = await loadLayersForUser(userId, userEmail);
         }
 
