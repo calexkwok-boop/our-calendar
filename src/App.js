@@ -67,10 +67,6 @@ function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState({});
-  const [locallyDeletedEventIds, setLocallyDeletedEventIds] = useState([]);
-  const [locallyDeletedEventKeys, setLocallyDeletedEventKeys] = useState([]);
-  const [locallyDeletedListItemIds, setLocallyDeletedListItemIds] = useState([]);
-  const [locallyDeletedListItemKeys, setLocallyDeletedListItemKeys] = useState([]);
   const [quickEntry, setQuickEntry] = useState('');
   const [isScanningReminder, setIsScanningReminder] = useState(false);
   const [showScanHelpModal, setShowScanHelpModal] = useState(false);
@@ -122,7 +118,6 @@ function App() {
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(true);
   const [authError, setAuthError] = useState('');
-  const saveRequestIdRef = useRef(0);
   const [firstTapDate, setFirstTapDate] = useState(null);
   const [lastTapTime, setLastTapTime] = useState(0);
   const [recurrence, setRecurrence] = useState('once');
@@ -176,7 +171,6 @@ function App() {
   const weatherAutocompleteRef = useRef(null);
   const [draggedNoteId, setDraggedNoteId] = useState(null);
   const [subCalendarEvents, setSubCalendarEvents] = useState({});
-  const [locallyDeletedSubCalEventIds, setLocallyDeletedSubCalEventIds] = useState([]);
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
   const [newSubCalName, setNewSubCalName] = useState('');
   const [subCalInviteEmail, setSubCalInviteEmail] = useState('');
@@ -215,101 +209,6 @@ function App() {
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
   const DELETED_PHOTOS_NOTE_TEXT = '__DELETED_PHOTOS_V1__';
-  const getDeletedEventsLocalKey = (uid, layerId) => `calendar-deleted-events-${uid}-${layerId}`;
-  const getDeletedEventKeysLocalKey = (uid, layerId) => `calendar-deleted-event-keys-${uid}-${layerId}`;
-  const readLocalDeletedEventIds = (uid, layerId) => {
-    try {
-      if (!uid || !layerId) return [];
-      const raw = localStorage.getItem(getDeletedEventsLocalKey(uid, layerId));
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(parsed)) return [];
-      return Array.from(new Set(parsed.map(id => String(id)).filter(Boolean)));
-    } catch {
-      return [];
-    }
-  };
-  const writeLocalDeletedEventIds = (uid, layerId, ids) => {
-    try {
-      if (!uid || !layerId) return;
-      const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
-      localStorage.setItem(getDeletedEventsLocalKey(uid, layerId), JSON.stringify(normalized));
-    } catch {}
-  };
-  const readLocalDeletedEventKeys = (uid, layerId) => {
-    try {
-      if (!uid || !layerId) return [];
-      const raw = localStorage.getItem(getDeletedEventKeysLocalKey(uid, layerId));
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(parsed)) return [];
-      return Array.from(new Set(parsed.map(id => String(id)).filter(Boolean)));
-    } catch {
-      return [];
-    }
-  };
-  const writeLocalDeletedEventKeys = (uid, layerId, keys) => {
-    try {
-      if (!uid || !layerId) return;
-      const normalized = Array.from(new Set((keys || []).map(id => String(id)).filter(Boolean)));
-      localStorage.setItem(getDeletedEventKeysLocalKey(uid, layerId), JSON.stringify(normalized));
-    } catch {}
-  };
-  const getDeletedListItemsLocalKey = (uid, layerId) => `calendar-deleted-list-items-${uid}-${layerId}`;
-  const getDeletedListItemKeysLocalKey = (uid, layerId) => `calendar-deleted-list-item-keys-${uid}-${layerId}`;
-  const readLocalDeletedListItemIds = (uid, layerId) => {
-    try {
-      if (!uid || !layerId) return [];
-      const raw = localStorage.getItem(getDeletedListItemsLocalKey(uid, layerId));
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(parsed)) return [];
-      return Array.from(new Set(parsed.map(id => String(id)).filter(Boolean)));
-    } catch {
-      return [];
-    }
-  };
-  const writeLocalDeletedListItemIds = (uid, layerId, ids) => {
-    try {
-      if (!uid || !layerId) return;
-      const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
-      localStorage.setItem(getDeletedListItemsLocalKey(uid, layerId), JSON.stringify(normalized));
-    } catch {}
-  };
-  const readLocalDeletedListItemKeys = (uid, layerId) => {
-    try {
-      if (!uid || !layerId) return [];
-      const raw = localStorage.getItem(getDeletedListItemKeysLocalKey(uid, layerId));
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(parsed)) return [];
-      return Array.from(new Set(parsed.map(id => String(id)).filter(Boolean)));
-    } catch {
-      return [];
-    }
-  };
-  const writeLocalDeletedListItemKeys = (uid, layerId, keys) => {
-    try {
-      if (!uid || !layerId) return;
-      const normalized = Array.from(new Set((keys || []).map(id => String(id)).filter(Boolean)));
-      localStorage.setItem(getDeletedListItemKeysLocalKey(uid, layerId), JSON.stringify(normalized));
-    } catch {}
-  };
-  const getDeletedSubCalEventsLocalKey = (uid, subCalId) => `calendar-deleted-subcal-events-${uid}-${subCalId}`;
-  const readLocalDeletedSubCalEventIds = (uid, subCalId) => {
-    try {
-      if (!uid || !subCalId) return [];
-      const raw = localStorage.getItem(getDeletedSubCalEventsLocalKey(uid, subCalId));
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(parsed)) return [];
-      return Array.from(new Set(parsed.map(id => String(id)).filter(Boolean)));
-    } catch {
-      return [];
-    }
-  };
-  const writeLocalDeletedSubCalEventIds = (uid, subCalId, ids) => {
-    try {
-      if (!uid || !subCalId) return;
-      const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
-      localStorage.setItem(getDeletedSubCalEventsLocalKey(uid, subCalId), JSON.stringify(normalized));
-    } catch {}
-  };
   const getDeletedPhotosLocalKey = (subCalId) => `subcal-deleted-photos-${subCalId}`;
   const readLocalDeletedPhotoIds = (subCalId) => {
     try {
@@ -673,9 +572,7 @@ function App() {
         .eq('sub_calendar_id', subCalId);
       if (error) { console.error('Error loading sub_calendar_events:', error); return; }
       const grouped = {};
-      const deletedSet = new Set((readLocalDeletedSubCalEventIds(user?.id, subCalId) || []).map(id => String(id)));
       (data || []).forEach(e => {
-        if (deletedSet.has(String(e?.id))) return;
         if (!grouped[e.date]) grouped[e.date] = [];
         grouped[e.date].push({
           id: e.id,
@@ -2029,13 +1926,7 @@ function App() {
   };
 
   const deleteSubCalEvent = async (eventId, dateKey) => {
-    addLocalDeletedSubCalEventIds([eventId]);
-    const { error } = await supabase.from('sub_calendar_events').delete().eq('id', eventId);
-    if (error) {
-      console.error('Error deleting sub-calendar event:', error);
-      setPhotoUploadError(true);
-      setPhotoUploadMessage(`Could not delete trip event on server: ${error.message}. Hidden locally on this device.`);
-    }
+    await supabase.from('sub_calendar_events').delete().eq('id', eventId);
     setSubCalendarEvents(prev => ({
       ...prev,
       [dateKey]: (prev[dateKey] || []).filter(e => e.id !== eventId)
@@ -2135,185 +2026,6 @@ function App() {
   const [showTipBanner, setShowTipBanner] = useState(() => localStorage.getItem('hideTipBanner') !== 'true');
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
   const [showWeather, setShowWeather] = useState(true);
-
-  const addLocalDeletedEventIds = (ids) => {
-    const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
-    if (normalized.length === 0) return;
-    setLocallyDeletedEventIds(prev => {
-      const next = Array.from(new Set([...(prev || []), ...normalized]));
-      writeLocalDeletedEventIds(user?.id, activeLayerId, next);
-      return next;
-    });
-  };
-
-  const getEventDeleteKey = (event) => {
-    const title = String(event?.title || '').trim().toLowerCase();
-    const date = String(event?.date || '').trim();
-    const time = String(event?.time || '').trim();
-    const recurrence = String(event?.recurrence || (event?.isAnnual ? 'annual' : 'once')).trim();
-    if (!title || !date) return '';
-    return `${date}|${time}|${title}|${recurrence}`;
-  };
-
-  const addLocalDeletedEventKeys = (eventsToMark) => {
-    const keys = Array.from(
-      new Set((eventsToMark || []).map(getEventDeleteKey).filter(Boolean))
-    );
-    if (keys.length === 0) return;
-    setLocallyDeletedEventKeys(prev => {
-      const next = Array.from(new Set([...(prev || []), ...keys]));
-      writeLocalDeletedEventKeys(user?.id, activeLayerId, next);
-      return next;
-    });
-  };
-
-  const addLocalDeletedListItemIds = (ids) => {
-    const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
-    if (normalized.length === 0) return;
-    setLocallyDeletedListItemIds(prev => {
-      const next = Array.from(new Set([...(prev || []), ...normalized]));
-      writeLocalDeletedListItemIds(user?.id, activeLayerId, next);
-      return next;
-    });
-  };
-
-  const getListItemDeleteKey = (item) => {
-    const listId = String(item?.list_id || selectedSharedListId || '').trim();
-    const text = String(item?.text || '').trim().toLowerCase();
-    if (!listId || !text) return '';
-    return `${listId}|${text}`;
-  };
-
-  const addLocalDeletedListItemKeys = (itemsToMark) => {
-    const keys = Array.from(
-      new Set((itemsToMark || []).map(getListItemDeleteKey).filter(Boolean))
-    );
-    if (keys.length === 0) return;
-    setLocallyDeletedListItemKeys(prev => {
-      const next = Array.from(new Set([...(prev || []), ...keys]));
-      writeLocalDeletedListItemKeys(user?.id, activeLayerId, next);
-      return next;
-    });
-  };
-
-  const addLocalDeletedSubCalEventIds = (ids) => {
-    const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
-    if (normalized.length === 0) return;
-    setLocallyDeletedSubCalEventIds(prev => {
-      const next = Array.from(new Set([...(prev || []), ...normalized]));
-      writeLocalDeletedSubCalEventIds(user?.id, activeSubCalendar?.id, next);
-      return next;
-    });
-  };
-
-  const filterEventsMapByLocalDeletes = (eventsMap) => {
-    if (!eventsMap || typeof eventsMap !== 'object') return {};
-    if (
-      (!locallyDeletedEventIds || locallyDeletedEventIds.length === 0) &&
-      (!locallyDeletedEventKeys || locallyDeletedEventKeys.length === 0)
-    ) return eventsMap;
-    const deletedSet = new Set(locallyDeletedEventIds.map(id => String(id)));
-    const deletedKeySet = new Set(locallyDeletedEventKeys.map(id => String(id)));
-    const filtered = {};
-    Object.entries(eventsMap).forEach(([dateKey, dateEvents]) => {
-      const kept = (dateEvents || []).filter(e => {
-        if (deletedSet.has(String(e?.id))) return false;
-        const key = getEventDeleteKey(e);
-        if (key && deletedKeySet.has(key)) return false;
-        return true;
-      });
-      if (kept.length > 0) filtered[dateKey] = kept;
-    });
-    return filtered;
-  };
-
-  useEffect(() => {
-    if (!user?.id || !activeLayerId) {
-      setLocallyDeletedEventIds([]);
-      setLocallyDeletedEventKeys([]);
-      return;
-    }
-    setLocallyDeletedEventIds(readLocalDeletedEventIds(user.id, activeLayerId));
-    setLocallyDeletedEventKeys(readLocalDeletedEventKeys(user.id, activeLayerId));
-  }, [user?.id, activeLayerId]);
-
-  useEffect(() => {
-    if (
-      (!locallyDeletedEventIds || locallyDeletedEventIds.length === 0) &&
-      (!locallyDeletedEventKeys || locallyDeletedEventKeys.length === 0)
-    ) return;
-    const deletedSet = new Set((locallyDeletedEventIds || []).map(id => String(id)));
-    const deletedKeySet = new Set((locallyDeletedEventKeys || []).map(id => String(id)));
-    setEvents(prev => {
-      let changed = false;
-      const next = {};
-      Object.entries(prev || {}).forEach(([dateKey, dateEvents]) => {
-        const source = dateEvents || [];
-        const kept = source.filter(event => {
-          if (deletedSet.has(String(event?.id))) return false;
-          const key = getEventDeleteKey(event);
-          if (key && deletedKeySet.has(key)) return false;
-          return true;
-        });
-        if (kept.length !== source.length) changed = true;
-        if (kept.length > 0) next[dateKey] = kept;
-      });
-      return changed ? next : prev;
-    });
-  }, [locallyDeletedEventIds, locallyDeletedEventKeys, events]);
-
-  useEffect(() => {
-    if (!user?.id || !activeLayerId) {
-      setLocallyDeletedListItemIds([]);
-      setLocallyDeletedListItemKeys([]);
-      return;
-    }
-    setLocallyDeletedListItemIds(readLocalDeletedListItemIds(user.id, activeLayerId));
-    setLocallyDeletedListItemKeys(readLocalDeletedListItemKeys(user.id, activeLayerId));
-  }, [user?.id, activeLayerId]);
-
-  useEffect(() => {
-    if (!user?.id || !activeSubCalendar?.id) {
-      setLocallyDeletedSubCalEventIds([]);
-      return;
-    }
-    setLocallyDeletedSubCalEventIds(readLocalDeletedSubCalEventIds(user.id, activeSubCalendar.id));
-  }, [user?.id, activeSubCalendar?.id]);
-
-  useEffect(() => {
-    if (
-      (!locallyDeletedListItemIds || locallyDeletedListItemIds.length === 0) &&
-      (!locallyDeletedListItemKeys || locallyDeletedListItemKeys.length === 0)
-    ) return;
-    const deletedSet = new Set((locallyDeletedListItemIds || []).map(id => String(id)));
-    const deletedKeySet = new Set((locallyDeletedListItemKeys || []).map(id => String(id)));
-    setSharedListItems(prev => {
-      const source = prev || [];
-      const kept = source.filter(item => {
-        if (deletedSet.has(String(item?.id))) return false;
-        const key = getListItemDeleteKey(item);
-        if (key && deletedKeySet.has(key)) return false;
-        return true;
-      });
-      return kept.length === source.length ? prev : kept;
-    });
-  }, [locallyDeletedListItemIds, locallyDeletedListItemKeys, sharedListItems]);
-
-  useEffect(() => {
-    if (!locallyDeletedSubCalEventIds || locallyDeletedSubCalEventIds.length === 0) return;
-    const deletedSet = new Set(locallyDeletedSubCalEventIds.map(id => String(id)));
-    setSubCalendarEvents(prev => {
-      let changed = false;
-      const next = {};
-      Object.entries(prev || {}).forEach(([dateKey, dateEvents]) => {
-        const source = dateEvents || [];
-        const kept = source.filter(event => !deletedSet.has(String(event?.id)));
-        if (kept.length !== source.length) changed = true;
-        if (kept.length > 0) next[dateKey] = kept;
-      });
-      return changed ? next : prev;
-    });
-  }, [locallyDeletedSubCalEventIds, subCalendarEvents]);
 
   const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || '').trim());
   const cleanOwnerLabel = (value) => {
@@ -3131,14 +2843,7 @@ function App() {
   const getEventsForDate = (date) => {
     if (!date) return [];
     const dateKey = getDateKey(date);
-    const deletedSet = new Set((locallyDeletedEventIds || []).map(id => String(id)));
-    const deletedKeySet = new Set((locallyDeletedEventKeys || []).map(id => String(id)));
-    const directEvents = (events[dateKey] || []).filter(e => {
-      if (deletedSet.has(String(e?.id))) return false;
-      const key = getEventDeleteKey(e);
-      if (key && deletedKeySet.has(key)) return false;
-      return true;
-    });
+    const directEvents = events[dateKey] || [];
 
     const month = date.getMonth() + 1;
     const day = date.getDate();
@@ -3147,9 +2852,6 @@ function App() {
 
     Object.values(events).forEach(dateEvents => {
       dateEvents.forEach(event => {
-        if (deletedSet.has(String(event?.id))) return;
-        const eventKey = getEventDeleteKey(event);
-        if (eventKey && deletedKeySet.has(eventKey)) return;
         const alreadyDirect = directEvents.some(e => e.id === event.id);
         if (alreadyDirect) return;
 
@@ -3201,27 +2903,20 @@ function App() {
     });
   };
 
-  const saveEvents = async (newEvents, options = {}) => {
-    const { immediate = false } = options;
+  const saveEvents = async (newEvents) => {
     try {
-      if (!activeLayerId || !user?.id) return;
-      setEvents(filterEventsMapByLocalDeletes(newEvents));
-
-      const requestId = ++saveRequestIdRef.current;
-      const saveLayerId = activeLayerId;
-      const saveUserId = user.id;
+      if (!activeLayerId) return;
+      setEvents(newEvents);
 
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      const persist = async () => {
+      saveTimeoutRef.current = setTimeout(async () => {
         try {
-          if (requestId !== saveRequestIdRef.current) return;
           const myEvents = [];
           const sharedUpdates = []; // events owned by others that we've edited
 
           Object.entries(newEvents).forEach(([date, dateEvents]) => {
             dateEvents.forEach(event => {
-              if ((locallyDeletedEventIds || []).includes(String(event?.id))) return;
-              if (event.userId && event.userId !== saveUserId) {
+              if (event.userId && event.userId !== user?.id) {
                 // Shared event — do a targeted update on just the fields we allow editing
                 sharedUpdates.push(event);
                 return;
@@ -3246,21 +2941,15 @@ function App() {
                 location: event.location || null,
                 created_by: event.createdBy,
                 created_at: event.createdAt,
-                user_id: saveUserId,
-                layer_id: saveLayerId,
-                calendar_id: saveLayerId
+                user_id: user?.id,
+                layer_id: activeLayerId,
+                calendar_id: activeLayerId
               });
             });
           });
 
-          if (requestId !== saveRequestIdRef.current) return;
           // Save own events via delete+reinsert
-          const { error: deleteError } = await supabase.from('events').delete().eq('user_id', saveUserId).eq('layer_id', saveLayerId);
-          if (deleteError) {
-            console.error('Error deleting existing events in Supabase:', deleteError);
-            return;
-          }
-          if (requestId !== saveRequestIdRef.current) return;
+          await supabase.from('events').delete().eq('user_id', user?.id).eq('layer_id', activeLayerId);
           if (myEvents.length > 0) {
             const { error } = await supabase.from('events').insert(myEvents);
             if (error) console.error('Error saving events to Supabase:', error);
@@ -3268,7 +2957,6 @@ function App() {
 
           // Save shared event edits via targeted UPDATE on each row
           for (const event of sharedUpdates) {
-            if (requestId !== saveRequestIdRef.current) return;
             await supabase.from('events').update({
               title: event.title,
               time: event.time,
@@ -3282,18 +2970,12 @@ function App() {
               exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
               reactions: event.reactions ? JSON.stringify(event.reactions) : null,
               location: event.location || null,
-            }).eq('id', event.id).eq('layer_id', saveLayerId);
+            }).eq('id', event.id).eq('layer_id', activeLayerId);
           }
         } catch (err) {
           console.error('Error writing to Supabase:', err);
         }
-      };
-
-      if (immediate) {
-        await persist();
-      } else {
-        saveTimeoutRef.current = setTimeout(persist, 800);
-      }
+      }, 800);
     } catch (error) {
       console.error('Error saving events:', error);
     }
@@ -3444,22 +3126,7 @@ function App() {
     }
 
     setListError('');
-    const deletedSet = new Set(
-      (readLocalDeletedListItemIds(user?.id, activeLayerId) || []).map(id => String(id))
-    );
-    const deletedKeySet = new Set(
-      (readLocalDeletedListItemKeys(user?.id, activeLayerId) || []).map(id => String(id))
-    );
-    setSharedListItems(
-      (data || [])
-        .filter(item => {
-          if (deletedSet.has(String(item?.id))) return false;
-          const key = getListItemDeleteKey(item);
-          if (key && deletedKeySet.has(key)) return false;
-          return true;
-        })
-        .map(item => ({ ...item, done: !!item.done }))
-    );
+    setSharedListItems((data || []).map(item => ({ ...item, done: !!item.done })));
   };
 
   const createSharedList = async () => {
@@ -3621,9 +3288,6 @@ function App() {
   };
 
   const removeSharedListItem = async (itemId) => {
-    const targetItem = (sharedListItems || []).find(i => String(i?.id) === String(itemId));
-    addLocalDeletedListItemIds([itemId]);
-    addLocalDeletedListItemKeys(targetItem ? [targetItem] : []);
     const { error } = await supabase
       .from('shared_lists')
       .delete()
@@ -3632,10 +3296,11 @@ function App() {
 
     if (error) {
       console.error('Error deleting list item:', error);
-      setListError(`Could not delete item on server: ${error.message}. Hidden locally on this device.`);
+      setListError(`Could not delete item: ${error.message}`);
+      return;
     }
 
-    if (!error) setListError('');
+    setListError('');
     setSharedListItems(prev => prev.filter(i => i.id !== itemId));
   };
 
@@ -3806,7 +3471,7 @@ function App() {
               isShared: event.user_id !== userId
             });
           });
-          setEvents(filterEventsMapByLocalDeletes(eventsObj));
+          setEvents(eventsObj);
           if (typeof window !== 'undefined') window.events = eventsObj;
         } else {
           setSharedCalendars([]);
@@ -3840,7 +3505,7 @@ function App() {
                 isShared: false
               });
             });
-            setEvents(filterEventsMapByLocalDeletes(eventsObj));
+            setEvents(eventsObj);
             if (typeof window !== 'undefined') window.events = eventsObj;
           }
         }
@@ -3958,7 +3623,7 @@ function App() {
               isShared: true
             });
           });
-          return filterEventsMapByLocalDeletes(merged);
+          return merged;
         });
       } catch (err) {
         console.error('Error refreshing shared events:', err);
@@ -4865,95 +4530,6 @@ function App() {
     if ('Notification' in window) setNotificationPermission(Notification.permission);
   }, []);
 
-  const urlBase64ToUint8Array = (base64String) => {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    return Uint8Array.from([...rawData].map((ch) => ch.charCodeAt(0)));
-  };
-
-  const getPushPublicKey = () => String(process.env.REACT_APP_VAPID_PUBLIC_KEY || '').trim();
-
-  const getPushServiceWorkerRegistration = async () => {
-    if (!('serviceWorker' in navigator)) return null;
-    const existing = await navigator.serviceWorker.getRegistration('/');
-    if (existing) return existing;
-    try {
-      return await navigator.serviceWorker.register('/sw.js');
-    } catch (err) {
-      console.error('Service worker registration failed:', err);
-      return null;
-    }
-  };
-
-  const savePushSubscription = async (subscription) => {
-    if (!user?.id || !subscription?.endpoint) return;
-    const json = subscription.toJSON ? subscription.toJSON() : {};
-    const endpoint = String(json.endpoint || subscription.endpoint || '').trim();
-    const p256dh = String(json?.keys?.p256dh || '').trim();
-    const auth = String(json?.keys?.auth || '').trim();
-    if (!endpoint || !p256dh || !auth) return;
-    const payload = {
-      user_id: user.id,
-      endpoint,
-      p256dh,
-      auth,
-      enabled: true,
-      user_agent: navigator.userAgent || null,
-      updated_at: new Date().toISOString(),
-    };
-    const { error } = await supabase
-      .from('push_subscriptions')
-      .upsert(payload, { onConflict: 'endpoint' });
-    if (error) console.error('Saving push subscription failed:', error);
-  };
-
-  const removePushSubscription = async () => {
-    if (!('serviceWorker' in navigator)) return;
-    try {
-      const registration = await navigator.serviceWorker.getRegistration('/');
-      if (!registration) return;
-      const sub = await registration.pushManager.getSubscription();
-      if (!sub) return;
-      const endpoint = String(sub.endpoint || '').trim();
-      try {
-        await sub.unsubscribe();
-      } catch {}
-      if (endpoint) {
-        await supabase
-          .from('push_subscriptions')
-          .delete()
-          .eq('endpoint', endpoint);
-      }
-    } catch (err) {
-      console.error('Failed to remove push subscription:', err);
-    }
-  };
-
-  const ensurePushSubscription = async () => {
-    if (!user?.id) return;
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    const vapidPublicKey = getPushPublicKey();
-    if (!vapidPublicKey) {
-      console.warn('Missing REACT_APP_VAPID_PUBLIC_KEY; push subscription skipped.');
-      return;
-    }
-    const registration = await getPushServiceWorkerRegistration();
-    if (!registration) return;
-    try {
-      let subscription = await registration.pushManager.getSubscription();
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-        });
-      }
-      await savePushSubscription(subscription);
-    } catch (err) {
-      console.error('Push subscribe failed:', err);
-    }
-  };
-
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
       alert('This browser does not support notifications');
@@ -4965,7 +4541,6 @@ function App() {
       if (permission === 'granted') {
         setNotificationsEnabled(true);
         await window.storage.set('notifications-enabled', 'true', false);
-        await ensurePushSubscription();
       }
     } catch (error) {
       console.error('Error requesting notification permission:', error);
@@ -4979,16 +4554,8 @@ function App() {
       const newState = !notificationsEnabled;
       setNotificationsEnabled(newState);
       await window.storage.set('notifications-enabled', newState.toString(), false);
-      if (newState) await ensurePushSubscription();
-      else await removePushSubscription();
     }
   };
-
-  useEffect(() => {
-    if (!notificationsEnabled) return;
-    if (notificationPermission !== 'granted') return;
-    ensurePushSubscription();
-  }, [notificationsEnabled, notificationPermission, user?.id]);
 
   const toggleNotificationWindow = async (key, currentValue, setter) => {
     const next = !currentValue;
@@ -5069,18 +4636,18 @@ function App() {
     return new Date(yy, mm - 1, dd, 9, 0, 0, 0);
   };
 
-  const readSmartLeaveMap = (uid) => {
+  const readSmartLeaveMap = () => {
     try {
-      const raw = localStorage.getItem(`smart-leave-sent-map-${uid || 'anon'}`);
+      const raw = localStorage.getItem('smart-leave-sent-map');
       return raw ? JSON.parse(raw) : {};
     } catch {
       return {};
     }
   };
 
-  const writeSmartLeaveMap = (uid, map) => {
+  const writeSmartLeaveMap = (map) => {
     try {
-      localStorage.setItem(`smart-leave-sent-map-${uid || 'anon'}`, JSON.stringify(map));
+      localStorage.setItem('smart-leave-sent-map', JSON.stringify(map));
     } catch {}
   };
 
@@ -5169,12 +4736,12 @@ function App() {
       setSmartLeavePrompt(null);
       return;
     }
-    const map = readSmartLeaveMap(user?.id);
+    const map = readSmartLeaveMap();
     const snooze = map.__snooze || {};
     snooze[smartLeavePrompt.id] = Date.now() + (minutes * 60 * 1000);
     delete map[smartLeavePrompt.id];
     map.__snooze = snooze;
-    writeSmartLeaveMap(user?.id, map);
+    writeSmartLeaveMap(map);
     setSmartLeavePrompt(null);
   };
 
@@ -5199,7 +4766,7 @@ function App() {
 
     const readSentMap = () => {
       try {
-        const raw = localStorage.getItem(`notification-sent-map-${user?.id || 'anon'}`);
+        const raw = localStorage.getItem('notification-sent-map');
         return raw ? JSON.parse(raw) : {};
       } catch {
         return {};
@@ -5208,7 +4775,7 @@ function App() {
 
     const writeSentMap = (map) => {
       try {
-        localStorage.setItem(`notification-sent-map-${user?.id || 'anon'}`, JSON.stringify(map));
+        localStorage.setItem('notification-sent-map', JSON.stringify(map));
       } catch {}
     };
 
@@ -5268,7 +4835,7 @@ function App() {
       window.removeEventListener('focus', checkNotifications);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent, notifyOneWeek, notifyOneDay, notifyOneHour, notifyAtEventTime, user?.id]);
+  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent, notifyOneWeek, notifyOneDay, notifyOneHour, notifyAtEventTime]);
 
   // Smart leave assistant: estimate travel time and prompt a few minutes before leaving.
   useEffect(() => {
@@ -5278,7 +4845,7 @@ function App() {
 
     const checkSmartLeave = async () => {
       const now = new Date();
-      const sentMap = readSmartLeaveMap(user?.id);
+      const sentMap = readSmartLeaveMap();
       const snoozeMap = sentMap.__snooze || {};
       const ownCandidates = [];
 
@@ -5328,7 +4895,7 @@ function App() {
           travelMinutes: minutes,
         });
         sentMap[sentKey] = true;
-        writeSmartLeaveMap(user?.id, sentMap);
+        writeSmartLeaveMap(sentMap);
         break;
       }
     };
@@ -5345,7 +4912,7 @@ function App() {
       window.removeEventListener('focus', checkSmartLeave);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent, user?.id]);
+  }, [events, notificationsEnabled, showPrivateEvents, onlyNotifyUrgent]);
   // Load notification preference
   useEffect(() => {
     const loadNotificationPreference = async () => {
@@ -5567,47 +5134,6 @@ function App() {
     return '';
   };
 
-  const parseTimeInput = (rawValue) => {
-    const value = String(rawValue || '').trim().toLowerCase();
-    if (!value) return null;
-
-    const compact = value.replace(/\s+/g, '');
-
-    // Supports: 5pm, 5:30pm, 17:30, 1730, 5.30pm
-    let match = compact.match(/^(\d{1,2})(?::|\.|h)?(\d{2})?(am|pm)?$/i);
-    if (!match) {
-      // Supports: 530pm / 0930
-      match = compact.match(/^(\d{1,2})(\d{2})(am|pm)?$/i);
-      if (!match) return null;
-      const h = Number(match[1]);
-      const m = Number(match[2]);
-      const period = String(match[3] || '').toLowerCase();
-      if (!Number.isFinite(h) || !Number.isFinite(m) || m < 0 || m > 59) return null;
-      if (period) {
-        if (h < 1 || h > 12) return null;
-        let hh = h;
-        if (period === 'pm' && hh < 12) hh += 12;
-        if (period === 'am' && hh === 12) hh = 0;
-        return `${String(hh).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      }
-      if (h < 0 || h > 23) return null;
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    }
-
-    let h = Number(match[1]);
-    const m = Number(match[2] || '0');
-    const period = String(match[3] || '').toLowerCase();
-    if (!Number.isFinite(h) || !Number.isFinite(m) || m < 0 || m > 59) return null;
-    if (period) {
-      if (h < 1 || h > 12) return null;
-      if (period === 'pm' && h < 12) h += 12;
-      if (period === 'am' && h === 12) h = 0;
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    }
-    if (h < 0 || h > 23) return null;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  };
-
   const parseScannedLocation = (rawText) => {
     const lines = String(rawText || '').split('\n').map(line => line.trim()).filter(Boolean);
     const withPin = lines.find(line => /^(📍|@)\s*/.test(line));
@@ -5718,78 +5244,8 @@ function App() {
     setPendingEvent(null);
   };
 
-  const deleteSharedEventsFromDb = async (eventsToDelete) => {
-    try {
-      if (!activeLayerId || !Array.isArray(eventsToDelete) || eventsToDelete.length === 0) return;
-      const sharedEventIds = Array.from(
-        new Set(
-          eventsToDelete
-            .filter(e => e && e.id && e.userId && String(e.userId) !== String(user?.id))
-            .map(e => e.id)
-        )
-      );
-      if (sharedEventIds.length === 0) return;
-      for (const id of sharedEventIds) {
-        const { error } = await supabase
-          .from('events')
-          .delete()
-          .eq('id', id)
-          .eq('layer_id', activeLayerId);
-        if (error) console.error('Error deleting shared event from Supabase:', error);
-      }
-    } catch (error) {
-      console.error('Error deleting shared events:', error);
-    }
-  };
-
-  const deleteOwnedEventsFromDb = async (eventsToDelete) => {
-    try {
-      if (!activeLayerId || !Array.isArray(eventsToDelete) || eventsToDelete.length === 0) return;
-      const ownedEventIds = Array.from(
-        new Set(
-          eventsToDelete
-            .filter(e => e && e.id && (!e.userId || String(e.userId) === String(user?.id)))
-            .map(e => e.id)
-        )
-      );
-      if (ownedEventIds.length === 0) return;
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .in('id', ownedEventIds)
-        .eq('layer_id', activeLayerId);
-      if (error) console.error('Error deleting own events from Supabase:', error);
-    } catch (error) {
-      console.error('Error deleting own events:', error);
-    }
-  };
-
-  const getNextRecurringDateKey = (event, fromDateKey) => {
-    const base = new Date(`${fromDateKey}T00:00:00`);
-    if (Number.isNaN(base.getTime())) return null;
-    const next = new Date(base);
-    if (event?.recurrence === 'weekly') {
-      next.setDate(next.getDate() + 7);
-    } else if (event?.recurrence === 'monthly') {
-      next.setMonth(next.getMonth() + 1);
-    } else if (event?.recurrence === 'annual' || event?.isAnnual) {
-      next.setFullYear(next.getFullYear() + 1);
-    } else {
-      return null;
-    }
-    return getDateKey(next);
-  };
-
-  const handleDeleteEvent = async (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false, skipOnce = false) => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
-    // Invalidate any in-flight save that could reinsert stale state.
-    saveRequestIdRef.current += 1;
-
-    const actualDateKey = Object.keys(events).find(k => events[k]?.some(e => e.id === eventId)) || dateKey;
-    const eventToDelete = events[actualDateKey]?.find(e => e.id === eventId);
+  const handleDeleteEvent = (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false, skipOnce = false) => {
+    const eventToDelete = events[dateKey]?.find(e => e.id === eventId);
 
     if (isVirtualAnnual || isVirtualRecurrence) {
       // Find the original event
@@ -5802,24 +5258,6 @@ function App() {
       if (!originalDateKey || !originalEvent) return;
 
       if (skipOnce) {
-        if (dateKey === originalDateKey) {
-          // Source occurrence is stored as a direct event, so "skip once" must move
-          // the series anchor forward instead of only adding an exception.
-          const nextDateKey = getNextRecurringDateKey(originalEvent, originalDateKey);
-          if (!nextDateKey) return;
-          const movedEvent = { ...originalEvent, date: nextDateKey };
-          const updatedEvents = { ...events };
-          updatedEvents[originalDateKey] = (updatedEvents[originalDateKey] || []).filter(e => e.id !== eventId);
-          if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
-          updatedEvents[nextDateKey] = [...(updatedEvents[nextDateKey] || []), movedEvent].sort((a, b) => {
-            if (!a.time) return 1;
-            if (!b.time) return -1;
-            return a.time.localeCompare(b.time);
-          });
-          await saveEvents(updatedEvents, { immediate: true });
-          return;
-        }
-
         // Add this date as an exception so it's skipped in future renders
         const updatedExceptions = [...(originalEvent.exceptions || []), dateKey];
         const updatedEvents = {
@@ -5828,44 +5266,27 @@ function App() {
             e.id === eventId ? { ...e, exceptions: updatedExceptions } : e
           )
         };
-        await saveEvents(updatedEvents, { immediate: true });
+        saveEvents(updatedEvents);
       } else {
         // Delete the whole recurring event
-        addLocalDeletedEventIds([eventId]);
-        addLocalDeletedEventKeys([originalEvent]);
-        await deleteOwnedEventsFromDb([originalEvent]);
-        await deleteSharedEventsFromDb([originalEvent]);
         const updatedEvents = { ...events, [originalDateKey]: events[originalDateKey].filter(e => e.id !== eventId) };
         if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
-        setEvents(updatedEvents);
+        saveEvents(updatedEvents);
       }
       return;
     }
 
     if (eventToDelete?.isMultiDay && eventToDelete.multiDayId) {
       const updatedEvents = { ...events };
-      const toDelete = [];
       Object.keys(updatedEvents).forEach(key => {
-        toDelete.push(...updatedEvents[key].filter(e => e.multiDayId === eventToDelete.multiDayId));
         updatedEvents[key] = updatedEvents[key].filter(e => e.multiDayId !== eventToDelete.multiDayId);
         if (updatedEvents[key].length === 0) delete updatedEvents[key];
       });
-      addLocalDeletedEventIds(toDelete.map(e => e.id));
-      addLocalDeletedEventKeys(toDelete);
-      await deleteOwnedEventsFromDb(toDelete);
-      await deleteSharedEventsFromDb(toDelete);
-      setEvents(updatedEvents);
+      saveEvents(updatedEvents);
     } else {
-      addLocalDeletedEventIds(eventToDelete ? [eventToDelete.id] : [eventId]);
-      addLocalDeletedEventKeys(eventToDelete ? [eventToDelete] : []);
-      await deleteOwnedEventsFromDb(eventToDelete ? [eventToDelete] : []);
-      await deleteSharedEventsFromDb(eventToDelete ? [eventToDelete] : []);
-      const updatedEvents = {
-        ...events,
-        [actualDateKey]: (events[actualDateKey] || []).filter(e => e.id !== eventId)
-      };
-      if (updatedEvents[actualDateKey].length === 0) delete updatedEvents[actualDateKey];
-      setEvents(updatedEvents);
+      const updatedEvents = { ...events, [dateKey]: events[dateKey].filter(e => e.id !== eventId) };
+      if (updatedEvents[dateKey].length === 0) delete updatedEvents[dateKey];
+      saveEvents(updatedEvents);
     }
   };
 
@@ -6085,10 +5506,18 @@ function App() {
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
                   const val = e.target.value;
-                  const parsed = parseTimeInput(val);
-                  if (parsed) handleTimeSubmit(parsed);
-                  else if (!String(val || '').trim()) handleTimeSubmit(null);
-                  else window.alert("Couldn't read that time. Try 5:30 PM or 17:30.");
+                  // parse "3pm", "3:30pm", "15:00" etc into HH:MM
+                  const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                  if (match) {
+                    let h = parseInt(match[1]);
+                    const m = match[2] ? parseInt(match[2]) : 0;
+                    const period = match[3]?.toLowerCase();
+                    if (period === 'pm' && h < 12) h += 12;
+                    if (period === 'am' && h === 12) h = 0;
+                    handleTimeSubmit(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+                  } else {
+                    handleTimeSubmit(null);
+                  }
                 }
               }}
             />
@@ -6099,9 +5528,17 @@ function App() {
                 const input = document.getElementById('timeInput');
                 const val = input.value.trim();
                 if (!val) { handleTimeSubmit(null); return; }
-                const parsed = parseTimeInput(val);
-                if (parsed) handleTimeSubmit(parsed);
-                else window.alert("Couldn't read that time. Try 5:30 PM or 17:30.");
+                const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                if (match) {
+                  let h = parseInt(match[1]);
+                  const m = match[2] ? parseInt(match[2]) : 0;
+                  const period = match[3]?.toLowerCase();
+                  if (period === 'pm' && h < 12) h += 12;
+                  if (period === 'am' && h === 12) h = 0;
+                  handleTimeSubmit(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+                } else {
+                  handleTimeSubmit(null);
+                }
               }}
               className="flex-1 px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all font-medium"
             >
@@ -7015,7 +6452,7 @@ function App() {
               const active = subCalendars
                 .filter(sc => today >= sc.start_date && today <= sc.end_date)
                 .sort((a, b) => {
-                  const todayEvents = getEventsForDate(new Date());
+                  const todayEvents = events[today] || [];
                   const aMatch = todayEvents.some(e => e.title.toLowerCase().includes(a.name.toLowerCase()) || a.name.toLowerCase().includes(e.title.toLowerCase()));
                   const bMatch = todayEvents.some(e => e.title.toLowerCase().includes(b.name.toLowerCase()) || b.name.toLowerCase().includes(e.title.toLowerCase()));
                   return (bMatch ? 1 : 0) - (aMatch ? 1 : 0);
@@ -7451,9 +6888,15 @@ function App() {
                             onBlur={(e) => {
                               const val = e.target.value.trim();
                               if (!val) { handleUpdateEventField(event.date, event.id, { time: null }); return; }
-                              const parsed = parseTimeInput(val);
-                              if (parsed) handleUpdateEventField(event.date, event.id, { time: parsed });
-                              else window.alert("Couldn't read that time. Try 5:30 PM or 17:30.");
+                              const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                              if (match) {
+                                let h = parseInt(match[1]);
+                                const m = match[2] ? parseInt(match[2]) : 0;
+                                const period = match[3]?.toLowerCase();
+                                if (period === 'pm' && h < 12) h += 12;
+                                if (period === 'am' && h === 12) h = 0;
+                                handleUpdateEventField(event.date, event.id, { time: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` });
+                              }
                             }}
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
@@ -7543,7 +6986,7 @@ function App() {
                                 </span>
                               )}
                               {event.time && (
-                                <div className="flex items-center gap-1 text-gray-700 dark:text-gray-200 text-sm font-medium">
+                                <div className={`flex items-center gap-1 ${category.text} text-sm font-medium`}>
                                   <Clock className="w-3 h-3" />
                                   {formatTime(event.time)}
                                 </div>
