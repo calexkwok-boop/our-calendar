@@ -191,7 +191,7 @@ function App() {
   const photoTapRef = useRef({ id: null, at: 0, timer: null });
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
 
-  const REACTION_EMOJIS = ['â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ‘', 'ðŸŽ‰', 'ðŸ˜¢', 'ðŸ’°', 'ðŸ˜˜', 'ðŸ’¯'];
+  const REACTION_EMOJIS = ['❤️', '😂', '😮', '👍', '🎉', '😢', '💰', '😘', '💯'];
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
@@ -1925,19 +1925,18 @@ function App() {
     return yearHolidays.find(h => h.date === dateKey) || null;
   };
 
-  // Weather code â†’ display object with emoji/label and a color
+  // Weather code → display object with emoji/label and a color
   const weatherDisplay = (code) => {
-    if (code === 0) return { icon: 'â˜€ï¸', color: 'text-yellow-500' };
-    if (code <= 2) return { icon: 'â›…', color: 'text-yellow-400' };
-    if (code <= 3) return { icon: 'â˜ï¸', color: 'text-gray-400' };
+    if (code === 0) return { icon: '☀️', color: 'text-yellow-500' };
+    if (code <= 2) return { icon: '⛅', color: 'text-yellow-400' };
+    if (code <= 3) return { icon: '☁️', color: 'text-gray-400' };
     if (code <= 49) return { icon: 'FOG', color: 'text-gray-400' };
-    if (code <= 59) return { icon: 'ðŸŒ¦ï¸', color: 'text-blue-400' };
-    if (code <= 67) return { icon: 'ðŸŒ§ï¸', color: 'text-blue-500' };
-    if (code <= 77) return { icon: 'ðŸŒ¨ï¸', color: 'text-blue-200' };
-    if (code <= 84) return { icon: 'ðŸŒ§ï¸', color: 'text-blue-500' };
-    if (code <= 99) return { icon: 'â›ˆï¸', color: 'text-purple-500' };
-    return { icon: 'â›ˆï¸', color: 'text-purple-500' };
-  };
+    if (code <= 59) return { icon: '🌦️', color: 'text-blue-400' };
+    if (code <= 67) return { icon: '🌧️', color: 'text-blue-500' };
+    if (code <= 77) return { icon: '🌨️', color: 'text-blue-200' };
+    if (code <= 84) return { icon: '🌧️', color: 'text-blue-500' };
+    if (code <= 99) return { icon: '⛈️', color: 'text-purple-500' };
+    return { icon: '⛈️', color: 'text-purple-500' };
 
   const fetchWeather = async (lat, lon) => {
     try {
