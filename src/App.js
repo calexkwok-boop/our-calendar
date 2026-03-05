@@ -1706,6 +1706,7 @@ function App() {
   const [mutualShareDetected, setMutualShareDetected] = useState(false);
   const [mergeTargetLayerId, setMergeTargetLayerId] = useState('');
   const [mergeInProgress, setMergeInProgress] = useState(false);
+  const autoMergeSeenRef = useRef(new Set());
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [showTipBanner, setShowTipBanner] = useState(() => localStorage.getItem('hideTipBanner') !== 'true');
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
@@ -1868,38 +1869,43 @@ function App() {
     return [date, time, title, recurrence, location].join('|');
   };
 
-  const mergeLayerIntoOwnedCalendar = async () => {
-    if (!user?.id || !activeLayerId || !mergeTargetLayerId) return;
-    if (String(activeLayerOwnerId) === String(user.id)) {
+  const mergeLayerIntoOwnedCalendar = async (opts = {}) => {
+    const sourceLayerId = String(opts.sourceLayerId || activeLayerId || '');
+    const targetLayerId = String(opts.targetLayerId || mergeTargetLayerId || '');
+    const isAuto = Boolean(opts.auto);
+    if (!user?.id || !sourceLayerId || !targetLayerId) return false;
+    if (String(activeLayerOwnerId) === String(user.id) && sourceLayerId === String(activeLayerId || '')) {
       setShareMessage('Switch to a shared calendar first, then run merge.');
-      return;
+      return false;
     }
-    if (String(activeLayerId) === String(mergeTargetLayerId)) {
+    if (sourceLayerId === targetLayerId) {
       setShareMessage('Source and target calendars cannot be the same.');
-      return;
+      return false;
     }
-    const confirmed = window.confirm('Merge this shared calendar into your selected calendar? Existing items are preserved and duplicates are skipped.');
-    if (!confirmed) return;
+    if (!isAuto) {
+      const confirmed = window.confirm('Merge this shared calendar into your selected calendar? Existing items are preserved and duplicates are skipped.');
+      if (!confirmed) return false;
+    }
 
     setMergeInProgress(true);
     setShareMessage('');
     try {
-      const targetLayer = layers.find(layer => String(layer.id) === String(mergeTargetLayerId));
+      const targetLayer = layers.find(layer => String(layer.id) === targetLayerId);
       if (!targetLayer || String(targetLayer.owner_id) !== String(user.id)) {
         setShareMessage('Target calendar must be one of your owned calendars.');
-        return;
+        return false;
       }
 
       // Merge events
       const { data: sourceEvents, error: srcEventsErr } = await supabase
         .from('events')
         .select('*')
-        .eq('layer_id', activeLayerId);
+        .eq('layer_id', sourceLayerId);
       if (srcEventsErr) throw srcEventsErr;
       const { data: targetEvents, error: tgtEventsErr } = await supabase
         .from('events')
         .select('*')
-        .eq('layer_id', mergeTargetLayerId);
+        .eq('layer_id', targetLayerId);
       if (tgtEventsErr) throw tgtEventsErr;
 
       const targetEventKeys = new Set((targetEvents || []).map(buildEventMergeKey));
@@ -1929,8 +1935,8 @@ function App() {
           created_by: row.created_by || currentUser || user.email || 'User',
           created_at: row.created_at || new Date().toISOString(),
           user_id: user.id,
-          layer_id: mergeTargetLayerId,
-          calendar_id: mergeTargetLayerId,
+          layer_id: targetLayerId,
+          calendar_id: targetLayerId,
         });
       });
       if (eventsToInsert.length > 0) {
@@ -1942,12 +1948,12 @@ function App() {
       const { data: sourceGroups, error: srcGroupsErr } = await supabase
         .from('shared_list_groups')
         .select('*')
-        .eq('layer_id', activeLayerId);
+        .eq('layer_id', sourceLayerId);
       if (srcGroupsErr) throw srcGroupsErr;
       const { data: targetGroups, error: tgtGroupsErr } = await supabase
         .from('shared_list_groups')
         .select('*')
-        .eq('layer_id', mergeTargetLayerId);
+        .eq('layer_id', targetLayerId);
       if (tgtGroupsErr) throw tgtGroupsErr;
 
       const existingGroupByTitle = new Map();
@@ -1964,8 +1970,8 @@ function App() {
         }
         const payload = {
           owner_id: user.id,
-          layer_id: mergeTargetLayerId,
-          calendar_id: mergeTargetLayerId,
+          layer_id: targetLayerId,
+          calendar_id: targetLayerId,
           title: srcGroup.title || 'List',
           created_by: srcGroup.created_by || currentUser || user.email || 'User',
           user_id: user.id,
@@ -1984,12 +1990,12 @@ function App() {
       const { data: sourceItems, error: srcItemsErr } = await supabase
         .from('shared_lists')
         .select('*')
-        .eq('layer_id', activeLayerId);
+        .eq('layer_id', sourceLayerId);
       if (srcItemsErr) throw srcItemsErr;
       const { data: targetItems, error: tgtItemsErr } = await supabase
         .from('shared_lists')
         .select('*')
-        .eq('layer_id', mergeTargetLayerId);
+        .eq('layer_id', targetLayerId);
       if (tgtItemsErr) throw tgtItemsErr;
       const targetItemKeys = new Set((targetItems || []).map(item => `${String(item.list_id)}|${String(item.text || '').trim().toLowerCase()}|${item.done ? '1' : '0'}`));
       const itemsToInsert = [];
@@ -2001,8 +2007,8 @@ function App() {
         targetItemKeys.add(itemKey);
         itemsToInsert.push({
           owner_id: user.id,
-          layer_id: mergeTargetLayerId,
-          calendar_id: mergeTargetLayerId,
+          layer_id: targetLayerId,
+          calendar_id: targetLayerId,
           list_id: mappedListId,
           text: item.text || '',
           done: !!item.done,
@@ -2019,7 +2025,7 @@ function App() {
       const { data: sourceShares, error: srcSharesErr } = await supabase
         .from('shared_access')
         .select('*')
-        .eq('layer_id', activeLayerId);
+        .eq('layer_id', sourceLayerId);
       if (srcSharesErr) throw srcSharesErr;
       const participantRows = [...(sourceShares || [])];
       participantRows.push({
@@ -2035,8 +2041,8 @@ function App() {
         if (sharedWithEmail && sharedWithEmail === String(user.email || '').trim().toLowerCase()) continue;
         const payload = {
           owner_id: user.id,
-          layer_id: mergeTargetLayerId,
-          calendar_id: mergeTargetLayerId,
+          layer_id: targetLayerId,
+          calendar_id: targetLayerId,
           shared_with_id: sharedWithId,
           shared_with_email: sharedWithEmail,
         };
@@ -2046,12 +2052,14 @@ function App() {
         }
       }
 
-      setShareMessage('✅ Merge complete. Switched to the merged calendar.');
-      setActiveLayerId(mergeTargetLayerId);
-      localStorage.setItem(`active-layer-${user.id}`, mergeTargetLayerId);
+      setShareMessage(isAuto ? '✅ Calendars auto-merged.' : '✅ Merge complete. Switched to the merged calendar.');
+      setActiveLayerId(targetLayerId);
+      localStorage.setItem(`active-layer-${user.id}`, targetLayerId);
+      return true;
     } catch (error) {
       console.error('Calendar merge failed:', error);
       setShareMessage(`Merge failed: ${error.message || 'Unknown error'}`);
+      return false;
     } finally {
       setMergeInProgress(false);
     }
@@ -2981,13 +2989,24 @@ function App() {
       setMutualShareDetected(detected);
       if (detected) {
         const owned = (layers || []).filter(layer => String(layer.owner_id) === String(user.id));
-        if (owned.length > 0 && !owned.some(layer => String(layer.id) === String(mergeTargetLayerId))) {
-          setMergeTargetLayerId(String(owned[0].id));
+        if (owned.length > 0) {
+          const resolvedTargetId = owned.some(layer => String(layer.id) === String(mergeTargetLayerId))
+            ? String(mergeTargetLayerId)
+            : String(owned[0].id);
+          if (!owned.some(layer => String(layer.id) === String(mergeTargetLayerId))) {
+            setMergeTargetLayerId(resolvedTargetId);
+          }
+          const autoKey = `${String(user.id)}:${String(activeLayerId)}->${resolvedTargetId}`;
+          if (!mergeInProgress && !autoMergeSeenRef.current.has(autoKey)) {
+            autoMergeSeenRef.current.add(autoKey);
+            const ok = await mergeLayerIntoOwnedCalendar({ sourceLayerId: activeLayerId, targetLayerId: resolvedTargetId, auto: true });
+            if (!ok) autoMergeSeenRef.current.delete(autoKey);
+          }
         }
       }
     };
     detectMutualShare();
-  }, [user?.id, activeLayerId, activeLayerOwnerId, layers, mergeTargetLayerId]);
+  }, [user?.id, activeLayerId, activeLayerOwnerId, layers, mergeTargetLayerId, mergeInProgress]);
 
   useEffect(() => {
     if (!primaryListOwnerId || !selectedSharedListId) {
