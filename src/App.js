@@ -3022,13 +3022,40 @@ function App() {
 
     try {
       const myEmail = String(user.email || '').trim().toLowerCase();
-      const { error } = await supabase
+      const deletedIds = new Set();
+
+      const { data: deletedById, error: deleteByIdErr } = await supabase
         .from('shared_access')
         .delete()
         .eq('layer_id', normalizedLayerId)
-        .or(`shared_with_id.eq.${user.id},shared_with_email.eq.${myEmail}`);
-      if (error) {
-        alert(`Could not leave calendar: ${error.message || 'Unknown error'}`);
+        .eq('shared_with_id', user.id)
+        .select('id');
+      if (deleteByIdErr) {
+        alert(`Could not leave calendar: ${deleteByIdErr.message || 'Unknown error'}`);
+        return;
+      }
+      (deletedById || []).forEach((row) => {
+        if (row?.id) deletedIds.add(String(row.id));
+      });
+
+      if (myEmail) {
+        const { data: deletedByEmail, error: deleteByEmailErr } = await supabase
+          .from('shared_access')
+          .delete()
+          .eq('layer_id', normalizedLayerId)
+          .ilike('shared_with_email', myEmail)
+          .select('id');
+        if (deleteByEmailErr) {
+          alert(`Could not leave calendar: ${deleteByEmailErr.message || 'Unknown error'}`);
+          return;
+        }
+        (deletedByEmail || []).forEach((row) => {
+          if (row?.id) deletedIds.add(String(row.id));
+        });
+      }
+
+      if (deletedIds.size === 0) {
+        alert('Could not leave calendar: no matching share row found for this account.');
         return;
       }
 
@@ -3044,6 +3071,7 @@ function App() {
         setActiveLayerId(nextLayerId);
         if (nextLayerId) localStorage.setItem(`active-layer-${user.id}`, nextLayerId);
       }
+      setLayerRefreshToken(prev => prev + 1);
     } catch (err) {
       console.error('Error leaving shared calendar layer:', err);
       alert(`Could not leave calendar: ${err.message || 'Unknown error'}`);
