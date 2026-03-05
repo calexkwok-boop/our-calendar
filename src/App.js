@@ -4226,22 +4226,22 @@ function App() {
 
         const { data: datedInviteRows, error: inviteErr } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,created_at')
+          .select('sub_calendar_id,email,added_by,invited_at,accepted_at')
           .ilike('email', myEmail)
-          .gt('created_at', getCursor('tripInvites'))
-          .order('created_at', { ascending: true })
+          .or(`invited_at.gt.${getCursor('tripInvites')},accepted_at.gt.${getCursor('tripInvites')}`)
+          .order('invited_at', { ascending: true, nullsFirst: false })
           .limit(200);
         if (inviteErr) {
           console.error('sub_calendar_members invite poll failed:', inviteErr);
         }
         const { data: nullInviteRows, error: nullInviteErr } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,created_at')
+          .select('sub_calendar_id,email,added_by,invited_at,accepted_at')
           .ilike('email', myEmail)
-          .is('created_at', null)
+          .is('invited_at', null)
           .limit(200);
         if (nullInviteErr) {
-          console.error('sub_calendar_members null-created_at invite poll failed:', nullInviteErr);
+          console.error('sub_calendar_members null-invited_at invite poll failed:', nullInviteErr);
         }
         const inviteRows = Array.from(new Map([...(datedInviteRows || []), ...(nullInviteRows || [])].map(row => [`${String(row?.sub_calendar_id || '')}|${String(row?.email || '').toLowerCase()}`, row])).values());
         if (inviteRows.length > 0) {
@@ -4315,13 +4315,13 @@ function App() {
 
         inviteRows.forEach(row => {
           const subCalId = String(row.sub_calendar_id);
-          const stamp = String(row?.invited_at || row?.created_at || '');
+          const stamp = String(row?.invited_at || row?.accepted_at || '');
           const inviteKey = `trip_invite:${subCalId}:${myEmail}:${stamp}`;
           addInAppNotification({
             key: inviteKey,
             type: 'invite',
             message: `You were invited to ${nameMap[subCalId] || 'a trip'}.`,
-            createdAt: row.invited_at || row.created_at || new Date().toISOString(),
+            createdAt: row.invited_at || row.accepted_at || new Date().toISOString(),
           });
         });
       };
@@ -4331,14 +4331,14 @@ function App() {
         const cursor = inAppSyncCursorRef.current.tripInvites || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
         const { data: datedRows } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,created_at,invited_at')
+          .select('sub_calendar_id,email,added_by,accepted_at,invited_at')
           .ilike('email', myEmail)
-          .or(`created_at.gt.${cursor},invited_at.gt.${cursor}`)
+          .or(`accepted_at.gt.${cursor},invited_at.gt.${cursor}`)
           .order('invited_at', { ascending: true, nullsFirst: false })
           .limit(200);
         const { data: nullRows } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,created_at,invited_at')
+          .select('sub_calendar_id,email,added_by,accepted_at,invited_at')
           .ilike('email', myEmail)
           .is('invited_at', null)
           .limit(200);
@@ -4347,7 +4347,7 @@ function App() {
 
         if (Array.isArray(datedRows) && datedRows.length > 0) {
           const maxCreatedAt = datedRows.reduce((max, row) => {
-            const ts = String(row?.invited_at || row?.created_at || '');
+            const ts = String(row?.invited_at || row?.accepted_at || '');
             if (!ts) return max;
             return !max || ts > max ? ts : max;
           }, inAppSyncCursorRef.current.tripInvites || null);
@@ -4392,7 +4392,7 @@ function App() {
       let rows = [];
       const pendingResult = await supabase
         .from('sub_calendar_members')
-        .select('sub_calendar_id,email,added_by,status,invited_at,created_at')
+        .select('sub_calendar_id,email,added_by,status,invited_at,accepted_at')
         .ilike('email', myEmail)
         .eq('status', 'pending')
         .order('invited_at', { ascending: false, nullsFirst: false })
@@ -4402,7 +4402,7 @@ function App() {
       } else {
         const fallback = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,status,invited_at,created_at')
+          .select('sub_calendar_id,email,added_by,status,invited_at,accepted_at')
           .ilike('email', myEmail)
           .order('invited_at', { ascending: false, nullsFirst: false })
           .limit(200);
@@ -4440,7 +4440,7 @@ function App() {
             ownerId: String(trip?.owner_id || row?.added_by || ''),
             startDate: trip?.start_date || null,
             endDate: trip?.end_date || null,
-            invitedAt: row.invited_at || row.created_at || null,
+            invitedAt: row.invited_at || row.accepted_at || null,
             email: String(row.email || myEmail).toLowerCase(),
           };
         })
