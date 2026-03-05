@@ -98,7 +98,7 @@ function App() {
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [inAppNotifications, setInAppNotifications] = useState([]);
   const seenInAppNotificationKeysRef = useRef(new Set());
-  const inAppSyncCursorRef = useRef({ events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null });
+  const inAppSyncCursorRef = useRef({ events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null, tripInvites: null });
   const seenExpenseIdsRef = useRef(new Set());
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
@@ -3344,7 +3344,7 @@ function App() {
     if (!user?.id) {
       seenInAppNotificationKeysRef.current = new Set();
       seenExpenseIdsRef.current = new Set();
-      inAppSyncCursorRef.current = { events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null };
+      inAppSyncCursorRef.current = { events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null, tripInvites: null };
       setInAppNotifications([]);
       return;
     }
@@ -3375,12 +3375,13 @@ function App() {
         subCalEvents: parsedCursor?.subCalEvents || fallbackTs,
         tripPhotos: parsedCursor?.tripPhotos || fallbackTs,
         sharedListItems: parsedCursor?.sharedListItems || fallbackTs,
+        tripInvites: parsedCursor?.tripInvites || fallbackTs,
       };
     } catch {
       seenInAppNotificationKeysRef.current = new Set();
       seenExpenseIdsRef.current = new Set();
       const fallbackTs = new Date(Date.now() - (5 * 60 * 1000)).toISOString();
-      inAppSyncCursorRef.current = { events: fallbackTs, subCalEvents: fallbackTs, tripPhotos: fallbackTs, sharedListItems: fallbackTs };
+      inAppSyncCursorRef.current = { events: fallbackTs, subCalEvents: fallbackTs, tripPhotos: fallbackTs, sharedListItems: fallbackTs, tripInvites: fallbackTs };
       setInAppNotifications([]);
     }
   }, [user?.id]);
@@ -3552,6 +3553,21 @@ function App() {
           createdAt: row.created_at,
         });
       })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sub_calendar_members' }, async ({ new: row }) => {
+        if (!row) return;
+        const inviteEmail = String(row.email || '').trim().toLowerCase();
+        if (!inviteEmail || inviteEmail !== myEmail) return;
+        if (String(row.added_by || '') === me) return;
+        const subCalId = String(row.sub_calendar_id || '');
+        if (!subCalId) return;
+        const tripName = subCalNameMap[subCalId] || 'a trip';
+        addInAppNotification({
+          key: `trip_invite:${subCalId}:${inviteEmail}`,
+          type: 'invite',
+          message: `You were invited to ${tripName}.`,
+          createdAt: row.created_at || new Date().toISOString(),
+        });
+      })
       .subscribe();
 
     return () => {
@@ -3677,6 +3693,23 @@ function App() {
       });
     };
 
+    const notifyTripInvites = (rows) => {
+      (rows || []).forEach(row => {
+        const inviteEmail = String(row?.email || '').trim().toLowerCase();
+        if (!inviteEmail || inviteEmail !== myEmail) return;
+        if (String(row?.added_by || '') === me) return;
+        const subCalId = String(row?.sub_calendar_id || '');
+        if (!subCalId) return;
+        const tripName = String(row?.sub_calendar_name || subCalNameMap[subCalId] || 'a trip');
+        addInAppNotification({
+          key: `trip_invite:${subCalId}:${inviteEmail}`,
+          type: 'invite',
+          message: `You were invited to ${tripName}.`,
+          createdAt: row?.created_at || new Date().toISOString(),
+        });
+      });
+    };
+
     const getAccessibleSubCalIds = async () => {
       const ids = new Set(Array.from(subCalIdSet));
 
@@ -3791,6 +3824,39 @@ function App() {
         }
         notifyTripPhotos([...(datedTripPhotoRows || []), ...(nullTripPhotoRows || [])]);
         updateCursor('tripPhotos', datedTripPhotoRows);
+
+        const { data: inviteRows, error: inviteErr } = await supabase
+          .from('sub_calendar_members')
+          .select('sub_calendar_id,email,added_by,created_at')
+          .ilike('email', myEmail)
+          .gt('created_at', getCursor('tripInvites'))
+          .order('created_at', { ascending: true })
+          .limit(200);
+        if (inviteErr) {
+          console.error('sub_calendar_members invite poll failed:', inviteErr);
+        } else if (Array.isArray(inviteRows) && inviteRows.length > 0) {
+          const inviteTripIds = Array.from(new Set(inviteRows.map(row => String(row?.sub_calendar_id || '')).filter(Boolean)));
+          const inviteNameMap = {};
+          if (inviteTripIds.length > 0) {
+            const { data: inviteTrips, error: inviteTripsErr } = await supabase
+              .from('sub_calendars')
+              .select('id,name')
+              .in('id', inviteTripIds);
+            if (inviteTripsErr) {
+              console.error('sub_calendars invite name fetch failed:', inviteTripsErr);
+            } else {
+              (inviteTrips || []).forEach(trip => {
+                inviteNameMap[String(trip.id)] = trip.name || 'trip';
+              });
+            }
+          }
+          const inviteRowsWithNames = inviteRows.map(row => ({
+            ...row,
+            sub_calendar_name: inviteNameMap[String(row?.sub_calendar_id || '')] || subCalNameMap[String(row?.sub_calendar_id || '')] || 'trip',
+          }));
+          notifyTripInvites(inviteRowsWithNames);
+          updateCursor('tripInvites', inviteRows);
+        }
       } catch (err) {
         console.error('In-app notification sync failed:', err);
       }
