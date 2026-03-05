@@ -1686,6 +1686,7 @@ function App() {
   const [layers, setLayers] = useState([]);
   const [activeLayerId, setActiveLayerId] = useState(null);
   const [showLayerModal, setShowLayerModal] = useState(false);
+  const [showSharedLayerCalendars, setShowSharedLayerCalendars] = useState(false);
   const [newLayerName, setNewLayerName] = useState('');
   const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
   const [sharedOwnerLabels, setSharedOwnerLabels] = useState({});
@@ -3808,6 +3809,8 @@ function App() {
       return endTs !== null && endTs < todayTs;
     })
     .sort((a, b) => toDateOnlyTs(getSubCalEndRaw(b)) - toDateOnlyTs(getSubCalEndRaw(a)));
+  const ownedLayerCalendars = layers.filter(layer => String(layer.owner_id) === String(user?.id));
+  const sharedLayerCalendars = layers.filter(layer => String(layer.owner_id) !== String(user?.id));
 
   if (isLoading) {
     return (
@@ -5281,7 +5284,7 @@ function App() {
                     <div className="text-sm text-gray-500 dark:text-gray-400">No calendars found.</div>
                   ) : (
                     <div className="space-y-2">
-                      {layers.map(layer => {
+                      {ownedLayerCalendars.map(layer => {
                         const isActiveLayer = String(layer.id) === String(activeLayerId);
                         return (
                           <button
@@ -5296,7 +5299,40 @@ function App() {
                               <div className="min-w-0">
                                 <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{layer.name || 'Calendar'}</div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                  {String(layer.owner_id) === String(user?.id) ? 'Owned by you' : `Shared by ${sharedOwnerLabels[String(layer.owner_id || '')] || fallbackOwnerLabel(layer.owner_id)}`}
+                                  Owned by you
+                                </div>
+                              </div>
+                              {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {sharedLayerCalendars.length > 0 && (
+                        <div className="pt-1">
+                          <button
+                            onClick={() => setShowSharedLayerCalendars(prev => !prev)}
+                            className="text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-300 underline"
+                          >
+                            {showSharedLayerCalendars ? 'Hide shared calendars' : `Show shared calendars (${sharedLayerCalendars.length})`}
+                          </button>
+                        </div>
+                      )}
+                      {showSharedLayerCalendars && sharedLayerCalendars.map(layer => {
+                        const isActiveLayer = String(layer.id) === String(activeLayerId);
+                        return (
+                          <button
+                            key={layer.id}
+                            onClick={() => {
+                              setActiveLayerId(layer.id);
+                              if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layer.id);
+                            }}
+                            className={`w-full text-left p-3 rounded-xl border transition-all ${isActiveLayer ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300'}`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{layer.name || 'Calendar'}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                  {`Shared by ${sharedOwnerLabels[String(layer.owner_id || '')] || fallbackOwnerLabel(layer.owner_id)}`}
                                 </div>
                               </div>
                               {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
