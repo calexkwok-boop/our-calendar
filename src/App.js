@@ -3972,6 +3972,32 @@ function App() {
           createdAt: row.created_at || new Date().toISOString(),
         });
       })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_access' }, async ({ new: row }) => {
+        if (!row) return;
+        const sharedWithId = String(row.shared_with_id || '');
+        const sharedWithEmail = String(row.shared_with_email || '').trim().toLowerCase();
+        if (sharedWithId !== me && sharedWithEmail !== myEmail) return;
+        if (String(row.owner_id || '') === me) return;
+
+        let calendarName = 'a calendar';
+        const layerId = String(row.layer_id || '');
+        if (layerId) {
+          const { data: layerRow } = await supabase
+            .from('calendar_layers')
+            .select('name')
+            .eq('id', layerId)
+            .maybeSingle();
+          const maybeName = String(layerRow?.name || '').trim();
+          if (maybeName) calendarName = `"${maybeName}"`;
+        }
+
+        addInAppNotification({
+          key: `shared_access:${String(row.id || `${layerId}:${sharedWithEmail}:${sharedWithId}`)}`,
+          type: 'invite',
+          message: `You were invited to ${calendarName}.`,
+          createdAt: row.created_at || new Date().toISOString(),
+        });
+      })
       .subscribe();
 
     return () => {
