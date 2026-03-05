@@ -716,22 +716,47 @@ function App() {
   const inviteToSubCalendar = async (emailOverride) => {
     const emailToInvite = (emailOverride || subCalInviteEmail).trim().toLowerCase();
     if (!emailToInvite || !activeSubCalendar) return;
-    let { error } = await supabase.from('sub_calendar_members').insert({
+    if (!user?.id) {
+      alert('You must be signed in to invite members.');
+      return;
+    }
+
+    const payload = {
       sub_calendar_id: activeSubCalendar.id,
       email: emailToInvite,
       added_by: user.id,
       created_at: new Date().toISOString(),
-    });
-    if (error && /column .*created_at|schema cache/i.test(String(error.message || ''))) {
-      const fallback = await supabase.from('sub_calendar_members').insert({
-        sub_calendar_id: activeSubCalendar.id,
-        email: emailToInvite,
-        added_by: user.id,
-      });
-      error = fallback.error;
+    };
+
+    let error = null;
+    try {
+      const primary = await supabase
+        .from('sub_calendar_members')
+        .upsert(payload, { onConflict: 'sub_calendar_id,email', ignoreDuplicates: true });
+      error = primary.error;
+
+      if (error && /column .*created_at|schema cache/i.test(String(error.message || ''))) {
+        const fallbackPayload = {
+          sub_calendar_id: activeSubCalendar.id,
+          email: emailToInvite,
+          added_by: user.id,
+        };
+        const fallback = await supabase
+          .from('sub_calendar_members')
+          .upsert(fallbackPayload, { onConflict: 'sub_calendar_id,email', ignoreDuplicates: true });
+        error = fallback.error;
+      }
+    } catch (e) {
+      error = e;
     }
-    if (error) { console.error('Error inviting member:', error); return; }
-    setSubCalMembers(prev => [...prev, { email: emailToInvite, sub_calendar_id: activeSubCalendar.id }]);
+
+    if (error) {
+      console.error('Error inviting member:', error);
+      alert(`Invite failed: ${error.message || 'Unknown error'}`);
+      return;
+    }
+
+    await loadSubCalendarMembers(activeSubCalendar.id);
     setSubCalInviteEmail('');
   };
 
