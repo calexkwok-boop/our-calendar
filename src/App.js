@@ -2202,8 +2202,8 @@ function App() {
     if (!normalizedLayerId || !user?.id) return;
     const layer = layers.find(item => String(item.id) === normalizedLayerId);
     if (!layer || String(layer.owner_id) !== String(user.id)) return;
-    const ownedCount = (layers || []).filter(item => String(item.owner_id) === String(user.id)).length;
-    if (ownedCount <= 1) {
+    const totalCount = (layers || []).length;
+    if (totalCount <= 1) {
       alert('You must keep at least one calendar.');
       return;
     }
@@ -7381,9 +7381,9 @@ function App() {
                       {String(activeLayer.owner_id) === String(user?.id) ? (
                         <button
                           onClick={() => deleteLayerCalendar(activeLayer.id)}
-                          disabled={ownedLayerCalendars.length <= 1}
+                          disabled={layers.length <= 1}
                           className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                          title={ownedLayerCalendars.length <= 1 ? 'You must keep at least one owned calendar' : 'Delete active calendar'}
+                          title={layers.length <= 1 ? 'You must keep at least one calendar' : 'Delete active calendar'}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           Delete Active
@@ -7406,7 +7406,7 @@ function App() {
                       {visibleLayerCalendars.map(layer => {
                         const isActiveLayer = String(layer.id) === String(activeLayerId);
                         const isOwnedLayer = String(layer?.owner_id) === String(user?.id);
-                        const canDeleteLayer = isOwnedLayer && ownedLayerCalendars.length > 1;
+                        const canDeleteLayer = isOwnedLayer && layers.length > 1;
                         const layerRowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
                         const isLayerDeleteRevealed = layerRowOffset < 0;
                         return (
