@@ -4632,6 +4632,7 @@ function App() {
       }
 
       setPendingTripInvites(prev => prev.filter(item => item.subCalendarId !== invite.subCalendarId));
+      clearInviteNotifications({ kind: 'trip', subCalendarId: invite.subCalendarId });
       setLayerRefreshToken(prev => prev + 1);
     } catch (err) {
       alert(`Accept failed: ${err.message || 'Unknown error'}`);
@@ -4652,6 +4653,7 @@ function App() {
         return;
       }
       setPendingTripInvites(prev => prev.filter(item => item.subCalendarId !== invite.subCalendarId));
+      clearInviteNotifications({ kind: 'trip', subCalendarId: invite.subCalendarId });
     } catch (err) {
       alert(`Decline failed: ${err.message || 'Unknown error'}`);
     }
@@ -4729,6 +4731,25 @@ function App() {
     });
   };
 
+  const clearInviteNotifications = ({ kind, subCalendarId, shareId }) => {
+    const normalizedKind = String(kind || '').trim().toLowerCase();
+    const normalizedSubCalId = String(subCalendarId || '').trim();
+    const normalizedShareId = String(shareId || '').trim();
+    const removedKeys = [];
+    setInAppNotifications(prev => prev.filter((item) => {
+      const key = String(item?.key || '');
+      let shouldRemove = false;
+      if (normalizedKind === 'trip' && normalizedSubCalId) {
+        shouldRemove = key.startsWith(`trip_invite:${normalizedSubCalId}:`);
+      } else if (normalizedKind === 'calendar' && normalizedShareId) {
+        shouldRemove = key.startsWith(`calendar_invite:${normalizedShareId}:`);
+      }
+      if (shouldRemove && key) removedKeys.push(key);
+      return !shouldRemove;
+    }));
+    removedKeys.forEach((key) => seenInAppNotificationKeysRef.current.delete(key));
+  };
+
   const parseInviteNotification = (item) => {
     const key = String(item?.key || '');
     if (key.startsWith('trip_invite:')) {
@@ -4765,6 +4786,7 @@ function App() {
       }
       setActiveLayerId(invite.layerId);
       localStorage.setItem(`active-layer-${user.id}`, invite.layerId);
+      clearInviteNotifications({ kind: 'calendar', shareId: invite.shareId });
       setLayerRefreshToken(prev => prev + 1);
     } catch (err) {
       alert(`Accept failed: ${err.message || 'Unknown error'}`);
@@ -4782,7 +4804,9 @@ function App() {
         .or(`shared_with_id.eq.${user.id},shared_with_email.eq.${myEmail}`);
       if (error) {
         alert(`Decline failed: ${error.message || 'Could not decline calendar invite.'}`);
+        return;
       }
+      clearInviteNotifications({ kind: 'calendar', shareId: invite.shareId });
     } catch (err) {
       alert(`Decline failed: ${err.message || 'Unknown error'}`);
     }
