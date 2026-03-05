@@ -5648,6 +5648,8 @@ function App() {
                               onClick={() => {
                                 setActiveLayerId(layer.id);
                                 if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layer.id);
+                                setBottomNavTab('home');
+                                setShowDateDetailModal(false);
                               }}
                               className={`relative z-10 w-full text-left p-3 rounded-xl border transition-all ${isActiveLayer ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300'}`}
                               style={{ transform: `translateX(${layerRowOffset}px)`, transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease' }}
