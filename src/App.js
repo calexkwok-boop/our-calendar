@@ -2113,6 +2113,199 @@ function App() {
         if (insertItemsErr) throw insertItemsErr;
       }
 
+      // Merge trip sub-calendars (+ related rows)
+      const { data: sourceTrips, error: srcTripsErr } = await supabase
+        .from('sub_calendars')
+        .select('*')
+        .eq('layer_id', sourceLayerId);
+      if (srcTripsErr) throw srcTripsErr;
+      const { data: targetTrips, error: tgtTripsErr } = await supabase
+        .from('sub_calendars')
+        .select('*')
+        .eq('layer_id', targetLayerId);
+      if (tgtTripsErr) throw tgtTripsErr;
+
+      const tripIdMap = {};
+      const existingTripByKey = new Map();
+      (targetTrips || []).forEach(trip => {
+        const key = `${String(trip.name || '').trim().toLowerCase()}|${String(trip.start_date || '')}|${String(trip.end_date || '')}`;
+        existingTripByKey.set(key, trip);
+      });
+
+      for (const sourceTrip of (sourceTrips || [])) {
+        const tripKey = `${String(sourceTrip.name || '').trim().toLowerCase()}|${String(sourceTrip.start_date || '')}|${String(sourceTrip.end_date || '')}`;
+        const existing = existingTripByKey.get(tripKey);
+        if (existing) {
+          tripIdMap[String(sourceTrip.id)] = String(existing.id);
+          continue;
+        }
+        const newTrip = {
+          id: `sc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          name: sourceTrip.name || 'Trip',
+          start_date: sourceTrip.start_date,
+          end_date: sourceTrip.end_date,
+          created_by: sourceTrip.created_by || currentUser || user.email || 'User',
+          owner_id: user.id,
+          layer_id: targetLayerId,
+          calendar_id: targetLayerId,
+          weather_location: sourceTrip.weather_location || null,
+          weather_lat: sourceTrip.weather_lat || null,
+          weather_lon: sourceTrip.weather_lon || null,
+        };
+        const { data: insertedTrip, error: insertTripErr } = await supabase
+          .from('sub_calendars')
+          .insert(newTrip)
+          .select('*')
+          .single();
+        if (insertTripErr) throw insertTripErr;
+        tripIdMap[String(sourceTrip.id)] = String(insertedTrip.id);
+        existingTripByKey.set(tripKey, insertedTrip);
+      }
+
+      const sourceTripIds = Object.keys(tripIdMap);
+      if (sourceTripIds.length > 0) {
+        const targetTripIds = Array.from(new Set(Object.values(tripIdMap)));
+
+        const { data: sourceTripEvents, error: srcTripEventsErr } = await supabase
+          .from('sub_calendar_events')
+          .select('*')
+          .in('sub_calendar_id', sourceTripIds);
+        if (srcTripEventsErr) throw srcTripEventsErr;
+        const { data: targetTripEvents, error: tgtTripEventsErr } = await supabase
+          .from('sub_calendar_events')
+          .select('*')
+          .in('sub_calendar_id', targetTripIds);
+        if (tgtTripEventsErr) throw tgtTripEventsErr;
+
+        const tripEventKeys = new Set((targetTripEvents || []).map(ev => `${String(ev.sub_calendar_id)}|${String(ev.date || '')}|${String(ev.time || '')}|${String(ev.end_time || '')}|${String(ev.title || '').trim().toLowerCase()}|${String(ev.location || '').trim().toLowerCase()}`));
+        const tripEventsToInsert = [];
+        (sourceTripEvents || []).forEach((ev, idx) => {
+          const mappedSubCalId = tripIdMap[String(ev.sub_calendar_id)];
+          if (!mappedSubCalId) return;
+          const key = `${mappedSubCalId}|${String(ev.date || '')}|${String(ev.time || '')}|${String(ev.end_time || '')}|${String(ev.title || '').trim().toLowerCase()}|${String(ev.location || '').trim().toLowerCase()}`;
+          if (tripEventKeys.has(key)) return;
+          tripEventKeys.add(key);
+          tripEventsToInsert.push({
+            id: `sce_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
+            sub_calendar_id: mappedSubCalId,
+            date: ev.date,
+            title: ev.title || '',
+            time: ev.time || null,
+            end_time: ev.end_time || null,
+            notes: ev.notes || null,
+            category: ev.category || 'other',
+            created_by: ev.created_by || currentUser || user.email || 'User',
+            user_id: user.id,
+            reactions: ev.reactions || null,
+            location: ev.location || null,
+            created_at: ev.created_at || new Date().toISOString(),
+          });
+        });
+        if (tripEventsToInsert.length > 0) {
+          const { error: insertTripEventsErr } = await supabase.from('sub_calendar_events').insert(tripEventsToInsert);
+          if (insertTripEventsErr) throw insertTripEventsErr;
+        }
+
+        const { data: sourceTripMembers, error: srcTripMembersErr } = await supabase
+          .from('sub_calendar_members')
+          .select('*')
+          .in('sub_calendar_id', sourceTripIds);
+        if (srcTripMembersErr) throw srcTripMembersErr;
+        const { data: targetTripMembers, error: tgtTripMembersErr } = await supabase
+          .from('sub_calendar_members')
+          .select('*')
+          .in('sub_calendar_id', targetTripIds);
+        if (tgtTripMembersErr) throw tgtTripMembersErr;
+        const tripMemberKeys = new Set((targetTripMembers || []).map(m => `${String(m.sub_calendar_id)}|${String(m.email || '').trim().toLowerCase()}`));
+        const tripMembersToInsert = [];
+        (sourceTripMembers || []).forEach(member => {
+          const mappedSubCalId = tripIdMap[String(member.sub_calendar_id)];
+          if (!mappedSubCalId) return;
+          const email = String(member.email || '').trim().toLowerCase();
+          if (!email) return;
+          const key = `${mappedSubCalId}|${email}`;
+          if (tripMemberKeys.has(key)) return;
+          tripMemberKeys.add(key);
+          tripMembersToInsert.push({
+            sub_calendar_id: mappedSubCalId,
+            email,
+            added_by: user.id,
+          });
+        });
+        if (tripMembersToInsert.length > 0) {
+          const { error: insertTripMembersErr } = await supabase.from('sub_calendar_members').insert(tripMembersToInsert);
+          if (insertTripMembersErr) throw insertTripMembersErr;
+        }
+
+        const { data: sourceTripNotes, error: srcTripNotesErr } = await supabase
+          .from('sub_calendar_notes')
+          .select('*')
+          .in('sub_calendar_id', sourceTripIds);
+        if (srcTripNotesErr) throw srcTripNotesErr;
+        const { data: targetTripNotes, error: tgtTripNotesErr } = await supabase
+          .from('sub_calendar_notes')
+          .select('*')
+          .in('sub_calendar_id', targetTripIds);
+        if (tgtTripNotesErr) throw tgtTripNotesErr;
+        const tripNoteKeys = new Set((targetTripNotes || []).map(n => `${String(n.sub_calendar_id)}|${String(n.text || '')}|${String(n.checklist || '')}`));
+        const tripNotesToInsert = [];
+        (sourceTripNotes || []).forEach((note, idx) => {
+          const mappedSubCalId = tripIdMap[String(note.sub_calendar_id)];
+          if (!mappedSubCalId) return;
+          const key = `${mappedSubCalId}|${String(note.text || '')}|${String(note.checklist || '')}`;
+          if (tripNoteKeys.has(key)) return;
+          tripNoteKeys.add(key);
+          tripNotesToInsert.push({
+            id: `scn_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
+            sub_calendar_id: mappedSubCalId,
+            text: note.text || '',
+            checklist: note.checklist || JSON.stringify([]),
+            created_by: note.created_by || currentUser || user.email || 'User',
+            user_id: user.id,
+            created_at: note.created_at || new Date().toISOString(),
+          });
+        });
+        if (tripNotesToInsert.length > 0) {
+          const { error: insertTripNotesErr } = await supabase.from('sub_calendar_notes').insert(tripNotesToInsert);
+          if (insertTripNotesErr) throw insertTripNotesErr;
+        }
+
+        const { data: sourceTripPhotos, error: srcTripPhotosErr } = await supabase
+          .from('trip_photos')
+          .select('*')
+          .in('sub_calendar_id', sourceTripIds);
+        if (srcTripPhotosErr) throw srcTripPhotosErr;
+        const { data: targetTripPhotos, error: tgtTripPhotosErr } = await supabase
+          .from('trip_photos')
+          .select('*')
+          .in('sub_calendar_id', targetTripIds);
+        if (tgtTripPhotosErr) throw tgtTripPhotosErr;
+        const tripPhotoKeys = new Set((targetTripPhotos || []).map(p => `${String(p.sub_calendar_id)}|${String(p.url || '')}|${String(p.date || '')}|${String(p.caption || '')}`));
+        const tripPhotosToInsert = [];
+        (sourceTripPhotos || []).forEach((photo, idx) => {
+          const mappedSubCalId = tripIdMap[String(photo.sub_calendar_id)];
+          if (!mappedSubCalId) return;
+          const key = `${mappedSubCalId}|${String(photo.url || '')}|${String(photo.date || '')}|${String(photo.caption || '')}`;
+          if (tripPhotoKeys.has(key)) return;
+          tripPhotoKeys.add(key);
+          tripPhotosToInsert.push({
+            id: `ph_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
+            sub_calendar_id: mappedSubCalId,
+            event_id: photo.event_id || null,
+            date: photo.date || null,
+            url: photo.url || null,
+            caption: photo.caption || null,
+            uploaded_by: photo.uploaded_by || currentUser || user.email || 'User',
+            user_id: user.id,
+            created_at: photo.created_at || new Date().toISOString(),
+          });
+        });
+        if (tripPhotosToInsert.length > 0) {
+          const { error: insertTripPhotosErr } = await supabase.from('trip_photos').insert(tripPhotosToInsert);
+          if (insertTripPhotosErr) throw insertTripPhotosErr;
+        }
+      }
+
       // Merge participants / sharing
       const { data: sourceShares, error: srcSharesErr } = await supabase
         .from('shared_access')
