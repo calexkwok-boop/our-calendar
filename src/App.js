@@ -210,6 +210,7 @@ function App() {
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
   const DELETED_PHOTOS_NOTE_TEXT = '__DELETED_PHOTOS_V1__';
+  const AUTO_MERGE_SHARED_LAYERS = false;
   const getDeletedPhotosLocalKey = (subCalId) => `subcal-deleted-photos-${subCalId}`;
   const readLocalDeletedPhotoIds = (subCalId) => {
     try {
@@ -3704,6 +3705,7 @@ function App() {
   }, [sharedCalendars, activeLayerId]);
 
   useEffect(() => {
+    if (!AUTO_MERGE_SHARED_LAYERS) return;
     const autoMergeMutualSharedLayers = async () => {
       if (!user?.id || mergeInProgress || !Array.isArray(layers) || layers.length === 0) return;
       const owned = layers.filter(layer => String(layer.owner_id) === String(user.id));
