@@ -4072,23 +4072,25 @@ function App() {
         setPendingTripInvites([]);
         return;
       }
-      const { data: tripRows } = await supabase
+      const { data: tripRows, error: tripErr } = await supabase
         .from('sub_calendars')
         .select('id,name,layer_id,owner_id,start_date,end_date')
         .in('id', subCalIds);
+      if (tripErr) {
+        console.error('loadPendingTripInvites trip lookup failed:', tripErr);
+      }
       const tripMap = new Map((tripRows || []).map(t => [String(t.id), t]));
       const pending = rows
         .map((row) => {
           const subCalId = String(row?.sub_calendar_id || '');
-          const trip = tripMap.get(subCalId);
-          if (!trip) return null;
+          const trip = tripMap.get(subCalId) || null;
           return {
             subCalendarId: subCalId,
-            tripName: trip.name || 'Trip',
-            layerId: String(trip.layer_id || ''),
-            ownerId: String(trip.owner_id || ''),
-            startDate: trip.start_date,
-            endDate: trip.end_date,
+            tripName: trip?.name || 'Trip Invite',
+            layerId: String(trip?.layer_id || ''),
+            ownerId: String(trip?.owner_id || row?.added_by || ''),
+            startDate: trip?.start_date || null,
+            endDate: trip?.end_date || null,
             invitedAt: row.invited_at || row.created_at || null,
             email: String(row.email || myEmail).toLowerCase(),
           };
@@ -4105,10 +4107,27 @@ function App() {
     if (!invite || !user?.id || !user?.email) return;
     const myEmail = String(user.email).trim().toLowerCase();
     try {
+      let ownerId = String(invite.ownerId || '');
+      let layerId = String(invite.layerId || '');
+      if (!ownerId || !layerId) {
+        const { data: tripRow, error: tripErr } = await supabase
+          .from('sub_calendars')
+          .select('owner_id,layer_id')
+          .eq('id', invite.subCalendarId)
+          .maybeSingle();
+        if (!tripErr && tripRow) {
+          ownerId = String(tripRow.owner_id || ownerId);
+          layerId = String(tripRow.layer_id || layerId);
+        }
+      }
+      if (!ownerId || !layerId) {
+        alert('Accept failed: Could not resolve trip owner/layer for this invite.');
+        return;
+      }
       const { error: shareErr } = await supabase.from('shared_access').insert({
-        owner_id: invite.ownerId,
-        layer_id: invite.layerId,
-        calendar_id: invite.layerId,
+        owner_id: ownerId,
+        layer_id: layerId,
+        calendar_id: layerId,
         shared_with_email: myEmail,
         shared_with_id: user.id,
       });
