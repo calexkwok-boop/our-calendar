@@ -3437,7 +3437,7 @@ function App() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user?.id || !activeLayerId) return;
+    if (!user?.id) return;
     const storageKey = `in-app-notifications-${user.id}`;
     const cursorKey = `in-app-notification-cursor-${user.id}`;
     const expenseSeenKey = `in-app-seen-expenses-${user.id}`;
