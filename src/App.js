@@ -4140,6 +4140,45 @@ function App() {
       });
     };
 
+    const notifyCalendarShares = async (rows) => {
+      const inviteRows = (rows || []).filter((row) => {
+        const ownerId = String(row?.owner_id || '');
+        if (!ownerId || ownerId === me) return false;
+        const sharedWithId = String(row?.shared_with_id || '');
+        const sharedWithEmail = String(row?.shared_with_email || '').trim().toLowerCase();
+        return sharedWithId === me || sharedWithEmail === myEmail;
+      });
+      if (inviteRows.length === 0) return;
+
+      const layerIds = Array.from(new Set(inviteRows.map(row => String(row?.layer_id || '')).filter(Boolean)));
+      const layerNameMap = {};
+      if (layerIds.length > 0) {
+        const { data: layerRows, error: layerErr } = await supabase
+          .from('calendar_layers')
+          .select('id,name')
+          .in('id', layerIds);
+        if (layerErr) {
+          console.error('calendar_layers invite name fetch failed:', layerErr);
+        } else {
+          (layerRows || []).forEach(layer => {
+            layerNameMap[String(layer.id)] = layer.name || 'a calendar';
+          });
+        }
+      }
+
+      inviteRows.forEach((row) => {
+        const layerId = String(row?.layer_id || '');
+        const calendarName = layerNameMap[layerId] || 'a calendar';
+        const rowId = String(row?.id || `${layerId}:${String(row?.owner_id || '')}`);
+        addInAppNotification({
+          key: `shared_access:${rowId}`,
+          type: 'invite',
+          message: `You were invited to "${calendarName}".`,
+          createdAt: row?.created_at || new Date().toISOString(),
+        });
+      });
+    };
+
     const getAccessibleSubCalIds = async () => {
       const ids = new Set(Array.from(subCalIdSet));
 
@@ -4183,9 +4222,10 @@ function App() {
       try {
         const { data: sharedData } = await supabase
           .from('shared_access')
-          .select('owner_id')
+          .select('id,owner_id,layer_id,shared_with_id,shared_with_email,created_at')
           .or(`shared_with_email.eq.${user.email},shared_with_id.eq.${user.id}`);
         const ownerIds = Array.from(new Set((sharedData || []).map(s => String(s.owner_id || '')).filter(Boolean)));
+        await notifyCalendarShares(sharedData || []);
 
         if (ownerIds.length > 0) {
           const { data: sharedEvents } = await supabase
