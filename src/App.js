@@ -448,7 +448,11 @@ function App() {
       return;
     }
     try {
-      const { data, error } = await supabase
+      const myUserId = String(user?.id || '');
+      const myEmail = String(user?.email || '').trim().toLowerCase();
+      const ownerIdForLayer = String(activeLayerOwnerId || myUserId || '');
+
+      const { data: directRows, error } = await supabase
         .from('sub_calendars')
         .select('*')
         .eq('layer_id', activeLayerId);
@@ -456,7 +460,45 @@ function App() {
         console.error('Error loading sub_calendars:', error);
         return;
       }
-      setSubCalendars(data || []);
+
+      const { data: sharedOwnerRows } = await supabase
+        .from('shared_access')
+        .select('owner_id')
+        .eq('layer_id', activeLayerId)
+        .or(`shared_with_id.eq.${myUserId},shared_with_email.eq.${myEmail}`);
+      const accessibleOwnerIds = Array.from(new Set([
+        ownerIdForLayer,
+        ...((sharedOwnerRows || []).map(row => String(row?.owner_id || '')).filter(Boolean)),
+      ]));
+
+      let legacyRows = [];
+      if (accessibleOwnerIds.length > 0) {
+        const { data: legacyData } = await supabase
+          .from('sub_calendars')
+          .select('*')
+          .is('layer_id', null)
+          .in('owner_id', accessibleOwnerIds);
+        legacyRows = legacyData || [];
+      }
+
+      let memberRows = [];
+      if (myEmail) {
+        const { data: memberLinks } = await supabase
+          .from('sub_calendar_members')
+          .select('sub_calendar_id')
+          .eq('email', myEmail);
+        const memberTripIds = Array.from(new Set((memberLinks || []).map(row => String(row?.sub_calendar_id || '')).filter(Boolean)));
+        if (memberTripIds.length > 0) {
+          const { data: memberTrips } = await supabase
+            .from('sub_calendars')
+            .select('*')
+            .in('id', memberTripIds);
+          memberRows = memberTrips || [];
+        }
+      }
+
+      const mergedRows = Array.from(new Map([...(directRows || []), ...legacyRows, ...memberRows].map(sc => [String(sc.id), sc])).values());
+      setSubCalendars(mergedRows);
     } catch (e) { console.error(e); }
   };
 
