@@ -1677,11 +1677,16 @@ function App() {
       .from('events')
       .update({ reactions: JSON.stringify(updatedReactions) })
       .eq('id', event.id)
+      .eq('layer_id', activeLayerId)
       .then(({ error }) => {
         if (error) console.error('Error saving reaction:', error);
       });
   }; // 'month' | 'week'
   const [holidays, setHolidays] = useState({});
+  const [layers, setLayers] = useState([]);
+  const [activeLayerId, setActiveLayerId] = useState(null);
+  const [showLayerModal, setShowLayerModal] = useState(false);
+  const [newLayerName, setNewLayerName] = useState('');
   const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
   const [sharedOwnerLabels, setSharedOwnerLabels] = useState({});
   const [myShares, setMyShares] = useState([]); // people I've shared with
@@ -1714,8 +1719,10 @@ function App() {
     if (!id) return 'another user';
     return isUuidLike(id) ? `User ${id.slice(0, 8)}` : id;
   };
+  const activeLayer = layers.find(layer => layer.id === activeLayerId) || null;
+  const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
 
-  const resolveSharedOwnerLabels = async (shares) => {
+  const resolveSharedOwnerLabels = async (shares, layerId) => {
     const ownerIds = Array.from(new Set((shares || []).map(s => String(s?.owner_id || '')).filter(Boolean)));
     if (ownerIds.length === 0) {
       setSharedOwnerLabels({});
@@ -1730,6 +1737,7 @@ function App() {
         .from('events')
         .select('user_id,created_by,created_at')
         .in('user_id', ownerIds)
+        .eq('layer_id', layerId)
         .order('created_at', { ascending: false })
         .limit(500);
       if (!eventErr) {
@@ -1769,6 +1777,82 @@ function App() {
       });
       return merged;
     });
+  };
+
+  const loadLayersForUser = async (userId, userEmail) => {
+    const { data: ownedLayers, error: ownedErr } = await supabase
+      .from('calendar_layers')
+      .select('*')
+      .eq('owner_id', userId)
+      .order('created_at', { ascending: true });
+    if (ownedErr) throw ownedErr;
+
+    const { data: sharedRows } = await supabase
+      .from('shared_access')
+      .select('layer_id')
+      .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`);
+    const sharedLayerIds = Array.from(new Set((sharedRows || []).map(r => String(r?.layer_id || '')).filter(Boolean)));
+
+    let sharedLayers = [];
+    if (sharedLayerIds.length > 0) {
+      const { data: sharedLayerData, error: sharedLayersErr } = await supabase
+        .from('calendar_layers')
+        .select('*')
+        .in('id', sharedLayerIds)
+        .order('created_at', { ascending: true });
+      if (sharedLayersErr) throw sharedLayersErr;
+      sharedLayers = sharedLayerData || [];
+    }
+
+    const merged = Array.from(new Map([...(ownedLayers || []), ...sharedLayers].map(layer => [String(layer.id), layer])).values());
+    setLayers(merged);
+    return merged;
+  };
+
+  const createLayerCalendar = async () => {
+    const name = newLayerName.trim();
+    if (!name || !user?.id) return;
+    const payload = {
+      owner_id: user.id,
+      name,
+      is_default: false,
+      created_by: currentUser || user.email || 'User',
+    };
+    const { data, error } = await supabase
+      .from('calendar_layers')
+      .insert(payload)
+      .select('*')
+      .single();
+    if (error) {
+      setShareMessage(`Could not create calendar: ${error.message}`);
+      return;
+    }
+    const created = data || payload;
+    setLayers(prev => [...prev, created]);
+    setActiveLayerId(created.id);
+    localStorage.setItem(`active-layer-${user.id}`, created.id);
+    setNewLayerName('');
+    setShowLayerModal(false);
+  };
+
+  const renameActiveLayer = async (nextName) => {
+    const trimmed = String(nextName || '').trim();
+    if (!trimmed || !activeLayerId || String(activeLayerOwnerId) !== String(user?.id)) {
+      setCalendarTitle(activeLayer?.name || 'Our Calendar');
+      return;
+    }
+    const { error } = await supabase
+      .from('calendar_layers')
+      .update({ name: trimmed })
+      .eq('id', activeLayerId)
+      .eq('owner_id', user.id);
+    if (error) {
+      console.error('Could not rename calendar layer:', error);
+      setCalendarTitle(activeLayer?.name || 'Our Calendar');
+      return;
+    }
+    setLayers(prev => prev.map(layer => String(layer.id) === String(activeLayerId) ? { ...layer, name: trimmed } : layer));
+    setCalendarTitle(trimmed);
   };
 
   // Apply dark mode to document
@@ -1882,7 +1966,7 @@ function App() {
       );
     };
     initWeather();
-  }, []);
+  }, [activeLayerId]);
   const handleDateTap = (date) => {
     if (!date) return;
 
@@ -1996,6 +2080,7 @@ function App() {
 
   const saveEvents = async (newEvents) => {
     try {
+      if (!activeLayerId) return;
       setEvents(newEvents);
 
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -2031,13 +2116,14 @@ function App() {
                 location: event.location || null,
                 created_by: event.createdBy,
                 created_at: event.createdAt,
-                user_id: user?.id
+                user_id: user?.id,
+                layer_id: activeLayerId
               });
             });
           });
 
           // Save own events via delete+reinsert
-          await supabase.from('events').delete().eq('user_id', user?.id);
+          await supabase.from('events').delete().eq('user_id', user?.id).eq('layer_id', activeLayerId);
           if (myEvents.length > 0) {
             const { error } = await supabase.from('events').insert(myEvents);
             if (error) console.error('Error saving events to Supabase:', error);
@@ -2058,7 +2144,7 @@ function App() {
               exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
               reactions: event.reactions ? JSON.stringify(event.reactions) : null,
               location: event.location || null,
-            }).eq('id', event.id);
+            }).eq('id', event.id).eq('layer_id', activeLayerId);
           }
         } catch (err) {
           console.error('Error writing to Supabase:', err);
@@ -2110,7 +2196,7 @@ function App() {
   };
 
   const handleShareCalendar = async () => {
-    if (!shareEmailInput.trim()) return;
+    if (!shareEmailInput.trim() || !activeLayerId) return;
     const email = shareEmailInput.trim().toLowerCase();
 
     // Check not already shared
@@ -2127,6 +2213,7 @@ function App() {
 
     const { error } = await supabase.from('shared_access').insert({
       owner_id: user.id,
+      layer_id: activeLayerId,
       shared_with_email: email,
     });
 
@@ -2134,7 +2221,7 @@ function App() {
       setShareMessage('Error sharing calendar. Try again.');
       console.error(error);
     } else {
-      setMyShares(prev => [...prev, { owner_id: user.id, shared_with_email: email }]);
+      setMyShares(prev => [...prev, { owner_id: user.id, layer_id: activeLayerId, shared_with_email: email }]);
       setShareEmailInput('');
       setShareMessage(`✅ Shared! When ${email} logs in they'll see your calendar.`);
     }
@@ -2145,6 +2232,7 @@ function App() {
       .from('shared_access')
       .delete()
       .eq('owner_id', user.id)
+      .eq('layer_id', activeLayerId)
       .eq('shared_with_email', shareEmail);
 
     if (!error) {
@@ -2153,16 +2241,15 @@ function App() {
     }
   };
 
-  const primaryListOwnerId = (sharedCalendars && sharedCalendars.length > 0)
-    ? sharedCalendars[0].owner_id
-    : user?.id;
+  const primaryListOwnerId = activeLayerOwnerId;
 
   const loadSharedListGroups = async (ownerId) => {
-    if (!ownerId) return;
+    if (!ownerId || !activeLayerId) return;
     const { data, error } = await supabase
       .from('shared_list_groups')
       .select('*')
       .eq('owner_id', ownerId)
+      .eq('layer_id', activeLayerId)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -2189,7 +2276,7 @@ function App() {
   };
 
   const loadSharedListItems = async (ownerId, listId) => {
-    if (!ownerId || !listId) {
+    if (!ownerId || !listId || !activeLayerId) {
       setSharedListItems([]);
       return;
     }
@@ -2197,6 +2284,7 @@ function App() {
       .from('shared_lists')
       .select('*')
       .eq('owner_id', ownerId)
+      .eq('layer_id', activeLayerId)
       .eq('list_id', listId)
       .order('created_at', { ascending: true });
 
@@ -2216,10 +2304,11 @@ function App() {
 
   const createSharedList = async () => {
     const title = newSharedListTitle.trim();
-    if (!title || !primaryListOwnerId || !user?.id) return;
+    if (!title || !primaryListOwnerId || !user?.id || !activeLayerId) return;
 
     const payload = {
       owner_id: primaryListOwnerId,
+      layer_id: activeLayerId,
       title,
       created_by: currentUser || user.email || 'User',
       user_id: user.id,
@@ -2246,13 +2335,14 @@ function App() {
   };
 
   const deleteSharedList = async (listId) => {
-    if (!listId || !primaryListOwnerId) return;
+    if (!listId || !primaryListOwnerId || !activeLayerId) return;
     if (!window.confirm('Delete this list and all its items?')) return;
 
     const { error: itemDeleteError } = await supabase
       .from('shared_lists')
       .delete()
       .eq('owner_id', primaryListOwnerId)
+      .eq('layer_id', activeLayerId)
       .eq('list_id', listId);
 
     if (itemDeleteError) {
@@ -2263,6 +2353,7 @@ function App() {
     const { error: listDeleteError } = await supabase
       .from('shared_list_groups')
       .delete()
+      .eq('layer_id', activeLayerId)
       .eq('id', listId);
 
     if (listDeleteError) {
@@ -2279,10 +2370,11 @@ function App() {
 
   const addSharedListItem = async () => {
     const text = newListItemText.trim();
-    if (!text || !primaryListOwnerId || !selectedSharedListId || !user?.id) return;
+    if (!text || !primaryListOwnerId || !selectedSharedListId || !user?.id || !activeLayerId) return;
 
     const payload = {
       owner_id: primaryListOwnerId,
+      layer_id: activeLayerId,
       list_id: selectedSharedListId,
       text,
       done: false,
@@ -2311,6 +2403,7 @@ function App() {
     const { error } = await supabase
       .from('shared_lists')
       .update({ done: !item.done })
+      .eq('layer_id', activeLayerId)
       .eq('id', item.id);
 
     if (error) {
@@ -2327,6 +2420,7 @@ function App() {
     const { error } = await supabase
       .from('shared_lists')
       .delete()
+      .eq('layer_id', activeLayerId)
       .eq('id', itemId);
 
     if (error) {
@@ -2359,6 +2453,7 @@ function App() {
     const { error } = await supabase
       .from('shared_lists')
       .update({ text: nextText })
+      .eq('layer_id', activeLayerId)
       .eq('id', item.id);
 
     if (error) {
@@ -2379,19 +2474,42 @@ function App() {
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
         const userEmail = session?.user?.email;
-        if (!userId) return;
+        if (!userId || !activeLayerId) return;
+        const loadedLayers = await loadLayersForUser(userId, userEmail);
+        if (!loadedLayers || loadedLayers.length === 0) {
+          setLayers([]);
+          setActiveLayerId(null);
+          setEvents({});
+          setSharedCalendars([]);
+          setMyShares([]);
+          setSharedListGroups([]);
+          setSharedListItems([]);
+          return;
+        }
+        const persistedLayerId = localStorage.getItem(`active-layer-${userId}`);
+        const selectedLayerId = (
+          activeLayerId && loadedLayers.some(layer => String(layer.id) === String(activeLayerId))
+            ? activeLayerId
+            : (persistedLayerId && loadedLayers.some(layer => String(layer.id) === String(persistedLayerId))
+              ? persistedLayerId
+              : loadedLayers[0].id)
+        );
+        if (selectedLayerId !== activeLayerId) setActiveLayerId(selectedLayerId);
+        localStorage.setItem(`active-layer-${userId}`, selectedLayerId);
 
         // Load my own events
         const { data: eventsData, error: eventsError } = await supabase
           .from('events')
           .select('*')
-          .eq('user_id', userId);
+          .eq('user_id', userId)
+          .eq('layer_id', selectedLayerId);
 
         // Load calendars shared WITH me (by email)
         const { data: sharedWithMe } = await supabase
           .from('shared_access')
           .select('*')
-          .eq('shared_with_email', userEmail);
+          .eq('layer_id', selectedLayerId)
+          .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`);
 
         // Update shared_with_id if not yet set (first time they log in)
         if (sharedWithMe && sharedWithMe.length > 0) {
@@ -2404,14 +2522,15 @@ function App() {
             }
           }
           setSharedCalendars(sharedWithMe);
-          await resolveSharedOwnerLabels(sharedWithMe);
+          await resolveSharedOwnerLabels(sharedWithMe, selectedLayerId);
 
           // Load events from all owners who shared with me
           const ownerIds = sharedWithMe.map(s => s.owner_id);
           const { data: sharedEventsData } = await supabase
             .from('events')
             .select('*')
-            .in('user_id', ownerIds);
+            .in('user_id', ownerIds)
+            .eq('layer_id', selectedLayerId);
 
           // Merge own events + shared events
           const allEventsData = [...(eventsData || []), ...(sharedEventsData || [])];
@@ -2484,7 +2603,8 @@ function App() {
         const { data: mySharesData } = await supabase
           .from('shared_access')
           .select('*')
-          .eq('owner_id', userId);
+          .eq('owner_id', userId)
+          .eq('layer_id', selectedLayerId);
         setMyShares(mySharesData || []);
 
         const { data: categoriesData } = await supabase
@@ -2508,10 +2628,8 @@ function App() {
           setCategories(DEFAULT_CATEGORIES);
         }
 
-        const titleKey = `calendar-title-${userId}`;
-        const savedTitle = localStorage.getItem(titleKey);
-        if (savedTitle) setCalendarTitle(savedTitle);
-        else setCalendarTitle('Our Calendar');
+        const activeLayerRow = loadedLayers.find(layer => String(layer.id) === String(selectedLayerId));
+        setCalendarTitle(activeLayerRow?.name || 'Our Calendar');
 
         const userResult = await window.storage.get('calendar-user', false);
         if (userResult && userResult.value) {
@@ -2546,6 +2664,7 @@ function App() {
         const { data: sharedData } = await supabase
           .from('shared_access')
           .select('*')
+          .eq('layer_id', activeLayerId)
           .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`);
 
         if (!sharedData || sharedData.length === 0) return;
@@ -2554,7 +2673,8 @@ function App() {
         const { data: sharedEventsData } = await supabase
           .from('events')
           .select('*')
-          .in('user_id', ownerIds);
+          .in('user_id', ownerIds)
+          .eq('layer_id', activeLayerId);
 
         if (!sharedEventsData) return;
 
@@ -2606,7 +2726,7 @@ function App() {
       .subscribe();
 
     return () => sharedSubscription.unsubscribe();
-  }, []);
+  }, [activeLayerId]);
 
   // Check auth session
   useEffect(() => {
@@ -2628,12 +2748,12 @@ function App() {
   useEffect(() => {
     if (!primaryListOwnerId) return;
     loadSharedListGroups(primaryListOwnerId);
-  }, [primaryListOwnerId]);
+  }, [primaryListOwnerId, activeLayerId]);
 
   useEffect(() => {
     if (!sharedCalendars || sharedCalendars.length === 0) return;
-    resolveSharedOwnerLabels(sharedCalendars);
-  }, [sharedCalendars]);
+    resolveSharedOwnerLabels(sharedCalendars, activeLayerId);
+  }, [sharedCalendars, activeLayerId]);
 
   useEffect(() => {
     if (!primaryListOwnerId || !selectedSharedListId) {
@@ -2641,7 +2761,7 @@ function App() {
       return;
     }
     loadSharedListItems(primaryListOwnerId, selectedSharedListId);
-  }, [primaryListOwnerId, selectedSharedListId]);
+  }, [primaryListOwnerId, selectedSharedListId, activeLayerId]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -2689,7 +2809,7 @@ function App() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !activeLayerId) return;
     const storageKey = `in-app-notifications-${user.id}`;
     const cursorKey = `in-app-notification-cursor-${user.id}`;
     const expenseSeenKey = `in-app-seen-expenses-${user.id}`;
@@ -2750,6 +2870,7 @@ function App() {
         .from('shared_access')
         .select('id')
         .eq('owner_id', ownerId)
+        .eq('layer_id', activeLayerId)
         .eq('shared_with_id', me)
         .limit(1);
       if (!shareByIdErr && (shareById || []).length > 0) {
@@ -2761,6 +2882,7 @@ function App() {
         .from('shared_access')
         .select('id')
         .eq('owner_id', ownerId)
+        .eq('layer_id', activeLayerId)
         .ilike('shared_with_email', myEmail)
         .limit(1);
       if (!shareByEmailErr && (shareByEmail || []).length > 0) {
@@ -2805,6 +2927,7 @@ function App() {
       .channel(`in-app-updates-${me}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'events' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
+        if (String(row.layer_id || '') !== String(activeLayerId)) return;
         if (!(await canAccessOwnerId(row.user_id))) return;
         const who = String(row.created_by || 'Someone');
         addInAppNotification({
@@ -2841,6 +2964,7 @@ function App() {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_lists' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
+        if (String(row.layer_id || '') !== String(activeLayerId)) return;
         const who = String(row.created_by || 'Someone');
         const itemText = String(row.text || '').trim();
         const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
@@ -2856,10 +2980,10 @@ function App() {
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, currentUser, subCalendars]);
+  }, [user?.id, user?.email, currentUser, subCalendars, activeLayerId]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !activeLayerId) return;
     const me = String(user.id);
     const myEmail = String(user?.email || '').trim().toLowerCase();
     const myName = String(currentUser || '').trim().toLowerCase();
@@ -3020,6 +3144,7 @@ function App() {
         const { data: sharedData } = await supabase
           .from('shared_access')
           .select('owner_id')
+          .eq('layer_id', activeLayerId)
           .or(`shared_with_email.eq.${user.email},shared_with_id.eq.${user.id}`);
         const ownerIds = Array.from(new Set((sharedData || []).map(s => String(s.owner_id || '')).filter(Boolean)));
 
@@ -3028,6 +3153,7 @@ function App() {
             .from('events')
             .select('id,title,created_by,user_id,created_at')
             .in('user_id', ownerIds)
+            .eq('layer_id', activeLayerId)
             .gt('created_at', getCursor('events'))
             .order('created_at', { ascending: true })
             .limit(200);
@@ -3038,6 +3164,7 @@ function App() {
             .from('shared_lists')
             .select('id,text,created_by,user_id,created_at')
             .in('owner_id', ownerIds)
+            .eq('layer_id', activeLayerId)
             .gt('created_at', getCursor('sharedListItems'))
             .order('created_at', { ascending: true })
             .limit(200);
@@ -3104,7 +3231,7 @@ function App() {
       window.removeEventListener('focus', pollInAppUpdates);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [user?.id, user?.email, currentUser, subCalendars]);
+  }, [user?.id, user?.email, currentUser, subCalendars, activeLayerId]);
 
   // Check notification permission on load
   useEffect(() => {
@@ -3884,12 +4011,12 @@ function App() {
                     onChange={(e) => setCalendarTitle(e.target.value)}
                     onBlur={async () => {
                       setIsEditingTitle(false);
-                      localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
+                      await renameActiveLayer(calendarTitle);
                     }}
                     onKeyPress={async (e) => {
                       if (e.key === 'Enter') {
                         setIsEditingTitle(false);
-                        localStorage.setItem(`calendar-title-${user?.id}`, calendarTitle);
+                        await renameActiveLayer(calendarTitle);
                       }
                     }}
                     className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 border-2 border-purple-300 rounded-lg w-full"
@@ -5141,11 +5268,44 @@ function App() {
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Active Calendars</h3>
                   <button
-                    onClick={() => setShowSubCalendarModal(true)}
+                    onClick={() => setShowLayerModal(true)}
                     className="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-xs font-semibold shrink-0"
                   >
                     + New Calendar
                   </button>
+                </div>
+
+                <div className="mb-4">
+                  <h4 className="text-xs uppercase tracking-wide font-semibold text-indigo-600 dark:text-indigo-400 mb-2">Calendars</h4>
+                  {layers.length === 0 ? (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">No calendars found.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {layers.map(layer => {
+                        const isActiveLayer = String(layer.id) === String(activeLayerId);
+                        return (
+                          <button
+                            key={layer.id}
+                            onClick={() => {
+                              setActiveLayerId(layer.id);
+                              if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layer.id);
+                            }}
+                            className={`w-full text-left p-3 rounded-xl border transition-all ${isActiveLayer ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300'}`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{layer.name || 'Calendar'}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                  {String(layer.owner_id) === String(user?.id) ? 'Owned by you' : `Shared by ${sharedOwnerLabels[String(layer.owner_id || '')] || fallbackOwnerLabel(layer.owner_id)}`}
+                                </div>
+                              </div>
+                              {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="mb-4">
@@ -5340,6 +5500,34 @@ function App() {
               Archived
             </button>
           </div>
+        </div>
+      </div>
+    )}
+
+    {showLayerModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">New Calendar</h3>
+            <button onClick={() => setShowLayerModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          <input
+            type="text"
+            value={newLayerName}
+            onChange={e => setNewLayerName(e.target.value)}
+            placeholder="e.g. Work, Friends, Family"
+            className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+            autoFocus
+            onKeyPress={e => e.key === 'Enter' && createLayerCalendar()}
+          />
+          <button
+            onClick={createLayerCalendar}
+            className="w-full py-2.5 bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-xl font-medium"
+          >
+            Create Calendar
+          </button>
         </div>
       </div>
     )}
