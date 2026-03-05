@@ -716,12 +716,20 @@ function App() {
   const inviteToSubCalendar = async (emailOverride) => {
     const emailToInvite = (emailOverride || subCalInviteEmail).trim().toLowerCase();
     if (!emailToInvite || !activeSubCalendar) return;
-    const { error } = await supabase.from('sub_calendar_members').insert({
+    let { error } = await supabase.from('sub_calendar_members').insert({
       sub_calendar_id: activeSubCalendar.id,
       email: emailToInvite,
       added_by: user.id,
       created_at: new Date().toISOString(),
     });
+    if (error && /column .*created_at|schema cache/i.test(String(error.message || ''))) {
+      const fallback = await supabase.from('sub_calendar_members').insert({
+        sub_calendar_id: activeSubCalendar.id,
+        email: emailToInvite,
+        added_by: user.id,
+      });
+      error = fallback.error;
+    }
     if (error) { console.error('Error inviting member:', error); return; }
     setSubCalMembers(prev => [...prev, { email: emailToInvite, sub_calendar_id: activeSubCalendar.id }]);
     setSubCalInviteEmail('');
