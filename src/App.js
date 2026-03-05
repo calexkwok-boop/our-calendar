@@ -5797,18 +5797,8 @@ function App() {
 
             {bottomNavTab === 'active' && (
               <>
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Active Calendars</h3>
-                  <button
-                    onClick={() => setShowLayerModal(true)}
-                    className="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-xs font-semibold shrink-0"
-                  >
-                    + New Calendar
-                  </button>
-                </div>
-
                 <div className="mb-4">
-                  <h4 className="text-xs uppercase tracking-wide font-semibold text-indigo-600 dark:text-indigo-400 mb-2">Calendars</h4>
+                  <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400 mb-3">Calendars</h3>
                   {layers.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No calendars found.</div>
                   ) : (
@@ -5862,6 +5852,12 @@ function App() {
                       })}
                     </div>
                   )}
+                  <button
+                    onClick={() => setShowLayerModal(true)}
+                    className="mt-3 w-full px-3 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold"
+                  >
+                    + New Calendar
+                  </button>
                 </div>
 
                 <div>
