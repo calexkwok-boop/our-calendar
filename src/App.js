@@ -486,9 +486,16 @@ function App() {
       if (myEmail) {
         const { data: memberLinks } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id')
+          .select('sub_calendar_id,status')
           .eq('email', myEmail);
-        const memberTripIds = Array.from(new Set((memberLinks || []).map(row => String(row?.sub_calendar_id || '')).filter(Boolean)));
+        const memberTripIds = Array.from(new Set((memberLinks || [])
+          .filter(row => {
+            const status = String(row?.status || '').toLowerCase();
+            // Legacy rows without status remain visible; new flow requires accepted.
+            return !status || status === 'accepted';
+          })
+          .map(row => String(row?.sub_calendar_id || ''))
+          .filter(Boolean)));
         if (memberTripIds.length > 0) {
           const { data: memberTrips } = await supabase
             .from('sub_calendars')
@@ -4107,34 +4114,6 @@ function App() {
     if (!invite || !user?.id || !user?.email) return;
     const myEmail = String(user.email).trim().toLowerCase();
     try {
-      let ownerId = String(invite.ownerId || '');
-      let layerId = String(invite.layerId || '');
-      if (!ownerId || !layerId) {
-        const { data: tripRow, error: tripErr } = await supabase
-          .from('sub_calendars')
-          .select('owner_id,layer_id')
-          .eq('id', invite.subCalendarId)
-          .maybeSingle();
-        if (!tripErr && tripRow) {
-          ownerId = String(tripRow.owner_id || ownerId);
-          layerId = String(tripRow.layer_id || layerId);
-        }
-      }
-      if (!ownerId || !layerId) {
-        alert('Accept failed: Could not resolve trip owner/layer for this invite.');
-        return;
-      }
-      const { error: shareErr } = await supabase.from('shared_access').insert({
-        owner_id: ownerId,
-        layer_id: layerId,
-        calendar_id: layerId,
-        shared_with_email: myEmail,
-        shared_with_id: user.id,
-      });
-      if (shareErr && !/duplicate key|already exists|unique constraint/i.test(String(shareErr.message || ''))) {
-        alert(`Accept failed: ${shareErr.message || 'Could not grant access.'}`);
-        return;
-      }
       const { error: updateErr } = await supabase
         .from('sub_calendar_members')
         .update({ status: 'accepted' })
