@@ -4628,6 +4628,12 @@ function App() {
     })
     .sort((a, b) => toDateOnlyTs(getSubCalEndRaw(b)) - toDateOnlyTs(getSubCalEndRaw(a)));
   const ownedLayerCalendars = layers.filter(layer => String(layer.owner_id) === String(user?.id));
+  const visibleLayerCalendars = [...layers].sort((a, b) => {
+    const aOwned = String(a?.owner_id || '') === String(user?.id || '');
+    const bOwned = String(b?.owner_id || '') === String(user?.id || '');
+    if (aOwned !== bOwned) return aOwned ? -1 : 1;
+    return String(a?.name || '').localeCompare(String(b?.name || ''));
+  });
 
   if (isLoading) {
     return (
@@ -6128,9 +6134,10 @@ function App() {
                     <div className="text-sm text-gray-500 dark:text-gray-400">No calendars found.</div>
                   ) : (
                     <div className="space-y-2">
-                      {ownedLayerCalendars.map(layer => {
+                      {visibleLayerCalendars.map(layer => {
                         const isActiveLayer = String(layer.id) === String(activeLayerId);
-                        const canDeleteLayer = ownedLayerCalendars.length > 1;
+                        const isOwnedLayer = String(layer.owner_id) === String(user?.id);
+                        const canDeleteLayer = isOwnedLayer && ownedLayerCalendars.length > 1;
                         const layerRowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
                         const isLayerDeleteRevealed = layerRowOffset < 0;
                         return (
@@ -6166,7 +6173,9 @@ function App() {
                                 <div className="min-w-0">
                                   <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{layer.name || 'Calendar'}</div>
                                   <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                    Owned by you
+                                    {isOwnedLayer
+                                      ? 'Owned by you'
+                                      : `Shared by ${sharedOwnerLabels[String(layer.owner_id || '')] || fallbackOwnerLabel(layer.owner_id)}`}
                                   </div>
                                 </div>
                                 {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
