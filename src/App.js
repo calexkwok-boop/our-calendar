@@ -483,6 +483,7 @@ function App() {
       }
 
       let memberRows = [];
+      const memberTripIdSet = new Set();
       if (myEmail) {
         const { data: memberLinks } = await supabase
           .from('sub_calendar_members')
@@ -496,6 +497,7 @@ function App() {
           })
           .map(row => String(row?.sub_calendar_id || ''))
           .filter(Boolean)));
+        memberTripIds.forEach(id => memberTripIdSet.add(id));
         if (memberTripIds.length > 0) {
           const { data: memberTrips } = await supabase
             .from('sub_calendars')
@@ -506,8 +508,50 @@ function App() {
       }
 
       const mergedRows = Array.from(new Map([...(directRows || []), ...legacyRows, ...memberRows].map(sc => [String(sc.id), sc])).values());
-      setSubCalendars(mergedRows);
-      return mergedRows;
+
+      // Deduplicate duplicate cloned trips (same name + dates + effective layer) by selecting the best candidate.
+      const dedupedMap = new Map();
+      const getTripScore = (sc) => {
+        let score = 0;
+        const scId = String(sc?.id || '');
+        const scLayerId = String(sc?.layer_id || '');
+        const scOwnerId = String(sc?.owner_id || '');
+        if (scLayerId && scLayerId === String(activeLayerId || '')) score += 4;
+        if (!scLayerId) score += 1; // legacy copy
+        if (scOwnerId && scOwnerId === String(ownerIdForLayer || '')) score += 2;
+        if (memberTripIdSet.has(scId)) score += 1;
+        return score;
+      };
+      const getDedupKey = (sc) => {
+        const name = String(sc?.name || '').trim().toLowerCase();
+        const start = String(sc?.start_date || '');
+        const end = String(sc?.end_date || '');
+        const effectiveLayer = String(sc?.layer_id || activeLayerId || '');
+        return `${effectiveLayer}|${name}|${start}|${end}`;
+      };
+      (mergedRows || []).forEach((sc) => {
+        const key = getDedupKey(sc);
+        const existing = dedupedMap.get(key);
+        if (!existing) {
+          dedupedMap.set(key, sc);
+          return;
+        }
+        const currentScore = getTripScore(sc);
+        const existingScore = getTripScore(existing);
+        if (currentScore > existingScore) {
+          dedupedMap.set(key, sc);
+          return;
+        }
+        if (currentScore === existingScore) {
+          const currentCreated = Date.parse(sc?.created_at || '') || 0;
+          const existingCreated = Date.parse(existing?.created_at || '') || 0;
+          if (currentCreated < existingCreated) dedupedMap.set(key, sc);
+        }
+      });
+
+      const dedupedRows = Array.from(dedupedMap.values());
+      setSubCalendars(dedupedRows);
+      return dedupedRows;
     } catch (e) { console.error(e); }
     return [];
   };
