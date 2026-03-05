@@ -69,7 +69,6 @@ function App() {
   const [events, setEvents] = useState({});
   const [quickEntry, setQuickEntry] = useState('');
   const [isScanningReminder, setIsScanningReminder] = useState(false);
-  const [scanStatusMessage, setScanStatusMessage] = useState('');
   const [suggestedTime, setSuggestedTime] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -4910,11 +4909,9 @@ function App() {
   const handleScanReminder = async (file) => {
     if (!file) return;
     if (!String(file.type || '').startsWith('image/')) {
-      setScanStatusMessage('Please choose an image.');
       return;
     }
     setIsScanningReminder(true);
-    setScanStatusMessage('Scanning image...');
     try {
       const tesseract = await import('tesseract.js');
       let text = '';
@@ -4929,7 +4926,6 @@ function App() {
       }
 
       if (!text.trim()) {
-        setScanStatusMessage('Could not read text. Try a clearer photo.');
         return;
       }
 
@@ -4945,10 +4941,8 @@ function App() {
       setPendingEvent({ title: fullTitle, datesToAdd: [parsedDate], isMultiDay: false });
       setSuggestedTime(parsedTime || '');
       setShowTimePrompt(true);
-      setScanStatusMessage(`Scanned "${parsedTitle}". Review and add.`);
     } catch (err) {
       console.error('Scan failed:', err);
-      setScanStatusMessage('Scan failed. Try another image.');
     } finally {
       setIsScanningReminder(false);
     }
@@ -5438,6 +5432,26 @@ function App() {
               >
                 List
               </button>
+              <button
+                onClick={() => scanReminderInputRef.current?.click()}
+                disabled={isScanningReminder}
+                className={`p-2 rounded-xl transition-all duration-200 ${isScanningReminder ? 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                title="Scan document"
+              >
+                <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+              <input
+                ref={scanReminderInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleScanReminder(file);
+                  e.target.value = '';
+                }}
+              />
               <button
                 onClick={() => setShowWeather(!showWeather)}
                 className={`p-2 rounded-xl transition-all duration-200 text-sm ${showWeather ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
@@ -6905,39 +6919,6 @@ function App() {
         </div>
       </div>
     </div>
-
-    {!activeSubCalendar && bottomNavTab === 'home' && (
-      <div className="fixed inset-x-0 bottom-[4.9rem] z-30 px-3 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-2.5">
-            <button
-              onClick={() => scanReminderInputRef.current?.click()}
-              disabled={isScanningReminder}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all text-sm font-semibold disabled:opacity-60"
-              title="Scan a reminder card or document"
-            >
-              <Camera className="w-4 h-4" />
-              {isScanningReminder ? 'Scanning Document...' : 'Scan Document'}
-            </button>
-            <input
-              ref={scanReminderInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleScanReminder(file);
-                e.target.value = '';
-              }}
-            />
-            {scanStatusMessage && (
-              <div className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400 text-center">{scanStatusMessage}</div>
-            )}
-          </div>
-        </div>
-      </div>
-    )}
 
     {/* ── Create Sub-Calendar Modal ── */}
     {!activeSubCalendar && (
