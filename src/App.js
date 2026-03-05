@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase
@@ -6461,30 +6461,7 @@ function App() {
                 <button onClick={handleQuickAdd} className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all">
                   <Plus className="w-5 h-5" />
                 </button>
-                <button
-                  onClick={() => scanReminderInputRef.current?.click()}
-                  disabled={isScanningReminder}
-                  className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all text-sm font-medium disabled:opacity-60"
-                  title="Scan from reminder photo"
-                >
-                  {isScanningReminder ? 'Scanning...' : 'Scan'}
-                </button>
-                <input
-                  ref={scanReminderInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleScanReminder(file);
-                    e.target.value = '';
-                  }}
-                />
               </div>
-              {scanStatusMessage && (
-                <div className="text-xs text-gray-500 dark:text-gray-400">{scanStatusMessage}</div>
-              )}
             </div>
 
             <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -6928,6 +6905,39 @@ function App() {
         </div>
       </div>
     </div>
+
+    {!activeSubCalendar && bottomNavTab === 'home' && (
+      <div className="fixed inset-x-0 bottom-[4.9rem] z-30 px-3 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-2.5">
+            <button
+              onClick={() => scanReminderInputRef.current?.click()}
+              disabled={isScanningReminder}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all text-sm font-semibold disabled:opacity-60"
+              title="Scan a reminder card or document"
+            >
+              <Camera className="w-4 h-4" />
+              {isScanningReminder ? 'Scanning Document...' : 'Scan Document'}
+            </button>
+            <input
+              ref={scanReminderInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleScanReminder(file);
+                e.target.value = '';
+              }}
+            />
+            {scanStatusMessage && (
+              <div className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400 text-center">{scanStatusMessage}</div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* ── Create Sub-Calendar Modal ── */}
     {!activeSubCalendar && (
