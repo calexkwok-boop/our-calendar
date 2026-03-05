@@ -68,6 +68,9 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState({});
   const [quickEntry, setQuickEntry] = useState('');
+  const [isScanningReminder, setIsScanningReminder] = useState(false);
+  const [scanStatusMessage, setScanStatusMessage] = useState('');
+  const [suggestedTime, setSuggestedTime] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [editingEvent, setEditingEvent] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('other');
@@ -81,6 +84,7 @@ function App() {
 
   const saveTimeoutRef = useRef(null);
   const dateTapTimeoutRef = useRef(null);
+  const scanReminderInputRef = useRef(null);
   const [currentUser, setCurrentUser] = useState('');
   const [showUserSetup, setShowUserSetup] = useState(false);
   const [selectedDates, setSelectedDates] = useState([]);
@@ -4839,6 +4843,117 @@ function App() {
     saveCategories(updatedCategories);
   };
 
+  const parseScannedDate = (rawText) => {
+    const text = String(rawText || '');
+    const now = new Date();
+
+    const numeric = text.match(/\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/);
+    if (numeric) {
+      const month = Number(numeric[1]);
+      const day = Number(numeric[2]);
+      const yearRaw = numeric[3];
+      let year = yearRaw ? Number(yearRaw) : now.getFullYear();
+      if (year < 100) year += 2000;
+      const d = new Date(year, month - 1, day);
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+
+    const monthName = text.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:,?\s*(\d{4}))?\b/i);
+    if (monthName) {
+      const monthMap = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+      const key = monthName[1].slice(0, 3).toLowerCase();
+      const month = monthMap[key];
+      const day = Number(monthName[2]);
+      const year = monthName[3] ? Number(monthName[3]) : now.getFullYear();
+      const d = new Date(year, month, day);
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+    return null;
+  };
+
+  const parseScannedTime = (rawText) => {
+    const text = String(rawText || '');
+    const ampm = text.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
+    if (ampm) {
+      let h = Number(ampm[1]);
+      const m = Number(ampm[2] || '0');
+      const period = String(ampm[3] || '').toLowerCase();
+      if (period === 'pm' && h < 12) h += 12;
+      if (period === 'am' && h === 12) h = 0;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+    const hhmm = text.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+    if (hhmm) return `${String(Number(hhmm[1])).padStart(2, '0')}:${hhmm[2]}`;
+    return '';
+  };
+
+  const parseScannedLocation = (rawText) => {
+    const lines = String(rawText || '').split('\n').map(line => line.trim()).filter(Boolean);
+    const withPin = lines.find(line => /^(📍|@)\s*/.test(line));
+    if (withPin) return withPin.replace(/^(📍|@)\s*/, '').trim();
+    const addressLike = lines.find(line => /\b(st|street|ave|avenue|rd|road|blvd|boulevard|suite|ste|clinic|hospital)\b/i.test(line));
+    return addressLike || '';
+  };
+
+  const parseScannedTitle = (rawText) => {
+    const lines = String(rawText || '').split('\n').map(line => line.trim()).filter(Boolean);
+    const candidate = lines.find(line => {
+      if (line.length < 3) return false;
+      if (/^\d/.test(line)) return false;
+      if (/\b(am|pm)\b/i.test(line)) return false;
+      if (/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i.test(line)) return false;
+      return true;
+    });
+    return candidate || 'Appointment';
+  };
+
+  const handleScanReminder = async (file) => {
+    if (!file) return;
+    if (!String(file.type || '').startsWith('image/')) {
+      setScanStatusMessage('Please choose an image.');
+      return;
+    }
+    setIsScanningReminder(true);
+    setScanStatusMessage('Scanning image...');
+    try {
+      const tesseract = await import('tesseract.js');
+      let text = '';
+      if (typeof tesseract.recognize === 'function') {
+        const result = await tesseract.recognize(file, 'eng');
+        text = String(result?.data?.text || '');
+      } else if (typeof tesseract.createWorker === 'function') {
+        const worker = await tesseract.createWorker('eng');
+        const result = await worker.recognize(file);
+        text = String(result?.data?.text || '');
+        await worker.terminate();
+      }
+
+      if (!text.trim()) {
+        setScanStatusMessage('Could not read text. Try a clearer photo.');
+        return;
+      }
+
+      const parsedDate = parseScannedDate(text) || new Date();
+      const parsedTime = parseScannedTime(text);
+      const parsedTitle = parseScannedTitle(text);
+      const parsedLocation = parseScannedLocation(text);
+      const fullTitle = parsedLocation ? `${parsedTitle} @ ${parsedLocation}` : parsedTitle;
+
+      setSelectedDate(parsedDate);
+      setSelectedDates([parsedDate]);
+      setQuickEntry(fullTitle);
+      setPendingEvent({ title: fullTitle, datesToAdd: [parsedDate], isMultiDay: false });
+      setSuggestedTime(parsedTime || '');
+      setShowTimePrompt(true);
+      setScanStatusMessage(`Scanned "${parsedTitle}". Review and add.`);
+    } catch (err) {
+      console.error('Scan failed:', err);
+      setScanStatusMessage('Scan failed. Try another image.');
+    } finally {
+      setIsScanningReminder(false);
+    }
+  };
+
   const handleQuickAdd = () => {
     if (!quickEntry.trim()) return;
     const title = quickEntry.trim();
@@ -4882,6 +4997,7 @@ function App() {
     saveEvents(updatedEvents);
     setSelectedDates([]);
     setRecurrence('once');
+    setSuggestedTime('');
     setShowTimePrompt(false);
     setPendingEvent(null);
   };
@@ -5142,6 +5258,7 @@ function App() {
               type="text"
               id="timeInput"
               placeholder="e.g. 3:00 PM or 15:00"
+              defaultValue={suggestedTime || ''}
               style={{ boxSizing: 'border-box', minWidth: 0 }}
               className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
               onKeyPress={(e) => {
@@ -5195,6 +5312,7 @@ function App() {
               onClick={() => {
                 setShowTimePrompt(false);
                 setPendingEvent(null);
+                setSuggestedTime('');
                 setQuickEntry(pendingEvent.title);
               }}
               className="flex-1 px-6 py-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-200 dark:hover:bg-red-800 transition-all"
@@ -6343,7 +6461,30 @@ function App() {
                 <button onClick={handleQuickAdd} className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all">
                   <Plus className="w-5 h-5" />
                 </button>
+                <button
+                  onClick={() => scanReminderInputRef.current?.click()}
+                  disabled={isScanningReminder}
+                  className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all text-sm font-medium disabled:opacity-60"
+                  title="Scan from reminder photo"
+                >
+                  {isScanningReminder ? 'Scanning...' : 'Scan'}
+                </button>
+                <input
+                  ref={scanReminderInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleScanReminder(file);
+                    e.target.value = '';
+                  }}
+                />
               </div>
+              {scanStatusMessage && (
+                <div className="text-xs text-gray-500 dark:text-gray-400">{scanStatusMessage}</div>
+              )}
             </div>
 
             <div className="space-y-3 max-h-96 overflow-y-auto">
