@@ -3888,6 +3888,101 @@ function App() {
     };
   }, [user?.id, user?.email, currentUser, subCalendars, activeLayerId]);
 
+  // Invite notifications must work even when no active layer is selected yet.
+  useEffect(() => {
+    if (!user?.id || !user?.email) return;
+    const me = String(user.id);
+    const myEmail = String(user.email).trim().toLowerCase();
+
+    const notifyInvites = async (rows) => {
+      const inviteRows = (rows || []).filter(row => {
+        const inviteEmail = String(row?.email || '').trim().toLowerCase();
+        if (!inviteEmail || inviteEmail !== myEmail) return false;
+        if (String(row?.added_by || '') === me) return false;
+        return Boolean(row?.sub_calendar_id);
+      });
+      if (inviteRows.length === 0) return;
+
+      const subIds = Array.from(new Set(inviteRows.map(row => String(row.sub_calendar_id))));
+      let nameMap = {};
+      if (subIds.length > 0) {
+        const { data: tripRows } = await supabase
+          .from('sub_calendars')
+          .select('id,name')
+          .in('id', subIds);
+        (tripRows || []).forEach(trip => {
+          nameMap[String(trip.id)] = trip.name || 'a trip';
+        });
+      }
+
+      inviteRows.forEach(row => {
+        const subCalId = String(row.sub_calendar_id);
+        const inviteKey = `trip_invite:${subCalId}:${myEmail}`;
+        addInAppNotification({
+          key: inviteKey,
+          type: 'invite',
+          message: `You were invited to ${nameMap[subCalId] || 'a trip'}.`,
+          createdAt: row.created_at || new Date().toISOString(),
+        });
+      });
+    };
+
+    const pollInviteRows = async () => {
+      try {
+        const cursor = inAppSyncCursorRef.current.tripInvites || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
+        const { data: datedRows } = await supabase
+          .from('sub_calendar_members')
+          .select('sub_calendar_id,email,added_by,created_at')
+          .ilike('email', myEmail)
+          .gt('created_at', cursor)
+          .order('created_at', { ascending: true })
+          .limit(200);
+        const { data: nullRows } = await supabase
+          .from('sub_calendar_members')
+          .select('sub_calendar_id,email,added_by,created_at')
+          .ilike('email', myEmail)
+          .is('created_at', null)
+          .limit(200);
+        const merged = Array.from(new Map([...(datedRows || []), ...(nullRows || [])].map(row => [`${String(row?.sub_calendar_id || '')}|${String(row?.email || '').toLowerCase()}`, row])).values());
+        await notifyInvites(merged);
+
+        if (Array.isArray(datedRows) && datedRows.length > 0) {
+          const maxCreatedAt = datedRows.reduce((max, row) => {
+            const ts = String(row?.created_at || '');
+            if (!ts) return max;
+            return !max || ts > max ? ts : max;
+          }, inAppSyncCursorRef.current.tripInvites || null);
+          if (maxCreatedAt) inAppSyncCursorRef.current.tripInvites = maxCreatedAt;
+        }
+      } catch (err) {
+        console.error('Invite notification poll failed:', err);
+      }
+    };
+
+    const inviteChannel = supabase
+      .channel(`invite-updates-${me}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sub_calendar_members' }, async ({ new: row }) => {
+        if (!row) return;
+        await notifyInvites([row]);
+      })
+      .subscribe();
+
+    pollInviteRows();
+    const interval = setInterval(pollInviteRows, 60 * 1000);
+    window.addEventListener('focus', pollInviteRows);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') pollInviteRows();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', pollInviteRows);
+      document.removeEventListener('visibilitychange', onVisible);
+      inviteChannel.unsubscribe();
+    };
+  }, [user?.id, user?.email]);
+
   // Check notification permission on load
   useEffect(() => {
     if ('Notification' in window) setNotificationPermission(Notification.permission);
