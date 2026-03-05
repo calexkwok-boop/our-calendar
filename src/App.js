@@ -97,7 +97,6 @@ function App() {
   const [notifyAtEventTime, setNotifyAtEventTime] = useState(true);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [inAppNotifications, setInAppNotifications] = useState([]);
-  const [pendingTripInvites, setPendingTripInvites] = useState([]);
   const seenInAppNotificationKeysRef = useRef(new Set());
   const inAppSyncCursorRef = useRef({ events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null });
   const seenExpenseIdsRef = useRef(new Set());
@@ -449,90 +448,15 @@ function App() {
       return;
     }
     try {
-      const myUserId = String(user?.id || '');
-      const myEmail = String(user?.email || '').trim().toLowerCase();
-      const ownerIdForLayer = String(activeLayerOwnerId || myUserId || '');
-      let directRows = [];
-      const directResult = await supabase
+      const { data, error } = await supabase
         .from('sub_calendars')
         .select('*')
         .eq('layer_id', activeLayerId);
-      if (directResult.error) {
-        // Fallback for environments where sub_calendars.layer_id is missing or blocked.
-        if (/column .*layer_id|schema cache/i.test(String(directResult.error.message || ''))) {
-          const fallback = await supabase
-            .from('sub_calendars')
-            .select('*')
-            .eq('owner_id', ownerIdForLayer);
-          if (fallback.error) {
-            console.error('Error loading sub_calendars fallback:', fallback.error);
-            return;
-          }
-          directRows = fallback.data || [];
-        } else {
-          console.error('Error loading sub_calendars:', directResult.error);
-          return;
-        }
-      } else {
-        directRows = directResult.data || [];
+      if (error) {
+        console.error('Error loading sub_calendars:', error);
+        return;
       }
-
-      let legacyRows = [];
-      if (ownerIdForLayer) {
-        const { data: legacyData, error: legacyError } = await supabase
-          .from('sub_calendars')
-          .select('*')
-          .is('layer_id', null)
-          .eq('owner_id', ownerIdForLayer);
-        if (legacyError) {
-          if (!/column .*layer_id|schema cache/i.test(String(legacyError.message || ''))) {
-            console.error('Error loading legacy sub_calendars:', legacyError);
-          }
-        } else {
-          legacyRows = legacyData || [];
-        }
-      }
-
-      let memberRows = [];
-      if (myEmail) {
-        const { data: membershipRows, error: membershipError } = await supabase
-          .from('sub_calendar_members')
-          .select('sub_calendar_id')
-          .eq('email', myEmail);
-        if (membershipError) {
-          console.error('Error loading sub_calendar memberships:', membershipError);
-        } else {
-          const memberTripIds = Array.from(new Set((membershipRows || []).map(r => String(r?.sub_calendar_id || '')).filter(Boolean)));
-          if (memberTripIds.length > 0) {
-            const { data: memberTrips, error: memberTripsError } = await supabase
-              .from('sub_calendars')
-              .select('*')
-              .in('id', memberTripIds);
-            if (memberTripsError) {
-              console.error('Error loading member sub_calendars:', memberTripsError);
-            } else {
-              memberRows = memberTrips || [];
-            }
-          }
-        }
-      }
-
-      const rows = Array.from(
-        new Map([...(directRows || []), ...legacyRows, ...memberRows].map(sc => [String(sc.id), sc])).values()
-      );
-      setSubCalendars(rows);
-
-      // Auto-heal legacy trips that predate layer_id by attaching them to current layer.
-      const legacyIds = rows
-        .filter(sc => !sc?.layer_id && String(sc?.owner_id || '') === ownerIdForLayer)
-        .map(sc => sc.id)
-        .filter(Boolean);
-      if (legacyIds.length > 0) {
-        await supabase
-          .from('sub_calendars')
-          .update({ layer_id: activeLayerId, calendar_id: activeLayerId })
-          .in('id', legacyIds);
-      }
+      setSubCalendars(data || []);
     } catch (e) { console.error(e); }
   };
 
@@ -750,34 +674,13 @@ function App() {
   const inviteToSubCalendar = async (emailOverride) => {
     const emailToInvite = (emailOverride || subCalInviteEmail).trim().toLowerCase();
     if (!emailToInvite || !activeSubCalendar) return;
-    let insertedRow = {
-      email: emailToInvite,
-      sub_calendar_id: activeSubCalendar.id,
-      added_by: user.id,
-      status: 'pending',
-    };
-    let { error } = await supabase.from('sub_calendar_members').insert({
+    const { error } = await supabase.from('sub_calendar_members').insert({
       sub_calendar_id: activeSubCalendar.id,
       email: emailToInvite,
       added_by: user.id,
-      status: 'pending',
-      invited_at: new Date().toISOString(),
     });
-    if (error && /column .*status|column .*invited_at/i.test(String(error.message || ''))) {
-      const fallback = await supabase.from('sub_calendar_members').insert({
-        sub_calendar_id: activeSubCalendar.id,
-        email: emailToInvite,
-        added_by: user.id,
-      });
-      error = fallback.error;
-      insertedRow = {
-        email: emailToInvite,
-        sub_calendar_id: activeSubCalendar.id,
-        added_by: user.id,
-      };
-    }
     if (error) { console.error('Error inviting member:', error); return; }
-    setSubCalMembers(prev => [...prev, insertedRow]);
+    setSubCalMembers(prev => [...prev, { email: emailToInvite, sub_calendar_id: activeSubCalendar.id }]);
     setSubCalInviteEmail('');
   };
 
@@ -3392,21 +3295,6 @@ function App() {
   }, [primaryListOwnerId, selectedSharedListId, activeLayerId]);
 
   useEffect(() => {
-    if (!user?.email) {
-      setPendingTripInvites([]);
-      return;
-    }
-    loadPendingTripInvites();
-    const interval = setInterval(loadPendingTripInvites, 60 * 1000);
-    const onFocus = () => loadPendingTripInvites();
-    window.addEventListener('focus', onFocus);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
-    };
-  }, [user?.email, user?.id, layerRefreshToken]);
-
-  useEffect(() => {
     if (!user?.id) {
       seenInAppNotificationKeysRef.current = new Set();
       seenExpenseIdsRef.current = new Set();
@@ -3616,21 +3504,6 @@ function App() {
           type: 'list',
           message: `${who} added "${preview || 'a list item'}" to the list.`,
           createdAt: row.created_at,
-        });
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sub_calendar_members' }, async ({ new: row }) => {
-        if (!row) return;
-        const inviteEmail = String(row.email || '').trim().toLowerCase();
-        if (!inviteEmail || inviteEmail !== myEmail) return;
-        const subCalId = String(row.sub_calendar_id || '');
-        if (!subCalId) return;
-        const tripName = subCalNameMap[subCalId] || 'a trip';
-        const createdAt = row.invited_at || row.created_at || new Date().toISOString();
-        addInAppNotification({
-          key: `trip_invite:${subCalId}:${inviteEmail}`,
-          type: 'invite',
-          message: `You were invited to ${tripName}.`,
-          createdAt,
         });
       })
       .subscribe();
@@ -3973,167 +3846,6 @@ function App() {
       body: `Notifications are working at ${new Date().toLocaleTimeString()}.`,
       tag: 'notification-test',
     });
-  };
-
-  const loadPendingTripInvites = async () => {
-    const myEmail = String(user?.email || '').trim().toLowerCase();
-    if (!myEmail) {
-      setPendingTripInvites([]);
-      return;
-    }
-    try {
-      let rows = [];
-      const withStatus = await supabase
-        .from('sub_calendar_members')
-        .select('sub_calendar_id,email,added_by,status,created_at,invited_at')
-        .eq('email', myEmail)
-        .eq('status', 'pending');
-      if (!withStatus.error) {
-        rows = withStatus.data || [];
-      } else if (/column .*status|column .*invited_at/i.test(String(withStatus.error.message || ''))) {
-        const fallback = await supabase
-          .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,created_at')
-          .eq('email', myEmail);
-        if (fallback.error) {
-          console.error('Error loading pending trip invites:', fallback.error);
-          setPendingTripInvites([]);
-          return;
-        }
-        rows = (fallback.data || []).map(item => ({ ...item, status: 'pending' }));
-      } else {
-        console.error('Error loading pending trip invites:', withStatus.error);
-        setPendingTripInvites([]);
-        return;
-      }
-
-      const subCalIds = Array.from(new Set(rows.map(row => String(row?.sub_calendar_id || '')).filter(Boolean)));
-      if (subCalIds.length === 0) {
-        setPendingTripInvites([]);
-        return;
-      }
-      const { data: trips, error: tripsError } = await supabase
-        .from('sub_calendars')
-        .select('id,name,start_date,end_date,layer_id,owner_id')
-        .in('id', subCalIds);
-      if (tripsError) {
-        console.error('Error loading invited trips:', tripsError);
-        setPendingTripInvites([]);
-        return;
-      }
-      const tripMap = new Map((trips || []).map(trip => [String(trip.id), trip]));
-      const normalized = rows
-        .map(row => {
-          const trip = tripMap.get(String(row.sub_calendar_id));
-          if (!trip) return null;
-          return {
-            subCalendarId: String(row.sub_calendar_id),
-            email: String(row.email || myEmail).toLowerCase(),
-            addedBy: row.added_by ? String(row.added_by) : '',
-            status: row.status || 'pending',
-            invitedAt: row.invited_at || row.created_at || null,
-            tripName: trip.name || 'Trip',
-            startDate: trip.start_date,
-            endDate: trip.end_date,
-            layerId: String(trip.layer_id || ''),
-            ownerId: String(trip.owner_id || ''),
-          };
-        })
-        .filter(Boolean);
-      if (normalized.length === 0) {
-        setPendingTripInvites([]);
-        return;
-      }
-
-      const ownerIds = Array.from(new Set(normalized.map(item => String(item.ownerId || '')).filter(Boolean)));
-      const layerIds = Array.from(new Set(normalized.map(item => String(item.layerId || '')).filter(Boolean)));
-      let grantedKeys = new Set();
-      if (ownerIds.length > 0 && layerIds.length > 0) {
-        const { data: accessRows } = await supabase
-          .from('shared_access')
-          .select('owner_id,layer_id')
-          .in('owner_id', ownerIds)
-          .in('layer_id', layerIds)
-          .or(`shared_with_id.eq.${user?.id},shared_with_email.eq.${myEmail}`);
-        grantedKeys = new Set((accessRows || []).map(row => `${String(row.owner_id)}|${String(row.layer_id)}`));
-      }
-
-      const visibleInvites = normalized.filter(item => {
-        const key = `${String(item.ownerId)}|${String(item.layerId)}`;
-        return !grantedKeys.has(key);
-      });
-      setPendingTripInvites(visibleInvites);
-      visibleInvites.forEach((invite) => {
-        const inviteEmail = String(invite.email || myEmail).trim().toLowerCase();
-        const inviteKey = `trip_invite:${String(invite.subCalendarId)}:${inviteEmail}`;
-        addInAppNotification({
-          key: inviteKey,
-          type: 'invite',
-          message: `You were invited to ${invite.tripName || 'a trip'}.`,
-          createdAt: invite.invitedAt || new Date().toISOString(),
-        });
-      });
-    } catch (error) {
-      console.error('loadPendingTripInvites failed:', error);
-      setPendingTripInvites([]);
-    }
-  };
-
-  const acceptTripInvite = async (invite) => {
-    if (!invite || !user?.id) return;
-    const myEmail = String(user?.email || '').trim().toLowerCase();
-    try {
-      const layerId = String(invite.layerId || '');
-      const ownerId = String(invite.ownerId || '');
-      if (layerId && ownerId) {
-        const { error: shareErr } = await supabase.from('shared_access').insert({
-          owner_id: ownerId,
-          layer_id: layerId,
-          calendar_id: layerId,
-          shared_with_email: myEmail,
-          shared_with_id: user.id,
-        });
-        if (shareErr && !/duplicate key|already exists/i.test(String(shareErr.message || ''))) {
-          console.error('Error granting layer access from invite:', shareErr);
-        }
-      }
-
-      const updateResult = await supabase
-        .from('sub_calendar_members')
-        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-        .eq('sub_calendar_id', invite.subCalendarId)
-        .eq('email', myEmail);
-      if (updateResult.error && !/column .*status|column .*accepted_at/i.test(String(updateResult.error.message || ''))) {
-        console.error('Error accepting trip invite:', updateResult.error);
-      }
-
-      setPendingTripInvites(prev => prev.filter(item => !(item.subCalendarId === invite.subCalendarId && item.email === myEmail)));
-      setLayerRefreshToken(prev => prev + 1);
-    } catch (error) {
-      console.error('acceptTripInvite failed:', error);
-    }
-  };
-
-  const declineTripInvite = async (invite) => {
-    if (!invite || !user?.email) return;
-    const myEmail = String(user.email).trim().toLowerCase();
-    try {
-      const updateResult = await supabase
-        .from('sub_calendar_members')
-        .update({ status: 'declined' })
-        .eq('sub_calendar_id', invite.subCalendarId)
-        .eq('email', myEmail);
-      if (updateResult.error && /column .*status/i.test(String(updateResult.error.message || ''))) {
-        await supabase
-          .from('sub_calendar_members')
-          .delete()
-          .eq('sub_calendar_id', invite.subCalendarId)
-          .eq('email', myEmail);
-      }
-      setPendingTripInvites(prev => prev.filter(item => !(item.subCalendarId === invite.subCalendarId && item.email === myEmail)));
-    } catch (error) {
-      console.error('declineTripInvite failed:', error);
-    }
   };
 
   const getEventDateTime = (dateKey, timeValue) => {
@@ -4628,12 +4340,6 @@ function App() {
     })
     .sort((a, b) => toDateOnlyTs(getSubCalEndRaw(b)) - toDateOnlyTs(getSubCalEndRaw(a)));
   const ownedLayerCalendars = layers.filter(layer => String(layer.owner_id) === String(user?.id));
-  const visibleLayerCalendars = [...layers].sort((a, b) => {
-    const aOwned = String(a?.owner_id || '') === String(user?.id || '');
-    const bOwned = String(b?.owner_id || '') === String(user?.id || '');
-    if (aOwned !== bOwned) return aOwned ? -1 : 1;
-    return String(a?.name || '').localeCompare(String(b?.name || ''));
-  });
 
   if (isLoading) {
     return (
@@ -4966,43 +4672,6 @@ function App() {
               </button>
             </div>
             <div className="space-y-4">
-              {pendingTripInvites.length > 0 && (
-                <div className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Bell className="w-5 h-5 text-violet-600" />
-                      <span className="font-semibold text-gray-800 dark:text-gray-200">Trip Invites</span>
-                      <span className="px-1.5 py-0.5 rounded-full bg-violet-500 text-white text-[10px] font-bold">{pendingTripInvites.length}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    {pendingTripInvites.map(invite => (
-                      <div key={`${invite.subCalendarId}-${invite.email}`} className="rounded-lg border border-violet-200 dark:border-violet-700 bg-white/80 dark:bg-gray-800 px-3 py-2">
-                        <div className="text-sm text-gray-800 dark:text-gray-100 font-medium">
-                          You were invited to "{invite.tripName}"
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {invite.startDate} - {invite.endDate}
-                        </div>
-                        <div className="flex gap-2 mt-2">
-                          <button
-                            onClick={() => acceptTripInvite(invite)}
-                            className="px-2.5 py-1 text-xs rounded-md bg-violet-600 hover:bg-violet-700 text-white font-medium"
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => declineTripInvite(invite)}
-                            className="px-2.5 py-1 text-xs rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium"
-                          >
-                            Decline
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
               <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -6134,10 +5803,9 @@ function App() {
                     <div className="text-sm text-gray-500 dark:text-gray-400">No calendars found.</div>
                   ) : (
                     <div className="space-y-2">
-                      {visibleLayerCalendars.map(layer => {
+                      {ownedLayerCalendars.map(layer => {
                         const isActiveLayer = String(layer.id) === String(activeLayerId);
-                        const isOwnedLayer = String(layer.owner_id) === String(user?.id);
-                        const canDeleteLayer = isOwnedLayer && ownedLayerCalendars.length > 1;
+                        const canDeleteLayer = ownedLayerCalendars.length > 1;
                         const layerRowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
                         const isLayerDeleteRevealed = layerRowOffset < 0;
                         return (
@@ -6173,9 +5841,7 @@ function App() {
                                 <div className="min-w-0">
                                   <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{layer.name || 'Calendar'}</div>
                                   <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                    {isOwnedLayer
-                                      ? 'Owned by you'
-                                      : `Shared by ${sharedOwnerLabels[String(layer.owner_id || '')] || fallbackOwnerLabel(layer.owner_id)}`}
+                                    Owned by you
                                   </div>
                                 </div>
                                 {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
