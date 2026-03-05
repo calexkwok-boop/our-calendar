@@ -526,8 +526,7 @@ function App() {
         const name = String(sc?.name || '').trim().toLowerCase();
         const start = String(sc?.start_date || '');
         const end = String(sc?.end_date || '');
-        const effectiveLayer = String(sc?.layer_id || activeLayerId || '');
-        return `${effectiveLayer}|${name}|${start}|${end}`;
+        return `${name}|${start}|${end}`;
       };
       (mergedRows || []).forEach((sc) => {
         const key = getDedupKey(sc);
