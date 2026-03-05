@@ -1703,7 +1703,6 @@ function App() {
   const [listError, setListError] = useState('');
   const [shareEmailInput, setShareEmailInput] = useState('');
   const [shareMessage, setShareMessage] = useState('');
-  const [mutualShareDetected, setMutualShareDetected] = useState(false);
   const [mergeTargetLayerId, setMergeTargetLayerId] = useState('');
   const [mergeInProgress, setMergeInProgress] = useState(false);
   const autoMergeSeenRef = useRef(new Set());
@@ -2971,22 +2970,15 @@ function App() {
 
   useEffect(() => {
     const detectMutualShare = async () => {
-      if (!user?.id || !activeLayerId || !activeLayerOwnerId || String(activeLayerOwnerId) === String(user.id)) {
-        setMutualShareDetected(false);
-        return;
-      }
+      if (!user?.id || !activeLayerId || !activeLayerOwnerId || String(activeLayerOwnerId) === String(user.id)) return;
       const { data, error } = await supabase
         .from('shared_access')
         .select('id')
         .eq('owner_id', user.id)
         .eq('shared_with_id', activeLayerOwnerId)
         .limit(1);
-      if (error) {
-        setMutualShareDetected(false);
-        return;
-      }
+      if (error) return;
       const detected = Array.isArray(data) && data.length > 0;
-      setMutualShareDetected(detected);
       if (detected) {
         const owned = (layers || []).filter(layer => String(layer.owner_id) === String(user.id));
         if (owned.length > 0) {
@@ -4571,31 +4563,6 @@ function App() {
                 </p>
               )}
             </div>
-            {mutualShareDetected && String(activeLayerOwnerId) !== String(user?.id) && (
-              <div className="mb-5 p-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20">
-                <p className="text-sm text-indigo-700 dark:text-indigo-300 mb-2">
-                  Mutual sharing detected. You can merge this shared calendar into one of your calendars.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <select
-                    value={mergeTargetLayerId}
-                    onChange={(e) => setMergeTargetLayerId(e.target.value)}
-                    className="flex-1 px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                  >
-                    {ownedLayerCalendars.map(layer => (
-                      <option key={layer.id} value={layer.id}>{layer.name || 'Calendar'}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={mergeLayerIntoOwnedCalendar}
-                    disabled={mergeInProgress || !mergeTargetLayerId}
-                    className="px-3 py-2 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
-                  >
-                    {mergeInProgress ? 'Merging...' : 'Merge Into This Calendar'}
-                  </button>
-                </div>
-              </div>
-            )}
             {myShares.length > 0 && (
               <div className="mb-5">
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Shared with:</h4>
