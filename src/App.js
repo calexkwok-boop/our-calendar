@@ -542,11 +542,42 @@ function App() {
 
   const loadSubCalendarMembers = async (subCalId) => {
     try {
-      const { data } = await supabase
+      const myEmail = String(user?.email || '').trim().toLowerCase();
+      const { data: memberRows } = await supabase
         .from('sub_calendar_members')
         .select('*')
         .eq('sub_calendar_id', subCalId);
-      setSubCalMembers(data || []);
+
+      const merged = new Map();
+      const addMember = (email, extra = {}) => {
+        const normalized = String(email || '').trim().toLowerCase();
+        if (!normalized || normalized === myEmail) return;
+        if (!merged.has(normalized)) merged.set(normalized, { email: normalized, ...extra });
+      };
+
+      (memberRows || []).forEach((row) => {
+        const status = String(row?.status || '').toLowerCase();
+        if (status === 'declined') return;
+        addMember(row?.email, { status: row?.status || null, source: 'trip_invite', removable: true });
+      });
+
+      const { data: subCalRow } = await supabase
+        .from('sub_calendars')
+        .select('layer_id')
+        .eq('id', subCalId)
+        .maybeSingle();
+      const layerId = String(subCalRow?.layer_id || '').trim();
+      if (layerId) {
+        const { data: sharedRows } = await supabase
+          .from('shared_access')
+          .select('shared_with_email')
+          .eq('layer_id', layerId);
+        (sharedRows || []).forEach((row) => {
+          addMember(row?.shared_with_email, { status: 'accepted', source: 'layer_share', removable: false });
+        });
+      }
+
+      setSubCalMembers(Array.from(merged.values()));
     } catch (e) { console.error(e); }
   };
 
@@ -7260,7 +7291,7 @@ function App() {
                   {subCalMembers.map(m => (
                     <span key={m.email} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
                       {m.email}
-                      {activeSubCalendar.owner_id === user?.id && (
+                      {activeSubCalendar.owner_id === user?.id && m.removable !== false && (
                         <button onClick={() => removeMemberFromSubCal(m.email)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
                       )}
                     </span>
