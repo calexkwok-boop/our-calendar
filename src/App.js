@@ -69,6 +69,7 @@ function App() {
   const [events, setEvents] = useState({});
   const [quickEntry, setQuickEntry] = useState('');
   const [isScanningReminder, setIsScanningReminder] = useState(false);
+  const [showScanHelpModal, setShowScanHelpModal] = useState(false);
   const [suggestedTime, setSuggestedTime] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -5433,7 +5434,7 @@ function App() {
                 List
               </button>
               <button
-                onClick={() => scanReminderInputRef.current?.click()}
+                onClick={() => setShowScanHelpModal(true)}
                 disabled={isScanningReminder}
                 className={`p-2 rounded-xl transition-all duration-200 ${isScanningReminder ? 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
                 title="Scan document"
@@ -6981,6 +6982,46 @@ function App() {
           >
             Create Calendar
           </button>
+        </div>
+      </div>
+    )}
+
+    {showScanHelpModal && (
+      <div
+        className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center"
+        onClick={() => setShowScanHelpModal(false)}
+      >
+        <div
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Camera className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Scan Appointment</h3>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            Take a photo of your appointment/reminder card and we will try to auto-fill the event title, date, and time.
+          </p>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+            Tip: keep the text clear and include the date/time in the photo.
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowScanHelpModal(false)}
+              className="flex-1 px-3 py-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                setShowScanHelpModal(false);
+                scanReminderInputRef.current?.click();
+              }}
+              className="flex-1 px-3 py-2 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-sm font-semibold"
+            >
+              Scan
+            </button>
+          </div>
         </div>
       </div>
     )}
