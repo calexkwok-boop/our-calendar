@@ -4040,19 +4040,33 @@ function App() {
       return;
     }
     try {
-      const { data: inviteRows, error: inviteErr } = await supabase
+      let rows = [];
+      const pendingResult = await supabase
         .from('sub_calendar_members')
         .select('sub_calendar_id,email,added_by,status,invited_at,created_at')
         .ilike('email', myEmail)
         .eq('status', 'pending')
         .order('invited_at', { ascending: false, nullsFirst: false })
         .limit(200);
-      if (inviteErr) {
-        console.error('loadPendingTripInvites failed:', inviteErr);
-        setPendingTripInvites([]);
-        return;
+      if (!pendingResult.error) {
+        rows = pendingResult.data || [];
+      } else {
+        const fallback = await supabase
+          .from('sub_calendar_members')
+          .select('sub_calendar_id,email,added_by,status,invited_at,created_at')
+          .ilike('email', myEmail)
+          .order('invited_at', { ascending: false, nullsFirst: false })
+          .limit(200);
+        if (fallback.error) {
+          console.error('loadPendingTripInvites failed:', fallback.error);
+          setPendingTripInvites([]);
+          return;
+        }
+        rows = (fallback.data || []).filter((row) => {
+          const status = String(row?.status || 'pending').toLowerCase();
+          return status !== 'accepted' && status !== 'declined';
+        });
       }
-      const rows = inviteRows || [];
       const subCalIds = Array.from(new Set(rows.map(r => String(r?.sub_calendar_id || '')).filter(Boolean)));
       if (subCalIds.length === 0) {
         setPendingTripInvites([]);
