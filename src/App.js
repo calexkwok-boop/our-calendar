@@ -97,6 +97,7 @@ function App() {
   const [notifyAtEventTime, setNotifyAtEventTime] = useState(true);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [inAppNotifications, setInAppNotifications] = useState([]);
+  const [pendingTripInvites, setPendingTripInvites] = useState([]);
   const seenInAppNotificationKeysRef = useRef(new Set());
   const inAppSyncCursorRef = useRef({ events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null, tripInvites: null });
   const seenExpenseIdsRef = useRef(new Set());
@@ -4032,6 +4033,125 @@ function App() {
     };
   }, [user?.id, user?.email]);
 
+  const loadPendingTripInvites = async () => {
+    const myEmail = String(user?.email || '').trim().toLowerCase();
+    if (!myEmail) {
+      setPendingTripInvites([]);
+      return;
+    }
+    try {
+      const { data: inviteRows, error: inviteErr } = await supabase
+        .from('sub_calendar_members')
+        .select('sub_calendar_id,email,added_by,status,invited_at,created_at')
+        .ilike('email', myEmail)
+        .eq('status', 'pending')
+        .order('invited_at', { ascending: false, nullsFirst: false })
+        .limit(200);
+      if (inviteErr) {
+        console.error('loadPendingTripInvites failed:', inviteErr);
+        setPendingTripInvites([]);
+        return;
+      }
+      const rows = inviteRows || [];
+      const subCalIds = Array.from(new Set(rows.map(r => String(r?.sub_calendar_id || '')).filter(Boolean)));
+      if (subCalIds.length === 0) {
+        setPendingTripInvites([]);
+        return;
+      }
+      const { data: tripRows } = await supabase
+        .from('sub_calendars')
+        .select('id,name,layer_id,owner_id,start_date,end_date')
+        .in('id', subCalIds);
+      const tripMap = new Map((tripRows || []).map(t => [String(t.id), t]));
+      const pending = rows
+        .map((row) => {
+          const subCalId = String(row?.sub_calendar_id || '');
+          const trip = tripMap.get(subCalId);
+          if (!trip) return null;
+          return {
+            subCalendarId: subCalId,
+            tripName: trip.name || 'Trip',
+            layerId: String(trip.layer_id || ''),
+            ownerId: String(trip.owner_id || ''),
+            startDate: trip.start_date,
+            endDate: trip.end_date,
+            invitedAt: row.invited_at || row.created_at || null,
+            email: String(row.email || myEmail).toLowerCase(),
+          };
+        })
+        .filter(Boolean);
+      setPendingTripInvites(pending);
+    } catch (err) {
+      console.error('loadPendingTripInvites exception:', err);
+      setPendingTripInvites([]);
+    }
+  };
+
+  const acceptTripInvite = async (invite) => {
+    if (!invite || !user?.id || !user?.email) return;
+    const myEmail = String(user.email).trim().toLowerCase();
+    try {
+      const { error: shareErr } = await supabase.from('shared_access').insert({
+        owner_id: invite.ownerId,
+        layer_id: invite.layerId,
+        calendar_id: invite.layerId,
+        shared_with_email: myEmail,
+        shared_with_id: user.id,
+      });
+      if (shareErr && !/duplicate key|already exists|unique constraint/i.test(String(shareErr.message || ''))) {
+        alert(`Accept failed: ${shareErr.message || 'Could not grant access.'}`);
+        return;
+      }
+      const { error: updateErr } = await supabase
+        .from('sub_calendar_members')
+        .update({ status: 'accepted' })
+        .eq('sub_calendar_id', invite.subCalendarId)
+        .ilike('email', myEmail);
+      if (updateErr) {
+        alert(`Accept failed: ${updateErr.message || 'Could not update invite status.'}`);
+        return;
+      }
+      setPendingTripInvites(prev => prev.filter(item => item.subCalendarId !== invite.subCalendarId));
+      setLayerRefreshToken(prev => prev + 1);
+    } catch (err) {
+      alert(`Accept failed: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  const declineTripInvite = async (invite) => {
+    if (!invite || !user?.email) return;
+    const myEmail = String(user.email).trim().toLowerCase();
+    try {
+      const { error: updateErr } = await supabase
+        .from('sub_calendar_members')
+        .update({ status: 'declined' })
+        .eq('sub_calendar_id', invite.subCalendarId)
+        .ilike('email', myEmail);
+      if (updateErr) {
+        alert(`Decline failed: ${updateErr.message || 'Could not update invite status.'}`);
+        return;
+      }
+      setPendingTripInvites(prev => prev.filter(item => item.subCalendarId !== invite.subCalendarId));
+    } catch (err) {
+      alert(`Decline failed: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.email) {
+      setPendingTripInvites([]);
+      return;
+    }
+    loadPendingTripInvites();
+    const interval = setInterval(loadPendingTripInvites, 60 * 1000);
+    const onFocus = () => loadPendingTripInvites();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [user?.email, user?.id, layerRefreshToken]);
+
   // Check notification permission on load
   useEffect(() => {
     if ('Notification' in window) setNotificationPermission(Notification.permission);
@@ -4940,6 +5060,39 @@ function App() {
               </button>
             </div>
             <div className="space-y-4">
+              {pendingTripInvites.length > 0 && (
+                <div className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bell className="w-5 h-5 text-violet-600" />
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">Trip Invites</span>
+                    <span className="px-1.5 py-0.5 rounded-full bg-violet-500 text-white text-[10px] font-bold">{pendingTripInvites.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {pendingTripInvites.map(invite => (
+                      <div key={`${invite.subCalendarId}-${invite.email}`} className="rounded-lg border border-violet-200 dark:border-violet-700 bg-white dark:bg-gray-800 p-2.5">
+                        <div className="text-sm font-medium text-gray-800 dark:text-gray-100">{invite.tripName}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatTripDate(invite.startDate)} - {formatTripDate(invite.endDate, true)}
+                        </div>
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            onClick={() => acceptTripInvite(invite)}
+                            className="px-2.5 py-1.5 rounded-md text-xs font-semibold bg-violet-500 hover:bg-violet-600 text-white"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => declineTripInvite(invite)}
+                            className="px-2.5 py-1.5 rounded-md text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
