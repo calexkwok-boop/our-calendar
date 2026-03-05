@@ -102,6 +102,7 @@ function App() {
   const seenExpenseIdsRef = useRef(new Set());
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
+  const [layerRefreshToken, setLayerRefreshToken] = useState(0);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [user, setUser] = useState(null);
@@ -1965,13 +1966,14 @@ function App() {
     const sourceLayerId = String(opts.sourceLayerId || activeLayerId || '');
     const targetLayerId = String(opts.targetLayerId || mergeTargetLayerId || '');
     const isAuto = Boolean(opts.auto);
+    const sourceLayer = layers.find(layer => String(layer.id) === sourceLayerId);
     if (!user?.id || !sourceLayerId || !targetLayerId) return false;
     if (String(activeLayerOwnerId) === String(user.id) && sourceLayerId === String(activeLayerId || '')) {
-      setShareMessage('Switch to a shared calendar first, then run merge.');
+      if (!isAuto) setShareMessage('Switch to a shared calendar first, then run merge.');
       return false;
     }
     if (sourceLayerId === targetLayerId) {
-      setShareMessage('Source and target calendars cannot be the same.');
+      if (!isAuto) setShareMessage('Source and target calendars cannot be the same.');
       return false;
     }
     if (!isAuto) {
@@ -1980,11 +1982,11 @@ function App() {
     }
 
     setMergeInProgress(true);
-    setShareMessage('');
+    if (!isAuto) setShareMessage('');
     try {
       const targetLayer = layers.find(layer => String(layer.id) === targetLayerId);
       if (!targetLayer || String(targetLayer.owner_id) !== String(user.id)) {
-        setShareMessage('Target calendar must be one of your owned calendars.');
+        if (!isAuto) setShareMessage('Target calendar must be one of your owned calendars.');
         return false;
       }
 
@@ -2314,7 +2316,7 @@ function App() {
       if (srcSharesErr) throw srcSharesErr;
       const participantRows = [...(sourceShares || [])];
       participantRows.push({
-        shared_with_id: activeLayerOwnerId,
+        shared_with_id: sourceLayer?.owner_id ? String(sourceLayer.owner_id) : null,
         shared_with_email: null,
       });
 
@@ -2337,13 +2339,14 @@ function App() {
         }
       }
 
-      setShareMessage(isAuto ? '✅ Calendars auto-merged.' : '✅ Merge complete. Switched to the merged calendar.');
+      if (!isAuto) setShareMessage('✅ Merge complete. Switched to the merged calendar.');
       setActiveLayerId(targetLayerId);
       localStorage.setItem(`active-layer-${user.id}`, targetLayerId);
+      setLayerRefreshToken(prev => prev + 1);
       return true;
     } catch (error) {
       console.error('Calendar merge failed:', error);
-      setShareMessage(`Merge failed: ${error.message || 'Unknown error'}`);
+      if (!isAuto) setShareMessage(`Merge failed: ${error.message || 'Unknown error'}`);
       return false;
     } finally {
       setMergeInProgress(false);
@@ -2461,7 +2464,7 @@ function App() {
       );
     };
     initWeather();
-  }, [activeLayerId]);
+  }, []);
   const handleDateTap = (date) => {
     if (!date) return;
 
@@ -3225,7 +3228,7 @@ function App() {
       .subscribe();
 
     return () => sharedSubscription.unsubscribe();
-  }, [activeLayerId]);
+  }, [activeLayerId, layerRefreshToken]);
 
   // Check auth session
   useEffect(() => {
@@ -3255,36 +3258,45 @@ function App() {
   }, [sharedCalendars, activeLayerId]);
 
   useEffect(() => {
-    const detectMutualShare = async () => {
-      if (!user?.id || !activeLayerId || !activeLayerOwnerId || String(activeLayerOwnerId) === String(user.id)) return;
-      const { data, error } = await supabase
+    const autoMergeMutualSharedLayers = async () => {
+      if (!user?.id || mergeInProgress || !Array.isArray(layers) || layers.length === 0) return;
+      const owned = layers.filter(layer => String(layer.owner_id) === String(user.id));
+      const shared = layers.filter(layer => String(layer.owner_id) !== String(user.id));
+      if (owned.length === 0 || shared.length === 0) return;
+
+      const resolvedTargetId = owned.some(layer => String(layer.id) === String(mergeTargetLayerId))
+        ? String(mergeTargetLayerId)
+        : String(owned[0].id);
+      if (!owned.some(layer => String(layer.id) === String(mergeTargetLayerId))) {
+        setMergeTargetLayerId(resolvedTargetId);
+      }
+
+      const { data: myShareRows, error: myShareErr } = await supabase
         .from('shared_access')
-        .select('id')
-        .eq('owner_id', user.id)
-        .eq('shared_with_id', activeLayerOwnerId)
-        .limit(1);
-      if (error) return;
-      const detected = Array.isArray(data) && data.length > 0;
-      if (detected) {
-        const owned = (layers || []).filter(layer => String(layer.owner_id) === String(user.id));
-        if (owned.length > 0) {
-          const resolvedTargetId = owned.some(layer => String(layer.id) === String(mergeTargetLayerId))
-            ? String(mergeTargetLayerId)
-            : String(owned[0].id);
-          if (!owned.some(layer => String(layer.id) === String(mergeTargetLayerId))) {
-            setMergeTargetLayerId(resolvedTargetId);
-          }
-          const autoKey = `${String(user.id)}:${String(activeLayerId)}->${resolvedTargetId}`;
-          if (!mergeInProgress && !autoMergeSeenRef.current.has(autoKey)) {
-            autoMergeSeenRef.current.add(autoKey);
-            const ok = await mergeLayerIntoOwnedCalendar({ sourceLayerId: activeLayerId, targetLayerId: resolvedTargetId, auto: true });
-            if (!ok) autoMergeSeenRef.current.delete(autoKey);
-          }
-        }
+        .select('shared_with_id,shared_with_email')
+        .eq('owner_id', user.id);
+      if (myShareErr) return;
+      const sharedWithIdSet = new Set((myShareRows || []).map(r => String(r?.shared_with_id || '')).filter(Boolean));
+      const sharedWithEmailSet = new Set((myShareRows || []).map(r => String(r?.shared_with_email || '').trim().toLowerCase()).filter(Boolean));
+
+      for (const sharedLayer of shared) {
+        const ownerId = String(sharedLayer.owner_id || '');
+        const ownerEmailGuess = String(sharedLayer.created_by || '').trim().toLowerCase();
+        const isMutual = sharedWithIdSet.has(ownerId) || (ownerEmailGuess.includes('@') && sharedWithEmailSet.has(ownerEmailGuess));
+        if (!isMutual) continue;
+        const autoKey = `${String(user.id)}:${String(sharedLayer.id)}->${resolvedTargetId}`;
+        if (autoMergeSeenRef.current.has(autoKey)) continue;
+        autoMergeSeenRef.current.add(autoKey);
+        const ok = await mergeLayerIntoOwnedCalendar({
+          sourceLayerId: String(sharedLayer.id),
+          targetLayerId: resolvedTargetId,
+          auto: true,
+        });
+        if (!ok) autoMergeSeenRef.current.delete(autoKey);
       }
     };
-    detectMutualShare();
-  }, [user?.id, activeLayerId, activeLayerOwnerId, layers, mergeTargetLayerId, mergeInProgress]);
+    autoMergeMutualSharedLayers();
+  }, [user?.id, layers, mergeTargetLayerId, mergeInProgress, activeLayerId]);
 
   useEffect(() => {
     if (!primaryListOwnerId || !selectedSharedListId) {
