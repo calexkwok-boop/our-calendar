@@ -2046,12 +2046,39 @@ function App() {
   };
 
   const loadLayersForUser = async (userId, userEmail) => {
-    const { data: ownedLayers, error: ownedErr } = await supabase
+    let { data: ownedLayers, error: ownedErr } = await supabase
       .from('calendar_layers')
       .select('*')
       .eq('owner_id', userId)
       .order('created_at', { ascending: true });
     if (ownedErr) throw ownedErr;
+
+    // Bootstrap a brand-new account with a default calendar.
+    if (!ownedLayers || ownedLayers.length === 0) {
+      const defaultPayload = {
+        owner_id: userId,
+        name: 'Main Calendar',
+        is_default: true,
+        created_by: currentUser || userEmail || 'User',
+      };
+      const { data: insertedLayer, error: insertErr } = await supabase
+        .from('calendar_layers')
+        .insert(defaultPayload)
+        .select('*')
+        .single();
+      if (insertErr) {
+        // If another session created it first, continue by reloading owned layers.
+        const { data: reloadedOwned, error: reloadErr } = await supabase
+          .from('calendar_layers')
+          .select('*')
+          .eq('owner_id', userId)
+          .order('created_at', { ascending: true });
+        if (reloadErr) throw reloadErr;
+        ownedLayers = reloadedOwned || [];
+      } else {
+        ownedLayers = insertedLayer ? [insertedLayer] : [];
+      }
+    }
 
     const { data: sharedRows } = await supabase
       .from('shared_access')
