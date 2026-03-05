@@ -3013,6 +3013,43 @@ function App() {
     }
   };
 
+  const leaveSharedLayerCalendar = async (layerId) => {
+    const normalizedLayerId = String(layerId || '');
+    if (!normalizedLayerId || !user?.id) return;
+    const layer = layers.find(item => String(item.id) === normalizedLayerId);
+    if (!layer || String(layer.owner_id) === String(user.id)) return;
+    if (!window.confirm(`Leave "${layer.name || 'this calendar'}"?`)) return;
+
+    try {
+      const myEmail = String(user.email || '').trim().toLowerCase();
+      const { error } = await supabase
+        .from('shared_access')
+        .delete()
+        .eq('layer_id', normalizedLayerId)
+        .or(`shared_with_id.eq.${user.id},shared_with_email.eq.${myEmail}`);
+      if (error) {
+        alert(`Could not leave calendar: ${error.message || 'Unknown error'}`);
+        return;
+      }
+
+      const remainingLayers = layers.filter(item => String(item.id) !== normalizedLayerId);
+      setLayers(remainingLayers);
+      setSwipedLayerId(null);
+      setLayerSwipeDrag({ id: null, offset: 0 });
+
+      if (String(activeLayerId) === normalizedLayerId) {
+        const nextOwned = remainingLayers.find(item => String(item.owner_id) === String(user.id));
+        const fallback = nextOwned || remainingLayers[0] || null;
+        const nextLayerId = fallback ? String(fallback.id) : null;
+        setActiveLayerId(nextLayerId);
+        if (nextLayerId) localStorage.setItem(`active-layer-${user.id}`, nextLayerId);
+      }
+    } catch (err) {
+      console.error('Error leaving shared calendar layer:', err);
+      alert(`Could not leave calendar: ${err.message || 'Unknown error'}`);
+    }
+  };
+
   const saveCategories = async (newCategories) => {
     try {
       setCategories(newCategories);
@@ -7331,6 +7368,37 @@ function App() {
               <>
                 <div className="mb-4">
                   <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400 mb-3">Calendars</h3>
+                  {activeLayer && (
+                    <div className="mb-3 flex items-center justify-between gap-2 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{activeLayer.name || 'Calendar'}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {String(activeLayer.owner_id) === String(user?.id)
+                            ? 'Owned by you'
+                            : `Shared by ${sharedOwnerLabels[String(activeLayer.owner_id || '')] || fallbackOwnerLabel(activeLayer.owner_id)}`}
+                        </div>
+                      </div>
+                      {String(activeLayer.owner_id) === String(user?.id) ? (
+                        <button
+                          onClick={() => deleteLayerCalendar(activeLayer.id)}
+                          disabled={ownedLayerCalendars.length <= 1}
+                          className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={ownedLayerCalendars.length <= 1 ? 'You must keep at least one owned calendar' : 'Delete active calendar'}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete Active
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => leaveSharedLayerCalendar(activeLayer.id)}
+                          className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-xs font-semibold"
+                          title="Leave active shared calendar"
+                        >
+                          Leave Active
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {layers.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No calendars found.</div>
                   ) : (
