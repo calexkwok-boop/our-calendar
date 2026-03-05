@@ -3992,7 +3992,7 @@ function App() {
         }
 
         addInAppNotification({
-          key: `shared_access:${String(row.id || `${layerId}:${sharedWithEmail}:${sharedWithId}`)}`,
+          key: `calendar_invite:${String(row.id || '')}:${layerId}`,
           type: 'invite',
           message: `You were invited to ${calendarName}.`,
           createdAt: row.created_at || new Date().toISOString(),
@@ -4169,9 +4169,10 @@ function App() {
       inviteRows.forEach((row) => {
         const layerId = String(row?.layer_id || '');
         const calendarName = layerNameMap[layerId] || 'a calendar';
-        const rowId = String(row?.id || `${layerId}:${String(row?.owner_id || '')}`);
+        const rowId = String(row?.id || '');
+        if (!rowId || !layerId) return;
         addInAppNotification({
-          key: `shared_access:${rowId}`,
+          key: `calendar_invite:${rowId}:${layerId}`,
           type: 'invite',
           message: `You were invited to "${calendarName}".`,
           createdAt: row?.created_at || new Date().toISOString(),
@@ -4688,13 +4689,61 @@ function App() {
 
   const parseInviteNotification = (item) => {
     const key = String(item?.key || '');
-    if (!key.startsWith('trip_invite:')) return null;
-    const parts = key.split(':');
-    if (parts.length < 3) return null;
-    const subCalendarId = String(parts[1] || '').trim();
-    const email = String(parts[2] || '').trim().toLowerCase();
-    if (!subCalendarId || !email) return null;
-    return { subCalendarId, email };
+    if (key.startsWith('trip_invite:')) {
+      const parts = key.split(':');
+      if (parts.length < 3) return null;
+      const subCalendarId = String(parts[1] || '').trim();
+      const email = String(parts[2] || '').trim().toLowerCase();
+      if (!subCalendarId || !email) return null;
+      return { kind: 'trip', subCalendarId, email };
+    }
+    if (key.startsWith('calendar_invite:')) {
+      const parts = key.split(':');
+      if (parts.length < 3) return null;
+      const shareId = String(parts[1] || '').trim();
+      const layerId = String(parts[2] || '').trim();
+      if (!shareId || !layerId) return null;
+      return { kind: 'calendar', shareId, layerId };
+    }
+    return null;
+  };
+
+  const acceptCalendarInvite = async (invite) => {
+    if (!invite?.shareId || !invite?.layerId || !user?.id) return;
+    const myEmail = String(user?.email || '').trim().toLowerCase();
+    try {
+      const { error } = await supabase
+        .from('shared_access')
+        .update({ shared_with_id: user.id })
+        .eq('id', invite.shareId)
+        .or(`shared_with_id.eq.${user.id},shared_with_email.eq.${myEmail}`);
+      if (error) {
+        alert(`Accept failed: ${error.message || 'Could not accept calendar invite.'}`);
+        return;
+      }
+      setActiveLayerId(invite.layerId);
+      localStorage.setItem(`active-layer-${user.id}`, invite.layerId);
+      setLayerRefreshToken(prev => prev + 1);
+    } catch (err) {
+      alert(`Accept failed: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  const declineCalendarInvite = async (invite) => {
+    if (!invite?.shareId || !user?.id) return;
+    const myEmail = String(user?.email || '').trim().toLowerCase();
+    try {
+      const { error } = await supabase
+        .from('shared_access')
+        .delete()
+        .eq('id', invite.shareId)
+        .or(`shared_with_id.eq.${user.id},shared_with_email.eq.${myEmail}`);
+      if (error) {
+        alert(`Decline failed: ${error.message || 'Could not decline calendar invite.'}`);
+      }
+    } catch (err) {
+      alert(`Decline failed: ${err.message || 'Unknown error'}`);
+    }
   };
 
   const markInAppNotificationRead = (notificationId) => {
@@ -6034,6 +6083,34 @@ function App() {
                         {item.type === 'invite' && (() => {
                           const parsedInvite = parseInviteNotification(item);
                           if (!parsedInvite) return null;
+                          if (parsedInvite.kind === 'calendar') {
+                            return (
+                              <div className="mt-2 flex gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    acceptCalendarInvite(parsedInvite);
+                                    markInAppNotificationRead(item.id);
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-md text-[11px] font-semibold bg-violet-500 hover:bg-violet-600 text-white"
+                                >
+                                  Accept
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    declineCalendarInvite(parsedInvite);
+                                    markInAppNotificationRead(item.id);
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-md text-[11px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                >
+                                  Decline
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          if (parsedInvite.kind !== 'trip') return null;
                           const pendingInvite = pendingTripInvites.find(
                             inv => String(inv?.subCalendarId || '') === String(parsedInvite.subCalendarId || '')
                           );
