@@ -5383,8 +5383,33 @@ function App() {
     setPendingEvent(null);
   };
 
-  const handleDeleteEvent = (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false, skipOnce = false) => {
-    const eventToDelete = events[dateKey]?.find(e => e.id === eventId);
+  const deleteSharedEventsFromDb = async (eventsToDelete) => {
+    try {
+      if (!activeLayerId || !Array.isArray(eventsToDelete) || eventsToDelete.length === 0) return;
+      const sharedEventIds = Array.from(
+        new Set(
+          eventsToDelete
+            .filter(e => e && e.id && e.userId && String(e.userId) !== String(user?.id))
+            .map(e => e.id)
+        )
+      );
+      if (sharedEventIds.length === 0) return;
+      for (const id of sharedEventIds) {
+        const { error } = await supabase
+          .from('events')
+          .delete()
+          .eq('id', id)
+          .eq('layer_id', activeLayerId);
+        if (error) console.error('Error deleting shared event from Supabase:', error);
+      }
+    } catch (error) {
+      console.error('Error deleting shared events:', error);
+    }
+  };
+
+  const handleDeleteEvent = async (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false, skipOnce = false) => {
+    const actualDateKey = Object.keys(events).find(k => events[k]?.some(e => e.id === eventId)) || dateKey;
+    const eventToDelete = events[actualDateKey]?.find(e => e.id === eventId);
 
     if (isVirtualAnnual || isVirtualRecurrence) {
       // Find the original event
@@ -5408,6 +5433,7 @@ function App() {
         saveEvents(updatedEvents);
       } else {
         // Delete the whole recurring event
+        await deleteSharedEventsFromDb([originalEvent]);
         const updatedEvents = { ...events, [originalDateKey]: events[originalDateKey].filter(e => e.id !== eventId) };
         if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
         saveEvents(updatedEvents);
@@ -5417,14 +5443,21 @@ function App() {
 
     if (eventToDelete?.isMultiDay && eventToDelete.multiDayId) {
       const updatedEvents = { ...events };
+      const toDelete = [];
       Object.keys(updatedEvents).forEach(key => {
+        toDelete.push(...updatedEvents[key].filter(e => e.multiDayId === eventToDelete.multiDayId));
         updatedEvents[key] = updatedEvents[key].filter(e => e.multiDayId !== eventToDelete.multiDayId);
         if (updatedEvents[key].length === 0) delete updatedEvents[key];
       });
+      await deleteSharedEventsFromDb(toDelete);
       saveEvents(updatedEvents);
     } else {
-      const updatedEvents = { ...events, [dateKey]: events[dateKey].filter(e => e.id !== eventId) };
-      if (updatedEvents[dateKey].length === 0) delete updatedEvents[dateKey];
+      await deleteSharedEventsFromDb(eventToDelete ? [eventToDelete] : []);
+      const updatedEvents = {
+        ...events,
+        [actualDateKey]: (events[actualDateKey] || []).filter(e => e.id !== eventId)
+      };
+      if (updatedEvents[actualDateKey].length === 0) delete updatedEvents[actualDateKey];
       saveEvents(updatedEvents);
     }
   };
