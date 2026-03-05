@@ -452,35 +452,42 @@ function App() {
       const myUserId = String(user?.id || '');
       const myEmail = String(user?.email || '').trim().toLowerCase();
       const ownerIdForLayer = String(activeLayerOwnerId || myUserId || '');
-
-      const { data: sharedRows } = await supabase
-        .from('shared_access')
-        .select('owner_id')
-        .eq('layer_id', activeLayerId)
-        .or(`shared_with_id.eq.${myUserId},shared_with_email.eq.${myEmail}`);
-      const accessibleOwnerIds = Array.from(new Set([
-        ...[ownerIdForLayer, myUserId].filter(Boolean),
-        ...(sharedRows || []).map(r => String(r?.owner_id || '')).filter(Boolean),
-      ]));
-
-      const { data: directRows, error } = await supabase
+      let directRows = [];
+      const directResult = await supabase
         .from('sub_calendars')
         .select('*')
         .eq('layer_id', activeLayerId);
-      if (error) {
-        console.error('Error loading sub_calendars:', error);
-        return;
+      if (directResult.error) {
+        // Fallback for environments where sub_calendars.layer_id is missing or blocked.
+        if (/column .*layer_id|schema cache/i.test(String(directResult.error.message || ''))) {
+          const fallback = await supabase
+            .from('sub_calendars')
+            .select('*')
+            .eq('owner_id', ownerIdForLayer);
+          if (fallback.error) {
+            console.error('Error loading sub_calendars fallback:', fallback.error);
+            return;
+          }
+          directRows = fallback.data || [];
+        } else {
+          console.error('Error loading sub_calendars:', directResult.error);
+          return;
+        }
+      } else {
+        directRows = directResult.data || [];
       }
 
       let legacyRows = [];
-      if (accessibleOwnerIds.length > 0) {
+      if (ownerIdForLayer) {
         const { data: legacyData, error: legacyError } = await supabase
           .from('sub_calendars')
           .select('*')
           .is('layer_id', null)
-          .in('owner_id', accessibleOwnerIds);
+          .eq('owner_id', ownerIdForLayer);
         if (legacyError) {
-          console.error('Error loading legacy sub_calendars:', legacyError);
+          if (!/column .*layer_id|schema cache/i.test(String(legacyError.message || ''))) {
+            console.error('Error loading legacy sub_calendars:', legacyError);
+          }
         } else {
           legacyRows = legacyData || [];
         }
