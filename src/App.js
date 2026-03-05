@@ -5669,56 +5669,6 @@ function App() {
                   )}
                 </div>
 
-                <div className="mb-4">
-                  <h4 className="text-xs uppercase tracking-wide font-semibold text-green-600 dark:text-green-400 mb-2">Active</h4>
-                  {activeTrips.length === 0 ? (
-                    <div className="text-sm text-gray-500 dark:text-gray-400">No active calendars right now.</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {activeTrips.map(sc => {
-                        const canDelete = sc.owner_id === user?.id;
-                        const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
-                        const isDeleteRevealed = rowOffset < 0;
-                        return (
-                          <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-green-300 dark:ring-green-700">
-                            {canDelete && (
-                              <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
-                                <button
-                                  onClick={() => deleteSubCalendar(sc.id)}
-                                  className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            )}
-                            <div
-                              onTouchStart={(e) => handleTripSwipeStart(e, sc.id, canDelete)}
-                              onTouchMove={handleTripSwipeMove}
-                              onTouchEnd={handleTripSwipeEnd}
-                              onTouchCancel={handleTripSwipeEnd}
-                              className="relative z-10 flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20"
-                              style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
-                            >
-                              <div className="min-w-0">
-                                <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  Happening now · {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => openSubCalendar(sc)}
-                                className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white"
-                              >
-                                Open
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
                 <div>
                   <h4 className="text-xs uppercase tracking-wide font-semibold text-purple-600 dark:text-purple-400 mb-2">Upcoming Itineraries</h4>
                   {upcomingTrips.length === 0 ? (
