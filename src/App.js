@@ -551,6 +551,7 @@ function App() {
       const merged = new Map();
       const addMember = (email, extra = {}) => {
         const normalized = String(email || '').trim().toLowerCase();
+        if (!normalized.includes('@')) return;
         if (!normalized || normalized === myEmail) return;
         if (!merged.has(normalized)) merged.set(normalized, { email: normalized, ...extra });
       };
