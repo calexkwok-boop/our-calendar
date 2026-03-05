@@ -438,9 +438,19 @@ function App() {
   // ── Sub-calendar functions ──────────────────────────────────────────────
 
   const loadSubCalendars = async () => {
+    if (!activeLayerId) {
+      setSubCalendars([]);
+      return;
+    }
     try {
-      const { data, error } = await supabase.from('sub_calendars').select('*');
-      if (error) { console.error('Error loading sub_calendars:', error); return; }
+      const { data, error } = await supabase
+        .from('sub_calendars')
+        .select('*')
+        .eq('layer_id', activeLayerId);
+      if (error) {
+        console.error('Error loading sub_calendars:', error);
+        return;
+      }
       setSubCalendars(data || []);
     } catch (e) { console.error(e); }
   };
@@ -560,6 +570,8 @@ function App() {
       end_date: endDate,
       created_by: currentUser,
       owner_id: user.id,
+      layer_id: activeLayerId,
+      calendar_id: activeLayerId,
     };
     const { data: insertData, error } = await supabase.from('sub_calendars').insert(newSC).select();
     console.log('insert response:', insertData, error);
@@ -582,7 +594,7 @@ function App() {
     if (!window.confirm('Delete this sub-calendar and all its events?')) return;
     await supabase.from('sub_calendar_events').delete().eq('sub_calendar_id', id);
     await supabase.from('sub_calendar_members').delete().eq('sub_calendar_id', id);
-    await supabase.from('sub_calendars').delete().eq('id', id);
+    await supabase.from('sub_calendars').delete().eq('id', id).eq('layer_id', activeLayerId);
     setSubCalendars(prev => prev.filter(sc => sc.id !== id));
     if (activeSubCalendar?.id === id) setActiveSubCalendar(null);
   };
