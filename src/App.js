@@ -2148,8 +2148,19 @@ function App() {
 
   useEffect(() => {
     if (!locallyDeletedEventIds || locallyDeletedEventIds.length === 0) return;
-    setEvents(prev => filterEventsMapByLocalDeletes(prev));
-  }, [locallyDeletedEventIds]);
+    const deletedSet = new Set(locallyDeletedEventIds.map(id => String(id)));
+    setEvents(prev => {
+      let changed = false;
+      const next = {};
+      Object.entries(prev || {}).forEach(([dateKey, dateEvents]) => {
+        const source = dateEvents || [];
+        const kept = source.filter(event => !deletedSet.has(String(event?.id)));
+        if (kept.length !== source.length) changed = true;
+        if (kept.length > 0) next[dateKey] = kept;
+      });
+      return changed ? next : prev;
+    });
+  }, [locallyDeletedEventIds, events]);
 
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
@@ -2170,21 +2181,28 @@ function App() {
   useEffect(() => {
     if (!locallyDeletedListItemIds || locallyDeletedListItemIds.length === 0) return;
     const deletedSet = new Set(locallyDeletedListItemIds.map(id => String(id)));
-    setSharedListItems(prev => (prev || []).filter(item => !deletedSet.has(String(item?.id))));
-  }, [locallyDeletedListItemIds]);
+    setSharedListItems(prev => {
+      const source = prev || [];
+      const kept = source.filter(item => !deletedSet.has(String(item?.id)));
+      return kept.length === source.length ? prev : kept;
+    });
+  }, [locallyDeletedListItemIds, sharedListItems]);
 
   useEffect(() => {
     if (!locallyDeletedSubCalEventIds || locallyDeletedSubCalEventIds.length === 0) return;
     const deletedSet = new Set(locallyDeletedSubCalEventIds.map(id => String(id)));
     setSubCalendarEvents(prev => {
+      let changed = false;
       const next = {};
       Object.entries(prev || {}).forEach(([dateKey, dateEvents]) => {
-        const kept = (dateEvents || []).filter(event => !deletedSet.has(String(event?.id)));
+        const source = dateEvents || [];
+        const kept = source.filter(event => !deletedSet.has(String(event?.id)));
+        if (kept.length !== source.length) changed = true;
         if (kept.length > 0) next[dateKey] = kept;
       });
-      return next;
+      return changed ? next : prev;
     });
-  }, [locallyDeletedSubCalEventIds]);
+  }, [locallyDeletedSubCalEventIds, subCalendarEvents]);
 
   const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || '').trim());
   const cleanOwnerLabel = (value) => {
@@ -6865,7 +6883,7 @@ function App() {
               const active = subCalendars
                 .filter(sc => today >= sc.start_date && today <= sc.end_date)
                 .sort((a, b) => {
-                  const todayEvents = events[today] || [];
+                  const todayEvents = getEventsForDate(new Date());
                   const aMatch = todayEvents.some(e => e.title.toLowerCase().includes(a.name.toLowerCase()) || a.name.toLowerCase().includes(e.title.toLowerCase()));
                   const bMatch = todayEvents.some(e => e.title.toLowerCase().includes(b.name.toLowerCase()) || b.name.toLowerCase().includes(e.title.toLowerCase()));
                   return (bMatch ? 1 : 0) - (aMatch ? 1 : 0);
