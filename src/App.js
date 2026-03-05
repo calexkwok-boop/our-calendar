@@ -449,15 +449,29 @@ function App() {
       return;
     }
     try {
+      const ownerIdForLayer = String(activeLayerOwnerId || user?.id || '');
       const { data, error } = await supabase
         .from('sub_calendars')
         .select('*')
-        .eq('layer_id', activeLayerId);
+        .or(`layer_id.eq.${activeLayerId},and(layer_id.is.null,owner_id.eq.${ownerIdForLayer})`);
       if (error) {
         console.error('Error loading sub_calendars:', error);
         return;
       }
-      setSubCalendars(data || []);
+      const rows = data || [];
+      setSubCalendars(rows);
+
+      // Auto-heal legacy trips that predate layer_id by attaching them to current layer.
+      const legacyIds = rows
+        .filter(sc => !sc?.layer_id && String(sc?.owner_id || '') === ownerIdForLayer)
+        .map(sc => sc.id)
+        .filter(Boolean);
+      if (legacyIds.length > 0) {
+        await supabase
+          .from('sub_calendars')
+          .update({ layer_id: activeLayerId, calendar_id: activeLayerId })
+          .in('id', legacyIds);
+      }
     } catch (e) { console.error(e); }
   };
 
