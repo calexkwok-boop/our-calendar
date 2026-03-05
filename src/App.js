@@ -570,10 +570,25 @@ function App() {
       if (layerId) {
         const { data: sharedRows } = await supabase
           .from('shared_access')
-          .select('shared_with_email')
+          .select('owner_id,shared_with_email')
           .eq('layer_id', layerId);
         (sharedRows || []).forEach((row) => {
-          addMember(row?.shared_with_email, { status: 'accepted', source: 'layer_share', removable: false });
+          const sharedEmail = String(row?.shared_with_email || '').trim().toLowerCase();
+          const ownerId = String(row?.owner_id || '').trim();
+
+          // Always include directly shared recipient email (unless it's me).
+          if (sharedEmail) {
+            addMember(sharedEmail, { status: 'accepted', source: 'layer_share', removable: false });
+          }
+
+          // If this row is "owner shared to me", also include the owner label/email.
+          // This preserves collaborator visibility for recipients under strict RLS.
+          if (sharedEmail && sharedEmail === myEmail && ownerId) {
+            const ownerLabel = String(sharedOwnerLabels?.[ownerId] || '').trim().toLowerCase();
+            if (ownerLabel.includes('@')) {
+              addMember(ownerLabel, { status: 'accepted', source: 'layer_share_owner', removable: false });
+            }
+          }
         });
       }
 
