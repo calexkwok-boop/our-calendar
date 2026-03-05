@@ -1703,6 +1703,9 @@ function App() {
   const [listError, setListError] = useState('');
   const [shareEmailInput, setShareEmailInput] = useState('');
   const [shareMessage, setShareMessage] = useState('');
+  const [mutualShareDetected, setMutualShareDetected] = useState(false);
+  const [mergeTargetLayerId, setMergeTargetLayerId] = useState('');
+  const [mergeInProgress, setMergeInProgress] = useState(false);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [showTipBanner, setShowTipBanner] = useState(() => localStorage.getItem('hideTipBanner') !== 'true');
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
@@ -1854,6 +1857,200 @@ function App() {
     }
     setLayers(prev => prev.map(layer => String(layer.id) === String(activeLayerId) ? { ...layer, name: trimmed } : layer));
     setCalendarTitle(trimmed);
+  };
+
+  const buildEventMergeKey = (event) => {
+    const title = String(event?.title || '').trim().toLowerCase();
+    const date = String(event?.date || '').trim();
+    const time = String(event?.time || '').trim();
+    const recurrence = String(event?.recurrence || '').trim();
+    const location = String(event?.location || '').trim().toLowerCase();
+    return [date, time, title, recurrence, location].join('|');
+  };
+
+  const mergeLayerIntoOwnedCalendar = async () => {
+    if (!user?.id || !activeLayerId || !mergeTargetLayerId) return;
+    if (String(activeLayerOwnerId) === String(user.id)) {
+      setShareMessage('Switch to a shared calendar first, then run merge.');
+      return;
+    }
+    if (String(activeLayerId) === String(mergeTargetLayerId)) {
+      setShareMessage('Source and target calendars cannot be the same.');
+      return;
+    }
+    const confirmed = window.confirm('Merge this shared calendar into your selected calendar? Existing items are preserved and duplicates are skipped.');
+    if (!confirmed) return;
+
+    setMergeInProgress(true);
+    setShareMessage('');
+    try {
+      const targetLayer = layers.find(layer => String(layer.id) === String(mergeTargetLayerId));
+      if (!targetLayer || String(targetLayer.owner_id) !== String(user.id)) {
+        setShareMessage('Target calendar must be one of your owned calendars.');
+        return;
+      }
+
+      // Merge events
+      const { data: sourceEvents, error: srcEventsErr } = await supabase
+        .from('events')
+        .select('*')
+        .eq('layer_id', activeLayerId);
+      if (srcEventsErr) throw srcEventsErr;
+      const { data: targetEvents, error: tgtEventsErr } = await supabase
+        .from('events')
+        .select('*')
+        .eq('layer_id', mergeTargetLayerId);
+      if (tgtEventsErr) throw tgtEventsErr;
+
+      const targetEventKeys = new Set((targetEvents || []).map(buildEventMergeKey));
+      const eventsToInsert = [];
+      (sourceEvents || []).forEach((row, idx) => {
+        const key = buildEventMergeKey(row);
+        if (targetEventKeys.has(key)) return;
+        targetEventKeys.add(key);
+        eventsToInsert.push({
+          id: `evt_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
+          date: row.date,
+          title: row.title,
+          time: row.time,
+          category: row.category || 'other',
+          is_private: !!row.is_private,
+          is_private_for: row.is_private_for || null,
+          is_urgent: !!row.is_urgent,
+          is_multi_day: !!row.is_multi_day,
+          multi_day_id: row.multi_day_id || null,
+          is_annual: !!row.is_annual,
+          annual_month: row.annual_month || null,
+          annual_day: row.annual_day || null,
+          recurrence: row.recurrence || 'once',
+          exceptions: row.exceptions || null,
+          reactions: row.reactions || null,
+          location: row.location || null,
+          created_by: row.created_by || currentUser || user.email || 'User',
+          created_at: row.created_at || new Date().toISOString(),
+          user_id: user.id,
+          layer_id: mergeTargetLayerId,
+        });
+      });
+      if (eventsToInsert.length > 0) {
+        const { error: insertEventsErr } = await supabase.from('events').insert(eventsToInsert);
+        if (insertEventsErr) throw insertEventsErr;
+      }
+
+      // Merge list groups
+      const { data: sourceGroups, error: srcGroupsErr } = await supabase
+        .from('shared_list_groups')
+        .select('*')
+        .eq('layer_id', activeLayerId);
+      if (srcGroupsErr) throw srcGroupsErr;
+      const { data: targetGroups, error: tgtGroupsErr } = await supabase
+        .from('shared_list_groups')
+        .select('*')
+        .eq('layer_id', mergeTargetLayerId);
+      if (tgtGroupsErr) throw tgtGroupsErr;
+
+      const existingGroupByTitle = new Map();
+      (targetGroups || []).forEach(group => {
+        existingGroupByTitle.set(String(group.title || '').trim().toLowerCase(), group);
+      });
+      const groupIdMap = {};
+      for (const srcGroup of (sourceGroups || [])) {
+        const titleKey = String(srcGroup.title || '').trim().toLowerCase();
+        const existing = existingGroupByTitle.get(titleKey);
+        if (existing) {
+          groupIdMap[String(srcGroup.id)] = existing.id;
+          continue;
+        }
+        const payload = {
+          owner_id: user.id,
+          layer_id: mergeTargetLayerId,
+          title: srcGroup.title || 'List',
+          created_by: srcGroup.created_by || currentUser || user.email || 'User',
+          user_id: user.id,
+        };
+        const { data: insertedGroup, error: insertGroupErr } = await supabase
+          .from('shared_list_groups')
+          .insert(payload)
+          .select('*')
+          .single();
+        if (insertGroupErr) throw insertGroupErr;
+        groupIdMap[String(srcGroup.id)] = insertedGroup.id;
+        existingGroupByTitle.set(titleKey, insertedGroup);
+      }
+
+      // Merge list items
+      const { data: sourceItems, error: srcItemsErr } = await supabase
+        .from('shared_lists')
+        .select('*')
+        .eq('layer_id', activeLayerId);
+      if (srcItemsErr) throw srcItemsErr;
+      const { data: targetItems, error: tgtItemsErr } = await supabase
+        .from('shared_lists')
+        .select('*')
+        .eq('layer_id', mergeTargetLayerId);
+      if (tgtItemsErr) throw tgtItemsErr;
+      const targetItemKeys = new Set((targetItems || []).map(item => `${String(item.list_id)}|${String(item.text || '').trim().toLowerCase()}|${item.done ? '1' : '0'}`));
+      const itemsToInsert = [];
+      (sourceItems || []).forEach(item => {
+        const mappedListId = groupIdMap[String(item.list_id)];
+        if (!mappedListId) return;
+        const itemKey = `${String(mappedListId)}|${String(item.text || '').trim().toLowerCase()}|${item.done ? '1' : '0'}`;
+        if (targetItemKeys.has(itemKey)) return;
+        targetItemKeys.add(itemKey);
+        itemsToInsert.push({
+          owner_id: user.id,
+          layer_id: mergeTargetLayerId,
+          list_id: mappedListId,
+          text: item.text || '',
+          done: !!item.done,
+          created_by: item.created_by || currentUser || user.email || 'User',
+          user_id: user.id,
+        });
+      });
+      if (itemsToInsert.length > 0) {
+        const { error: insertItemsErr } = await supabase.from('shared_lists').insert(itemsToInsert);
+        if (insertItemsErr) throw insertItemsErr;
+      }
+
+      // Merge participants / sharing
+      const { data: sourceShares, error: srcSharesErr } = await supabase
+        .from('shared_access')
+        .select('*')
+        .eq('layer_id', activeLayerId);
+      if (srcSharesErr) throw srcSharesErr;
+      const participantRows = [...(sourceShares || [])];
+      participantRows.push({
+        shared_with_id: activeLayerOwnerId,
+        shared_with_email: null,
+      });
+
+      for (const row of participantRows) {
+        const sharedWithId = row?.shared_with_id ? String(row.shared_with_id) : null;
+        const sharedWithEmail = row?.shared_with_email ? String(row.shared_with_email).trim().toLowerCase() : null;
+        if (!sharedWithId && !sharedWithEmail) continue;
+        if (sharedWithId === String(user.id)) continue;
+        if (sharedWithEmail && sharedWithEmail === String(user.email || '').trim().toLowerCase()) continue;
+        const payload = {
+          owner_id: user.id,
+          layer_id: mergeTargetLayerId,
+          shared_with_id: sharedWithId,
+          shared_with_email: sharedWithEmail,
+        };
+        const { error: insertShareErr } = await supabase.from('shared_access').insert(payload);
+        if (insertShareErr && !/duplicate key/i.test(String(insertShareErr.message || ''))) {
+          throw insertShareErr;
+        }
+      }
+
+      setShareMessage('✅ Merge complete. Switched to the merged calendar.');
+      setActiveLayerId(mergeTargetLayerId);
+      localStorage.setItem(`active-layer-${user.id}`, mergeTargetLayerId);
+    } catch (error) {
+      console.error('Calendar merge failed:', error);
+      setShareMessage(`Merge failed: ${error.message || 'Unknown error'}`);
+    } finally {
+      setMergeInProgress(false);
+    }
   };
 
   // Apply dark mode to document
@@ -2755,6 +2952,34 @@ function App() {
     if (!sharedCalendars || sharedCalendars.length === 0) return;
     resolveSharedOwnerLabels(sharedCalendars, activeLayerId);
   }, [sharedCalendars, activeLayerId]);
+
+  useEffect(() => {
+    const detectMutualShare = async () => {
+      if (!user?.id || !activeLayerId || !activeLayerOwnerId || String(activeLayerOwnerId) === String(user.id)) {
+        setMutualShareDetected(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('shared_access')
+        .select('id')
+        .eq('owner_id', user.id)
+        .eq('shared_with_id', activeLayerOwnerId)
+        .limit(1);
+      if (error) {
+        setMutualShareDetected(false);
+        return;
+      }
+      const detected = Array.isArray(data) && data.length > 0;
+      setMutualShareDetected(detected);
+      if (detected) {
+        const owned = (layers || []).filter(layer => String(layer.owner_id) === String(user.id));
+        if (owned.length > 0 && !owned.some(layer => String(layer.id) === String(mergeTargetLayerId))) {
+          setMergeTargetLayerId(String(owned[0].id));
+        }
+      }
+    };
+    detectMutualShare();
+  }, [user?.id, activeLayerId, activeLayerOwnerId, layers, mergeTargetLayerId]);
 
   useEffect(() => {
     if (!primaryListOwnerId || !selectedSharedListId) {
@@ -4319,6 +4544,31 @@ function App() {
                 </p>
               )}
             </div>
+            {mutualShareDetected && String(activeLayerOwnerId) !== String(user?.id) && (
+              <div className="mb-5 p-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20">
+                <p className="text-sm text-indigo-700 dark:text-indigo-300 mb-2">
+                  Mutual sharing detected. You can merge this shared calendar into one of your calendars.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <select
+                    value={mergeTargetLayerId}
+                    onChange={(e) => setMergeTargetLayerId(e.target.value)}
+                    className="flex-1 px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                  >
+                    {ownedLayerCalendars.map(layer => (
+                      <option key={layer.id} value={layer.id}>{layer.name || 'Calendar'}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={mergeLayerIntoOwnedCalendar}
+                    disabled={mergeInProgress || !mergeTargetLayerId}
+                    className="px-3 py-2 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
+                  >
+                    {mergeInProgress ? 'Merging...' : 'Merge Into This Calendar'}
+                  </button>
+                </div>
+              </div>
+            )}
             {myShares.length > 0 && (
               <div className="mb-5">
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Shared with:</h4>
