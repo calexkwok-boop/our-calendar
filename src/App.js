@@ -3055,7 +3055,7 @@ function App() {
       }
 
       if (deletedIds.size === 0) {
-        alert('Could not leave calendar: no matching share row found for this account.');
+        alert('Could not leave calendar: no deletable share row found for this account (likely Supabase RLS policy).');
         return;
       }
 
