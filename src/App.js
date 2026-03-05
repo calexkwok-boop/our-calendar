@@ -2216,7 +2216,7 @@ function App() {
       alert('You must keep at least one calendar.');
       return;
     }
-    if (!window.confirm(`Delete "${layer.name || 'this calendar'}" and all of its events, lists, shares, and trips?`)) return;
+    if (!window.confirm(`Delete "${layer.name || 'this calendar'}" only?\n\nThis removes events, lists, shares, and trips linked to this specific calendar layer.`)) return;
 
     try {
       const { data: subCalRows } = await supabase
@@ -5664,7 +5664,10 @@ function App() {
     })
     .sort((a, b) => toDateOnlyTs(getSubCalEndRaw(b)) - toDateOnlyTs(getSubCalEndRaw(a)));
   const ownedLayerCalendars = layers.filter(layer => String(layer.owner_id) === String(user?.id));
-  const visibleLayerCalendars = [...layers].sort((a, b) => {
+  const uniqueVisibleLayers = Array.from(
+    new Map((layers || []).map(layer => [String(layer?.id || ''), layer])).values()
+  ).filter(layer => String(layer?.id || '').trim() !== '');
+  const visibleLayerCalendars = [...uniqueVisibleLayers].sort((a, b) => {
     const aOwned = String(a?.owner_id) === String(user?.id) ? 0 : 1;
     const bOwned = String(b?.owner_id) === String(user?.id) ? 0 : 1;
     if (aOwned !== bOwned) return aOwned - bOwned;
@@ -7373,37 +7376,6 @@ function App() {
               <>
                 <div className="mb-4">
                   <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400 mb-3">Calendars</h3>
-                  {activeLayer && (
-                    <div className="mb-3 flex items-center justify-between gap-2 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{activeLayer.name || 'Calendar'}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {String(activeLayer.owner_id) === String(user?.id)
-                            ? 'Owned by you'
-                            : `Shared by ${sharedOwnerLabels[String(activeLayer.owner_id || '')] || fallbackOwnerLabel(activeLayer.owner_id)}`}
-                        </div>
-                      </div>
-                      {String(activeLayer.owner_id) === String(user?.id) ? (
-                        <button
-                          onClick={() => deleteLayerCalendar(activeLayer.id)}
-                          disabled={layers.length <= 1}
-                          className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                          title={layers.length <= 1 ? 'You must keep at least one calendar' : 'Delete active calendar'}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete Active
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => leaveSharedLayerCalendar(activeLayer.id)}
-                          className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-xs font-semibold"
-                          title="Leave active shared calendar"
-                        >
-                          Leave Active
-                        </button>
-                      )}
-                    </div>
-                  )}
                   {layers.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No calendars found.</div>
                   ) : (
