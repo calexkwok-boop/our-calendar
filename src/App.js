@@ -4510,6 +4510,10 @@ function App() {
     setInAppNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
+  const clearReadInAppNotifications = () => {
+    setInAppNotifications(prev => prev.filter(n => !n.read));
+  };
+
   const sendTestNotification = () => {
     if (!('Notification' in window)) {
       alert('This browser does not support notifications.');
@@ -5200,6 +5204,7 @@ function App() {
   }
 
   const unreadInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 0 : 1), 0);
+  const readInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 1 : 0), 0);
 
   return (
     <>
@@ -5391,13 +5396,22 @@ function App() {
                       <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">{unreadInAppCount}</span>
                     )}
                   </div>
-                  <button
-                    onClick={markAllInAppNotificationsRead}
-                    disabled={unreadInAppCount === 0}
-                    className="px-2 py-1 rounded-md text-xs font-medium bg-indigo-500 hover:bg-indigo-600 text-white disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Mark all read
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={markAllInAppNotificationsRead}
+                      disabled={unreadInAppCount === 0}
+                      className="px-2 py-1 rounded-md text-xs font-medium bg-indigo-500 hover:bg-indigo-600 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Mark all read
+                    </button>
+                    <button
+                      onClick={clearReadInAppNotifications}
+                      disabled={readInAppCount === 0}
+                      className="px-2 py-1 rounded-md text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Clear read
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
                   {inAppNotifications.length === 0 ? (
