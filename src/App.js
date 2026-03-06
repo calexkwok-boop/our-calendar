@@ -1936,6 +1936,12 @@ function App() {
       `Added "${newEvent.title}" in ${activeSubCalendar?.name || 'trip'}.`,
       { allowWhenVisible: true }
     );
+    void sendCrossDevicePush({
+      type: 'event',
+      title: 'Trip Update',
+      body: `${currentUser || 'Someone'} added "${newEvent.title}" in ${activeSubCalendar?.name || 'a trip'}.`,
+      data: { url: '/', eventId: id, subCalendarId: String(activeSubCalendar?.id || '') },
+    });
   };
 
   const updateSubCalEvent = async (eventId, updates) => {
@@ -3420,6 +3426,12 @@ function App() {
       `Added "${text}" to ${listTitle}.`,
       { allowWhenVisible: true }
     );
+    void sendCrossDevicePush({
+      type: 'list',
+      title: 'List Update',
+      body: `${currentUser || 'Someone'} added "${text}" to ${listTitle}.`,
+      data: { url: '/', listId: String(selectedSharedListId || ''), listItemId: String(data?.id || '') },
+    });
     setNewListItemText('');
   };
 
@@ -4941,6 +4953,27 @@ function App() {
     };
   }, []);
 
+  const sendCrossDevicePush = async ({ type, title, body, data }) => {
+    if (!user?.id) return;
+    try {
+      const { error } = await supabase.functions.invoke('send-immediate-push', {
+        body: {
+          type: String(type || 'update'),
+          title: String(title || 'Calendar Update'),
+          body: String(body || ''),
+          data: data && typeof data === 'object' ? data : {},
+          actorUserId: String(user.id),
+          actorEmail: String(user?.email || '').trim().toLowerCase(),
+          layerId: activeLayerId ? String(activeLayerId) : null,
+          subCalendarId: activeSubCalendar?.id ? String(activeSubCalendar.id) : null,
+        },
+      });
+      if (error) console.error('send-immediate-push invoke failed:', error);
+    } catch (err) {
+      console.error('send-immediate-push invoke exception:', err);
+    }
+  };
+
   const maybeSendInAppSystemNotification = (type, key, message, options = {}) => {
     if (!notificationsEnabled) return;
     if (!('Notification' in window)) return;
@@ -5818,6 +5851,14 @@ function App() {
         : `Added "${pendingEvent.title}" to your calendar.`,
       { allowWhenVisible: true }
     );
+    void sendCrossDevicePush({
+      type: 'event',
+      title: 'Calendar Update',
+      body: pendingEvent.datesToAdd.length > 1
+        ? `${currentUser || 'Someone'} added "${pendingEvent.title}" on ${pendingEvent.datesToAdd.length} dates.`
+        : `${currentUser || 'Someone'} added "${pendingEvent.title}".`,
+      data: { url: '/' },
+    });
     setSelectedDates([]);
     setRecurrence('once');
     setSuggestedTime('');
