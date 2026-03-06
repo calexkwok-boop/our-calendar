@@ -66,6 +66,7 @@ const COLOR_OPTIONS = [
 ];
 
 const WEB_PUSH_VAPID_PUBLIC_KEY = String(process.env.REACT_APP_VAPID_PUBLIC_KEY || process.env.REACT_APP_FCM_VAPID_PUBLIC_KEY || '').trim();
+const FCM_WEB_VAPID_PUBLIC_KEY = String(process.env.REACT_APP_FCM_VAPID_PUBLIC_KEY || process.env.REACT_APP_VAPID_PUBLIC_KEY || '').trim();
 
 
 const urlBase64ToUint8Array = (base64String) => {
