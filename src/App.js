@@ -3870,12 +3870,6 @@ function App() {
   useEffect(() => {
     if (!user?.id) return;
     const me = String(user.id);
-    const accessibleSharedLayerIds = new Set(
-      (layers || [])
-        .filter(layer => String(layer?.owner_id || '') !== me)
-        .map(layer => String(layer?.id || '').trim())
-        .filter(Boolean)
-    );
     if (accessibleSharedLayerIds.size === 0) return;
     const removedKeys = [];
     setInAppNotifications(prev => prev.filter((item) => {
@@ -4063,13 +4057,6 @@ function App() {
         if (row?.accepted_at) return;
         const subCalId = String(row.sub_calendar_id || '');
         if (!subCalId) return;
-        const { data: tripRow } = await supabase
-          .from('sub_calendars')
-          .select('layer_id,owner_id')
-          .eq('id', subCalId)
-          .maybeSingle();
-        const tripLayerId = String(tripRow?.layer_id || '').trim();
-        if (tripLayerId && accessibleSharedLayerIds.has(tripLayerId)) return;
         const tripName = subCalNameMap[subCalId] || 'a trip';
         addInAppNotification({
           key: `trip_invite:${subCalId}:${inviteEmail}`,
@@ -4242,8 +4229,6 @@ function App() {
         const status = String(row?.status || '').trim().toLowerCase();
         if (status && status !== 'pending') return;
         if (row?.accepted_at) return;
-        const tripLayerId = String(row?.trip_layer_id || '').trim();
-        if (tripLayerId && accessibleSharedLayerIds.has(tripLayerId)) return;
         const subCalId = String(row?.sub_calendar_id || '');
         if (!subCalId) return;
         const tripName = String(row?.sub_calendar_name || subCalNameMap[subCalId] || 'a trip');
@@ -4476,25 +4461,22 @@ function App() {
         if (inviteRows.length > 0) {
           const inviteTripIds = Array.from(new Set(inviteRows.map(row => String(row?.sub_calendar_id || '')).filter(Boolean)));
           const inviteNameMap = {};
-          const inviteLayerMap = {};
           if (inviteTripIds.length > 0) {
             const { data: inviteTrips, error: inviteTripsErr } = await supabase
               .from('sub_calendars')
-              .select('id,name,layer_id')
+              .select('id,name')
               .in('id', inviteTripIds);
             if (inviteTripsErr) {
               console.error('sub_calendars invite name fetch failed:', inviteTripsErr);
             } else {
               (inviteTrips || []).forEach(trip => {
                 inviteNameMap[String(trip.id)] = trip.name || 'trip';
-                inviteLayerMap[String(trip.id)] = String(trip.layer_id || '');
               });
             }
           }
           const inviteRowsWithNames = inviteRows.map(row => ({
             ...row,
             sub_calendar_name: inviteNameMap[String(row?.sub_calendar_id || '')] || subCalNameMap[String(row?.sub_calendar_id || '')] || 'trip',
-            trip_layer_id: inviteLayerMap[String(row?.sub_calendar_id || '')] || '',
           }));
           notifyTripInvites(inviteRowsWithNames);
           updateCursor('tripInvites', datedInviteRows);
@@ -4544,22 +4526,18 @@ function App() {
 
       const subIds = Array.from(new Set(inviteRows.map(row => String(row.sub_calendar_id))));
       let nameMap = {};
-      let layerMap = {};
       if (subIds.length > 0) {
         const { data: tripRows } = await supabase
           .from('sub_calendars')
-          .select('id,name,layer_id,owner_id')
+          .select('id,name')
           .in('id', subIds);
         (tripRows || []).forEach(trip => {
           nameMap[String(trip.id)] = trip.name || 'a trip';
-          layerMap[String(trip.id)] = String(trip.layer_id || '');
         });
       }
 
         inviteRows.forEach(row => {
           const subCalId = String(row.sub_calendar_id);
-          const tripLayerId = layerMap[subCalId] || '';
-          if (tripLayerId && accessibleSharedLayerIds.has(tripLayerId)) return;
           const stamp = String(row?.invited_at || row?.accepted_at || '');
           const inviteKey = `trip_invite:${subCalId}:${myEmail}:${stamp}`;
           addInAppNotification({
@@ -4637,12 +4615,6 @@ function App() {
     }
     try {
       const me = String(user?.id || '');
-      const accessibleSharedLayerIds = new Set(
-        (layers || [])
-          .filter(layer => String(layer?.owner_id || '') !== me)
-          .map(layer => String(layer?.id || '').trim())
-          .filter(Boolean)
-      );
       let rows = [];
       const pendingResult = await supabase
         .from('sub_calendar_members')
@@ -4687,8 +4659,6 @@ function App() {
         .map((row) => {
           const subCalId = String(row?.sub_calendar_id || '');
           const trip = tripMap.get(subCalId) || null;
-          const tripLayerId = String(trip?.layer_id || '');
-          if (tripLayerId && accessibleSharedLayerIds.has(tripLayerId)) return null;
           return {
             subCalendarId: subCalId,
             tripName: trip?.name || 'Trip Invite',
