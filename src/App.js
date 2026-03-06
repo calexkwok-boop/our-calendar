@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
 import { getMessagingIfSupported } from "./firebase";
@@ -123,6 +123,13 @@ function App() {
   const [notifyOneHour, setNotifyOneHour] = useState(false);
   const [notifyAtEventTime, setNotifyAtEventTime] = useState(true);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [showAiAssistant, setShowAiAssistant] = useState(false);
+  const [aiMessages, setAiMessages] = useState([
+    { role: 'assistant', content: 'Hi, I can help you plan events, trips, and reminders.' }
+  ]);
+  const [aiInput, setAiInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
   const [inAppNotifications, setInAppNotifications] = useState([]);
   const [pendingTripInvites, setPendingTripInvites] = useState([]);
   const seenInAppNotificationKeysRef = useRef(new Set());
@@ -4801,6 +4808,36 @@ function App() {
     await window.storage.set(key, next.toString(), false);
   };
 
+  const sendAiAssistantMessage = async () => {
+    const text = String(aiInput || '').trim();
+    if (!text || aiLoading) return;
+    const userMessage = { role: 'user', content: text };
+    const nextMessages = [...aiMessages, userMessage];
+    setAiMessages(nextMessages);
+    setAiInput('');
+    setAiError('');
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ask-assistant', {
+        body: {
+          messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+          context: {
+            selectedDate: selectedDate ? getDateKey(selectedDate) : null,
+            currentUser: currentUser || user?.email || 'User',
+            calendarView,
+          },
+        },
+      });
+      if (error) throw new Error(error.message || 'Function invocation failed');
+      const reply = String(data?.reply || '').trim() || "I couldn't generate a response.";
+      setAiMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+    } catch (err) {
+      setAiError(String(err?.message || 'Assistant request failed.'));
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const ensureFirebaseMessagingServiceWorker = async () => {
     if (!('serviceWorker' in navigator)) return null;
     try {
@@ -6288,6 +6325,13 @@ function App() {
                 List
               </button>
               <button
+                onClick={() => setShowAiAssistant(true)}
+                className="p-2 rounded-xl transition-all duration-200 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800"
+                title="AI assistant"
+              >
+                <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+              <button
                 onClick={() => setShowScanHelpModal(true)}
                 disabled={isScanningReminder}
                 className={`p-2 rounded-xl transition-all duration-200 ${isScanningReminder ? 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
@@ -6624,6 +6668,66 @@ function App() {
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Only send notifications for events marked as urgent 🚨</p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {showAiAssistant && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border border-indigo-200 dark:border-indigo-800">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-lg sm:text-xl font-semibold text-indigo-600 dark:text-indigo-400">AI Assistant</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Ask for help planning events, reminders, and trip ideas.</p>
+              </div>
+              <button
+                onClick={() => setShowAiAssistant(false)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label="Close AI assistant"
+              >
+                <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              </button>
+            </div>
+            <div className="h-60 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3 space-y-2">
+              {aiMessages.map((msg, idx) => (
+                <div
+                  key={`${msg.role}-${idx}`}
+                  className={`max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap ${
+                    msg.role === 'user'
+                      ? 'ml-auto bg-indigo-600 text-white'
+                      : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              ))}
+              {aiLoading && (
+                <div className="max-w-[92%] px-3 py-2 rounded-xl text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300">
+                  Thinking...
+                </div>
+              )}
+            </div>
+            {aiError && <p className="mt-2 text-xs text-red-500">{aiError}</p>}
+            <div className="mt-3 flex gap-2">
+              <input
+                type="text"
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendAiAssistantMessage();
+                  }
+                }}
+                placeholder="Ask anything about your calendar..."
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+              />
+              <button
+                onClick={sendAiAssistantMessage}
+                disabled={aiLoading || !aiInput.trim()}
+                className="px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold disabled:opacity-50"
+              >
+                Send
+              </button>
             </div>
           </div>
         )}
