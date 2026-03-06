@@ -3870,6 +3870,12 @@ function App() {
   useEffect(() => {
     if (!user?.id) return;
     const me = String(user.id);
+    const accessibleSharedLayerIds = new Set(
+      (layers || [])
+        .filter(layer => String(layer?.owner_id || '') !== me)
+        .map(layer => String(layer?.id || '').trim())
+        .filter(Boolean)
+    );
     if (accessibleSharedLayerIds.size === 0) return;
     const removedKeys = [];
     setInAppNotifications(prev => prev.filter((item) => {
@@ -4108,6 +4114,12 @@ function App() {
     const me = String(user.id);
     const myEmail = String(user?.email || '').trim().toLowerCase();
     const myName = String(currentUser || '').trim().toLowerCase();
+    const accessibleSharedLayerIds = new Set(
+      (layers || [])
+        .filter((layer) => String(layer?.owner_id || '') !== me)
+        .map((layer) => String(layer?.id || '').trim())
+        .filter(Boolean)
+    );
     const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
