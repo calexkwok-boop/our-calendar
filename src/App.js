@@ -4835,6 +4835,24 @@ function App() {
         if (!messaging) return;
         unsubscribe = onMessage(messaging, (payload) => {
           console.log('Foreground FCM payload:', payload);
+          if (!('Notification' in window)) return;
+          if (Notification.permission !== 'granted') return;
+          const title = String(payload?.notification?.title || payload?.data?.title || 'Calendar Update');
+          const body = String(payload?.notification?.body || payload?.data?.body || '');
+          const tag = String(payload?.data?.tag || 'fcm-foreground');
+          try {
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistration().then((registration) => {
+                if (registration?.showNotification) {
+                  registration.showNotification(title, { body, tag, data: payload?.data || {} });
+                } else {
+                  new Notification(title, { body, tag });
+                }
+              });
+            } else {
+              new Notification(title, { body, tag });
+            }
+          } catch {}
         });
       } catch (error) {
         console.error('Error setting up foreground FCM listener:', error);
