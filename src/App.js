@@ -455,8 +455,10 @@ function App() {
   // ── Sub-calendar functions ──────────────────────────────────────────────
 
   const loadSubCalendars = async () => {
-    if (!activeLayerId) {
+    const requestedLayerId = String(activeLayerId || '');
+    if (!requestedLayerId) {
       setSubCalendars([]);
+      setActiveSubCalendar(null);
       return [];
     }
     try {
@@ -467,7 +469,7 @@ function App() {
       const { data: directRows, error } = await supabase
         .from('sub_calendars')
         .select('*')
-        .eq('layer_id', activeLayerId);
+        .eq('layer_id', requestedLayerId);
       if (error) {
         console.error('Error loading sub_calendars:', error);
         return;
@@ -476,7 +478,7 @@ function App() {
       const { data: sharedOwnerRows } = await supabase
         .from('shared_access')
         .select('owner_id')
-        .eq('layer_id', activeLayerId)
+        .eq('layer_id', requestedLayerId)
         .or(`shared_with_id.eq.${myUserId},shared_with_email.eq.${myEmail}`);
       const accessibleOwnerIds = Array.from(new Set([
         ownerIdForLayer,
@@ -519,7 +521,7 @@ function App() {
       }
 
       const mergedRows = Array.from(new Map([...(directRows || []), ...legacyRows, ...memberRows].map(sc => [String(sc.id), sc])).values());
-      const layerScopedRows = mergedRows.filter(sc => String(sc?.layer_id || '') === String(activeLayerId || ''));
+      const layerScopedRows = mergedRows.filter(sc => String(sc?.layer_id || '') === requestedLayerId);
 
       // Deduplicate duplicate cloned trips (same name + dates + effective layer) by selecting the best candidate.
       const dedupedMap = new Map();
@@ -528,7 +530,7 @@ function App() {
         const scId = String(sc?.id || '');
         const scLayerId = String(sc?.layer_id || '');
         const scOwnerId = String(sc?.owner_id || '');
-        if (scLayerId && scLayerId === String(activeLayerId || '')) score += 4;
+        if (scLayerId && scLayerId === requestedLayerId) score += 4;
         if (!scLayerId) score += 1; // legacy copy
         if (scOwnerId && scOwnerId === String(ownerIdForLayer || '')) score += 2;
         if (memberTripIdSet.has(scId)) score += 1;
@@ -561,7 +563,12 @@ function App() {
       });
 
       const dedupedRows = Array.from(dedupedMap.values());
+      if (String(activeLayerIdRef.current || '') !== requestedLayerId) return dedupedRows;
       setSubCalendars(dedupedRows);
+      setActiveSubCalendar((prev) => {
+        if (!prev?.id) return prev;
+        return dedupedRows.some((sc) => String(sc.id) === String(prev.id)) ? prev : null;
+      });
       return dedupedRows;
     } catch (e) { console.error(e); }
     return [];
@@ -2055,6 +2062,14 @@ function App() {
     if (!id) return 'another user';
     return isUuidLike(id) ? `User ${id.slice(0, 8)}` : id;
   };
+  const activeLayerIdRef = useRef(activeLayerId);
+  useEffect(() => {
+    activeLayerIdRef.current = activeLayerId;
+  }, [activeLayerId]);
+  useEffect(() => {
+    setSubCalendars([]);
+    setActiveSubCalendar(null);
+  }, [activeLayerId]);
   const activeLayer = layers.find(layer => layer.id === activeLayerId) || null;
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
 
