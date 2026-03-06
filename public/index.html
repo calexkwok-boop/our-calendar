@@ -8,6 +8,7 @@
     <meta name="description" content="Our family calendar" />
 
     <!-- PWA / iOS specific -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Our Calendar" />
@@ -23,7 +24,7 @@
       function gm_authFailure() { console.error('Google Maps auth failure — check API key and restrictions'); }
     </script>
     <script async defer
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB5j5uL4UZtLRGdSD-PmFPwAlMGLLLFUgY&libraries=places&callback=initGoogleMaps"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB5j5uL4UZtLRGdSD-PmFPwAlMGLLLFUgY&libraries=places&callback=initGoogleMaps&loading=async"
       onerror="console.error('Google Maps script failed to load')">
     </script>
   </head>
