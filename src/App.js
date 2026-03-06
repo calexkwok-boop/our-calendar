@@ -4807,7 +4807,11 @@ function App() {
       if (!messaging) return null;
       const vapidKey = FCM_WEB_VAPID_PUBLIC_KEY || WEB_PUSH_VAPID_PUBLIC_KEY;
       if (!vapidKey) return null;
-      const token = await getToken(messaging, { vapidKey });
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      const token = await getToken(messaging, {
+        vapidKey,
+        serviceWorkerRegistration: registration,
+      });
       if (token) {
         localStorage.setItem('fcm-token', token);
         console.log('FCM token:', token);
@@ -4842,7 +4846,7 @@ function App() {
           const tag = String(payload?.data?.tag || 'fcm-foreground');
           try {
             if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.getRegistration().then((registration) => {
+              navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js').then((registration) => {
                 if (registration?.showNotification) {
                   registration.showNotification(title, { body, tag, data: payload?.data || {} });
                 } else {
@@ -4885,7 +4889,7 @@ function App() {
 
     try {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistration().then((registration) => {
+        navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js').then((registration) => {
           if (registration?.showNotification) {
             registration.showNotification(title, { body: message, tag, data: { url: '/' } });
           } else {

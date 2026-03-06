@@ -16,9 +16,17 @@ root.render(
 reportWebVitals();
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((err) => {
+  window.addEventListener('load', async () => {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(
+        regs
+          .filter((reg) => !reg.active?.scriptURL?.includes('/firebase-messaging-sw.js'))
+          .map((reg) => reg.unregister())
+      );
+      await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    } catch (err) {
       console.error('Service worker registration failed:', err);
-    });
+    }
   });
 }
