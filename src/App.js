@@ -4801,13 +4801,60 @@ function App() {
     await window.storage.set(key, next.toString(), false);
   };
 
+  const ensureFirebaseMessagingServiceWorker = async () => {
+    if (!('serviceWorker' in navigator)) return null;
+    try {
+      let registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+      if (!registration) {
+        registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      }
+
+      if (!registration?.active) {
+        await new Promise((resolve) => {
+          let resolved = false;
+          const done = () => {
+            if (resolved) return;
+            resolved = true;
+            resolve();
+          };
+          const timeout = setTimeout(done, 5000);
+          if (registration?.installing) {
+            registration.installing.addEventListener('statechange', () => {
+              if (registration.active) {
+                clearTimeout(timeout);
+                done();
+              }
+            });
+          } else {
+            clearTimeout(timeout);
+            done();
+          }
+        });
+      }
+
+      if (!registration?.active) {
+        await navigator.serviceWorker.ready;
+        registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+      }
+
+      return registration?.active ? registration : null;
+    } catch (err) {
+      console.error('Firebase service worker setup failed:', err);
+      return null;
+    }
+  };
+
   const requestFcmToken = async () => {
     try {
       const messaging = await getMessagingIfSupported();
       if (!messaging) return null;
       const vapidKey = FCM_WEB_VAPID_PUBLIC_KEY || WEB_PUSH_VAPID_PUBLIC_KEY;
       if (!vapidKey) return null;
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      const registration = await ensureFirebaseMessagingServiceWorker();
+      if (!registration) {
+        console.warn('FCM token skipped: firebase-messaging-sw.js is not active yet.');
+        return null;
+      }
       const token = await getToken(messaging, {
         vapidKey,
         serviceWorkerRegistration: registration,
@@ -5377,7 +5424,11 @@ function App() {
     let cancelled = false;
     const syncPushSubscription = async () => {
       try {
-        const registration = await navigator.serviceWorker.ready;
+        const registration = await ensureFirebaseMessagingServiceWorker();
+        if (!registration) {
+          console.warn('Push subscription skipped: firebase-messaging-sw.js is not active yet.');
+          return;
+        }
         let subscription = await registration.pushManager.getSubscription();
         const shouldEnable = notificationsEnabled && Notification.permission === 'granted';
 
@@ -5419,6 +5470,10 @@ function App() {
           try { await subscription.unsubscribe(); } catch {}
         }
       } catch (err) {
+        if (String(err?.name || '') === 'AbortError') {
+          console.warn('Push subscription sync aborted (service worker not active or browser storage issue):', err);
+          return;
+        }
         console.error('Push subscription sync failed:', err);
       }
     };

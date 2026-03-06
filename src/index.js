@@ -16,7 +16,7 @@ root.render(
 reportWebVitals();
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
+  (async () => {
     try {
       const regs = await navigator.serviceWorker.getRegistrations();
       await Promise.all(
@@ -28,5 +28,5 @@ if ('serviceWorker' in navigator) {
     } catch (err) {
       console.error('Service worker registration failed:', err);
     }
-  });
+  })();
 }
