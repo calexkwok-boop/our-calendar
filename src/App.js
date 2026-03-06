@@ -5096,21 +5096,6 @@ function App() {
     setInAppNotifications(prev => prev.filter(n => !n.read));
   };
 
-  const sendTestNotification = () => {
-    if (!('Notification' in window)) {
-      alert('This browser does not support notifications.');
-      return;
-    }
-    if (Notification.permission !== 'granted') {
-      alert('Notification permission is not granted.');
-      return;
-    }
-    new Notification('Test notification', {
-      body: `Notifications are working at ${new Date().toLocaleTimeString()}.`,
-      tag: 'notification-test',
-    });
-  };
-
   const getEventDateTime = (dateKey, timeValue) => {
     if (!dateKey || typeof dateKey !== 'string') return null;
     const [yy, mm, dd] = dateKey.split('-').map(Number);
@@ -6617,20 +6602,6 @@ function App() {
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifyAtEventTime ? 'bg-blue-500' : 'bg-gray-300'}`}
                   >
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifyAtEventTime ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-                </div>
-              </div>
-              <div className="p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="font-semibold text-gray-800 dark:text-gray-200">Quick Test</div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Send a test notification right now.</p>
-                  </div>
-                  <button
-                    onClick={sendTestNotification}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-white hover:bg-emerald-600"
-                  >
-                    Send Test
                   </button>
                 </div>
               </div>
