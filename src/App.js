@@ -3870,36 +3870,7 @@ function App() {
   useEffect(() => {
     if (!user?.id) return;
     const me = String(user.id);
-    const accessibleSharedLayerIds = new Set(
-      (layers || [])
-        .filter(layer => String(layer?.owner_id || '') !== me)
-        .map(layer => String(layer?.id || '').trim())
-        .filter(Boolean)
-    );
-    if (accessibleSharedLayerIds.size === 0) return;
-    const removedKeys = [];
-    setInAppNotifications(prev => prev.filter((item) => {
-      const key = String(item?.key || '');
-      if (!key.startsWith('calendar_invite:')) return true;
-      const parts = key.split(':');
-      const layerId = String(parts?.[2] || '').trim();
-      const shouldRemove = Boolean(layerId) && accessibleSharedLayerIds.has(layerId);
-      if (shouldRemove) removedKeys.push(key);
-      return !shouldRemove;
-    }));
-    removedKeys.forEach((key) => seenInAppNotificationKeysRef.current.delete(key));
-  }, [user?.id, layers]);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    const me = String(user.id);
     const myEmail = String(user?.email || '').trim().toLowerCase();
-    const accessibleSharedLayerIds = new Set(
-      (layers || [])
-        .filter(layer => String(layer?.owner_id || '') !== me)
-        .map(layer => String(layer?.id || '').trim())
-        .filter(Boolean)
-    );
     const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
@@ -4080,7 +4051,6 @@ function App() {
         const layerId = String(row.layer_id || '').trim();
         // Only notify for pending invites. Accepted shares have shared_with_id set.
         if (sharedWithId) return;
-        if (layerId && accessibleSharedLayerIds.has(layerId)) return;
         if (sharedWithId !== me && sharedWithEmail !== myEmail) return;
         if (String(row.owner_id || '') === me) return;
 
@@ -4114,12 +4084,6 @@ function App() {
     const me = String(user.id);
     const myEmail = String(user?.email || '').trim().toLowerCase();
     const myName = String(currentUser || '').trim().toLowerCase();
-    const accessibleSharedLayerIds = new Set(
-      (layers || [])
-        .filter((layer) => String(layer?.owner_id || '') !== me)
-        .map((layer) => String(layer?.id || '').trim())
-        .filter(Boolean)
-    );
     const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
@@ -4275,20 +4239,6 @@ function App() {
         removedKeys.forEach((key) => seenInAppNotificationKeysRef.current.delete(key));
       }
 
-      if (accessibleSharedLayerIds.size > 0) {
-        const removedKeys = [];
-        setInAppNotifications(prev => prev.filter((item) => {
-          const key = String(item?.key || '');
-          if (!key.startsWith('calendar_invite:')) return true;
-          const parts = key.split(':');
-          const layerId = String(parts?.[2] || '').trim();
-          const shouldRemove = Boolean(layerId) && accessibleSharedLayerIds.has(layerId);
-          if (shouldRemove) removedKeys.push(key);
-          return !shouldRemove;
-        }));
-        removedKeys.forEach((key) => seenInAppNotificationKeysRef.current.delete(key));
-      }
-
       const inviteRows = (rows || []).filter((row) => {
         const rowId = String(row?.id || '').trim();
         if (rowId && dismissedCalendarInviteIdsRef.current.has(rowId)) return false;
@@ -4300,7 +4250,6 @@ function App() {
         // Only surface pending calendar invites.
         if (sharedWithId) return false;
         if (layerId && acceptedLayerIds.has(layerId)) return false;
-        if (layerId && accessibleSharedLayerIds.has(layerId)) return false;
         return sharedWithEmail === myEmail;
       });
       if (inviteRows.length === 0) return;
@@ -4517,12 +4466,6 @@ function App() {
     if (!user?.id || !user?.email) return;
     const me = String(user.id);
     const myEmail = String(user.email).trim().toLowerCase();
-    const accessibleSharedLayerIds = new Set(
-      (layers || [])
-        .filter(layer => String(layer?.owner_id || '') !== me)
-        .map(layer => String(layer?.id || '').trim())
-        .filter(Boolean)
-    );
 
     const notifyInvites = async (rows) => {
         const inviteRows = (rows || []).filter(row => {
