@@ -4800,6 +4800,51 @@ function App() {
     await window.storage.set(key, next.toString(), false);
   };
 
+  const requestFcmToken = async () => {
+    try {
+      const messaging = await getMessagingIfSupported();
+      if (!messaging) return null;
+      const vapidKey = FCM_WEB_VAPID_PUBLIC_KEY || WEB_PUSH_VAPID_PUBLIC_KEY;
+      if (!vapidKey) return null;
+      const token = await getToken(messaging, { vapidKey });
+      if (token) {
+        localStorage.setItem('fcm-token', token);
+        console.log('FCM token:', token);
+      }
+      return token || null;
+    } catch (err) {
+      console.error('Error getting FCM token:', err);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (!notificationsEnabled) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    requestFcmToken();
+  }, [user?.id, notificationsEnabled, notificationPermission]);
+
+  useEffect(() => {
+    let unsubscribe = null;
+    const startForegroundListener = async () => {
+      try {
+        const messaging = await getMessagingIfSupported();
+        if (!messaging) return;
+        unsubscribe = onMessage(messaging, (payload) => {
+          console.log('Foreground FCM payload:', payload);
+        });
+      } catch (error) {
+        console.error('Error setting up foreground FCM listener:', error);
+      }
+    };
+    startForegroundListener();
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
+
   const maybeSendInAppSystemNotification = (type, key, message) => {
     if (!notificationsEnabled) return;
     if (!('Notification' in window)) return;
