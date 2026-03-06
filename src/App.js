@@ -4035,8 +4035,9 @@ function App() {
         const subCalId = String(row.sub_calendar_id || '');
         if (!subCalId) return;
         const tripName = subCalNameMap[subCalId] || 'a trip';
+        const stamp = String(row?.invited_at || row?.created_at || '');
         addInAppNotification({
-          key: `trip_invite:${subCalId}:${inviteEmail}`,
+          key: `trip_invite:${subCalId}:${inviteEmail}:${stamp}`,
           type: 'invite',
           message: `You were invited to ${tripName}.`,
           createdAt: row.created_at || new Date().toISOString(),
@@ -4208,8 +4209,9 @@ function App() {
         const subCalId = String(row?.sub_calendar_id || '');
         if (!subCalId) return;
         const tripName = String(row?.sub_calendar_name || subCalNameMap[subCalId] || 'a trip');
+        const stamp = String(row?.invited_at || row?.created_at || '');
         addInAppNotification({
-          key: `trip_invite:${subCalId}:${inviteEmail}`,
+          key: `trip_invite:${subCalId}:${inviteEmail}:${stamp}`,
           type: 'invite',
           message: `You were invited to ${tripName}.`,
           createdAt: row?.created_at || new Date().toISOString(),
@@ -4786,8 +4788,9 @@ function App() {
     if (!notificationsEnabled) return;
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
-    // Avoid noisy duplicate banners while user is actively looking at the app.
-    if (document.visibilityState === 'visible') return;
+    const normalizedType = String(type || '').trim().toLowerCase();
+    // Invite notifications should still surface in-app while user is active.
+    if (document.visibilityState === 'visible' && normalizedType !== 'invite') return;
 
     const titleByType = {
       invite: 'Calendar Invite',
@@ -4797,7 +4800,7 @@ function App() {
       expense: 'Expense Update',
       update: 'Calendar Update',
     };
-    const title = titleByType[String(type || '').trim().toLowerCase()] || 'Calendar Update';
+    const title = titleByType[normalizedType] || 'Calendar Update';
     const tag = `in-app:${String(key || '').trim()}`;
 
     try {
