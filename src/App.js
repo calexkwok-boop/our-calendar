@@ -109,6 +109,7 @@ function App() {
   const [inAppNotifications, setInAppNotifications] = useState([]);
   const [pendingTripInvites, setPendingTripInvites] = useState([]);
   const seenInAppNotificationKeysRef = useRef(new Set());
+  const dismissedCalendarInviteIdsRef = useRef(new Set());
   const inAppSyncCursorRef = useRef({ events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null, tripInvites: null });
   const seenExpenseIdsRef = useRef(new Set());
   const [showTimePrompt, setShowTimePrompt] = useState(false);
@@ -3803,12 +3804,14 @@ function App() {
   useEffect(() => {
     if (!user?.id) {
       seenInAppNotificationKeysRef.current = new Set();
+      dismissedCalendarInviteIdsRef.current = new Set();
       seenExpenseIdsRef.current = new Set();
       inAppSyncCursorRef.current = { events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null, tripInvites: null };
       setInAppNotifications([]);
       return;
     }
     const storageKey = `in-app-notifications-${user.id}`;
+    const dismissedCalendarInvitesKey = `dismissed-calendar-invites-${user.id}`;
     const expenseSeenKey = `in-app-seen-expenses-${user.id}`;
     const cursorKey = `in-app-notification-cursor-${user.id}`;
     try {
@@ -3828,8 +3831,13 @@ function App() {
       const parsedCursor = cursorRaw ? JSON.parse(cursorRaw) : null;
       const seenExpensesRaw = localStorage.getItem(expenseSeenKey);
       const parsedSeenExpenses = seenExpensesRaw ? JSON.parse(seenExpensesRaw) : [];
+      const dismissedRaw = localStorage.getItem(dismissedCalendarInvitesKey);
+      const parsedDismissed = dismissedRaw ? JSON.parse(dismissedRaw) : [];
       const fallbackTs = new Date(Date.now() - (5 * 60 * 1000)).toISOString();
       seenExpenseIdsRef.current = new Set(Array.isArray(parsedSeenExpenses) ? parsedSeenExpenses.map(v => String(v)) : []);
+      dismissedCalendarInviteIdsRef.current = new Set(
+        Array.isArray(parsedDismissed) ? parsedDismissed.map(v => String(v)) : []
+      );
       inAppSyncCursorRef.current = {
         events: parsedCursor?.events || fallbackTs,
         subCalEvents: parsedCursor?.subCalEvents || fallbackTs,
@@ -3839,6 +3847,7 @@ function App() {
       };
     } catch {
       seenInAppNotificationKeysRef.current = new Set();
+      dismissedCalendarInviteIdsRef.current = new Set();
       seenExpenseIdsRef.current = new Set();
       const fallbackTs = new Date(Date.now() - (5 * 60 * 1000)).toISOString();
       inAppSyncCursorRef.current = { events: fallbackTs, subCalEvents: fallbackTs, tripPhotos: fallbackTs, sharedListItems: fallbackTs, tripInvites: fallbackTs };
@@ -3861,7 +3870,36 @@ function App() {
   useEffect(() => {
     if (!user?.id) return;
     const me = String(user.id);
+    const accessibleSharedLayerIds = new Set(
+      (layers || [])
+        .filter(layer => String(layer?.owner_id || '') !== me)
+        .map(layer => String(layer?.id || '').trim())
+        .filter(Boolean)
+    );
+    if (accessibleSharedLayerIds.size === 0) return;
+    const removedKeys = [];
+    setInAppNotifications(prev => prev.filter((item) => {
+      const key = String(item?.key || '');
+      if (!key.startsWith('calendar_invite:')) return true;
+      const parts = key.split(':');
+      const layerId = String(parts?.[2] || '').trim();
+      const shouldRemove = Boolean(layerId) && accessibleSharedLayerIds.has(layerId);
+      if (shouldRemove) removedKeys.push(key);
+      return !shouldRemove;
+    }));
+    removedKeys.forEach((key) => seenInAppNotificationKeysRef.current.delete(key));
+  }, [user?.id, layers]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const me = String(user.id);
     const myEmail = String(user?.email || '').trim().toLowerCase();
+    const accessibleSharedLayerIds = new Set(
+      (layers || [])
+        .filter(layer => String(layer?.owner_id || '') !== me)
+        .map(layer => String(layer?.id || '').trim())
+        .filter(Boolean)
+    );
     const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
@@ -4032,10 +4070,14 @@ function App() {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_access' }, async ({ new: row }) => {
         if (!row) return;
+        const rowId = String(row.id || '').trim();
+        if (rowId && dismissedCalendarInviteIdsRef.current.has(rowId)) return;
         const sharedWithId = String(row.shared_with_id || '');
         const sharedWithEmail = String(row.shared_with_email || '').trim().toLowerCase();
+        const layerId = String(row.layer_id || '').trim();
         // Only notify for pending invites. Accepted shares have shared_with_id set.
         if (sharedWithId) return;
+        if (layerId && accessibleSharedLayerIds.has(layerId)) return;
         if (sharedWithId !== me && sharedWithEmail !== myEmail) return;
         if (String(row.owner_id || '') === me) return;
 
@@ -4063,7 +4105,7 @@ function App() {
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, currentUser, subCalendars]);
+  }, [user?.id, user?.email, currentUser, subCalendars, layers]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -4188,6 +4230,11 @@ function App() {
         const inviteEmail = String(row?.email || '').trim().toLowerCase();
         if (!inviteEmail || inviteEmail !== myEmail) return;
         if (String(row?.added_by || '') === me) return;
+        const status = String(row?.status || '').trim().toLowerCase();
+        if (status && status !== 'pending') return;
+        if (row?.accepted_at) return;
+        const tripLayerId = String(row?.trip_layer_id || '').trim();
+        if (tripLayerId && accessibleSharedLayerIds.has(tripLayerId)) return;
         const subCalId = String(row?.sub_calendar_id || '');
         if (!subCalId) return;
         const tripName = String(row?.sub_calendar_name || subCalNameMap[subCalId] || 'a trip');
@@ -4222,7 +4269,23 @@ function App() {
         removedKeys.forEach((key) => seenInAppNotificationKeysRef.current.delete(key));
       }
 
+      if (accessibleSharedLayerIds.size > 0) {
+        const removedKeys = [];
+        setInAppNotifications(prev => prev.filter((item) => {
+          const key = String(item?.key || '');
+          if (!key.startsWith('calendar_invite:')) return true;
+          const parts = key.split(':');
+          const layerId = String(parts?.[2] || '').trim();
+          const shouldRemove = Boolean(layerId) && accessibleSharedLayerIds.has(layerId);
+          if (shouldRemove) removedKeys.push(key);
+          return !shouldRemove;
+        }));
+        removedKeys.forEach((key) => seenInAppNotificationKeysRef.current.delete(key));
+      }
+
       const inviteRows = (rows || []).filter((row) => {
+        const rowId = String(row?.id || '').trim();
+        if (rowId && dismissedCalendarInviteIdsRef.current.has(rowId)) return false;
         const ownerId = String(row?.owner_id || '');
         if (!ownerId || ownerId === me) return false;
         const sharedWithId = String(row?.shared_with_id || '');
@@ -4231,6 +4294,7 @@ function App() {
         // Only surface pending calendar invites.
         if (sharedWithId) return false;
         if (layerId && acceptedLayerIds.has(layerId)) return false;
+        if (layerId && accessibleSharedLayerIds.has(layerId)) return false;
         return sharedWithEmail === myEmail;
       });
       if (inviteRows.length === 0) return;
@@ -4380,8 +4444,9 @@ function App() {
 
         const { data: datedInviteRows, error: inviteErr } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,invited_at,accepted_at')
+          .select('sub_calendar_id,email,added_by,status,invited_at,accepted_at')
           .ilike('email', myEmail)
+          .eq('status', 'pending')
           .or(`invited_at.gt.${getCursor('tripInvites')},accepted_at.gt.${getCursor('tripInvites')}`)
           .order('invited_at', { ascending: true, nullsFirst: false })
           .limit(200);
@@ -4390,8 +4455,9 @@ function App() {
         }
         const { data: nullInviteRows, error: nullInviteErr } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,invited_at,accepted_at')
+          .select('sub_calendar_id,email,added_by,status,invited_at,accepted_at')
           .ilike('email', myEmail)
+          .eq('status', 'pending')
           .is('invited_at', null)
           .limit(200);
         if (nullInviteErr) {
@@ -4401,22 +4467,25 @@ function App() {
         if (inviteRows.length > 0) {
           const inviteTripIds = Array.from(new Set(inviteRows.map(row => String(row?.sub_calendar_id || '')).filter(Boolean)));
           const inviteNameMap = {};
+          const inviteLayerMap = {};
           if (inviteTripIds.length > 0) {
             const { data: inviteTrips, error: inviteTripsErr } = await supabase
               .from('sub_calendars')
-              .select('id,name')
+              .select('id,name,layer_id')
               .in('id', inviteTripIds);
             if (inviteTripsErr) {
               console.error('sub_calendars invite name fetch failed:', inviteTripsErr);
             } else {
               (inviteTrips || []).forEach(trip => {
                 inviteNameMap[String(trip.id)] = trip.name || 'trip';
+                inviteLayerMap[String(trip.id)] = String(trip.layer_id || '');
               });
             }
           }
           const inviteRowsWithNames = inviteRows.map(row => ({
             ...row,
             sub_calendar_name: inviteNameMap[String(row?.sub_calendar_id || '')] || subCalNameMap[String(row?.sub_calendar_id || '')] || 'trip',
+            trip_layer_id: inviteLayerMap[String(row?.sub_calendar_id || '')] || '',
           }));
           notifyTripInvites(inviteRowsWithNames);
           updateCursor('tripInvites', datedInviteRows);
@@ -4438,37 +4507,50 @@ function App() {
       window.removeEventListener('focus', pollInAppUpdates);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [user?.id, user?.email, currentUser, subCalendars]);
+  }, [user?.id, user?.email, currentUser, subCalendars, layers]);
 
   // Invite notifications must work even when no active layer is selected yet.
   useEffect(() => {
     if (!user?.id || !user?.email) return;
     const me = String(user.id);
     const myEmail = String(user.email).trim().toLowerCase();
+    const accessibleSharedLayerIds = new Set(
+      (layers || [])
+        .filter(layer => String(layer?.owner_id || '') !== me)
+        .map(layer => String(layer?.id || '').trim())
+        .filter(Boolean)
+    );
 
     const notifyInvites = async (rows) => {
         const inviteRows = (rows || []).filter(row => {
           const inviteEmail = String(row?.email || '').trim().toLowerCase();
           if (!inviteEmail || inviteEmail !== myEmail) return false;
           if (String(row?.added_by || '') === me) return false;
+          const status = String(row?.status || '').trim().toLowerCase();
+          if (status && status !== 'pending') return false;
+          if (row?.accepted_at) return false;
           return Boolean(row?.sub_calendar_id);
       });
       if (inviteRows.length === 0) return;
 
       const subIds = Array.from(new Set(inviteRows.map(row => String(row.sub_calendar_id))));
       let nameMap = {};
+      let layerMap = {};
       if (subIds.length > 0) {
         const { data: tripRows } = await supabase
           .from('sub_calendars')
-          .select('id,name')
+          .select('id,name,layer_id')
           .in('id', subIds);
         (tripRows || []).forEach(trip => {
           nameMap[String(trip.id)] = trip.name || 'a trip';
+          layerMap[String(trip.id)] = String(trip.layer_id || '');
         });
       }
 
         inviteRows.forEach(row => {
           const subCalId = String(row.sub_calendar_id);
+          const tripLayerId = layerMap[subCalId] || '';
+          if (tripLayerId && accessibleSharedLayerIds.has(tripLayerId)) return;
           const stamp = String(row?.invited_at || row?.accepted_at || '');
           const inviteKey = `trip_invite:${subCalId}:${myEmail}:${stamp}`;
           addInAppNotification({
@@ -4485,15 +4567,17 @@ function App() {
         const cursor = inAppSyncCursorRef.current.tripInvites || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
         const { data: datedRows } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,accepted_at,invited_at')
+          .select('sub_calendar_id,email,added_by,status,accepted_at,invited_at')
           .ilike('email', myEmail)
+          .eq('status', 'pending')
           .or(`accepted_at.gt.${cursor},invited_at.gt.${cursor}`)
           .order('invited_at', { ascending: true, nullsFirst: false })
           .limit(200);
         const { data: nullRows } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,accepted_at,invited_at')
+          .select('sub_calendar_id,email,added_by,status,accepted_at,invited_at')
           .ilike('email', myEmail)
+          .eq('status', 'pending')
           .is('invited_at', null)
           .limit(200);
         const merged = Array.from(new Map([...(datedRows || []), ...(nullRows || [])].map(row => [`${String(row?.sub_calendar_id || '')}|${String(row?.email || '').toLowerCase()}`, row])).values());
@@ -4534,7 +4618,7 @@ function App() {
       document.removeEventListener('visibilitychange', onVisible);
       inviteChannel.unsubscribe();
     };
-  }, [user?.id, user?.email]);
+  }, [user?.id, user?.email, layers]);
 
   const loadPendingTripInvites = async () => {
     const myEmail = String(user?.email || '').trim().toLowerCase();
@@ -4543,6 +4627,13 @@ function App() {
       return;
     }
     try {
+      const me = String(user?.id || '');
+      const accessibleSharedLayerIds = new Set(
+        (layers || [])
+          .filter(layer => String(layer?.owner_id || '') !== me)
+          .map(layer => String(layer?.id || '').trim())
+          .filter(Boolean)
+      );
       let rows = [];
       const pendingResult = await supabase
         .from('sub_calendar_members')
@@ -4566,8 +4657,8 @@ function App() {
           return;
         }
         rows = (fallback.data || []).filter((row) => {
-          const status = String(row?.status || 'pending').toLowerCase();
-          return status !== 'accepted' && status !== 'declined';
+          const status = String(row?.status || '').toLowerCase();
+          return status === 'pending';
         });
       }
       const subCalIds = Array.from(new Set(rows.map(r => String(r?.sub_calendar_id || '')).filter(Boolean)));
@@ -4587,6 +4678,8 @@ function App() {
         .map((row) => {
           const subCalId = String(row?.sub_calendar_id || '');
           const trip = tripMap.get(subCalId) || null;
+          const tripLayerId = String(trip?.layer_id || '');
+          if (tripLayerId && accessibleSharedLayerIds.has(tripLayerId)) return null;
           return {
             subCalendarId: subCalId,
             tripName: trip?.name || 'Trip Invite',
@@ -4715,7 +4808,7 @@ function App() {
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
-  }, [user?.email, user?.id, layerRefreshToken]);
+  }, [user?.email, user?.id, layerRefreshToken, layers]);
 
   // Check notification permission on load
   useEffect(() => {
@@ -4793,6 +4886,18 @@ function App() {
     removedKeys.forEach((key) => seenInAppNotificationKeysRef.current.delete(key));
   };
 
+  const markCalendarInviteDismissed = (shareId) => {
+    const normalized = String(shareId || '').trim();
+    if (!normalized || !user?.id) return;
+    dismissedCalendarInviteIdsRef.current.add(normalized);
+    try {
+      localStorage.setItem(
+        `dismissed-calendar-invites-${user.id}`,
+        JSON.stringify(Array.from(dismissedCalendarInviteIdsRef.current))
+      );
+    } catch {}
+  };
+
   const parseInviteNotification = (item) => {
     const key = String(item?.key || '');
     if (key.startsWith('trip_invite:')) {
@@ -4829,6 +4934,7 @@ function App() {
       }
       setActiveLayerId(invite.layerId);
       localStorage.setItem(`active-layer-${user.id}`, invite.layerId);
+      markCalendarInviteDismissed(invite.shareId);
       clearInviteNotifications({ kind: 'calendar', shareId: invite.shareId });
       setLayerRefreshToken(prev => prev + 1);
     } catch (err) {
@@ -4849,6 +4955,7 @@ function App() {
         alert(`Decline failed: ${error.message || 'Could not decline calendar invite.'}`);
         return;
       }
+      markCalendarInviteDismissed(invite.shareId);
       clearInviteNotifications({ kind: 'calendar', shareId: invite.shareId });
     } catch (err) {
       alert(`Decline failed: ${err.message || 'Unknown error'}`);
