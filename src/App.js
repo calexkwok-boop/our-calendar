@@ -4782,11 +4782,47 @@ function App() {
     await window.storage.set(key, next.toString(), false);
   };
 
+  const maybeSendInAppSystemNotification = (type, key, message) => {
+    if (!notificationsEnabled) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    // Avoid noisy duplicate banners while user is actively looking at the app.
+    if (document.visibilityState === 'visible') return;
+
+    const titleByType = {
+      invite: 'Calendar Invite',
+      event: 'Calendar Update',
+      list: 'List Update',
+      photo: 'Trip Photo',
+      expense: 'Expense Update',
+      update: 'Calendar Update',
+    };
+    const title = titleByType[String(type || '').trim().toLowerCase()] || 'Calendar Update';
+    const tag = `in-app:${String(key || '').trim()}`;
+
+    try {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then((registration) => {
+          if (registration?.showNotification) {
+            registration.showNotification(title, { body: message, tag, data: { url: '/' } });
+          } else {
+            new Notification(title, { body: message, tag });
+          }
+        }).catch(() => {
+          new Notification(title, { body: message, tag });
+        });
+      } else {
+        new Notification(title, { body: message, tag });
+      }
+    } catch {}
+  };
+
   const addInAppNotification = ({ key, type, message, createdAt }) => {
     if (!key || !message) return;
     const normalizedKey = String(key);
     if (seenInAppNotificationKeysRef.current.has(normalizedKey)) return;
     seenInAppNotificationKeysRef.current.add(normalizedKey);
+    maybeSendInAppSystemNotification(type, normalizedKey, message);
     setInAppNotifications(prev => {
       if (prev.some(n => n.key === normalizedKey)) return prev;
       const next = [{
