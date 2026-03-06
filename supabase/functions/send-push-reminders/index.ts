@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
+import { DateTime } from "npm:luxon@3.5.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,17 +12,22 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY") || "";
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY") || "";
 const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@example.com";
+const REMINDER_TIMEZONE = Deno.env.get("REMINDER_TIMEZONE") || "America/Los_Angeles";
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 const toEventDateTime = (dateKey: string, timeValue: string | null) => {
   const [y, m, d] = String(dateKey || "").split("-").map((n) => Number(n));
   if (!y || !m || !d) return null;
-  if (timeValue && /^\d{2}:\d{2}$/.test(timeValue)) {
-    const [hh, mm] = timeValue.split(":").map((n) => Number(n));
-    return new Date(y, m - 1, d, hh || 0, mm || 0, 0, 0);
-  }
-  return new Date(y, m - 1, d, 9, 0, 0, 0);
+  const [hh, mm] = timeValue && /^\d{2}:\d{2}$/.test(timeValue)
+    ? timeValue.split(":").map((n) => Number(n))
+    : [9, 0];
+  const dt = DateTime.fromObject(
+    { year: y, month: m, day: d, hour: hh || 0, minute: mm || 0, second: 0, millisecond: 0 },
+    { zone: REMINDER_TIMEZONE },
+  );
+  if (!dt.isValid) return null;
+  return dt.toJSDate();
 };
 
 const fmtDate = (date: Date) =>
@@ -82,6 +88,7 @@ Deno.serve(async (req) => {
     }
 
     const windows = [
+      { key: "week", leadMs: 7 * 24 * 60 * 60 * 1000, title: "Event in 1 Week" },
       { key: "day", leadMs: 24 * 60 * 60 * 1000, title: "Event in 1 Day" },
       { key: "hour", leadMs: 60 * 60 * 1000, title: "Event in 1 Hour" },
       { key: "at-time", leadMs: 0, title: "Event starting now" },
