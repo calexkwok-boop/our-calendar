@@ -14,6 +14,13 @@ firebase.initializeApp({
 
 firebase.messaging();
 
+const broadcastToClients = async (type, payload) => {
+  const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  clients.forEach((client) => {
+    client.postMessage({ source: 'firebase-messaging-sw', type, payload });
+  });
+};
+
 const normalizePayload = (raw) => {
   if (!raw) return {};
   if (typeof raw === 'string') {
@@ -44,13 +51,16 @@ self.addEventListener('push', (event) => {
   event.waitUntil((async () => {
     try {
       const rawText = event?.data ? await event.data.text() : '';
+      await broadcastToClients('push-received', { rawText });
       await showFromPayload(rawText);
+      await broadcastToClients('notification-shown', {});
     } catch (err) {
       await self.registration.showNotification('Calendar Update', {
         body: 'You have a new update.',
         tag: 'calendar-update-fallback',
         data: {},
       });
+      await broadcastToClients('push-error', { message: String(err?.message || err) });
       console.error('SW push handler failed:', err);
     }
   })());

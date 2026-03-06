@@ -4915,6 +4915,19 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handleSwDebugMessage = (event) => {
+      const data = event?.data || {};
+      if (data?.source !== 'firebase-messaging-sw') return;
+      console.log('[SW debug]', data.type, data.payload || {});
+    };
+    navigator.serviceWorker.addEventListener('message', handleSwDebugMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleSwDebugMessage);
+    };
+  }, []);
+
   const maybeSendInAppSystemNotification = (type, key, message) => {
     if (!notificationsEnabled) return;
     if (!('Notification' in window)) return;
