@@ -4201,13 +4201,36 @@ function App() {
     };
 
     const notifyCalendarShares = async (rows) => {
+      const acceptedLayerIds = new Set(
+        (rows || [])
+          .filter((row) => String(row?.shared_with_id || '') === me)
+          .map((row) => String(row?.layer_id || '').trim())
+          .filter(Boolean)
+      );
+
+      if (acceptedLayerIds.size > 0) {
+        const removedKeys = [];
+        setInAppNotifications(prev => prev.filter((item) => {
+          const key = String(item?.key || '');
+          if (!key.startsWith('calendar_invite:')) return true;
+          const parts = key.split(':');
+          const layerId = String(parts?.[2] || '').trim();
+          const shouldRemove = Boolean(layerId) && acceptedLayerIds.has(layerId);
+          if (shouldRemove) removedKeys.push(key);
+          return !shouldRemove;
+        }));
+        removedKeys.forEach((key) => seenInAppNotificationKeysRef.current.delete(key));
+      }
+
       const inviteRows = (rows || []).filter((row) => {
         const ownerId = String(row?.owner_id || '');
         if (!ownerId || ownerId === me) return false;
         const sharedWithId = String(row?.shared_with_id || '');
         const sharedWithEmail = String(row?.shared_with_email || '').trim().toLowerCase();
+        const layerId = String(row?.layer_id || '').trim();
         // Only surface pending calendar invites.
         if (sharedWithId) return false;
+        if (layerId && acceptedLayerIds.has(layerId)) return false;
         return sharedWithEmail === myEmail;
       });
       if (inviteRows.length === 0) return;
