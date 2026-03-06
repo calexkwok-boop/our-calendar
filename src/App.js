@@ -7925,7 +7925,7 @@ function App() {
                       const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
                       const isDeleteRevealed = rowOffset < 0;
                       return (
-                        <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-purple-200 dark:ring-purple-700">
+                        <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-green-200 dark:ring-green-700">
                           {canDelete && (
                             <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
                               <button
@@ -7941,7 +7941,7 @@ function App() {
                             onTouchMove={handleTripSwipeMove}
                             onTouchEnd={handleTripSwipeEnd}
                             onTouchCancel={handleTripSwipeEnd}
-                            className="relative z-10 flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20"
+                            className="relative z-10 flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20"
                             style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                           >
                             <div className="min-w-0">
@@ -7952,7 +7952,7 @@ function App() {
                             </div>
                             <button
                               onClick={() => openSubCalendar(sc)}
-                              className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-purple-500 hover:bg-purple-600 text-white"
+                              className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-green-500 hover:bg-green-600 text-white"
                             >
                               Open
                             </button>
