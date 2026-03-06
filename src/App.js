@@ -4034,6 +4034,8 @@ function App() {
         if (!row) return;
         const sharedWithId = String(row.shared_with_id || '');
         const sharedWithEmail = String(row.shared_with_email || '').trim().toLowerCase();
+        // Only notify for pending invites. Accepted shares have shared_with_id set.
+        if (sharedWithId) return;
         if (sharedWithId !== me && sharedWithEmail !== myEmail) return;
         if (String(row.owner_id || '') === me) return;
 
@@ -4204,7 +4206,9 @@ function App() {
         if (!ownerId || ownerId === me) return false;
         const sharedWithId = String(row?.shared_with_id || '');
         const sharedWithEmail = String(row?.shared_with_email || '').trim().toLowerCase();
-        return sharedWithId === me || sharedWithEmail === myEmail;
+        // Only surface pending calendar invites.
+        if (sharedWithId) return false;
+        return sharedWithEmail === myEmail;
       });
       if (inviteRows.length === 0) return;
 
