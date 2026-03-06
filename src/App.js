@@ -1,8 +1,8 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
-import { getToken, onMessage } from 'firebase/messaging';
-import { getMessagingIfSupported } from './firebase';
+import { getToken, onMessage } from "firebase/messaging";
+import { getMessagingIfSupported } from "./firebase";
 
 // Initialize Supabase
 const supabase = createClient(
@@ -65,11 +65,8 @@ const COLOR_OPTIONS = [
   { name: 'Gray', color: 'bg-gray-500', lightBg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700' },
 ];
 
-const WEB_PUSH_VAPID_PUBLIC_KEY = String(process.env.REACT_APP_VAPID_PUBLIC_KEY || '').trim();
-const FCM_WEB_VAPID_PUBLIC_KEY = String(
-  process.env.REACT_APP_FCM_VAPID_PUBLIC_KEY ||
-  'BBHSIOKaJQ7QGXZvf92fl1bTJc3dwrlbFERINUVlA4js1PaL1uwCCqazWoGu2WJiUpcHMvjFPh2cJfwYZV7xGjM'
-).trim();
+const WEB_PUSH_VAPID_PUBLIC_KEY = String(process.env.REACT_APP_VAPID_PUBLIC_KEY || process.env.REACT_APP_FCM_VAPID_PUBLIC_KEY || '').trim();
+
 
 const urlBase64ToUint8Array = (base64String) => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -3757,30 +3754,16 @@ function App() {
 
   // Check auth session
   useEffect(() => {
-    const clearAuthHashFromUrl = () => {
-      try {
-        const hash = String(window.location.hash || '');
-        if (!hash) return;
-        if (!/(^#|&)access_token=|(^#|&)refresh_token=|(^#|&)provider_token=/.test(hash)) return;
-        const cleanUrl = `${window.location.pathname}${window.location.search}`;
-        window.history.replaceState({}, document.title, cleanUrl);
-      } catch (err) {
-        console.warn('Could not clear auth hash from URL:', err);
-      }
-    };
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setShowAuth(!session?.user);
       setIsLoading(false);
-      if (session?.user) clearAuthHashFromUrl();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setShowAuth(!session?.user);
       if (session?.user) setCurrentUser(session.user.email);
-      if (session?.user) clearAuthHashFromUrl();
     });
 
     return () => subscription.unsubscribe();
@@ -4784,27 +4767,6 @@ function App() {
     if ('Notification' in window) setNotificationPermission(Notification.permission);
   }, []);
 
-  const requestFcmToken = async () => {
-    try {
-      if (!('Notification' in window)) return;
-      if (Notification.permission !== 'granted') return;
-      if (!FCM_WEB_VAPID_PUBLIC_KEY) return;
-
-      const messaging = await getMessagingIfSupported();
-      if (!messaging) return;
-
-      const token = await getToken(messaging, {
-        vapidKey: FCM_WEB_VAPID_PUBLIC_KEY,
-      });
-      if (!token) return;
-
-      localStorage.setItem('fcm-token', token);
-      console.log('FCM token:', token);
-    } catch (error) {
-      console.error('Error getting FCM token:', error);
-    }
-  };
-
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
       alert('This browser does not support notifications');
@@ -4816,7 +4778,6 @@ function App() {
       if (permission === 'granted') {
         setNotificationsEnabled(true);
         await window.storage.set('notifications-enabled', 'true', false);
-        await requestFcmToken();
       }
     } catch (error) {
       console.error('Error requesting notification permission:', error);
@@ -5335,44 +5296,13 @@ function App() {
     loadNotificationPreference();
   }, []);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    if (notificationPermission !== 'granted') return;
-    requestFcmToken();
-  }, [user?.id, notificationPermission]);
-
-  useEffect(() => {
-    let unsubscribe = null;
-    const startForegroundListener = async () => {
-      try {
-        const messaging = await getMessagingIfSupported();
-        if (!messaging) return;
-        unsubscribe = onMessage(messaging, (payload) => {
-          const title = payload?.notification?.title || 'Calendar Update';
-          const body = payload?.notification?.body || '';
-          addInAppNotification({
-            key: `fcm:${payload?.messageId || Date.now()}`,
-            type: 'update',
-            message: body ? `${title}: ${body}` : title,
-            createdAt: new Date().toISOString(),
-          });
-        });
-      } catch (error) {
-        console.error('Error setting up foreground FCM listener:', error);
-      }
-    };
-    startForegroundListener();
-    return () => {
-      if (typeof unsubscribe === 'function') unsubscribe();
-    };
-  }, []);
-
   // Keep this browser/device subscribed for web push when notifications are enabled.
   useEffect(() => {
     if (!user?.id) return;
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    if (!WEB_PUSH_VAPID_PUBLIC_KEY) {
-      console.warn('Push disabled: missing REACT_APP_VAPID_PUBLIC_KEY');
+    const pushVapidKey = WEB_PUSH_VAPID_PUBLIC_KEY || FCM_WEB_VAPID_PUBLIC_KEY;
+    if (!pushVapidKey) {
+      console.warn('Push disabled: missing REACT_APP_VAPID_PUBLIC_KEY (or REACT_APP_FCM_VAPID_PUBLIC_KEY)');
       return;
     }
 
@@ -5387,7 +5317,7 @@ function App() {
           if (!subscription) {
             subscription = await registration.pushManager.subscribe({
               userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array(WEB_PUSH_VAPID_PUBLIC_KEY),
+              applicationServerKey: urlBase64ToUint8Array(pushVapidKey),
             });
           }
           if (!subscription || cancelled) return;
