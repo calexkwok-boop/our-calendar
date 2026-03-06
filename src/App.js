@@ -519,6 +519,7 @@ function App() {
       }
 
       const mergedRows = Array.from(new Map([...(directRows || []), ...legacyRows, ...memberRows].map(sc => [String(sc.id), sc])).values());
+      const layerScopedRows = mergedRows.filter(sc => String(sc?.layer_id || '') === String(activeLayerId || ''));
 
       // Deduplicate duplicate cloned trips (same name + dates + effective layer) by selecting the best candidate.
       const dedupedMap = new Map();
@@ -539,7 +540,7 @@ function App() {
         const end = String(sc?.end_date || '');
         return `${name}|${start}|${end}`;
       };
-      (mergedRows || []).forEach((sc) => {
+      (layerScopedRows || []).forEach((sc) => {
         const key = getDedupKey(sc);
         const existing = dedupedMap.get(key);
         if (!existing) {
