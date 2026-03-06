@@ -1930,6 +1930,12 @@ function App() {
         location: location || null,
       }]
     }));
+    maybeSendInAppSystemNotification(
+      'event',
+      `local:subcal_event_add:${id}`,
+      `Added "${newEvent.title}" in ${activeSubCalendar?.name || 'trip'}.`,
+      { allowWhenVisible: true }
+    );
   };
 
   const updateSubCalEvent = async (eventId, updates) => {
@@ -3407,6 +3413,13 @@ function App() {
 
     setListError('');
     setSharedListItems(prev => [...prev, { ...(data || payload), done: false }]);
+    const listTitle = (sharedListGroups.find(g => g.id === selectedSharedListId)?.title || 'List').trim();
+    maybeSendInAppSystemNotification(
+      'list',
+      `local:list_add:${String(data?.id || `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`)}`,
+      `Added "${text}" to ${listTitle}.`,
+      { allowWhenVisible: true }
+    );
     setNewListItemText('');
   };
 
@@ -4928,13 +4941,14 @@ function App() {
     };
   }, []);
 
-  const maybeSendInAppSystemNotification = (type, key, message) => {
+  const maybeSendInAppSystemNotification = (type, key, message, options = {}) => {
     if (!notificationsEnabled) return;
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
     const normalizedType = String(type || '').trim().toLowerCase();
+    const allowWhenVisible = Boolean(options?.allowWhenVisible);
     // Invite notifications should still surface in-app while user is active.
-    if (document.visibilityState === 'visible' && normalizedType !== 'invite') return;
+    if (document.visibilityState === 'visible' && normalizedType !== 'invite' && !allowWhenVisible) return;
 
     const titleByType = {
       invite: 'Calendar Invite',
@@ -5796,6 +5810,14 @@ function App() {
       });
     });
     saveEvents(updatedEvents);
+    maybeSendInAppSystemNotification(
+      'event',
+      `local:event_add:${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      pendingEvent.datesToAdd.length > 1
+        ? `Added "${pendingEvent.title}" on ${pendingEvent.datesToAdd.length} dates.`
+        : `Added "${pendingEvent.title}" to your calendar.`,
+      { allowWhenVisible: true }
+    );
     setSelectedDates([]);
     setRecurrence('once');
     setSuggestedTime('');
