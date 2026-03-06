@@ -12,13 +12,60 @@ firebase.initializeApp({
 });
 
 
-const messaging = firebase.messaging();
+firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
-  const title = payload?.notification?.title || 'Calendar Update';
-  const options = {
-    body: payload?.notification?.body || '',
-    data: payload?.data || {},
-  };
-  self.registration.showNotification(title, options);
+const normalizePayload = (raw) => {
+  if (!raw) return {};
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return { notification: { body: raw } };
+    }
+  }
+  return raw;
+};
+
+const showFromPayload = async (rawPayload) => {
+  const payload = normalizePayload(rawPayload);
+  const notification = payload?.notification || {};
+  const data = payload?.data || {};
+  const title = notification.title || data.title || 'Calendar Update';
+  const body = notification.body || data.body || '';
+  const tag = data.tag || 'calendar-update';
+  await self.registration.showNotification(title, {
+    body,
+    tag,
+    data,
+  });
+};
+
+self.addEventListener('push', (event) => {
+  event.waitUntil((async () => {
+    try {
+      const rawText = event?.data ? await event.data.text() : '';
+      await showFromPayload(rawText);
+    } catch (err) {
+      await self.registration.showNotification('Calendar Update', {
+        body: 'You have a new update.',
+        tag: 'calendar-update-fallback',
+        data: {},
+      });
+      console.error('SW push handler failed:', err);
+    }
+  })());
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event?.notification?.data?.url || '/';
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const existing = windows.find((w) => w.url.includes(self.location.origin));
+    if (existing) {
+      existing.focus();
+      return;
+    }
+    await self.clients.openWindow(targetUrl);
+  })());
 });
