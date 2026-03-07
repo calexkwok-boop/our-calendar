@@ -7553,7 +7553,7 @@ function App() {
                       >
                         {hasSubCalendarRange && (
                           <div
-                            className="absolute top-0 left-0.5 right-0.5 h-1 rounded-b bg-gradient-to-r from-emerald-300 to-green-500 opacity-90"
+                            className="absolute bottom-0 left-0.5 right-0.5 h-1 rounded-t bg-gradient-to-r from-emerald-300 to-green-500 opacity-90"
                             title={`${subTripsOnDate.length} sub-calendar range${subTripsOnDate.length > 1 ? 's' : ''}`}
                           />
                         )}
@@ -7626,7 +7626,7 @@ function App() {
                       >
                       {hasSubCalendarRange && (
                         <div
-                          className={`absolute top-0 left-1 right-1 h-1 rounded-b ${isSelected ? 'bg-white/70' : 'bg-gradient-to-r from-emerald-300 to-green-500 opacity-90'}`}
+                          className={`absolute bottom-0 left-1 right-1 h-1 rounded-t ${isSelected ? 'bg-white/70' : 'bg-gradient-to-r from-emerald-300 to-green-500 opacity-90'}`}
                           title={`${subTripsOnDate.length} sub-calendar range${subTripsOnDate.length > 1 ? 's' : ''}`}
                         />
                       )}
