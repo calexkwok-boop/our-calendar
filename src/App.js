@@ -2195,6 +2195,10 @@ function App() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
   const [pollOptionInputs, setPollOptionInputs] = useState(['', '']);
+  const [popupDraftTitle, setPopupDraftTitle] = useState('');
+  const [popupDraftDate, setPopupDraftDate] = useState(() => getDateKey(new Date()));
+  const [popupDraftTime, setPopupDraftTime] = useState('');
+  const [popupDraftMaxPeople, setPopupDraftMaxPeople] = useState('10');
   const [selectedSharedListId, setSelectedSharedListId] = useState(null);
   const [newSharedListTitle, setNewSharedListTitle] = useState('');
   const [newListItemText, setNewListItemText] = useState('');
@@ -4371,12 +4375,115 @@ function App() {
     }
   };
 
+  const createPopupEventFromChat = async () => {
+    if (!activeLayerId || !user?.id) return;
+    if (!popupFeatureAvailable) {
+      setChatError('Popup events need DB setup first.');
+      return;
+    }
+    const title = String(popupDraftTitle || '').trim();
+    const dateKey = String(popupDraftDate || '').trim();
+    const time = String(popupDraftTime || '').trim() || null;
+    const maxPeople = Math.max(1, parseInt(String(popupDraftMaxPeople || '').trim(), 10) || 1);
+    if (!title) {
+      setChatError('Add the event name first.');
+      return;
+    }
+    if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+      setChatError('Pick a valid event date.');
+      return;
+    }
+    const eventRow = {
+      id: `${Date.now()}-${Math.random()}`,
+      date: dateKey,
+      title,
+      time,
+      category: 'other',
+      is_private: false,
+      is_private_for: null,
+      is_urgent: false,
+      is_multi_day: false,
+      multi_day_id: null,
+      is_annual: false,
+      annual_month: null,
+      annual_day: null,
+      recurrence: 'once',
+      exceptions: null,
+      reactions: null,
+      location: null,
+      created_by: currentUser || user?.email || user?.phone || 'User',
+      created_at: new Date().toISOString(),
+      user_id: user.id,
+      layer_id: activeLayerId,
+      calendar_id: activeLayerId,
+    };
+    const { data, error } = await supabase
+      .from('events')
+      .insert(eventRow)
+      .select('*')
+      .single();
+    if (error) {
+      setChatError(`Could not create popup event: ${error.message}`);
+      return;
+    }
+
+    const inserted = data || eventRow;
+    setEvents(prev => {
+      const next = { ...prev };
+      const key = inserted.date;
+      const curr = next[key] || [];
+      const mapped = {
+        id: inserted.id,
+        title: inserted.title,
+        time: inserted.time,
+        date: inserted.date,
+        category: inserted.category,
+        isPrivate: inserted.is_private,
+        isUrgent: inserted.is_urgent,
+        isMultiDay: inserted.is_multi_day,
+        multiDayId: inserted.multi_day_id,
+        isAnnual: inserted.is_annual || false,
+        annualMonth: inserted.annual_month || null,
+        annualDay: inserted.annual_day || null,
+        recurrence: inserted.recurrence || 'once',
+        exceptions: inserted.exceptions ? JSON.parse(inserted.exceptions) : [],
+        reactions: inserted.reactions ? JSON.parse(inserted.reactions) : {},
+        location: inserted.location || null,
+        createdBy: inserted.created_by,
+        createdAt: inserted.created_at,
+        userId: inserted.user_id,
+        isShared: String(inserted.user_id || '') !== String(user?.id || ''),
+      };
+      next[key] = [...curr, mapped].sort((a, b) => {
+        if (!a.time) return 1;
+        if (!b.time) return -1;
+        return a.time.localeCompare(b.time);
+      });
+      return next;
+    });
+
+    await createPopupEventRows([{
+      layer_id: activeLayerId,
+      event_id: inserted.id,
+      max_people: maxPeople,
+      created_by_user_id: user.id,
+      created_by_name: currentUser || user?.email || user?.phone || 'Member',
+      created_at: new Date().toISOString(),
+    }]);
+    setChatError('');
+    resetPollComposer();
+  };
+
   const resetPollComposer = () => {
     setShowCreateEventPopup(false);
     setPollComposerStep('menu');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
     setPollOptionInputs(['', '']);
+    setPopupDraftTitle('');
+    setPopupDraftDate(getDateKey(selectedDate || new Date()));
+    setPopupDraftTime('');
+    setPopupDraftMaxPeople('10');
   };
 
   const deleteCalendarChatMessage = async (messageRow) => {
@@ -8633,10 +8740,14 @@ function App() {
             <div className="mt-3 flex gap-2">
               <button
                 onClick={() => {
+                  setPollComposerStep('menu');
                   setPollQuestionInput('');
                   setPollDateInput(getDateKey(selectedDate || new Date()));
                   setPollOptionInputs(['', '']);
-                  setPollComposerStep('menu');
+                  setPopupDraftTitle('');
+                  setPopupDraftDate(getDateKey(selectedDate || new Date()));
+                  setPopupDraftTime('');
+                  setPopupDraftMaxPeople('10');
                   setShowCreateEventPopup(true);
                   if (chatError) setChatError('');
                 }}
@@ -8674,12 +8785,14 @@ function App() {
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-base font-semibold text-indigo-600 dark:text-indigo-400">
                       {pollComposerStep === 'menu'
-                        ? 'Create an event poll'
+                        ? 'Create'
                         : pollComposerStep === 'when'
                           ? 'When is the event?'
                           : pollComposerStep === 'what'
                             ? 'What is the event?'
-                            : 'Poll options'}
+                            : pollComposerStep === 'popup'
+                              ? 'Create pop-up event'
+                              : 'Poll options'}
                     </h4>
                     <button
                       onClick={resetPollComposer}
@@ -8690,13 +8803,73 @@ function App() {
                   </div>
 
                   {pollComposerStep === 'menu' && (
-                    <button
-                      onClick={() => setPollComposerStep('when')}
-                      className="w-full px-3 py-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
-                    >
-                      <div className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">📅✏️ Create an event poll</div>
-                      <div className="text-xs text-indigo-600/90 dark:text-indigo-400/90 mt-0.5">Ask your calendar members to vote, then auto-add the winner.</div>
-                    </button>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setPollComposerStep('when')}
+                        className="w-full px-3 py-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
+                      >
+                        <div className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">📅✏️ Create an event poll</div>
+                        <div className="text-xs text-indigo-600/90 dark:text-indigo-400/90 mt-0.5">Ask members to vote, then auto-add the winner.</div>
+                      </button>
+                      <button
+                        onClick={() => setPollComposerStep('popup')}
+                        className="w-full px-3 py-3 rounded-xl border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-left hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
+                      >
+                        <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">🏀 Create a pop-up event</div>
+                        <div className="text-xs text-emerald-700/90 dark:text-emerald-300/90 mt-0.5">First come, first served with max headcount.</div>
+                      </button>
+                    </div>
+                  )}
+
+                  {pollComposerStep === 'popup' && (
+                    <div className="space-y-3">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={popupDraftTitle}
+                        onChange={(e) => setPopupDraftTitle(e.target.value)}
+                        placeholder="What's the event? (e.g. Pickup basketball)"
+                        className="w-full px-3 py-2 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-400"
+                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="date"
+                          value={popupDraftDate}
+                          onChange={(e) => setPopupDraftDate(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                        />
+                        <input
+                          type="time"
+                          value={popupDraftTime}
+                          onChange={(e) => setPopupDraftTime(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Max people</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={popupDraftMaxPeople}
+                          onChange={(e) => setPopupDraftMaxPeople(e.target.value)}
+                          className="w-24 px-2 py-1.5 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-lg"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => setPollComposerStep('menu')}
+                          className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+                        >
+                          Back
+                        </button>
+                        <button
+                          onClick={createPopupEventFromChat}
+                          className="px-3 py-2 text-sm rounded-xl bg-emerald-600 text-white font-semibold"
+                        >
+                          Create
+                        </button>
+                      </div>
+                    </div>
                   )}
 
                   {pollComposerStep === 'when' && (
