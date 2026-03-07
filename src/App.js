@@ -212,6 +212,10 @@ function App() {
   const [memberLocations, setMemberLocations] = useState({});
   const subCalLocationChannelRef = useRef(null);
   const subCalGeoWatchRef = useRef(null);
+  const [shareLayerLocation, setShareLayerLocation] = useState(() => localStorage.getItem('layer-share-location') === 'true');
+  const [layerMemberLocations, setLayerMemberLocations] = useState({});
+  const layerLocationChannelRef = useRef(null);
+  const layerGeoWatchRef = useRef(null);
   const [tripPhotos, setTripPhotos] = useState([]);
   const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
   const [deletedPhotosNoteId, setDeletedPhotosNoteId] = useState(null);
@@ -5767,6 +5771,103 @@ function App() {
     };
   }, [activeSubCalendar?.id, shareMyLocation, currentUser, user?.id, user?.email]);
 
+  // Live location sharing within active calendar layer (opt-in only).
+  useEffect(() => {
+    const clearGeoWatch = () => {
+      if (layerGeoWatchRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.clearWatch(layerGeoWatchRef.current);
+        layerGeoWatchRef.current = null;
+      }
+    };
+
+    if (!activeLayerId || !user?.id) {
+      clearGeoWatch();
+      setLayerMemberLocations({});
+      return;
+    }
+
+    const identity = String(user?.id || user?.email || user?.phone || currentUser || `guest-${Date.now()}`);
+    const displayName = currentUser || user?.email || user?.phone || 'Member';
+    let cancelled = false;
+    const channel = supabase.channel(`layer-live-location-${activeLayerId}`, {
+      config: { presence: { key: identity } },
+    });
+    layerLocationChannelRef.current = channel;
+
+    const publishPassivePresence = async () => {
+      try {
+        await channel.track({
+          userId: identity,
+          layerId: String(activeLayerId),
+          name: displayName,
+          email: user?.email || null,
+          sharing: false,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch {}
+    };
+
+    const startOrUpdateSharing = async () => {
+      clearGeoWatch();
+      if (!shareLayerLocation || !navigator?.geolocation) {
+        await publishPassivePresence();
+        return;
+      }
+      layerGeoWatchRef.current = navigator.geolocation.watchPosition(
+        async (pos) => {
+          if (cancelled) return;
+          try {
+            await channel.track({
+              userId: identity,
+              layerId: String(activeLayerId),
+              name: displayName,
+              email: user?.email || null,
+              sharing: true,
+              lat: pos.coords.latitude,
+              lon: pos.coords.longitude,
+              accuracy: Math.round(pos.coords.accuracy || 0),
+              updatedAt: new Date().toISOString(),
+            });
+          } catch (err) {
+            console.error('Layer location presence update failed:', err);
+          }
+        },
+        async (err) => {
+          console.error('Layer geolocation watch failed:', err);
+          await publishPassivePresence();
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+      );
+    };
+
+    channel.on('presence', { event: 'sync' }, () => {
+      if (cancelled) return;
+      const state = channel.presenceState();
+      const flattened = {};
+      Object.values(state || {}).forEach((entries) => {
+        (entries || []).forEach((entry) => {
+          if (!entry?.userId) return;
+          flattened[entry.userId] = entry;
+        });
+      });
+      setLayerMemberLocations(flattened);
+    });
+
+    channel.subscribe(async (status) => {
+      if (status !== 'SUBSCRIBED' || cancelled) return;
+      await startOrUpdateSharing();
+    });
+
+    return () => {
+      cancelled = true;
+      clearGeoWatch();
+      setLayerMemberLocations({});
+      channel.untrack().catch(() => {});
+      channel.unsubscribe();
+      if (layerLocationChannelRef.current === channel) layerLocationChannelRef.current = null;
+    };
+  }, [activeLayerId, shareLayerLocation, currentUser, user?.id, user?.email, user?.phone]);
+
   // Global mouse up handler for selections
   useEffect(() => {
     const handleGlobalMouseUp = () => {
@@ -7323,6 +7424,61 @@ function App() {
             )}
           </div>
         )}
+
+        {bottomNavTab === 'home' && (() => {
+          const activeLayer = (layers || []).find(layer => String(layer?.id || '') === String(activeLayerId || ''));
+          const isOwner = String(activeLayer?.owner_id || '') === String(user?.id || '');
+          const hasCollaborators = isOwner
+            ? (myShares || []).some(share => String(share?.layer_id || share?.calendar_id || '') === String(activeLayerId || ''))
+            : Boolean(activeLayerId);
+          const liveLocations = Object.values(layerMemberLocations).filter(
+            loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number'
+          );
+          const toggleDisabled = !hasCollaborators;
+          return (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4 border border-green-100 dark:border-green-900/40">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-emerald-600 dark:text-emerald-400">Live Location</h3>
+                  <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
+                    {hasCollaborators
+                      ? `${liveLocations.length} member${liveLocations.length === 1 ? '' : 's'} sharing now in this calendar.`
+                      : 'Share this calendar with someone to enable live location.'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (toggleDisabled) return;
+                    const next = !shareLayerLocation;
+                    setShareLayerLocation(next);
+                    localStorage.setItem('layer-share-location', next.toString());
+                  }}
+                  disabled={toggleDisabled}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareLayerLocation && !toggleDisabled ? 'bg-green-500' : 'bg-gray-300'} ${toggleDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={toggleDisabled ? 'Share the calendar first' : 'Share my live location with calendar members'}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${shareLayerLocation && !toggleDisabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+              {liveLocations.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  {liveLocations.map((loc, idx) => (
+                    <a
+                      key={`${loc.userId || 'member'}-${idx}`}
+                      href={`https://www.google.com/maps?q=${loc.lat},${loc.lon}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-green-300"
+                    >
+                      <span className="text-gray-700 dark:text-gray-200 truncate">📍 {loc.name || loc.email || loc.userId}</span>
+                      <span className="text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         <div className="grid grid-cols-1 gap-4">
           <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 ${bottomNavTab !== 'home' ? 'hidden' : ''}`}>
