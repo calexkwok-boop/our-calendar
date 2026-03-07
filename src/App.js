@@ -2208,6 +2208,7 @@ function App() {
   const [showWeather, setShowWeather] = useState(true);
   const calendarChatScrollRef = useRef(null);
   const CHAT_POLL_PREFIX = '[poll-v1]';
+  const CHAT_DELETED_PREFIX = '[deleted-v1]';
 
   const parseDateFromText = (text) => {
     const raw = String(text || '');
@@ -2240,6 +2241,8 @@ function App() {
     if (!m) return null;
     return `${String(Number(m[1])).padStart(2, '0')}:${m[2]}`;
   };
+
+  const isDeletedChatMessage = (message) => String(message || '').startsWith(CHAT_DELETED_PREFIX);
 
   const buildPollMessage = ({ question, dateKey, createdBy, dimensions = [], optionsByDimension = {} }) => {
     const dims = ['what', 'where', 'when'].filter((key) => (dimensions || []).includes(key));
@@ -3829,7 +3832,7 @@ function App() {
     }
 
     setChatError('');
-    setCalendarChatMessages(data || []);
+    setCalendarChatMessages((data || []).filter(row => !isDeletedChatMessage(row?.message)));
   };
 
   const sendCalendarChatMessage = async () => {
@@ -3963,13 +3966,21 @@ function App() {
       .from('calendar_messages')
       .delete()
       .eq('id', messageId)
-      .eq('layer_id', activeLayerId)
-      .eq('user_id', user.id);
+      .eq('layer_id', activeLayerId);
     if (error) {
-      console.error('Error deleting chat message:', error);
-      setChatError(`Could not delete message: ${error.message}`);
-      setDeletingChatMessageId(null);
-      return;
+      // Fallback for projects without DELETE policy: soft-delete via UPDATE and hide in UI.
+      const tombstone = `${CHAT_DELETED_PREFIX}${JSON.stringify({ id: messageId, at: new Date().toISOString(), by: String(user.id) })}`;
+      const { error: softDeleteErr } = await supabase
+        .from('calendar_messages')
+        .update({ message: tombstone })
+        .eq('id', messageId)
+        .eq('layer_id', activeLayerId);
+      if (softDeleteErr) {
+        console.error('Error deleting chat message:', error, softDeleteErr);
+        setChatError(`Could not delete message: ${softDeleteErr.message || error.message}`);
+        setDeletingChatMessageId(null);
+        return;
+      }
     }
     setChatError('');
     setCalendarChatMessages(prev => prev.filter(row => String(row?.id || '') !== messageId));
@@ -4538,6 +4549,10 @@ function App() {
         }
         const row = payload?.new;
         if (!row) return;
+        if (isDeletedChatMessage(row?.message)) {
+          setCalendarChatMessages(prev => prev.filter((m) => String(m?.id || '') !== String(row?.id || '')));
+          return;
+        }
         setCalendarChatMessages((prev) => {
           const idx = prev.findIndex((m) => String(m?.id || '') === String(row?.id || ''));
           if (idx >= 0) {
