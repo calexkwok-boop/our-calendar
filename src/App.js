@@ -2174,6 +2174,13 @@ function App() {
   const [calendarChatMessages, setCalendarChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState('');
+  const [showCreateEventPopup, setShowCreateEventPopup] = useState(false);
+  const [pollQuestionInput, setPollQuestionInput] = useState('');
+  const [pollDateInput, setPollDateInput] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  });
+  const [pollOptionsInput, setPollOptionsInput] = useState(['', '']);
   const [selectedSharedListId, setSelectedSharedListId] = useState(null);
   const [newSharedListTitle, setNewSharedListTitle] = useState('');
   const [newListItemText, setNewListItemText] = useState('');
@@ -2207,30 +2214,6 @@ function App() {
     const d = new Date(year, month - 1, day);
     if (d.getFullYear() !== year || d.getMonth() !== (month - 1) || d.getDate() !== day) return null;
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  };
-
-  const parsePollDraftFromText = (input) => {
-    const lines = String(input || '')
-      .split('\n')
-      .map(line => line.trim())
-      .filter(Boolean);
-    if (lines.length < 3) return null;
-    const first = lines[0];
-    const options = lines
-      .slice(1)
-      .map(line => {
-        const m = line.match(/^\d+[.).:-]?\s*(.+)$/);
-        return m ? m[1].trim() : '';
-      })
-      .filter(Boolean);
-    if (options.length < 2) return null;
-    const dateKey = parseDateFromText(first) || getDateKey(selectedDate || new Date());
-    const question = first
-      .replace(/\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/g, '')
-      .replace(/\s{2,}/g, ' ')
-      .trim();
-    if (!question) return null;
-    return { question, dateKey, options };
   };
 
   const buildPollMessage = ({ question, dateKey, options, createdBy }) => {
@@ -3763,21 +3746,12 @@ function App() {
   const sendCalendarChatMessage = async () => {
     const text = String(chatInput || '').trim();
     if (!text || !activeLayerId || !user?.id) return;
-    const pollDraft = parsePollDraftFromText(text);
-    const outgoingMessage = pollDraft
-      ? buildPollMessage({
-        question: pollDraft.question,
-        dateKey: pollDraft.dateKey,
-        options: pollDraft.options,
-        createdBy: currentUser || user?.email || user?.phone || 'User',
-      })
-      : text;
     const payload = {
       layer_id: activeLayerId,
       calendar_id: activeLayerId,
       user_id: user.id,
       created_by: currentUser || user?.email || user?.phone || 'User',
-      message: outgoingMessage,
+      message: text,
       created_at: new Date().toISOString(),
     };
     const { data, error } = await supabase
@@ -3794,6 +3768,63 @@ function App() {
 
     setChatError('');
     setChatInput('');
+    if (data) {
+      setCalendarChatMessages((prev) => {
+        const exists = prev.some((row) => String(row?.id || '') === String(data?.id || ''));
+        if (exists) return prev;
+        return [...prev, data];
+      });
+    }
+  };
+
+  const sendCalendarChatPollMessage = async () => {
+    if (!activeLayerId || !user?.id) return;
+    const question = String(pollQuestionInput || '').trim();
+    const dateKey = String(pollDateInput || '').trim();
+    const options = (pollOptionsInput || []).map(v => String(v || '').trim()).filter(Boolean);
+    if (!question) {
+      setChatError('Add a question for the event vote.');
+      return;
+    }
+    if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+      setChatError('Choose a valid event date.');
+      return;
+    }
+    if (options.length < 2) {
+      setChatError('Add at least two options to vote on.');
+      return;
+    }
+
+    const payload = {
+      layer_id: activeLayerId,
+      calendar_id: activeLayerId,
+      user_id: user.id,
+      created_by: currentUser || user?.email || user?.phone || 'User',
+      message: buildPollMessage({
+        question,
+        dateKey,
+        options,
+        createdBy: currentUser || user?.email || user?.phone || 'User',
+      }),
+      created_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('calendar_messages')
+      .insert(payload)
+      .select('*')
+      .single();
+    if (error) {
+      console.error('Error sending poll message:', error);
+      setChatError(`Could not create event vote: ${error.message}`);
+      return;
+    }
+
+    setChatError('');
+    setShowCreateEventPopup(false);
+    setPollQuestionInput('');
+    setPollDateInput(getDateKey(selectedDate || new Date()));
+    setPollOptionsInput(['', '']);
     if (data) {
       setCalendarChatMessages((prev) => {
         const exists = prev.some((row) => String(row?.id || '') === String(data?.id || ''));
@@ -7519,6 +7550,18 @@ function App() {
             {chatError && <p className="mt-2 text-xs text-red-500">{chatError}</p>}
 
             <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => {
+                  setPollDateInput(getDateKey(selectedDate || new Date()));
+                  setShowCreateEventPopup(true);
+                  if (chatError) setChatError('');
+                }}
+                className="w-10 h-10 shrink-0 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 text-xl leading-none"
+                title="Create an event vote"
+                aria-label="Create an event vote"
+              >
+                +
+              </button>
               <input
                 type="text"
                 value={chatInput}
@@ -7529,7 +7572,7 @@ function App() {
                     sendCalendarChatMessage();
                   }
                 }}
-                placeholder={"Message or poll:\nWhat's for lunch 3/7/26\n1. Deli D\n2. Wingstop"}
+                placeholder="Send a message to this calendar..."
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
               />
               <button
@@ -7540,6 +7583,73 @@ function App() {
                 Send
               </button>
             </div>
+
+            {showCreateEventPopup && (
+              <div className="fixed inset-0 z-[70] bg-black/45 flex items-center justify-center p-4">
+                <div className="w-full max-w-md rounded-2xl border border-indigo-100 dark:border-indigo-800 bg-white dark:bg-gray-800 p-4 shadow-2xl">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-base font-semibold text-indigo-600 dark:text-indigo-400">Create an event</h4>
+                    <button
+                      onClick={() => setShowCreateEventPopup(false)}
+                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <input
+                      type="text"
+                      value={pollQuestionInput}
+                      onChange={(e) => setPollQuestionInput(e.target.value)}
+                      placeholder="Question (e.g. What's for lunch?)"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                    />
+                    <input
+                      type="date"
+                      value={pollDateInput}
+                      onChange={(e) => setPollDateInput(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                    />
+                    {pollOptionsInput.map((opt, idx) => (
+                      <input
+                        key={`poll-opt-input-${idx}`}
+                        type="text"
+                        value={opt}
+                        onChange={(e) => {
+                          const next = [...pollOptionsInput];
+                          next[idx] = e.target.value;
+                          setPollOptionsInput(next);
+                        }}
+                        placeholder={`Option ${idx + 1}`}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                      />
+                    ))}
+                    <button
+                      onClick={() => setPollOptionsInput(prev => prev.length >= 8 ? prev : [...prev, ''])}
+                      className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                    >
+                      + Add option
+                    </button>
+                  </div>
+
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button
+                      onClick={() => setShowCreateEventPopup(false)}
+                      className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={sendCalendarChatPollMessage}
+                      className="px-3 py-2 text-sm rounded-xl bg-indigo-600 text-white font-semibold"
+                    >
+                      Post vote
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
