@@ -2266,6 +2266,13 @@ function App() {
     return out.length > 0 ? out : [startKey];
   };
 
+  const formatDateKeyMMDDYYYY = (value) => {
+    const raw = String(value || '').trim();
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return raw;
+    return `${m[2]}/${m[3]}/${m[1]}`;
+  };
+
   const isDeletedChatMessage = (message) => String(message || '').startsWith(CHAT_DELETED_PREFIX);
   const markChatSeenForLayer = (layerId, atIso = new Date().toISOString()) => {
     const key = String(layerId || '');
@@ -8293,8 +8300,13 @@ function App() {
 
                   {pollComposerStep === 'structured' && (
                     <div className="space-y-3">
-                      <div className="text-sm sm:text-base text-indigo-700 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900/25 border-2 border-indigo-300 dark:border-indigo-700 rounded-2xl px-4 py-3">
-                        <strong>{pollQuestionInput || 'Event'}</strong> on <strong>{pollDateInput || getDateKey(selectedDate || new Date())}</strong>
+                      <div className="px-1">
+                        <div className="text-sm sm:text-base font-semibold text-indigo-700 dark:text-indigo-200">
+                          {pollQuestionInput || 'Event'}
+                        </div>
+                        <div className="text-xs sm:text-sm text-indigo-600 dark:text-indigo-300">
+                          {formatDateKeyMMDDYYYY(pollDateInput || getDateKey(selectedDate || new Date()))}
+                        </div>
                       </div>
                       {pollOptionInputs.map((opt, idx) => (
                         <div key={`poll-option-${idx}`} className="flex items-center gap-2">
