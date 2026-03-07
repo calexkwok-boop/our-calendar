@@ -2182,13 +2182,15 @@ function App() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
-  const [pollDimensions, setPollDimensions] = useState({ what: true, where: false, when: true });
-  const [pollSectionOpen, setPollSectionOpen] = useState({ what: false, where: false, when: false });
-  const [pollWhatOptions, setPollWhatOptions] = useState(['', '']);
+  const [pollDimensions, setPollDimensions] = useState({ where: false, when: true });
+  const [pollSectionOpen, setPollSectionOpen] = useState({ where: false, when: false });
   const [pollWhereOptions, setPollWhereOptions] = useState(['', '']);
   const [pollWhenOptions, setPollWhenOptions] = useState([]);
   const [whenOptionDateInput, setWhenOptionDateInput] = useState('');
   const [whenOptionTimeInput, setWhenOptionTimeInput] = useState('');
+  const [whenOptionRangeChoice, setWhenOptionRangeChoice] = useState(null); // 'yes' | 'no' | null
+  const [whenOptionTimeChoice, setWhenOptionTimeChoice] = useState(null); // 'yes' | 'no' | null
+  const [whenOptionEndDateInput, setWhenOptionEndDateInput] = useState('');
   const [selectedSharedListId, setSelectedSharedListId] = useState(null);
   const [newSharedListTitle, setNewSharedListTitle] = useState('');
   const [newListItemText, setNewListItemText] = useState('');
@@ -2240,6 +2242,30 @@ function App() {
     const m = raw.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
     if (!m) return null;
     return `${String(Number(m[1])).padStart(2, '0')}:${m[2]}`;
+  };
+
+  const parseDateRangeFromText = (text) => {
+    const raw = String(text || '');
+    const m = raw.match(/\b(\d{4}-\d{2}-\d{2})\s+(?:to|-)\s+(\d{4}-\d{2}-\d{2})\b/i);
+    if (!m) return null;
+    const start = parseDateFromText(m[1]);
+    const end = parseDateFromText(m[2]);
+    if (!start || !end) return null;
+    return { start, end };
+  };
+
+  const getDateKeysInRange = (startKey, endKey) => {
+    const start = new Date(`${startKey}T00:00:00`);
+    const end = new Date(`${endKey}T00:00:00`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [startKey];
+    const from = start <= end ? start : end;
+    const to = start <= end ? end : start;
+    const out = [];
+    for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
+      out.push(getDateKey(d));
+      if (out.length > 370) break;
+    }
+    return out.length > 0 ? out : [startKey];
   };
 
   const isDeletedChatMessage = (message) => String(message || '').startsWith(CHAT_DELETED_PREFIX);
@@ -3877,13 +3903,12 @@ function App() {
       setChatError("Add the event name first.");
       return;
     }
-    const dimensions = ['what', 'where', 'when'].filter((key) => Boolean(pollDimensions?.[key]));
+    const dimensions = ['where', 'when'].filter((key) => Boolean(pollDimensions?.[key]));
     if (dimensions.length === 0) {
       setChatError('Select at least one poll section: What, Where, or When.');
       return;
     }
     const optionsByDimension = {
-      what: (pollWhatOptions || []).map(v => String(v || '').trim()).filter(Boolean),
       where: (pollWhereOptions || []).map(v => String(v || '').trim()).filter(Boolean),
       when: (pollWhenOptions || []).map(v => String(v || '').trim()).filter(Boolean),
     };
@@ -3925,13 +3950,15 @@ function App() {
     setPollComposerStep('menu');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
-    setPollDimensions({ what: true, where: false, when: true });
-    setPollSectionOpen({ what: false, where: false, when: false });
-    setPollWhatOptions(['', '']);
+    setPollDimensions({ where: false, when: true });
+    setPollSectionOpen({ where: false, when: false });
     setPollWhereOptions(['', '']);
     setPollWhenOptions([]);
     setWhenOptionDateInput('');
     setWhenOptionTimeInput('');
+    setWhenOptionRangeChoice(null);
+    setWhenOptionTimeChoice(null);
+    setWhenOptionEndDateInput('');
     if (data) {
       setCalendarChatMessages((prev) => {
         const exists = prev.some((row) => String(row?.id || '') === String(data?.id || ''));
@@ -3946,13 +3973,15 @@ function App() {
     setPollComposerStep('menu');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
-    setPollDimensions({ what: true, where: false, when: true });
-    setPollSectionOpen({ what: false, where: false, when: false });
-    setPollWhatOptions(['', '']);
+    setPollDimensions({ where: false, when: true });
+    setPollSectionOpen({ where: false, when: false });
     setPollWhereOptions(['', '']);
     setPollWhenOptions([]);
     setWhenOptionDateInput('');
     setWhenOptionTimeInput('');
+    setWhenOptionRangeChoice(null);
+    setWhenOptionTimeChoice(null);
+    setWhenOptionEndDateInput('');
   };
 
   const deleteCalendarChatMessage = async (messageRow) => {
@@ -4003,18 +4032,17 @@ function App() {
         if (!Number.isInteger(idx) || idx < 0 || idx >= opts.length) return null;
         return String(opts[idx] || '').trim() || null;
       };
-      const whatWinner = pick('what');
       const whereWinner = pick('where');
       const whenWinner = pick('when');
-      if (dims.includes('what') && !whatWinner) return null;
       if (dims.includes('where') && !whereWinner) return null;
       if (dims.includes('when') && !whenWinner) return null;
-      if (whatWinner) eventTitle = whatWinner;
       if (whereWinner) eventLocation = whereWinner;
       if (whenWinner) {
+        const range = parseDateRangeFromText(whenWinner);
+        if (range?.start) eventDateKey = range.start;
         const winnerDate = parseDateFromText(whenWinner);
-        if (winnerDate) eventDateKey = winnerDate;
-        eventTime = parseTimeFromText(whenWinner);
+        if (!range && winnerDate) eventDateKey = winnerDate;
+        eventTime = range ? null : parseTimeFromText(whenWinner);
       }
     } else {
       const winnerIndex = Number(poll.winnerIndex);
@@ -4034,18 +4062,29 @@ function App() {
       }
     }
 
-    const eventId = `${Date.now()}-${Math.random()}`;
-    const eventPayload = {
-      id: eventId,
-      date: eventDateKey,
+    let dateKeys = [eventDateKey];
+    const structuredWhenWinner = poll?.mode === 'structured' ? (() => {
+      const idx = Number(poll?.winners?.when);
+      const opts = poll?.optionsByDimension?.when || [];
+      return Number.isInteger(idx) && idx >= 0 && idx < opts.length ? String(opts[idx]) : null;
+    })() : null;
+    if (structuredWhenWinner) {
+      const range = parseDateRangeFromText(structuredWhenWinner);
+      if (range?.start && range?.end) dateKeys = getDateKeysInRange(range.start, range.end);
+    }
+    const multiDayId = dateKeys.length > 1 ? `poll-multi-${Date.now()}` : null;
+    const nowIso = new Date().toISOString();
+    const eventRows = dateKeys.map((dateKey, idx) => ({
+      id: `${Date.now()}-${Math.random()}-${idx}`,
+      date: dateKey,
       title: eventTitle,
-      time: eventTime,
+      time: idx === 0 ? eventTime : null,
       category: 'other',
       is_private: false,
       is_private_for: null,
       is_urgent: false,
-      is_multi_day: false,
-      multi_day_id: null,
+      is_multi_day: dateKeys.length > 1,
+      multi_day_id: multiDayId,
       is_annual: false,
       annual_month: null,
       annual_day: null,
@@ -4054,17 +4093,17 @@ function App() {
       reactions: null,
       location: eventLocation,
       created_by: currentUser || user?.email || user?.phone || 'User',
-      created_at: new Date().toISOString(),
+      created_at: nowIso,
       user_id: user.id,
       layer_id: activeLayerId,
       calendar_id: activeLayerId,
-    };
+    }));
 
-    const { data: insertedEvent, error: eventErr } = await supabase
+    const { data: insertedEvents, error: eventErr } = await supabase
       .from('events')
-      .insert(eventPayload)
+      .insert(eventRows)
       .select('*')
-      .single();
+      .order('date', { ascending: true });
     if (eventErr) {
       console.error('Error inserting poll winner event:', eventErr);
       setChatError(`Could not create event from poll: ${eventErr.message}`);
@@ -4072,41 +4111,45 @@ function App() {
     }
 
     setEvents(prev => {
-      const dateEvents = prev[eventDateKey] || [];
-      const nextEvent = {
-        id: insertedEvent.id,
-        title: insertedEvent.title,
-        time: insertedEvent.time,
-        date: insertedEvent.date,
-        category: insertedEvent.category,
-        isPrivate: insertedEvent.is_private,
-        isUrgent: insertedEvent.is_urgent,
-        isMultiDay: insertedEvent.is_multi_day,
-        multiDayId: insertedEvent.multi_day_id,
-        isAnnual: insertedEvent.is_annual || false,
-        annualMonth: insertedEvent.annual_month || null,
-        annualDay: insertedEvent.annual_day || null,
-        recurrence: insertedEvent.recurrence || 'once',
-        exceptions: insertedEvent.exceptions ? JSON.parse(insertedEvent.exceptions) : [],
-        reactions: insertedEvent.reactions ? JSON.parse(insertedEvent.reactions) : {},
-        location: insertedEvent.location || null,
-        createdBy: insertedEvent.created_by,
-        createdAt: insertedEvent.created_at,
-        userId: insertedEvent.user_id,
-        isShared: String(insertedEvent.user_id || '') !== String(user?.id || ''),
-      };
-      const merged = [...dateEvents, nextEvent].sort((a, b) => {
-        if (!a.time) return 1;
-        if (!b.time) return -1;
-        return a.time.localeCompare(b.time);
+      const next = { ...prev };
+      (insertedEvents || []).forEach((insertedEvent) => {
+        const dayKey = insertedEvent.date;
+        const dateEvents = next[dayKey] || [];
+        const nextEvent = {
+          id: insertedEvent.id,
+          title: insertedEvent.title,
+          time: insertedEvent.time,
+          date: insertedEvent.date,
+          category: insertedEvent.category,
+          isPrivate: insertedEvent.is_private,
+          isUrgent: insertedEvent.is_urgent,
+          isMultiDay: insertedEvent.is_multi_day,
+          multiDayId: insertedEvent.multi_day_id,
+          isAnnual: insertedEvent.is_annual || false,
+          annualMonth: insertedEvent.annual_month || null,
+          annualDay: insertedEvent.annual_day || null,
+          recurrence: insertedEvent.recurrence || 'once',
+          exceptions: insertedEvent.exceptions ? JSON.parse(insertedEvent.exceptions) : [],
+          reactions: insertedEvent.reactions ? JSON.parse(insertedEvent.reactions) : {},
+          location: insertedEvent.location || null,
+          createdBy: insertedEvent.created_by,
+          createdAt: insertedEvent.created_at,
+          userId: insertedEvent.user_id,
+          isShared: String(insertedEvent.user_id || '') !== String(user?.id || ''),
+        };
+        next[dayKey] = [...dateEvents, nextEvent].sort((a, b) => {
+          if (!a.time) return 1;
+          if (!b.time) return -1;
+          return a.time.localeCompare(b.time);
+        });
       });
-      return { ...prev, [eventDateKey]: merged };
+      return next;
     });
 
     const resolvedPoll = {
       ...poll,
       resolved: true,
-      createdEventId: insertedEvent.id,
+      createdEventId: insertedEvents?.[0]?.id || null,
     };
     const { data: updatedMessage, error: msgErr } = await supabase
       .from('calendar_messages')
@@ -4117,12 +4160,12 @@ function App() {
       .single();
     if (msgErr) {
       console.error('Error marking poll as resolved:', msgErr);
-      return insertedEvent;
+      return insertedEvents?.[0] || null;
     }
     if (updatedMessage) {
       setCalendarChatMessages(prev => prev.map(m => String(m?.id) === String(updatedMessage.id) ? updatedMessage : m));
     }
-    return insertedEvent;
+    return insertedEvents?.[0] || null;
   };
 
   const voteOnChatPoll = async (messageRow, optionIndex, dimensionKey = null) => {
@@ -7832,13 +7875,15 @@ function App() {
                 onClick={() => {
                   setPollQuestionInput('');
                   setPollDateInput(getDateKey(selectedDate || new Date()));
-                  setPollDimensions({ what: true, where: false, when: true });
-                  setPollSectionOpen({ what: false, where: false, when: false });
-                  setPollWhatOptions(['', '']);
+                  setPollDimensions({ where: false, when: true });
+                  setPollSectionOpen({ where: false, when: false });
                   setPollWhereOptions(['', '']);
                   setPollWhenOptions([]);
                   setWhenOptionDateInput(getDateKey(selectedDate || new Date()));
                   setWhenOptionTimeInput('');
+                  setWhenOptionRangeChoice(null);
+                  setWhenOptionTimeChoice(null);
+                  setWhenOptionEndDateInput('');
                   setPollComposerStep('menu');
                   setShowCreateEventPopup(true);
                   if (chatError) setChatError('');
@@ -7909,7 +7954,7 @@ function App() {
                         className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
                       />
                       <div className="flex items-center gap-2">
-                        {['what', 'where', 'when'].map((dim) => (
+                        {['where', 'when'].map((dim) => (
                           <button
                             key={`dim-${dim}`}
                             onClick={() => {
@@ -7920,42 +7965,10 @@ function App() {
                               ? 'border-indigo-300 bg-indigo-100 dark:bg-indigo-900/35 text-indigo-800 dark:text-indigo-200'
                               : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-300'}`}
                           >
-                            {dim === 'what' ? 'What' : dim === 'where' ? 'Where' : 'When'}
+                            {dim === 'where' ? 'Where' : 'When'}
                           </button>
                         ))}
                       </div>
-
-                      {pollDimensions.what && (
-                        <div className="rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/70 dark:bg-indigo-900/20 p-2.5">
-                          <button onClick={() => setPollSectionOpen(prev => ({ ...prev, what: !prev.what }))} className="w-full flex items-center justify-between text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                            <span>What options</span>
-                            <span>{pollSectionOpen.what ? 'Close' : 'Open'}</span>
-                          </button>
-                          {pollSectionOpen.what && (
-                            <div className="space-y-1.5 mt-2">
-                              {pollWhatOptions.map((opt, idx) => (
-                                <div key={`what-opt-${idx}`} className="flex items-center gap-2">
-                                  <input
-                                    type="text"
-                                    value={opt}
-                                    onChange={(e) => {
-                                      const next = [...pollWhatOptions];
-                                      next[idx] = e.target.value;
-                                      setPollWhatOptions(next);
-                                    }}
-                                    placeholder={`What option ${idx + 1}`}
-                                    className="flex-1 px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
-                                  />
-                                  {pollWhatOptions.length > 2 && (
-                                    <button onClick={() => setPollWhatOptions(prev => prev.filter((_, i) => i !== idx))} className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200">Remove</button>
-                                  )}
-                                </div>
-                              ))}
-                              <button onClick={() => setPollWhatOptions(prev => prev.length >= 8 ? prev : [...prev, ''])} className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200">+ Add what option</button>
-                            </div>
-                          )}
-                        </div>
-                      )}
 
                       {pollDimensions.where && (
                         <div className="rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/70 dark:bg-indigo-900/20 p-2.5">
@@ -7997,31 +8010,78 @@ function App() {
                           </button>
                           {pollSectionOpen.when && (
                             <div className="space-y-1.5 mt-2">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <input
+                                type="date"
+                                value={whenOptionDateInput}
+                                onChange={(e) => {
+                                  setWhenOptionDateInput(e.target.value);
+                                  setWhenOptionRangeChoice(null);
+                                  setWhenOptionTimeChoice(null);
+                                  setWhenOptionEndDateInput('');
+                                  setWhenOptionTimeInput('');
+                                }}
+                                className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                              />
+                              {whenOptionDateInput && (
+                                <div className="rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-100/70 dark:bg-indigo-900/30 p-2">
+                                  <div className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-200">Need a date range?</div>
+                                  <div className="mt-1 flex gap-2">
+                                    <button onClick={() => { setWhenOptionRangeChoice('yes'); setWhenOptionTimeChoice(null); }} className={`px-2.5 py-1 text-xs rounded-lg border ${whenOptionRangeChoice === 'yes' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-200'}`}>Yes</button>
+                                    <button onClick={() => { setWhenOptionRangeChoice('no'); setWhenOptionEndDateInput(''); }} className={`px-2.5 py-1 text-xs rounded-lg border ${whenOptionRangeChoice === 'no' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-200'}`}>No</button>
+                                  </div>
+                                </div>
+                              )}
+                              {whenOptionRangeChoice === 'yes' && (
                                 <input
                                   type="date"
-                                  value={whenOptionDateInput}
-                                  onChange={(e) => {
-                                    setWhenOptionDateInput(e.target.value);
-                                    if (e.target.value && !whenOptionTimeInput) setWhenOptionTimeInput('12:00');
-                                  }}
+                                  value={whenOptionEndDateInput}
+                                  onChange={(e) => setWhenOptionEndDateInput(e.target.value)}
                                   className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
                                 />
+                              )}
+                              {whenOptionRangeChoice === 'no' && (
+                                <div className="rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-100/70 dark:bg-indigo-900/30 p-2">
+                                  <div className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-200">Need a time?</div>
+                                  <div className="mt-1 flex gap-2">
+                                    <button onClick={() => setWhenOptionTimeChoice('yes')} className={`px-2.5 py-1 text-xs rounded-lg border ${whenOptionTimeChoice === 'yes' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-200'}`}>Yes</button>
+                                    <button onClick={() => { setWhenOptionTimeChoice('no'); setWhenOptionTimeInput(''); }} className={`px-2.5 py-1 text-xs rounded-lg border ${whenOptionTimeChoice === 'no' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-200'}`}>No</button>
+                                  </div>
+                                </div>
+                              )}
+                              {whenOptionTimeChoice === 'yes' && (
                                 <input
                                   type="time"
                                   value={whenOptionTimeInput}
                                   onChange={(e) => setWhenOptionTimeInput(e.target.value)}
-                                  disabled={!whenOptionDateInput}
-                                  className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl disabled:opacity-50"
+                                  className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
                                 />
-                              </div>
+                              )}
                               <button
                                 onClick={() => {
-                                  if (!whenOptionDateInput || !whenOptionTimeInput) {
-                                    setChatError('Pick both date and time for When option.');
+                                  if (!whenOptionDateInput) {
+                                    setChatError('Pick a date first.');
                                     return;
                                   }
-                                  const optionText = `${whenOptionDateInput} ${whenOptionTimeInput}`;
+                                  let optionText = whenOptionDateInput;
+                                  if (whenOptionRangeChoice === 'yes') {
+                                    if (!whenOptionEndDateInput) {
+                                      setChatError('Pick an end date for the range.');
+                                      return;
+                                    }
+                                    optionText = `${whenOptionDateInput} to ${whenOptionEndDateInput}`;
+                                  } else if (whenOptionRangeChoice === 'no' && whenOptionTimeChoice === 'yes') {
+                                    if (!whenOptionTimeInput) {
+                                      setChatError('Pick a time.');
+                                      return;
+                                    }
+                                    optionText = `${whenOptionDateInput} ${whenOptionTimeInput}`;
+                                  } else if (whenOptionRangeChoice === null) {
+                                    setChatError('Answer if you need a date range.');
+                                    return;
+                                  } else if (whenOptionRangeChoice === 'no' && whenOptionTimeChoice === null) {
+                                    setChatError('Answer if you need a time.');
+                                    return;
+                                  }
                                   setPollWhenOptions(prev => (prev.includes(optionText) || prev.length >= 8 ? prev : [...prev, optionText]));
                                   setChatError('');
                                 }}
