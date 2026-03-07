@@ -138,6 +138,11 @@ function App() {
   const seenExpenseIdsRef = useRef(new Set());
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
+  const [isPopupEventDraft, setIsPopupEventDraft] = useState(false);
+  const [popupEventMaxPeopleDraft, setPopupEventMaxPeopleDraft] = useState('10');
+  const [popupEventsByEventId, setPopupEventsByEventId] = useState({});
+  const [popupSignupsByEventId, setPopupSignupsByEventId] = useState({});
+  const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -3991,6 +3996,136 @@ function App() {
     setCalendarChatMessages((data || []).filter(row => !isDeletedChatMessage(row?.message)));
   };
 
+  const loadPopupEventData = async () => {
+    if (!activeLayerId) {
+      setPopupEventsByEventId({});
+      setPopupSignupsByEventId({});
+      return;
+    }
+
+    const { data: popupEventsRows, error: popupEventsErr } = await supabase
+      .from('popup_events')
+      .select('event_id,max_people,created_by_user_id,created_by_name,created_at')
+      .eq('layer_id', activeLayerId);
+
+    if (popupEventsErr) {
+      if (popupEventsErr.code === '42P01') {
+        setPopupFeatureAvailable(false);
+      }
+      setPopupEventsByEventId({});
+      setPopupSignupsByEventId({});
+      return;
+    }
+
+    const eventIds = (popupEventsRows || []).map((row) => String(row?.event_id || '')).filter(Boolean);
+    const eventsMap = {};
+    (popupEventsRows || []).forEach((row) => {
+      const eventId = String(row?.event_id || '');
+      if (!eventId) return;
+      eventsMap[eventId] = {
+        eventId,
+        maxPeople: Math.max(1, Number(row?.max_people || 1)),
+        createdByUserId: String(row?.created_by_user_id || ''),
+        createdByName: String(row?.created_by_name || ''),
+        createdAt: String(row?.created_at || ''),
+      };
+    });
+
+    let signupsMap = {};
+    if (eventIds.length > 0) {
+      const { data: signupRows, error: signupErr } = await supabase
+        .from('popup_event_signups')
+        .select('event_id,user_id,display_name,created_at')
+        .eq('layer_id', activeLayerId)
+        .in('event_id', eventIds)
+        .order('created_at', { ascending: true });
+
+      if (!signupErr) {
+        signupsMap = {};
+        (signupRows || []).forEach((row) => {
+          const eventId = String(row?.event_id || '');
+          if (!eventId) return;
+          if (!Array.isArray(signupsMap[eventId])) signupsMap[eventId] = [];
+          signupsMap[eventId].push({
+            userId: String(row?.user_id || ''),
+            displayName: String(row?.display_name || ''),
+            createdAt: String(row?.created_at || ''),
+          });
+        });
+      }
+    }
+
+    setPopupFeatureAvailable(true);
+    setPopupEventsByEventId(eventsMap);
+    setPopupSignupsByEventId(signupsMap);
+  };
+
+  const createPopupEventRows = async (rows) => {
+    const payload = Array.isArray(rows) ? rows : [];
+    if (payload.length === 0) return true;
+    const { error } = await supabase
+      .from('popup_events')
+      .upsert(payload, { onConflict: 'event_id' });
+    if (error) {
+      if (error.code === '42P01') {
+        setPopupFeatureAvailable(false);
+        alert('Popup events need DB setup (popup_events + popup_event_signups tables are missing).');
+        return false;
+      }
+      alert(`Could not create popup event: ${error.message}`);
+      return false;
+    }
+    setPopupFeatureAvailable(true);
+    await loadPopupEventData();
+    return true;
+  };
+
+  const joinPopupEvent = async (eventId) => {
+    const normalizedEventId = String(eventId || '').trim();
+    const popup = popupEventsByEventId[normalizedEventId];
+    if (!normalizedEventId || !popup || !activeLayerId || !user?.id) return;
+    if (!popupFeatureAvailable) {
+      alert('Popup events need DB setup first.');
+      return;
+    }
+    const signups = popupSignupsByEventId[normalizedEventId] || [];
+    const alreadyJoined = signups.some((row) => String(row?.userId || '') === String(user.id));
+    if (alreadyJoined) return;
+    if (signups.length >= popup.maxPeople) {
+      alert('This pop-up event is full.');
+      return;
+    }
+    const payload = {
+      layer_id: activeLayerId,
+      event_id: normalizedEventId,
+      user_id: user.id,
+      display_name: currentUser || user?.email || user?.phone || 'Member',
+      created_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('popup_event_signups').insert(payload);
+    if (error) {
+      alert(`Could not join popup event: ${error.message}`);
+      return;
+    }
+    await loadPopupEventData();
+  };
+
+  const leavePopupEvent = async (eventId) => {
+    const normalizedEventId = String(eventId || '').trim();
+    if (!normalizedEventId || !activeLayerId || !user?.id) return;
+    const { error } = await supabase
+      .from('popup_event_signups')
+      .delete()
+      .eq('layer_id', activeLayerId)
+      .eq('event_id', normalizedEventId)
+      .eq('user_id', user.id);
+    if (error) {
+      alert(`Could not leave popup event: ${error.message}`);
+      return;
+    }
+    await loadPopupEventData();
+  };
+
   const loadChatMembers = async () => {
     if (!activeLayerId) {
       setChatMembers([]);
@@ -4908,6 +5043,15 @@ function App() {
 
   useEffect(() => {
     if (!activeLayerId) {
+      setPopupEventsByEventId({});
+      setPopupSignupsByEventId({});
+      return;
+    }
+    loadPopupEventData();
+  }, [activeLayerId, layerRefreshToken]);
+
+  useEffect(() => {
+    if (!activeLayerId) {
       setChatMembers([]);
       setShowChatMembersPanel(false);
       return;
@@ -5009,6 +5153,22 @@ function App() {
       channel.unsubscribe();
     };
   }, [showChatPanel, activeLayerId, user?.id]);
+
+  useEffect(() => {
+    if (!activeLayerId) return;
+    const channel = supabase
+      .channel(`popup-events-${activeLayerId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_events', filter: `layer_id=eq.${activeLayerId}` }, () => {
+        loadPopupEventData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `layer_id=eq.${activeLayerId}` }, () => {
+        loadPopupEventData();
+      })
+      .subscribe();
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [activeLayerId, user?.id]);
 
   useEffect(() => {
     if (!showChatPanel || !activeLayerId) return;
@@ -7163,19 +7323,28 @@ function App() {
     if (!quickEntry.trim()) return;
     const title = quickEntry.trim();
     const datesToAdd = selectedDates.length > 1 ? selectedDates : [selectedDate];
-    setPendingEvent({ title, datesToAdd, isMultiDay: selectedDates.length > 1 });
+    const parsedMax = Math.max(1, parseInt(String(popupEventMaxPeopleDraft || '').trim(), 10) || 1);
+    setPendingEvent({
+      title,
+      datesToAdd,
+      isMultiDay: selectedDates.length > 1,
+      isPopupEvent: Boolean(isPopupEventDraft),
+      popupMaxPeople: parsedMax,
+    });
     setShowTimePrompt(true);
     setQuickEntry('');
   };
 
-  const handleTimeSubmit = (time) => {
+  const handleTimeSubmit = async (time) => {
     if (!pendingEvent) return;
     const updatedEvents = { ...events };
     const multiDayId = pendingEvent.isMultiDay ? Date.now().toString() : null;
+    const createdEventIds = [];
     pendingEvent.datesToAdd.forEach(date => {
       const dateKey = getDateKey(date);
+      const eventId = `${Date.now()}-${Math.random()}`;
       const newEvent = {
-        id: `${Date.now()}-${Math.random()}`,
+        id: eventId,
         title: pendingEvent.title,
         time: pendingEvent.isMultiDay ? null : (time || null),
         date: dateKey,
@@ -7192,6 +7361,7 @@ function App() {
         multiDayId,
         userId: user?.id || null
       };
+      createdEventIds.push(eventId);
       const dateEvents = updatedEvents[dateKey] || [];
       updatedEvents[dateKey] = [...dateEvents, newEvent].sort((a, b) => {
         if (!a.time) return 1;
@@ -7200,11 +7370,24 @@ function App() {
       });
     });
     saveEvents(updatedEvents);
+    if (pendingEvent.isPopupEvent) {
+      const maxPeople = Math.max(1, Number(pendingEvent.popupMaxPeople || 1));
+      await createPopupEventRows(createdEventIds.map((eventId) => ({
+        layer_id: activeLayerId,
+        event_id: eventId,
+        max_people: maxPeople,
+        created_by_user_id: user?.id || null,
+        created_by_name: currentUser || user?.email || user?.phone || 'Member',
+        created_at: new Date().toISOString(),
+      })));
+    }
     setSelectedDates([]);
     setRecurrence('once');
     setSuggestedTime('');
     setShowTimePrompt(false);
     setPendingEvent(null);
+    setIsPopupEventDraft(false);
+    setPopupEventMaxPeopleDraft('10');
   };
 
   const deleteEventsByIds = async (eventIds) => {
@@ -7227,6 +7410,11 @@ function App() {
       alert(`Delete blocked by permissions or ownership. Missing IDs: ${missing.join(', ')}`);
       return false;
     }
+    try {
+      await supabase.from('popup_event_signups').delete().eq('layer_id', activeLayerId).in('event_id', ids);
+      await supabase.from('popup_events').delete().eq('layer_id', activeLayerId).in('event_id', ids);
+      await loadPopupEventData();
+    } catch {}
     return true;
   };
 
@@ -9393,6 +9581,33 @@ function App() {
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setIsPopupEventDraft(prev => !prev)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                    isPopupEventDraft
+                      ? 'bg-emerald-100 border-emerald-300 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-300'
+                      : 'bg-gray-100 border-gray-200 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  {isPopupEventDraft ? 'Pop-up event: on' : 'Pop-up event'}
+                </button>
+                {isPopupEventDraft && (
+                  <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
+                    Max people
+                    <input
+                      type="number"
+                      min="1"
+                      value={popupEventMaxPeopleDraft}
+                      onChange={(e) => setPopupEventMaxPeopleDraft(e.target.value)}
+                      className="w-16 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    />
+                  </label>
+                )}
+              </div>
+              {isPopupEventDraft && (
+                <p className="mt-1 text-[11px] text-emerald-700 dark:text-emerald-300">First come, first served signups will be enabled for this event.</p>
+              )}
             </div>
 
             <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -9401,6 +9616,10 @@ function App() {
               ) : (
                 selectedEvents.map(event => {
                   const category = categories[event.category || 'other'] || categories.other;
+                  const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                  const popupSignups = popupMeta ? (popupSignupsByEventId[String(event.id || '')] || []) : [];
+                  const popupJoined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
+                  const popupFull = popupMeta ? popupSignups.length >= Number(popupMeta.maxPeople || 1) : false;
 
                   if (event.isHoliday) {
                     return (
@@ -9564,6 +9783,36 @@ function App() {
                                 {event.createdBy}
                                 {event.isShared && (
                                   <span className="ml-1 px-1.5 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full text-xs">shared</span>
+                                )}
+                              </div>
+                            )}
+                            {popupMeta && (
+                              <div className="mt-2 p-2 rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                    Pop-up event: {popupSignups.length}/{popupMeta.maxPeople} spots
+                                  </div>
+                                  {popupJoined ? (
+                                    <button
+                                      onClick={() => leavePopupEvent(event.id)}
+                                      className="px-2 py-1 text-[11px] rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-200"
+                                    >
+                                      Leave
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => joinPopupEvent(event.id)}
+                                      disabled={popupFull}
+                                      className="px-2 py-1 text-[11px] rounded-md border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 disabled:opacity-50"
+                                    >
+                                      {popupFull ? 'Full' : 'Join'}
+                                    </button>
+                                  )}
+                                </div>
+                                {popupSignups.length > 0 && (
+                                  <div className="mt-1 text-[11px] text-emerald-700/90 dark:text-emerald-300/90 truncate">
+                                    {popupSignups.map((row) => row.displayName || 'Member').join(', ')}
+                                  </div>
                                 )}
                               </div>
                             )}
