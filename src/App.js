@@ -2176,6 +2176,9 @@ function App() {
   const [chatError, setChatError] = useState('');
   const [chatUnreadCounts, setChatUnreadCounts] = useState({});
   const [chatLastSeenByLayer, setChatLastSeenByLayer] = useState({});
+  const [chatMembers, setChatMembers] = useState([]);
+  const [chatPresenceByUserId, setChatPresenceByUserId] = useState({});
+  const [showChatMembersPanel, setShowChatMembersPanel] = useState(false);
   const [chatReactionPickerFor, setChatReactionPickerFor] = useState(null);
   const chatLastTapRef = useRef({ messageId: null, at: 0 });
   const [deletingChatMessageId, setDeletingChatMessageId] = useState(null);
@@ -3988,6 +3991,90 @@ function App() {
     setCalendarChatMessages((data || []).filter(row => !isDeletedChatMessage(row?.message)));
   };
 
+  const loadChatMembers = async () => {
+    if (!activeLayerId) {
+      setChatMembers([]);
+      return;
+    }
+    const membersMap = new Map();
+    const addMember = (member) => {
+      const key = String(member?.key || '').trim();
+      if (!key) return;
+      if (membersMap.has(key)) return;
+      membersMap.set(key, member);
+    };
+
+    const ownerId = String(activeLayerOwnerId || user?.id || '').trim();
+    const ownerLabel = String(
+      activeLayerOwnerId === user?.id
+        ? (currentUser || 'You')
+        : (sharedOwnerLabels?.[ownerId] || fallbackOwnerLabel(ownerId) || 'Owner')
+    ).trim();
+    if (ownerId) {
+      addMember({
+        key: `owner:${ownerId}`,
+        userId: ownerId,
+        label: ownerLabel || 'Owner',
+      });
+    }
+
+    let rows = [];
+    try {
+      const { data, error } = await supabase
+        .from('shared_access')
+        .select('shared_with_id,shared_with_email,shared_with_phone')
+        .eq('layer_id', activeLayerId);
+      if (!error) rows = data || [];
+    } catch {}
+
+    (rows || []).forEach((row) => {
+      const sharedWithId = String(row?.shared_with_id || '').trim();
+      const sharedWithEmail = normalizeEmail(row?.shared_with_email);
+      const sharedWithPhone = normalizePhoneNumber(row?.shared_with_phone);
+      const identity = sharedWithId || sharedWithEmail || sharedWithPhone;
+      if (!identity) return;
+      const isMe = sharedWithId && String(sharedWithId) === String(user?.id || '');
+      const label = isMe
+        ? 'You'
+        : (sharedWithEmail || sharedWithPhone || fallbackOwnerLabel(sharedWithId) || 'Member');
+      addMember({
+        key: `share:${identity}`,
+        userId: sharedWithId || null,
+        label: String(label || 'Member'),
+      });
+    });
+
+    // Fallback when shared_access visibility is limited.
+    if (rows.length === 0) {
+      (myShares || []).forEach((row) => {
+        const rowLayerId = String(row?.layer_id || row?.calendar_id || '').trim();
+        if (rowLayerId !== String(activeLayerId)) return;
+        const sharedWithId = String(row?.shared_with_id || '').trim();
+        const sharedWithEmail = normalizeEmail(row?.shared_with_email);
+        const sharedWithPhone = normalizePhoneNumber(row?.shared_with_phone);
+        const identity = sharedWithId || sharedWithEmail || sharedWithPhone;
+        if (!identity) return;
+        addMember({
+          key: `share:${identity}`,
+          userId: sharedWithId || null,
+          label: String(sharedWithEmail || sharedWithPhone || fallbackOwnerLabel(sharedWithId) || 'Member'),
+        });
+      });
+      if (String(activeLayerOwnerId || '') !== String(user?.id || '')) {
+        const meKey = String(user?.id || '').trim() || normalizeEmail(user?.email) || normalizePhoneNumber(user?.phone);
+        if (meKey) {
+          addMember({
+            key: `share:${meKey}`,
+            userId: String(user?.id || '').trim() || null,
+            label: 'You',
+          });
+        }
+      }
+    }
+
+    setChatMembers(Array.from(membersMap.values()));
+  };
+
   const sendCalendarChatMessage = async () => {
     const text = String(chatInput || '').trim();
     if (!text || !activeLayerId || !user?.id) return;
@@ -4749,6 +4836,61 @@ function App() {
     }
     loadCalendarChatMessages();
   }, [showChatPanel, activeLayerId]);
+
+  useEffect(() => {
+    if (!activeLayerId) {
+      setChatMembers([]);
+      setShowChatMembersPanel(false);
+      return;
+    }
+    loadChatMembers();
+  }, [activeLayerId, activeLayerOwnerId, user?.id, user?.email, user?.phone, currentUser, myShares, sharedOwnerLabels, layerRefreshToken]);
+
+  useEffect(() => {
+    if (!activeLayerId || !user?.id) {
+      setChatPresenceByUserId({});
+      return;
+    }
+    const presenceChannel = supabase.channel(`calendar-chat-presence-${activeLayerId}`, {
+      config: { presence: { key: String(user.id) } },
+    });
+    const syncPresence = () => {
+      const state = presenceChannel.presenceState();
+      const next = {};
+      Object.values(state || {}).forEach((metas) => {
+        (metas || []).forEach((meta) => {
+          const uid = String(meta?.userId || '').trim();
+          if (!uid) return;
+          next[uid] = {
+            userId: uid,
+            label: String(meta?.label || ''),
+            at: String(meta?.at || ''),
+          };
+        });
+      });
+      setChatPresenceByUserId(next);
+    };
+
+    presenceChannel
+      .on('presence', { event: 'sync' }, syncPresence)
+      .on('presence', { event: 'join' }, syncPresence)
+      .on('presence', { event: 'leave' }, syncPresence)
+      .subscribe(async (status) => {
+        if (status !== 'SUBSCRIBED') return;
+        if (showChatPanel) {
+          await presenceChannel.track({
+            userId: String(user.id),
+            label: String(currentUser || user?.email || user?.phone || 'Member'),
+            at: new Date().toISOString(),
+          });
+        }
+      });
+
+    return () => {
+      presenceChannel.unsubscribe();
+      setChatPresenceByUserId({});
+    };
+  }, [activeLayerId, user?.id, showChatPanel, currentUser, user?.email, user?.phone]);
 
   useEffect(() => {
     if (!activeLayerId) return;
@@ -7407,6 +7549,16 @@ function App() {
   const unreadInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 0 : 1), 0);
   const readInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 1 : 0), 0);
   const activeChatUnreadCount = Number(chatUnreadCounts[String(activeLayerId || '')] || 0);
+  const chatTotalMembers = Math.max(1, Number(chatMembers.length || 0));
+  const chatOnlineMemberCount = chatMembers.reduce((sum, member) => (
+    member?.userId && chatPresenceByUserId[String(member.userId)] ? sum + 1 : sum
+  ), 0);
+  const chatMembersWithStatus = [...chatMembers].sort((a, b) => {
+    const aOnline = Boolean(a?.userId && chatPresenceByUserId[String(a.userId)]);
+    const bOnline = Boolean(b?.userId && chatPresenceByUserId[String(b.userId)]);
+    if (aOnline !== bOnline) return aOnline ? -1 : 1;
+    return String(a?.label || '').localeCompare(String(b?.label || ''));
+  });
   const selectedSharedListGroup = sharedListGroups.find(group => group.id === selectedSharedListId) || null;
   const incompleteSharedListItems = sharedListItems.filter(item => !item.done);
   const completedSharedListItems = sharedListItems.filter(item => item.done);
@@ -7490,6 +7642,7 @@ function App() {
                   const layerKey = String(activeLayerId || '');
                   const next = !showChatPanel;
                   setShowChatPanel(next);
+                  if (!next) setShowChatMembersPanel(false);
                   if (next && layerKey) markChatSeenForLayer(layerKey);
                 }}
                 className={`relative px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showChatPanel ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
@@ -8003,10 +8156,32 @@ function App() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border border-indigo-100 dark:border-indigo-800">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="text-lg sm:text-xl font-semibold text-indigo-600 dark:text-indigo-400">Calendar Chat</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg sm:text-xl font-semibold text-indigo-600 dark:text-indigo-400">Calendar Chat</h3>
+                  <button
+                    onClick={() => setShowChatMembersPanel(prev => !prev)}
+                    className="px-2 py-1 rounded-full text-[11px] font-semibold border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/25 text-indigo-700 dark:text-indigo-200"
+                    title="Show member status"
+                  >
+                    {chatOnlineMemberCount}/{chatTotalMembers} members
+                  </button>
+                </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Messages in this calendar are shared with everyone who has access.</p>
+                {showChatMembersPanel && (
+                  <div className="mt-2 w-full max-w-xs rounded-xl border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-gray-900 shadow-md p-2">
+                    {chatMembersWithStatus.map((member, idx) => {
+                      const online = Boolean(member?.userId && chatPresenceByUserId[String(member.userId)]);
+                      return (
+                        <div key={String(member?.key || `${member?.label || 'member'}-${idx}`)} className="flex items-center justify-between gap-2 px-1.5 py-1">
+                          <span className="text-xs text-gray-700 dark:text-gray-200 truncate">{member?.label || 'Member'}</span>
+                          <span className={`inline-block w-2 h-2 rounded-full ${online ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              <button onClick={() => setShowChatPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <button onClick={() => { setShowChatMembersPanel(false); setShowChatPanel(false); }} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
