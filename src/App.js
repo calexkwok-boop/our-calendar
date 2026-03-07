@@ -8176,14 +8176,16 @@ function App() {
 
                   {pollComposerStep === 'when' && (
                     <div className="space-y-3 min-w-0 overflow-hidden">
-                      <input
-                        autoFocus
-                        type="date"
-                        value={pollDateInput}
-                        onChange={(e) => setPollDateInput(e.target.value)}
-                        className="block w-full min-w-0 max-w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
-                        style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
-                      />
+                      <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800">
+                        <input
+                          autoFocus
+                          type="date"
+                          value={pollDateInput}
+                          onChange={(e) => setPollDateInput(e.target.value)}
+                          className="block w-full min-w-0 max-w-full px-3 py-2 text-sm bg-transparent dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none"
+                          style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', WebkitAppearance: 'none' }}
+                        />
+                      </div>
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => setPollComposerStep('menu')}
