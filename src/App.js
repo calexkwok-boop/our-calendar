@@ -2365,6 +2365,14 @@ function App() {
     return `${CHAT_POLL_PREFIX}${JSON.stringify(payload)}`;
   };
 
+  const coercePollIndex = (value, optionCount = null) => {
+    if (value === null || value === undefined || value === '') return null;
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isInteger(n) || n < 0) return null;
+    if (Number.isInteger(optionCount) && optionCount >= 0 && n >= optionCount) return null;
+    return n;
+  };
+
   const parsePollMessage = (message) => {
     const raw = String(message || '');
     if (!raw.startsWith(CHAT_POLL_PREFIX)) return null;
@@ -2397,8 +2405,8 @@ function App() {
         const winners = { what: null, where: null, when: null };
         const rawWinners = parsed?.winners && typeof parsed.winners === 'object' ? parsed.winners : {};
         ['what', 'where', 'when'].forEach((key) => {
-          const n = Number(rawWinners[key]);
-          if (Number.isInteger(n) && n >= 0 && n < (optionsByDimension[key] || []).length) winners[key] = n;
+          const n = coercePollIndex(rawWinners[key], (optionsByDimension[key] || []).length);
+          if (Number.isInteger(n)) winners[key] = n;
         });
         return {
           ...parsed,
@@ -2435,7 +2443,7 @@ function App() {
         votes,
         reactions: normalizeChatReactions(parsed?.reactions),
         resolved: Boolean(parsed.resolved),
-        winnerIndex: Number.isInteger(Number(parsed.winnerIndex)) ? Number(parsed.winnerIndex) : null,
+        winnerIndex: coercePollIndex(parsed?.winnerIndex, options.length),
         createdEventId: parsed.createdEventId ? String(parsed.createdEventId) : null,
       };
     } catch {
@@ -4181,9 +4189,9 @@ function App() {
       const dims = Array.isArray(poll?.dimensions) ? poll.dimensions : [];
       const winners = poll?.winners || {};
       const pick = (dim) => {
-        const idx = Number(winners?.[dim]);
+        const idx = coercePollIndex(winners?.[dim], (poll?.optionsByDimension?.[dim] || []).length);
         const opts = poll?.optionsByDimension?.[dim] || [];
-        if (!Number.isInteger(idx) || idx < 0 || idx >= opts.length) return null;
+        if (!Number.isInteger(idx)) return null;
         return String(opts[idx] || '').trim() || null;
       };
       const whereWinner = pick('where');
@@ -4199,8 +4207,8 @@ function App() {
         eventTime = range ? null : parseTimeFromText(whenWinner);
       }
     } else {
-      const winnerIndex = Number(poll.winnerIndex);
-      if (!Number.isInteger(winnerIndex) || winnerIndex < 0 || winnerIndex >= (poll.options || []).length) return null;
+      const winnerIndex = coercePollIndex(poll?.winnerIndex, (poll?.options || []).length);
+      if (!Number.isInteger(winnerIndex)) return null;
       const winnerOption = String(poll.options[winnerIndex] || '').trim();
       if (!winnerOption) return null;
       const pollFor = ['when', 'what', 'both'].includes(String(poll?.pollFor || '')) ? String(poll.pollFor) : 'both';
@@ -4349,7 +4357,10 @@ function App() {
         nextPoll.winners = { ...(poll.winners || {}), [dim]: null };
       }
       const dims = Array.isArray(nextPoll?.dimensions) ? nextPoll.dimensions : [];
-      shouldInsertEvent = dims.length > 0 && dims.every((key) => Number.isInteger(Number(nextPoll?.winners?.[key])));
+      shouldInsertEvent = dims.length > 0 && dims.every((key) => {
+        const opts = nextPoll?.optionsByDimension?.[key] || [];
+        return Number.isInteger(coercePollIndex(nextPoll?.winners?.[key], opts.length));
+      });
     } else {
       if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= poll.options.length) return;
       nextPoll.votes = {
@@ -4358,7 +4369,7 @@ function App() {
       };
       const majority = getPollMajorityWinner(nextPoll, null, eligibleVoterCount);
       if (Number.isInteger(majority.winnerIndex)) nextPoll.winnerIndex = majority.winnerIndex;
-      shouldInsertEvent = Number.isInteger(nextPoll.winnerIndex);
+      shouldInsertEvent = Number.isInteger(coercePollIndex(nextPoll?.winnerIndex, (nextPoll?.options || []).length));
     }
 
     const { data: updatedRow, error } = await supabase
@@ -8048,7 +8059,7 @@ function App() {
                                 const counts = getPollVoteCounts(poll, dim);
                                 const total = counts.reduce((sum, n) => sum + n, 0);
                                 const myVote = Number(poll?.votesByDimension?.[dim]?.[String(user?.id || '')]);
-                                const winner = Number(poll?.winners?.[dim]);
+                                const winner = coercePollIndex(poll?.winners?.[dim], options.length);
                                 const label = dim === 'what' ? 'What' : dim === 'where' ? 'Where' : 'When';
                                 return (
                                   <div key={`${msg?.id || 'poll'}-${dim}`} className={`rounded-lg border px-2.5 py-2 ${mine ? 'border-indigo-300/60 bg-indigo-500/20' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'}`}>
@@ -8095,7 +8106,7 @@ function App() {
                                   const voteCounts = getPollVoteCounts(poll);
                                   const voteTotal = voteCounts.reduce((sum, n) => sum + n, 0);
                                   const myVoteIndex = Number(poll?.votes?.[String(user?.id || '')]);
-                                  const winnerIndex = Number(poll?.winnerIndex);
+                                  const winnerIndex = coercePollIndex(poll?.winnerIndex, (poll?.options || []).length);
                                   const selected = myVoteIndex === idx;
                                   const isWinner = winnerIndex === idx;
                                   const pct = voteTotal > 0 ? Math.round((voteCounts[idx] / voteTotal) * 100) : 0;
