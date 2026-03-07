@@ -2175,6 +2175,8 @@ function App() {
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState('');
   const [chatUnreadCounts, setChatUnreadCounts] = useState({});
+  const [chatReactionPickerFor, setChatReactionPickerFor] = useState(null);
+  const chatLastTapRef = useRef({ messageId: null, at: 0 });
   const [deletingChatMessageId, setDeletingChatMessageId] = useState(null);
   const [showCreateEventPopup, setShowCreateEventPopup] = useState(false);
   const [pollComposerStep, setPollComposerStep] = useState('menu');
@@ -2204,6 +2206,8 @@ function App() {
   const calendarChatScrollRef = useRef(null);
   const CHAT_POLL_PREFIX = '[poll-v1]';
   const CHAT_DELETED_PREFIX = '[deleted-v1]';
+  const CHAT_MESSAGE_PREFIX = '[msg-v1]';
+  const CHAT_REACTION_EMOJIS = ['👍', '❤️', '😂', '🔥', '🙏', '👀'];
 
   const parseDateFromText = (text) => {
     const raw = String(text || '');
@@ -2263,6 +2267,46 @@ function App() {
 
   const isDeletedChatMessage = (message) => String(message || '').startsWith(CHAT_DELETED_PREFIX);
 
+  const buildTextChatMessage = (text, reactions = {}) => (
+    `${CHAT_MESSAGE_PREFIX}${JSON.stringify({ type: 'msg', text: String(text || ''), reactions: reactions || {} })}`
+  );
+
+  const parseTextChatMessage = (message) => {
+    const raw = String(message || '');
+    if (!raw.startsWith(CHAT_MESSAGE_PREFIX)) return null;
+    try {
+      const parsed = JSON.parse(raw.slice(CHAT_MESSAGE_PREFIX.length));
+      const text = String(parsed?.text || '');
+      if (!text) return null;
+      const reactions = (parsed && typeof parsed.reactions === 'object' && parsed.reactions !== null) ? parsed.reactions : {};
+      return { text, reactions };
+    } catch {
+      return null;
+    }
+  };
+
+  const normalizeChatReactions = (reactions) => {
+    const next = {};
+    if (!reactions || typeof reactions !== 'object') return next;
+    Object.entries(reactions).forEach(([emoji, users]) => {
+      const ids = Array.isArray(users) ? Array.from(new Set(users.map(v => String(v || '').trim()).filter(Boolean))) : [];
+      if (ids.length > 0) next[String(emoji)] = ids;
+    });
+    return next;
+  };
+
+  const toggleChatReaction = (reactions, emoji, userId) => {
+    const current = normalizeChatReactions(reactions);
+    const key = String(emoji || '').trim();
+    const uid = String(userId || '').trim();
+    if (!key || !uid) return current;
+    const set = new Set(current[key] || []);
+    if (set.has(uid)) set.delete(uid); else set.add(uid);
+    if (set.size === 0) delete current[key];
+    else current[key] = Array.from(set);
+    return current;
+  };
+
   const buildPollMessage = ({ question, dateKey, createdBy, dimensions = [], optionsByDimension = {} }) => {
     const dims = ['what', 'where', 'when'].filter((key) => (dimensions || []).includes(key));
     const normalizedOptions = {
@@ -2279,6 +2323,7 @@ function App() {
       optionsByDimension: normalizedOptions,
       votesByDimension: { what: {}, where: {}, when: {} },
       winners: { what: null, where: null, when: null },
+      reactions: {},
       resolved: false,
       createdEventId: null,
       createdBy: String(createdBy || '').trim() || 'Member',
@@ -2298,6 +2343,7 @@ function App() {
       votes: {},
       resolved: false,
       winnerIndex: null,
+      reactions: {},
       createdEventId: null,
       createdBy: String(createdBy || '').trim() || 'Member',
       createdAt: new Date().toISOString(),
@@ -2349,6 +2395,7 @@ function App() {
           optionsByDimension,
           votesByDimension,
           winners,
+          reactions: normalizeChatReactions(parsed?.reactions),
           resolved: Boolean(parsed.resolved),
           createdEventId: parsed.createdEventId ? String(parsed.createdEventId) : null,
         };
@@ -2372,6 +2419,7 @@ function App() {
         pollFor: ['when', 'what', 'both'].includes(String(parsed?.pollFor || '')) ? String(parsed.pollFor) : 'both',
         eventTitle: parsed?.eventTitle ? String(parsed.eventTitle) : null,
         votes,
+        reactions: normalizeChatReactions(parsed?.reactions),
         resolved: Boolean(parsed.resolved),
         winnerIndex: Number.isInteger(Number(parsed.winnerIndex)) ? Number(parsed.winnerIndex) : null,
         createdEventId: parsed.createdEventId ? String(parsed.createdEventId) : null,
@@ -3880,7 +3928,7 @@ function App() {
       calendar_id: activeLayerId,
       user_id: user.id,
       created_by: currentUser || user?.email || user?.phone || 'User',
-      message: text,
+      message: buildTextChatMessage(text, {}),
       created_at: new Date().toISOString(),
     };
     const { data, error } = await supabase
@@ -4012,6 +4060,48 @@ function App() {
     setChatError('');
     setCalendarChatMessages(prev => prev.filter(row => String(row?.id || '') !== messageId));
     setDeletingChatMessageId(null);
+  };
+
+  const reactToChatMessage = async (messageRow, emoji) => {
+    const messageId = String(messageRow?.id || '');
+    if (!messageId || !activeLayerId || !user?.id || !emoji) return;
+    const raw = String(messageRow?.message || '');
+    if (!raw || isDeletedChatMessage(raw)) return;
+
+    const poll = parsePollMessage(raw);
+    const textPayload = poll ? null : parseTextChatMessage(raw);
+    const fallbackText = (!poll && !textPayload) ? raw : '';
+    const currentReactions = poll
+      ? normalizeChatReactions(poll?.reactions)
+      : normalizeChatReactions(textPayload?.reactions);
+    const nextReactions = toggleChatReaction(currentReactions, emoji, user.id);
+
+    let nextMessage = raw;
+    if (poll) {
+      nextMessage = `${CHAT_POLL_PREFIX}${JSON.stringify({ ...poll, reactions: nextReactions })}`;
+    } else if (textPayload) {
+      nextMessage = buildTextChatMessage(textPayload.text, nextReactions);
+    } else {
+      nextMessage = buildTextChatMessage(fallbackText, nextReactions);
+    }
+
+    const { data, error } = await supabase
+      .from('calendar_messages')
+      .update({ message: nextMessage })
+      .eq('id', messageId)
+      .eq('layer_id', activeLayerId)
+      .select('*')
+      .single();
+    if (error) {
+      console.error('Error reacting to chat message:', error);
+      setChatError(`Could not add reaction: ${error.message}`);
+      return;
+    }
+    setChatError('');
+    setChatReactionPickerFor(null);
+    if (data) {
+      setCalendarChatMessages(prev => prev.map(row => String(row?.id || '') === messageId ? data : row));
+    }
   };
 
   const insertPollWinnerEvent = async (poll, pollMessageId) => {
@@ -7791,8 +7881,29 @@ function App() {
                   const mine = String(msg?.user_id || '') === String(user?.id || '');
                   const who = String(msg?.created_by || msg?.email || 'Member');
                   const poll = parsePollMessage(msg?.message);
+                  const textPayload = poll ? null : parseTextChatMessage(msg?.message);
+                  const displayText = textPayload ? textPayload.text : String(msg?.message || '');
+                  const chatReactions = poll
+                    ? normalizeChatReactions(poll?.reactions)
+                    : normalizeChatReactions(textPayload?.reactions);
+                  const messageId = String(msg?.id || '');
                   return (
-                    <div key={String(msg?.id || `${who}-${msg?.created_at || ''}`)} className={`max-w-[90%] sm:max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap break-words ${mine ? 'ml-auto bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}>
+                    <div
+                      key={String(msg?.id || `${who}-${msg?.created_at || ''}`)}
+                      onPointerUp={(e) => {
+                        if (!messageId || isDeletedChatMessage(msg?.message)) return;
+                        if (e.button !== undefined && e.button !== 0) return;
+                        const now = Date.now();
+                        const last = chatLastTapRef.current;
+                        if (last.messageId === messageId && (now - last.at) < 320) {
+                          setChatReactionPickerFor(prev => prev === messageId ? null : messageId);
+                          chatLastTapRef.current = { messageId: null, at: 0 };
+                        } else {
+                          chatLastTapRef.current = { messageId, at: now };
+                        }
+                      }}
+                      className={`max-w-[90%] sm:max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap break-words ${mine ? 'ml-auto bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}
+                    >
                       <div className="mb-1 flex items-center justify-between gap-2">
                         <div className={`text-[10px] ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>{mine ? 'You' : who}</div>
                         {mine && (
@@ -7896,7 +8007,34 @@ function App() {
                           </div>
                         </div>
                       ) : (
-                        <div>{msg?.message}</div>
+                        <div>{displayText}</div>
+                      )}
+                      {Object.keys(chatReactions).length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {Object.entries(chatReactions).map(([emoji, users]) => (
+                            <button
+                              key={`${messageId}-rx-${emoji}`}
+                              onClick={() => reactToChatMessage(msg, emoji)}
+                              className={`px-1.5 py-0.5 rounded-full text-[11px] border ${mine ? 'border-indigo-200/70 bg-indigo-500/40 text-white' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200'}`}
+                            >
+                              {emoji} {Array.isArray(users) ? users.length : 0}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {chatReactionPickerFor === messageId && !isDeletedChatMessage(msg?.message) && (
+                        <div className={`mt-1.5 inline-flex items-center gap-1 rounded-full border px-2 py-1 ${mine ? 'border-indigo-200/70 bg-indigo-500/45' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'}`}>
+                          {CHAT_REACTION_EMOJIS.map((emoji) => (
+                            <button
+                              key={`${messageId}-picker-${emoji}`}
+                              onClick={() => reactToChatMessage(msg, emoji)}
+                              className="text-base leading-none hover:scale-110 transition-transform"
+                              title={`React ${emoji}`}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
                       )}
                       <div className={`text-[10px] mt-1 ${mine ? 'text-indigo-100/90' : 'text-gray-400 dark:text-gray-500'}`}>{msg?.created_at ? new Date(msg.created_at).toLocaleString() : ''}</div>
                     </div>
@@ -7984,6 +8122,7 @@ function App() {
                         value={pollDateInput}
                         onChange={(e) => setPollDateInput(e.target.value)}
                         className="block w-full min-w-0 max-w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                        style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                       />
                       <div className="flex justify-end gap-2">
                         <button
