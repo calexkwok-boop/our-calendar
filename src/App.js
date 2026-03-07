@@ -8257,13 +8257,13 @@ function App() {
                                             onClick={() => voteOnChatPoll(msg, idx, dim)}
                                             disabled={Boolean(poll.resolved)}
                                             className={`w-full text-left px-2 py-1.5 rounded-lg border transition-colors ${mine
-                                              ? (selected ? 'bg-violet-200 border-violet-300 text-violet-950' : 'bg-violet-100 border-violet-200 text-violet-950 hover:bg-violet-200')
-                                              : (selected ? 'bg-violet-50 dark:bg-violet-900/30 border-violet-300 dark:border-violet-700' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-700')
+                                              ? (selected ? 'bg-emerald-200 border-emerald-300 text-emerald-950' : 'bg-emerald-100 border-emerald-200 text-emerald-950 hover:bg-emerald-200')
+                                              : (selected ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-700')
                                             } ${poll.resolved ? 'cursor-default opacity-90' : ''}`}
                                           >
                                             <div className="flex items-center justify-between gap-2">
                                               <span className="truncate min-w-0">{idx + 1}. {opt}</span>
-                                              <span className={`text-[10px] shrink-0 ${mine ? 'text-violet-700' : 'text-gray-500 dark:text-gray-400'}`}>
+                                              <span className={`text-[10px] shrink-0 ${mine ? 'text-emerald-700' : 'text-gray-500 dark:text-gray-400'}`}>
                                                 {counts[idx]} ({pct}%)
                                               </span>
                                             </div>
@@ -8298,13 +8298,13 @@ function App() {
                                       onClick={() => voteOnChatPoll(msg, idx)}
                                       disabled={Boolean(poll.resolved)}
                                       className={`w-full text-left px-2.5 py-1.5 rounded-lg border transition-colors ${mine
-                                        ? (selected ? 'bg-violet-200 border-violet-300 text-violet-950' : 'bg-violet-100 border-violet-200 text-violet-950 hover:bg-violet-200')
-                                        : (selected ? 'bg-violet-50 dark:bg-violet-900/30 border-violet-300 dark:border-violet-700' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-700')
+                                        ? (selected ? 'bg-emerald-200 border-emerald-300 text-emerald-950' : 'bg-emerald-100 border-emerald-200 text-emerald-950 hover:bg-emerald-200')
+                                        : (selected ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-700')
                                       } ${poll.resolved ? 'cursor-default opacity-90' : ''}`}
                                     >
                                       <div className="flex items-center justify-between gap-2">
                                         <span className="truncate min-w-0">{idx + 1}. {opt}</span>
-                                        <span className={`text-[11px] shrink-0 ${mine ? 'text-violet-700' : 'text-gray-500 dark:text-gray-400'}`}>
+                                        <span className={`text-[11px] shrink-0 ${mine ? 'text-emerald-700' : 'text-gray-500 dark:text-gray-400'}`}>
                                           {voteCounts[idx]} vote{voteCounts[idx] === 1 ? '' : 's'} ({pct}%)
                                         </span>
                                       </div>
