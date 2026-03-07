@@ -2176,6 +2176,7 @@ function App() {
   const [chatError, setChatError] = useState('');
   const [showCreateEventPopup, setShowCreateEventPopup] = useState(false);
   const [pollComposerStep, setPollComposerStep] = useState('menu');
+  const [pollScope, setPollScope] = useState('both');
   const [pollQuestionInput, setPollQuestionInput] = useState('');
   const [pollDateInput, setPollDateInput] = useState(() => {
     const now = new Date();
@@ -2204,6 +2205,16 @@ function App() {
 
   const parseDateFromText = (text) => {
     const raw = String(text || '');
+    const iso = raw.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+    if (iso) {
+      const year = Number(iso[1]);
+      const month = Number(iso[2]);
+      const day = Number(iso[3]);
+      const d = new Date(year, month - 1, day);
+      if (d.getFullYear() === year && d.getMonth() === (month - 1) && d.getDate() === day) {
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
+    }
     const m = raw.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b/);
     if (!m) return null;
     const month = Number(m[1]);
@@ -2217,12 +2228,14 @@ function App() {
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   };
 
-  const buildPollMessage = ({ question, dateKey, options, createdBy }) => {
+  const buildPollMessage = ({ question, dateKey, options, createdBy, pollFor = 'both', eventTitle = null }) => {
     const payload = {
       type: 'poll',
       question: String(question || '').trim(),
       dateKey: String(dateKey || ''),
       options: (options || []).map(v => String(v || '').trim()).filter(Boolean).slice(0, 8),
+      pollFor: ['when', 'what', 'both'].includes(String(pollFor)) ? String(pollFor) : 'both',
+      eventTitle: eventTitle ? String(eventTitle).trim() : null,
       votes: {},
       resolved: false,
       winnerIndex: null,
@@ -2252,6 +2265,8 @@ function App() {
         question: String(parsed.question),
         dateKey: String(parsed.dateKey || ''),
         options,
+        pollFor: ['when', 'what', 'both'].includes(String(parsed?.pollFor || '')) ? String(parsed.pollFor) : 'both',
+        eventTitle: parsed?.eventTitle ? String(parsed.eventTitle) : null,
         votes,
         resolved: Boolean(parsed.resolved),
         winnerIndex: Number.isInteger(Number(parsed.winnerIndex)) ? Number(parsed.winnerIndex) : null,
@@ -3780,14 +3795,14 @@ function App() {
 
   const sendCalendarChatPollMessage = async () => {
     if (!activeLayerId || !user?.id) return;
-    const question = String(pollQuestionInput || '').trim();
+    const rawQuestion = String(pollQuestionInput || '').trim();
     const dateKey = String(pollDateInput || '').trim();
     const options = (pollOptionsInput || []).map(v => String(v || '').trim()).filter(Boolean);
-    if (!question) {
+    if (!rawQuestion) {
       setChatError('Add a question for the event vote.');
       return;
     }
-    if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    if (pollScope !== 'when' && (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey))) {
       setChatError('Choose a valid event date.');
       return;
     }
@@ -3795,6 +3810,11 @@ function App() {
       setChatError('Add at least two options to vote on.');
       return;
     }
+    const baseDateKey = dateKey || getDateKey(selectedDate || new Date());
+    const eventTitle = rawQuestion.replace(/\?+$/, '').trim();
+    const question = pollScope === 'when'
+      ? `When should we ${eventTitle || 'do this'}?`
+      : rawQuestion;
 
     const payload = {
       layer_id: activeLayerId,
@@ -3803,9 +3823,11 @@ function App() {
       created_by: currentUser || user?.email || user?.phone || 'User',
       message: buildPollMessage({
         question,
-        dateKey,
+        dateKey: baseDateKey,
         options,
         createdBy: currentUser || user?.email || user?.phone || 'User',
+        pollFor: pollScope,
+        eventTitle: pollScope === 'when' ? eventTitle : null,
       }),
       created_at: new Date().toISOString(),
     };
@@ -3824,6 +3846,7 @@ function App() {
     setChatError('');
     setShowCreateEventPopup(false);
     setPollComposerStep('menu');
+    setPollScope('both');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
     setPollOptionsInput(['', '']);
@@ -3839,6 +3862,7 @@ function App() {
   const resetPollComposer = () => {
     setShowCreateEventPopup(false);
     setPollComposerStep('menu');
+    setPollScope('both');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
     setPollOptionsInput(['', '']);
@@ -3851,12 +3875,21 @@ function App() {
     const winnerOption = String(poll.options[winnerIndex] || '').trim();
     if (!winnerOption) return null;
 
-    const eventDateKey = parseDateFromText(poll.dateKey) || poll.dateKey || getDateKey(new Date());
+    const pollFor = ['when', 'what', 'both'].includes(String(poll?.pollFor || '')) ? String(poll.pollFor) : 'both';
+    let eventDateKey = parseDateFromText(poll.dateKey) || poll.dateKey || getDateKey(new Date());
+    if (pollFor === 'when') {
+      const winnerDate = parseDateFromText(winnerOption);
+      if (winnerDate) eventDateKey = winnerDate;
+    }
+    const fallbackTitle = String(poll?.eventTitle || poll?.question || '').replace(/\?+$/, '').trim();
+    const eventTitle = pollFor === 'when'
+      ? (fallbackTitle || winnerOption)
+      : (pollFor === 'what' ? winnerOption : `${poll.question}: ${winnerOption}`);
     const eventId = `${Date.now()}-${Math.random()}`;
     const eventPayload = {
       id: eventId,
       date: eventDateKey,
-      title: `${poll.question}: ${winnerOption}`,
+      title: eventTitle,
       time: null,
       category: 'other',
       is_private: false,
@@ -7501,6 +7534,7 @@ function App() {
                   const voteTotal = voteCounts.reduce((sum, n) => sum + n, 0);
                   const myVoteIndex = poll ? Number(poll?.votes?.[String(user?.id || '')]) : null;
                   const winnerIndex = poll && Number.isInteger(Number(poll?.winnerIndex)) ? Number(poll.winnerIndex) : null;
+                  const pollFor = poll?.pollFor || 'both';
                   return (
                     <div key={String(msg?.id || `${who}-${msg?.created_at || ''}`)} className={`max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap ${mine ? 'ml-auto bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}>
                       <div className={`text-[10px] mb-1 ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>{mine ? 'You' : who}</div>
@@ -7508,7 +7542,9 @@ function App() {
                         <div className={`${mine ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
                           <div className="font-semibold">{poll.question}</div>
                           <div className={`text-[11px] mt-0.5 ${mine ? 'text-indigo-100/90' : 'text-gray-500 dark:text-gray-400'}`}>
-                            Vote to add an event on {poll.dateKey || getDateKey(new Date())}
+                            {pollFor === 'when'
+                              ? 'Vote on the date for this event.'
+                              : `Vote to add an event on ${poll.dateKey || getDateKey(new Date())}`}
                           </div>
                           <div className="mt-2 space-y-1.5">
                             {poll.options.map((opt, idx) => {
@@ -7562,6 +7598,7 @@ function App() {
             <div className="mt-3 flex gap-2">
               <button
                 onClick={() => {
+                  setPollScope('both');
                   setPollQuestionInput('');
                   setPollDateInput(getDateKey(selectedDate || new Date()));
                   setPollOptionsInput(['', '']);
@@ -7602,7 +7639,15 @@ function App() {
                 <div className="w-full max-w-md rounded-2xl border border-indigo-100 dark:border-indigo-800 bg-white dark:bg-gray-800 p-4 shadow-2xl">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-base font-semibold text-indigo-600 dark:text-indigo-400">
-                      {pollComposerStep === 'menu' ? 'Create an event poll' : pollComposerStep === 'question' ? "What's the event?" : pollComposerStep === 'date' ? "When's the event?" : 'Options menu'}
+                      {pollComposerStep === 'menu'
+                        ? 'Create an event poll'
+                        : pollComposerStep === 'scope'
+                          ? 'What are we polling for?'
+                          : pollComposerStep === 'question'
+                            ? "What's the event?"
+                            : pollComposerStep === 'date'
+                              ? "When's the event?"
+                              : 'Options menu'}
                     </h4>
                     <button
                       onClick={resetPollComposer}
@@ -7614,12 +7659,58 @@ function App() {
 
                   {pollComposerStep === 'menu' && (
                     <button
-                      onClick={() => setPollComposerStep('question')}
+                      onClick={() => setPollComposerStep('scope')}
                       className="w-full px-3 py-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
                     >
                       <div className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">📅✏️ Create an event poll</div>
                       <div className="text-xs text-indigo-600/90 dark:text-indigo-400/90 mt-0.5">Ask your calendar members to vote, then auto-add the winner.</div>
                     </button>
+                  )}
+
+                  {pollComposerStep === 'scope' && (
+                    <div className="space-y-2.5">
+                      <button
+                        onClick={() => {
+                          setPollScope('when');
+                          const d0 = new Date(selectedDate || new Date());
+                          const d1 = new Date(d0);
+                          d1.setDate(d1.getDate() + 1);
+                          const d2 = new Date(d0);
+                          d2.setDate(d2.getDate() + 2);
+                          setPollOptionsInput([getDateKey(d0), getDateKey(d1), getDateKey(d2)]);
+                          setPollQuestionInput('');
+                          setPollComposerStep('question');
+                        }}
+                        className="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-left hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        When?
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPollScope('what');
+                          setPollQuestionInput('');
+                          setPollOptionsInput(['', '']);
+                          setPollComposerStep('question');
+                        }}
+                        className="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-left hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        What?
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPollScope('both');
+                          setPollQuestionInput('');
+                          setPollOptionsInput(['', '']);
+                          setPollComposerStep('question');
+                        }}
+                        className="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-left hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        Both?
+                      </button>
+                      <div className="flex justify-end">
+                        <button onClick={() => setPollComposerStep('menu')} className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">Back</button>
+                      </div>
+                    </div>
                   )}
 
                   {pollComposerStep === 'question' && (
@@ -7629,11 +7720,11 @@ function App() {
                         type="text"
                         value={pollQuestionInput}
                         onChange={(e) => setPollQuestionInput(e.target.value)}
-                        placeholder="e.g. What's for lunch?"
+                        placeholder={pollScope === 'when' ? 'e.g. Team lunch' : "e.g. What's for lunch?"}
                         className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
                       />
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => setPollComposerStep('menu')} className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">Back</button>
+                        <button onClick={() => setPollComposerStep('scope')} className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">Back</button>
                         <button
                           onClick={() => {
                             if (!pollQuestionInput.trim()) {
@@ -7641,7 +7732,8 @@ function App() {
                               return;
                             }
                             setChatError('');
-                            setPollComposerStep('date');
+                            if (pollScope === 'when') setPollComposerStep('options');
+                            else setPollComposerStep('date');
                           }}
                           className="px-3 py-2 text-sm rounded-xl bg-indigo-600 text-white font-semibold"
                         >
@@ -7691,7 +7783,7 @@ function App() {
                               next[idx] = e.target.value;
                               setPollOptionsInput(next);
                             }}
-                            placeholder={`Option ${idx + 1}`}
+                            placeholder={pollScope === 'when' ? `Date option ${idx + 1} (YYYY-MM-DD)` : `Option ${idx + 1}`}
                             className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
                           />
                           {pollOptionsInput.length > 2 && (
@@ -7713,7 +7805,7 @@ function App() {
                       </button>
                       <div className="mt-4 flex justify-end gap-2">
                         <button
-                          onClick={() => setPollComposerStep('date')}
+                          onClick={() => setPollComposerStep(pollScope === 'when' ? 'question' : 'date')}
                           className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
                         >
                           Back
