@@ -2211,7 +2211,7 @@ function App() {
   const CHAT_POLL_PREFIX = '[poll-v1]';
   const CHAT_DELETED_PREFIX = '[deleted-v1]';
   const CHAT_MESSAGE_PREFIX = '[msg-v1]';
-  const CHAT_REACTION_EMOJIS = ['👍', '❤️', '😂', '🔥', '🙏', '👀', '🎉', '✅', '👏', '🤔', '😮', '😢', '😡', '🍕', '☕'];
+  const CHAT_REACTION_EMOJIS = ['👍', '❤️', '😂', '🔥', '🙏', '👀', '🎉', '✅', '👏', '🤔', '😮', '😢', '😡', '🤣', '😍', '🥳', '🙌', '💯', '🤝', '👎', '🍕', '☕', '🍔', '🌮', '🍣', '🏆', '🎯', '🚀'];
 
   const parseDateFromText = (text) => {
     const raw = String(text || '');
@@ -8405,17 +8405,19 @@ function App() {
                         </div>
                       )}
                       {chatReactionPickerFor === messageId && !isDeletedChatMessage(msg?.message) && (
-                        <div className={`mt-1.5 inline-flex items-center gap-1 rounded-full border px-2 py-1 ${mine ? 'border-indigo-200/70 bg-indigo-500/45' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'}`}>
+                        <div className={`mt-1.5 max-w-full rounded-full border px-2 py-1 ${mine ? 'border-indigo-200/70 bg-indigo-500/45' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'}`}>
+                          <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pr-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
                           {CHAT_REACTION_EMOJIS.map((emoji) => (
                             <button
                               key={`${messageId}-picker-${emoji}`}
                               onClick={() => reactToChatMessage(msg, emoji)}
-                              className="text-base leading-none hover:scale-110 transition-transform"
+                              className="shrink-0 text-base leading-none hover:scale-110 transition-transform"
                               title={`React ${emoji}`}
                             >
                               {emoji}
                             </button>
                           ))}
+                          </div>
                         </div>
                       )}
                       <div className={`text-[10px] mt-1 ${mine ? 'text-indigo-100/90' : 'text-gray-400 dark:text-gray-500'}`}>{msg?.created_at ? new Date(msg.created_at).toLocaleString() : ''}</div>
