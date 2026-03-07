@@ -2184,6 +2184,8 @@ function App() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
   const [pollOptionsInput, setPollOptionsInput] = useState(['', '']);
+  const [whenOptionDateInput, setWhenOptionDateInput] = useState('');
+  const [whenOptionTimeInput, setWhenOptionTimeInput] = useState('');
   const [selectedSharedListId, setSelectedSharedListId] = useState(null);
   const [newSharedListTitle, setNewSharedListTitle] = useState('');
   const [newListItemText, setNewListItemText] = useState('');
@@ -2227,6 +2229,13 @@ function App() {
     const d = new Date(year, month - 1, day);
     if (d.getFullYear() !== year || d.getMonth() !== (month - 1) || d.getDate() !== day) return null;
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  const parseTimeFromText = (text) => {
+    const raw = String(text || '');
+    const m = raw.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+    if (!m) return null;
+    return `${String(Number(m[1])).padStart(2, '0')}:${m[2]}`;
   };
 
   const buildPollMessage = ({ question, dateKey, options, createdBy, pollFor = 'both', eventTitle = null }) => {
@@ -3851,6 +3860,8 @@ function App() {
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
     setPollOptionsInput(['', '']);
+    setWhenOptionDateInput('');
+    setWhenOptionTimeInput('');
     if (data) {
       setCalendarChatMessages((prev) => {
         const exists = prev.some((row) => String(row?.id || '') === String(data?.id || ''));
@@ -3867,6 +3878,8 @@ function App() {
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
     setPollOptionsInput(['', '']);
+    setWhenOptionDateInput('');
+    setWhenOptionTimeInput('');
   };
 
   const deleteCalendarChatMessage = async (messageRow) => {
@@ -3902,9 +3915,11 @@ function App() {
 
     const pollFor = ['when', 'what', 'both'].includes(String(poll?.pollFor || '')) ? String(poll.pollFor) : 'both';
     let eventDateKey = parseDateFromText(poll.dateKey) || poll.dateKey || getDateKey(new Date());
+    let eventTime = null;
     if (pollFor === 'when') {
       const winnerDate = parseDateFromText(winnerOption);
       if (winnerDate) eventDateKey = winnerDate;
+      eventTime = parseTimeFromText(winnerOption);
     }
     const fallbackTitle = String(poll?.eventTitle || poll?.question || '').replace(/\?+$/, '').trim();
     const eventTitle = pollFor === 'when'
@@ -3915,7 +3930,7 @@ function App() {
       id: eventId,
       date: eventDateKey,
       title: eventTitle,
-      time: null,
+      time: eventTime,
       category: 'other',
       is_private: false,
       is_private_for: null,
@@ -7648,6 +7663,8 @@ function App() {
                   setPollQuestionInput('');
                   setPollDateInput(getDateKey(selectedDate || new Date()));
                   setPollOptionsInput(['', '']);
+                  setWhenOptionDateInput(getDateKey(selectedDate || new Date()));
+                  setWhenOptionTimeInput('');
                   setPollComposerStep('menu');
                   setShowCreateEventPopup(true);
                   if (chatError) setChatError('');
@@ -7718,12 +7735,9 @@ function App() {
                       <button
                         onClick={() => {
                           setPollScope('when');
-                          const d0 = new Date(selectedDate || new Date());
-                          const d1 = new Date(d0);
-                          d1.setDate(d1.getDate() + 1);
-                          const d2 = new Date(d0);
-                          d2.setDate(d2.getDate() + 2);
-                          setPollOptionsInput([getDateKey(d0), getDateKey(d1), getDateKey(d2)]);
+                          setPollOptionsInput([]);
+                          setWhenOptionDateInput(getDateKey(selectedDate || new Date()));
+                          setWhenOptionTimeInput('');
                           setPollQuestionInput('');
                           setPollComposerStep('question');
                         }}
@@ -7819,36 +7833,99 @@ function App() {
 
                   {pollComposerStep === 'options' && (
                     <div className="space-y-2.5">
-                      {pollOptionsInput.map((opt, idx) => (
-                        <div key={`poll-opt-input-${idx}`} className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={opt}
-                            onChange={(e) => {
-                              const next = [...pollOptionsInput];
-                              next[idx] = e.target.value;
-                              setPollOptionsInput(next);
-                            }}
-                            placeholder={pollScope === 'when' ? `Date option ${idx + 1} (YYYY-MM-DD)` : `Option ${idx + 1}`}
-                            className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
-                          />
-                          {pollOptionsInput.length > 2 && (
-                            <button
-                              onClick={() => setPollOptionsInput(prev => prev.filter((_, optionIdx) => optionIdx !== idx))}
-                              className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/30"
-                              title="Remove option"
-                            >
-                              Remove
-                            </button>
+                      {pollScope === 'when' ? (
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input
+                              type="date"
+                              value={whenOptionDateInput}
+                              onChange={(e) => {
+                                setWhenOptionDateInput(e.target.value);
+                                if (e.target.value) setWhenOptionTimeInput('12:00');
+                              }}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                            />
+                            <input
+                              type="time"
+                              value={whenOptionTimeInput}
+                              onChange={(e) => setWhenOptionTimeInput(e.target.value)}
+                              disabled={!whenOptionDateInput}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
+                            />
+                          </div>
+                          {whenOptionDateInput && (
+                            <p className="text-[11px] text-indigo-600 dark:text-indigo-300">Date selected. Choose a time, then add this option.</p>
                           )}
-                        </div>
-                      ))}
-                      <button
-                        onClick={() => setPollOptionsInput(prev => prev.length >= 8 ? prev : [...prev, ''])}
-                        className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/30"
-                      >
-                        + Add option
-                      </button>
+                          <button
+                            onClick={() => {
+                              if (!whenOptionDateInput) {
+                                setChatError('Pick a date first.');
+                                return;
+                              }
+                              if (!whenOptionTimeInput) {
+                                setChatError('Pick a time for this option.');
+                                return;
+                              }
+                              const optionText = `${whenOptionDateInput} ${whenOptionTimeInput}`;
+                              setPollOptionsInput(prev => {
+                                if (prev.includes(optionText) || prev.length >= 8) return prev;
+                                return [...prev, optionText];
+                              });
+                              setChatError('');
+                            }}
+                            className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/30"
+                          >
+                            + Add date/time option
+                          </button>
+                          {pollOptionsInput.map((opt, idx) => (
+                            <div key={`poll-opt-when-${idx}`} className="flex items-center gap-2">
+                              <div className="flex-1 px-3 py-2 text-sm rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/70 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-200">
+                                {opt}
+                              </div>
+                              <button
+                                onClick={() => setPollOptionsInput(prev => prev.filter((_, optionIdx) => optionIdx !== idx))}
+                                className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/30"
+                                title="Remove option"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <>
+                          {pollOptionsInput.map((opt, idx) => (
+                            <div key={`poll-opt-input-${idx}`} className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={opt}
+                                onChange={(e) => {
+                                  const next = [...pollOptionsInput];
+                                  next[idx] = e.target.value;
+                                  setPollOptionsInput(next);
+                                }}
+                                placeholder={`Option ${idx + 1}`}
+                                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                              />
+                              {pollOptionsInput.length > 2 && (
+                                <button
+                                  onClick={() => setPollOptionsInput(prev => prev.filter((_, optionIdx) => optionIdx !== idx))}
+                                  className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/30"
+                                  title="Remove option"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                          <button
+                            onClick={() => setPollOptionsInput(prev => prev.length >= 8 ? prev : [...prev, ''])}
+                            className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/30"
+                          >
+                            + Add option
+                          </button>
+                        </>
+                      )}
                       <div className="mt-4 flex justify-end gap-2">
                         <button
                           onClick={() => setPollComposerStep(pollScope === 'when' ? 'question' : 'date')}
