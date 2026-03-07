@@ -4057,6 +4057,7 @@ function App() {
 
     (rows || []).forEach((row) => {
       const sharedWithId = String(row?.shared_with_id || '').trim();
+      if (!sharedWithId) return; // only count accepted members
       const sharedWithEmail = normalizeEmail(row?.shared_with_email);
       const sharedWithPhone = normalizePhoneNumber(row?.shared_with_phone);
       const identity = sharedWithId || sharedWithEmail || sharedWithPhone;
@@ -4078,6 +4079,7 @@ function App() {
         const rowLayerId = String(row?.layer_id || row?.calendar_id || '').trim();
         if (rowLayerId !== String(activeLayerId)) return;
         const sharedWithId = String(row?.shared_with_id || '').trim();
+        if (!sharedWithId) return; // only count accepted members
         const sharedWithEmail = normalizeEmail(row?.shared_with_email);
         const sharedWithPhone = normalizePhoneNumber(row?.shared_with_phone);
         const identity = sharedWithId || sharedWithEmail || sharedWithPhone;
@@ -4099,6 +4101,45 @@ function App() {
         }
       }
     }
+
+    // Enrich roster from actual layer activity so members still show up under stricter share-row visibility.
+    try {
+      const { data: chatActors } = await supabase
+        .from('calendar_messages')
+        .select('user_id,created_by,created_at')
+        .eq('layer_id', activeLayerId)
+        .order('created_at', { ascending: false })
+        .limit(300);
+      (chatActors || []).forEach((row) => {
+        const actorId = String(row?.user_id || '').trim();
+        if (!actorId) return;
+        const actorLabel = String(row?.created_by || '').trim();
+        addMember({
+          key: `actor:${actorId}`,
+          userId: actorId,
+          label: actorLabel || fallbackOwnerLabel(actorId) || 'Member',
+        });
+      });
+    } catch {}
+
+    try {
+      const { data: eventActors } = await supabase
+        .from('events')
+        .select('user_id,created_by,created_at')
+        .eq('layer_id', activeLayerId)
+        .order('created_at', { ascending: false })
+        .limit(300);
+      (eventActors || []).forEach((row) => {
+        const actorId = String(row?.user_id || '').trim();
+        if (!actorId) return;
+        const actorLabel = String(row?.created_by || '').trim();
+        addMember({
+          key: `event-actor:${actorId}`,
+          userId: actorId,
+          label: actorLabel || fallbackOwnerLabel(actorId) || 'Member',
+        });
+      });
+    } catch {}
 
     setChatMembers(Array.from(membersMap.values()));
   };
