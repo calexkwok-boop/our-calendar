@@ -6229,17 +6229,6 @@ function App() {
     if (error) setAuthError(error.message);
   };
 
-  const handleFacebookSignIn = async () => {
-    setAuthError('');
-    setAuthBusy(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'facebook',
-      options: { redirectTo: window.location.origin }
-    });
-    setAuthBusy(false);
-    if (error) setAuthError(error.message);
-  };
-
   if (showAuth) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
@@ -6271,16 +6260,6 @@ function App() {
               <path fill="none" d="M0 0h48v48H0z"/>
             </svg>
             Sign in with Google
-          </button>
-          <button
-            onClick={handleFacebookSignIn}
-            disabled={authBusy}
-            className="w-full mt-3 flex items-center justify-center gap-3 px-6 py-3 bg-[#1877F2] border-2 border-[#1877F2] rounded-xl hover:opacity-90 transition-all font-medium text-white"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.019 4.388 11.009 10.125 11.927v-8.437H7.078v-3.49h3.047V9.413c0-3.007 1.792-4.669 4.533-4.669 1.313 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.928-1.956 1.88v2.261h3.328l-.532 3.49h-2.796V24C19.612 23.082 24 18.092 24 12.073z"/>
-            </svg>
-            Sign in with Facebook
           </button>
 
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-6 text-center">
