@@ -2273,9 +2273,9 @@ function App() {
   const buildPollMessage = ({ question, dateKey, createdBy, dimensions = [], optionsByDimension = {} }) => {
     const dims = ['what', 'where', 'when'].filter((key) => (dimensions || []).includes(key));
     const normalizedOptions = {
-      what: Array.isArray(optionsByDimension?.what) ? optionsByDimension.what.map(v => String(v || '').trim()).filter(Boolean).slice(0, 8) : [],
-      where: Array.isArray(optionsByDimension?.where) ? optionsByDimension.where.map(v => String(v || '').trim()).filter(Boolean).slice(0, 8) : [],
-      when: Array.isArray(optionsByDimension?.when) ? optionsByDimension.when.map(v => String(v || '').trim()).filter(Boolean).slice(0, 8) : [],
+      what: Array.isArray(optionsByDimension?.what) ? optionsByDimension.what.map(v => String(v || '').trim()).filter(Boolean).slice(0, 3) : [],
+      where: Array.isArray(optionsByDimension?.where) ? optionsByDimension.where.map(v => String(v || '').trim()).filter(Boolean).slice(0, 3) : [],
+      when: Array.isArray(optionsByDimension?.when) ? optionsByDimension.when.map(v => String(v || '').trim()).filter(Boolean).slice(0, 3) : [],
     };
     const payload = {
       type: 'poll',
@@ -3905,12 +3905,12 @@ function App() {
     }
     const dimensions = ['where', 'when'].filter((key) => Boolean(pollDimensions?.[key]));
     if (dimensions.length === 0) {
-      setChatError('Select at least one poll section: What, Where, or When.');
+      setChatError('Select at least one poll section: Where or When.');
       return;
     }
     const optionsByDimension = {
-      where: (pollWhereOptions || []).map(v => String(v || '').trim()).filter(Boolean),
-      when: (pollWhenOptions || []).map(v => String(v || '').trim()).filter(Boolean),
+      where: (pollWhereOptions || []).map(v => String(v || '').trim()).filter(Boolean).slice(0, 3),
+      when: (pollWhenOptions || []).map(v => String(v || '').trim()).filter(Boolean).slice(0, 3),
     };
     for (const dim of dimensions) {
       if ((optionsByDimension[dim] || []).length < 2) {
@@ -3947,7 +3947,7 @@ function App() {
 
     setChatError('');
     setShowCreateEventPopup(false);
-    setPollComposerStep('menu');
+    setPollComposerStep('structured');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
     setPollDimensions({ where: false, when: true });
@@ -3970,7 +3970,7 @@ function App() {
 
   const resetPollComposer = () => {
     setShowCreateEventPopup(false);
-    setPollComposerStep('menu');
+    setPollComposerStep('structured');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
     setPollDimensions({ where: false, when: true });
@@ -7894,7 +7894,7 @@ function App() {
                   setWhenOptionRangeChoice(null);
                   setWhenOptionTimeChoice(null);
                   setWhenOptionEndDateInput('');
-                  setPollComposerStep('menu');
+                  setPollComposerStep('structured');
                   setShowCreateEventPopup(true);
                   if (chatError) setChatError('');
                 }}
@@ -7930,11 +7930,7 @@ function App() {
               <div className="fixed inset-0 z-[70] bg-black/45 flex items-center justify-center p-4">
                 <div className="w-full max-w-md rounded-2xl border border-indigo-100 dark:border-indigo-800 bg-white dark:bg-gray-800 p-4 shadow-2xl">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-base font-semibold text-indigo-600 dark:text-indigo-400">
-                      {pollComposerStep === 'menu'
-                        ? 'Create an event poll'
-                        : 'Build your poll'}
-                    </h4>
+                    <h4 className="text-base font-semibold text-indigo-600 dark:text-indigo-400">Build your poll</h4>
                     <button
                       onClick={resetPollComposer}
                       className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -7942,16 +7938,6 @@ function App() {
                       <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                     </button>
                   </div>
-
-                  {pollComposerStep === 'menu' && (
-                    <button
-                      onClick={() => setPollComposerStep('structured')}
-                      className="w-full px-3 py-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
-                    >
-                      <div className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">📅✏️ Create an event poll</div>
-                      <div className="text-xs text-indigo-600/90 dark:text-indigo-400/90 mt-0.5">Ask your calendar members to vote, then auto-add the winner.</div>
-                    </button>
-                  )}
 
                   {pollComposerStep === 'structured' && (
                     <div className="space-y-3">
@@ -8006,7 +7992,7 @@ function App() {
                                   )}
                                 </div>
                               ))}
-                              <button onClick={() => setPollWhereOptions(prev => prev.length >= 8 ? prev : [...prev, ''])} className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200">+ Add where option</button>
+                              <button onClick={() => setPollWhereOptions(prev => prev.length >= 3 ? prev : [...prev, ''])} className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200">+ Add where option</button>
                             </div>
                           )}
                         </div>
@@ -8092,7 +8078,7 @@ function App() {
                                     setChatError('Answer if you need a time.');
                                     return;
                                   }
-                                  setPollWhenOptions(prev => (prev.includes(optionText) || prev.length >= 8 ? prev : [...prev, optionText]));
+                                  setPollWhenOptions(prev => (prev.includes(optionText) || prev.length >= 3 ? prev : [...prev, optionText]));
                                   setChatError('');
                                 }}
                                 className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200"
@@ -8112,10 +8098,10 @@ function App() {
 
                       <div className="mt-4 flex justify-end gap-2">
                         <button
-                          onClick={() => setPollComposerStep('menu')}
+                          onClick={resetPollComposer}
                           className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
                         >
-                          Back
+                          Cancel
                         </button>
                         <button
                           onClick={sendCalendarChatPollMessage}
