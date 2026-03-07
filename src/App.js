@@ -2453,15 +2453,61 @@ function App() {
     return counts;
   };
 
-  const getPollMajorityWinner = (poll, dimensionKey = null) => {
+  const getPollMajorityWinner = (poll, dimensionKey = null, eligibleVoterCount = null) => {
     const counts = getPollVoteCounts(poll, dimensionKey);
     const totalVotes = counts.reduce((sum, n) => sum + n, 0);
-    if (totalVotes < 2) return { winnerIndex: null, counts, totalVotes };
+    const eligibleCount = Number.isInteger(Number(eligibleVoterCount)) && Number(eligibleVoterCount) > 0
+      ? Number(eligibleVoterCount)
+      : null;
+    const votesNeeded = eligibleCount ? Math.floor(eligibleCount / 2) + 1 : 2;
+    if (totalVotes < votesNeeded) return { winnerIndex: null, counts, totalVotes, votesNeeded };
     let winnerIndex = null;
     counts.forEach((n, idx) => {
-      if (n > totalVotes / 2) winnerIndex = idx;
+      if (n >= votesNeeded) winnerIndex = idx;
     });
-    return { winnerIndex, counts, totalVotes };
+    return { winnerIndex, counts, totalVotes, votesNeeded };
+  };
+
+  const getEligiblePollVoterCount = async (layerId) => {
+    const normalizedLayerId = String(layerId || '').trim();
+    if (!normalizedLayerId) return 2;
+    const participants = new Set();
+    const ownerId = String(activeLayerOwnerId || user?.id || '').trim();
+    if (ownerId) participants.add(`owner:${ownerId}`);
+
+    try {
+      const { data, error } = await supabase
+        .from('shared_access')
+        .select('shared_with_id,shared_with_email,shared_with_phone')
+        .eq('layer_id', normalizedLayerId);
+      if (!error) {
+        (data || []).forEach((row) => {
+          const identity = String(row?.shared_with_id || '').trim()
+            || normalizeEmail(row?.shared_with_email)
+            || normalizePhoneNumber(row?.shared_with_phone);
+          if (identity) participants.add(`share:${identity}`);
+        });
+        return Math.max(1, participants.size);
+      }
+    } catch {}
+
+    // Fallback for restrictive RLS: use locally known shares plus owner.
+    (myShares || []).forEach((row) => {
+      const rowLayerId = String(row?.layer_id || row?.calendar_id || '').trim();
+      if (rowLayerId !== normalizedLayerId) return;
+      const identity = String(row?.shared_with_id || '').trim()
+        || normalizeEmail(row?.shared_with_email)
+        || normalizePhoneNumber(row?.shared_with_phone);
+      if (identity) participants.add(`share:${identity}`);
+    });
+
+    if (String(activeLayerOwnerId || '') !== String(user?.id || '')) {
+      const me = String(user?.id || '').trim()
+        || normalizeEmail(user?.email)
+        || normalizePhoneNumber(user?.phone);
+      if (me) participants.add(`share:${me}`);
+    }
+    return Math.max(1, participants.size);
   };
 
   const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || '').trim());
@@ -4269,6 +4315,7 @@ function App() {
     if (!poll || poll.resolved) return;
     const nextPoll = { ...poll };
     let shouldInsertEvent = false;
+    const eligibleVoterCount = await getEligiblePollVoterCount(activeLayerId);
 
     if (poll.mode === 'structured') {
       const dim = String(dimensionKey || '').toLowerCase();
@@ -4282,7 +4329,7 @@ function App() {
           [String(user.id)]: optionIndex,
         },
       };
-      const maj = getPollMajorityWinner(nextPoll, dim);
+      const maj = getPollMajorityWinner(nextPoll, dim, eligibleVoterCount);
       if (Number.isInteger(maj.winnerIndex)) {
         nextPoll.winners = { ...(poll.winners || {}), [dim]: maj.winnerIndex };
       } else {
@@ -4296,7 +4343,7 @@ function App() {
         ...(poll.votes || {}),
         [String(user.id)]: optionIndex,
       };
-      const majority = getPollMajorityWinner(nextPoll);
+      const majority = getPollMajorityWinner(nextPoll, null, eligibleVoterCount);
       if (Number.isInteger(majority.winnerIndex)) nextPoll.winnerIndex = majority.winnerIndex;
       shouldInsertEvent = Number.isInteger(nextPoll.winnerIndex);
     }
