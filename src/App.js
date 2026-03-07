@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
 import { getMessagingIfSupported } from "./firebase";
@@ -6676,20 +6676,6 @@ function App() {
                 List
               </button>
               <button
-                onClick={() => setShowChatPanel(!showChatPanel)}
-                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showChatPanel ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                title="Calendar chat"
-              >
-                Chat
-              </button>
-              <button
-                onClick={() => setShowAiAssistant(true)}
-                className="p-2 rounded-xl transition-all duration-200 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800"
-                title="AI assistant"
-              >
-                <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-              <button
                 onClick={() => setShowScanHelpModal(true)}
                 disabled={isScanningReminder}
                 className={`p-2 rounded-xl transition-all duration-200 ${isScanningReminder ? 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
@@ -6784,6 +6770,23 @@ function App() {
               <ChevronRight className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </button>
           </div>
+        </div>
+
+        <div className="mb-4 flex gap-2">
+          <button
+            onClick={() => setShowChatPanel(!showChatPanel)}
+            className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showChatPanel ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+            title="Calendar chat"
+          >
+            Chat
+          </button>
+          <button
+            onClick={() => setShowAiAssistant(true)}
+            className="px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800"
+            title="AI assistant"
+          >
+            Ask AI
+          </button>
         </div>
 
         {/* Notification Settings Panel */}
