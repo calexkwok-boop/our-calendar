@@ -2177,13 +2177,15 @@ function App() {
   const [deletingChatMessageId, setDeletingChatMessageId] = useState(null);
   const [showCreateEventPopup, setShowCreateEventPopup] = useState(false);
   const [pollComposerStep, setPollComposerStep] = useState('menu');
-  const [pollScope, setPollScope] = useState('both');
   const [pollQuestionInput, setPollQuestionInput] = useState('');
   const [pollDateInput, setPollDateInput] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
-  const [pollOptionsInput, setPollOptionsInput] = useState(['', '']);
+  const [pollDimensions, setPollDimensions] = useState({ what: true, where: false, when: true });
+  const [pollWhatOptions, setPollWhatOptions] = useState(['', '']);
+  const [pollWhereOptions, setPollWhereOptions] = useState(['', '']);
+  const [pollWhenOptions, setPollWhenOptions] = useState([]);
   const [whenOptionDateInput, setWhenOptionDateInput] = useState('');
   const [whenOptionTimeInput, setWhenOptionTimeInput] = useState('');
   const [selectedSharedListId, setSelectedSharedListId] = useState(null);
@@ -2238,17 +2240,23 @@ function App() {
     return `${String(Number(m[1])).padStart(2, '0')}:${m[2]}`;
   };
 
-  const buildPollMessage = ({ question, dateKey, options, createdBy, pollFor = 'both', eventTitle = null }) => {
+  const buildPollMessage = ({ question, dateKey, createdBy, dimensions = [], optionsByDimension = {} }) => {
+    const dims = ['what', 'where', 'when'].filter((key) => (dimensions || []).includes(key));
+    const normalizedOptions = {
+      what: Array.isArray(optionsByDimension?.what) ? optionsByDimension.what.map(v => String(v || '').trim()).filter(Boolean).slice(0, 8) : [],
+      where: Array.isArray(optionsByDimension?.where) ? optionsByDimension.where.map(v => String(v || '').trim()).filter(Boolean).slice(0, 8) : [],
+      when: Array.isArray(optionsByDimension?.when) ? optionsByDimension.when.map(v => String(v || '').trim()).filter(Boolean).slice(0, 8) : [],
+    };
     const payload = {
       type: 'poll',
       question: String(question || '').trim(),
       dateKey: String(dateKey || ''),
-      options: (options || []).map(v => String(v || '').trim()).filter(Boolean).slice(0, 8),
-      pollFor: ['when', 'what', 'both'].includes(String(pollFor)) ? String(pollFor) : 'both',
-      eventTitle: eventTitle ? String(eventTitle).trim() : null,
-      votes: {},
+      mode: 'structured',
+      dimensions: dims,
+      optionsByDimension: normalizedOptions,
+      votesByDimension: { what: {}, where: {}, when: {} },
+      winners: { what: null, where: null, when: null },
       resolved: false,
-      winnerIndex: null,
       createdEventId: null,
       createdBy: String(createdBy || '').trim() || 'Member',
       createdAt: new Date().toISOString(),
@@ -2262,8 +2270,52 @@ function App() {
     const json = raw.slice(CHAT_POLL_PREFIX.length);
     try {
       const parsed = JSON.parse(json);
+      if (String(parsed?.type || '') !== 'poll' || !parsed?.question) return null;
+      const dimensions = Array.isArray(parsed?.dimensions)
+        ? parsed.dimensions.map(v => String(v || '').trim().toLowerCase()).filter(v => ['what', 'where', 'when'].includes(v))
+        : [];
+
+      if (String(parsed?.mode || '') === 'structured' && dimensions.length > 0) {
+        const optionsByDimension = {
+          what: Array.isArray(parsed?.optionsByDimension?.what) ? parsed.optionsByDimension.what.map(v => String(v || '').trim()).filter(Boolean) : [],
+          where: Array.isArray(parsed?.optionsByDimension?.where) ? parsed.optionsByDimension.where.map(v => String(v || '').trim()).filter(Boolean) : [],
+          when: Array.isArray(parsed?.optionsByDimension?.when) ? parsed.optionsByDimension.when.map(v => String(v || '').trim()).filter(Boolean) : [],
+        };
+        const votesByDimension = { what: {}, where: {}, when: {} };
+        const rawVotes = parsed?.votesByDimension && typeof parsed.votesByDimension === 'object' ? parsed.votesByDimension : {};
+        ['what', 'where', 'when'].forEach((key) => {
+          const options = optionsByDimension[key] || [];
+          const raw = rawVotes[key] && typeof rawVotes[key] === 'object' ? rawVotes[key] : {};
+          Object.entries(raw).forEach(([uid, idx]) => {
+            const n = Number(idx);
+            if (String(uid || '').trim() && Number.isInteger(n) && n >= 0 && n < options.length) {
+              votesByDimension[key][String(uid)] = n;
+            }
+          });
+        });
+        const winners = { what: null, where: null, when: null };
+        const rawWinners = parsed?.winners && typeof parsed.winners === 'object' ? parsed.winners : {};
+        ['what', 'where', 'when'].forEach((key) => {
+          const n = Number(rawWinners[key]);
+          if (Number.isInteger(n) && n >= 0 && n < (optionsByDimension[key] || []).length) winners[key] = n;
+        });
+        return {
+          ...parsed,
+          mode: 'structured',
+          question: String(parsed.question),
+          dateKey: String(parsed.dateKey || ''),
+          dimensions,
+          optionsByDimension,
+          votesByDimension,
+          winners,
+          resolved: Boolean(parsed.resolved),
+          createdEventId: parsed.createdEventId ? String(parsed.createdEventId) : null,
+        };
+      }
+
+      // Backward compatibility for legacy single-dimension polls.
       const options = Array.isArray(parsed?.options) ? parsed.options.map(v => String(v || '').trim()).filter(Boolean) : [];
-      if (String(parsed?.type || '') !== 'poll' || !parsed?.question || options.length < 2) return null;
+      if (options.length < 2) return null;
       const votesObj = (parsed && typeof parsed.votes === 'object' && parsed.votes !== null) ? parsed.votes : {};
       const votes = {};
       Object.entries(votesObj).forEach(([uid, idx]) => {
@@ -2272,6 +2324,7 @@ function App() {
       });
       return {
         ...parsed,
+        mode: 'legacy',
         question: String(parsed.question),
         dateKey: String(parsed.dateKey || ''),
         options,
@@ -2287,7 +2340,16 @@ function App() {
     }
   };
 
-  const getPollVoteCounts = (poll) => {
+  const getPollVoteCounts = (poll, dimensionKey = null) => {
+    if (poll?.mode === 'structured') {
+      const dim = String(dimensionKey || '').toLowerCase();
+      const opts = poll?.optionsByDimension?.[dim] || [];
+      const counts = new Array(opts.length).fill(0);
+      Object.values(poll?.votesByDimension?.[dim] || {}).forEach((idx) => {
+        if (Number.isInteger(idx) && idx >= 0 && idx < counts.length) counts[idx] += 1;
+      });
+      return counts;
+    }
     const counts = new Array((poll?.options || []).length).fill(0);
     Object.values(poll?.votes || {}).forEach((idx) => {
       if (Number.isInteger(idx) && idx >= 0 && idx < counts.length) counts[idx] += 1;
@@ -2295,8 +2357,8 @@ function App() {
     return counts;
   };
 
-  const getPollMajorityWinner = (poll) => {
-    const counts = getPollVoteCounts(poll);
+  const getPollMajorityWinner = (poll, dimensionKey = null) => {
+    const counts = getPollVoteCounts(poll, dimensionKey);
     const totalVotes = counts.reduce((sum, n) => sum + n, 0);
     if (totalVotes < 2) return { winnerIndex: null, counts, totalVotes };
     let winnerIndex = null;
@@ -3805,26 +3867,28 @@ function App() {
 
   const sendCalendarChatPollMessage = async () => {
     if (!activeLayerId || !user?.id) return;
-    const rawQuestion = String(pollQuestionInput || '').trim();
-    const dateKey = String(pollDateInput || '').trim();
-    const options = (pollOptionsInput || []).map(v => String(v || '').trim()).filter(Boolean);
-    if (!rawQuestion) {
-      setChatError('Add a question for the event vote.');
+    const eventName = String(pollQuestionInput || '').trim();
+    const dateKey = String(pollDateInput || '').trim() || getDateKey(selectedDate || new Date());
+    if (!eventName) {
+      setChatError("Add the event name first.");
       return;
     }
-    if (pollScope !== 'when' && (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey))) {
-      setChatError('Choose a valid event date.');
+    const dimensions = ['what', 'where', 'when'].filter((key) => Boolean(pollDimensions?.[key]));
+    if (dimensions.length === 0) {
+      setChatError('Select at least one poll section: What, Where, or When.');
       return;
     }
-    if (options.length < 2) {
-      setChatError('Add at least two options to vote on.');
-      return;
+    const optionsByDimension = {
+      what: (pollWhatOptions || []).map(v => String(v || '').trim()).filter(Boolean),
+      where: (pollWhereOptions || []).map(v => String(v || '').trim()).filter(Boolean),
+      when: (pollWhenOptions || []).map(v => String(v || '').trim()).filter(Boolean),
+    };
+    for (const dim of dimensions) {
+      if ((optionsByDimension[dim] || []).length < 2) {
+        setChatError(`Add at least two options in ${dim}.`);
+        return;
+      }
     }
-    const baseDateKey = dateKey || getDateKey(selectedDate || new Date());
-    const eventTitle = rawQuestion.replace(/\?+$/, '').trim();
-    const question = pollScope === 'when'
-      ? `When should we ${eventTitle || 'do this'}?`
-      : rawQuestion;
 
     const payload = {
       layer_id: activeLayerId,
@@ -3832,12 +3896,11 @@ function App() {
       user_id: user.id,
       created_by: currentUser || user?.email || user?.phone || 'User',
       message: buildPollMessage({
-        question,
-        dateKey: baseDateKey,
-        options,
+        question: eventName,
+        dateKey,
         createdBy: currentUser || user?.email || user?.phone || 'User',
-        pollFor: pollScope,
-        eventTitle: pollScope === 'when' ? eventTitle : null,
+        dimensions,
+        optionsByDimension,
       }),
       created_at: new Date().toISOString(),
     };
@@ -3856,10 +3919,12 @@ function App() {
     setChatError('');
     setShowCreateEventPopup(false);
     setPollComposerStep('menu');
-    setPollScope('both');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
-    setPollOptionsInput(['', '']);
+    setPollDimensions({ what: true, where: false, when: true });
+    setPollWhatOptions(['', '']);
+    setPollWhereOptions(['', '']);
+    setPollWhenOptions([]);
     setWhenOptionDateInput('');
     setWhenOptionTimeInput('');
     if (data) {
@@ -3874,10 +3939,12 @@ function App() {
   const resetPollComposer = () => {
     setShowCreateEventPopup(false);
     setPollComposerStep('menu');
-    setPollScope('both');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
-    setPollOptionsInput(['', '']);
+    setPollDimensions({ what: true, where: false, when: true });
+    setPollWhatOptions(['', '']);
+    setPollWhereOptions(['', '']);
+    setPollWhenOptions([]);
     setWhenOptionDateInput('');
     setWhenOptionTimeInput('');
   };
@@ -3908,23 +3975,51 @@ function App() {
 
   const insertPollWinnerEvent = async (poll, pollMessageId) => {
     if (!poll || !activeLayerId || !user?.id) return null;
-    const winnerIndex = Number(poll.winnerIndex);
-    if (!Number.isInteger(winnerIndex) || winnerIndex < 0 || winnerIndex >= (poll.options || []).length) return null;
-    const winnerOption = String(poll.options[winnerIndex] || '').trim();
-    if (!winnerOption) return null;
-
-    const pollFor = ['when', 'what', 'both'].includes(String(poll?.pollFor || '')) ? String(poll.pollFor) : 'both';
-    let eventDateKey = parseDateFromText(poll.dateKey) || poll.dateKey || getDateKey(new Date());
+    let eventDateKey = parseDateFromText(poll?.dateKey) || poll?.dateKey || getDateKey(new Date());
     let eventTime = null;
-    if (pollFor === 'when') {
-      const winnerDate = parseDateFromText(winnerOption);
-      if (winnerDate) eventDateKey = winnerDate;
-      eventTime = parseTimeFromText(winnerOption);
+    let eventTitle = String(poll?.question || 'Event').trim() || 'Event';
+    let eventLocation = null;
+
+    if (poll?.mode === 'structured') {
+      const dims = Array.isArray(poll?.dimensions) ? poll.dimensions : [];
+      const winners = poll?.winners || {};
+      const pick = (dim) => {
+        const idx = Number(winners?.[dim]);
+        const opts = poll?.optionsByDimension?.[dim] || [];
+        if (!Number.isInteger(idx) || idx < 0 || idx >= opts.length) return null;
+        return String(opts[idx] || '').trim() || null;
+      };
+      const whatWinner = pick('what');
+      const whereWinner = pick('where');
+      const whenWinner = pick('when');
+      if (dims.includes('what') && !whatWinner) return null;
+      if (dims.includes('where') && !whereWinner) return null;
+      if (dims.includes('when') && !whenWinner) return null;
+      if (whatWinner) eventTitle = whatWinner;
+      if (whereWinner) eventLocation = whereWinner;
+      if (whenWinner) {
+        const winnerDate = parseDateFromText(whenWinner);
+        if (winnerDate) eventDateKey = winnerDate;
+        eventTime = parseTimeFromText(whenWinner);
+      }
+    } else {
+      const winnerIndex = Number(poll.winnerIndex);
+      if (!Number.isInteger(winnerIndex) || winnerIndex < 0 || winnerIndex >= (poll.options || []).length) return null;
+      const winnerOption = String(poll.options[winnerIndex] || '').trim();
+      if (!winnerOption) return null;
+      const pollFor = ['when', 'what', 'both'].includes(String(poll?.pollFor || '')) ? String(poll.pollFor) : 'both';
+      if (pollFor === 'when') {
+        const winnerDate = parseDateFromText(winnerOption);
+        if (winnerDate) eventDateKey = winnerDate;
+        eventTime = parseTimeFromText(winnerOption);
+        eventTitle = String(poll?.eventTitle || poll?.question || winnerOption).replace(/\?+$/, '').trim() || winnerOption;
+      } else if (pollFor === 'what') {
+        eventTitle = winnerOption;
+      } else {
+        eventTitle = `${poll.question}: ${winnerOption}`;
+      }
     }
-    const fallbackTitle = String(poll?.eventTitle || poll?.question || '').replace(/\?+$/, '').trim();
-    const eventTitle = pollFor === 'when'
-      ? (fallbackTitle || winnerOption)
-      : (pollFor === 'what' ? winnerOption : `${poll.question}: ${winnerOption}`);
+
     const eventId = `${Date.now()}-${Math.random()}`;
     const eventPayload = {
       id: eventId,
@@ -3943,7 +4038,7 @@ function App() {
       recurrence: 'once',
       exceptions: null,
       reactions: null,
-      location: null,
+      location: eventLocation,
       created_by: currentUser || user?.email || user?.phone || 'User',
       created_at: new Date().toISOString(),
       user_id: user.id,
@@ -4016,22 +4111,42 @@ function App() {
     return insertedEvent;
   };
 
-  const voteOnChatPoll = async (messageRow, optionIndex) => {
+  const voteOnChatPoll = async (messageRow, optionIndex, dimensionKey = null) => {
     if (!messageRow?.id || !activeLayerId || !user?.id) return;
     const poll = parsePollMessage(messageRow.message);
     if (!poll || poll.resolved) return;
-    if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= poll.options.length) return;
+    const nextPoll = { ...poll };
+    let shouldInsertEvent = false;
 
-    const nextPoll = {
-      ...poll,
-      votes: {
+    if (poll.mode === 'structured') {
+      const dim = String(dimensionKey || '').toLowerCase();
+      if (!['what', 'where', 'when'].includes(dim)) return;
+      const opts = poll?.optionsByDimension?.[dim] || [];
+      if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= opts.length) return;
+      nextPoll.votesByDimension = {
+        ...(poll.votesByDimension || {}),
+        [dim]: {
+          ...(poll?.votesByDimension?.[dim] || {}),
+          [String(user.id)]: optionIndex,
+        },
+      };
+      const maj = getPollMajorityWinner(nextPoll, dim);
+      if (Number.isInteger(maj.winnerIndex)) {
+        nextPoll.winners = { ...(poll.winners || {}), [dim]: maj.winnerIndex };
+      } else {
+        nextPoll.winners = { ...(poll.winners || {}), [dim]: null };
+      }
+      const dims = Array.isArray(nextPoll?.dimensions) ? nextPoll.dimensions : [];
+      shouldInsertEvent = dims.length > 0 && dims.every((key) => Number.isInteger(Number(nextPoll?.winners?.[key])));
+    } else {
+      if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= poll.options.length) return;
+      nextPoll.votes = {
         ...(poll.votes || {}),
         [String(user.id)]: optionIndex,
-      },
-    };
-    const majority = getPollMajorityWinner(nextPoll);
-    if (Number.isInteger(majority.winnerIndex)) {
-      nextPoll.winnerIndex = majority.winnerIndex;
+      };
+      const majority = getPollMajorityWinner(nextPoll);
+      if (Number.isInteger(majority.winnerIndex)) nextPoll.winnerIndex = majority.winnerIndex;
+      shouldInsertEvent = Number.isInteger(nextPoll.winnerIndex);
     }
 
     const { data: updatedRow, error } = await supabase
@@ -4050,7 +4165,7 @@ function App() {
     setChatError('');
     if (updatedRow) {
       setCalendarChatMessages(prev => prev.map(m => String(m?.id) === String(updatedRow.id) ? updatedRow : m));
-      if (Number.isInteger(nextPoll.winnerIndex) && !nextPoll.resolved && !nextPoll.createdEventId) {
+      if (shouldInsertEvent && !nextPoll.resolved && !nextPoll.createdEventId) {
         await insertPollWinnerEvent(nextPoll, updatedRow.id);
       }
     }
@@ -7578,11 +7693,6 @@ function App() {
                   const mine = String(msg?.user_id || '') === String(user?.id || '');
                   const who = String(msg?.created_by || msg?.email || 'Member');
                   const poll = parsePollMessage(msg?.message);
-                  const voteCounts = poll ? getPollVoteCounts(poll) : [];
-                  const voteTotal = voteCounts.reduce((sum, n) => sum + n, 0);
-                  const myVoteIndex = poll ? Number(poll?.votes?.[String(user?.id || '')]) : null;
-                  const winnerIndex = poll && Number.isInteger(Number(poll?.winnerIndex)) ? Number(poll.winnerIndex) : null;
-                  const pollFor = poll?.pollFor || 'both';
                   return (
                     <div key={String(msg?.id || `${who}-${msg?.created_at || ''}`)} className={`max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap ${mine ? 'ml-auto bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}>
                       <div className="mb-1 flex items-center justify-between gap-2">
@@ -7602,46 +7712,89 @@ function App() {
                       {poll ? (
                         <div className={`${mine ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
                           <div className="font-semibold">{poll.question}</div>
-                          <div className={`text-[11px] mt-0.5 ${mine ? 'text-indigo-100/90' : 'text-gray-500 dark:text-gray-400'}`}>
-                            {pollFor === 'when'
-                              ? 'Vote on the date for this event.'
-                              : `Vote to add an event on ${poll.dateKey || getDateKey(new Date())}`}
-                          </div>
-                          <div className="mt-2 space-y-1.5">
-                            {poll.options.map((opt, idx) => {
-                              const selected = myVoteIndex === idx;
-                              const isWinner = winnerIndex === idx;
-                              const pct = voteTotal > 0 ? Math.round((voteCounts[idx] / voteTotal) * 100) : 0;
-                              return (
-                                <button
-                                  key={`${msg?.id || 'poll'}-opt-${idx}`}
-                                  onClick={() => voteOnChatPoll(msg, idx)}
-                                  disabled={Boolean(poll.resolved)}
-                                  className={`w-full text-left px-2.5 py-1.5 rounded-lg border transition-colors ${mine
-                                    ? (selected ? 'bg-indigo-500 border-indigo-300' : 'bg-indigo-700/60 border-indigo-400/50 hover:bg-indigo-700')
-                                    : (selected ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700')
-                                  } ${poll.resolved ? 'cursor-default opacity-90' : ''}`}
-                                  title={poll.resolved ? 'Voting closed - event created' : 'Vote for this option'}
-                                >
-                                  <div className="flex items-center justify-between gap-2">
-                                    <span className="truncate">{idx + 1}. {opt}</span>
-                                    <span className={`text-[11px] shrink-0 ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>
-                                      {voteCounts[idx]} vote{voteCounts[idx] === 1 ? '' : 's'} ({pct}%)
-                                    </span>
-                                  </div>
-                                  {isWinner && (
-                                    <div className={`mt-1 text-[10px] ${mine ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                      Majority reached
+                          {poll.mode === 'structured' ? (
+                            <div className="mt-2 space-y-3">
+                              {(poll.dimensions || []).map((dim) => {
+                                const options = poll?.optionsByDimension?.[dim] || [];
+                                const counts = getPollVoteCounts(poll, dim);
+                                const total = counts.reduce((sum, n) => sum + n, 0);
+                                const myVote = Number(poll?.votesByDimension?.[dim]?.[String(user?.id || '')]);
+                                const winner = Number(poll?.winners?.[dim]);
+                                const label = dim === 'what' ? 'What' : dim === 'where' ? 'Where' : 'When';
+                                return (
+                                  <div key={`${msg?.id || 'poll'}-${dim}`} className={`rounded-lg border px-2.5 py-2 ${mine ? 'border-indigo-300/60 bg-indigo-500/20' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'}`}>
+                                    <div className={`text-[11px] font-semibold mb-1 ${mine ? 'text-indigo-100' : 'text-gray-600 dark:text-gray-300'}`}>{label}</div>
+                                    <div className="space-y-1.5">
+                                      {options.map((opt, idx) => {
+                                        const selected = myVote === idx;
+                                        const isWinner = winner === idx;
+                                        const pct = total > 0 ? Math.round((counts[idx] / total) * 100) : 0;
+                                        return (
+                                          <button
+                                            key={`${msg?.id || 'poll'}-${dim}-opt-${idx}`}
+                                            onClick={() => voteOnChatPoll(msg, idx, dim)}
+                                            disabled={Boolean(poll.resolved)}
+                                            className={`w-full text-left px-2 py-1.5 rounded-lg border transition-colors ${mine
+                                              ? (selected ? 'bg-indigo-500 border-indigo-300' : 'bg-indigo-700/60 border-indigo-400/50 hover:bg-indigo-700')
+                                              : (selected ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700')
+                                            } ${poll.resolved ? 'cursor-default opacity-90' : ''}`}
+                                          >
+                                            <div className="flex items-center justify-between gap-2">
+                                              <span className="truncate">{idx + 1}. {opt}</span>
+                                              <span className={`text-[10px] shrink-0 ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                {counts[idx]} ({pct}%)
+                                              </span>
+                                            </div>
+                                            {isWinner && <div className={`text-[10px] mt-1 ${mine ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'}`}>Majority reached</div>}
+                                          </button>
+                                        );
+                                      })}
                                     </div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <>
+                              <div className={`text-[11px] mt-0.5 ${mine ? 'text-indigo-100/90' : 'text-gray-500 dark:text-gray-400'}`}>
+                                {poll?.pollFor === 'when'
+                                  ? 'Vote on the date for this event.'
+                                  : `Vote to add an event on ${poll?.dateKey || getDateKey(new Date())}`}
+                              </div>
+                              <div className="mt-2 space-y-1.5">
+                                {(poll.options || []).map((opt, idx) => {
+                                  const voteCounts = getPollVoteCounts(poll);
+                                  const voteTotal = voteCounts.reduce((sum, n) => sum + n, 0);
+                                  const myVoteIndex = Number(poll?.votes?.[String(user?.id || '')]);
+                                  const winnerIndex = Number(poll?.winnerIndex);
+                                  const selected = myVoteIndex === idx;
+                                  const isWinner = winnerIndex === idx;
+                                  const pct = voteTotal > 0 ? Math.round((voteCounts[idx] / voteTotal) * 100) : 0;
+                                  return (
+                                    <button
+                                      key={`${msg?.id || 'poll'}-opt-${idx}`}
+                                      onClick={() => voteOnChatPoll(msg, idx)}
+                                      disabled={Boolean(poll.resolved)}
+                                      className={`w-full text-left px-2.5 py-1.5 rounded-lg border transition-colors ${mine
+                                        ? (selected ? 'bg-indigo-500 border-indigo-300' : 'bg-indigo-700/60 border-indigo-400/50 hover:bg-indigo-700')
+                                        : (selected ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700')
+                                      } ${poll.resolved ? 'cursor-default opacity-90' : ''}`}
+                                    >
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="truncate">{idx + 1}. {opt}</span>
+                                        <span className={`text-[11px] shrink-0 ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                                          {voteCounts[idx]} vote{voteCounts[idx] === 1 ? '' : 's'} ({pct}%)
+                                        </span>
+                                      </div>
+                                      {isWinner && <div className={`mt-1 text-[10px] ${mine ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'}`}>Majority reached</div>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          )}
                           <div className={`text-[10px] mt-1 ${mine ? 'text-indigo-100/90' : 'text-gray-400 dark:text-gray-500'}`}>
-                            {poll.resolved
-                              ? 'Voting complete. Event added to calendar.'
-                              : `${voteTotal} total vote${voteTotal === 1 ? '' : 's'}${Number.isInteger(myVoteIndex) ? ' • You voted' : ''}`}
+                            {poll.resolved ? 'Voting complete. Event added to calendar.' : 'Vote to reach majority in each selected section.'}
                           </div>
                         </div>
                       ) : (
@@ -7659,10 +7812,12 @@ function App() {
             <div className="mt-3 flex gap-2">
               <button
                 onClick={() => {
-                  setPollScope('both');
                   setPollQuestionInput('');
                   setPollDateInput(getDateKey(selectedDate || new Date()));
-                  setPollOptionsInput(['', '']);
+                  setPollDimensions({ what: true, where: false, when: true });
+                  setPollWhatOptions(['', '']);
+                  setPollWhereOptions(['', '']);
+                  setPollWhenOptions([]);
                   setWhenOptionDateInput(getDateKey(selectedDate || new Date()));
                   setWhenOptionTimeInput('');
                   setPollComposerStep('menu');
@@ -7704,13 +7859,7 @@ function App() {
                     <h4 className="text-base font-semibold text-indigo-600 dark:text-indigo-400">
                       {pollComposerStep === 'menu'
                         ? 'Create an event poll'
-                        : pollComposerStep === 'scope'
-                          ? 'What are we polling for?'
-                          : pollComposerStep === 'question'
-                            ? "What's the event?"
-                            : pollComposerStep === 'date'
-                              ? "When's the event?"
-                              : 'Options menu'}
+                        : 'Build your poll'}
                     </h4>
                     <button
                       onClick={resetPollComposer}
@@ -7722,7 +7871,7 @@ function App() {
 
                   {pollComposerStep === 'menu' && (
                     <button
-                      onClick={() => setPollComposerStep('scope')}
+                      onClick={() => setPollComposerStep('structured')}
                       className="w-full px-3 py-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
                     >
                       <div className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">📅✏️ Create an event poll</div>
@@ -7730,205 +7879,127 @@ function App() {
                     </button>
                   )}
 
-                  {pollComposerStep === 'scope' && (
-                    <div className="space-y-2.5">
-                      <button
-                        onClick={() => {
-                          setPollScope('when');
-                          setPollOptionsInput([]);
-                          setWhenOptionDateInput(getDateKey(selectedDate || new Date()));
-                          setWhenOptionTimeInput('');
-                          setPollQuestionInput('');
-                          setPollComposerStep('question');
-                        }}
-                        className="w-full px-3 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/25 text-indigo-800 dark:text-indigo-200 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/35 font-semibold transition-colors"
-                      >
-                        When?
-                      </button>
-                      <button
-                        onClick={() => {
-                          setPollScope('what');
-                          setPollQuestionInput('');
-                          setPollOptionsInput(['', '']);
-                          setPollComposerStep('question');
-                        }}
-                        className="w-full px-3 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/25 text-indigo-800 dark:text-indigo-200 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/35 font-semibold transition-colors"
-                      >
-                        What?
-                      </button>
-                      <button
-                        onClick={() => {
-                          setPollScope('both');
-                          setPollQuestionInput('');
-                          setPollOptionsInput(['', '']);
-                          setPollComposerStep('question');
-                        }}
-                        className="w-full px-3 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/25 text-indigo-800 dark:text-indigo-200 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/35 font-semibold transition-colors"
-                      >
-                        Both?
-                      </button>
-                      <div className="flex justify-end">
-                        <button onClick={() => setPollComposerStep('menu')} className="px-3 py-2 text-sm rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/30">Back</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {pollComposerStep === 'question' && (
+                  {pollComposerStep === 'structured' && (
                     <div className="space-y-3">
                       <input
                         autoFocus
                         type="text"
                         value={pollQuestionInput}
                         onChange={(e) => setPollQuestionInput(e.target.value)}
-                        placeholder={pollScope === 'when' ? 'e.g. Team lunch' : "e.g. What's for lunch?"}
+                        placeholder="What's the event? (e.g. Team lunch)"
                         className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
                       />
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => setPollComposerStep('scope')} className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">Back</button>
-                        <button
-                          onClick={() => {
-                            if (!pollQuestionInput.trim()) {
-                              setChatError('Add a question for the event vote.');
-                              return;
-                            }
-                            setChatError('');
-                            if (pollScope === 'when') setPollComposerStep('options');
-                            else setPollComposerStep('date');
-                          }}
-                          className="px-3 py-2 text-sm rounded-xl bg-indigo-600 text-white font-semibold"
-                        >
-                          Next
-                        </button>
+                      <div className="flex items-center gap-2">
+                        {['what', 'where', 'when'].map((dim) => (
+                          <button
+                            key={`dim-${dim}`}
+                            onClick={() => setPollDimensions(prev => ({ ...prev, [dim]: !prev[dim] }))}
+                            className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${pollDimensions[dim]
+                              ? 'border-indigo-300 bg-indigo-100 dark:bg-indigo-900/35 text-indigo-800 dark:text-indigo-200'
+                              : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-300'}`}
+                          >
+                            {dim === 'what' ? 'What' : dim === 'where' ? 'Where' : 'When'}
+                          </button>
+                        ))}
                       </div>
-                    </div>
-                  )}
 
-                  {pollComposerStep === 'date' && (
-                    <div className="space-y-3">
-                      <input
-                        autoFocus
-                        type="date"
-                        value={pollDateInput}
-                        onChange={(e) => setPollDateInput(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
-                      />
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => setPollComposerStep('question')} className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">Back</button>
-                        <button
-                          onClick={() => {
-                            if (!pollDateInput || !/^\d{4}-\d{2}-\d{2}$/.test(pollDateInput)) {
-                              setChatError('Choose a valid event date.');
-                              return;
-                            }
-                            setChatError('');
-                            setPollComposerStep('options');
-                          }}
-                          className="px-3 py-2 text-sm rounded-xl bg-indigo-600 text-white font-semibold"
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                      {pollDimensions.what && (
+                        <div className="space-y-1.5">
+                          <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">What options</div>
+                          {pollWhatOptions.map((opt, idx) => (
+                            <div key={`what-opt-${idx}`} className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={opt}
+                                onChange={(e) => {
+                                  const next = [...pollWhatOptions];
+                                  next[idx] = e.target.value;
+                                  setPollWhatOptions(next);
+                                }}
+                                placeholder={`What option ${idx + 1}`}
+                                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl"
+                              />
+                              {pollWhatOptions.length > 2 && (
+                                <button onClick={() => setPollWhatOptions(prev => prev.filter((_, i) => i !== idx))} className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200">Remove</button>
+                              )}
+                            </div>
+                          ))}
+                          <button onClick={() => setPollWhatOptions(prev => prev.length >= 8 ? prev : [...prev, ''])} className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200">+ Add what option</button>
+                        </div>
+                      )}
 
-                  {pollComposerStep === 'options' && (
-                    <div className="space-y-2.5">
-                      {pollScope === 'when' ? (
-                        <>
+                      {pollDimensions.where && (
+                        <div className="space-y-1.5">
+                          <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Where options</div>
+                          {pollWhereOptions.map((opt, idx) => (
+                            <div key={`where-opt-${idx}`} className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={opt}
+                                onChange={(e) => {
+                                  const next = [...pollWhereOptions];
+                                  next[idx] = e.target.value;
+                                  setPollWhereOptions(next);
+                                }}
+                                placeholder={`Where option ${idx + 1}`}
+                                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl"
+                              />
+                              {pollWhereOptions.length > 2 && (
+                                <button onClick={() => setPollWhereOptions(prev => prev.filter((_, i) => i !== idx))} className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200">Remove</button>
+                              )}
+                            </div>
+                          ))}
+                          <button onClick={() => setPollWhereOptions(prev => prev.length >= 8 ? prev : [...prev, ''])} className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200">+ Add where option</button>
+                        </div>
+                      )}
+
+                      {pollDimensions.when && (
+                        <div className="space-y-1.5">
+                          <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">When options</div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <input
                               type="date"
                               value={whenOptionDateInput}
                               onChange={(e) => {
                                 setWhenOptionDateInput(e.target.value);
-                                if (e.target.value) setWhenOptionTimeInput('12:00');
+                                if (e.target.value && !whenOptionTimeInput) setWhenOptionTimeInput('12:00');
                               }}
-                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl"
                             />
                             <input
                               type="time"
                               value={whenOptionTimeInput}
                               onChange={(e) => setWhenOptionTimeInput(e.target.value)}
                               disabled={!whenOptionDateInput}
-                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
+                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl disabled:opacity-50"
                             />
                           </div>
-                          {whenOptionDateInput && (
-                            <p className="text-[11px] text-indigo-600 dark:text-indigo-300">Date selected. Choose a time, then add this option.</p>
-                          )}
                           <button
                             onClick={() => {
-                              if (!whenOptionDateInput) {
-                                setChatError('Pick a date first.');
-                                return;
-                              }
-                              if (!whenOptionTimeInput) {
-                                setChatError('Pick a time for this option.');
+                              if (!whenOptionDateInput || !whenOptionTimeInput) {
+                                setChatError('Pick both date and time for When option.');
                                 return;
                               }
                               const optionText = `${whenOptionDateInput} ${whenOptionTimeInput}`;
-                              setPollOptionsInput(prev => {
-                                if (prev.includes(optionText) || prev.length >= 8) return prev;
-                                return [...prev, optionText];
-                              });
+                              setPollWhenOptions(prev => (prev.includes(optionText) || prev.length >= 8 ? prev : [...prev, optionText]));
                               setChatError('');
                             }}
-                            className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/30"
+                            className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200"
                           >
-                            + Add date/time option
+                            + Add when option
                           </button>
-                          {pollOptionsInput.map((opt, idx) => (
-                            <div key={`poll-opt-when-${idx}`} className="flex items-center gap-2">
-                              <div className="flex-1 px-3 py-2 text-sm rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/70 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-200">
-                                {opt}
-                              </div>
-                              <button
-                                onClick={() => setPollOptionsInput(prev => prev.filter((_, optionIdx) => optionIdx !== idx))}
-                                className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/30"
-                                title="Remove option"
-                              >
-                                Remove
-                              </button>
+                          {pollWhenOptions.map((opt, idx) => (
+                            <div key={`when-opt-${idx}`} className="flex items-center gap-2">
+                              <div className="flex-1 px-3 py-2 text-sm rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/70 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-200">{opt}</div>
+                              <button onClick={() => setPollWhenOptions(prev => prev.filter((_, i) => i !== idx))} className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200">Remove</button>
                             </div>
                           ))}
-                        </>
-                      ) : (
-                        <>
-                          {pollOptionsInput.map((opt, idx) => (
-                            <div key={`poll-opt-input-${idx}`} className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={opt}
-                                onChange={(e) => {
-                                  const next = [...pollOptionsInput];
-                                  next[idx] = e.target.value;
-                                  setPollOptionsInput(next);
-                                }}
-                                placeholder={`Option ${idx + 1}`}
-                                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
-                              />
-                              {pollOptionsInput.length > 2 && (
-                                <button
-                                  onClick={() => setPollOptionsInput(prev => prev.filter((_, optionIdx) => optionIdx !== idx))}
-                                  className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/30"
-                                  title="Remove option"
-                                >
-                                  Remove
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                          <button
-                            onClick={() => setPollOptionsInput(prev => prev.length >= 8 ? prev : [...prev, ''])}
-                            className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/30"
-                          >
-                            + Add option
-                          </button>
-                        </>
+                        </div>
                       )}
+
                       <div className="mt-4 flex justify-end gap-2">
                         <button
-                          onClick={() => setPollComposerStep(pollScope === 'when' ? 'question' : 'date')}
+                          onClick={() => setPollComposerStep('menu')}
                           className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
                         >
                           Back
