@@ -2208,7 +2208,7 @@ function App() {
   const CHAT_POLL_PREFIX = '[poll-v1]';
   const CHAT_DELETED_PREFIX = '[deleted-v1]';
   const CHAT_MESSAGE_PREFIX = '[msg-v1]';
-  const CHAT_REACTION_EMOJIS = ['👍', '❤️', '😂', '🔥', '🙏', '👀'];
+  const CHAT_REACTION_EMOJIS = ['👍', '❤️', '😂', '🔥', '🙏', '👀', '🎉', '✅', '👏', '🤔', '😮', '😢', '😡', '🍕', '☕'];
 
   const parseDateFromText = (text) => {
     const raw = String(text || '');
@@ -4151,7 +4151,8 @@ function App() {
       .eq('id', messageId)
       .eq('layer_id', activeLayerId)
       .select('*')
-      .single();
+      .limit(1)
+      .maybeSingle();
     if (error) {
       console.error('Error reacting to chat message:', error);
       setChatError(`Could not add reaction: ${error.message}`);
@@ -4161,6 +4162,11 @@ function App() {
     setChatReactionPickerFor(null);
     if (data) {
       setCalendarChatMessages(prev => prev.map(row => String(row?.id || '') === messageId ? data : row));
+    } else {
+      // If RLS blocks returning rows, still keep local UI in sync.
+      setCalendarChatMessages(prev => prev.map((row) => (
+        String(row?.id || '') === messageId ? { ...row, message: nextMessage } : row
+      )));
     }
   };
 
