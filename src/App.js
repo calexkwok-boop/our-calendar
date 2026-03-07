@@ -7681,7 +7681,7 @@ function App() {
                           setPollQuestionInput('');
                           setPollComposerStep('question');
                         }}
-                        className="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-left hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="w-full px-3 py-2.5 rounded-xl border border-cyan-200 dark:border-cyan-700 bg-cyan-50 dark:bg-cyan-900/25 text-cyan-800 dark:text-cyan-200 text-left hover:bg-cyan-100 dark:hover:bg-cyan-900/35 font-semibold transition-colors"
                       >
                         When?
                       </button>
@@ -7692,7 +7692,7 @@ function App() {
                           setPollOptionsInput(['', '']);
                           setPollComposerStep('question');
                         }}
-                        className="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-left hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="w-full px-3 py-2.5 rounded-xl border border-fuchsia-200 dark:border-fuchsia-700 bg-fuchsia-50 dark:bg-fuchsia-900/25 text-fuchsia-800 dark:text-fuchsia-200 text-left hover:bg-fuchsia-100 dark:hover:bg-fuchsia-900/35 font-semibold transition-colors"
                       >
                         What?
                       </button>
@@ -7703,12 +7703,12 @@ function App() {
                           setPollOptionsInput(['', '']);
                           setPollComposerStep('question');
                         }}
-                        className="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-left hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="w-full px-3 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/25 text-indigo-800 dark:text-indigo-200 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/35 font-semibold transition-colors"
                       >
                         Both?
                       </button>
                       <div className="flex justify-end">
-                        <button onClick={() => setPollComposerStep('menu')} className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">Back</button>
+                        <button onClick={() => setPollComposerStep('menu')} className="px-3 py-2 text-sm rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/30">Back</button>
                       </div>
                     </div>
                   )}
@@ -7789,7 +7789,7 @@ function App() {
                           {pollOptionsInput.length > 2 && (
                             <button
                               onClick={() => setPollOptionsInput(prev => prev.filter((_, optionIdx) => optionIdx !== idx))}
-                              className="px-2.5 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300"
+                              className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/30"
                               title="Remove option"
                             >
                               Remove
@@ -7799,7 +7799,7 @@ function App() {
                       ))}
                       <button
                         onClick={() => setPollOptionsInput(prev => prev.length >= 8 ? prev : [...prev, ''])}
-                        className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                        className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/30"
                       >
                         + Add option
                       </button>
