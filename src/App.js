@@ -7937,13 +7937,13 @@ function App() {
                   )}
 
                   {pollComposerStep === 'when' && (
-                    <div className="space-y-3">
+                    <div className="space-y-3 min-w-0 overflow-hidden">
                       <input
                         autoFocus
                         type="date"
                         value={pollDateInput}
                         onChange={(e) => setPollDateInput(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                        className="block w-full min-w-0 max-w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
                       />
                       <div className="flex justify-end gap-2">
                         <button
@@ -8005,7 +8005,7 @@ function App() {
 
                   {pollComposerStep === 'structured' && (
                     <div className="space-y-3">
-                      <div className="text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl px-3 py-2">
+                      <div className="text-sm sm:text-base text-indigo-700 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900/25 border-2 border-indigo-300 dark:border-indigo-700 rounded-2xl px-4 py-3">
                         <strong>{pollQuestionInput || 'Event'}</strong> on <strong>{pollDateInput || getDateKey(selectedDate || new Date())}</strong>
                       </div>
                       {pollOptionInputs.map((opt, idx) => (
@@ -8019,7 +8019,7 @@ function App() {
                               setPollOptionInputs(next);
                             }}
                             placeholder={`Option ${idx + 1}`}
-                            className="flex-1 px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                            className="flex-1 px-3 py-2 text-xs sm:text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
                           />
                           {pollOptionInputs.length > 2 && (
                             <button
