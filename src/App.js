@@ -2182,15 +2182,7 @@ function App() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
-  const [pollDimensions, setPollDimensions] = useState({ where: false, when: true });
-  const [pollSectionOpen, setPollSectionOpen] = useState({ where: false, when: false });
-  const [pollWhereOptions, setPollWhereOptions] = useState(['', '']);
-  const [pollWhenOptions, setPollWhenOptions] = useState([]);
-  const [whenOptionDateInput, setWhenOptionDateInput] = useState('');
-  const [whenOptionTimeInput, setWhenOptionTimeInput] = useState('');
-  const [whenOptionRangeChoice, setWhenOptionRangeChoice] = useState(null); // 'yes' | 'no' | null
-  const [whenOptionTimeChoice, setWhenOptionTimeChoice] = useState(null); // 'yes' | 'no' | null
-  const [whenOptionEndDateInput, setWhenOptionEndDateInput] = useState('');
+  const [pollOptionInputs, setPollOptionInputs] = useState(['', '']);
   const [selectedSharedListId, setSelectedSharedListId] = useState(null);
   const [newSharedListTitle, setNewSharedListTitle] = useState('');
   const [newListItemText, setNewListItemText] = useState('');
@@ -2287,6 +2279,24 @@ function App() {
       votesByDimension: { what: {}, where: {}, when: {} },
       winners: { what: null, where: null, when: null },
       resolved: false,
+      createdEventId: null,
+      createdBy: String(createdBy || '').trim() || 'Member',
+      createdAt: new Date().toISOString(),
+    };
+    return `${CHAT_POLL_PREFIX}${JSON.stringify(payload)}`;
+  };
+
+  const buildLegacyPollMessage = ({ question, dateKey, options, createdBy, pollFor = 'what', eventTitle = null }) => {
+    const payload = {
+      type: 'poll',
+      question: String(question || '').trim(),
+      dateKey: String(dateKey || ''),
+      options: (options || []).map(v => String(v || '').trim()).filter(Boolean).slice(0, 8),
+      pollFor: ['when', 'what', 'both'].includes(String(pollFor)) ? String(pollFor) : 'what',
+      eventTitle: eventTitle ? String(eventTitle).trim() : null,
+      votes: {},
+      resolved: false,
+      winnerIndex: null,
       createdEventId: null,
       createdBy: String(createdBy || '').trim() || 'Member',
       createdAt: new Date().toISOString(),
@@ -3898,25 +3908,19 @@ function App() {
   const sendCalendarChatPollMessage = async () => {
     if (!activeLayerId || !user?.id) return;
     const eventName = String(pollQuestionInput || '').trim();
-    const dateKey = String(pollDateInput || '').trim() || getDateKey(selectedDate || new Date());
+    const dateKey = String(pollDateInput || '').trim();
     if (!eventName) {
       setChatError("Add the event name first.");
       return;
     }
-    const dimensions = ['where', 'when'].filter((key) => Boolean(pollDimensions?.[key]));
-    if (dimensions.length === 0) {
-      setChatError('Select at least one poll section: Where or When.');
+    if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+      setChatError('Pick a valid event date.');
       return;
     }
-    const optionsByDimension = {
-      where: (pollWhereOptions || []).map(v => String(v || '').trim()).filter(Boolean).slice(0, 3),
-      when: (pollWhenOptions || []).map(v => String(v || '').trim()).filter(Boolean).slice(0, 3),
-    };
-    for (const dim of dimensions) {
-      if ((optionsByDimension[dim] || []).length < 2) {
-        setChatError(`Add at least two options in ${dim}.`);
-        return;
-      }
+    const options = (pollOptionInputs || []).map(v => String(v || '').trim()).filter(Boolean);
+    if (options.length < 2) {
+      setChatError('Add at least two poll options.');
+      return;
     }
 
     const payload = {
@@ -3924,12 +3928,11 @@ function App() {
       calendar_id: activeLayerId,
       user_id: user.id,
       created_by: currentUser || user?.email || user?.phone || 'User',
-      message: buildPollMessage({
+      message: buildLegacyPollMessage({
         question: eventName,
         dateKey,
-        createdBy: currentUser || user?.email || user?.phone || 'User',
-        dimensions,
-        optionsByDimension,
+        options,
+        createdBy: currentUser || user?.email || user?.phone || 'User'
       }),
       created_at: new Date().toISOString(),
     };
@@ -3950,15 +3953,7 @@ function App() {
     setPollComposerStep('menu');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
-    setPollDimensions({ where: false, when: true });
-    setPollSectionOpen({ where: false, when: false });
-    setPollWhereOptions(['', '']);
-    setPollWhenOptions([]);
-    setWhenOptionDateInput('');
-    setWhenOptionTimeInput('');
-    setWhenOptionRangeChoice(null);
-    setWhenOptionTimeChoice(null);
-    setWhenOptionEndDateInput('');
+    setPollOptionInputs(['', '']);
     if (data) {
       setCalendarChatMessages((prev) => {
         const exists = prev.some((row) => String(row?.id || '') === String(data?.id || ''));
@@ -3973,15 +3968,7 @@ function App() {
     setPollComposerStep('menu');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
-    setPollDimensions({ where: false, when: true });
-    setPollSectionOpen({ where: false, when: false });
-    setPollWhereOptions(['', '']);
-    setPollWhenOptions([]);
-    setWhenOptionDateInput('');
-    setWhenOptionTimeInput('');
-    setWhenOptionRangeChoice(null);
-    setWhenOptionTimeChoice(null);
-    setWhenOptionEndDateInput('');
+    setPollOptionInputs(['', '']);
   };
 
   const deleteCalendarChatMessage = async (messageRow) => {
@@ -7765,7 +7752,7 @@ function App() {
                   const who = String(msg?.created_by || msg?.email || 'Member');
                   const poll = parsePollMessage(msg?.message);
                   return (
-                    <div key={String(msg?.id || `${who}-${msg?.created_at || ''}`)} className={`max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap ${mine ? 'ml-auto bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}>
+                    <div key={String(msg?.id || `${who}-${msg?.created_at || ''}`)} className={`max-w-[90%] sm:max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap break-words ${mine ? 'ml-auto bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}>
                       <div className="mb-1 flex items-center justify-between gap-2">
                         <div className={`text-[10px] ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>{mine ? 'You' : who}</div>
                         {mine && (
@@ -7811,7 +7798,7 @@ function App() {
                                             } ${poll.resolved ? 'cursor-default opacity-90' : ''}`}
                                           >
                                             <div className="flex items-center justify-between gap-2">
-                                              <span className="truncate">{idx + 1}. {opt}</span>
+                                              <span className="truncate min-w-0">{idx + 1}. {opt}</span>
                                               <span className={`text-[10px] shrink-0 ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>
                                                 {counts[idx]} ({pct}%)
                                               </span>
@@ -7852,7 +7839,7 @@ function App() {
                                       } ${poll.resolved ? 'cursor-default opacity-90' : ''}`}
                                     >
                                       <div className="flex items-center justify-between gap-2">
-                                        <span className="truncate">{idx + 1}. {opt}</span>
+                                        <span className="truncate min-w-0">{idx + 1}. {opt}</span>
                                         <span className={`text-[11px] shrink-0 ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>
                                           {voteCounts[idx]} vote{voteCounts[idx] === 1 ? '' : 's'} ({pct}%)
                                         </span>
@@ -7885,15 +7872,7 @@ function App() {
                 onClick={() => {
                   setPollQuestionInput('');
                   setPollDateInput(getDateKey(selectedDate || new Date()));
-                  setPollDimensions({ where: false, when: true });
-                  setPollSectionOpen({ where: false, when: false });
-                  setPollWhereOptions(['', '']);
-                  setPollWhenOptions([]);
-                  setWhenOptionDateInput(getDateKey(selectedDate || new Date()));
-                  setWhenOptionTimeInput('');
-                  setWhenOptionRangeChoice(null);
-                  setWhenOptionTimeChoice(null);
-                  setWhenOptionEndDateInput('');
+                  setPollOptionInputs(['', '']);
                   setPollComposerStep('menu');
                   setShowCreateEventPopup(true);
                   if (chatError) setChatError('');
@@ -8029,152 +8008,35 @@ function App() {
                       <div className="text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl px-3 py-2">
                         <strong>{pollQuestionInput || 'Event'}</strong> on <strong>{pollDateInput || getDateKey(selectedDate || new Date())}</strong>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {['where', 'when'].map((dim) => (
-                          <button
-                            key={`dim-${dim}`}
-                            onClick={() => {
-                              setPollDimensions(prev => ({ ...prev, [dim]: !prev[dim] }));
-                              setPollSectionOpen(prev => ({ ...prev, [dim]: false }));
+                      {pollOptionInputs.map((opt, idx) => (
+                        <div key={`poll-option-${idx}`} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={opt}
+                            onChange={(e) => {
+                              const next = [...pollOptionInputs];
+                              next[idx] = e.target.value;
+                              setPollOptionInputs(next);
                             }}
-                            className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${pollDimensions[dim]
-                              ? 'border-indigo-300 bg-indigo-100 dark:bg-indigo-900/35 text-indigo-800 dark:text-indigo-200'
-                              : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-300'}`}
-                          >
-                            {dim === 'where' ? 'Where' : 'When'}
-                          </button>
-                        ))}
-                      </div>
-
-                      {pollDimensions.where && (
-                        <div className="rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/70 dark:bg-indigo-900/20 p-2.5">
-                          <button onClick={() => setPollSectionOpen(prev => ({ ...prev, where: !prev.where }))} className="w-full flex items-center justify-between text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                            <span>Where options</span>
-                            <span>{pollSectionOpen.where ? 'Close' : 'Open'}</span>
-                          </button>
-                          {pollSectionOpen.where && (
-                            <div className="space-y-1.5 mt-2">
-                              {pollWhereOptions.map((opt, idx) => (
-                                <div key={`where-opt-${idx}`} className="flex items-center gap-2">
-                                  <input
-                                    type="text"
-                                    value={opt}
-                                    onChange={(e) => {
-                                      const next = [...pollWhereOptions];
-                                      next[idx] = e.target.value;
-                                      setPollWhereOptions(next);
-                                    }}
-                                    placeholder={`Where option ${idx + 1}`}
-                                    className="flex-1 px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
-                                  />
-                                  {pollWhereOptions.length > 2 && (
-                                    <button onClick={() => setPollWhereOptions(prev => prev.filter((_, i) => i !== idx))} className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200">Remove</button>
-                                  )}
-                                </div>
-                              ))}
-                              <button onClick={() => setPollWhereOptions(prev => prev.length >= 3 ? prev : [...prev, ''])} className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200">+ Add where option</button>
-                            </div>
+                            placeholder={`Option ${idx + 1}`}
+                            className="flex-1 px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                          />
+                          {pollOptionInputs.length > 2 && (
+                            <button
+                              onClick={() => setPollOptionInputs(prev => prev.filter((_, i) => i !== idx))}
+                              className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200"
+                            >
+                              Remove
+                            </button>
                           )}
                         </div>
-                      )}
-
-                      {pollDimensions.when && (
-                        <div className="rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/70 dark:bg-indigo-900/20 p-2.5">
-                          <button onClick={() => setPollSectionOpen(prev => ({ ...prev, when: !prev.when }))} className="w-full flex items-center justify-between text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                            <span>When options</span>
-                            <span>{pollSectionOpen.when ? 'Close' : 'Open'}</span>
-                          </button>
-                          {pollSectionOpen.when && (
-                            <div className="space-y-1.5 mt-2">
-                              <input
-                                type="date"
-                                value={whenOptionDateInput}
-                                onChange={(e) => {
-                                  setWhenOptionDateInput(e.target.value);
-                                  setWhenOptionRangeChoice(null);
-                                  setWhenOptionTimeChoice(null);
-                                  setWhenOptionEndDateInput('');
-                                  setWhenOptionTimeInput('');
-                                }}
-                                className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
-                              />
-                              {whenOptionDateInput && (
-                                <div className="rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-100/70 dark:bg-indigo-900/30 p-2">
-                                  <div className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-200">Need a date range?</div>
-                                  <div className="mt-1 flex gap-2">
-                                    <button onClick={() => { setWhenOptionRangeChoice('yes'); setWhenOptionTimeChoice(null); }} className={`px-2.5 py-1 text-xs rounded-lg border ${whenOptionRangeChoice === 'yes' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-200'}`}>Yes</button>
-                                    <button onClick={() => { setWhenOptionRangeChoice('no'); setWhenOptionEndDateInput(''); }} className={`px-2.5 py-1 text-xs rounded-lg border ${whenOptionRangeChoice === 'no' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-200'}`}>No</button>
-                                  </div>
-                                </div>
-                              )}
-                              {whenOptionRangeChoice === 'yes' && (
-                                <input
-                                  type="date"
-                                  value={whenOptionEndDateInput}
-                                  onChange={(e) => setWhenOptionEndDateInput(e.target.value)}
-                                  className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
-                                />
-                              )}
-                              {whenOptionRangeChoice === 'no' && (
-                                <div className="rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-100/70 dark:bg-indigo-900/30 p-2">
-                                  <div className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-200">Need a time?</div>
-                                  <div className="mt-1 flex gap-2">
-                                    <button onClick={() => setWhenOptionTimeChoice('yes')} className={`px-2.5 py-1 text-xs rounded-lg border ${whenOptionTimeChoice === 'yes' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-200'}`}>Yes</button>
-                                    <button onClick={() => { setWhenOptionTimeChoice('no'); setWhenOptionTimeInput(''); }} className={`px-2.5 py-1 text-xs rounded-lg border ${whenOptionTimeChoice === 'no' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-200'}`}>No</button>
-                                  </div>
-                                </div>
-                              )}
-                              {whenOptionTimeChoice === 'yes' && (
-                                <input
-                                  type="time"
-                                  value={whenOptionTimeInput}
-                                  onChange={(e) => setWhenOptionTimeInput(e.target.value)}
-                                  className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
-                                />
-                              )}
-                              <button
-                                onClick={() => {
-                                  if (!whenOptionDateInput) {
-                                    setChatError('Pick a date first.');
-                                    return;
-                                  }
-                                  let optionText = whenOptionDateInput;
-                                  if (whenOptionRangeChoice === 'yes') {
-                                    if (!whenOptionEndDateInput) {
-                                      setChatError('Pick an end date for the range.');
-                                      return;
-                                    }
-                                    optionText = `${whenOptionDateInput} to ${whenOptionEndDateInput}`;
-                                  } else if (whenOptionRangeChoice === 'no' && whenOptionTimeChoice === 'yes') {
-                                    if (!whenOptionTimeInput) {
-                                      setChatError('Pick a time.');
-                                      return;
-                                    }
-                                    optionText = `${whenOptionDateInput} ${whenOptionTimeInput}`;
-                                  } else if (whenOptionRangeChoice === null) {
-                                    setChatError('Answer if you need a date range.');
-                                    return;
-                                  } else if (whenOptionRangeChoice === 'no' && whenOptionTimeChoice === null) {
-                                    setChatError('Answer if you need a time.');
-                                    return;
-                                  }
-                                  setPollWhenOptions(prev => (prev.includes(optionText) || prev.length >= 3 ? prev : [...prev, optionText]));
-                                  setChatError('');
-                                }}
-                                className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200"
-                              >
-                                + Add when option
-                              </button>
-                              {pollWhenOptions.map((opt, idx) => (
-                                <div key={`when-opt-${idx}`} className="flex items-center gap-2">
-                                  <div className="flex-1 px-3 py-2 text-sm rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-100/70 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200">{opt}</div>
-                                  <button onClick={() => setPollWhenOptions(prev => prev.filter((_, i) => i !== idx))} className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200">Remove</button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      ))}
+                      <button
+                        onClick={() => setPollOptionInputs(prev => prev.length >= 8 ? prev : [...prev, ''])}
+                        className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200"
+                      >
+                        + Add option
+                      </button>
 
                       <div className="mt-4 flex justify-end gap-2">
                         <button
