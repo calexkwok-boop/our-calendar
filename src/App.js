@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
 import { getMessagingIfSupported } from "./firebase";
@@ -6676,36 +6676,12 @@ function App() {
                 List
               </button>
               <button
-                onClick={() => setShowScanHelpModal(true)}
-                disabled={isScanningReminder}
-                className={`p-2 rounded-xl transition-all duration-200 ${isScanningReminder ? 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
-                title="Scan document"
+                onClick={() => setShowChatPanel(!showChatPanel)}
+                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showChatPanel ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                title="Calendar chat"
               >
-                <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                Chat
               </button>
-              <input
-                ref={scanReminderInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleScanReminder(file);
-                  e.target.value = '';
-                }}
-              />
-              <input
-                ref={scanReminderUploadInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleScanReminder(file);
-                  e.target.value = '';
-                }}
-              />
               <button
                 onClick={() => setShowWeather(!showWeather)}
                 className={`p-2 rounded-xl transition-all duration-200 text-sm ${showWeather ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
@@ -6770,23 +6746,6 @@ function App() {
               <ChevronRight className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </button>
           </div>
-        </div>
-
-        <div className="mb-4 flex gap-2">
-          <button
-            onClick={() => setShowChatPanel(!showChatPanel)}
-            className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showChatPanel ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
-            title="Calendar chat"
-          >
-            Chat
-          </button>
-          <button
-            onClick={() => setShowAiAssistant(true)}
-            className="px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800"
-            title="AI assistant"
-          >
-            Ask AI
-          </button>
         </div>
 
         {/* Notification Settings Panel */}
@@ -8492,6 +8451,49 @@ function App() {
         </div>
       </div>
     </div>
+
+    {!activeSubCalendar && (
+      <div className="fixed right-3 z-30 flex flex-col gap-2" style={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom))' }}>
+        <button
+          onClick={() => setShowAiAssistant(true)}
+          className="w-11 h-11 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg flex items-center justify-center transition-all"
+          title="Ask AI"
+        >
+          <MessageSquare className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => setShowScanHelpModal(true)}
+          disabled={isScanningReminder}
+          className={`w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all ${isScanningReminder ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'}`}
+          title="Scan document"
+        >
+          <Camera className="w-5 h-5" />
+        </button>
+      </div>
+    )}
+    <input
+      ref={scanReminderInputRef}
+      type="file"
+      accept="image/*"
+      capture="environment"
+      className="hidden"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (file) handleScanReminder(file);
+        e.target.value = '';
+      }}
+    />
+    <input
+      ref={scanReminderUploadInputRef}
+      type="file"
+      accept="image/*"
+      className="hidden"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (file) handleScanReminder(file);
+        e.target.value = '';
+      }}
+    />
 
     {/* ── Create Sub-Calendar Modal ── */}
     {!activeSubCalendar && (
