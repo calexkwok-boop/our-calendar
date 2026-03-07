@@ -5085,6 +5085,19 @@ function App() {
   }, [showChatPanel, calendarChatMessages.length]);
 
   useEffect(() => {
+    if (!chatReactionPickerFor) return;
+    const closeOnOutsidePointer = (event) => {
+      const target = event?.target;
+      if (target && typeof target.closest === 'function' && target.closest('[data-chat-reaction-picker="true"]')) return;
+      setChatReactionPickerFor(null);
+    };
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+    };
+  }, [chatReactionPickerFor]);
+
+  useEffect(() => {
     if (!user?.id) {
       seenInAppNotificationKeysRef.current = new Set();
       dismissedCalendarInviteIdsRef.current = new Set();
@@ -8405,7 +8418,7 @@ function App() {
                         </div>
                       )}
                       {chatReactionPickerFor === messageId && !isDeletedChatMessage(msg?.message) && (
-                        <div className={`mt-1.5 max-w-full min-h-[2.5rem] rounded-full border px-2 py-1.5 ${mine ? 'border-indigo-200/70 bg-indigo-500/45' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'}`}>
+                        <div data-chat-reaction-picker="true" className={`mt-1.5 max-w-full min-h-[2.5rem] rounded-full border px-2 py-1.5 ${mine ? 'border-indigo-200/70 bg-indigo-500/45' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'}`}>
                           <div className="flex items-center gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap pr-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
                           {CHAT_REACTION_EMOJIS.map((emoji) => (
                             <button
