@@ -7203,7 +7203,7 @@ function App() {
   if (showTimePrompt && pendingEvent) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div style={{ width: 'calc(100vw - 2rem)', maxWidth: '28rem', boxSizing: 'border-box' }} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-5">
+        <div style={{ width: 'calc(100vw - 2rem)', maxWidth: '28rem', boxSizing: 'border-box' }} className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-5">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
             What time?
           </h2>
@@ -7216,14 +7216,14 @@ function App() {
               </span>
             )}
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr' }}>
+          <div className="min-w-0" style={{ display: 'grid', gridTemplateColumns: '1fr' }}>
             <input
               type="text"
               id="timeInput"
               placeholder="e.g. 3:00 PM or 15:00"
               defaultValue={suggestedTime || ''}
               style={{ boxSizing: 'border-box', minWidth: 0 }}
-              className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
+              className="block w-full min-w-0 max-w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
                   const val = e.target.value;
@@ -10152,7 +10152,7 @@ function App() {
                                   className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-sm"
                                   autoFocus
                                 />
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 min-w-0">
                                   <input
                                     type="text"
                                     defaultValue={event.time || ''}
@@ -10170,7 +10170,7 @@ function App() {
                                         updateSubCalEvent(event.id, { time: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` });
                                       }
                                     }}
-                                    className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-xs"
+                                    className="flex-1 min-w-0 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-xs"
                                   />
                                   <input
                                     type="text"
@@ -10189,7 +10189,7 @@ function App() {
                                         updateSubCalEvent(event.id, { endTime: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` });
                                       }
                                     }}
-                                    className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-xs"
+                                    className="flex-1 min-w-0 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-xs"
                                   />
                                 </div>
                                 <textarea
@@ -10288,19 +10288,19 @@ function App() {
                               onChange={e => setSubCalNewEventForm(f => ({ ...f, title: e.target.value }))}
                               className="w-full text-sm px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
                             />
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 min-w-0">
                               <input
                                 type="text"
                                 readOnly
                                 value={`${hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`}
-                                className="w-24 text-xs px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-gray-300 rounded-lg bg-gray-50"
+                                className="w-24 shrink-0 text-xs px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-gray-300 rounded-lg bg-gray-50"
                               />
                               <input
                                 type="text"
                                 placeholder="End time (optional)"
                                 value={subCalNewEventForm.endTime}
                                 onChange={e => setSubCalNewEventForm(f => ({ ...f, endTime: e.target.value }))}
-                                className="flex-1 text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
+                                className="flex-1 min-w-0 text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
                               />
                             </div>
                             <PlacesAutocomplete
