@@ -2183,6 +2183,7 @@ function App() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
   const [pollDimensions, setPollDimensions] = useState({ what: true, where: false, when: true });
+  const [pollSectionOpen, setPollSectionOpen] = useState({ what: false, where: false, when: false });
   const [pollWhatOptions, setPollWhatOptions] = useState(['', '']);
   const [pollWhereOptions, setPollWhereOptions] = useState(['', '']);
   const [pollWhenOptions, setPollWhenOptions] = useState([]);
@@ -3922,6 +3923,7 @@ function App() {
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
     setPollDimensions({ what: true, where: false, when: true });
+    setPollSectionOpen({ what: false, where: false, when: false });
     setPollWhatOptions(['', '']);
     setPollWhereOptions(['', '']);
     setPollWhenOptions([]);
@@ -3942,6 +3944,7 @@ function App() {
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
     setPollDimensions({ what: true, where: false, when: true });
+    setPollSectionOpen({ what: false, where: false, when: false });
     setPollWhatOptions(['', '']);
     setPollWhereOptions(['', '']);
     setPollWhenOptions([]);
@@ -7815,6 +7818,7 @@ function App() {
                   setPollQuestionInput('');
                   setPollDateInput(getDateKey(selectedDate || new Date()));
                   setPollDimensions({ what: true, where: false, when: true });
+                  setPollSectionOpen({ what: false, where: false, when: false });
                   setPollWhatOptions(['', '']);
                   setPollWhereOptions(['', '']);
                   setPollWhenOptions([]);
@@ -7893,7 +7897,10 @@ function App() {
                         {['what', 'where', 'when'].map((dim) => (
                           <button
                             key={`dim-${dim}`}
-                            onClick={() => setPollDimensions(prev => ({ ...prev, [dim]: !prev[dim] }))}
+                            onClick={() => {
+                              setPollDimensions(prev => ({ ...prev, [dim]: !prev[dim] }));
+                              setPollSectionOpen(prev => ({ ...prev, [dim]: false }));
+                            }}
                             className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${pollDimensions[dim]
                               ? 'border-indigo-300 bg-indigo-100 dark:bg-indigo-900/35 text-indigo-800 dark:text-indigo-200'
                               : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-300'}`}
@@ -7904,96 +7911,117 @@ function App() {
                       </div>
 
                       {pollDimensions.what && (
-                        <div className="space-y-1.5">
-                          <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">What options</div>
-                          {pollWhatOptions.map((opt, idx) => (
-                            <div key={`what-opt-${idx}`} className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={opt}
-                                onChange={(e) => {
-                                  const next = [...pollWhatOptions];
-                                  next[idx] = e.target.value;
-                                  setPollWhatOptions(next);
-                                }}
-                                placeholder={`What option ${idx + 1}`}
-                                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl"
-                              />
-                              {pollWhatOptions.length > 2 && (
-                                <button onClick={() => setPollWhatOptions(prev => prev.filter((_, i) => i !== idx))} className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200">Remove</button>
-                              )}
+                        <div className="rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/70 dark:bg-indigo-900/20 p-2.5">
+                          <button onClick={() => setPollSectionOpen(prev => ({ ...prev, what: !prev.what }))} className="w-full flex items-center justify-between text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                            <span>What options</span>
+                            <span>{pollSectionOpen.what ? 'Close' : 'Open'}</span>
+                          </button>
+                          {pollSectionOpen.what && (
+                            <div className="space-y-1.5 mt-2">
+                              {pollWhatOptions.map((opt, idx) => (
+                                <div key={`what-opt-${idx}`} className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    value={opt}
+                                    onChange={(e) => {
+                                      const next = [...pollWhatOptions];
+                                      next[idx] = e.target.value;
+                                      setPollWhatOptions(next);
+                                    }}
+                                    placeholder={`What option ${idx + 1}`}
+                                    className="flex-1 px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                                  />
+                                  {pollWhatOptions.length > 2 && (
+                                    <button onClick={() => setPollWhatOptions(prev => prev.filter((_, i) => i !== idx))} className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200">Remove</button>
+                                  )}
+                                </div>
+                              ))}
+                              <button onClick={() => setPollWhatOptions(prev => prev.length >= 8 ? prev : [...prev, ''])} className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200">+ Add what option</button>
                             </div>
-                          ))}
-                          <button onClick={() => setPollWhatOptions(prev => prev.length >= 8 ? prev : [...prev, ''])} className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200">+ Add what option</button>
+                          )}
                         </div>
                       )}
 
                       {pollDimensions.where && (
-                        <div className="space-y-1.5">
-                          <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Where options</div>
-                          {pollWhereOptions.map((opt, idx) => (
-                            <div key={`where-opt-${idx}`} className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={opt}
-                                onChange={(e) => {
-                                  const next = [...pollWhereOptions];
-                                  next[idx] = e.target.value;
-                                  setPollWhereOptions(next);
-                                }}
-                                placeholder={`Where option ${idx + 1}`}
-                                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl"
-                              />
-                              {pollWhereOptions.length > 2 && (
-                                <button onClick={() => setPollWhereOptions(prev => prev.filter((_, i) => i !== idx))} className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200">Remove</button>
-                              )}
+                        <div className="rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/70 dark:bg-indigo-900/20 p-2.5">
+                          <button onClick={() => setPollSectionOpen(prev => ({ ...prev, where: !prev.where }))} className="w-full flex items-center justify-between text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                            <span>Where options</span>
+                            <span>{pollSectionOpen.where ? 'Close' : 'Open'}</span>
+                          </button>
+                          {pollSectionOpen.where && (
+                            <div className="space-y-1.5 mt-2">
+                              {pollWhereOptions.map((opt, idx) => (
+                                <div key={`where-opt-${idx}`} className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    value={opt}
+                                    onChange={(e) => {
+                                      const next = [...pollWhereOptions];
+                                      next[idx] = e.target.value;
+                                      setPollWhereOptions(next);
+                                    }}
+                                    placeholder={`Where option ${idx + 1}`}
+                                    className="flex-1 px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                                  />
+                                  {pollWhereOptions.length > 2 && (
+                                    <button onClick={() => setPollWhereOptions(prev => prev.filter((_, i) => i !== idx))} className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200">Remove</button>
+                                  )}
+                                </div>
+                              ))}
+                              <button onClick={() => setPollWhereOptions(prev => prev.length >= 8 ? prev : [...prev, ''])} className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200">+ Add where option</button>
                             </div>
-                          ))}
-                          <button onClick={() => setPollWhereOptions(prev => prev.length >= 8 ? prev : [...prev, ''])} className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200">+ Add where option</button>
+                          )}
                         </div>
                       )}
 
                       {pollDimensions.when && (
-                        <div className="space-y-1.5">
-                          <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">When options</div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <input
-                              type="date"
-                              value={whenOptionDateInput}
-                              onChange={(e) => {
-                                setWhenOptionDateInput(e.target.value);
-                                if (e.target.value && !whenOptionTimeInput) setWhenOptionTimeInput('12:00');
-                              }}
-                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl"
-                            />
-                            <input
-                              type="time"
-                              value={whenOptionTimeInput}
-                              onChange={(e) => setWhenOptionTimeInput(e.target.value)}
-                              disabled={!whenOptionDateInput}
-                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl disabled:opacity-50"
-                            />
-                          </div>
-                          <button
-                            onClick={() => {
-                              if (!whenOptionDateInput || !whenOptionTimeInput) {
-                                setChatError('Pick both date and time for When option.');
-                                return;
-                              }
-                              const optionText = `${whenOptionDateInput} ${whenOptionTimeInput}`;
-                              setPollWhenOptions(prev => (prev.includes(optionText) || prev.length >= 8 ? prev : [...prev, optionText]));
-                              setChatError('');
-                            }}
-                            className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-200"
-                          >
-                            + Add when option
+                        <div className="rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/70 dark:bg-indigo-900/20 p-2.5">
+                          <button onClick={() => setPollSectionOpen(prev => ({ ...prev, when: !prev.when }))} className="w-full flex items-center justify-between text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                            <span>When options</span>
+                            <span>{pollSectionOpen.when ? 'Close' : 'Open'}</span>
                           </button>
-                          {pollWhenOptions.map((opt, idx) => (
-                            <div key={`when-opt-${idx}`} className="flex items-center gap-2">
-                              <div className="flex-1 px-3 py-2 text-sm rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50/70 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-200">{opt}</div>
-                              <button onClick={() => setPollWhenOptions(prev => prev.filter((_, i) => i !== idx))} className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200">Remove</button>
+                          {pollSectionOpen.when && (
+                            <div className="space-y-1.5 mt-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <input
+                                  type="date"
+                                  value={whenOptionDateInput}
+                                  onChange={(e) => {
+                                    setWhenOptionDateInput(e.target.value);
+                                    if (e.target.value && !whenOptionTimeInput) setWhenOptionTimeInput('12:00');
+                                  }}
+                                  className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                                />
+                                <input
+                                  type="time"
+                                  value={whenOptionTimeInput}
+                                  onChange={(e) => setWhenOptionTimeInput(e.target.value)}
+                                  disabled={!whenOptionDateInput}
+                                  className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl disabled:opacity-50"
+                                />
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (!whenOptionDateInput || !whenOptionTimeInput) {
+                                    setChatError('Pick both date and time for When option.');
+                                    return;
+                                  }
+                                  const optionText = `${whenOptionDateInput} ${whenOptionTimeInput}`;
+                                  setPollWhenOptions(prev => (prev.includes(optionText) || prev.length >= 8 ? prev : [...prev, optionText]));
+                                  setChatError('');
+                                }}
+                                className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200"
+                              >
+                                + Add when option
+                              </button>
+                              {pollWhenOptions.map((opt, idx) => (
+                                <div key={`when-opt-${idx}`} className="flex items-center gap-2">
+                                  <div className="flex-1 px-3 py-2 text-sm rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-100/70 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200">{opt}</div>
+                                  <button onClick={() => setPollWhenOptions(prev => prev.filter((_, i) => i !== idx))} className="px-2.5 py-2 text-xs rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200">Remove</button>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          )}
                         </div>
                       )}
 
