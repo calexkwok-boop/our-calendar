@@ -3997,11 +3997,39 @@ function App() {
       return;
     }
     const membersMap = new Map();
+    const userIdToKey = new Map();
+    const scoreLabel = (value) => {
+      const label = String(value || '').trim();
+      if (!label) return 0;
+      if (label.toLowerCase() === 'member') return 1;
+      if (label.toLowerCase() === 'owner') return 1;
+      if (label.toLowerCase() === 'you') return 5;
+      // Prefer display-like names over raw email/phone identities.
+      if (label.includes('@') || /^\+?\d[\d\s()-]{6,}$/.test(label)) return 2;
+      return 4;
+    };
     const addMember = (member) => {
       const key = String(member?.key || '').trim();
+      const uid = String(member?.userId || '').trim();
       if (!key) return;
+      if (uid && userIdToKey.has(uid)) {
+        const existingKey = userIdToKey.get(uid);
+        const existing = membersMap.get(existingKey);
+        if (!existing) {
+          membersMap.set(key, member);
+          userIdToKey.set(uid, key);
+          return;
+        }
+        const existingScore = scoreLabel(existing?.label);
+        const incomingScore = scoreLabel(member?.label);
+        if (incomingScore > existingScore) {
+          membersMap.set(existingKey, { ...existing, label: member.label });
+        }
+        return;
+      }
       if (membersMap.has(key)) return;
       membersMap.set(key, member);
+      if (uid) userIdToKey.set(uid, key);
     };
 
     const ownerId = String(activeLayerOwnerId || user?.id || '').trim();
