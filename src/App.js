@@ -3991,22 +3991,32 @@ function App() {
     if (ownerId !== String(user.id)) return;
     if (!window.confirm('Delete this message?')) return;
     setDeletingChatMessageId(messageId);
-    const { error } = await supabase
+    const { data: hardDeletedRows, error } = await supabase
       .from('calendar_messages')
       .delete()
+      .select('id')
       .eq('id', messageId)
       .eq('layer_id', activeLayerId);
-    if (error) {
+
+    const hardDeleted = Array.isArray(hardDeletedRows)
+      && hardDeletedRows.some((row) => String(row?.id || '') === messageId);
+
+    if (error || !hardDeleted) {
       // Fallback for projects without DELETE policy: soft-delete via UPDATE and hide in UI.
       const tombstone = `${CHAT_DELETED_PREFIX}${JSON.stringify({ id: messageId, at: new Date().toISOString(), by: String(user.id) })}`;
-      const { error: softDeleteErr } = await supabase
+      const { data: softDeletedRows, error: softDeleteErr } = await supabase
         .from('calendar_messages')
         .update({ message: tombstone })
+        .select('id')
         .eq('id', messageId)
         .eq('layer_id', activeLayerId);
-      if (softDeleteErr) {
+
+      const softDeleted = Array.isArray(softDeletedRows)
+        && softDeletedRows.some((row) => String(row?.id || '') === messageId);
+
+      if (softDeleteErr || !softDeleted) {
         console.error('Error deleting chat message:', error, softDeleteErr);
-        setChatError(`Could not delete message: ${softDeleteErr.message || error.message}`);
+        setChatError(`Could not delete message: ${(softDeleteErr && softDeleteErr.message) || (error && error.message) || 'Delete permission blocked.'}`);
         setDeletingChatMessageId(null);
         return;
       }
