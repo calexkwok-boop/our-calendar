@@ -2201,7 +2201,9 @@ function App() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
   const [popupDraftTime, setPopupDraftTime] = useState('');
+  const [popupDraftLocation, setPopupDraftLocation] = useState('');
   const [popupDraftMaxPeople, setPopupDraftMaxPeople] = useState('10');
+  const [popupDraftNoMaxPeople, setPopupDraftNoMaxPeople] = useState(false);
   const [selectedSharedListId, setSelectedSharedListId] = useState(null);
   const [newSharedListTitle, setNewSharedListTitle] = useState('');
   const [newListItemText, setNewListItemText] = useState('');
@@ -2224,6 +2226,7 @@ function App() {
   const CHAT_DELETED_PREFIX = '[deleted-v1]';
   const CHAT_MESSAGE_PREFIX = '[msg-v1]';
   const CHAT_REACTION_EMOJIS = ['👍', '❤️', '😂', '🔥', '🙏', '👀', '🎉', '✅', '👏', '🤔', '😮', '😢', '😡', '🤣', '😍', '🥳', '🙌', '💯', '🤝', '👎', '🍕', '☕', '🍔', '🌮', '🍣', '🏆', '🎯', '🚀'];
+  const POPUP_NO_MAX_SENTINEL = 1000000;
 
   const parseDateFromText = (text) => {
     const raw = String(text || '');
@@ -4098,7 +4101,8 @@ function App() {
     const signups = popupSignupsByEventId[normalizedEventId] || [];
     const alreadyJoined = signups.some((row) => String(row?.userId || '') === String(user.id));
     if (alreadyJoined) return;
-    if (signups.length >= popup.maxPeople) {
+    const noMax = Number(popup?.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL;
+    if (!noMax && signups.length >= popup.maxPeople) {
       alert('This pop-up event is full.');
       return;
     }
@@ -4387,7 +4391,10 @@ function App() {
     const title = String(popupDraftTitle || '').trim();
     const dateKey = String(popupDraftDate || '').trim();
     const time = String(popupDraftTime || '').trim() || null;
-    const maxPeople = Math.max(1, parseInt(String(popupDraftMaxPeople || '').trim(), 10) || 1);
+    const location = String(popupDraftLocation || '').trim() || null;
+    const maxPeople = popupDraftNoMaxPeople
+      ? POPUP_NO_MAX_SENTINEL
+      : Math.max(1, parseInt(String(popupDraftMaxPeople || '').trim(), 10) || 1);
     if (!title) {
       setChatError('Add the event name first.');
       return;
@@ -4413,7 +4420,7 @@ function App() {
       recurrence: 'once',
       exceptions: null,
       reactions: null,
-      location: null,
+      location,
       created_by: currentUser || user?.email || user?.phone || 'User',
       created_at: new Date().toISOString(),
       user_id: user.id,
@@ -4486,7 +4493,9 @@ function App() {
     setPopupDraftTitle('');
     setPopupDraftDate(getDateKey(selectedDate || new Date()));
     setPopupDraftTime('');
+    setPopupDraftLocation('');
     setPopupDraftMaxPeople('10');
+    setPopupDraftNoMaxPeople(false);
   };
 
   const deleteCalendarChatMessage = async (messageRow) => {
@@ -8750,7 +8759,9 @@ function App() {
                   setPopupDraftTitle('');
                   setPopupDraftDate(getDateKey(selectedDate || new Date()));
                   setPopupDraftTime('');
+                  setPopupDraftLocation('');
                   setPopupDraftMaxPeople('10');
+                  setPopupDraftNoMaxPeople(false);
                   setShowCreateEventPopup(true);
                   if (chatError) setChatError('');
                 }}
@@ -8818,7 +8829,7 @@ function App() {
                         onClick={() => setPollComposerStep('popup')}
                         className="w-full px-3 py-3 rounded-xl border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-left hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
                       >
-                        <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">🏀 Create a pop-up event</div>
+                        <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">🎉 Create a pop-up event</div>
                         <div className="text-xs text-emerald-700/90 dark:text-emerald-300/90 mt-0.5">First come, first served with max headcount.</div>
                       </button>
                     </div>
@@ -8848,6 +8859,12 @@ function App() {
                           className="w-full px-3 py-2 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
                         />
                       </div>
+                      <PlacesAutocomplete
+                        value={popupDraftLocation}
+                        onSelect={(val) => setPopupDraftLocation(val || '')}
+                        placeholder="📍 Location (optional)"
+                        className="w-full px-3 py-2 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                      />
                       <div className="flex items-center gap-2">
                         <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Max people</label>
                         <input
@@ -8855,8 +8872,18 @@ function App() {
                           min="1"
                           value={popupDraftMaxPeople}
                           onChange={(e) => setPopupDraftMaxPeople(e.target.value)}
+                          disabled={popupDraftNoMaxPeople}
                           className="w-24 px-2 py-1.5 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-lg"
                         />
+                        <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
+                          <input
+                            type="checkbox"
+                            checked={popupDraftNoMaxPeople}
+                            onChange={(e) => setPopupDraftNoMaxPeople(e.target.checked)}
+                            className="rounded"
+                          />
+                          No max
+                        </label>
                       </div>
                       <div className="flex justify-end gap-2">
                         <button
@@ -9795,7 +9822,8 @@ function App() {
                   const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
                   const popupSignups = popupMeta ? (popupSignupsByEventId[String(event.id || '')] || []) : [];
                   const popupJoined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
-                  const popupFull = popupMeta ? popupSignups.length >= Number(popupMeta.maxPeople || 1) : false;
+                  const popupNoMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
+                  const popupFull = popupMeta ? (!popupNoMax && popupSignups.length >= Number(popupMeta.maxPeople || 1)) : false;
 
                   if (event.isHoliday) {
                     return (
@@ -9966,7 +9994,7 @@ function App() {
                               <div className="mt-2 p-2 rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20">
                                 <div className="flex items-center justify-between gap-2">
                                   <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                                    Pop-up event: {popupSignups.length}/{popupMeta.maxPeople} spots
+                                    Pop-up event: {popupSignups.length}{popupNoMax ? ' joined (no max)' : `/${popupMeta.maxPeople} spots`}
                                   </div>
                                   {popupJoined ? (
                                     <button
