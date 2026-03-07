@@ -7050,20 +7050,63 @@ function App() {
                 </div>
               </div>
             )}
-            {sharedCalendars.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Calendars shared with you:</h4>
-                <div className="space-y-2">
-                  {sharedCalendars.map((share, i) => (
-                    <div key={i} className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-700">
-                      <div className="w-7 h-7 rounded-full bg-green-400 flex items-center justify-center text-white text-xs">📅</div>
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Shared by <strong>{sharedOwnerLabels[String(share.owner_id || '')] || fallbackOwnerLabel(share.owner_id)}</strong></span>
+            <div className="mb-1 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700">
+              {(() => {
+                const activeLayer = (layers || []).find(layer => String(layer?.id || '') === String(activeLayerId || ''));
+                const isOwner = String(activeLayer?.owner_id || '') === String(user?.id || '');
+                const hasCollaborators = isOwner
+                  ? (myShares || []).some(share => String(share?.layer_id || share?.calendar_id || '') === String(activeLayerId || ''))
+                  : Boolean(activeLayerId);
+                const liveLocations = Object.values(layerMemberLocations).filter(
+                  loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number'
+                );
+                const toggleDisabled = !hasCollaborators;
+                return (
+                  <>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">📍 Live Location</h4>
+                        <p className="text-xs text-emerald-600/90 dark:text-emerald-400/90">
+                          {hasCollaborators
+                            ? `${liveLocations.length} member${liveLocations.length === 1 ? '' : 's'} sharing now in this calendar.`
+                            : 'Share this calendar with someone to enable live location.'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (toggleDisabled) return;
+                          const next = !shareLayerLocation;
+                          setShareLayerLocation(next);
+                          localStorage.setItem('layer-share-location', next.toString());
+                        }}
+                        disabled={toggleDisabled}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareLayerLocation && !toggleDisabled ? 'bg-green-500' : 'bg-gray-300'} ${toggleDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        title={toggleDisabled ? 'Share the calendar first' : 'Share my live location with calendar members'}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${shareLayerLocation && !toggleDisabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {myShares.length === 0 && sharedCalendars.length === 0 && (
+                    {liveLocations.length > 0 && (
+                      <div className="mt-2 space-y-1.5">
+                        {liveLocations.map((loc, idx) => (
+                          <a
+                            key={`${loc.userId || 'member'}-${idx}`}
+                            href={`https://www.google.com/maps?q=${loc.lat},${loc.lon}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800 hover:border-emerald-400"
+                          >
+                            <span className="text-gray-700 dark:text-gray-200 truncate">📍 {loc.name || loc.email || loc.userId}</span>
+                            <span className="text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+            {myShares.length === 0 && (
               <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add an email or phone above to get started.</p>
             )}
           </div>
@@ -7424,61 +7467,6 @@ function App() {
             )}
           </div>
         )}
-
-        {bottomNavTab === 'home' && (() => {
-          const activeLayer = (layers || []).find(layer => String(layer?.id || '') === String(activeLayerId || ''));
-          const isOwner = String(activeLayer?.owner_id || '') === String(user?.id || '');
-          const hasCollaborators = isOwner
-            ? (myShares || []).some(share => String(share?.layer_id || share?.calendar_id || '') === String(activeLayerId || ''))
-            : Boolean(activeLayerId);
-          const liveLocations = Object.values(layerMemberLocations).filter(
-            loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number'
-          );
-          const toggleDisabled = !hasCollaborators;
-          return (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4 border border-green-100 dark:border-green-900/40">
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold text-emerald-600 dark:text-emerald-400">Live Location</h3>
-                  <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
-                    {hasCollaborators
-                      ? `${liveLocations.length} member${liveLocations.length === 1 ? '' : 's'} sharing now in this calendar.`
-                      : 'Share this calendar with someone to enable live location.'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    if (toggleDisabled) return;
-                    const next = !shareLayerLocation;
-                    setShareLayerLocation(next);
-                    localStorage.setItem('layer-share-location', next.toString());
-                  }}
-                  disabled={toggleDisabled}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareLayerLocation && !toggleDisabled ? 'bg-green-500' : 'bg-gray-300'} ${toggleDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title={toggleDisabled ? 'Share the calendar first' : 'Share my live location with calendar members'}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${shareLayerLocation && !toggleDisabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-              </div>
-              {liveLocations.length > 0 && (
-                <div className="mt-2 space-y-1.5">
-                  {liveLocations.map((loc, idx) => (
-                    <a
-                      key={`${loc.userId || 'member'}-${idx}`}
-                      href={`https://www.google.com/maps?q=${loc.lat},${loc.lon}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-green-300"
-                    >
-                      <span className="text-gray-700 dark:text-gray-200 truncate">📍 {loc.name || loc.email || loc.userId}</span>
-                      <span className="text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })()}
 
         <div className="grid grid-cols-1 gap-4">
           <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 ${bottomNavTab !== 'home' ? 'hidden' : ''}`}>
