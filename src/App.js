@@ -8453,7 +8453,7 @@ function App() {
     </div>
 
     {!activeSubCalendar && (
-      <div className="fixed right-3 z-30 flex flex-col gap-2" style={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom))' }}>
+      <div className="fixed right-3 z-30 flex flex-row gap-2" style={{ bottom: 'calc(3.35rem + env(safe-area-inset-bottom))' }}>
         <button
           onClick={() => setShowAiAssistant(true)}
           className="w-11 h-11 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg flex items-center justify-center transition-all"
