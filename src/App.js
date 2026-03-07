@@ -4133,10 +4133,10 @@ function App() {
     return true;
   };
 
-  const joinPopupEvent = async (eventId) => {
+  const joinPopupEvent = async (eventId, fallbackMeta = null) => {
     const normalizedEventId = String(eventId || '').trim();
-    const popup = popupEventsByEventId[normalizedEventId];
-    if (!normalizedEventId || !popup || !activeLayerId || !user?.id) return;
+    const popup = popupEventsByEventId[normalizedEventId] || null;
+    if (!normalizedEventId || !activeLayerId || !user?.id) return;
     if (!popupFeatureAvailable) {
       alert('Popup events need DB setup first.');
       return;
@@ -4144,8 +4144,11 @@ function App() {
     const signups = popupSignupsByEventId[normalizedEventId] || [];
     const alreadyJoined = signups.some((row) => String(row?.userId || '') === String(user.id));
     if (alreadyJoined) return;
-    const noMax = Number(popup?.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL;
-    if (!noMax && signups.length >= popup.maxPeople) {
+    const fallbackNoMax = Boolean(fallbackMeta?.noMax);
+    const fallbackMax = Math.max(1, Number(fallbackMeta?.maxPeople || 1));
+    const maxPeople = popup ? Number(popup?.maxPeople || 1) : fallbackMax;
+    const noMax = popup ? (Number(popup?.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL) : fallbackNoMax;
+    if (!noMax && signups.length >= maxPeople) {
       alert('This pop-up event is full.');
       return;
     }
@@ -8823,7 +8826,10 @@ function App() {
                                     </button>
                                   ) : (
                                     <button
-                                      onClick={() => joinPopupEvent(popupInvite.eventId)}
+                                      onClick={() => joinPopupEvent(popupInvite.eventId, {
+                                        maxPeople: popupInvite.maxPeople,
+                                        noMax: popupInvite.noMax,
+                                      })}
                                       disabled={full}
                                       className={`px-2 py-1 text-[11px] rounded-md border disabled:opacity-50 ${mine ? 'border-indigo-200/70 bg-indigo-500/40 text-white' : 'border-emerald-300 dark:border-emerald-700 bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300'}`}
                                     >
