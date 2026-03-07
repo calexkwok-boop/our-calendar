@@ -3947,7 +3947,7 @@ function App() {
 
     setChatError('');
     setShowCreateEventPopup(false);
-    setPollComposerStep('structured');
+    setPollComposerStep('menu');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
     setPollDimensions({ where: false, when: true });
@@ -3970,7 +3970,7 @@ function App() {
 
   const resetPollComposer = () => {
     setShowCreateEventPopup(false);
-    setPollComposerStep('structured');
+    setPollComposerStep('menu');
     setPollQuestionInput('');
     setPollDateInput(getDateKey(selectedDate || new Date()));
     setPollDimensions({ where: false, when: true });
@@ -7894,7 +7894,7 @@ function App() {
                   setWhenOptionRangeChoice(null);
                   setWhenOptionTimeChoice(null);
                   setWhenOptionEndDateInput('');
-                  setPollComposerStep('structured');
+                  setPollComposerStep('menu');
                   setShowCreateEventPopup(true);
                   if (chatError) setChatError('');
                 }}
@@ -7930,7 +7930,15 @@ function App() {
               <div className="fixed inset-0 z-[70] bg-black/45 flex items-center justify-center p-4">
                 <div className="w-full max-w-md rounded-2xl border border-indigo-100 dark:border-indigo-800 bg-white dark:bg-gray-800 p-4 shadow-2xl">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-base font-semibold text-indigo-600 dark:text-indigo-400">Build your poll</h4>
+                    <h4 className="text-base font-semibold text-indigo-600 dark:text-indigo-400">
+                      {pollComposerStep === 'menu'
+                        ? 'Create an event poll'
+                        : pollComposerStep === 'when'
+                          ? 'When is the event?'
+                          : pollComposerStep === 'what'
+                            ? 'What is the event?'
+                            : 'Poll options'}
+                    </h4>
                     <button
                       onClick={resetPollComposer}
                       className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -7939,7 +7947,50 @@ function App() {
                     </button>
                   </div>
 
-                  {pollComposerStep === 'structured' && (
+                  {pollComposerStep === 'menu' && (
+                    <button
+                      onClick={() => setPollComposerStep('when')}
+                      className="w-full px-3 py-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
+                    >
+                      <div className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">📅✏️ Create an event poll</div>
+                      <div className="text-xs text-indigo-600/90 dark:text-indigo-400/90 mt-0.5">Ask your calendar members to vote, then auto-add the winner.</div>
+                    </button>
+                  )}
+
+                  {pollComposerStep === 'when' && (
+                    <div className="space-y-3">
+                      <input
+                        autoFocus
+                        type="date"
+                        value={pollDateInput}
+                        onChange={(e) => setPollDateInput(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => setPollComposerStep('menu')}
+                          className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+                        >
+                          Back
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!pollDateInput || !/^\d{4}-\d{2}-\d{2}$/.test(pollDateInput)) {
+                              setChatError('Pick a valid event date.');
+                              return;
+                            }
+                            setChatError('');
+                            setPollComposerStep('what');
+                          }}
+                          className="px-3 py-2 text-sm rounded-xl bg-indigo-600 text-white font-semibold"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {pollComposerStep === 'what' && (
                     <div className="space-y-3">
                       <input
                         autoFocus
@@ -7947,8 +7998,37 @@ function App() {
                         value={pollQuestionInput}
                         onChange={(e) => setPollQuestionInput(e.target.value)}
                         placeholder="What's the event? (e.g. Team lunch)"
-                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                        className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
                       />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => setPollComposerStep('when')}
+                          className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+                        >
+                          Back
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!pollQuestionInput.trim()) {
+                              setChatError('Add the event name first.');
+                              return;
+                            }
+                            setChatError('');
+                            setPollComposerStep('structured');
+                          }}
+                          className="px-3 py-2 text-sm rounded-xl bg-indigo-600 text-white font-semibold"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {pollComposerStep === 'structured' && (
+                    <div className="space-y-3">
+                      <div className="text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl px-3 py-2">
+                        <strong>{pollQuestionInput || 'Event'}</strong> on <strong>{pollDateInput || getDateKey(selectedDate || new Date())}</strong>
+                      </div>
                       <div className="flex items-center gap-2">
                         {['where', 'when'].map((dim) => (
                           <button
@@ -8098,10 +8178,10 @@ function App() {
 
                       <div className="mt-4 flex justify-end gap-2">
                         <button
-                          onClick={resetPollComposer}
+                          onClick={() => setPollComposerStep('what')}
                           className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
                         >
-                          Cancel
+                          Back
                         </button>
                         <button
                           onClick={sendCalendarChatPollMessage}
