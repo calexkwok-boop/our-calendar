@@ -2174,6 +2174,7 @@ function App() {
   const [calendarChatMessages, setCalendarChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState('');
+  const [deletingChatMessageId, setDeletingChatMessageId] = useState(null);
   const [showCreateEventPopup, setShowCreateEventPopup] = useState(false);
   const [pollComposerStep, setPollComposerStep] = useState('menu');
   const [pollScope, setPollScope] = useState('both');
@@ -3868,6 +3869,30 @@ function App() {
     setPollOptionsInput(['', '']);
   };
 
+  const deleteCalendarChatMessage = async (messageRow) => {
+    const messageId = String(messageRow?.id || '');
+    if (!messageId || !activeLayerId || !user?.id) return;
+    const ownerId = String(messageRow?.user_id || '');
+    if (ownerId !== String(user.id)) return;
+    if (!window.confirm('Delete this message?')) return;
+    setDeletingChatMessageId(messageId);
+    const { error } = await supabase
+      .from('calendar_messages')
+      .delete()
+      .eq('id', messageId)
+      .eq('layer_id', activeLayerId)
+      .eq('user_id', user.id);
+    if (error) {
+      console.error('Error deleting chat message:', error);
+      setChatError(`Could not delete message: ${error.message}`);
+      setDeletingChatMessageId(null);
+      return;
+    }
+    setChatError('');
+    setCalendarChatMessages(prev => prev.filter(row => String(row?.id || '') !== messageId));
+    setDeletingChatMessageId(null);
+  };
+
   const insertPollWinnerEvent = async (poll, pollMessageId) => {
     if (!poll || !activeLayerId || !user?.id) return null;
     const winnerIndex = Number(poll.winnerIndex);
@@ -4370,6 +4395,14 @@ function App() {
     const channel = supabase
       .channel(`calendar-chat-${activeLayerId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_messages', filter: `layer_id=eq.${activeLayerId}` }, (payload) => {
+        const eventType = String(payload?.eventType || '').toUpperCase();
+        if (eventType === 'DELETE') {
+          const deletedId = String(payload?.old?.id || '');
+          if (!deletedId) return;
+          setDeletingChatMessageId((prev) => (String(prev || '') === deletedId ? null : prev));
+          setCalendarChatMessages(prev => prev.filter((m) => String(m?.id || '') !== deletedId));
+          return;
+        }
         const row = payload?.new;
         if (!row) return;
         setCalendarChatMessages((prev) => {
@@ -7537,7 +7570,20 @@ function App() {
                   const pollFor = poll?.pollFor || 'both';
                   return (
                     <div key={String(msg?.id || `${who}-${msg?.created_at || ''}`)} className={`max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap ${mine ? 'ml-auto bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}>
-                      <div className={`text-[10px] mb-1 ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>{mine ? 'You' : who}</div>
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <div className={`text-[10px] ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>{mine ? 'You' : who}</div>
+                        {mine && (
+                          <button
+                            onClick={() => deleteCalendarChatMessage(msg)}
+                            disabled={String(deletingChatMessageId || '') === String(msg?.id || '')}
+                            className={`p-1 rounded-md ${mine ? 'text-indigo-100 hover:bg-indigo-500/60' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'} disabled:opacity-50`}
+                            title={poll ? 'Delete this poll' : 'Delete this message'}
+                            aria-label={poll ? 'Delete poll' : 'Delete message'}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                       {poll ? (
                         <div className={`${mine ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
                           <div className="font-semibold">{poll.question}</div>
@@ -7681,7 +7727,7 @@ function App() {
                           setPollQuestionInput('');
                           setPollComposerStep('question');
                         }}
-                        className="w-full px-3 py-2.5 rounded-xl border border-cyan-200 dark:border-cyan-700 bg-cyan-50 dark:bg-cyan-900/25 text-cyan-800 dark:text-cyan-200 text-left hover:bg-cyan-100 dark:hover:bg-cyan-900/35 font-semibold transition-colors"
+                        className="w-full px-3 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/25 text-indigo-800 dark:text-indigo-200 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/35 font-semibold transition-colors"
                       >
                         When?
                       </button>
@@ -7692,7 +7738,7 @@ function App() {
                           setPollOptionsInput(['', '']);
                           setPollComposerStep('question');
                         }}
-                        className="w-full px-3 py-2.5 rounded-xl border border-fuchsia-200 dark:border-fuchsia-700 bg-fuchsia-50 dark:bg-fuchsia-900/25 text-fuchsia-800 dark:text-fuchsia-200 text-left hover:bg-fuchsia-100 dark:hover:bg-fuchsia-900/35 font-semibold transition-colors"
+                        className="w-full px-3 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/25 text-indigo-800 dark:text-indigo-200 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/35 font-semibold transition-colors"
                       >
                         What?
                       </button>
