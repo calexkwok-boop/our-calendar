@@ -2175,6 +2175,7 @@ function App() {
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState('');
   const [chatUnreadCounts, setChatUnreadCounts] = useState({});
+  const [chatLastSeenByLayer, setChatLastSeenByLayer] = useState({});
   const [chatReactionPickerFor, setChatReactionPickerFor] = useState(null);
   const chatLastTapRef = useRef({ messageId: null, at: 0 });
   const [deletingChatMessageId, setDeletingChatMessageId] = useState(null);
@@ -2266,6 +2267,12 @@ function App() {
   };
 
   const isDeletedChatMessage = (message) => String(message || '').startsWith(CHAT_DELETED_PREFIX);
+  const markChatSeenForLayer = (layerId, atIso = new Date().toISOString()) => {
+    const key = String(layerId || '');
+    if (!key) return;
+    setChatLastSeenByLayer(prev => ({ ...prev, [key]: atIso }));
+    setChatUnreadCounts(prev => ({ ...prev, [key]: 0 }));
+  };
 
   const buildTextChatMessage = (text, reactions = {}) => (
     `${CHAT_MESSAGE_PREFIX}${JSON.stringify({ type: 'msg', text: String(text || ''), reactions: reactions || {} })}`
@@ -4716,13 +4723,71 @@ function App() {
 
   useEffect(() => {
     if (!showChatPanel || !activeLayerId) return;
-    const layerKey = String(activeLayerId || '');
-    if (!layerKey) return;
-    setChatUnreadCounts(prev => {
-      if (!prev[layerKey]) return prev;
-      return { ...prev, [layerKey]: 0 };
-    });
+    markChatSeenForLayer(activeLayerId);
   }, [showChatPanel, activeLayerId]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setChatLastSeenByLayer({});
+      setChatUnreadCounts({});
+      return;
+    }
+    const storageKey = `chat-last-seen-${user.id}`;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const parsed = raw ? JSON.parse(raw) : {};
+      const normalized = (parsed && typeof parsed === 'object') ? parsed : {};
+      setChatLastSeenByLayer(normalized);
+    } catch {
+      setChatLastSeenByLayer({});
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const storageKey = `chat-last-seen-${user.id}`;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(chatLastSeenByLayer));
+    } catch {}
+  }, [user?.id, chatLastSeenByLayer]);
+
+  useEffect(() => {
+    const syncUnreadForActiveLayer = async () => {
+      if (!activeLayerId || !user?.id || showChatPanel) return;
+      const layerKey = String(activeLayerId);
+      const lastSeen = chatLastSeenByLayer[layerKey];
+      let query = supabase
+        .from('calendar_messages')
+        .select('id,user_id,created_at,message')
+        .eq('layer_id', activeLayerId)
+        .order('created_at', { ascending: false })
+        .limit(250);
+      if (lastSeen) query = query.gt('created_at', lastSeen);
+      const { data, error } = await query;
+      if (error) return;
+      const unread = (data || []).filter(row => (
+        String(row?.user_id || '') !== String(user.id)
+        && !isDeletedChatMessage(row?.message)
+      )).length;
+      setChatUnreadCounts(prev => ({ ...prev, [layerKey]: unread }));
+    };
+
+    syncUnreadForActiveLayer();
+    if (showChatPanel || !activeLayerId || !user?.id) return;
+
+    const intervalId = window.setInterval(syncUnreadForActiveLayer, 15000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') syncUnreadForActiveLayer();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', syncUnreadForActiveLayer);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', syncUnreadForActiveLayer);
+    };
+  }, [activeLayerId, user?.id, showChatPanel, chatLastSeenByLayer, layerRefreshToken]);
 
   useEffect(() => {
     if (!showChatPanel || !calendarChatScrollRef.current) return;
@@ -7347,12 +7412,7 @@ function App() {
                   const layerKey = String(activeLayerId || '');
                   const next = !showChatPanel;
                   setShowChatPanel(next);
-                  if (next && layerKey) {
-                    setChatUnreadCounts(prev => {
-                      if (!prev[layerKey]) return prev;
-                      return { ...prev, [layerKey]: 0 };
-                    });
-                  }
+                  if (next && layerKey) markChatSeenForLayer(layerKey);
                 }}
                 className={`relative px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showChatPanel ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
                 title="Calendar chat"
