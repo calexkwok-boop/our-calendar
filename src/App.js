@@ -2174,6 +2174,7 @@ function App() {
   const [calendarChatMessages, setCalendarChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState('');
+  const [chatUnreadCounts, setChatUnreadCounts] = useState({});
   const [deletingChatMessageId, setDeletingChatMessageId] = useState(null);
   const [showCreateEventPopup, setShowCreateEventPopup] = useState(false);
   const [pollComposerStep, setPollComposerStep] = useState('menu');
@@ -4575,7 +4576,7 @@ function App() {
   }, [showChatPanel, activeLayerId]);
 
   useEffect(() => {
-    if (!showChatPanel || !activeLayerId) return;
+    if (!activeLayerId) return;
     const channel = supabase
       .channel(`calendar-chat-${activeLayerId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_messages', filter: `layer_id=eq.${activeLayerId}` }, (payload) => {
@@ -4593,6 +4594,19 @@ function App() {
           setCalendarChatMessages(prev => prev.filter((m) => String(m?.id || '') !== String(row?.id || '')));
           return;
         }
+        if (
+          eventType === 'INSERT'
+          && !showChatPanel
+          && String(row?.user_id || '') !== String(user?.id || '')
+        ) {
+          const layerKey = String(activeLayerId || '');
+          if (layerKey) {
+            setChatUnreadCounts(prev => ({
+              ...prev,
+              [layerKey]: (Number(prev[layerKey] || 0) + 1),
+            }));
+          }
+        }
         setCalendarChatMessages((prev) => {
           const idx = prev.findIndex((m) => String(m?.id || '') === String(row?.id || ''));
           if (idx >= 0) {
@@ -4608,6 +4622,16 @@ function App() {
     return () => {
       channel.unsubscribe();
     };
+  }, [showChatPanel, activeLayerId, user?.id]);
+
+  useEffect(() => {
+    if (!showChatPanel || !activeLayerId) return;
+    const layerKey = String(activeLayerId || '');
+    if (!layerKey) return;
+    setChatUnreadCounts(prev => {
+      if (!prev[layerKey]) return prev;
+      return { ...prev, [layerKey]: 0 };
+    });
   }, [showChatPanel, activeLayerId]);
 
   useEffect(() => {
@@ -7149,6 +7173,7 @@ function App() {
 
   const unreadInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 0 : 1), 0);
   const readInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 1 : 0), 0);
+  const activeChatUnreadCount = Number(chatUnreadCounts[String(activeLayerId || '')] || 0);
   const selectedSharedListGroup = sharedListGroups.find(group => group.id === selectedSharedListId) || null;
   const incompleteSharedListItems = sharedListItems.filter(item => !item.done);
   const completedSharedListItems = sharedListItems.filter(item => item.done);
@@ -7228,11 +7253,26 @@ function App() {
                 List
               </button>
               <button
-                onClick={() => setShowChatPanel(!showChatPanel)}
-                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showChatPanel ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                onClick={() => {
+                  const layerKey = String(activeLayerId || '');
+                  const next = !showChatPanel;
+                  setShowChatPanel(next);
+                  if (next && layerKey) {
+                    setChatUnreadCounts(prev => {
+                      if (!prev[layerKey]) return prev;
+                      return { ...prev, [layerKey]: 0 };
+                    });
+                  }
+                }}
+                className={`relative px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showChatPanel ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
                 title="Calendar chat"
               >
                 Chat
+                {activeChatUnreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                    {activeChatUnreadCount > 99 ? '99+' : activeChatUnreadCount}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setShowWeather(!showWeather)}
