@@ -2223,6 +2223,7 @@ function App() {
   const [showWeather, setShowWeather] = useState(true);
   const calendarChatScrollRef = useRef(null);
   const CHAT_POLL_PREFIX = '[poll-v1]';
+  const CHAT_POPUP_PREFIX = '[popup-v1]';
   const CHAT_DELETED_PREFIX = '[deleted-v1]';
   const CHAT_MESSAGE_PREFIX = '[msg-v1]';
   const CHAT_REACTION_EMOJIS = ['👍', '❤️', '😂', '🔥', '🙏', '👀', '🎉', '✅', '👏', '🤔', '😮', '😢', '😡', '🤣', '😍', '🥳', '🙌', '💯', '🤝', '👎', '🍕', '☕', '🍔', '🌮', '🍣', '🏆', '🎯', '🚀'];
@@ -2303,6 +2304,22 @@ function App() {
     `${CHAT_MESSAGE_PREFIX}${JSON.stringify({ type: 'msg', text: String(text || ''), reactions: reactions || {} })}`
   );
 
+  const buildPopupInviteMessage = (payload = {}, reactions = {}) => (
+    `${CHAT_POPUP_PREFIX}${JSON.stringify({
+      type: 'popup_invite',
+      eventId: String(payload?.eventId || ''),
+      title: String(payload?.title || ''),
+      dateKey: String(payload?.dateKey || ''),
+      time: payload?.time ? String(payload.time) : null,
+      location: payload?.location ? String(payload.location) : null,
+      maxPeople: Number(payload?.maxPeople || 0),
+      noMax: Boolean(payload?.noMax),
+      createdBy: String(payload?.createdBy || ''),
+      createdAt: String(payload?.createdAt || new Date().toISOString()),
+      reactions: reactions || {},
+    })}`
+  );
+
   const parseTextChatMessage = (message) => {
     const raw = String(message || '');
     if (!raw.startsWith(CHAT_MESSAGE_PREFIX)) return null;
@@ -2312,6 +2329,32 @@ function App() {
       if (!text) return null;
       const reactions = (parsed && typeof parsed.reactions === 'object' && parsed.reactions !== null) ? parsed.reactions : {};
       return { text, reactions };
+    } catch {
+      return null;
+    }
+  };
+
+  const parsePopupInviteMessage = (message) => {
+    const raw = String(message || '');
+    if (!raw.startsWith(CHAT_POPUP_PREFIX)) return null;
+    try {
+      const parsed = JSON.parse(raw.slice(CHAT_POPUP_PREFIX.length));
+      const eventId = String(parsed?.eventId || '').trim();
+      const title = String(parsed?.title || '').trim();
+      const dateKey = String(parsed?.dateKey || '').trim();
+      if (!eventId || !title || !dateKey) return null;
+      return {
+        eventId,
+        title,
+        dateKey,
+        time: parsed?.time ? String(parsed.time) : null,
+        location: parsed?.location ? String(parsed.location) : null,
+        maxPeople: Math.max(0, Number(parsed?.maxPeople || 0)),
+        noMax: Boolean(parsed?.noMax),
+        createdBy: String(parsed?.createdBy || ''),
+        createdAt: String(parsed?.createdAt || ''),
+        reactions: normalizeChatReactions(parsed?.reactions),
+      };
     } catch {
       return null;
     }
@@ -4480,6 +4523,37 @@ function App() {
       created_by_name: currentUser || user?.email || user?.phone || 'Member',
       created_at: new Date().toISOString(),
     }]);
+
+    const invitePayload = {
+      eventId: inserted.id,
+      title: inserted.title,
+      dateKey: inserted.date,
+      time: inserted.time,
+      location: inserted.location || null,
+      maxPeople,
+      noMax: maxPeople >= POPUP_NO_MAX_SENTINEL,
+      createdBy: currentUser || user?.email || user?.phone || 'Member',
+      createdAt: new Date().toISOString(),
+    };
+    const { data: popupChatMsg } = await supabase
+      .from('calendar_messages')
+      .insert({
+        layer_id: activeLayerId,
+        calendar_id: activeLayerId,
+        user_id: user.id,
+        created_by: currentUser || user?.email || user?.phone || 'User',
+        message: buildPopupInviteMessage(invitePayload, {}),
+        created_at: new Date().toISOString(),
+      })
+      .select('*')
+      .maybeSingle();
+    if (popupChatMsg) {
+      setCalendarChatMessages((prev) => {
+        const exists = prev.some((row) => String(row?.id || '') === String(popupChatMsg?.id || ''));
+        if (exists) return prev;
+        return [...prev, popupChatMsg];
+      });
+    }
     setChatError('');
     resetPollComposer();
   };
@@ -4547,16 +4621,21 @@ function App() {
     if (!raw || isDeletedChatMessage(raw)) return;
 
     const poll = parsePollMessage(raw);
-    const textPayload = poll ? null : parseTextChatMessage(raw);
-    const fallbackText = (!poll && !textPayload) ? raw : '';
+    const popupInvite = poll ? null : parsePopupInviteMessage(raw);
+    const textPayload = (poll || popupInvite) ? null : parseTextChatMessage(raw);
+    const fallbackText = (!poll && !popupInvite && !textPayload) ? raw : '';
     const currentReactions = poll
       ? normalizeChatReactions(poll?.reactions)
-      : normalizeChatReactions(textPayload?.reactions);
+      : (popupInvite
+        ? normalizeChatReactions(popupInvite?.reactions)
+        : normalizeChatReactions(textPayload?.reactions));
     const nextReactions = toggleChatReaction(currentReactions, emoji, user.id);
 
     let nextMessage = raw;
     if (poll) {
       nextMessage = `${CHAT_POLL_PREFIX}${JSON.stringify({ ...poll, reactions: nextReactions })}`;
+    } else if (popupInvite) {
+      nextMessage = buildPopupInviteMessage(popupInvite, nextReactions);
     } else if (textPayload) {
       nextMessage = buildTextChatMessage(textPayload.text, nextReactions);
     } else {
@@ -8583,11 +8662,14 @@ function App() {
                   const mine = String(msg?.user_id || '') === String(user?.id || '');
                   const who = String(msg?.created_by || msg?.email || 'Member');
                   const poll = parsePollMessage(msg?.message);
-                  const textPayload = poll ? null : parseTextChatMessage(msg?.message);
+                  const popupInvite = poll ? null : parsePopupInviteMessage(msg?.message);
+                  const textPayload = (poll || popupInvite) ? null : parseTextChatMessage(msg?.message);
                   const displayText = textPayload ? textPayload.text : String(msg?.message || '');
                   const chatReactions = poll
                     ? normalizeChatReactions(poll?.reactions)
-                    : normalizeChatReactions(textPayload?.reactions);
+                    : (popupInvite
+                      ? normalizeChatReactions(popupInvite?.reactions)
+                      : normalizeChatReactions(textPayload?.reactions));
                   const messageId = String(msg?.id || '');
                   return (
                     <div
@@ -8706,6 +8788,51 @@ function App() {
                           )}
                           <div className={`text-[10px] mt-1 ${mine ? 'text-indigo-100/90' : 'text-gray-400 dark:text-gray-500'}`}>
                             {poll.resolved ? 'Voting complete. Event added to calendar.' : 'Vote to reach majority in each selected section.'}
+                          </div>
+                        </div>
+                      ) : popupInvite ? (
+                        <div className={`${mine ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                          <div className={`rounded-lg border px-3 py-2 ${mine ? 'border-indigo-200/70 bg-indigo-500/35' : 'border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20'}`}>
+                            <div className="font-semibold">🎉 {popupInvite.title}</div>
+                            <div className={`text-[11px] mt-0.5 ${mine ? 'text-indigo-100/90' : 'text-gray-600 dark:text-gray-300'}`}>
+                              {formatDateKeyMMDDYYYY(popupInvite.dateKey)}{popupInvite.time ? ` at ${formatTime(popupInvite.time)}` : ''}
+                            </div>
+                            {popupInvite.location && (
+                              <div className={`text-[11px] mt-0.5 ${mine ? 'text-indigo-100/90' : 'text-gray-600 dark:text-gray-300'}`}>
+                                📍 {popupInvite.location}
+                              </div>
+                            )}
+                            {(() => {
+                              const popupMeta = popupEventsByEventId[String(popupInvite.eventId || '')] || null;
+                              const popupSignups = popupMeta ? (popupSignupsByEventId[String(popupInvite.eventId || '')] || []) : [];
+                              const noMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : Boolean(popupInvite.noMax);
+                              const maxPeople = popupMeta ? Number(popupMeta.maxPeople || 0) : Number(popupInvite.maxPeople || 0);
+                              const joined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
+                              const full = noMax ? false : (popupSignups.length >= maxPeople);
+                              return (
+                                <div className="mt-2 flex items-center justify-between gap-2">
+                                  <div className={`text-[11px] ${mine ? 'text-indigo-100/90' : 'text-emerald-700 dark:text-emerald-300'}`}>
+                                    {popupSignups.length}{noMax ? ' joined (no max)' : `/${maxPeople} spots`}
+                                  </div>
+                                  {joined ? (
+                                    <button
+                                      onClick={() => leavePopupEvent(popupInvite.eventId)}
+                                      className={`px-2 py-1 text-[11px] rounded-md border ${mine ? 'border-indigo-200/70 bg-indigo-500/40 text-white' : 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-200'}`}
+                                    >
+                                      Leave
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => joinPopupEvent(popupInvite.eventId)}
+                                      disabled={full}
+                                      className={`px-2 py-1 text-[11px] rounded-md border disabled:opacity-50 ${mine ? 'border-indigo-200/70 bg-indigo-500/40 text-white' : 'border-emerald-300 dark:border-emerald-700 bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300'}`}
+                                    >
+                                      {full ? 'Full' : 'Join'}
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       ) : (
