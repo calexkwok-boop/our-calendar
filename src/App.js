@@ -8313,7 +8313,7 @@ function App() {
                                 const winner = coercePollIndex(poll?.winners?.[dim], options.length);
                                 const label = dim === 'what' ? 'What' : dim === 'where' ? 'Where' : 'When';
                                 return (
-                                  <div key={`${msg?.id || 'poll'}-${dim}`} className={`rounded-lg border px-2.5 py-2 ${mine ? 'border-indigo-300/60 bg-indigo-500/20' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'}`}>
+                                  <div key={`${msg?.id || 'poll'}-${dim}`} className="rounded-lg border px-2.5 py-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                                     <div className={`text-[11px] font-semibold mb-1 ${mine ? 'text-indigo-100' : 'text-gray-600 dark:text-gray-300'}`}>{label}</div>
                                     <div className="space-y-1.5">
                                       {options.map((opt, idx) => {
@@ -8336,7 +8336,7 @@ function App() {
                                                 {counts[idx]} ({pct}%)
                                               </span>
                                             </div>
-                                            {isWinner && <div className={`text-[10px] mt-1 ${mine ? 'text-emerald-700' : 'text-emerald-600 dark:text-emerald-400'}`}>Majority reached</div>}
+                                            {isWinner && <div className={`text-[10px] mt-1 ${mine ? 'text-gray-700' : 'text-gray-600 dark:text-gray-400'}`}>Majority reached</div>}
                                           </button>
                                         );
                                       })}
@@ -8377,7 +8377,7 @@ function App() {
                                           {voteCounts[idx]} vote{voteCounts[idx] === 1 ? '' : 's'} ({pct}%)
                                         </span>
                                       </div>
-                                      {isWinner && <div className={`mt-1 text-[10px] ${mine ? 'text-emerald-700' : 'text-emerald-600 dark:text-emerald-400'}`}>Majority reached</div>}
+                                      {isWinner && <div className={`mt-1 text-[10px] ${mine ? 'text-gray-700' : 'text-gray-600 dark:text-gray-400'}`}>Majority reached</div>}
                                     </button>
                                   );
                                 })}
@@ -8405,13 +8405,13 @@ function App() {
                         </div>
                       )}
                       {chatReactionPickerFor === messageId && !isDeletedChatMessage(msg?.message) && (
-                        <div className={`mt-1.5 max-w-full rounded-full border px-2 py-1 ${mine ? 'border-indigo-200/70 bg-indigo-500/45' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'}`}>
-                          <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pr-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+                        <div className={`mt-1.5 max-w-full min-h-[2.5rem] rounded-full border px-2 py-1.5 ${mine ? 'border-indigo-200/70 bg-indigo-500/45' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'}`}>
+                          <div className="flex items-center gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap pr-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
                           {CHAT_REACTION_EMOJIS.map((emoji) => (
                             <button
                               key={`${messageId}-picker-${emoji}`}
                               onClick={() => reactToChatMessage(msg, emoji)}
-                              className="shrink-0 text-base leading-none hover:scale-110 transition-transform"
+                              className="shrink-0 text-lg leading-none p-0.5 hover:scale-110 transition-transform"
                               title={`React ${emoji}`}
                             >
                               {emoji}
