@@ -4378,7 +4378,8 @@ function App() {
       .eq('id', messageRow.id)
       .eq('layer_id', activeLayerId)
       .select('*')
-      .single();
+      .limit(1)
+      .maybeSingle();
     if (error) {
       console.error('Error voting on poll:', error);
       setChatError(`Could not submit vote: ${error.message}`);
@@ -4386,11 +4387,17 @@ function App() {
     }
 
     setChatError('');
+    const targetId = String(updatedRow?.id || messageRow?.id || '');
     if (updatedRow) {
       setCalendarChatMessages(prev => prev.map(m => String(m?.id) === String(updatedRow.id) ? updatedRow : m));
-      if (shouldInsertEvent && !nextPoll.resolved && !nextPoll.createdEventId) {
-        await insertPollWinnerEvent(nextPoll, updatedRow.id);
-      }
+    } else {
+      // Keep local UI responsive when update succeeds but no row is returned by policy/shape.
+      setCalendarChatMessages(prev => prev.map((m) => (
+        String(m?.id || '') === targetId ? { ...m, message: `${CHAT_POLL_PREFIX}${JSON.stringify(nextPoll)}` } : m
+      )));
+    }
+    if (shouldInsertEvent && !nextPoll.resolved && !nextPoll.createdEventId) {
+      await insertPollWinnerEvent(nextPoll, targetId);
     }
   };
 
@@ -8075,17 +8082,17 @@ function App() {
                                             onClick={() => voteOnChatPoll(msg, idx, dim)}
                                             disabled={Boolean(poll.resolved)}
                                             className={`w-full text-left px-2 py-1.5 rounded-lg border transition-colors ${mine
-                                              ? (selected ? 'bg-indigo-500 border-indigo-300' : 'bg-indigo-700/60 border-indigo-400/50 hover:bg-indigo-700')
-                                              : (selected ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700')
+                                              ? (selected ? 'bg-violet-200 border-violet-300 text-violet-950' : 'bg-violet-100 border-violet-200 text-violet-950 hover:bg-violet-200')
+                                              : (selected ? 'bg-violet-50 dark:bg-violet-900/30 border-violet-300 dark:border-violet-700' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-700')
                                             } ${poll.resolved ? 'cursor-default opacity-90' : ''}`}
                                           >
                                             <div className="flex items-center justify-between gap-2">
                                               <span className="truncate min-w-0">{idx + 1}. {opt}</span>
-                                              <span className={`text-[10px] shrink-0 ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                                              <span className={`text-[10px] shrink-0 ${mine ? 'text-violet-700' : 'text-gray-500 dark:text-gray-400'}`}>
                                                 {counts[idx]} ({pct}%)
                                               </span>
                                             </div>
-                                            {isWinner && <div className={`text-[10px] mt-1 ${mine ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'}`}>Majority reached</div>}
+                                            {isWinner && <div className={`text-[10px] mt-1 ${mine ? 'text-emerald-700' : 'text-emerald-600 dark:text-emerald-400'}`}>Majority reached</div>}
                                           </button>
                                         );
                                       })}
@@ -8116,17 +8123,17 @@ function App() {
                                       onClick={() => voteOnChatPoll(msg, idx)}
                                       disabled={Boolean(poll.resolved)}
                                       className={`w-full text-left px-2.5 py-1.5 rounded-lg border transition-colors ${mine
-                                        ? (selected ? 'bg-indigo-500 border-indigo-300' : 'bg-indigo-700/60 border-indigo-400/50 hover:bg-indigo-700')
-                                        : (selected ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700')
+                                        ? (selected ? 'bg-violet-200 border-violet-300 text-violet-950' : 'bg-violet-100 border-violet-200 text-violet-950 hover:bg-violet-200')
+                                        : (selected ? 'bg-violet-50 dark:bg-violet-900/30 border-violet-300 dark:border-violet-700' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-700')
                                       } ${poll.resolved ? 'cursor-default opacity-90' : ''}`}
                                     >
                                       <div className="flex items-center justify-between gap-2">
                                         <span className="truncate min-w-0">{idx + 1}. {opt}</span>
-                                        <span className={`text-[11px] shrink-0 ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                                        <span className={`text-[11px] shrink-0 ${mine ? 'text-violet-700' : 'text-gray-500 dark:text-gray-400'}`}>
                                           {voteCounts[idx]} vote{voteCounts[idx] === 1 ? '' : 's'} ({pct}%)
                                         </span>
                                       </div>
-                                      {isWinner && <div className={`mt-1 text-[10px] ${mine ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'}`}>Majority reached</div>}
+                                      {isWinner && <div className={`mt-1 text-[10px] ${mine ? 'text-emerald-700' : 'text-emerald-600 dark:text-emerald-400'}`}>Majority reached</div>}
                                     </button>
                                   );
                                 })}
