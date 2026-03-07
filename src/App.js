@@ -144,6 +144,10 @@ function App() {
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(true);
   const [authError, setAuthError] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [phoneChallengeSent, setPhoneChallengeSent] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
   const [firstTapDate, setFirstTapDate] = useState(null);
   const [lastTapTime, setLastTapTime] = useState(0);
   const [recurrence, setRecurrence] = useState('once');
@@ -254,6 +258,84 @@ function App() {
     } catch {}
   };
   const normalizeIdentityKey = (value) => String(value || '').trim().toLowerCase();
+  const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+  const isEmailValue = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim().toLowerCase());
+  const normalizePhoneNumber = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const compact = raw.replace(/[^\d+]/g, '');
+    if (!compact) return '';
+    if (compact.startsWith('+')) {
+      const digits = compact.slice(1).replace(/\D/g, '');
+      return digits ? `+${digits}` : '';
+    }
+    const digits = compact.replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.length === 10) return `+1${digits}`;
+    if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+    return `+${digits}`;
+  };
+  const getAuthIdentityLabel = (authUser) => {
+    const email = String(authUser?.email || '').trim();
+    if (email) return email;
+    const phone = String(authUser?.phone || '').trim();
+    if (phone) return phone;
+    const fullName = String(authUser?.user_metadata?.full_name || '').trim();
+    if (fullName) return fullName;
+    const name = String(authUser?.user_metadata?.name || '').trim();
+    if (name) return name;
+    return 'User';
+  };
+  const resolveInviteRecipient = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    const email = normalizeEmail(raw);
+    if (isEmailValue(email)) {
+      return { kind: 'email', value: email, email, phone: '' };
+    }
+    const phone = normalizePhoneNumber(raw);
+    if (phone) {
+      return { kind: 'phone', value: phone, email: '', phone };
+    }
+    return null;
+  };
+  const getInviteIdentityFromRow = (row) => {
+    const rowEmail = normalizeEmail(row?.email);
+    if (rowEmail) return rowEmail;
+    const rowPhone = normalizePhoneNumber(row?.phone);
+    if (rowPhone) return rowPhone;
+    return '';
+  };
+  const getShareRecipientFromRow = (row) => {
+    const rowEmail = normalizeEmail(row?.shared_with_email);
+    if (rowEmail) return rowEmail;
+    const rowPhone = normalizePhoneNumber(row?.shared_with_phone);
+    if (rowPhone) return rowPhone;
+    return '';
+  };
+  const getRecipientKindLabel = (value) => {
+    const normalized = String(value || '').trim();
+    if (!normalized) return '';
+    return normalized.includes('@') ? 'Email' : 'Phone';
+  };
+  const buildShareRecipientFilter = (userId, email, phone) => {
+    const clauses = [];
+    const uid = String(userId || '').trim();
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedPhone = normalizePhoneNumber(phone);
+    if (uid) clauses.push(`shared_with_id.eq.${uid}`);
+    if (normalizedEmail) clauses.push(`shared_with_email.eq.${normalizedEmail}`);
+    if (normalizedPhone) clauses.push(`shared_with_phone.eq.${normalizedPhone}`);
+    return clauses.join(',');
+  };
+  const buildMemberRecipientFilter = (email, phone) => {
+    const clauses = [];
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedPhone = normalizePhoneNumber(phone);
+    if (normalizedEmail) clauses.push(`email.eq.${normalizedEmail}`);
+    if (normalizedPhone) clauses.push(`phone.eq.${normalizedPhone}`);
+    return clauses.join(',');
+  };
   const getExpenseParticipants = () => {
     const seen = new Set();
     const participants = [];
@@ -490,6 +572,7 @@ function App() {
       const myUserId = String(user?.id || '');
       const myEmail = String(user?.email || '').trim().toLowerCase();
       const ownerIdForLayer = String(activeLayerOwnerId || myUserId || '');
+      const shareRecipientFilter = buildShareRecipientFilter(myUserId, myEmail, user?.phone);
 
       const { data: directRows, error } = await supabase
         .from('sub_calendars')
@@ -500,11 +583,12 @@ function App() {
         return;
       }
 
-      const { data: sharedOwnerRows } = await supabase
+      let sharedOwnerQuery = supabase
         .from('shared_access')
         .select('owner_id')
-        .eq('layer_id', requestedLayerId)
-        .or(`shared_with_id.eq.${myUserId},shared_with_email.eq.${myEmail}`);
+        .eq('layer_id', requestedLayerId);
+      if (shareRecipientFilter) sharedOwnerQuery = sharedOwnerQuery.or(shareRecipientFilter);
+      const { data: sharedOwnerRows } = await sharedOwnerQuery;
       const accessibleOwnerIds = Array.from(new Set([
         ownerIdForLayer,
         ...((sharedOwnerRows || []).map(row => String(row?.owner_id || '')).filter(Boolean)),
@@ -522,11 +606,13 @@ function App() {
 
       let memberRows = [];
       const memberTripIdSet = new Set();
-      if (myEmail) {
+      const myPhone = normalizePhoneNumber(user?.phone);
+      const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
+      if (memberRecipientFilter) {
         const { data: memberLinks } = await supabase
           .from('sub_calendar_members')
           .select('sub_calendar_id,status')
-          .eq('email', myEmail);
+          .or(memberRecipientFilter);
         const memberTripIds = Array.from(new Set((memberLinks || [])
           .filter(row => {
             const status = String(row?.status || '').toLowerCase();
@@ -629,24 +715,33 @@ function App() {
 
   const loadSubCalendarMembers = async (subCalId) => {
     try {
-      const myEmail = String(user?.email || '').trim().toLowerCase();
+      const myEmail = normalizeEmail(user?.email);
+      const myPhone = normalizePhoneNumber(user?.phone);
       const { data: memberRows } = await supabase
         .from('sub_calendar_members')
         .select('*')
         .eq('sub_calendar_id', subCalId);
 
       const merged = new Map();
-      const addMember = (email, extra = {}) => {
-        const normalized = String(email || '').trim().toLowerCase();
-        if (!normalized.includes('@')) return;
-        if (!normalized || normalized === myEmail) return;
-        if (!merged.has(normalized)) merged.set(normalized, { email: normalized, ...extra });
+      const addMember = (identityValue, extra = {}) => {
+        const recipient = resolveInviteRecipient(identityValue);
+        if (!recipient?.value) return;
+        if (recipient.value === myEmail || recipient.value === myPhone) return;
+        if (!merged.has(recipient.value)) {
+          merged.set(recipient.value, {
+            id: recipient.value,
+            identity: recipient.value,
+            email: recipient.email || null,
+            phone: recipient.phone || null,
+            ...extra,
+          });
+        }
       };
 
       (memberRows || []).forEach((row) => {
         const status = String(row?.status || '').toLowerCase();
         if (status === 'declined') return;
-        addMember(row?.email, { status: row?.status || null, source: 'trip_invite', removable: true });
+        addMember(row?.email || row?.phone, { status: row?.status || null, source: 'trip_invite', removable: true });
       });
 
       const { data: subCalRow } = await supabase
@@ -667,20 +762,21 @@ function App() {
       if (layerId) {
         const { data: sharedRows } = await supabase
           .from('shared_access')
-          .select('owner_id,shared_with_email')
+          .select('owner_id,shared_with_email,shared_with_phone')
           .eq('layer_id', layerId);
         (sharedRows || []).forEach((row) => {
-          const sharedEmail = String(row?.shared_with_email || '').trim().toLowerCase();
+          const sharedEmail = normalizeEmail(row?.shared_with_email);
+          const sharedPhone = normalizePhoneNumber(row?.shared_with_phone);
+          const sharedIdentity = sharedEmail || sharedPhone;
           const ownerId = String(row?.owner_id || '').trim();
 
-          // Always include directly shared recipient email (unless it's me).
-          if (sharedEmail) {
-            addMember(sharedEmail, { status: 'accepted', source: 'layer_share', removable: false });
+          if (sharedIdentity) {
+            addMember(sharedIdentity, { status: 'accepted', source: 'layer_share', removable: false });
           }
 
           // If this row is "owner shared to me", also include the owner label/email.
           // This preserves collaborator visibility for recipients under strict RLS.
-          if (sharedEmail && sharedEmail === myEmail && ownerId) {
+          if (sharedIdentity && (sharedIdentity === myEmail || sharedIdentity === myPhone) && ownerId) {
             const ownerLabel = String(sharedOwnerLabels?.[ownerId] || '').trim().toLowerCase();
             if (ownerLabel.includes('@')) {
               addMember(ownerLabel, { status: 'accepted', source: 'layer_share_owner', removable: false });
@@ -728,44 +824,52 @@ function App() {
 
       const { data: sharedRows, error: sharedErr } = await supabase
         .from('shared_access')
-        .select('shared_with_email')
+        .select('shared_with_email,shared_with_phone')
         .eq('layer_id', layerId);
       if (sharedErr) {
         console.error('syncSubCalendarMembersFromLayer shared_access error:', sharedErr);
         return;
       }
 
-      const sharedEmails = Array.from(
+      const sharedRecipients = Array.from(
         new Set(
           (sharedRows || [])
-            .map((r) => String(r?.shared_with_email || '').trim().toLowerCase())
+            .map((r) => normalizeEmail(r?.shared_with_email) || normalizePhoneNumber(r?.shared_with_phone))
             .filter(Boolean)
         )
       );
-      if (sharedEmails.length === 0) return;
+      if (sharedRecipients.length === 0) return;
 
       const { data: existingRows, error: existingErr } = await supabase
         .from('sub_calendar_members')
-        .select('email')
+        .select('email,phone')
         .eq('sub_calendar_id', subCalId);
       if (existingErr) {
         console.error('syncSubCalendarMembersFromLayer existing members error:', existingErr);
         return;
       }
-      const existingEmails = new Set((existingRows || []).map((r) => String(r?.email || '').trim().toLowerCase()).filter(Boolean));
-      const missingEmails = sharedEmails.filter((email) => !existingEmails.has(email));
-      if (missingEmails.length === 0) return;
+      const existingRecipients = new Set(
+        (existingRows || [])
+          .map((r) => normalizeEmail(r?.email) || normalizePhoneNumber(r?.phone))
+          .filter(Boolean)
+      );
+      const missingRecipients = sharedRecipients.filter((identity) => !existingRecipients.has(identity));
+      if (missingRecipients.length === 0) return;
 
       const nowIso = new Date().toISOString();
-      const rows = missingEmails.map((email) => ({
-        sub_calendar_id: subCalId,
-        email,
-        added_by: user.id,
-        status: 'accepted',
-        invited_at: nowIso,
-        accepted_at: nowIso,
-        created_at: nowIso,
-      }));
+      const rows = missingRecipients.map((identity) => {
+        const recipient = resolveInviteRecipient(identity);
+        return {
+          sub_calendar_id: subCalId,
+          email: recipient?.email || null,
+          phone: recipient?.phone || null,
+          added_by: user.id,
+          status: 'accepted',
+          invited_at: nowIso,
+          accepted_at: nowIso,
+          created_at: nowIso,
+        };
+      });
 
       let { error: insertErr } = await supabase.from('sub_calendar_members').insert(rows);
       if (insertErr && /column .*created_at|schema cache/i.test(String(insertErr.message || ''))) {
@@ -955,9 +1059,9 @@ function App() {
     setSubCalSelectedDate(firstDate);
   };
 
-  const inviteToSubCalendar = async (emailOverride) => {
-    const emailToInvite = (emailOverride || subCalInviteEmail).trim().toLowerCase();
-    if (!emailToInvite || !activeSubCalendar) return;
+  const inviteToSubCalendar = async (recipientOverride) => {
+    const recipient = resolveInviteRecipient(recipientOverride || subCalInviteEmail);
+    if (!recipient?.value || !activeSubCalendar) return;
     if (!user?.id) {
       alert('You must be signed in to invite members.');
       return;
@@ -965,7 +1069,8 @@ function App() {
 
     const payload = {
       sub_calendar_id: activeSubCalendar.id,
-      email: emailToInvite,
+      email: recipient.email || null,
+      phone: recipient.phone || null,
       added_by: user.id,
       status: 'pending',
       invited_at: new Date().toISOString(),
@@ -980,7 +1085,8 @@ function App() {
       if (error && /column .*created_at|schema cache/i.test(String(error.message || ''))) {
         const fallbackPayload = {
           sub_calendar_id: activeSubCalendar.id,
-          email: emailToInvite,
+          email: recipient.email || null,
+          phone: recipient.phone || null,
           added_by: user.id,
           status: 'pending',
           invited_at: new Date().toISOString(),
@@ -996,11 +1102,13 @@ function App() {
           status: 'pending',
           invited_at: new Date().toISOString(),
         };
-        const refresh = await supabase
+        let refreshQuery = supabase
           .from('sub_calendar_members')
           .update(refreshPayload)
-          .eq('sub_calendar_id', activeSubCalendar.id)
-          .ilike('email', emailToInvite);
+          .eq('sub_calendar_id', activeSubCalendar.id);
+        const recipientFilter = buildMemberRecipientFilter(recipient.email, recipient.phone);
+        if (recipientFilter) refreshQuery = refreshQuery.or(recipientFilter);
+        const refresh = await refreshQuery;
         error = refresh.error;
       }
     } catch (e) {
@@ -1017,12 +1125,16 @@ function App() {
     setSubCalInviteEmail('');
   };
 
-  const removeMemberFromSubCal = async (email) => {
-    await supabase.from('sub_calendar_members')
+  const removeMemberFromSubCal = async (identity) => {
+    const recipient = resolveInviteRecipient(identity);
+    if (!recipient?.value) return;
+    let deleteQuery = supabase.from('sub_calendar_members')
       .delete()
-      .eq('sub_calendar_id', activeSubCalendar.id)
-      .eq('email', email);
-    setSubCalMembers(prev => prev.filter(m => m.email !== email));
+      .eq('sub_calendar_id', activeSubCalendar.id);
+    const recipientFilter = buildMemberRecipientFilter(recipient.email, recipient.phone);
+    if (recipientFilter) deleteQuery = deleteQuery.or(recipientFilter);
+    await deleteQuery;
+    setSubCalMembers(prev => prev.filter(m => m.identity !== recipient.value));
   };
 
   const loadSubCalNotes = async (subCalId) => {
@@ -2155,7 +2267,7 @@ function App() {
     });
   };
 
-  const loadLayersForUser = async (userId, userEmail) => {
+  const loadLayersForUser = async (userId, userEmail, userPhone) => {
     let { data: ownedLayers, error: ownedErr } = await supabase
       .from('calendar_layers')
       .select('*')
@@ -2190,10 +2302,12 @@ function App() {
       }
     }
 
-    const { data: sharedRows } = await supabase
+    const shareRecipientFilter = buildShareRecipientFilter(userId, userEmail, userPhone);
+    let sharedRowsQuery = supabase
       .from('shared_access')
-      .select('layer_id')
-      .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`);
+      .select('layer_id');
+    if (shareRecipientFilter) sharedRowsQuery = sharedRowsQuery.or(shareRecipientFilter);
+    const { data: sharedRows } = await sharedRowsQuery;
     const sharedLayerIds = Array.from(new Set((sharedRows || []).map(r => String(r?.layer_id || '')).filter(Boolean)));
 
     let sharedLayers = [];
@@ -2610,19 +2724,22 @@ function App() {
           .select('*')
           .in('sub_calendar_id', targetTripIds);
         if (tgtTripMembersErr) throw tgtTripMembersErr;
-        const tripMemberKeys = new Set((targetTripMembers || []).map(m => `${String(m.sub_calendar_id)}|${String(m.email || '').trim().toLowerCase()}`));
+        const tripMemberKeys = new Set((targetTripMembers || []).map(m => `${String(m.sub_calendar_id)}|${normalizeEmail(m.email) || normalizePhoneNumber(m.phone)}`));
         const tripMembersToInsert = [];
         (sourceTripMembers || []).forEach(member => {
           const mappedSubCalId = tripIdMap[String(member.sub_calendar_id)];
           if (!mappedSubCalId) return;
-          const email = String(member.email || '').trim().toLowerCase();
-          if (!email) return;
-          const key = `${mappedSubCalId}|${email}`;
+          const email = normalizeEmail(member.email);
+          const phone = normalizePhoneNumber(member.phone);
+          const identity = email || phone;
+          if (!identity) return;
+          const key = `${mappedSubCalId}|${identity}`;
           if (tripMemberKeys.has(key)) return;
           tripMemberKeys.add(key);
           tripMembersToInsert.push({
             sub_calendar_id: mappedSubCalId,
-            email,
+            email: email || null,
+            phone: phone || null,
             added_by: user.id,
           });
         });
@@ -2710,18 +2827,19 @@ function App() {
 
       for (const row of participantRows) {
         const sharedWithId = row?.shared_with_id ? String(row.shared_with_id) : null;
-        const sharedWithEmail = row?.shared_with_email ? String(row.shared_with_email).trim().toLowerCase() : '';
-        // In this project schema, shared_with_email is NOT NULL.
-        // Skip rows that do not have a valid email instead of failing the whole merge.
-        if (!sharedWithEmail) continue;
+        const sharedWithEmail = normalizeEmail(row?.shared_with_email);
+        const sharedWithPhone = normalizePhoneNumber(row?.shared_with_phone);
+        const sharedIdentity = sharedWithEmail || sharedWithPhone;
+        if (!sharedIdentity) continue;
         if (sharedWithId === String(user.id)) continue;
-        if (sharedWithEmail && sharedWithEmail === String(user.email || '').trim().toLowerCase()) continue;
+        if (sharedIdentity === normalizeEmail(user?.email) || sharedIdentity === normalizePhoneNumber(user?.phone)) continue;
         const payload = {
           owner_id: user.id,
           layer_id: targetLayerId,
           calendar_id: targetLayerId,
           shared_with_id: sharedWithId,
-          shared_with_email: sharedWithEmail,
+          shared_with_email: sharedWithEmail || null,
+          shared_with_phone: sharedWithPhone || null,
         };
         const { error: insertShareErr } = await supabase.from('shared_access').insert(payload);
         if (
@@ -3071,7 +3189,9 @@ function App() {
     if (!window.confirm(`Leave "${layer.name || 'this calendar'}"?`)) return;
 
     try {
-      const myEmail = String(user.email || '').trim().toLowerCase();
+      const myEmail = normalizeEmail(user?.email);
+      const myPhone = normalizePhoneNumber(user?.phone);
+      const shareRecipientFilter = buildShareRecipientFilter(user.id, myEmail, myPhone);
       const deletedIds = new Set();
 
       const { data: deletedById, error: deleteByIdErr } = await supabase
@@ -3088,18 +3208,18 @@ function App() {
         if (row?.id) deletedIds.add(String(row.id));
       });
 
-      if (myEmail) {
-        const { data: deletedByEmail, error: deleteByEmailErr } = await supabase
+      if (shareRecipientFilter) {
+        const { data: deletedByRecipient, error: deleteByRecipientErr } = await supabase
           .from('shared_access')
           .delete()
           .eq('layer_id', normalizedLayerId)
-          .ilike('shared_with_email', myEmail)
+          .or(shareRecipientFilter)
           .select('id');
-        if (deleteByEmailErr) {
-          alert(`Could not leave calendar: ${deleteByEmailErr.message || 'Unknown error'}`);
+        if (deleteByRecipientErr) {
+          alert(`Could not leave calendar: ${deleteByRecipientErr.message || 'Unknown error'}`);
           return;
         }
-        (deletedByEmail || []).forEach((row) => {
+        (deletedByRecipient || []).forEach((row) => {
           if (row?.id) deletedIds.add(String(row.id));
         });
       }
@@ -3170,16 +3290,24 @@ function App() {
 
   const handleShareCalendar = async () => {
     if (!shareEmailInput.trim() || !activeLayerId) return;
-    const email = shareEmailInput.trim().toLowerCase();
+    const recipient = resolveInviteRecipient(shareEmailInput);
+    if (!recipient?.value) {
+      setShareMessage('Enter a valid email or phone number.');
+      return;
+    }
+    const email = recipient.email;
+    const phone = recipient.phone;
 
     // Check not already shared
-    if (myShares.some(s => s.shared_with_email === email)) {
-      setShareMessage('Already shared with this email.');
+    if (myShares.some(s => getShareRecipientFromRow(s) === recipient.value)) {
+      setShareMessage('Already shared with this person.');
       return;
     }
 
     // Check not sharing with yourself
-    if (email === user?.email) {
+    const myEmail = normalizeEmail(user?.email);
+    const myPhone = normalizePhoneNumber(user?.phone);
+    if (recipient.value === myEmail || recipient.value === myPhone) {
       setShareMessage("You can't share with yourself.");
       return;
     }
@@ -3188,30 +3316,35 @@ function App() {
       owner_id: user.id,
       layer_id: activeLayerId,
       calendar_id: activeLayerId,
-      shared_with_email: email,
+      shared_with_email: email || null,
+      shared_with_phone: phone || null,
     });
 
     if (error) {
       setShareMessage('Error sharing calendar. Try again.');
       console.error(error);
     } else {
-      setMyShares(prev => [...prev, { owner_id: user.id, layer_id: activeLayerId, shared_with_email: email }]);
+      setMyShares(prev => [...prev, { owner_id: user.id, layer_id: activeLayerId, shared_with_email: email || null, shared_with_phone: phone || null }]);
       setShareEmailInput('');
-      setShareMessage(`✅ Shared! When ${email} logs in they'll see your calendar.`);
+      setShareMessage(`✅ Shared! When ${recipient.value} logs in they'll see your calendar.`);
     }
   };
 
-  const handleRemoveShare = async (shareEmail) => {
-    const { error } = await supabase
+  const handleRemoveShare = async (identity) => {
+    const recipient = resolveInviteRecipient(identity);
+    if (!recipient?.value) return;
+    let query = supabase
       .from('shared_access')
       .delete()
       .eq('owner_id', user.id)
-      .eq('layer_id', activeLayerId)
-      .eq('shared_with_email', shareEmail);
+      .eq('layer_id', activeLayerId);
+    const recipientFilter = buildShareRecipientFilter('', recipient.email, recipient.phone);
+    if (recipientFilter) query = query.or(recipientFilter);
+    const { error } = await query;
 
     if (!error) {
-      setMyShares(prev => prev.filter(s => s.shared_with_email !== shareEmail));
-      setShareMessage(`Removed access for ${shareEmail}.`);
+      setMyShares(prev => prev.filter(s => getShareRecipientFromRow(s) !== recipient.value));
+      setShareMessage(`Removed access for ${recipient.value}.`);
     }
   };
 
@@ -3497,11 +3630,13 @@ function App() {
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
         const userEmail = session?.user?.email;
+        const userPhone = session?.user?.phone;
         if (!userId) return;
-        let loadedLayers = await loadLayersForUser(userId, userEmail);
+        const shareRecipientFilter = buildShareRecipientFilter(userId, userEmail, userPhone);
+        let loadedLayers = await loadLayersForUser(userId, userEmail, userPhone);
         if (!loadedLayers || loadedLayers.length === 0) {
           // Retry once; loadLayersForUser already contains bootstrap logic.
-          loadedLayers = await loadLayersForUser(userId, userEmail);
+          loadedLayers = await loadLayersForUser(userId, userEmail, userPhone);
         }
 
         if (!loadedLayers || loadedLayers.length === 0) {
@@ -3533,11 +3668,12 @@ function App() {
           .eq('layer_id', selectedLayerId);
 
         // Load calendars shared WITH me (by email/id)
-        const { data: sharedWithMeRaw } = await supabase
+        let sharedWithMeQuery = supabase
           .from('shared_access')
           .select('*')
-          .eq('layer_id', selectedLayerId)
-          .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`);
+          .eq('layer_id', selectedLayerId);
+        if (shareRecipientFilter) sharedWithMeQuery = sharedWithMeQuery.or(shareRecipientFilter);
+        const { data: sharedWithMeRaw } = await sharedWithMeQuery;
         const sharedWithMe = (sharedWithMeRaw || []).filter(s => String(s?.owner_id || '') !== String(userId));
 
         // Update shared_with_id if not yet set (first time they log in)
@@ -3689,14 +3825,17 @@ function App() {
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
         const userEmail = session?.user?.email;
+        const userPhone = session?.user?.phone;
         if (!userId || !activeLayerId) return;
+        const shareRecipientFilter = buildShareRecipientFilter(userId, userEmail, userPhone);
 
         // Get calendars shared with me
-        const { data: sharedDataRaw } = await supabase
+        let sharedDataQuery = supabase
           .from('shared_access')
           .select('*')
-          .eq('layer_id', activeLayerId)
-          .or(`shared_with_email.eq.${userEmail},shared_with_id.eq.${userId}`);
+          .eq('layer_id', activeLayerId);
+        if (shareRecipientFilter) sharedDataQuery = sharedDataQuery.or(shareRecipientFilter);
+        const { data: sharedDataRaw } = await sharedDataQuery;
         const sharedData = (sharedDataRaw || []).filter(s => String(s?.owner_id || '') !== String(userId));
 
         if (!sharedData || sharedData.length === 0) return;
@@ -3765,13 +3904,14 @@ function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setShowAuth(!session?.user);
+      if (session?.user) setCurrentUser(getAuthIdentityLabel(session.user));
       setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setShowAuth(!session?.user);
-      if (session?.user) setCurrentUser(session.user.email);
+      if (session?.user) setCurrentUser(getAuthIdentityLabel(session.user));
     });
 
     return () => subscription.unsubscribe();
@@ -3894,7 +4034,10 @@ function App() {
   useEffect(() => {
     if (!user?.id) return;
     const me = String(user.id);
-    const myEmail = String(user?.email || '').trim().toLowerCase();
+    const myEmail = normalizeEmail(user?.email);
+    const myPhone = normalizePhoneNumber(user?.phone);
+    const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
+    const shareRecipientFilter = buildShareRecipientFilter(me, myEmail, myPhone);
     const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
@@ -3913,13 +4056,16 @@ function App() {
       if (!normalizedId) return false;
       if (accessibleSubCalIdCache.has(normalizedId)) return true;
 
-      const { data: memberRows, error: memberErr } = await supabase
+      const memberRowsQuery = supabase
         .from('sub_calendar_members')
         .select('sub_calendar_id')
-        .eq('sub_calendar_id', normalizedId)
-        .ilike('email', myEmail)
-        .limit(1);
-      if (!memberErr && (memberRows || []).length > 0) {
+        .eq('sub_calendar_id', normalizedId);
+      const memberRowsResult = memberRecipientFilter
+        ? await memberRowsQuery.or(memberRecipientFilter).limit(1)
+        : { data: [], error: null };
+      const memberRowsData = memberRowsResult.data;
+      const memberErr = memberRowsResult.error;
+      if (!memberErr && (memberRowsData || []).length > 0) {
         accessibleSubCalIdCache.add(normalizedId);
         return true;
       }
@@ -3942,24 +4088,11 @@ function App() {
         .from('shared_access')
         .select('id')
         .eq('owner_id', ownerId)
-        .eq('shared_with_id', me)
+        .or(shareRecipientFilter)
         .limit(1);
       if (scLayerId) shareByIdQuery = shareByIdQuery.eq('layer_id', scLayerId);
       const { data: shareById, error: shareByIdErr } = await shareByIdQuery;
       if (!shareByIdErr && (shareById || []).length > 0) {
-        accessibleSubCalIdCache.add(normalizedId);
-        return true;
-      }
-
-      let shareByEmailQuery = supabase
-        .from('shared_access')
-        .select('id')
-        .eq('owner_id', ownerId)
-        .ilike('shared_with_email', myEmail)
-        .limit(1);
-      if (scLayerId) shareByEmailQuery = shareByEmailQuery.eq('layer_id', scLayerId);
-      const { data: shareByEmail, error: shareByEmailErr } = await shareByEmailQuery;
-      if (!shareByEmailErr && (shareByEmail || []).length > 0) {
         accessibleSubCalIdCache.add(normalizedId);
         return true;
       }
@@ -3976,20 +4109,9 @@ function App() {
         .from('shared_access')
         .select('id')
         .eq('owner_id', ownerId)
-        .eq('shared_with_id', me)
+        .or(shareRecipientFilter)
         .limit(1);
       if (!shareByIdErr && (shareById || []).length > 0) {
-        accessibleOwnerIdCache.add(ownerId);
-        return true;
-      }
-
-      const { data: shareByEmail, error: shareByEmailErr } = await supabase
-        .from('shared_access')
-        .select('id')
-        .eq('owner_id', ownerId)
-        .ilike('shared_with_email', myEmail)
-        .limit(1);
-      if (!shareByEmailErr && (shareByEmail || []).length > 0) {
         accessibleOwnerIdCache.add(ownerId);
         return true;
       }
@@ -4050,8 +4172,8 @@ function App() {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sub_calendar_members' }, async ({ new: row }) => {
         if (!row) return;
-        const inviteEmail = String(row.email || '').trim().toLowerCase();
-        if (!inviteEmail || inviteEmail !== myEmail) return;
+        const inviteIdentity = getInviteIdentityFromRow(row);
+        if (!inviteIdentity || (inviteIdentity !== myEmail && inviteIdentity !== myPhone)) return;
         if (String(row.added_by || '') === me) return;
         const status = String(row?.status || '').trim().toLowerCase();
         if (status && status !== 'pending') return;
@@ -4061,7 +4183,7 @@ function App() {
         const tripName = subCalNameMap[subCalId] || 'a trip';
         const stamp = String(row?.invited_at || row?.created_at || '');
         addInAppNotification({
-          key: `trip_invite:${subCalId}:${inviteEmail}:${stamp}`,
+          key: `trip_invite:${subCalId}:${inviteIdentity}:${stamp}`,
           type: 'invite',
           message: `You were invited to ${tripName}.`,
           createdAt: row.created_at || new Date().toISOString(),
@@ -4072,11 +4194,11 @@ function App() {
         const rowId = String(row.id || '').trim();
         if (rowId && dismissedCalendarInviteIdsRef.current.has(rowId)) return;
         const sharedWithId = String(row.shared_with_id || '');
-        const sharedWithEmail = String(row.shared_with_email || '').trim().toLowerCase();
+        const sharedRecipient = getShareRecipientFromRow(row);
         const layerId = String(row.layer_id || '').trim();
         // Only notify for pending invites. Accepted shares have shared_with_id set.
         if (sharedWithId) return;
-        if (sharedWithId !== me && sharedWithEmail !== myEmail) return;
+        if (sharedWithId !== me && sharedRecipient !== myEmail && sharedRecipient !== myPhone) return;
         if (String(row.owner_id || '') === me) return;
 
         let calendarName = 'a calendar';
@@ -4102,13 +4224,16 @@ function App() {
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, currentUser, subCalendars, layers]);
+  }, [user?.id, user?.email, user?.phone, currentUser, subCalendars, layers]);
 
   useEffect(() => {
     if (!user?.id) return;
     const me = String(user.id);
-    const myEmail = String(user?.email || '').trim().toLowerCase();
+    const myEmail = normalizeEmail(user?.email);
+    const myPhone = normalizePhoneNumber(user?.phone);
     const myName = String(currentUser || '').trim().toLowerCase();
+    const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
+    if (!memberRecipientFilter) return;
     const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
     const subCalNameMap = {};
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
@@ -4224,8 +4349,8 @@ function App() {
 
     const notifyTripInvites = (rows) => {
       (rows || []).forEach(row => {
-        const inviteEmail = String(row?.email || '').trim().toLowerCase();
-        if (!inviteEmail || inviteEmail !== myEmail) return;
+        const inviteIdentity = getInviteIdentityFromRow(row);
+        if (!inviteIdentity || (inviteIdentity !== myEmail && inviteIdentity !== myPhone)) return;
         if (String(row?.added_by || '') === me) return;
         const status = String(row?.status || '').trim().toLowerCase();
         if (status && status !== 'pending') return;
@@ -4235,7 +4360,7 @@ function App() {
         const tripName = String(row?.sub_calendar_name || subCalNameMap[subCalId] || 'a trip');
         const stamp = String(row?.invited_at || row?.created_at || '');
         addInAppNotification({
-          key: `trip_invite:${subCalId}:${inviteEmail}:${stamp}`,
+          key: `trip_invite:${subCalId}:${inviteIdentity}:${stamp}`,
           type: 'invite',
           message: `You were invited to ${tripName}.`,
           createdAt: row?.created_at || new Date().toISOString(),
@@ -4271,12 +4396,12 @@ function App() {
         const ownerId = String(row?.owner_id || '');
         if (!ownerId || ownerId === me) return false;
         const sharedWithId = String(row?.shared_with_id || '');
-        const sharedWithEmail = String(row?.shared_with_email || '').trim().toLowerCase();
+        const sharedRecipient = getShareRecipientFromRow(row);
         const layerId = String(row?.layer_id || '').trim();
         // Only surface pending calendar invites.
         if (sharedWithId) return false;
         if (layerId && acceptedLayerIds.has(layerId)) return false;
-        return sharedWithEmail === myEmail;
+        return sharedRecipient === myEmail || sharedRecipient === myPhone;
       });
       if (inviteRows.length === 0) return;
 
@@ -4319,24 +4444,33 @@ function App() {
         .eq('owner_id', me);
       if (!ownedErr) (ownedRows || []).forEach(r => { if (r?.id) ids.add(String(r.id)); });
 
-      const { data: memberRows, error: memberErr } = await supabase
-        .from('sub_calendar_members')
-        .select('sub_calendar_id')
-        .ilike('email', myEmail);
+      let memberRows = [];
+      let memberErr = null;
+      if (memberRecipientFilter) {
+        const memberResult = await supabase
+          .from('sub_calendar_members')
+          .select('sub_calendar_id')
+          .or(memberRecipientFilter);
+        memberRows = memberResult.data || [];
+        memberErr = memberResult.error;
+      }
       if (!memberErr) (memberRows || []).forEach(r => { if (r?.sub_calendar_id) ids.add(String(r.sub_calendar_id)); });
 
       const { data: sharesById, error: sharesByIdErr } = await supabase
         .from('shared_access')
         .select('owner_id')
         .eq('shared_with_id', me);
-      const { data: sharesByEmail, error: sharesByEmailErr } = await supabase
+      const { data: sharesByRecipientRows, error: sharesByRecipientErr } = await supabase
         .from('shared_access')
-        .select('owner_id')
-        .ilike('shared_with_email', myEmail);
+        .select('owner_id,shared_with_email,shared_with_phone');
+      const sharesByRecipient = (sharesByRecipientRows || []).filter((row) => {
+        const recipient = getShareRecipientFromRow(row);
+        return recipient && (recipient === myEmail || recipient === myPhone);
+      });
 
       const ownerIds = new Set();
       if (!sharesByIdErr) (sharesById || []).forEach(s => { if (s?.owner_id) ownerIds.add(String(s.owner_id)); });
-      if (!sharesByEmailErr) (sharesByEmail || []).forEach(s => { if (s?.owner_id) ownerIds.add(String(s.owner_id)); });
+      if (!sharesByRecipientErr) sharesByRecipient.forEach(s => { if (s?.owner_id) ownerIds.add(String(s.owner_id)); });
 
       if (ownerIds.size > 0) {
         const { data: sharedOwnerSubCals, error: sharedOwnerErr } = await supabase
@@ -4351,10 +4485,12 @@ function App() {
 
     const pollInAppUpdates = async () => {
       try {
-        const { data: sharedData } = await supabase
+        const shareRecipientFilter = buildShareRecipientFilter(user?.id, user?.email, user?.phone);
+        let sharedDataQuery = supabase
           .from('shared_access')
-          .select('id,owner_id,layer_id,shared_with_id,shared_with_email,created_at')
-          .or(`shared_with_email.eq.${user.email},shared_with_id.eq.${user.id}`);
+          .select('id,owner_id,layer_id,shared_with_id,shared_with_email,shared_with_phone,created_at');
+        if (shareRecipientFilter) sharedDataQuery = sharedDataQuery.or(shareRecipientFilter);
+        const { data: sharedData } = await sharedDataQuery;
         const ownerIds = Array.from(new Set((sharedData || []).map(s => String(s.owner_id || '')).filter(Boolean)));
         await notifyCalendarShares(sharedData || []);
 
@@ -4425,8 +4561,8 @@ function App() {
 
         const { data: datedInviteRows, error: inviteErr } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,status,invited_at,accepted_at')
-          .ilike('email', myEmail)
+          .select('sub_calendar_id,email,phone,added_by,status,invited_at,accepted_at')
+          .or(memberRecipientFilter)
           .eq('status', 'pending')
           .or(`invited_at.gt.${getCursor('tripInvites')},accepted_at.gt.${getCursor('tripInvites')}`)
           .order('invited_at', { ascending: true, nullsFirst: false })
@@ -4436,15 +4572,15 @@ function App() {
         }
         const { data: nullInviteRows, error: nullInviteErr } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,status,invited_at,accepted_at')
-          .ilike('email', myEmail)
+          .select('sub_calendar_id,email,phone,added_by,status,invited_at,accepted_at')
+          .or(memberRecipientFilter)
           .eq('status', 'pending')
           .is('invited_at', null)
           .limit(200);
         if (nullInviteErr) {
           console.error('sub_calendar_members null-invited_at invite poll failed:', nullInviteErr);
         }
-        const inviteRows = Array.from(new Map([...(datedInviteRows || []), ...(nullInviteRows || [])].map(row => [`${String(row?.sub_calendar_id || '')}|${String(row?.email || '').toLowerCase()}`, row])).values());
+        const inviteRows = Array.from(new Map([...(datedInviteRows || []), ...(nullInviteRows || [])].map(row => [`${String(row?.sub_calendar_id || '')}|${getInviteIdentityFromRow(row)}`, row])).values());
         if (inviteRows.length > 0) {
           const inviteTripIds = Array.from(new Set(inviteRows.map(row => String(row?.sub_calendar_id || '')).filter(Boolean)));
           const inviteNameMap = {};
@@ -4485,18 +4621,21 @@ function App() {
       window.removeEventListener('focus', pollInAppUpdates);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [user?.id, user?.email, currentUser, subCalendars, layers]);
+  }, [user?.id, user?.email, user?.phone, currentUser, subCalendars, layers]);
 
   // Invite notifications must work even when no active layer is selected yet.
   useEffect(() => {
-    if (!user?.id || !user?.email) return;
+    if (!user?.id) return;
     const me = String(user.id);
-    const myEmail = String(user.email).trim().toLowerCase();
+    const myEmail = normalizeEmail(user.email);
+    const myPhone = normalizePhoneNumber(user.phone);
+    const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
+    if (!memberRecipientFilter) return;
 
     const notifyInvites = async (rows) => {
         const inviteRows = (rows || []).filter(row => {
-          const inviteEmail = String(row?.email || '').trim().toLowerCase();
-          if (!inviteEmail || inviteEmail !== myEmail) return false;
+          const inviteIdentity = getInviteIdentityFromRow(row);
+          if (!inviteIdentity || (inviteIdentity !== myEmail && inviteIdentity !== myPhone)) return false;
           if (String(row?.added_by || '') === me) return false;
           const status = String(row?.status || '').trim().toLowerCase();
           if (status && status !== 'pending') return false;
@@ -4520,7 +4659,8 @@ function App() {
         inviteRows.forEach(row => {
           const subCalId = String(row.sub_calendar_id);
           const stamp = String(row?.invited_at || row?.accepted_at || '');
-          const inviteKey = `trip_invite:${subCalId}:${myEmail}:${stamp}`;
+          const inviteIdentity = getInviteIdentityFromRow(row);
+          const inviteKey = `trip_invite:${subCalId}:${inviteIdentity}:${stamp}`;
           addInAppNotification({
             key: inviteKey,
             type: 'invite',
@@ -4535,20 +4675,20 @@ function App() {
         const cursor = inAppSyncCursorRef.current.tripInvites || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
         const { data: datedRows } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,status,accepted_at,invited_at')
-          .ilike('email', myEmail)
+          .select('sub_calendar_id,email,phone,added_by,status,accepted_at,invited_at')
+          .or(memberRecipientFilter)
           .eq('status', 'pending')
           .or(`accepted_at.gt.${cursor},invited_at.gt.${cursor}`)
           .order('invited_at', { ascending: true, nullsFirst: false })
           .limit(200);
         const { data: nullRows } = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,status,accepted_at,invited_at')
-          .ilike('email', myEmail)
+          .select('sub_calendar_id,email,phone,added_by,status,accepted_at,invited_at')
+          .or(memberRecipientFilter)
           .eq('status', 'pending')
           .is('invited_at', null)
           .limit(200);
-        const merged = Array.from(new Map([...(datedRows || []), ...(nullRows || [])].map(row => [`${String(row?.sub_calendar_id || '')}|${String(row?.email || '').toLowerCase()}`, row])).values());
+        const merged = Array.from(new Map([...(datedRows || []), ...(nullRows || [])].map(row => [`${String(row?.sub_calendar_id || '')}|${getInviteIdentityFromRow(row)}`, row])).values());
         await notifyInvites(merged);
 
         if (Array.isArray(datedRows) && datedRows.length > 0) {
@@ -4586,11 +4726,13 @@ function App() {
       document.removeEventListener('visibilitychange', onVisible);
       inviteChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, layers]);
+  }, [user?.id, user?.email, user?.phone, layers]);
 
   const loadPendingTripInvites = async () => {
-    const myEmail = String(user?.email || '').trim().toLowerCase();
-    if (!myEmail) {
+    const myEmail = normalizeEmail(user?.email);
+    const myPhone = normalizePhoneNumber(user?.phone);
+    const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
+    if (!memberRecipientFilter) {
       setPendingTripInvites([]);
       return;
     }
@@ -4599,8 +4741,8 @@ function App() {
       let rows = [];
       const pendingResult = await supabase
         .from('sub_calendar_members')
-        .select('sub_calendar_id,email,added_by,status,invited_at,accepted_at')
-        .ilike('email', myEmail)
+        .select('sub_calendar_id,email,phone,added_by,status,invited_at,accepted_at')
+        .or(memberRecipientFilter)
         .eq('status', 'pending')
         .order('invited_at', { ascending: false, nullsFirst: false })
         .limit(200);
@@ -4609,8 +4751,8 @@ function App() {
       } else {
         const fallback = await supabase
           .from('sub_calendar_members')
-          .select('sub_calendar_id,email,added_by,status,invited_at,accepted_at')
-          .ilike('email', myEmail)
+          .select('sub_calendar_id,email,phone,added_by,status,invited_at,accepted_at')
+          .or(memberRecipientFilter)
           .order('invited_at', { ascending: false, nullsFirst: false })
           .limit(200);
         if (fallback.error) {
@@ -4648,7 +4790,7 @@ function App() {
             startDate: trip?.start_date || null,
             endDate: trip?.end_date || null,
             invitedAt: row.invited_at || row.accepted_at || null,
-            email: String(row.email || myEmail).toLowerCase(),
+            identity: getInviteIdentityFromRow(row),
           };
         })
         .filter(Boolean);
@@ -4660,14 +4802,17 @@ function App() {
   };
 
   const acceptTripInvite = async (invite) => {
-    if (!invite || !user?.id || !user?.email) return;
-    const myEmail = String(user.email).trim().toLowerCase();
+    if (!invite || !user?.id) return;
+    const myEmail = normalizeEmail(user?.email);
+    const myPhone = normalizePhoneNumber(user?.phone);
+    const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
+    if (!memberRecipientFilter) return;
     try {
       const { error: updateErr } = await supabase
         .from('sub_calendar_members')
         .update({ status: 'accepted' })
         .eq('sub_calendar_id', invite.subCalendarId)
-        .ilike('email', myEmail);
+        .or(memberRecipientFilter);
       if (updateErr) {
         alert(`Accept failed: ${updateErr.message || 'Could not update invite status.'}`);
         return;
@@ -4736,14 +4881,17 @@ function App() {
   };
 
   const declineTripInvite = async (invite) => {
-    if (!invite || !user?.email) return;
-    const myEmail = String(user.email).trim().toLowerCase();
+    if (!invite || !user?.id) return;
+    const myEmail = normalizeEmail(user?.email);
+    const myPhone = normalizePhoneNumber(user?.phone);
+    const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
+    if (!memberRecipientFilter) return;
     try {
       const { error: updateErr } = await supabase
         .from('sub_calendar_members')
         .update({ status: 'declined' })
         .eq('sub_calendar_id', invite.subCalendarId)
-        .ilike('email', myEmail);
+        .or(memberRecipientFilter);
       if (updateErr) {
         alert(`Decline failed: ${updateErr.message || 'Could not update invite status.'}`);
         return;
@@ -4756,7 +4904,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (!user?.email) {
+    if (!user?.email && !user?.phone) {
       setPendingTripInvites([]);
       return;
     }
@@ -4768,7 +4916,7 @@ function App() {
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
-  }, [user?.email, user?.id, layerRefreshToken, layers]);
+  }, [user?.email, user?.phone, user?.id, layerRefreshToken, layers]);
 
   // Check notification permission on load
   useEffect(() => {
@@ -5059,9 +5207,9 @@ function App() {
       const parts = key.split(':');
       if (parts.length < 3) return null;
       const subCalendarId = String(parts[1] || '').trim();
-      const email = String(parts[2] || '').trim().toLowerCase();
-      if (!subCalendarId || !email) return null;
-      return { kind: 'trip', subCalendarId, email };
+      const identity = String(parts[2] || '').trim().toLowerCase();
+      if (!subCalendarId || !identity) return null;
+      return { kind: 'trip', subCalendarId, identity };
     }
     if (key.startsWith('calendar_invite:')) {
       const parts = key.split(':');
@@ -5077,12 +5225,14 @@ function App() {
   const acceptCalendarInvite = async (invite) => {
     if (!invite?.shareId || !invite?.layerId || !user?.id) return;
     const myEmail = String(user?.email || '').trim().toLowerCase();
+    const shareRecipientFilter = buildShareRecipientFilter(user.id, myEmail, user?.phone);
     try {
-      const { error } = await supabase
+      let acceptQuery = supabase
         .from('shared_access')
         .update({ shared_with_id: user.id })
-        .eq('id', invite.shareId)
-        .or(`shared_with_id.eq.${user.id},shared_with_email.eq.${myEmail}`);
+        .eq('id', invite.shareId);
+      if (shareRecipientFilter) acceptQuery = acceptQuery.or(shareRecipientFilter);
+      const { error } = await acceptQuery;
       if (error) {
         alert(`Accept failed: ${error.message || 'Could not accept calendar invite.'}`);
         return;
@@ -5100,12 +5250,14 @@ function App() {
   const declineCalendarInvite = async (invite) => {
     if (!invite?.shareId || !user?.id) return;
     const myEmail = String(user?.email || '').trim().toLowerCase();
+    const shareRecipientFilter = buildShareRecipientFilter(user.id, myEmail, user?.phone);
     try {
-      const { error } = await supabase
+      let declineQuery = supabase
         .from('shared_access')
         .delete()
-        .eq('id', invite.shareId)
-        .or(`shared_with_id.eq.${user.id},shared_with_email.eq.${myEmail}`);
+        .eq('id', invite.shareId);
+      if (shareRecipientFilter) declineQuery = declineQuery.or(shareRecipientFilter);
+      const { error } = await declineQuery;
       if (error) {
         alert(`Decline failed: ${error.message || 'Could not decline calendar invite.'}`);
         return;
@@ -6071,11 +6223,64 @@ function App() {
 
   const handleGoogleSignIn = async () => {
     setAuthError('');
+    setAuthBusy(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin }
     });
+    setAuthBusy(false);
     if (error) setAuthError(error.message);
+  };
+
+  const handlePhoneCodeRequest = async () => {
+    setAuthError('');
+    const normalizedPhone = normalizePhoneNumber(phoneInput);
+    if (!normalizedPhone || normalizedPhone.length < 8) {
+      setAuthError('Enter a valid phone number (include country code).');
+      return;
+    }
+    try {
+      setAuthBusy(true);
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: normalizedPhone,
+        options: { shouldCreateUser: true },
+      });
+      if (error) {
+        setAuthError(error.message || 'Could not send code.');
+        return;
+      }
+      setPhoneInput(normalizedPhone);
+      setPhoneOtp('');
+      setPhoneChallengeSent(true);
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handlePhoneOtpVerify = async () => {
+    setAuthError('');
+    const normalizedPhone = normalizePhoneNumber(phoneInput);
+    const token = String(phoneOtp || '').trim();
+    if (!normalizedPhone || !token) {
+      setAuthError('Enter both phone number and verification code.');
+      return;
+    }
+    try {
+      setAuthBusy(true);
+      const { error } = await supabase.auth.verifyOtp({
+        phone: normalizedPhone,
+        token,
+        type: 'sms',
+      });
+      if (error) {
+        setAuthError(error.message || 'Invalid verification code.');
+        return;
+      }
+      setPhoneChallengeSent(false);
+      setPhoneOtp('');
+    } finally {
+      setAuthBusy(false);
+    }
   };
 
   if (showAuth) {
@@ -6098,6 +6303,7 @@ function App() {
           )}
           <button
             onClick={handleGoogleSignIn}
+            disabled={authBusy}
             className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-purple-300 hover:shadow-md transition-all font-medium text-gray-700 dark:text-gray-200"
           >
             <svg width="20" height="20" viewBox="0 0 48 48">
@@ -6109,6 +6315,50 @@ function App() {
             </svg>
             Sign in with Google
           </button>
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase tracking-wide">
+              <span className="bg-white dark:bg-gray-800 px-2 text-gray-400 dark:text-gray-500">or</span>
+            </div>
+          </div>
+          <div className="space-y-2.5">
+            <input
+              type="tel"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              placeholder="+1 555 123 4567"
+              className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+            />
+            {phoneChallengeSent && (
+              <input
+                type="text"
+                value={phoneOtp}
+                onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="6-digit code"
+                className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+              />
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={handlePhoneCodeRequest}
+                disabled={authBusy}
+                className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all disabled:opacity-60"
+              >
+                {phoneChallengeSent ? 'Resend code' : 'Text me a code'}
+              </button>
+              {phoneChallengeSent && (
+                <button
+                  onClick={handlePhoneOtpVerify}
+                  disabled={authBusy}
+                  className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-60"
+                >
+                  Verify code
+                </button>
+              )}
+            </div>
+          </div>
 
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-6 text-center">
             Each account only sees its own events
@@ -6292,7 +6542,7 @@ function App() {
                   </h1>
                 )}
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                  <span className="font-semibold text-purple-600 dark:text-purple-400">{user?.email}</span>
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">{user?.email || user?.phone || currentUser}</span>
                   <button onClick={handleLogout} className="ml-2 text-xs text-purple-500 hover:text-purple-700 underline">logout</button>
                 </p>
               </div>
@@ -6447,7 +6697,7 @@ function App() {
                   </div>
                   <div className="space-y-2">
                     {pendingTripInvites.map(invite => (
-                      <div key={`${invite.subCalendarId}-${invite.email}`} className="rounded-lg border border-violet-200 dark:border-violet-700 bg-white dark:bg-gray-800 p-2.5">
+                      <div key={`${invite.subCalendarId}-${invite.identity || 'invite'}`} className="rounded-lg border border-violet-200 dark:border-violet-700 bg-white dark:bg-gray-800 p-2.5">
                         <div className="text-sm font-medium text-gray-800 dark:text-gray-100">{invite.tripName}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {formatTripDate(invite.startDate)} - {formatTripDate(invite.endDate, true)}
@@ -6566,7 +6816,7 @@ function App() {
                                   e.stopPropagation();
                                   acceptTripInvite(pendingInvite || {
                                     subCalendarId: parsedInvite.subCalendarId,
-                                    email: parsedInvite.email,
+                                    identity: parsedInvite.identity,
                                     tripName: 'Trip Invite',
                                   });
                                   markInAppNotificationRead(item.id);
@@ -6580,7 +6830,7 @@ function App() {
                                   e.stopPropagation();
                                   declineTripInvite(pendingInvite || {
                                     subCalendarId: parsedInvite.subCalendarId,
-                                    email: parsedInvite.email,
+                                    identity: parsedInvite.identity,
                                   });
                                   markInAppNotificationRead(item.id);
                                 }}
@@ -6744,14 +6994,14 @@ function App() {
             </div>
             <div className="mb-5">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Enter someone's email to give them access to your calendar. They'll see and be able to edit your events when they log in.
+                Enter someone's email or phone number to give them access to your calendar.
               </p>
               <div className="flex gap-2">
                 <input
-                  type="email"
+                  type="text"
                   value={shareEmailInput}
                   onChange={(e) => { setShareEmailInput(e.target.value); setShareMessage(''); }}
-                  placeholder="wife@gmail.com"
+                  placeholder="wife@gmail.com or +15551234567"
                   className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
                   onKeyPress={(e) => e.key === 'Enter' && handleShareCalendar()}
                 />
@@ -6773,17 +7023,26 @@ function App() {
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Shared with:</h4>
                 <div className="space-y-2">
                   {myShares.map((share, i) => (
+                    (() => {
+                      const recipient = getShareRecipientFromRow(share);
+                      if (!recipient) return null;
+                      return (
                     <div key={i} className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-200 dark:border-purple-700">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-purple-400 flex items-center justify-center text-white text-xs font-bold">
-                          {share.shared_with_email[0].toUpperCase()}
+                          {recipient[0]?.toUpperCase() || '?'}
                         </div>
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{share.shared_with_email}</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{recipient}</span>
+                        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-purple-100 dark:bg-purple-800 text-purple-700 dark:text-purple-200">
+                          {getRecipientKindLabel(recipient)}
+                        </span>
                       </div>
-                      <button onClick={() => handleRemoveShare(share.shared_with_email)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all" title="Remove access">
+                      <button onClick={() => handleRemoveShare(recipient)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all" title="Remove access">
                         <X className="w-4 h-4 text-red-500" />
                       </button>
                     </div>
+                      );
+                    })()
                   ))}
                 </div>
               </div>
@@ -6802,7 +7061,7 @@ function App() {
               </div>
             )}
             {myShares.length === 0 && sharedCalendars.length === 0 && (
-              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add someone's email above to get started.</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add an email or phone above to get started.</p>
             )}
           </div>
         )}
@@ -8206,8 +8465,8 @@ function App() {
             {/* Invite button */}
             <button
               onClick={() => {
-                const email = window.prompt('Enter email to invite:');
-                if (email) { inviteToSubCalendar(email); }
+                const target = window.prompt('Enter email or phone to invite:');
+                if (target) { inviteToSubCalendar(target); }
               }}
               className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs rounded-xl font-medium"
             >
@@ -8282,18 +8541,21 @@ function App() {
               👑 {currentUser} (you)
             </span>
             {subCalMembers.map(m => (
-              <span key={m.email} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
-                {m.email}
+              <span key={m.identity || m.email || m.phone} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
+                {m.identity || m.email || m.phone}
+                <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200">
+                  {getRecipientKindLabel(m.identity || m.email || m.phone)}
+                </span>
                 {activeSubCalendar.owner_id === user?.id && m.removable !== false && (
-                  <button onClick={() => removeMemberFromSubCal(m.email)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
+                  <button onClick={() => removeMemberFromSubCal(m.identity || m.email || m.phone)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
                 )}
               </span>
             ))}
             {activeSubCalendar.owner_id === user?.id && (
               <button
                 onClick={() => {
-                  const email = window.prompt('Invite by email:');
-                  if (email) { inviteToSubCalendar(email); }
+                  const target = window.prompt('Invite by email or phone:');
+                  if (target) { inviteToSubCalendar(target); }
                 }}
                 className="px-2 py-1 border border-dashed border-purple-300 dark:border-purple-600 text-purple-500 rounded-full text-xs hover:bg-purple-50 dark:hover:bg-purple-900/20"
               >+ Invite</button>
