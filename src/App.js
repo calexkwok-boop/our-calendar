@@ -8845,19 +8845,25 @@ function App() {
                         placeholder="What's the event? (e.g. Pickup basketball)"
                         className="w-full px-3 py-2 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-400"
                       />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <input
-                          type="date"
-                          value={popupDraftDate}
-                          onChange={(e) => setPopupDraftDate(e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
-                        />
-                        <input
-                          type="time"
-                          value={popupDraftTime}
-                          onChange={(e) => setPopupDraftTime(e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-0 overflow-hidden">
+                        <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800">
+                          <input
+                            type="date"
+                            value={popupDraftDate}
+                            onChange={(e) => setPopupDraftDate(e.target.value)}
+                            className="block w-full min-w-0 max-w-full px-3 py-2 text-sm bg-transparent dark:text-white"
+                            style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', WebkitAppearance: 'none' }}
+                          />
+                        </div>
+                        <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800">
+                          <input
+                            type="time"
+                            value={popupDraftTime}
+                            onChange={(e) => setPopupDraftTime(e.target.value)}
+                            className="block w-full min-w-0 max-w-full px-3 py-2 text-sm bg-transparent dark:text-white"
+                            style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}
+                          />
+                        </div>
                       </div>
                       <PlacesAutocomplete
                         value={popupDraftLocation}
