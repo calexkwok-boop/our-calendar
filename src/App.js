@@ -2168,8 +2168,12 @@ function App() {
   const [myShares, setMyShares] = useState([]); // people I've shared with
   const [showSharePanel, setShowSharePanel] = useState(false);
   const [showListPanel, setShowListPanel] = useState(false);
+  const [showChatPanel, setShowChatPanel] = useState(false);
   const [sharedListGroups, setSharedListGroups] = useState([]);
   const [sharedListItems, setSharedListItems] = useState([]);
+  const [calendarChatMessages, setCalendarChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatError, setChatError] = useState('');
   const [selectedSharedListId, setSelectedSharedListId] = useState(null);
   const [newSharedListTitle, setNewSharedListTitle] = useState('');
   const [newListItemText, setNewListItemText] = useState('');
@@ -2187,6 +2191,7 @@ function App() {
   const [showTipBanner, setShowTipBanner] = useState(() => localStorage.getItem('hideTipBanner') !== 'true');
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
   const [showWeather, setShowWeather] = useState(true);
+  const calendarChatScrollRef = useRef(null);
 
   const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || '').trim());
   const cleanOwnerLabel = (value) => {
@@ -3625,6 +3630,66 @@ function App() {
     setEditingListText('');
   };
 
+  const loadCalendarChatMessages = async () => {
+    if (!activeLayerId) {
+      setCalendarChatMessages([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('calendar_messages')
+      .select('*')
+      .eq('layer_id', activeLayerId)
+      .order('created_at', { ascending: true })
+      .limit(400);
+
+    if (error) {
+      console.error('Error loading calendar chat:', error);
+      if (error.code === '42P01') {
+        setChatError('Chat feature needs DB setup (calendar_messages table is missing).');
+      } else {
+        setChatError(`Could not load chat: ${error.message}`);
+      }
+      return;
+    }
+
+    setChatError('');
+    setCalendarChatMessages(data || []);
+  };
+
+  const sendCalendarChatMessage = async () => {
+    const text = String(chatInput || '').trim();
+    if (!text || !activeLayerId || !user?.id) return;
+    const payload = {
+      layer_id: activeLayerId,
+      calendar_id: activeLayerId,
+      user_id: user.id,
+      created_by: currentUser || user?.email || user?.phone || 'User',
+      message: text,
+      created_at: new Date().toISOString(),
+    };
+    const { data, error } = await supabase
+      .from('calendar_messages')
+      .insert(payload)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Error sending chat message:', error);
+      setChatError(`Could not send message: ${error.message}`);
+      return;
+    }
+
+    setChatError('');
+    setChatInput('');
+    if (data) {
+      setCalendarChatMessages((prev) => {
+        const exists = prev.some((row) => String(row?.id || '') === String(data?.id || ''));
+        if (exists) return prev;
+        return [...prev, data];
+      });
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -3965,6 +4030,39 @@ function App() {
     }
     loadSharedListItems(primaryListOwnerId, selectedSharedListId);
   }, [primaryListOwnerId, selectedSharedListId, activeLayerId]);
+
+  useEffect(() => {
+    if (!showChatPanel || !activeLayerId) {
+      if (!showChatPanel) setChatInput('');
+      return;
+    }
+    loadCalendarChatMessages();
+  }, [showChatPanel, activeLayerId]);
+
+  useEffect(() => {
+    if (!showChatPanel || !activeLayerId) return;
+    const channel = supabase
+      .channel(`calendar-chat-${activeLayerId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'calendar_messages', filter: `layer_id=eq.${activeLayerId}` }, ({ new: row }) => {
+        if (!row) return;
+        setCalendarChatMessages((prev) => {
+          const exists = prev.some((m) => String(m?.id || '') === String(row?.id || ''));
+          if (exists) return prev;
+          return [...prev, row];
+        });
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [showChatPanel, activeLayerId]);
+
+  useEffect(() => {
+    if (!showChatPanel || !calendarChatScrollRef.current) return;
+    const el = calendarChatScrollRef.current;
+    el.scrollTop = el.scrollHeight;
+  }, [showChatPanel, calendarChatMessages.length]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -6578,6 +6676,13 @@ function App() {
                 List
               </button>
               <button
+                onClick={() => setShowChatPanel(!showChatPanel)}
+                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showChatPanel ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                title="Calendar chat"
+              >
+                Chat
+              </button>
+              <button
                 onClick={() => setShowAiAssistant(true)}
                 className="p-2 rounded-xl transition-all duration-200 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800"
                 title="AI assistant"
@@ -7109,6 +7214,63 @@ function App() {
             {myShares.length === 0 && (
               <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add an email or phone above to get started.</p>
             )}
+          </div>
+        )}
+
+        {showChatPanel && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border border-indigo-100 dark:border-indigo-800">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-lg sm:text-xl font-semibold text-indigo-600 dark:text-indigo-400">Calendar Chat</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Messages in this calendar are shared with everyone who has access.</p>
+              </div>
+              <button onClick={() => setShowChatPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <div ref={calendarChatScrollRef} className="h-64 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3 space-y-2">
+              {calendarChatMessages.length === 0 ? (
+                <p className="text-xs text-gray-500 dark:text-gray-400 italic">No messages yet. Start the conversation.</p>
+              ) : (
+                calendarChatMessages.map((msg) => {
+                  const mine = String(msg?.user_id || '') === String(user?.id || '');
+                  const who = String(msg?.created_by || msg?.email || 'Member');
+                  return (
+                    <div key={String(msg?.id || `${who}-${msg?.created_at || ''}`)} className={`max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap ${mine ? 'ml-auto bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}>
+                      <div className={`text-[10px] mb-1 ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>{mine ? 'You' : who}</div>
+                      <div>{msg?.message}</div>
+                      <div className={`text-[10px] mt-1 ${mine ? 'text-indigo-100/90' : 'text-gray-400 dark:text-gray-500'}`}>{msg?.created_at ? new Date(msg.created_at).toLocaleString() : ''}</div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {chatError && <p className="mt-2 text-xs text-red-500">{chatError}</p>}
+
+            <div className="mt-3 flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => { setChatInput(e.target.value); if (chatError) setChatError(''); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendCalendarChatMessage();
+                  }
+                }}
+                placeholder="Send a message to this calendar..."
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+              />
+              <button
+                onClick={sendCalendarChatMessage}
+                disabled={!chatInput.trim()}
+                className="px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold disabled:opacity-50"
+              >
+                Send
+              </button>
+            </div>
           </div>
         )}
 
