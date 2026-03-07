@@ -2196,7 +2196,10 @@ function App() {
   });
   const [pollOptionInputs, setPollOptionInputs] = useState(['', '']);
   const [popupDraftTitle, setPopupDraftTitle] = useState('');
-  const [popupDraftDate, setPopupDraftDate] = useState(() => getDateKey(new Date()));
+  const [popupDraftDate, setPopupDraftDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  });
   const [popupDraftTime, setPopupDraftTime] = useState('');
   const [popupDraftMaxPeople, setPopupDraftMaxPeople] = useState('10');
   const [selectedSharedListId, setSelectedSharedListId] = useState(null);
