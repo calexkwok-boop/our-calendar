@@ -144,9 +144,6 @@ function App() {
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(true);
   const [authError, setAuthError] = useState('');
-  const [phoneInput, setPhoneInput] = useState('');
-  const [phoneOtp, setPhoneOtp] = useState('');
-  const [phoneChallengeSent, setPhoneChallengeSent] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [firstTapDate, setFirstTapDate] = useState(null);
   const [lastTapTime, setLastTapTime] = useState(0);
@@ -6232,55 +6229,15 @@ function App() {
     if (error) setAuthError(error.message);
   };
 
-  const handlePhoneCodeRequest = async () => {
+  const handleFacebookSignIn = async () => {
     setAuthError('');
-    const normalizedPhone = normalizePhoneNumber(phoneInput);
-    if (!normalizedPhone || normalizedPhone.length < 8) {
-      setAuthError('Enter a valid phone number (include country code).');
-      return;
-    }
-    try {
-      setAuthBusy(true);
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: normalizedPhone,
-        options: { shouldCreateUser: true },
-      });
-      if (error) {
-        setAuthError(error.message || 'Could not send code.');
-        return;
-      }
-      setPhoneInput(normalizedPhone);
-      setPhoneOtp('');
-      setPhoneChallengeSent(true);
-    } finally {
-      setAuthBusy(false);
-    }
-  };
-
-  const handlePhoneOtpVerify = async () => {
-    setAuthError('');
-    const normalizedPhone = normalizePhoneNumber(phoneInput);
-    const token = String(phoneOtp || '').trim();
-    if (!normalizedPhone || !token) {
-      setAuthError('Enter both phone number and verification code.');
-      return;
-    }
-    try {
-      setAuthBusy(true);
-      const { error } = await supabase.auth.verifyOtp({
-        phone: normalizedPhone,
-        token,
-        type: 'sms',
-      });
-      if (error) {
-        setAuthError(error.message || 'Invalid verification code.');
-        return;
-      }
-      setPhoneChallengeSent(false);
-      setPhoneOtp('');
-    } finally {
-      setAuthBusy(false);
-    }
+    setAuthBusy(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: { redirectTo: window.location.origin }
+    });
+    setAuthBusy(false);
+    if (error) setAuthError(error.message);
   };
 
   if (showAuth) {
@@ -6315,50 +6272,16 @@ function App() {
             </svg>
             Sign in with Google
           </button>
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase tracking-wide">
-              <span className="bg-white dark:bg-gray-800 px-2 text-gray-400 dark:text-gray-500">or</span>
-            </div>
-          </div>
-          <div className="space-y-2.5">
-            <input
-              type="tel"
-              value={phoneInput}
-              onChange={(e) => setPhoneInput(e.target.value)}
-              placeholder="+1 555 123 4567"
-              className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
-            />
-            {phoneChallengeSent && (
-              <input
-                type="text"
-                value={phoneOtp}
-                onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="6-digit code"
-                className="w-full px-4 py-2.5 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
-              />
-            )}
-            <div className="flex gap-2">
-              <button
-                onClick={handlePhoneCodeRequest}
-                disabled={authBusy}
-                className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all disabled:opacity-60"
-              >
-                {phoneChallengeSent ? 'Resend code' : 'Text me a code'}
-              </button>
-              {phoneChallengeSent && (
-                <button
-                  onClick={handlePhoneOtpVerify}
-                  disabled={authBusy}
-                  className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-60"
-                >
-                  Verify code
-                </button>
-              )}
-            </div>
-          </div>
+          <button
+            onClick={handleFacebookSignIn}
+            disabled={authBusy}
+            className="w-full mt-3 flex items-center justify-center gap-3 px-6 py-3 bg-[#1877F2] border-2 border-[#1877F2] rounded-xl hover:opacity-90 transition-all font-medium text-white"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.019 4.388 11.009 10.125 11.927v-8.437H7.078v-3.49h3.047V9.413c0-3.007 1.792-4.669 4.533-4.669 1.313 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.928-1.956 1.88v2.261h3.328l-.532 3.49h-2.796V24C19.612 23.082 24 18.092 24 12.073z"/>
+            </svg>
+            Sign in with Facebook
+          </button>
 
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-6 text-center">
             Each account only sees its own events
