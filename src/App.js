@@ -2192,6 +2192,110 @@ function App() {
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
   const [showWeather, setShowWeather] = useState(true);
   const calendarChatScrollRef = useRef(null);
+  const CHAT_POLL_PREFIX = '[poll-v1]';
+
+  const parseDateFromText = (text) => {
+    const raw = String(text || '');
+    const m = raw.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b/);
+    if (!m) return null;
+    const month = Number(m[1]);
+    const day = Number(m[2]);
+    let year = Number(m[3]);
+    if (!Number.isFinite(month) || !Number.isFinite(day) || !Number.isFinite(year)) return null;
+    if (year < 100) year += 2000;
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    const d = new Date(year, month - 1, day);
+    if (d.getFullYear() !== year || d.getMonth() !== (month - 1) || d.getDate() !== day) return null;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  const parsePollDraftFromText = (input) => {
+    const lines = String(input || '')
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean);
+    if (lines.length < 3) return null;
+    const first = lines[0];
+    const options = lines
+      .slice(1)
+      .map(line => {
+        const m = line.match(/^\d+[.).:-]?\s*(.+)$/);
+        return m ? m[1].trim() : '';
+      })
+      .filter(Boolean);
+    if (options.length < 2) return null;
+    const dateKey = parseDateFromText(first) || getDateKey(selectedDate || new Date());
+    const question = first
+      .replace(/\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    if (!question) return null;
+    return { question, dateKey, options };
+  };
+
+  const buildPollMessage = ({ question, dateKey, options, createdBy }) => {
+    const payload = {
+      type: 'poll',
+      question: String(question || '').trim(),
+      dateKey: String(dateKey || ''),
+      options: (options || []).map(v => String(v || '').trim()).filter(Boolean).slice(0, 8),
+      votes: {},
+      resolved: false,
+      winnerIndex: null,
+      createdEventId: null,
+      createdBy: String(createdBy || '').trim() || 'Member',
+      createdAt: new Date().toISOString(),
+    };
+    return `${CHAT_POLL_PREFIX}${JSON.stringify(payload)}`;
+  };
+
+  const parsePollMessage = (message) => {
+    const raw = String(message || '');
+    if (!raw.startsWith(CHAT_POLL_PREFIX)) return null;
+    const json = raw.slice(CHAT_POLL_PREFIX.length);
+    try {
+      const parsed = JSON.parse(json);
+      const options = Array.isArray(parsed?.options) ? parsed.options.map(v => String(v || '').trim()).filter(Boolean) : [];
+      if (String(parsed?.type || '') !== 'poll' || !parsed?.question || options.length < 2) return null;
+      const votesObj = (parsed && typeof parsed.votes === 'object' && parsed.votes !== null) ? parsed.votes : {};
+      const votes = {};
+      Object.entries(votesObj).forEach(([uid, idx]) => {
+        const n = Number(idx);
+        if (String(uid || '').trim() && Number.isInteger(n) && n >= 0 && n < options.length) votes[String(uid)] = n;
+      });
+      return {
+        ...parsed,
+        question: String(parsed.question),
+        dateKey: String(parsed.dateKey || ''),
+        options,
+        votes,
+        resolved: Boolean(parsed.resolved),
+        winnerIndex: Number.isInteger(Number(parsed.winnerIndex)) ? Number(parsed.winnerIndex) : null,
+        createdEventId: parsed.createdEventId ? String(parsed.createdEventId) : null,
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const getPollVoteCounts = (poll) => {
+    const counts = new Array((poll?.options || []).length).fill(0);
+    Object.values(poll?.votes || {}).forEach((idx) => {
+      if (Number.isInteger(idx) && idx >= 0 && idx < counts.length) counts[idx] += 1;
+    });
+    return counts;
+  };
+
+  const getPollMajorityWinner = (poll) => {
+    const counts = getPollVoteCounts(poll);
+    const totalVotes = counts.reduce((sum, n) => sum + n, 0);
+    if (totalVotes < 2) return { winnerIndex: null, counts, totalVotes };
+    let winnerIndex = null;
+    counts.forEach((n, idx) => {
+      if (n > totalVotes / 2) winnerIndex = idx;
+    });
+    return { winnerIndex, counts, totalVotes };
+  };
 
   const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || '').trim());
   const cleanOwnerLabel = (value) => {
@@ -3659,12 +3763,21 @@ function App() {
   const sendCalendarChatMessage = async () => {
     const text = String(chatInput || '').trim();
     if (!text || !activeLayerId || !user?.id) return;
+    const pollDraft = parsePollDraftFromText(text);
+    const outgoingMessage = pollDraft
+      ? buildPollMessage({
+        question: pollDraft.question,
+        dateKey: pollDraft.dateKey,
+        options: pollDraft.options,
+        createdBy: currentUser || user?.email || user?.phone || 'User',
+      })
+      : text;
     const payload = {
       layer_id: activeLayerId,
       calendar_id: activeLayerId,
       user_id: user.id,
       created_by: currentUser || user?.email || user?.phone || 'User',
-      message: text,
+      message: outgoingMessage,
       created_at: new Date().toISOString(),
     };
     const { data, error } = await supabase
@@ -3687,6 +3800,145 @@ function App() {
         if (exists) return prev;
         return [...prev, data];
       });
+    }
+  };
+
+  const insertPollWinnerEvent = async (poll, pollMessageId) => {
+    if (!poll || !activeLayerId || !user?.id) return null;
+    const winnerIndex = Number(poll.winnerIndex);
+    if (!Number.isInteger(winnerIndex) || winnerIndex < 0 || winnerIndex >= (poll.options || []).length) return null;
+    const winnerOption = String(poll.options[winnerIndex] || '').trim();
+    if (!winnerOption) return null;
+
+    const eventDateKey = parseDateFromText(poll.dateKey) || poll.dateKey || getDateKey(new Date());
+    const eventId = `${Date.now()}-${Math.random()}`;
+    const eventPayload = {
+      id: eventId,
+      date: eventDateKey,
+      title: `${poll.question}: ${winnerOption}`,
+      time: null,
+      category: 'other',
+      is_private: false,
+      is_private_for: null,
+      is_urgent: false,
+      is_multi_day: false,
+      multi_day_id: null,
+      is_annual: false,
+      annual_month: null,
+      annual_day: null,
+      recurrence: 'once',
+      exceptions: null,
+      reactions: null,
+      location: null,
+      created_by: currentUser || user?.email || user?.phone || 'User',
+      created_at: new Date().toISOString(),
+      user_id: user.id,
+      layer_id: activeLayerId,
+      calendar_id: activeLayerId,
+    };
+
+    const { data: insertedEvent, error: eventErr } = await supabase
+      .from('events')
+      .insert(eventPayload)
+      .select('*')
+      .single();
+    if (eventErr) {
+      console.error('Error inserting poll winner event:', eventErr);
+      setChatError(`Could not create event from poll: ${eventErr.message}`);
+      return null;
+    }
+
+    setEvents(prev => {
+      const dateEvents = prev[eventDateKey] || [];
+      const nextEvent = {
+        id: insertedEvent.id,
+        title: insertedEvent.title,
+        time: insertedEvent.time,
+        date: insertedEvent.date,
+        category: insertedEvent.category,
+        isPrivate: insertedEvent.is_private,
+        isUrgent: insertedEvent.is_urgent,
+        isMultiDay: insertedEvent.is_multi_day,
+        multiDayId: insertedEvent.multi_day_id,
+        isAnnual: insertedEvent.is_annual || false,
+        annualMonth: insertedEvent.annual_month || null,
+        annualDay: insertedEvent.annual_day || null,
+        recurrence: insertedEvent.recurrence || 'once',
+        exceptions: insertedEvent.exceptions ? JSON.parse(insertedEvent.exceptions) : [],
+        reactions: insertedEvent.reactions ? JSON.parse(insertedEvent.reactions) : {},
+        location: insertedEvent.location || null,
+        createdBy: insertedEvent.created_by,
+        createdAt: insertedEvent.created_at,
+        userId: insertedEvent.user_id,
+        isShared: String(insertedEvent.user_id || '') !== String(user?.id || ''),
+      };
+      const merged = [...dateEvents, nextEvent].sort((a, b) => {
+        if (!a.time) return 1;
+        if (!b.time) return -1;
+        return a.time.localeCompare(b.time);
+      });
+      return { ...prev, [eventDateKey]: merged };
+    });
+
+    const resolvedPoll = {
+      ...poll,
+      resolved: true,
+      createdEventId: insertedEvent.id,
+    };
+    const { data: updatedMessage, error: msgErr } = await supabase
+      .from('calendar_messages')
+      .update({ message: `${CHAT_POLL_PREFIX}${JSON.stringify(resolvedPoll)}` })
+      .eq('id', pollMessageId)
+      .eq('layer_id', activeLayerId)
+      .select('*')
+      .single();
+    if (msgErr) {
+      console.error('Error marking poll as resolved:', msgErr);
+      return insertedEvent;
+    }
+    if (updatedMessage) {
+      setCalendarChatMessages(prev => prev.map(m => String(m?.id) === String(updatedMessage.id) ? updatedMessage : m));
+    }
+    return insertedEvent;
+  };
+
+  const voteOnChatPoll = async (messageRow, optionIndex) => {
+    if (!messageRow?.id || !activeLayerId || !user?.id) return;
+    const poll = parsePollMessage(messageRow.message);
+    if (!poll || poll.resolved) return;
+    if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= poll.options.length) return;
+
+    const nextPoll = {
+      ...poll,
+      votes: {
+        ...(poll.votes || {}),
+        [String(user.id)]: optionIndex,
+      },
+    };
+    const majority = getPollMajorityWinner(nextPoll);
+    if (Number.isInteger(majority.winnerIndex)) {
+      nextPoll.winnerIndex = majority.winnerIndex;
+    }
+
+    const { data: updatedRow, error } = await supabase
+      .from('calendar_messages')
+      .update({ message: `${CHAT_POLL_PREFIX}${JSON.stringify(nextPoll)}` })
+      .eq('id', messageRow.id)
+      .eq('layer_id', activeLayerId)
+      .select('*')
+      .single();
+    if (error) {
+      console.error('Error voting on poll:', error);
+      setChatError(`Could not submit vote: ${error.message}`);
+      return;
+    }
+
+    setChatError('');
+    if (updatedRow) {
+      setCalendarChatMessages(prev => prev.map(m => String(m?.id) === String(updatedRow.id) ? updatedRow : m));
+      if (Number.isInteger(nextPoll.winnerIndex) && !nextPoll.resolved && !nextPoll.createdEventId) {
+        await insertPollWinnerEvent(nextPoll, updatedRow.id);
+      }
     }
   };
 
@@ -4043,11 +4295,16 @@ function App() {
     if (!showChatPanel || !activeLayerId) return;
     const channel = supabase
       .channel(`calendar-chat-${activeLayerId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'calendar_messages', filter: `layer_id=eq.${activeLayerId}` }, ({ new: row }) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_messages', filter: `layer_id=eq.${activeLayerId}` }, (payload) => {
+        const row = payload?.new;
         if (!row) return;
         setCalendarChatMessages((prev) => {
-          const exists = prev.some((m) => String(m?.id || '') === String(row?.id || ''));
-          if (exists) return prev;
+          const idx = prev.findIndex((m) => String(m?.id || '') === String(row?.id || ''));
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = row;
+            return copy;
+          }
           return [...prev, row];
         });
       })
@@ -7198,10 +7455,60 @@ function App() {
                 calendarChatMessages.map((msg) => {
                   const mine = String(msg?.user_id || '') === String(user?.id || '');
                   const who = String(msg?.created_by || msg?.email || 'Member');
+                  const poll = parsePollMessage(msg?.message);
+                  const voteCounts = poll ? getPollVoteCounts(poll) : [];
+                  const voteTotal = voteCounts.reduce((sum, n) => sum + n, 0);
+                  const myVoteIndex = poll ? Number(poll?.votes?.[String(user?.id || '')]) : null;
+                  const winnerIndex = poll && Number.isInteger(Number(poll?.winnerIndex)) ? Number(poll.winnerIndex) : null;
                   return (
                     <div key={String(msg?.id || `${who}-${msg?.created_at || ''}`)} className={`max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap ${mine ? 'ml-auto bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}>
                       <div className={`text-[10px] mb-1 ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>{mine ? 'You' : who}</div>
-                      <div>{msg?.message}</div>
+                      {poll ? (
+                        <div className={`${mine ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                          <div className="font-semibold">{poll.question}</div>
+                          <div className={`text-[11px] mt-0.5 ${mine ? 'text-indigo-100/90' : 'text-gray-500 dark:text-gray-400'}`}>
+                            Vote to add an event on {poll.dateKey || getDateKey(new Date())}
+                          </div>
+                          <div className="mt-2 space-y-1.5">
+                            {poll.options.map((opt, idx) => {
+                              const selected = myVoteIndex === idx;
+                              const isWinner = winnerIndex === idx;
+                              const pct = voteTotal > 0 ? Math.round((voteCounts[idx] / voteTotal) * 100) : 0;
+                              return (
+                                <button
+                                  key={`${msg?.id || 'poll'}-opt-${idx}`}
+                                  onClick={() => voteOnChatPoll(msg, idx)}
+                                  disabled={Boolean(poll.resolved)}
+                                  className={`w-full text-left px-2.5 py-1.5 rounded-lg border transition-colors ${mine
+                                    ? (selected ? 'bg-indigo-500 border-indigo-300' : 'bg-indigo-700/60 border-indigo-400/50 hover:bg-indigo-700')
+                                    : (selected ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700')
+                                  } ${poll.resolved ? 'cursor-default opacity-90' : ''}`}
+                                  title={poll.resolved ? 'Voting closed - event created' : 'Vote for this option'}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="truncate">{idx + 1}. {opt}</span>
+                                    <span className={`text-[11px] shrink-0 ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                                      {voteCounts[idx]} vote{voteCounts[idx] === 1 ? '' : 's'} ({pct}%)
+                                    </span>
+                                  </div>
+                                  {isWinner && (
+                                    <div className={`mt-1 text-[10px] ${mine ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                      Majority reached
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className={`text-[10px] mt-1 ${mine ? 'text-indigo-100/90' : 'text-gray-400 dark:text-gray-500'}`}>
+                            {poll.resolved
+                              ? 'Voting complete. Event added to calendar.'
+                              : `${voteTotal} total vote${voteTotal === 1 ? '' : 's'}${Number.isInteger(myVoteIndex) ? ' • You voted' : ''}`}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>{msg?.message}</div>
+                      )}
                       <div className={`text-[10px] mt-1 ${mine ? 'text-indigo-100/90' : 'text-gray-400 dark:text-gray-500'}`}>{msg?.created_at ? new Date(msg.created_at).toLocaleString() : ''}</div>
                     </div>
                   );
@@ -7222,7 +7529,7 @@ function App() {
                     sendCalendarChatMessage();
                   }
                 }}
-                placeholder="Send a message to this calendar..."
+                placeholder={"Message or poll:\nWhat's for lunch 3/7/26\n1. Deli D\n2. Wingstop"}
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
               />
               <button
