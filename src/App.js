@@ -4769,23 +4769,20 @@ function App() {
       .eq('id', messageId)
       .eq('layer_id', activeLayerId)
       .select('*')
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
     if (error) {
       console.error('Error reacting to chat message:', error);
       setChatError(`Could not add reaction: ${error.message}`);
       return;
     }
+    const updatedRow = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    if (!updatedRow) {
+      setChatError('Could not add reaction: update permission blocked.');
+      return;
+    }
     setChatError('');
     setChatReactionPickerFor(null);
-    if (data) {
-      setCalendarChatMessages(prev => prev.map(row => String(row?.id || '') === messageId ? data : row));
-    } else {
-      // If RLS blocks returning rows, still keep local UI in sync.
-      setCalendarChatMessages(prev => prev.map((row) => (
-        String(row?.id || '') === messageId ? { ...row, message: nextMessage } : row
-      )));
-    }
+    setCalendarChatMessages(prev => prev.map(row => String(row?.id || '') === messageId ? updatedRow : row));
   };
 
   const insertPollWinnerEvent = async (poll, pollMessageId) => {
