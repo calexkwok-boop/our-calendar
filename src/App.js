@@ -8985,13 +8985,16 @@ function App() {
                         </div>
                       ) : popupInvite ? (
                         <div className={`${mine ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
-                          <div className={`rounded-lg border px-3 py-2 ${mine ? 'border-orange-200/80 bg-orange-500/35' : 'border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20'}`}>
+                          <div className={`rounded-lg border px-3 py-2 ${mine ? 'border-indigo-200/70 bg-indigo-500/35' : 'border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20'}`}>
+                            <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold mb-1 ${mine ? 'bg-indigo-400/40 text-indigo-100' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'}`}>
+                              Pop-up Event
+                            </div>
                             <div className="font-semibold">🎉 {popupInvite.title}</div>
-                            <div className={`text-[11px] mt-0.5 ${mine ? 'text-orange-100/90' : 'text-gray-600 dark:text-gray-300'}`}>
+                            <div className={`text-[11px] mt-0.5 ${mine ? 'text-indigo-100/90' : 'text-gray-600 dark:text-gray-300'}`}>
                               {formatDateKeyMMDDYYYY(popupInvite.dateKey)}{popupInvite.time ? ` at ${formatTime(popupInvite.time)}` : ''}
                             </div>
                             {popupInvite.location && (
-                              <div className={`text-[11px] mt-0.5 ${mine ? 'text-orange-100/90' : 'text-gray-600 dark:text-gray-300'}`}>
+                              <div className={`text-[11px] mt-0.5 ${mine ? 'text-indigo-100/90' : 'text-gray-600 dark:text-gray-300'}`}>
                                 📍 {popupInvite.location}
                               </div>
                             )}
@@ -9004,13 +9007,13 @@ function App() {
                               const full = noMax ? false : (popupSignups.length >= maxPeople);
                               return (
                                 <div className="mt-2 flex items-center justify-between gap-2">
-                                  <div className={`text-[11px] ${mine ? 'text-orange-100/90' : 'text-orange-700 dark:text-orange-300'}`}>
+                                  <div className={`text-[11px] ${mine ? 'text-indigo-100/90' : 'text-purple-700 dark:text-purple-300'}`}>
                                     {popupSignups.length}{noMax ? ' joined (no max)' : `/${maxPeople} spots`}
                                   </div>
                                   {joined ? (
                                     <button
                                       onClick={() => leavePopupEvent(popupInvite.eventId)}
-                                      className={`px-2 py-1 text-[11px] rounded-md border ${mine ? 'border-orange-200/80 bg-orange-500/40 text-white' : 'border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-200'}`}
+                                      className={`px-2 py-1 text-[11px] rounded-md border ${mine ? 'border-indigo-200/70 bg-indigo-500/40 text-white' : 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-200'}`}
                                     >
                                       Leave
                                     </button>
@@ -9022,7 +9025,7 @@ function App() {
                                         dateKey: popupInvite.dateKey,
                                       })}
                                       disabled={full}
-                                      className={`px-2 py-1 text-[11px] rounded-md border disabled:opacity-50 ${mine ? 'border-orange-200/80 bg-orange-500/40 text-white' : 'border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 text-orange-700 dark:text-orange-300'}`}
+                                      className={`px-2 py-1 text-[11px] rounded-md border disabled:opacity-50 ${mine ? 'border-indigo-200/70 bg-indigo-500/40 text-white' : 'border-purple-300 dark:border-purple-700 bg-white dark:bg-gray-800 text-purple-700 dark:text-purple-300'}`}
                                     >
                                       {full ? 'Full' : 'Join'}
                                     </button>
@@ -10119,7 +10122,7 @@ function App() {
                   onClick={() => setIsPopupEventDraft(prev => !prev)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                     isPopupEventDraft
-                      ? 'bg-emerald-100 border-emerald-300 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-300'
+                      ? 'bg-orange-100 border-orange-300 text-orange-700 dark:bg-orange-900/30 dark:border-orange-700 dark:text-orange-300'
                       : 'bg-gray-100 border-gray-200 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300'
                   }`}
                 >
@@ -10139,7 +10142,7 @@ function App() {
                 )}
               </div>
               {isPopupEventDraft && (
-                <p className="mt-1 text-[11px] text-emerald-700 dark:text-emerald-300">First come, first served signups will be enabled for this event.</p>
+                <p className="mt-1 text-[11px] text-orange-700 dark:text-orange-300">First come, first served signups will be enabled for this event.</p>
               )}
             </div>
 
