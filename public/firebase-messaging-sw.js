@@ -33,17 +33,63 @@ const normalizePayload = (raw) => {
   return raw;
 };
 
+const formatNotificationContent = (payload) => {
+  const data = payload?.data && typeof payload.data === 'object' ? payload.data : {};
+  const notification = payload?.notification && typeof payload.notification === 'object' ? payload.notification : {};
+  const firstText = (...values) => {
+    for (const value of values) {
+      const text = String(value || '').trim();
+      if (text) return text;
+    }
+    return '';
+  };
+  const type = String(data?.type || notification?.type || 'update').trim().toLowerCase();
+  const genericTitles = new Set([
+    'calendar update',
+    'notification from our calendar',
+    'our calendar notification',
+    'our calendar',
+  ]);
+  const titleByType = {
+    invite: 'Calendar Invite',
+    event: 'Calendar Update',
+    list: 'List Update',
+    photo: 'Trip Photo',
+    expense: 'Expense Update',
+    reminder: 'Event Reminder',
+    update: 'Calendar Update',
+  };
+
+  const rawTitle = firstText(notification?.title, data?.title);
+  const title = !rawTitle || genericTitles.has(rawTitle.toLowerCase())
+    ? (titleByType[type] || 'Calendar Update')
+    : rawTitle;
+
+  let body = firstText(notification?.body, data?.body, data?.message, data?.summary, data?.text);
+  if (!body) {
+    const actor = firstText(data?.actor, data?.actorName, data?.createdBy);
+    const action = firstText(data?.action, 'updated');
+    const subject = firstText(data?.eventTitle, data?.itemTitle, data?.subject, data?.calendarName);
+    if (actor && subject) body = `${actor} ${action} "${subject}".`;
+    else if (subject) body = `Update: "${subject}".`;
+  }
+  if (!body) body = 'Open Our Calendar to see what changed.';
+
+  return {
+    title,
+    body,
+    tag: String(data?.tag || `calendar-${type || 'update'}`),
+    data,
+  };
+};
+
 const showFromPayload = async (rawPayload) => {
   const payload = normalizePayload(rawPayload);
-  const notification = payload?.notification || {};
-  const data = payload?.data || {};
-  const title = notification.title || data.title || 'Calendar Update';
-  const body = notification.body || data.body || '';
-  const tag = data.tag || 'calendar-update';
-  await self.registration.showNotification(title, {
-    body,
-    tag,
-    data,
+  const formatted = formatNotificationContent(payload);
+  await self.registration.showNotification(formatted.title, {
+    body: formatted.body,
+    tag: formatted.tag,
+    data: formatted.data,
   });
 };
 

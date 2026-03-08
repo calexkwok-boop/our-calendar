@@ -6617,6 +6617,54 @@ function App() {
     requestFcmToken();
   }, [user?.id, notificationsEnabled, notificationPermission]);
 
+  const formatPushNotificationContent = (payload) => {
+    const data = (payload?.data && typeof payload.data === 'object') ? payload.data : {};
+    const notification = (payload?.notification && typeof payload.notification === 'object') ? payload.notification : {};
+    const firstText = (...values) => {
+      for (const value of values) {
+        const text = String(value || '').trim();
+        if (text) return text;
+      }
+      return '';
+    };
+    const normalizedType = String(data?.type || notification?.type || 'update').trim().toLowerCase();
+    const genericTitleSet = new Set([
+      'calendar update',
+      'notification from our calendar',
+      'our calendar notification',
+      'our calendar',
+    ]);
+    const titleByType = {
+      invite: 'Calendar Invite',
+      event: 'Calendar Update',
+      list: 'List Update',
+      photo: 'Trip Photo',
+      expense: 'Expense Update',
+      reminder: 'Event Reminder',
+      update: 'Calendar Update',
+    };
+    const rawTitle = firstText(notification?.title, data?.title);
+    const fallbackTitle = titleByType[normalizedType] || 'Calendar Update';
+    const title = (!rawTitle || genericTitleSet.has(rawTitle.toLowerCase())) ? fallbackTitle : rawTitle;
+
+    let body = firstText(notification?.body, data?.body, data?.message, data?.summary, data?.text);
+    if (!body) {
+      const actor = firstText(data?.actor, data?.actorName, data?.createdBy);
+      const action = firstText(data?.action, 'updated');
+      const subject = firstText(data?.eventTitle, data?.itemTitle, data?.subject, data?.calendarName);
+      if (actor && subject) body = `${actor} ${action} "${subject}".`;
+      else if (subject) body = `Update: "${subject}".`;
+    }
+    if (!body) body = 'Open Our Calendar to see what changed.';
+
+    return {
+      title,
+      body,
+      tag: String(data?.tag || `fcm-${normalizedType || 'update'}`),
+      data,
+    };
+  };
+
   useEffect(() => {
     let unsubscribe = null;
     const startForegroundListener = async () => {
@@ -6627,20 +6675,22 @@ function App() {
           console.log('Foreground FCM payload:', payload);
           if (!('Notification' in window)) return;
           if (Notification.permission !== 'granted') return;
-          const title = String(payload?.notification?.title || payload?.data?.title || 'Calendar Update');
-          const body = String(payload?.notification?.body || payload?.data?.body || '');
-          const tag = String(payload?.data?.tag || 'fcm-foreground');
+          const formatted = formatPushNotificationContent(payload);
           try {
             if ('serviceWorker' in navigator) {
               navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js').then((registration) => {
                 if (registration?.showNotification) {
-                  registration.showNotification(title, { body, tag, data: payload?.data || {} });
+                  registration.showNotification(formatted.title, {
+                    body: formatted.body,
+                    tag: formatted.tag || 'fcm-foreground',
+                    data: formatted.data || {},
+                  });
                 } else {
-                  new Notification(title, { body, tag });
+                  new Notification(formatted.title, { body: formatted.body, tag: formatted.tag || 'fcm-foreground' });
                 }
               });
             } else {
-              new Notification(title, { body, tag });
+              new Notification(formatted.title, { body: formatted.body, tag: formatted.tag || 'fcm-foreground' });
             }
           } catch {}
         });
