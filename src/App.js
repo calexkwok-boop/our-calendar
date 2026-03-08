@@ -4161,6 +4161,11 @@ function App() {
     };
     const { error } = await supabase.from('popup_event_signups').insert(payload);
     if (error) {
+      if (String(error?.code || '') === '23505') {
+        // Already joined (unique event_id + user_id); treat as success.
+        await loadPopupEventData();
+        return;
+      }
       alert(`Could not join popup event: ${error.message}`);
       return;
     }
