@@ -10478,7 +10478,7 @@ function App() {
                     </div>
                   )}
                 </div>
-                <div>
+                <div className="mt-5">
                   <h4 className="text-xs uppercase tracking-wide font-semibold text-purple-600 dark:text-purple-400 mb-2">Upcoming Pop-up Events</h4>
                   {upcomingPopupEvents.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming pop-up events yet.</div>
