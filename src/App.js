@@ -10321,15 +10321,15 @@ function App() {
                               </div>
                             )}
                             {popupMeta && (
-                              <div className="mt-2 p-2 rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20">
+                              <div className="mt-2 p-2 rounded-lg border border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20">
                                 <div className="flex items-center justify-between gap-2">
-                                  <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                  <div className="text-xs font-semibold text-orange-700 dark:text-orange-300">
                                     Pop-up event: {popupSignups.length}{popupNoMax ? ' joined (no max)' : `/${popupMeta.maxPeople} spots`}
                                   </div>
                                   {popupJoined ? (
                                     <button
                                       onClick={() => leavePopupEvent(event.id)}
-                                      className="px-2 py-1 text-[11px] rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-200"
+                                      className="px-2 py-1 text-[11px] rounded-md border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-200"
                                     >
                                       Leave
                                     </button>
@@ -10337,14 +10337,14 @@ function App() {
                                     <button
                                       onClick={() => joinPopupEvent(event.id, { dateKey: event.date })}
                                       disabled={popupFull}
-                                      className="px-2 py-1 text-[11px] rounded-md border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 disabled:opacity-50"
+                                      className="px-2 py-1 text-[11px] rounded-md border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 text-orange-700 dark:text-orange-300 disabled:opacity-50"
                                     >
                                       {popupFull ? 'Full' : 'Join'}
                                     </button>
                                   )}
                                 </div>
                                 {popupSignups.length > 0 && (
-                                  <div className="mt-1 text-[11px] text-emerald-700/90 dark:text-emerald-300/90 truncate">
+                                  <div className="mt-1 text-[11px] text-orange-700/90 dark:text-orange-300/90 truncate">
                                     {popupSignups.map((row) => row.displayName || 'Member').join(', ')}
                                   </div>
                                 )}
