@@ -4612,8 +4612,37 @@ function App() {
     if (!messageId || !activeLayerId || !user?.id) return;
     const ownerId = String(messageRow?.user_id || '');
     if (ownerId !== String(user.id)) return;
+    const raw = String(messageRow?.message || '');
+    const popupInvite = parsePopupInviteMessage(raw);
+    const popupEventId = popupInvite ? String(popupInvite?.eventId || '') : '';
     if (!window.confirm('Delete this message?')) return;
     setDeletingChatMessageId(messageId);
+    if (popupEventId) {
+      const deletedPopup = await deleteEventsByIds([popupEventId]);
+      if (!deletedPopup) {
+        setChatError('Could not delete pop-up event from calendar.');
+        setDeletingChatMessageId(null);
+        return;
+      }
+      setEvents((prev) => {
+        const next = {};
+        Object.entries(prev || {}).forEach(([dateKey, rows]) => {
+          const filtered = (rows || []).filter((row) => String(row?.id || '') !== popupEventId);
+          if (filtered.length) next[dateKey] = filtered;
+        });
+        return next;
+      });
+      setPopupEventsByEventId((prev) => {
+        const next = { ...(prev || {}) };
+        delete next[popupEventId];
+        return next;
+      });
+      setPopupSignupsByEventId((prev) => {
+        const next = { ...(prev || {}) };
+        delete next[popupEventId];
+        return next;
+      });
+    }
     const { data: hardDeletedRows, error } = await supabase
       .from('calendar_messages')
       .delete()
@@ -7839,6 +7868,31 @@ function App() {
       return startTs !== null && startTs > todayTs;
     })
     .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
+  const upcomingPopupEvents = (() => {
+    const seen = new Set();
+    return Object.entries(events || {})
+      .flatMap(([dateKey, dateEvents]) => (dateEvents || []).map((event) => ({
+        ...event,
+        dateKey: String(event?.date || dateKey || ''),
+      })))
+      .filter((event) => {
+        const eventId = String(event?.id || '');
+        if (!eventId || seen.has(eventId)) return false;
+        if (!popupEventsByEventId[eventId]) return false;
+        const eventTs = toDateOnlyTs(event?.date || event?.dateKey || '');
+        if (eventTs === null || eventTs < todayTs) return false;
+        seen.add(eventId);
+        return true;
+      })
+      .sort((a, b) => {
+        const aTs = toDateOnlyTs(a?.date || a?.dateKey || '') || 0;
+        const bTs = toDateOnlyTs(b?.date || b?.dateKey || '') || 0;
+        if (aTs !== bTs) return aTs - bTs;
+        if (!a?.time) return 1;
+        if (!b?.time) return -1;
+        return String(a.time).localeCompare(String(b.time));
+      });
+  })();
   const activeTrips = [...subCalendars]
     .filter(sc => {
       const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
@@ -10420,6 +10474,46 @@ function App() {
                           </div>
                         </div>
                       );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h4 className="text-xs uppercase tracking-wide font-semibold text-purple-600 dark:text-purple-400 mb-2">Upcoming Pop-up Events</h4>
+                  {upcomingPopupEvents.length === 0 ? (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming pop-up events yet.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {upcomingPopupEvents.slice(0, 8).map((event) => {
+                        const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                        const signups = popupSignupsByEventId[String(event.id || '')] || [];
+                        const joinedCount = signups.length;
+                        const noMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
+                        const maxLabel = noMax ? 'No max' : `${Number(popupMeta?.maxPeople || 0)} max`;
+                        return (
+                          <div key={`upcoming-popup-${event.id}`} className="rounded-xl p-3 ring-1 ring-inset ring-purple-200 dark:ring-purple-700 bg-purple-50/70 dark:bg-purple-900/20">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">🎉 {event.title}</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+                                  {formatDateKeyMMDDYYYY(event.date || event.dateKey)}{event.time ? ` at ${formatTime(event.time)}` : ''}
+                                </div>
+                                {event.location && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">📍 {event.location}</div>
+                                )}
+                                <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                                  {joinedCount} joined · {maxLabel}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => focusOnPopupEventDate(event.id, event.date || event.dateKey)}
+                                className="shrink-0 ml-2 px-3 py-1.5 text-xs rounded-lg bg-purple-500 hover:bg-purple-600 text-white"
+                              >
+                                Open
+                              </button>
+                            </div>
+                          </div>
+                        );
                       })}
                     </div>
                   )}
