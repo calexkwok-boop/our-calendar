@@ -46,7 +46,7 @@ const DEFAULT_CATEGORIES = {
   personal: { label: 'Personal', color: 'bg-emerald-500', lightBg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
   health: { label: 'Health', color: 'bg-teal-500', lightBg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700' },
   social: { label: 'Social', color: 'bg-amber-500', lightBg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
-  popup_event: { label: 'Pop up event', color: 'bg-orange-500', lightBg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' },
+  popup_event: { label: 'Pop up event', color: 'bg-rose-500', lightBg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
   other: { label: 'Other', color: 'bg-gray-500', lightBg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700' }
 };
 
@@ -9225,10 +9225,10 @@ function App() {
                       </button>
                       <button
                         onClick={() => setPollComposerStep('popup')}
-                        className="w-full px-3 py-3 rounded-xl border border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 text-left hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
+                        className="w-full px-3 py-3 rounded-xl border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-left hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors"
                       >
-                        <div className="text-sm font-semibold text-orange-700 dark:text-orange-300">🎉 Create a pop-up event</div>
-                        <div className="text-xs text-orange-700/90 dark:text-orange-300/90 mt-0.5">First come, first served with max headcount.</div>
+                        <div className="text-sm font-semibold text-rose-700 dark:text-rose-300">🎉 Create a pop-up event</div>
+                        <div className="text-xs text-rose-700/90 dark:text-rose-300/90 mt-0.5">First come, first served with max headcount.</div>
                       </button>
                     </div>
                   )}
@@ -9241,10 +9241,10 @@ function App() {
                         value={popupDraftTitle}
                         onChange={(e) => setPopupDraftTitle(e.target.value)}
                         placeholder="What's the event? (e.g. Pickup basketball)"
-                        className="w-full px-3 py-2 text-sm border border-orange-200 dark:border-orange-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-orange-400"
+                        className="w-full px-3 py-2 text-sm border border-rose-200 dark:border-rose-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-rose-400"
                       />
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-0 overflow-hidden">
-                        <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-orange-200 dark:border-orange-700 bg-white/90 dark:bg-gray-800">
+                        <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-rose-200 dark:border-rose-700 bg-white/90 dark:bg-gray-800">
                           <input
                             type="date"
                             value={popupDraftDate}
@@ -9253,7 +9253,7 @@ function App() {
                             style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', WebkitAppearance: 'none' }}
                           />
                         </div>
-                        <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-orange-200 dark:border-orange-700 bg-white/90 dark:bg-gray-800">
+                        <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-rose-200 dark:border-rose-700 bg-white/90 dark:bg-gray-800">
                           <input
                             type="time"
                             value={popupDraftTime}
@@ -9267,7 +9267,7 @@ function App() {
                         value={popupDraftLocation}
                         onSelect={(val) => setPopupDraftLocation(val || '')}
                         placeholder="📍 Location (optional)"
-                        className="w-full px-3 py-2 text-sm border border-orange-200 dark:border-orange-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                        className="w-full px-3 py-2 text-sm border border-rose-200 dark:border-rose-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
                       />
                       <div className="flex items-center gap-2">
                         <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Max people</label>
@@ -9277,7 +9277,7 @@ function App() {
                           value={popupDraftMaxPeople}
                           onChange={(e) => setPopupDraftMaxPeople(e.target.value)}
                           disabled={popupDraftNoMaxPeople}
-                          className="w-24 px-2 py-1.5 text-sm border border-orange-200 dark:border-orange-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-lg"
+                          className="w-24 px-2 py-1.5 text-sm border border-rose-200 dark:border-rose-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-lg"
                         />
                         <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
                           <input
@@ -9298,7 +9298,7 @@ function App() {
                         </button>
                         <button
                           onClick={createPopupEventFromChat}
-                          className="px-3 py-2 text-sm rounded-xl bg-orange-600 text-white font-semibold"
+                          className="px-3 py-2 text-sm rounded-xl bg-rose-600 text-white font-semibold"
                         >
                           Create
                         </button>
@@ -10193,7 +10193,7 @@ function App() {
                   onClick={() => setIsPopupEventDraft(prev => !prev)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                     isPopupEventDraft
-                      ? 'bg-orange-100 border-orange-300 text-orange-700 dark:bg-orange-900/30 dark:border-orange-700 dark:text-orange-300'
+                      ? 'bg-rose-100 border-rose-300 text-rose-700 dark:bg-rose-900/30 dark:border-rose-700 dark:text-rose-300'
                       : 'bg-gray-100 border-gray-200 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300'
                   }`}
                 >
@@ -10213,7 +10213,7 @@ function App() {
                 )}
               </div>
               {isPopupEventDraft && (
-                <p className="mt-1 text-[11px] text-orange-700 dark:text-orange-300">First come, first served signups will be enabled for this event.</p>
+                <p className="mt-1 text-[11px] text-rose-700 dark:text-rose-300">First come, first served signups will be enabled for this event.</p>
               )}
             </div>
 
@@ -10396,15 +10396,15 @@ function App() {
                               </div>
                             )}
                             {popupMeta && (
-                              <div className="mt-2 p-2 rounded-lg border border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20">
+                              <div className="mt-2 p-2 rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20">
                                 <div className="flex items-center justify-between gap-2">
-                                  <div className="text-xs font-semibold text-orange-700 dark:text-orange-300">
+                                  <div className="text-xs font-semibold text-rose-700 dark:text-rose-300">
                                     Pop-up event: {popupSignups.length}{popupNoMax ? ' joined (no max)' : `/${popupMeta.maxPeople} spots`}
                                   </div>
                                   {popupJoined ? (
                                     <button
                                       onClick={() => leavePopupEvent(event.id)}
-                                      className="px-2 py-1 text-[11px] rounded-md border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-200"
+                                      className="px-2 py-1 text-[11px] rounded-md border border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-200"
                                     >
                                       Leave
                                     </button>
@@ -10412,14 +10412,14 @@ function App() {
                                     <button
                                       onClick={() => joinPopupEvent(event.id, { dateKey: event.date })}
                                       disabled={popupFull}
-                                      className="px-2 py-1 text-[11px] rounded-md border border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800 text-orange-700 dark:text-orange-300 disabled:opacity-50"
+                                      className="px-2 py-1 text-[11px] rounded-md border border-rose-300 dark:border-rose-700 bg-white dark:bg-gray-800 text-rose-700 dark:text-rose-300 disabled:opacity-50"
                                     >
                                       {popupFull ? 'Full' : 'Join'}
                                     </button>
                                   )}
                                 </div>
                                 {popupSignups.length > 0 && (
-                                  <div className="mt-1 text-[11px] text-orange-700/90 dark:text-orange-300/90 truncate">
+                                  <div className="mt-1 text-[11px] text-rose-700/90 dark:text-rose-300/90 truncate">
                                     {popupSignups.map((row) => row.displayName || 'Member').join(', ')}
                                   </div>
                                 )}
@@ -10658,7 +10658,7 @@ function App() {
                   )}
                 </div>
                 <div className="mt-5">
-                  <h4 className="text-xs uppercase tracking-wide font-semibold text-orange-600 dark:text-orange-400 mb-2">Upcoming Pop-up Events</h4>
+                  <h4 className="text-xs uppercase tracking-wide font-semibold text-rose-600 dark:text-rose-400 mb-2">Upcoming Pop-up Events</h4>
                   {upcomingPopupEvents.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming pop-up events yet.</div>
                   ) : (
@@ -10670,7 +10670,7 @@ function App() {
                         const noMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
                         const maxLabel = noMax ? 'No max' : `${Number(popupMeta?.maxPeople || 0)} max`;
                         return (
-                          <div key={`upcoming-popup-${event.id}`} className="rounded-xl p-3 ring-1 ring-inset ring-orange-200 dark:ring-orange-700 bg-orange-50/70 dark:bg-orange-900/20">
+                          <div key={`upcoming-popup-${event.id}`} className="rounded-xl p-3 ring-1 ring-inset ring-rose-200 dark:ring-rose-700 bg-rose-50/70 dark:bg-rose-900/20">
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
                                 <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">🎉 {event.title}</div>
@@ -10686,7 +10686,7 @@ function App() {
                               </div>
                               <button
                                 onClick={() => focusOnPopupEventDate(event.id, event.date || event.dateKey)}
-                                className="shrink-0 ml-2 px-3 py-1.5 text-xs rounded-lg bg-orange-500 hover:bg-orange-600 text-white"
+                                className="shrink-0 ml-2 px-3 py-1.5 text-xs rounded-lg bg-rose-500 hover:bg-rose-600 text-white"
                               >
                                 Open
                               </button>
