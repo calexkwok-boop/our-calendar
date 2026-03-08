@@ -4133,6 +4133,28 @@ function App() {
     return true;
   };
 
+  const focusOnPopupEventDate = (eventId, fallbackDateKey = null) => {
+    let dateKey = String(fallbackDateKey || '').trim();
+    if (!dateKey) {
+      Object.entries(events || {}).some(([dk, list]) => {
+        const found = (list || []).some((evt) => String(evt?.id || '') === String(eventId || ''));
+        if (!found) return false;
+        dateKey = String(dk || '').trim();
+        return true;
+      });
+    }
+    const m = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    if (Number.isNaN(d.getTime())) return;
+    setCurrentDate(new Date(d.getFullYear(), d.getMonth(), 1));
+    setSelectedDate(d);
+    setSelectedDates([]);
+    setSelectionStart(null);
+    setFirstTapDate(null);
+    setShowDateDetailModal(true);
+  };
+
   const joinPopupEvent = async (eventId, fallbackMeta = null) => {
     const normalizedEventId = String(eventId || '').trim();
     const popup = popupEventsByEventId[normalizedEventId] || null;
@@ -4143,7 +4165,10 @@ function App() {
     }
     const signups = popupSignupsByEventId[normalizedEventId] || [];
     const alreadyJoined = signups.some((row) => String(row?.userId || '') === String(user.id));
-    if (alreadyJoined) return;
+    if (alreadyJoined) {
+      focusOnPopupEventDate(normalizedEventId, fallbackMeta?.dateKey || null);
+      return;
+    }
     const fallbackNoMax = Boolean(fallbackMeta?.noMax);
     const fallbackMax = Math.max(1, Number(fallbackMeta?.maxPeople || 1));
     const maxPeople = popup ? Number(popup?.maxPeople || 1) : fallbackMax;
@@ -4164,12 +4189,14 @@ function App() {
       if (String(error?.code || '') === '23505') {
         // Already joined (unique event_id + user_id); treat as success.
         await loadPopupEventData();
+        focusOnPopupEventDate(normalizedEventId, fallbackMeta?.dateKey || null);
         return;
       }
       alert(`Could not join popup event: ${error.message}`);
       return;
     }
     await loadPopupEventData();
+    focusOnPopupEventDate(normalizedEventId, fallbackMeta?.dateKey || null);
   };
 
   const leavePopupEvent = async (eventId) => {
@@ -8834,6 +8861,7 @@ function App() {
                                       onClick={() => joinPopupEvent(popupInvite.eventId, {
                                         maxPeople: popupInvite.maxPeople,
                                         noMax: popupInvite.noMax,
+                                        dateKey: popupInvite.dateKey,
                                       })}
                                       disabled={full}
                                       className={`px-2 py-1 text-[11px] rounded-md border disabled:opacity-50 ${mine ? 'border-indigo-200/70 bg-indigo-500/40 text-white' : 'border-emerald-300 dark:border-emerald-700 bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300'}`}
@@ -10149,7 +10177,7 @@ function App() {
                                     </button>
                                   ) : (
                                     <button
-                                      onClick={() => joinPopupEvent(event.id)}
+                                      onClick={() => joinPopupEvent(event.id, { dateKey: event.date })}
                                       disabled={popupFull}
                                       className="px-2 py-1 text-[11px] rounded-md border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 disabled:opacity-50"
                                     >
