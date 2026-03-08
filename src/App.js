@@ -106,6 +106,7 @@ function App() {
   const dateTapTimeoutRef = useRef(null);
   const scanReminderInputRef = useRef(null);
   const scanReminderUploadInputRef = useRef(null);
+  const importCalendarInputRef = useRef(null);
   const smartLeaveGeoCacheRef = useRef(new Map());
   const smartLeaveTravelCacheRef = useRef(new Map());
   const smartLeavePositionRef = useRef({ at: 0, lat: null, lng: null });
@@ -151,6 +152,7 @@ function App() {
   const [showAuth, setShowAuth] = useState(true);
   const [authError, setAuthError] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
+  const [isImportingCalendar, setIsImportingCalendar] = useState(false);
   const [firstTapDate, setFirstTapDate] = useState(null);
   const [lastTapTime, setLastTapTime] = useState(0);
   const [recurrence, setRecurrence] = useState('once');
@@ -7761,6 +7763,209 @@ function App() {
     setQuickEntry('');
   };
 
+  const unfoldIcsLines = (text) => {
+    const normalized = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const rawLines = normalized.split('\n');
+    const lines = [];
+    rawLines.forEach((line) => {
+      if (!line) {
+        lines.push('');
+        return;
+      }
+      if ((line.startsWith(' ') || line.startsWith('\t')) && lines.length > 0) {
+        lines[lines.length - 1] += line.slice(1);
+      } else {
+        lines.push(line);
+      }
+    });
+    return lines;
+  };
+
+  const parseIcsDateTime = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    const dateOnly = raw.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (dateOnly) {
+      return {
+        date: new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3])),
+        isAllDay: true,
+      };
+    }
+    const dateTimeUtc = raw.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?Z$/);
+    if (dateTimeUtc) {
+      return {
+        date: new Date(Date.UTC(
+          Number(dateTimeUtc[1]),
+          Number(dateTimeUtc[2]) - 1,
+          Number(dateTimeUtc[3]),
+          Number(dateTimeUtc[4]),
+          Number(dateTimeUtc[5]),
+          Number(dateTimeUtc[6] || '0')
+        )),
+        isAllDay: false,
+      };
+    }
+    const dateTimeLocal = raw.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?$/);
+    if (dateTimeLocal) {
+      return {
+        date: new Date(
+          Number(dateTimeLocal[1]),
+          Number(dateTimeLocal[2]) - 1,
+          Number(dateTimeLocal[3]),
+          Number(dateTimeLocal[4]),
+          Number(dateTimeLocal[5]),
+          Number(dateTimeLocal[6] || '0')
+        ),
+        isAllDay: false,
+      };
+    }
+    return null;
+  };
+
+  const parseIcsText = (text) => {
+    const lines = unfoldIcsLines(text);
+    const eventsOut = [];
+    let current = null;
+
+    lines.forEach((line) => {
+      const trimmed = String(line || '').trim();
+      if (!trimmed) return;
+      const upper = trimmed.toUpperCase();
+      if (upper === 'BEGIN:VEVENT') {
+        current = {};
+        return;
+      }
+      if (upper === 'END:VEVENT') {
+        if (current) eventsOut.push(current);
+        current = null;
+        return;
+      }
+      if (!current) return;
+
+      const sepIndex = trimmed.indexOf(':');
+      if (sepIndex <= 0) return;
+      const left = trimmed.slice(0, sepIndex);
+      const value = trimmed.slice(sepIndex + 1);
+      const [rawKey, ...paramParts] = left.split(';');
+      const key = String(rawKey || '').trim().toUpperCase();
+      const params = {};
+      paramParts.forEach((part) => {
+        const eq = part.indexOf('=');
+        if (eq <= 0) return;
+        const pKey = part.slice(0, eq).toUpperCase();
+        const pVal = part.slice(eq + 1);
+        params[pKey] = pVal;
+      });
+      current[key] = { value, params };
+    });
+
+    return eventsOut;
+  };
+
+  const mapIcsFreqToRecurrence = (rrule) => {
+    const raw = String(rrule || '').toUpperCase();
+    const freq = raw.match(/(?:^|;)FREQ=([^;]+)/)?.[1] || '';
+    if (freq === 'YEARLY') return 'annual';
+    if (freq === 'MONTHLY') return 'monthly';
+    if (freq === 'WEEKLY') return 'weekly';
+    return 'once';
+  };
+
+  const importIcsFile = async (file) => {
+    if (!file || !activeLayerId || !user?.id) return;
+    setIsImportingCalendar(true);
+    try {
+      const text = await file.text();
+      const parsedEvents = parseIcsText(text);
+      if (parsedEvents.length === 0) {
+        alert('No calendar events found in this .ics file.');
+        return;
+      }
+
+      const updatedEvents = { ...events };
+      let importCount = 0;
+      const nowTs = Date.now();
+
+      parsedEvents.forEach((ev, idx) => {
+        const summary = String(ev?.SUMMARY?.value || '').trim() || 'Imported Event';
+        const location = String(ev?.LOCATION?.value || '').trim() || null;
+        const startRaw = ev?.DTSTART?.value || '';
+        const endRaw = ev?.DTEND?.value || '';
+        const startParsed = parseIcsDateTime(startRaw);
+        const endParsed = parseIcsDateTime(endRaw);
+        if (!startParsed?.date || Number.isNaN(startParsed.date.getTime())) return;
+
+        const recurrence = mapIcsFreqToRecurrence(ev?.RRULE?.value || '');
+
+        const pushEvent = (dateObj, opts = {}) => {
+          const dateKey = getDateKey(dateObj);
+          const hours = dateObj.getHours();
+          const minutes = dateObj.getMinutes();
+          const hasTime = !opts.allDay;
+          const time = hasTime ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}` : null;
+          const newEvent = {
+            id: `imp_${nowTs}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
+            title: summary,
+            time,
+            date: dateKey,
+            category: 'other',
+            isPrivate: false,
+            isUrgent: false,
+            isAnnual: recurrence === 'annual',
+            recurrence,
+            annualMonth: recurrence === 'annual' ? (dateObj.getMonth() + 1) : null,
+            annualDay: recurrence === 'annual' ? dateObj.getDate() : null,
+            createdBy: currentUser || user?.email || user?.phone || 'User',
+            createdAt: new Date().toISOString(),
+            isMultiDay: Boolean(opts.multiDayId),
+            multiDayId: opts.multiDayId || null,
+            userId: user.id,
+            location,
+            reactions: {},
+            exceptions: [],
+          };
+          const dateEvents = updatedEvents[dateKey] || [];
+          updatedEvents[dateKey] = [...dateEvents, newEvent].sort((a, b) => {
+            if (!a.time) return 1;
+            if (!b.time) return -1;
+            return a.time.localeCompare(b.time);
+          });
+          importCount += 1;
+        };
+
+        const start = new Date(startParsed.date);
+        const isAllDay = Boolean(startParsed.isAllDay);
+        if (isAllDay && endParsed?.date) {
+          const inclusiveEnd = new Date(endParsed.date);
+          inclusiveEnd.setDate(inclusiveEnd.getDate() - 1); // ICS all-day DTEND is exclusive
+          if (!Number.isNaN(inclusiveEnd.getTime()) && inclusiveEnd >= start) {
+            const multiDayId = `impmd_${nowTs}_${idx}`;
+            for (let d = new Date(start); d <= inclusiveEnd; d.setDate(d.getDate() + 1)) {
+              pushEvent(new Date(d), { allDay: true, multiDayId });
+              if (importCount > 5000) break;
+            }
+            return;
+          }
+        }
+
+        pushEvent(start, { allDay: isAllDay });
+      });
+
+      if (importCount === 0) {
+        alert('No valid events were imported from this file.');
+        return;
+      }
+      await saveEvents(updatedEvents, { immediate: true });
+      alert(`Imported ${importCount} event${importCount === 1 ? '' : 's'} from ${file.name}.`);
+    } catch (err) {
+      console.error('ICS import failed:', err);
+      alert(`Import failed: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsImportingCalendar(false);
+      if (importCalendarInputRef.current) importCalendarInputRef.current.value = '';
+    }
+  };
+
   const handleTimeSubmit = async (time) => {
     if (!pendingEvent) return;
     const updatedEvents = { ...events };
@@ -8384,6 +8589,28 @@ function App() {
               >
                 🌤️
               </button>
+              <button
+                onClick={() => importCalendarInputRef.current?.click()}
+                disabled={isImportingCalendar || !activeLayerId || !user?.id}
+                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${
+                  isImportingCalendar
+                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                    : 'bg-rose-100 dark:bg-rose-900 text-rose-700 dark:text-rose-300'
+                }`}
+                title="Import from Apple/Google .ics"
+              >
+                {isImportingCalendar ? 'Importing...' : 'Import .ics'}
+              </button>
+              <input
+                ref={importCalendarInputRef}
+                type="file"
+                accept=".ics,text/calendar"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) importIcsFile(file);
+                }}
+              />
               <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
                 className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
