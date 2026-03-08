@@ -4676,30 +4676,29 @@ function App() {
     if (!window.confirm('Delete this message?')) return;
     setDeletingChatMessageId(messageId);
     if (popupEventId) {
-      const deletedPopup = await deleteEventsByIds([popupEventId]);
+      const deletedPopup = await deleteEventsByIds([popupEventId], { silent: true });
       if (!deletedPopup) {
-        setChatError('Could not delete pop-up event from calendar.');
-        setDeletingChatMessageId(null);
-        return;
-      }
-      setEvents((prev) => {
-        const next = {};
-        Object.entries(prev || {}).forEach(([dateKey, rows]) => {
-          const filtered = (rows || []).filter((row) => String(row?.id || '') !== popupEventId);
-          if (filtered.length) next[dateKey] = filtered;
+        setChatError('Invite removed from chat. Event remains on calendar due to permissions.');
+      } else {
+        setEvents((prev) => {
+          const next = {};
+          Object.entries(prev || {}).forEach(([dateKey, rows]) => {
+            const filtered = (rows || []).filter((row) => String(row?.id || '') !== popupEventId);
+            if (filtered.length) next[dateKey] = filtered;
+          });
+          return next;
         });
-        return next;
-      });
-      setPopupEventsByEventId((prev) => {
-        const next = { ...(prev || {}) };
-        delete next[popupEventId];
-        return next;
-      });
-      setPopupSignupsByEventId((prev) => {
-        const next = { ...(prev || {}) };
-        delete next[popupEventId];
-        return next;
-      });
+        setPopupEventsByEventId((prev) => {
+          const next = { ...(prev || {}) };
+          delete next[popupEventId];
+          return next;
+        });
+        setPopupSignupsByEventId((prev) => {
+          const next = { ...(prev || {}) };
+          delete next[popupEventId];
+          return next;
+        });
+      }
     }
     const { data: hardDeletedRows, error } = await supabase
       .from('calendar_messages')
@@ -7757,7 +7756,8 @@ function App() {
     setPopupEventMaxPeopleDraft('10');
   };
 
-  const deleteEventsByIds = async (eventIds) => {
+  const deleteEventsByIds = async (eventIds, options = {}) => {
+    const silent = Boolean(options?.silent);
     const ids = Array.from(new Set((eventIds || []).map(id => String(id)).filter(Boolean)));
     if (!activeLayerId || ids.length === 0) return true;
     const { data, error } = await supabase
@@ -7768,13 +7768,13 @@ function App() {
       .eq('layer_id', activeLayerId);
     if (error) {
       console.error('Error deleting events:', error);
-      alert(`Could not delete event(s): ${error.message}`);
+      if (!silent) alert(`Could not delete event(s): ${error.message}`);
       return false;
     }
     const deletedIds = new Set((data || []).map(row => String(row.id)));
     if (deletedIds.size === 0 || ids.some(id => !deletedIds.has(String(id)))) {
       const missing = ids.filter(id => !deletedIds.has(String(id)));
-      alert(`Delete blocked by permissions or ownership. Missing IDs: ${missing.join(', ')}`);
+      if (!silent) alert(`Delete blocked by permissions or ownership. Missing IDs: ${missing.join(', ')}`);
       return false;
     }
     try {
