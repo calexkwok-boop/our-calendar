@@ -10152,8 +10152,9 @@ function App() {
                 <div className="text-center py-8 text-gray-400 dark:text-gray-500">No events for this day</div>
               ) : (
                 selectedEvents.map(event => {
-                  const category = categories[event.category || 'other'] || categories.other;
                   const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                  const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
+                  const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
                   const popupSignups = popupMeta ? (popupSignupsByEventId[String(event.id || '')] || []) : [];
                   const popupJoined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
                   const popupNoMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
