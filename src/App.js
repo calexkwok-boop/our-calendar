@@ -9151,10 +9151,10 @@ function App() {
                       </button>
                       <button
                         onClick={() => setPollComposerStep('popup')}
-                        className="w-full px-3 py-3 rounded-xl border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-left hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
+                        className="w-full px-3 py-3 rounded-xl border border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 text-left hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
                       >
-                        <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">🎉 Create a pop-up event</div>
-                        <div className="text-xs text-emerald-700/90 dark:text-emerald-300/90 mt-0.5">First come, first served with max headcount.</div>
+                        <div className="text-sm font-semibold text-orange-700 dark:text-orange-300">🎉 Create a pop-up event</div>
+                        <div className="text-xs text-orange-700/90 dark:text-orange-300/90 mt-0.5">First come, first served with max headcount.</div>
                       </button>
                     </div>
                   )}
@@ -10583,7 +10583,7 @@ function App() {
                   )}
                 </div>
                 <div className="mt-5">
-                  <h4 className="text-xs uppercase tracking-wide font-semibold text-purple-600 dark:text-purple-400 mb-2">Upcoming Pop-up Events</h4>
+                  <h4 className="text-xs uppercase tracking-wide font-semibold text-orange-600 dark:text-orange-400 mb-2">Upcoming Pop-up Events</h4>
                   {upcomingPopupEvents.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming pop-up events yet.</div>
                   ) : (
@@ -10595,7 +10595,7 @@ function App() {
                         const noMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
                         const maxLabel = noMax ? 'No max' : `${Number(popupMeta?.maxPeople || 0)} max`;
                         return (
-                          <div key={`upcoming-popup-${event.id}`} className="rounded-xl p-3 ring-1 ring-inset ring-purple-200 dark:ring-purple-700 bg-purple-50/70 dark:bg-purple-900/20">
+                          <div key={`upcoming-popup-${event.id}`} className="rounded-xl p-3 ring-1 ring-inset ring-orange-200 dark:ring-orange-700 bg-orange-50/70 dark:bg-orange-900/20">
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
                                 <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">🎉 {event.title}</div>
@@ -10611,7 +10611,7 @@ function App() {
                               </div>
                               <button
                                 onClick={() => focusOnPopupEventDate(event.id, event.date || event.dateKey)}
-                                className="shrink-0 ml-2 px-3 py-1.5 text-xs rounded-lg bg-purple-500 hover:bg-purple-600 text-white"
+                                className="shrink-0 ml-2 px-3 py-1.5 text-xs rounded-lg bg-orange-500 hover:bg-orange-600 text-white"
                               >
                                 Open
                               </button>
