@@ -46,6 +46,7 @@ const DEFAULT_CATEGORIES = {
   personal: { label: 'Personal', color: 'bg-emerald-500', lightBg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
   health: { label: 'Health', color: 'bg-teal-500', lightBg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700' },
   social: { label: 'Social', color: 'bg-amber-500', lightBg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
+  popup_event: { label: 'Pop up event', color: 'bg-orange-500', lightBg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700' },
   other: { label: 'Other', color: 'bg-gray-500', lightBg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700' }
 };
 
@@ -4538,14 +4539,14 @@ function App() {
       setChatError('Pick a valid event date.');
       return;
     }
-    const eventRow = {
-      id: `${Date.now()}-${Math.random()}`,
-      date: dateKey,
-      title,
-      time,
-      category: 'other',
-      is_private: false,
-      is_private_for: null,
+      const eventRow = {
+        id: `${Date.now()}-${Math.random()}`,
+        date: dateKey,
+        title,
+        time,
+        category: 'popup_event',
+        is_private: false,
+        is_private_for: null,
       is_urgent: false,
       is_multi_day: false,
       multi_day_id: null,
@@ -5174,7 +5175,7 @@ function App() {
               text: cat.text
             };
           });
-          setCategories(categoriesObj);
+          setCategories({ ...DEFAULT_CATEGORIES, ...categoriesObj });
         } else {
           setCategories(DEFAULT_CATEGORIES);
         }
@@ -7714,7 +7715,7 @@ function App() {
         title: pendingEvent.title,
         time: pendingEvent.isMultiDay ? null : (time || null),
         date: dateKey,
-        category: selectedCategory,
+        category: pendingEvent.isPopupEvent ? 'popup_event' : selectedCategory,
         isPrivate: isPrivate,
         isUrgent: isUrgent,
         isAnnual: recurrence === 'annual',
@@ -10537,7 +10538,7 @@ function App() {
                 </div>
 
                 <div>
-                  <h4 className="text-xs uppercase tracking-wide font-semibold text-purple-600 dark:text-purple-400 mb-2">Upcoming Itineraries</h4>
+                  <h4 className="text-xs uppercase tracking-wide font-semibold text-green-600 dark:text-green-400 mb-2">Upcoming Itineraries</h4>
                   {upcomingTrips.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming itineraries yet.</div>
                   ) : (
