@@ -9004,14 +9004,24 @@ function App() {
                               const popupSignups = popupMeta ? (popupSignupsByEventId[String(popupInvite.eventId || '')] || []) : [];
                               const noMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : Boolean(popupInvite.noMax);
                               const maxPeople = popupMeta ? Number(popupMeta.maxPeople || 0) : Number(popupInvite.maxPeople || 0);
+                              const popupUnavailable = !popupMeta;
                               const joined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
                               const full = noMax ? false : (popupSignups.length >= maxPeople);
                               return (
                                 <div className="mt-2 flex items-center justify-between gap-2">
                                   <div className={`text-[11px] ${mine ? 'text-indigo-100/90' : 'text-purple-700 dark:text-purple-300'}`}>
-                                    {popupSignups.length}{noMax ? ' joined (no max)' : `/${maxPeople} spots`}
+                                    {popupUnavailable
+                                      ? 'This event is no longer available.'
+                                      : `${popupSignups.length}${noMax ? ' joined (no max)' : `/${maxPeople} spots`}`}
                                   </div>
-                                  {joined ? (
+                                  {popupUnavailable ? (
+                                    <button
+                                      disabled
+                                      className={`px-2 py-1 text-[11px] rounded-md border opacity-70 cursor-not-allowed ${mine ? 'border-indigo-200/70 bg-indigo-500/30 text-indigo-100' : 'border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}
+                                    >
+                                      Unavailable
+                                    </button>
+                                  ) : joined ? (
                                     <button
                                       onClick={() => leavePopupEvent(popupInvite.eventId)}
                                       className={`px-2 py-1 text-[11px] rounded-md border ${mine ? 'border-indigo-200/70 bg-indigo-500/40 text-white' : 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-200'}`}
