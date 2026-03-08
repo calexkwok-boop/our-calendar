@@ -155,6 +155,9 @@ function App() {
   const [isImportingCalendar, setIsImportingCalendar] = useState(false);
   const [showFirstImportPrompt, setShowFirstImportPrompt] = useState(false);
   const IMPORT_PROMPT_HIDE_KEY = 'calendar-hide-import-prompt';
+  const GOOGLE_IMPORT_PENDING_KEY = 'calendar-google-import-pending';
+  const GOOGLE_CALENDAR_READ_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+  const googleImportResumeRef = useRef(false);
   const [hideImportPromptForever, setHideImportPromptForever] = useState(() => localStorage.getItem(IMPORT_PROMPT_HIDE_KEY) === 'true');
   const [dontShowImportPromptChecked, setDontShowImportPromptChecked] = useState(false);
   const [importPromptDismissedThisSession, setImportPromptDismissedThisSession] = useState(false);
@@ -3286,6 +3289,7 @@ function App() {
     if (!user?.id) {
       setImportPromptDismissedThisSession(false);
       setDontShowImportPromptChecked(false);
+      googleImportResumeRef.current = false;
     }
   }, [user?.id]);
 
@@ -7894,11 +7898,248 @@ function App() {
 
   const mapIcsFreqToRecurrence = (rrule) => {
     const raw = String(rrule || '').toUpperCase();
-    const freq = raw.match(/(?:^|;)FREQ=([^;]+)/)?.[1] || '';
+    const freq = raw.match(/(?:^|[:;])FREQ=([^;]+)/)?.[1] || '';
     if (freq === 'YEARLY') return 'annual';
     if (freq === 'MONTHLY') return 'monthly';
     if (freq === 'WEEKLY') return 'weekly';
     return 'once';
+  };
+
+  const parseGoogleDateTimeValue = (value) => {
+    if (!value || typeof value !== 'object') return null;
+    const dateTimeRaw = String(value.dateTime || '').trim();
+    if (dateTimeRaw) {
+      const parsed = new Date(dateTimeRaw);
+      if (!Number.isNaN(parsed.getTime())) {
+        return { date: parsed, isAllDay: false };
+      }
+    }
+    const dateRaw = String(value.date || '').trim();
+    const dateOnly = dateRaw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnly) {
+      return {
+        date: new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3])),
+        isAllDay: true,
+      };
+    }
+    return null;
+  };
+
+  const triggerGoogleCalendarOAuthImport = async () => {
+    localStorage.setItem(GOOGLE_IMPORT_PENDING_KEY, 'true');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+        scopes: `openid email profile ${GOOGLE_CALENDAR_READ_SCOPE}`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+          include_granted_scopes: 'true',
+        },
+      },
+    });
+    if (error) {
+      localStorage.removeItem(GOOGLE_IMPORT_PENDING_KEY);
+      throw new Error(error.message || 'Could not connect Google Calendar.');
+    }
+  };
+
+  const importGoogleCalendarEvents = async ({ allowReconnect = true } = {}) => {
+    if (!activeLayerId || !user?.id) return;
+    setIsImportingCalendar(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const providerToken = String(sessionData?.session?.provider_token || '').trim();
+      if (!providerToken) {
+        if (!allowReconnect) {
+          throw new Error('Google auth token is missing. Please reconnect and try again.');
+        }
+        await triggerGoogleCalendarOAuthImport();
+        return;
+      }
+
+      const authHeaders = { Authorization: `Bearer ${providerToken}` };
+      const calendarListResp = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader&showHidden=false', {
+        headers: authHeaders,
+      });
+
+      if ((calendarListResp.status === 401 || calendarListResp.status === 403) && allowReconnect) {
+        await triggerGoogleCalendarOAuthImport();
+        return;
+      }
+      if (!calendarListResp.ok) {
+        let message = `Google Calendar list request failed (${calendarListResp.status}).`;
+        try {
+          const errData = await calendarListResp.json();
+          const errMsg = String(errData?.error?.message || '').trim();
+          if (errMsg) message = errMsg;
+        } catch {}
+        throw new Error(message);
+      }
+
+      const calendarListJson = await calendarListResp.json();
+      const calendars = Array.isArray(calendarListJson?.items) ? calendarListJson.items : [];
+      const targetCalendar = calendars.find((c) => c?.primary) || calendars[0] || null;
+      const targetCalendarId = String(targetCalendar?.id || '').trim();
+      if (!targetCalendarId) {
+        throw new Error('No readable Google calendars were found for this account.');
+      }
+
+      let pageToken = '';
+      const googleEvents = [];
+      for (let page = 0; page < 6; page += 1) {
+        const params = new URLSearchParams({
+          showDeleted: 'false',
+          singleEvents: 'true',
+          orderBy: 'startTime',
+          maxResults: '2500',
+          timeMin: new Date(Date.now() - (365 * 24 * 60 * 60 * 1000)).toISOString(),
+          timeMax: new Date(Date.now() + (365 * 2 * 24 * 60 * 60 * 1000)).toISOString(),
+        });
+        if (pageToken) params.set('pageToken', pageToken);
+        const eventsResp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCalendarId)}/events?${params.toString()}`, {
+          headers: authHeaders,
+        });
+        if (!eventsResp.ok) {
+          let message = `Google Calendar events request failed (${eventsResp.status}).`;
+          try {
+            const errData = await eventsResp.json();
+            const errMsg = String(errData?.error?.message || '').trim();
+            if (errMsg) message = errMsg;
+          } catch {}
+          throw new Error(message);
+        }
+        const eventsJson = await eventsResp.json();
+        const pageItems = Array.isArray(eventsJson?.items) ? eventsJson.items : [];
+        googleEvents.push(...pageItems);
+        pageToken = String(eventsJson?.nextPageToken || '').trim();
+        if (!pageToken || googleEvents.length >= 7000) break;
+      }
+
+      if (googleEvents.length === 0) {
+        alert('No Google Calendar events were found to import.');
+        return;
+      }
+
+      const updatedEvents = { ...events };
+      const existingKeys = new Set();
+      Object.values(updatedEvents || {}).forEach((rows) => {
+        (rows || []).forEach((row) => {
+          const key = [
+            String(row?.date || ''),
+            String(row?.time || ''),
+            String(row?.title || '').trim().toLowerCase(),
+            String(row?.location || '').trim().toLowerCase(),
+            String(row?.recurrence || 'once'),
+          ].join('|');
+          existingKeys.add(key);
+        });
+      });
+
+      let importCount = 0;
+      let skippedDuplicates = 0;
+      const nowTs = Date.now();
+      const createdByLabel = currentUser || user?.email || user?.phone || 'User';
+
+      googleEvents.forEach((ev, idx) => {
+        if (String(ev?.status || '').toLowerCase() === 'cancelled') return;
+        const summary = String(ev?.summary || '').trim() || 'Imported Event';
+        const location = String(ev?.location || '').trim() || null;
+        const startParsed = parseGoogleDateTimeValue(ev?.start);
+        const endParsed = parseGoogleDateTimeValue(ev?.end);
+        if (!startParsed?.date || Number.isNaN(startParsed.date.getTime())) return;
+        const recurrenceRaw = Array.isArray(ev?.recurrence) ? String(ev.recurrence[0] || '').replace(/^RRULE:/i, '') : '';
+        const recurrence = mapIcsFreqToRecurrence(recurrenceRaw);
+
+        const pushEvent = (dateObj, opts = {}) => {
+          const dateKey = getDateKey(dateObj);
+          const hasTime = !opts.allDay;
+          const time = hasTime
+            ? `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`
+            : null;
+          const eventKey = [
+            dateKey,
+            String(time || ''),
+            summary.toLowerCase(),
+            String(location || '').toLowerCase(),
+            recurrence,
+          ].join('|');
+          if (existingKeys.has(eventKey)) {
+            skippedDuplicates += 1;
+            return;
+          }
+          existingKeys.add(eventKey);
+
+          const newEvent = {
+            id: `gimp_${nowTs}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
+            title: summary,
+            time,
+            date: dateKey,
+            category: 'other',
+            isPrivate: false,
+            isUrgent: false,
+            isAnnual: recurrence === 'annual',
+            recurrence,
+            annualMonth: recurrence === 'annual' ? (dateObj.getMonth() + 1) : null,
+            annualDay: recurrence === 'annual' ? dateObj.getDate() : null,
+            createdBy: createdByLabel,
+            createdAt: new Date().toISOString(),
+            isMultiDay: Boolean(opts.multiDayId),
+            multiDayId: opts.multiDayId || null,
+            userId: user.id,
+            location,
+            reactions: {},
+            exceptions: [],
+          };
+
+          const dateEvents = updatedEvents[dateKey] || [];
+          updatedEvents[dateKey] = [...dateEvents, newEvent].sort((a, b) => {
+            if (!a.time) return 1;
+            if (!b.time) return -1;
+            return a.time.localeCompare(b.time);
+          });
+          importCount += 1;
+        };
+
+        const start = new Date(startParsed.date);
+        const isAllDay = Boolean(startParsed.isAllDay);
+        if (isAllDay && endParsed?.date) {
+          const inclusiveEnd = new Date(endParsed.date);
+          inclusiveEnd.setDate(inclusiveEnd.getDate() - 1);
+          if (!Number.isNaN(inclusiveEnd.getTime()) && inclusiveEnd >= start) {
+            const multiDayId = `gimpmd_${nowTs}_${idx}`;
+            for (let d = new Date(start); d <= inclusiveEnd; d.setDate(d.getDate() + 1)) {
+              pushEvent(new Date(d), { allDay: true, multiDayId });
+              if (importCount > 5000) break;
+            }
+            return;
+          }
+        }
+
+        pushEvent(start, { allDay: isAllDay });
+      });
+
+      if (importCount === 0) {
+        if (skippedDuplicates > 0) {
+          alert('No new Google events were imported (all matched existing events).');
+          return;
+        }
+        alert('No valid Google events were found to import.');
+        return;
+      }
+
+      await saveEvents(updatedEvents, { immediate: true });
+      alert(
+        `Imported ${importCount} Google event${importCount === 1 ? '' : 's'}`
+        + (skippedDuplicates > 0 ? ` (${skippedDuplicates} duplicate${skippedDuplicates === 1 ? '' : 's'} skipped).` : '.')
+      );
+    } catch (err) {
+      console.error('Google calendar import failed:', err);
+      alert(`Google import failed: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsImportingCalendar(false);
+    }
   };
 
   const importIcsFile = async (file) => {
@@ -7996,18 +8237,31 @@ function App() {
     }
   };
 
-  const handleFirstImportPromptChoice = (provider) => {
+  const handleFirstImportPromptChoice = async (provider) => {
     if (dontShowImportPromptChecked) {
       localStorage.setItem(IMPORT_PROMPT_HIDE_KEY, 'true');
       setHideImportPromptForever(true);
     }
     setImportPromptDismissedThisSession(true);
     setDontShowImportPromptChecked(false);
-    if (provider === 'google' || provider === 'apple') {
+    if (provider === 'google') {
+      await importGoogleCalendarEvents();
+    } else if (provider === 'apple') {
       importCalendarInputRef.current?.click();
     }
     setShowFirstImportPrompt(false);
   };
+
+  useEffect(() => {
+    if (isLoading || showAuth || showUserSetup) return;
+    if (!user?.id || !activeLayerId) return;
+    if (googleImportResumeRef.current) return;
+    const pendingGoogleImport = localStorage.getItem(GOOGLE_IMPORT_PENDING_KEY) === 'true';
+    if (!pendingGoogleImport) return;
+    googleImportResumeRef.current = true;
+    localStorage.removeItem(GOOGLE_IMPORT_PENDING_KEY);
+    importGoogleCalendarEvents({ allowReconnect: false });
+  }, [isLoading, showAuth, showUserSetup, user?.id, activeLayerId]);
 
   const handleTimeSubmit = async (time) => {
     if (!pendingEvent) return;
@@ -8546,7 +8800,7 @@ function App() {
             Would you like to import your Google or Apple calendar now?
           </p>
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            Export your calendar as an <code>.ics</code> file, then upload it here.
+            Google can connect directly. Apple uses an <code>.ics</code> export upload.
           </p>
           <label className="mt-3 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
             <input
@@ -8563,7 +8817,7 @@ function App() {
               disabled={isImportingCalendar || !activeLayerId || !user?.id}
               className="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
             >
-              Import Google
+              Connect Google
             </button>
             <button
               onClick={() => handleFirstImportPromptChoice('apple')}
