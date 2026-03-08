@@ -4001,8 +4001,8 @@ function App() {
     }
     if (!pushResult?.ok) {
       setListError(`Push not sent: ${pushResult?.error || 'Unknown error'}`);
-    } else if (typeof pushResult?.sent === 'number' && pushResult.sent === 0) {
-      setListError('Push processed, but no subscribed devices were found.');
+    } else {
+      setListError('');
     }
   };
 
