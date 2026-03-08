@@ -3917,6 +3917,32 @@ function App() {
     if (ok) cancelEditingListGroup();
   };
 
+  const sendImmediatePushNotification = async ({ type = 'update', title, body, layerId, subCalendarId = null }) => {
+    try {
+      await supabase.functions.invoke('send-immediate-push', {
+        body: {
+          type,
+          title,
+          body,
+          layerId: layerId || null,
+          subCalendarId: subCalendarId || null,
+          actorUserId: user?.id || null,
+          actorEmail: user?.email || null,
+          data: {
+            type,
+            title,
+            body,
+            layerId: layerId || null,
+            url: '/',
+            tag: `${type}-${Date.now()}`,
+          },
+        },
+      });
+    } catch (err) {
+      console.warn('send-immediate-push failed:', err?.message || err);
+    }
+  };
+
   const addSharedListItem = async () => {
     const text = newListItemText.trim();
     if (!text || !primaryListOwnerId || !selectedSharedListId || !user?.id || !activeLayerId) return;
@@ -3947,6 +3973,16 @@ function App() {
     setListError('');
     setSharedListItems(prev => [...prev, { ...(data || payload), done: false }]);
     setNewListItemText('');
+    const who = String(currentUser || user?.email || user?.phone || 'Someone');
+    const selectedList = (sharedListGroups || []).find((g) => String(g?.id || '') === String(selectedSharedListId || ''));
+    const listName = String(selectedList?.title || 'the list').trim();
+    const preview = text.length > 48 ? `${text.slice(0, 48)}...` : text;
+    await sendImmediatePushNotification({
+      type: 'list',
+      title: 'List Update',
+      body: `${who} added "${preview}" to ${listName}.`,
+      layerId: activeLayerId,
+    });
   };
 
   const toggleSharedListItem = async (item) => {
