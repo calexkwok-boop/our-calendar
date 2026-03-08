@@ -3929,6 +3929,11 @@ function App() {
       const registration = await ensureFirebaseMessagingServiceWorker();
       if (!registration) return false;
       let subscription = await registration.pushManager.getSubscription();
+      const storedVapidKey = String(localStorage.getItem('push-vapid-key') || '').trim();
+      if (subscription && storedVapidKey && storedVapidKey !== pushVapidKey) {
+        try { await subscription.unsubscribe(); } catch {}
+        subscription = null;
+      }
       if (!subscription) {
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
@@ -3957,6 +3962,7 @@ function App() {
         console.warn('push_subscriptions upsert failed (pre-send):', error);
         return false;
       }
+      localStorage.setItem('push-vapid-key', pushVapidKey);
       return true;
     } catch (err) {
       console.warn('ensurePushSubscriptionForCurrentDevice failed:', err?.message || err);
@@ -7323,6 +7329,11 @@ function App() {
           return;
         }
         let subscription = await registration.pushManager.getSubscription();
+        const storedVapidKey = String(localStorage.getItem('push-vapid-key') || '').trim();
+        if (subscription && storedVapidKey && storedVapidKey !== pushVapidKey) {
+          try { await subscription.unsubscribe(); } catch {}
+          subscription = null;
+        }
         const shouldEnable = notificationsEnabled && Notification.permission === 'granted';
 
         if (shouldEnable) {
@@ -7350,6 +7361,7 @@ function App() {
               updated_at: new Date().toISOString(),
             }, { onConflict: 'endpoint' });
           if (error) console.error('push_subscriptions upsert failed:', error);
+          else localStorage.setItem('push-vapid-key', pushVapidKey);
         } else if (subscription) {
           const endpoint = String(subscription.endpoint || '').trim();
           if (endpoint) {
@@ -7361,6 +7373,7 @@ function App() {
             if (error) console.error('push_subscriptions disable failed:', error);
           }
           try { await subscription.unsubscribe(); } catch {}
+          localStorage.removeItem('push-vapid-key');
         }
       } catch (err) {
         if (String(err?.name || '') === 'AbortError') {
