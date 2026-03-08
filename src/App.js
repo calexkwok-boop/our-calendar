@@ -153,6 +153,11 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
   const [isImportingCalendar, setIsImportingCalendar] = useState(false);
+  const [showFirstImportPrompt, setShowFirstImportPrompt] = useState(false);
+  const IMPORT_PROMPT_HIDE_KEY = 'calendar-hide-import-prompt';
+  const [hideImportPromptForever, setHideImportPromptForever] = useState(() => localStorage.getItem(IMPORT_PROMPT_HIDE_KEY) === 'true');
+  const [dontShowImportPromptChecked, setDontShowImportPromptChecked] = useState(false);
+  const [importPromptDismissedThisSession, setImportPromptDismissedThisSession] = useState(false);
   const [firstTapDate, setFirstTapDate] = useState(null);
   const [lastTapTime, setLastTapTime] = useState(0);
   const [recurrence, setRecurrence] = useState('once');
@@ -3276,6 +3281,31 @@ function App() {
     }
     localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setImportPromptDismissedThisSession(false);
+      setDontShowImportPromptChecked(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (isLoading || showAuth || showUserSetup) return;
+    if (!user?.id || !activeLayerId) return;
+    if (hideImportPromptForever || importPromptDismissedThisSession) {
+      setShowFirstImportPrompt(false);
+      return;
+    }
+    setShowFirstImportPrompt(true);
+  }, [
+    isLoading,
+    showAuth,
+    showUserSetup,
+    user?.id,
+    activeLayerId,
+    hideImportPromptForever,
+    importPromptDismissedThisSession,
+  ]);
 
   const getDateKey = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -7966,6 +7996,19 @@ function App() {
     }
   };
 
+  const handleFirstImportPromptChoice = (provider) => {
+    if (dontShowImportPromptChecked) {
+      localStorage.setItem(IMPORT_PROMPT_HIDE_KEY, 'true');
+      setHideImportPromptForever(true);
+    }
+    setImportPromptDismissedThisSession(true);
+    setDontShowImportPromptChecked(false);
+    if (provider === 'google' || provider === 'apple') {
+      importCalendarInputRef.current?.click();
+    }
+    setShowFirstImportPrompt(false);
+  };
+
   const handleTimeSubmit = async (time) => {
     if (!pendingEvent) return;
     const updatedEvents = { ...events };
@@ -8495,6 +8538,60 @@ function App() {
   return (
     <>
     <style>{shakeStyle}</style>
+    {showFirstImportPrompt && (
+      <div className="fixed inset-0 z-[90] bg-black/40 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Import your calendar?</h3>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+            Would you like to import your Google or Apple calendar now?
+          </p>
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            Export your calendar as an <code>.ics</code> file, then upload it here.
+          </p>
+          <label className="mt-3 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+            <input
+              type="checkbox"
+              checked={dontShowImportPromptChecked}
+              onChange={(e) => setDontShowImportPromptChecked(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Don't show this again
+          </label>
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              onClick={() => handleFirstImportPromptChoice('google')}
+              disabled={isImportingCalendar || !activeLayerId || !user?.id}
+              className="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
+            >
+              Import Google
+            </button>
+            <button
+              onClick={() => handleFirstImportPromptChoice('apple')}
+              disabled={isImportingCalendar || !activeLayerId || !user?.id}
+              className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
+            >
+              Import Apple
+            </button>
+            <button
+              onClick={() => handleFirstImportPromptChoice('later')}
+              className="sm:col-span-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+            >
+              Not now
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    <input
+      ref={importCalendarInputRef}
+      type="file"
+      accept=".ics,text/calendar"
+      className="hidden"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (file) importIcsFile(file);
+      }}
+    />
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-2 sm:p-3 pb-24" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))', paddingBottom: 'max(4.75rem, env(safe-area-inset-bottom))' }}>
       <div className="max-w-6xl mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4">
@@ -8589,28 +8686,6 @@ function App() {
               >
                 🌤️
               </button>
-              <button
-                onClick={() => importCalendarInputRef.current?.click()}
-                disabled={isImportingCalendar || !activeLayerId || !user?.id}
-                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${
-                  isImportingCalendar
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                    : 'bg-rose-100 dark:bg-rose-900 text-rose-700 dark:text-rose-300'
-                }`}
-                title="Import from Apple/Google .ics"
-              >
-                {isImportingCalendar ? 'Importing...' : 'Import .ics'}
-              </button>
-              <input
-                ref={importCalendarInputRef}
-                type="file"
-                accept=".ics,text/calendar"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) importIcsFile(file);
-                }}
-              />
               <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
                 className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
