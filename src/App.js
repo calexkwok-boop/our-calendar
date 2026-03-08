@@ -9167,10 +9167,10 @@ function App() {
                         value={popupDraftTitle}
                         onChange={(e) => setPopupDraftTitle(e.target.value)}
                         placeholder="What's the event? (e.g. Pickup basketball)"
-                        className="w-full px-3 py-2 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-400"
+                        className="w-full px-3 py-2 text-sm border border-orange-200 dark:border-orange-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-orange-400"
                       />
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-0 overflow-hidden">
-                        <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800">
+                        <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-orange-200 dark:border-orange-700 bg-white/90 dark:bg-gray-800">
                           <input
                             type="date"
                             value={popupDraftDate}
@@ -9179,7 +9179,7 @@ function App() {
                             style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', WebkitAppearance: 'none' }}
                           />
                         </div>
-                        <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800">
+                        <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-orange-200 dark:border-orange-700 bg-white/90 dark:bg-gray-800">
                           <input
                             type="time"
                             value={popupDraftTime}
@@ -9193,7 +9193,7 @@ function App() {
                         value={popupDraftLocation}
                         onSelect={(val) => setPopupDraftLocation(val || '')}
                         placeholder="📍 Location (optional)"
-                        className="w-full px-3 py-2 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                        className="w-full px-3 py-2 text-sm border border-orange-200 dark:border-orange-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
                       />
                       <div className="flex items-center gap-2">
                         <label className="text-xs font-medium text-gray-600 dark:text-gray-300">Max people</label>
@@ -9203,7 +9203,7 @@ function App() {
                           value={popupDraftMaxPeople}
                           onChange={(e) => setPopupDraftMaxPeople(e.target.value)}
                           disabled={popupDraftNoMaxPeople}
-                          className="w-24 px-2 py-1.5 text-sm border border-emerald-200 dark:border-emerald-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-lg"
+                          className="w-24 px-2 py-1.5 text-sm border border-orange-200 dark:border-orange-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-lg"
                         />
                         <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
                           <input
@@ -9224,7 +9224,7 @@ function App() {
                         </button>
                         <button
                           onClick={createPopupEventFromChat}
-                          className="px-3 py-2 text-sm rounded-xl bg-emerald-600 text-white font-semibold"
+                          className="px-3 py-2 text-sm rounded-xl bg-orange-600 text-white font-semibold"
                         >
                           Create
                         </button>
