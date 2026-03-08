@@ -3918,8 +3918,55 @@ function App() {
     if (ok) cancelEditingListGroup();
   };
 
+  const ensurePushSubscriptionForCurrentDevice = async () => {
+    try {
+      if (!user?.id) return false;
+      if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+      const pushVapidKey = WEB_PUSH_VAPID_PUBLIC_KEY || FCM_WEB_VAPID_PUBLIC_KEY;
+      if (!pushVapidKey) return false;
+
+      const registration = await ensureFirebaseMessagingServiceWorker();
+      if (!registration) return false;
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(pushVapidKey),
+        });
+      }
+      if (!subscription) return false;
+      const payload = subscription.toJSON();
+      const endpoint = String(payload?.endpoint || '').trim();
+      const p256dh = String(payload?.keys?.p256dh || '').trim();
+      const auth = String(payload?.keys?.auth || '').trim();
+      if (!endpoint || !p256dh || !auth) return false;
+
+      const { error } = await supabase
+        .from('push_subscriptions')
+        .upsert({
+          user_id: user.id,
+          endpoint,
+          p256dh,
+          auth,
+          user_agent: navigator.userAgent || null,
+          enabled: true,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'endpoint' });
+      if (error) {
+        console.warn('push_subscriptions upsert failed (pre-send):', error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn('ensurePushSubscriptionForCurrentDevice failed:', err?.message || err);
+      return false;
+    }
+  };
+
   const sendImmediatePushNotification = async ({ type = 'update', title, body, layerId, subCalendarId = null }) => {
     try {
+      await ensurePushSubscriptionForCurrentDevice();
       const { data, error } = await supabase.functions.invoke('send-immediate-push', {
         body: {
           type,
