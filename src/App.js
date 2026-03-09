@@ -8052,8 +8052,10 @@ function App() {
 
   const parseScannedLocation = (rawText) => {
     const lines = String(rawText || '').split('\n').map(line => line.trim()).filter(Boolean);
-    const withPin = lines.find(line => /^(??|@)\s*/.test(line));
-    if (withPin) return withPin.replace(/^(??|@)\s*/, '').trim();
+    // Keep this ASCII-safe to avoid regex parser issues in production builds.
+    const locationPrefix = /^(?:@|pin:|location:)\s*/i;
+    const withPin = lines.find(line => locationPrefix.test(line));
+    if (withPin) return withPin.replace(locationPrefix, '').trim();
     const addressLike = lines.find(line => /\b(st|street|ave|avenue|rd|road|blvd|boulevard|suite|ste|clinic|hospital)\b/i.test(line));
     return addressLike || '';
   };
