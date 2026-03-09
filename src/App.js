@@ -4419,7 +4419,7 @@ function App() {
     }
   };
 
-  const sendImmediatePushNotification = async ({ type = 'update', title, body, layerId, subCalendarId = null }) => {
+  const sendImmediatePushNotification = async ({ type = 'update', title, body, layerId, subCalendarId = null, extraData = {} }) => {
     try {
       await ensurePushSubscriptionForCurrentDevice();
       const { data, error } = await supabase.functions.invoke('send-immediate-push', {
@@ -4438,6 +4438,7 @@ function App() {
             layerId: layerId || null,
             url: '/',
             tag: `${type}-${Date.now()}`,
+            ...(extraData && typeof extraData === 'object' ? extraData : {}),
           },
         },
       });
@@ -4502,6 +4503,10 @@ function App() {
       title: 'List Update',
       body: `${who} added "${preview}" to ${listName}.`,
       layerId: activeLayerId,
+      extraData: {
+        listId: selectedSharedListId || null,
+        listItemId: data?.id || null,
+      },
     });
     if (notificationsEnabled && Notification.permission === 'granted') {
       maybeSendInAppSystemNotification(
@@ -5034,6 +5039,10 @@ function App() {
       title: 'New Poll in Chat',
       body: `${pollCreator} created a poll: "${pollTitle}" (${dateKey}).`,
       layerId: activeLayerId,
+      extraData: {
+        panel: 'chat',
+        dateKey,
+      },
     });
     const pollSentCount = Number(pollPushResult?.sent || 0);
     if (!pollPushResult?.ok || pollSentCount <= 0) {
@@ -5184,6 +5193,11 @@ function App() {
       title: 'New Event in Chat',
       body: eventBody,
       layerId: activeLayerId,
+      extraData: {
+        panel: 'chat',
+        eventId: inserted?.id || null,
+        dateKey: inserted?.date || dateKey || null,
+      },
     });
     const eventSentCount = Number(eventPushResult?.sent || 0);
     if (!eventPushResult?.ok || eventSentCount <= 0) {
@@ -6090,6 +6104,7 @@ function App() {
         message: item.message || '',
         createdAt: item.createdAt || new Date().toISOString(),
         read: Boolean(item.read),
+        target: (item?.target && typeof item.target === 'object') ? item.target : null,
       })).filter(item => item.key && item.message) : [];
       seenInAppNotificationKeysRef.current = new Set(normalized.map(item => item.key));
       setInAppNotifications(normalized);
@@ -6407,10 +6422,15 @@ function App() {
         if (isOwnRow(row)) return;
         const who = String(row.created_by || 'Someone');
         addInAppNotification({
-          key: `events:${row.id}`,
+          key: `events:${row.id}:${String(row.layer_id || '')}`,
           type: 'event',
           message: `${who} added "${row.title || 'an event'}" to the calendar.`,
           createdAt: row.created_at,
+          target: {
+            layerId: String(row.layer_id || '').trim() || null,
+            eventId: String(row.id || '').trim() || null,
+            dateKey: String(row.date || '').trim() || null,
+          },
         });
       });
     };
@@ -6422,10 +6442,15 @@ function App() {
         const itemText = String(row.text || '').trim();
         const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
         addInAppNotification({
-          key: `shared_lists:${row.id}`,
+          key: `shared_lists:${row.id}:${String(row.layer_id || '')}`,
           type: 'list',
           message: `${who} added "${preview || 'a list item'}" to the list.`,
           createdAt: row.created_at,
+          target: {
+            layerId: String(row.layer_id || '').trim() || null,
+            listItemId: String(row.id || '').trim() || null,
+            listId: String(row.list_id || '').trim() || null,
+          },
         });
       });
     };
@@ -6648,7 +6673,7 @@ function App() {
         if (sharedLayerIds.length > 0) {
           const { data: sharedEvents } = await supabase
             .from('events')
-            .select('id,title,created_by,user_id,created_at,layer_id')
+            .select('id,title,date,created_by,user_id,created_at,layer_id')
             .in('layer_id', sharedLayerIds)
             .gt('created_at', getCursor('events'))
             .order('created_at', { ascending: true })
@@ -6658,7 +6683,7 @@ function App() {
 
           const { data: sharedListItems } = await supabase
             .from('shared_lists')
-            .select('id,text,created_by,user_id,created_at,layer_id')
+            .select('id,list_id,text,created_by,user_id,created_at,layer_id')
             .in('layer_id', sharedLayerIds)
             .gt('created_at', getCursor('sharedListItems'))
             .order('created_at', { ascending: true })
@@ -7308,6 +7333,15 @@ function App() {
         type: normalizedType,
         message: body,
         createdAt: new Date().toISOString(),
+        target: {
+          layerId: String(data?.layerId || '').trim() || null,
+          eventId: String(data?.eventId || '').trim() || null,
+          listId: String(data?.listId || '').trim() || null,
+          listItemId: String(data?.listItemId || '').trim() || null,
+          subCalendarId: String(data?.subCalendarId || '').trim() || null,
+          dateKey: String(data?.dateKey || '').trim() || null,
+          panel: String(data?.panel || '').trim() || null,
+        },
       });
     } catch {}
   };
@@ -7419,7 +7453,7 @@ function App() {
     } catch {}
   };
 
-  const addInAppNotification = ({ key, type, message, createdAt }) => {
+  const addInAppNotification = ({ key, type, message, createdAt, target = null }) => {
     if (!key || !message) return;
     const normalizedKey = String(key);
     if (seenInAppNotificationKeysRef.current.has(normalizedKey)) return;
@@ -7434,6 +7468,7 @@ function App() {
         message,
         createdAt: createdAt || new Date().toISOString(),
         read: false,
+        target: (target && typeof target === 'object') ? target : null,
       }, ...prev];
       return next.slice(0, 75);
     });
@@ -7583,9 +7618,28 @@ function App() {
     markInAppNotificationRead(item.id);
     const key = String(item?.key || '');
     const type = String(item?.type || '').trim().toLowerCase();
+    const target = (item?.target && typeof item.target === 'object') ? item.target : {};
+    const targetLayerId = String(target?.layerId || '').trim();
+    const switchToLayer = (layerId) => {
+      const lid = String(layerId || '').trim();
+      if (!lid || !user?.id) return;
+      if (String(activeLayerId || '') === lid) return;
+      setActiveLayerId(lid);
+      localStorage.setItem(`active-layer-${user.id}`, lid);
+      setLayerRefreshToken(prev => prev + 1);
+    };
+    if (targetLayerId) switchToLayer(targetLayerId);
+    if (String(target?.panel || '').trim().toLowerCase() === 'chat') {
+      setShowChatPanel(true);
+      setShowListPanel(false);
+      setShowNotificationSettings(false);
+    }
 
     if (key.startsWith('events:')) {
-      const eventId = String(key.split(':')[1] || '').trim();
+      const parts = key.split(':');
+      const eventId = String(parts[1] || target?.eventId || '').trim();
+      const keyLayerId = String(parts[2] || targetLayerId || activeLayerId || '').trim();
+      if (keyLayerId) switchToLayer(keyLayerId);
       if (eventId) {
         let eventDateKey = '';
         Object.entries(events || {}).some(([dk, rows]) => {
@@ -7598,7 +7652,7 @@ function App() {
             .from('events')
             .select('date')
             .eq('id', eventId)
-            .eq('layer_id', activeLayerId)
+            .eq('layer_id', keyLayerId || activeLayerId)
             .maybeSingle();
           eventDateKey = String(data?.date || '');
         }
@@ -7610,17 +7664,21 @@ function App() {
     }
 
     if (key.startsWith('shared_lists:')) {
-      const itemId = String(key.split(':')[1] || '').trim();
+      const parts = key.split(':');
+      const itemId = String(parts[1] || target?.listItemId || '').trim();
+      const listIdFromTarget = String(target?.listId || '').trim();
+      const keyLayerId = String(parts[2] || targetLayerId || activeLayerId || '').trim();
+      if (keyLayerId) switchToLayer(keyLayerId);
       setShowListPanel(true);
       setShowChatPanel(false);
       setShowNotificationSettings(false);
-      if (itemId && activeLayerId) {
-        let listId = String((sharedListItems || []).find((row) => String(row?.id || '') === itemId)?.list_id || '').trim();
+      if ((itemId || listIdFromTarget) && (keyLayerId || activeLayerId)) {
+        let listId = String(listIdFromTarget || (sharedListItems || []).find((row) => String(row?.id || '') === itemId)?.list_id || '').trim();
         if (!listId) {
           const { data } = await supabase
             .from('shared_lists')
             .select('list_id')
-            .eq('layer_id', activeLayerId)
+            .eq('layer_id', keyLayerId || activeLayerId)
             .eq('id', itemId)
             .maybeSingle();
           listId = String(data?.list_id || '').trim();
@@ -7708,17 +7766,46 @@ function App() {
     }
 
     if (type === 'list') {
+      if (targetLayerId) switchToLayer(targetLayerId);
       setShowListPanel(true);
       setShowChatPanel(false);
       setShowNotificationSettings(false);
+      const listId = String(target?.listId || '').trim();
+      if (listId) setSelectedSharedListId(listId);
       return;
     }
 
     if (type === 'chat_poll' || type === 'chat_event') {
+      if (targetLayerId) switchToLayer(targetLayerId);
+      const dateKey = String(target?.dateKey || '').trim();
+      if (dateKey) focusDateFromKey(dateKey);
       setShowChatPanel(true);
       setShowListPanel(false);
       setShowNotificationSettings(false);
       return;
+    }
+
+    if (type === 'event') {
+      if (targetLayerId) switchToLayer(targetLayerId);
+      const eventId = String(target?.eventId || '').trim();
+      const dateKey = String(target?.dateKey || '').trim();
+      if (dateKey) {
+        focusDateFromKey(dateKey);
+        return;
+      }
+      if (eventId) {
+        const { data } = await supabase
+          .from('events')
+          .select('date')
+          .eq('id', eventId)
+          .eq('layer_id', targetLayerId || activeLayerId)
+          .maybeSingle();
+        const eventDateKey = String(data?.date || '');
+        if (eventDateKey) {
+          focusDateFromKey(eventDateKey);
+          return;
+        }
+      }
     }
   };
 
