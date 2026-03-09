@@ -140,6 +140,8 @@ function App() {
   const seenExpenseIdsRef = useRef(new Set());
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
+  const [showConflictPrompt, setShowConflictPrompt] = useState(false);
+  const [conflictPromptData, setConflictPromptData] = useState({ title: '', lines: [] });
   const [isPopupEventDraft, setIsPopupEventDraft] = useState(false);
   const [popupEventMaxPeopleDraft, setPopupEventMaxPeopleDraft] = useState('10');
   const [popupEventsByEventId, setPopupEventsByEventId] = useState({});
@@ -177,6 +179,7 @@ function App() {
   const [layerSwipeDrag, setLayerSwipeDrag] = useState({ id: null, offset: 0 });
   const layerSwipeStartXRef = useRef(0);
   const swipingLayerIdRef = useRef(null);
+  const conflictPromptResolverRef = useRef(null);
 
   // Sub-calendar state
   const [subCalendars, setSubCalendars] = useState([]);
@@ -3373,6 +3376,26 @@ function App() {
       minute: '2-digit',
     });
   };
+  const openConflictPrompt = ({ title, lines }) => new Promise((resolve) => {
+    conflictPromptResolverRef.current = resolve;
+    setConflictPromptData({
+      title: String(title || 'Scheduling conflict'),
+      lines: Array.isArray(lines) ? lines : [],
+    });
+    setShowConflictPrompt(true);
+  });
+  const closeConflictPrompt = (accepted) => {
+    setShowConflictPrompt(false);
+    const resolver = conflictPromptResolverRef.current;
+    conflictPromptResolverRef.current = null;
+    if (typeof resolver === 'function') resolver(Boolean(accepted));
+  };
+  useEffect(() => () => {
+    if (typeof conflictPromptResolverRef.current === 'function') {
+      conflictPromptResolverRef.current(false);
+      conflictPromptResolverRef.current = null;
+    }
+  }, []);
   const findSchedulingConflicts = async ({ dateKey, time, ignoreEventId = null }) => {
     if (!user?.id) return [];
     const target = toEventDateTime(dateKey, time);
@@ -3456,10 +3479,11 @@ function App() {
     const lines = conflicts
       .slice(0, 4)
       .map((row) => `• ${row.title} (${row.layerName}) at ${formatConflictDateTime(row.date, row.time)}`)
-      .join('\n');
-    return window.confirm(
-      `${draftTitle} is within ${SCHEDULING_CONFLICT_WINDOW_HOURS} hours of:\n${lines}\n\nSave anyway?`
-    );
+      .filter(Boolean);
+    return openConflictPrompt({
+      title: `"${draftTitle}" is within ${SCHEDULING_CONFLICT_WINDOW_HOURS} hours of:`,
+      lines,
+    });
   };
 
   const fetchHolidays = async (year) => {
@@ -8768,10 +8792,11 @@ function App() {
           .slice(0, 4);
         const lines = unique
           .map((row) => `• ${row.title} (${row.layerName}) at ${formatConflictDateTime(row.date, row.time)}`)
-          .join('\n');
-        const ok = window.confirm(
-          `"${pendingEvent.title}" is within ${SCHEDULING_CONFLICT_WINDOW_HOURS} hours of:\n${lines}\n\nSave anyway?`
-        );
+          .filter(Boolean);
+        const ok = await openConflictPrompt({
+          title: `"${pendingEvent.title}" is within ${SCHEDULING_CONFLICT_WINDOW_HOURS} hours of:`,
+          lines,
+        });
         if (!ok) return;
       }
     }
@@ -9334,6 +9359,35 @@ function App() {
   return (
     <>
     <style>{shakeStyle}</style>
+    {showConflictPrompt && (
+      <div className="fixed inset-0 z-[95] bg-black/45 flex items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-2xl border border-purple-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-2xl">
+          <h3 className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+            Scheduling Conflict
+          </h3>
+          <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">{conflictPromptData.title}</p>
+          <div className="mt-3 rounded-xl bg-purple-50 dark:bg-gray-700/70 border border-purple-100 dark:border-gray-600 p-3 space-y-1.5">
+            {(conflictPromptData.lines || []).map((line, idx) => (
+              <div key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-200">{line}</div>
+            ))}
+          </div>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              onClick={() => closeConflictPrompt(true)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-sm font-semibold hover:shadow-lg transition-all"
+            >
+              Save Anyway
+            </button>
+            <button
+              onClick={() => closeConflictPrompt(false)}
+              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+            >
+              Change Time
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     {showFirstImportPrompt && (
       <div className="fixed inset-0 z-[90] bg-black/40 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
