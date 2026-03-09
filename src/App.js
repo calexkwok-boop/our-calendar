@@ -4981,6 +4981,7 @@ function App() {
     });
     if (!pollPushResult?.ok) {
       console.warn('Poll push not sent:', pollPushResult?.error || 'Unknown error');
+      setChatError(`Poll created, but push failed: ${pollPushResult?.error || 'Unknown error'}`);
     }
   };
 
@@ -5128,6 +5129,7 @@ function App() {
     });
     if (!eventPushResult?.ok) {
       console.warn('Chat event push not sent:', eventPushResult?.error || 'Unknown error');
+      setChatError(`Event created, but push failed: ${eventPushResult?.error || 'Unknown error'}`);
     }
     setChatError('');
     resetPollComposer();

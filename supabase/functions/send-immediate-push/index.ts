@@ -15,6 +15,7 @@ const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@example.com
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 const safeString = (value: unknown) => String(value || "").trim();
+const normalizePhone = (value: unknown) => safeString(value).replace(/[^\d+]/g, "");
 
 const normalizePayload = async (req: Request) => {
   try {
@@ -62,24 +63,36 @@ Deno.serve(async (req) => {
 
     const recipientIds = new Set<string>();
     if (actorUserId) recipientIds.add(actorUserId);
+    let cachedAuthUsers: any[] | null = null;
+    const listAuthUsers = async () => {
+      if (cachedAuthUsers) return cachedAuthUsers;
+      const { data: authUsers } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      cachedAuthUsers = authUsers?.users || [];
+      return cachedAuthUsers;
+    };
 
     if (layerId) {
       const { data: shareRows } = await supabase
         .from("shared_access")
-        .select("owner_id,shared_with_id,shared_with_email")
+        .select("owner_id,shared_with_id,shared_with_email,shared_with_phone")
         .eq("layer_id", layerId);
 
       for (const row of shareRows || []) {
         const ownerId = safeString(row?.owner_id);
         const sharedWithId = safeString(row?.shared_with_id);
         const sharedWithEmail = safeString(row?.shared_with_email).toLowerCase();
+        const sharedWithPhone = normalizePhone(row?.shared_with_phone);
         if (ownerId) recipientIds.add(ownerId);
         if (sharedWithId) recipientIds.add(sharedWithId);
 
-        // Best-effort email->user_id resolution if shared_with_id wasn't backfilled yet.
-        if (!sharedWithId && sharedWithEmail) {
-          const { data: authUsers } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-          const match = (authUsers?.users || []).find((u) => safeString(u?.email).toLowerCase() === sharedWithEmail);
+        // Best-effort recipient resolution if shared_with_id wasn't backfilled yet.
+        if (!sharedWithId && (sharedWithEmail || sharedWithPhone)) {
+          const users = await listAuthUsers();
+          const match = users.find((u) => {
+            const emailMatch = sharedWithEmail && safeString(u?.email).toLowerCase() === sharedWithEmail;
+            const phoneMatch = sharedWithPhone && normalizePhone(u?.phone) === sharedWithPhone;
+            return Boolean(emailMatch || phoneMatch);
+          });
           if (match?.id) recipientIds.add(String(match.id));
         }
       }
@@ -88,22 +101,27 @@ Deno.serve(async (req) => {
     if (subCalendarId) {
       const { data: memberRows } = await supabase
         .from("sub_calendar_members")
-        .select("email")
+        .select("email,phone")
         .eq("sub_calendar_id", subCalendarId)
         .in("status", ["accepted", "pending"]);
       const emails = Array.from(new Set((memberRows || []).map((row) => safeString(row?.email).toLowerCase()).filter(Boolean)));
-      if (emails.length > 0) {
-        const { data: authUsers } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const phones = Array.from(new Set((memberRows || []).map((row) => normalizePhone(row?.phone)).filter(Boolean)));
+      if (emails.length > 0 || phones.length > 0) {
+        const users = await listAuthUsers();
         for (const email of emails) {
-          const match = (authUsers?.users || []).find((u) => safeString(u?.email).toLowerCase() === email);
+          const match = users.find((u) => safeString(u?.email).toLowerCase() === email);
+          if (match?.id) recipientIds.add(String(match.id));
+        }
+        for (const phone of phones) {
+          const match = users.find((u) => normalizePhone(u?.phone) === phone);
           if (match?.id) recipientIds.add(String(match.id));
         }
       }
     }
 
     if (recipientIds.size === 0 && actorEmail) {
-      const { data: authUsers } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      const match = (authUsers?.users || []).find((u) => safeString(u?.email).toLowerCase() === actorEmail);
+      const users = await listAuthUsers();
+      const match = users.find((u) => safeString(u?.email).toLowerCase() === actorEmail);
       if (match?.id) recipientIds.add(String(match.id));
     }
 
