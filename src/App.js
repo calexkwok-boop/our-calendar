@@ -10228,10 +10228,10 @@ function App() {
                             {item.read && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); deleteInAppNotification(item.id); }}
-                                className="text-gray-400 hover:text-red-500 text-xs leading-none"
+                                className="text-gray-400 hover:text-red-500 leading-none"
                                 title="Remove notification"
                               >
-                                ?
+                                <X className="w-3.5 h-3.5" />
                               </button>
                             )}
                           </div>
