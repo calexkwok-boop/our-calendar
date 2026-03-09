@@ -158,6 +158,7 @@ function App() {
   const [authBusy, setAuthBusy] = useState(false);
   const [isImportingCalendar, setIsImportingCalendar] = useState(false);
   const [showFirstImportPrompt, setShowFirstImportPrompt] = useState(false);
+  const [importPromptStep, setImportPromptStep] = useState('main');
   const [appleCalendarUrlInput, setAppleCalendarUrlInput] = useState('');
   const IMPORT_PROMPT_HIDE_KEY = 'calendar-hide-import-prompt';
   const GOOGLE_IMPORT_PENDING_KEY = 'calendar-google-import-pending';
@@ -9039,6 +9040,7 @@ function App() {
       }
       setImportPromptDismissedThisSession(true);
       setDontShowImportPromptChecked(false);
+      setImportPromptStep('main');
       setShowFirstImportPrompt(false);
     };
 
@@ -9840,9 +9842,13 @@ function App() {
     {showFirstImportPrompt && (
       <div className="fixed inset-0 z-[90] bg-black/40 flex items-center justify-center p-4">
         <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Import Calendar</h3>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            {importPromptStep === 'apple' ? 'Import Apple Calendar' : 'Import Calendar'}
+          </h3>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            Choose Google or Apple, then import events into this calendar layer.
+            {importPromptStep === 'apple'
+              ? 'Paste your Apple calendar share link or upload an exported .ics file.'
+              : 'Choose Google or Apple, then import events into this calendar layer.'}
           </p>
           <label className="mt-3 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
             <input
@@ -9853,70 +9859,116 @@ function App() {
             />
             Don't show this again
           </label>
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button
-              onClick={() => handleFirstImportPromptChoice('google')}
-              disabled={isImportingCalendar || !activeLayerId || !user?.id}
-              className="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
-            >
-              Connect Google
-            </button>
-            <button
-              onClick={() => handleFirstImportPromptChoice('apple')}
-              disabled={isImportingCalendar || !activeLayerId || !user?.id}
-              className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
-            >
-              Import Apple Calendar (.ics)
-            </button>
-            <div className="sm:col-span-2 mt-1 rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-gray-50/80 dark:bg-gray-900/30">
-              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Apple Import</h4>
-              <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                Paste your Apple share link, or upload an exported <code>.ics</code> file.
-              </p>
-              <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-300 mt-2 mb-1">
-                Apple Share Link
-              </label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  value={appleCalendarUrlInput}
-                  onChange={(e) => setAppleCalendarUrlInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (!isImportingCalendar && activeLayerId && user?.id && appleCalendarUrlInput.trim()) {
-                        handleFirstImportPromptChoice('apple_url');
+          {importPromptStep === 'main' ? (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                onClick={() => handleFirstImportPromptChoice('google')}
+                disabled={isImportingCalendar || !activeLayerId || !user?.id}
+                className="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
+              >
+                Connect Google
+              </button>
+              <button
+                onClick={() => setImportPromptStep('apple')}
+                disabled={isImportingCalendar || !activeLayerId || !user?.id}
+                className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
+              >
+                Import Apple Calendar
+              </button>
+              <button
+                onClick={() => handleFirstImportPromptChoice('later')}
+                className="sm:col-span-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+              >
+                Not now
+              </button>
+            </div>
+          ) : (
+            <div className="mt-5 space-y-3">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-gray-50/80 dark:bg-gray-900/30">
+                <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-300 mb-1">
+                  Apple Share Link
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={appleCalendarUrlInput}
+                    onChange={(e) => setAppleCalendarUrlInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (!isImportingCalendar && activeLayerId && user?.id && appleCalendarUrlInput.trim()) {
+                          handleFirstImportPromptChoice('apple_url');
+                        }
                       }
-                    }
-                  }}
-                  placeholder="webcal://... or https://... .ics"
-                  className="w-full sm:flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                />
+                    }}
+                    placeholder="webcal://... or https://... .ics"
+                    className="w-full sm:flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  <button
+                    onClick={() => handleFirstImportPromptChoice('apple_url')}
+                    disabled={isImportingCalendar || !activeLayerId || !user?.id || !appleCalendarUrlInput.trim()}
+                    className="w-full sm:w-auto px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all whitespace-nowrap"
+                  >
+                    Import URL
+                  </button>
+                </div>
                 <button
-                  onClick={() => handleFirstImportPromptChoice('apple_url')}
-                  disabled={isImportingCalendar || !activeLayerId || !user?.id || !appleCalendarUrlInput.trim()}
-                  className="w-full sm:w-auto px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all whitespace-nowrap"
+                  onClick={() => handleFirstImportPromptChoice('apple')}
+                  disabled={isImportingCalendar || !activeLayerId || !user?.id}
+                  className="mt-2 w-full sm:w-auto px-3 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
                 >
-                  Import URL
+                  Upload .ics File
                 </button>
               </div>
-              <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/60 p-2.5">
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/60 p-2.5">
                 <div className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">How to get Apple link / file</div>
                 <ol className="mt-1 text-[11px] text-gray-600 dark:text-gray-300 space-y-1 list-decimal pl-4">
-                  <li>Open Calendar on iPhone/Mac and find the calendar you want.</li>
-                  <li>Tap the info icon, then Share Calendar.</li>
+                  <li>
+                    Open Calendar on iPhone/Mac.
+                    {' '}
+                    <a
+                      href="calshow://"
+                      className="text-indigo-600 dark:text-indigo-300 underline"
+                    >
+                      Try opening Calendar app
+                    </a>
+                    {' '}
+                    (Apple devices).
+                  </li>
+                  <li>Find the calendar you want, tap the info icon, then Share Calendar.</li>
                   <li>Turn on Public Calendar and copy the link (webcal://...).</li>
-                  <li>If link import fails, export or download a .ics file and use Upload.</li>
+                  <li>
+                    If needed, use
+                    {' '}
+                    <a
+                      href="https://www.icloud.com/calendar"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 dark:text-indigo-300 underline"
+                    >
+                      iCloud Calendar
+                    </a>
+                    {' '}
+                    to copy/export.
+                  </li>
                 </ol>
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  onClick={() => setImportPromptStep('main')}
+                  className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={() => handleFirstImportPromptChoice('later')}
+                  className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                >
+                  Not now
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => handleFirstImportPromptChoice('later')}
-              className="sm:col-span-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
-            >
-              Not now
-            </button>
-          </div>
+          )}
         </div>
       </div>
     )}
