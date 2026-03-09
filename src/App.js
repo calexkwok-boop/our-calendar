@@ -4971,6 +4971,17 @@ function App() {
         return [...prev, data];
       });
     }
+    const pollCreator = String(currentUser || user?.email || user?.phone || 'Someone');
+    const pollTitle = eventName.length > 56 ? `${eventName.slice(0, 56)}...` : eventName;
+    const pollPushResult = await sendImmediatePushNotification({
+      type: 'chat_poll',
+      title: 'New Poll in Chat',
+      body: `${pollCreator} created a poll: "${pollTitle}" (${dateKey}).`,
+      layerId: activeLayerId,
+    });
+    if (!pollPushResult?.ok) {
+      console.warn('Poll push not sent:', pollPushResult?.error || 'Unknown error');
+    }
   };
 
   const createPopupEventFromChat = async () => {
@@ -5101,6 +5112,22 @@ function App() {
         if (exists) return prev;
         return [...prev, popupChatMsg];
       });
+    }
+    const eventCreator = String(currentUser || user?.email || user?.phone || 'Someone');
+    const eventTitle = String(inserted?.title || title || 'Event');
+    const eventDate = String(inserted?.date || dateKey || '');
+    const eventTime = String(inserted?.time || '').trim();
+    const eventBody = eventTime
+      ? `${eventCreator} created "${eventTitle}" for ${eventDate} at ${eventTime}.`
+      : `${eventCreator} created "${eventTitle}" for ${eventDate}.`;
+    const eventPushResult = await sendImmediatePushNotification({
+      type: 'chat_event',
+      title: 'New Event in Chat',
+      body: eventBody,
+      layerId: activeLayerId,
+    });
+    if (!eventPushResult?.ok) {
+      console.warn('Chat event push not sent:', eventPushResult?.error || 'Unknown error');
     }
     setChatError('');
     resetPollComposer();
