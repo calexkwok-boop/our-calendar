@@ -103,6 +103,7 @@ function App() {
 
   const saveTimeoutRef = useRef(null);
   const saveRequestIdRef = useRef(0);
+  const holidayCleanupRunRef = useRef(new Set());
   const dateTapTimeoutRef = useRef(null);
   const scanReminderInputRef = useRef(null);
   const scanReminderUploadInputRef = useRef(null);
@@ -5677,6 +5678,20 @@ function App() {
   }, [primaryListOwnerId, activeLayerId]);
 
   useEffect(() => {
+    if (!user?.id || !activeLayerId) return;
+    const runKey = `${String(user.id)}:${String(activeLayerId)}`;
+    if (holidayCleanupRunRef.current.has(runKey)) return;
+    holidayCleanupRunRef.current.add(runKey);
+    cleanupDuplicateHolidayEventsForCurrentUserLayer().then((removed) => {
+      if (removed > 0) {
+        console.info(`Removed ${removed} duplicate holiday event(s) in this calendar layer.`);
+      }
+    }).catch((err) => {
+      console.error('Automatic holiday duplicate cleanup failed:', err);
+    });
+  }, [user?.id, activeLayerId]);
+
+  useEffect(() => {
     if (!sharedCalendars || sharedCalendars.length === 0) return;
     resolveSharedOwnerLabels(sharedCalendars, activeLayerId);
   }, [sharedCalendars, activeLayerId]);
@@ -8442,6 +8457,97 @@ function App() {
     return { insertedCount: eventsToInsert.length, duplicateCount };
   };
 
+  const normalizeHolidayTitleForCleanup = (value) => String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^us\s*holiday[:\s-]*/i, '')
+    .replace(/[^a-z0-9]/g, '');
+
+  const isLikelyHolidayTitle = (normalizedTitle) => {
+    const t = String(normalizedTitle || '');
+    if (!t) return false;
+    return [
+      'holiday',
+      'newyear',
+      'mlk',
+      'presidentsday',
+      'washingtonsbirthday',
+      'memorialday',
+      'juneteenth',
+      'independenceday',
+      'laborday',
+      'columbusday',
+      'veteransday',
+      'thanksgiving',
+      'christmas',
+      'easter',
+      'goodfriday',
+      'taxday',
+      'stpatrick',
+    ].some((token) => t.includes(token));
+  };
+
+  const cleanupDuplicateHolidayEventsForCurrentUserLayer = async () => {
+    if (!activeLayerId || !user?.id) return 0;
+    const { data: rows, error } = await supabase
+      .from('events')
+      .select('id,date,time,title,created_at')
+      .eq('layer_id', activeLayerId)
+      .eq('user_id', user.id)
+      .is('time', null)
+      .order('created_at', { ascending: true })
+      .limit(5000);
+    if (error) {
+      console.error('Holiday duplicate cleanup failed to load rows:', error);
+      return 0;
+    }
+
+    const firstByKey = new Map();
+    const deleteIds = [];
+    (rows || []).forEach((row) => {
+      const dateKey = String(row?.date || '').trim();
+      const titleNorm = normalizeHolidayTitleForCleanup(row?.title);
+      if (!dateKey || !titleNorm || !isLikelyHolidayTitle(titleNorm)) return;
+      const key = `${dateKey}|${titleNorm}`;
+      if (!firstByKey.has(key)) {
+        firstByKey.set(key, String(row.id));
+      } else {
+        deleteIds.push(String(row.id));
+      }
+    });
+    if (deleteIds.length === 0) return 0;
+
+    const deleted = new Set();
+    for (let i = 0; i < deleteIds.length; i += 200) {
+      const chunk = deleteIds.slice(i, i + 200);
+      const { data: removedRows, error: deleteError } = await supabase
+        .from('events')
+        .delete()
+        .select('id')
+        .eq('layer_id', activeLayerId)
+        .eq('user_id', user.id)
+        .in('id', chunk);
+      if (deleteError) {
+        console.error('Holiday duplicate cleanup delete failed:', deleteError);
+        continue;
+      }
+      (removedRows || []).forEach((row) => deleted.add(String(row?.id || '')));
+    }
+
+    if (deleted.size > 0) {
+      setEvents((prev) => {
+        const next = {};
+        Object.entries(prev || {}).forEach(([dk, list]) => {
+          const filtered = (list || []).filter((event) => !deleted.has(String(event?.id || '')));
+          if (filtered.length > 0) next[dk] = filtered;
+        });
+        return next;
+      });
+    }
+
+    return deleted.size;
+  };
+
   const triggerGoogleCalendarOAuthImport = async () => {
     localStorage.setItem(GOOGLE_IMPORT_PENDING_KEY, 'true');
     const { error } = await supabase.auth.signInWithOAuth({
@@ -8731,6 +8837,7 @@ function App() {
       }
 
       const { insertedCount, duplicateCount } = await persistImportedEvents(importedEventsDraft);
+      const cleanedHolidayDuplicates = await cleanupDuplicateHolidayEventsForCurrentUserLayer();
       const birthdayDraftCount = importedEventsDraft.filter((row) => {
         const title = String(row?.title || '').toLowerCase();
         return String(row?.recurrence || '') === 'annual' && title.includes('birthday');
@@ -8757,6 +8864,7 @@ function App() {
       alert(
         `Imported ${insertedCount} Google event${insertedCount === 1 ? '' : 's'} from ${calendarCandidates.length} calendar${calendarCandidates.length === 1 ? '' : 's'}`
         + (duplicateCount > 0 ? ` (${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'} skipped).` : '.')
+        + (cleanedHolidayDuplicates > 0 ? ` Cleaned ${cleanedHolidayDuplicates} duplicate holiday event${cleanedHolidayDuplicates === 1 ? '' : 's'}.` : '')
       );
     } catch (err) {
       console.error('Google calendar import failed:', err);
