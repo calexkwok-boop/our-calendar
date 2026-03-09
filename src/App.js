@@ -9930,11 +9930,10 @@ function App() {
                       href="calshow://"
                       className="text-indigo-600 dark:text-indigo-300 underline"
                     >
-                      Try opening Calendar app
+                      Open Calendar
                     </a>
-                    {' '}
-                    (Apple devices).
                   </li>
+                  <li>Click calendar icon at the bottom of the screen.</li>
                   <li>Find the calendar you want, tap the info icon, then Share Calendar.</li>
                   <li>Turn on Public Calendar and copy the link (webcal://...).</li>
                   <li>
