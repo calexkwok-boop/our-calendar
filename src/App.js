@@ -3352,6 +3352,116 @@ function App() {
       date1.getFullYear() === date2.getFullYear();
   };
 
+  const SCHEDULING_CONFLICT_WINDOW_HOURS = 3;
+  const SCHEDULING_CONFLICT_WINDOW_MS = SCHEDULING_CONFLICT_WINDOW_HOURS * 60 * 60 * 1000;
+  const toEventDateTime = (dateKey, time) => {
+    const dk = String(dateKey || '').trim();
+    const tm = String(time || '').trim();
+    if (!dk || !tm || !/^\d{4}-\d{2}-\d{2}$/.test(dk) || !/^\d{2}:\d{2}$/.test(tm)) return null;
+    const d = new Date(`${dk}T${tm}:00`);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  };
+  const formatConflictDateTime = (dateKey, time) => {
+    const dt = toEventDateTime(dateKey, time);
+    if (!dt) return `${dateKey} ${time || ''}`.trim();
+    return dt.toLocaleString('en-US', {
+      month: 'numeric',
+      day: 'numeric',
+      year: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+  const findSchedulingConflicts = async ({ dateKey, time, ignoreEventId = null }) => {
+    if (!user?.id) return [];
+    const target = toEventDateTime(dateKey, time);
+    if (!target) return [];
+
+    const minDate = new Date(target.getTime() - (24 * 60 * 60 * 1000));
+    const maxDate = new Date(target.getTime() + (24 * 60 * 60 * 1000));
+    const minDateKey = getDateKey(minDate);
+    const maxDateKey = getDateKey(maxDate);
+    const ignoreId = String(ignoreEventId || '').trim();
+    const rowsById = new Map();
+
+    // Local in-memory events first (captures unsaved/debounced state).
+    Object.values(events || {}).forEach((list) => {
+      (list || []).forEach((evt) => {
+        if (String(evt?.userId || '') !== String(user.id)) return;
+        const evtId = String(evt?.id || '').trim();
+        if (!evtId || (ignoreId && evtId === ignoreId)) return;
+        const evtDateKey = String(evt?.date || '').trim();
+        const evtTime = String(evt?.time || '').trim();
+        if (!evtDateKey || !evtTime) return;
+        rowsById.set(evtId, {
+          id: evtId,
+          title: String(evt?.title || '').trim() || 'Untitled Event',
+          date: evtDateKey,
+          time: evtTime,
+          layer_id: String(activeLayerId || ''),
+        });
+      });
+    });
+
+    // DB rows across all layers for this user.
+    try {
+      const { data: dbRows, error } = await supabase
+        .from('events')
+        .select('id,title,date,time,layer_id,user_id')
+        .eq('user_id', user.id)
+        .gte('date', minDateKey)
+        .lte('date', maxDateKey)
+        .not('time', 'is', null)
+        .limit(500);
+      if (!error) {
+        (dbRows || []).forEach((row) => {
+          const evtId = String(row?.id || '').trim();
+          if (!evtId || (ignoreId && evtId === ignoreId)) return;
+          rowsById.set(evtId, {
+            id: evtId,
+            title: String(row?.title || '').trim() || 'Untitled Event',
+            date: String(row?.date || '').trim(),
+            time: String(row?.time || '').trim(),
+            layer_id: String(row?.layer_id || '').trim(),
+          });
+        });
+      }
+    } catch {}
+
+    const layerNameById = {};
+    (layers || []).forEach((layer) => {
+      const id = String(layer?.id || '').trim();
+      if (id) layerNameById[id] = String(layer?.name || '').trim() || 'Calendar';
+    });
+
+    const conflicts = [];
+    rowsById.forEach((row) => {
+      const dt = toEventDateTime(row.date, row.time);
+      if (!dt) return;
+      const deltaMs = Math.abs(dt.getTime() - target.getTime());
+      if (deltaMs === 0 || deltaMs > SCHEDULING_CONFLICT_WINDOW_MS) return;
+      conflicts.push({
+        ...row,
+        deltaMs,
+        layerName: layerNameById[String(row.layer_id || '').trim()] || 'Calendar',
+      });
+    });
+    conflicts.sort((a, b) => a.deltaMs - b.deltaMs);
+    return conflicts.slice(0, 6);
+  };
+  const confirmSchedulingConflicts = async ({ dateKey, time, ignoreEventId = null, draftTitle = 'This event' }) => {
+    const conflicts = await findSchedulingConflicts({ dateKey, time, ignoreEventId });
+    if (conflicts.length === 0) return true;
+    const lines = conflicts
+      .slice(0, 4)
+      .map((row) => `• ${row.title} (${row.layerName}) at ${formatConflictDateTime(row.date, row.time)}`)
+      .join('\n');
+    return window.confirm(
+      `${draftTitle} is within ${SCHEDULING_CONFLICT_WINDOW_HOURS} hours of:\n${lines}\n\nSave anyway?`
+    );
+  };
+
   const fetchHolidays = async (year) => {
     if (holidays[year]) return; // already fetched
     try {
@@ -8644,6 +8754,27 @@ function App() {
 
   const handleTimeSubmit = async (time) => {
     if (!pendingEvent) return;
+    if (!pendingEvent.isMultiDay && time) {
+      const proposedDates = pendingEvent.datesToAdd || [];
+      const allConflicts = [];
+      for (const date of proposedDates) {
+        const dk = getDateKey(date);
+        const found = await findSchedulingConflicts({ dateKey: dk, time, ignoreEventId: null });
+        found.forEach((item) => allConflicts.push(item));
+      }
+      if (allConflicts.length > 0) {
+        const unique = Array.from(new Map(allConflicts.map((row) => [String(row.id), row])).values())
+          .sort((a, b) => a.deltaMs - b.deltaMs)
+          .slice(0, 4);
+        const lines = unique
+          .map((row) => `• ${row.title} (${row.layerName}) at ${formatConflictDateTime(row.date, row.time)}`)
+          .join('\n');
+        const ok = window.confirm(
+          `"${pendingEvent.title}" is within ${SCHEDULING_CONFLICT_WINDOW_HOURS} hours of:\n${lines}\n\nSave anyway?`
+        );
+        if (!ok) return;
+      }
+    }
     const updatedEvents = { ...events };
     const multiDayId = pendingEvent.isMultiDay ? Date.now().toString() : null;
     const createdEventIds = [];
@@ -8798,7 +8929,22 @@ function App() {
   };
 
   // Update a field without closing the edit form (for toggles)
-  const handleUpdateEventField = (dateKey, eventId, updates) => {
+  const handleUpdateEventField = async (dateKey, eventId, updates) => {
+    if (Object.prototype.hasOwnProperty.call(updates || {}, 'time')) {
+      const nextTime = String(updates?.time || '').trim();
+      if (nextTime) {
+        const actualDateKeyForConflict = Object.keys(events).find(k => events[k].some(e => e.id === eventId)) || dateKey;
+        const targetEvent = (events[actualDateKeyForConflict] || []).find(e => e.id === eventId);
+        const proposedDateKey = String(updates?.date || targetEvent?.date || actualDateKeyForConflict || '').trim();
+        const ok = await confirmSchedulingConflicts({
+          dateKey: proposedDateKey,
+          time: nextTime,
+          ignoreEventId: eventId,
+          draftTitle: String(targetEvent?.title || 'This event'),
+        });
+        if (!ok) return;
+      }
+    }
     // Find the actual date key where this event is stored
     const actualDateKey = Object.keys(events).find(k => events[k].some(e => e.id === eventId)) || dateKey;
     const updatedEvents = {
