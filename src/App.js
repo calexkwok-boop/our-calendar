@@ -3360,8 +3360,14 @@ function App() {
   const toEventDateTime = (dateKey, time) => {
     const dk = String(dateKey || '').trim();
     const tm = String(time || '').trim();
-    if (!dk || !tm || !/^\d{4}-\d{2}-\d{2}$/.test(dk) || !/^\d{2}:\d{2}$/.test(tm)) return null;
-    const d = new Date(`${dk}T${tm}:00`);
+    if (!dk || !tm || !/^\d{4}-\d{2}-\d{2}$/.test(dk)) return null;
+    const m = tm.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (!m) return null;
+    const hh = Number(m[1]);
+    const mm = Number(m[2]);
+    if (!Number.isInteger(hh) || !Number.isInteger(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    const normalizedTime = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00`;
+    const d = new Date(`${dk}T${normalizedTime}`);
     if (Number.isNaN(d.getTime())) return null;
     return d;
   };
@@ -3411,7 +3417,6 @@ function App() {
     // Local in-memory events first (captures unsaved/debounced state).
     Object.values(events || {}).forEach((list) => {
       (list || []).forEach((evt) => {
-        if (String(evt?.userId || '') !== String(user.id)) return;
         const evtId = String(evt?.id || '').trim();
         if (!evtId || (ignoreId && evtId === ignoreId)) return;
         const evtDateKey = String(evt?.date || '').trim();
@@ -3427,30 +3432,42 @@ function App() {
       });
     });
 
-    // DB rows across all layers for this user.
-    try {
-      const { data: dbRows, error } = await supabase
-        .from('events')
-        .select('id,title,date,time,layer_id,user_id')
-        .eq('user_id', user.id)
-        .gte('date', minDateKey)
-        .lte('date', maxDateKey)
-        .not('time', 'is', null)
-        .limit(500);
-      if (!error) {
-        (dbRows || []).forEach((row) => {
-          const evtId = String(row?.id || '').trim();
-          if (!evtId || (ignoreId && evtId === ignoreId)) return;
-          rowsById.set(evtId, {
-            id: evtId,
-            title: String(row?.title || '').trim() || 'Untitled Event',
-            date: String(row?.date || '').trim(),
-            time: String(row?.time || '').trim(),
-            layer_id: String(row?.layer_id || '').trim(),
+    // DB rows across all visible layers (owned + shared).
+    const visibleLayerIds = Array.from(
+      new Set((layers || []).map((layer) => String(layer?.id || '').trim()).filter(Boolean))
+    );
+    if (visibleLayerIds.length === 0 && String(activeLayerId || '').trim()) {
+      visibleLayerIds.push(String(activeLayerId).trim());
+    }
+    if (visibleLayerIds.length > 0) {
+      for (const lid of visibleLayerIds) {
+        try {
+          const { data: dbRows, error } = await supabase
+            .from('events')
+            .select('id,title,date,time,layer_id,user_id')
+            .eq('layer_id', lid)
+            .gte('date', minDateKey)
+            .lte('date', maxDateKey)
+            .not('time', 'is', null)
+            .limit(500);
+          if (error) {
+            console.warn('Conflict check layer query failed:', lid, error.message || error);
+            continue;
+          }
+          (dbRows || []).forEach((row) => {
+            const evtId = String(row?.id || '').trim();
+            if (!evtId || (ignoreId && evtId === ignoreId)) return;
+            rowsById.set(evtId, {
+              id: evtId,
+              title: String(row?.title || '').trim() || 'Untitled Event',
+              date: String(row?.date || '').trim(),
+              time: String(row?.time || '').trim(),
+              layer_id: String(row?.layer_id || '').trim(),
+            });
           });
-        });
+        } catch {}
       }
-    } catch {}
+    }
 
     const layerNameById = {};
     (layers || []).forEach((layer) => {
@@ -3463,7 +3480,7 @@ function App() {
       const dt = toEventDateTime(row.date, row.time);
       if (!dt) return;
       const deltaMs = Math.abs(dt.getTime() - target.getTime());
-      if (deltaMs === 0 || deltaMs > SCHEDULING_CONFLICT_WINDOW_MS) return;
+      if (deltaMs > SCHEDULING_CONFLICT_WINDOW_MS) return;
       conflicts.push({
         ...row,
         deltaMs,
