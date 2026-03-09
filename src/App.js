@@ -5826,6 +5826,7 @@ function App() {
     (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
     const accessibleSubCalIdCache = new Set(subCalIdSet);
     const accessibleOwnerIdCache = new Set([me]);
+    const accessibleLayerIdCache = new Set((layers || []).map((layer) => String(layer?.id || '')).filter(Boolean));
 
     const isOwnRow = (row) => {
       const rowUserId = row?.user_id ? String(row.user_id) : '';
@@ -5902,11 +5903,40 @@ function App() {
       return false;
     };
 
+    const canAccessLayerId = async (layerIdValue) => {
+      const layerId = String(layerIdValue || '').trim();
+      if (!layerId) return false;
+      if (accessibleLayerIdCache.has(layerId)) return true;
+
+      const { data: layerRow, error: layerErr } = await supabase
+        .from('calendar_layers')
+        .select('id,owner_id')
+        .eq('id', layerId)
+        .maybeSingle();
+      if (!layerErr && layerRow && String(layerRow.owner_id || '') === me) {
+        accessibleLayerIdCache.add(layerId);
+        return true;
+      }
+
+      const { data: acceptedShareRows, error: acceptedShareErr } = await supabase
+        .from('shared_access')
+        .select('id')
+        .eq('layer_id', layerId)
+        .eq('shared_with_id', me)
+        .limit(1);
+      if (!acceptedShareErr && (acceptedShareRows || []).length > 0) {
+        accessibleLayerIdCache.add(layerId);
+        return true;
+      }
+
+      return false;
+    };
+
     const updatesChannel = supabase
       .channel(`in-app-updates-${me}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'events' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
-        if (!(await canAccessOwnerId(row.user_id))) return;
+        if (!(await canAccessLayerId(row.layer_id || row.calendar_id))) return;
         const who = String(row.created_by || 'Someone');
         addInAppNotification({
           key: `events:${row.id}`,
@@ -5942,7 +5972,7 @@ function App() {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_lists' }, async ({ new: row }) => {
         if (!row || isOwnRow(row)) return;
-        if (!(await canAccessOwnerId(row.owner_id || row.user_id))) return;
+        if (!(await canAccessLayerId(row.layer_id || row.calendar_id))) return;
         const who = String(row.created_by || 'Someone');
         const itemText = String(row.text || '').trim();
         const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
@@ -6274,14 +6304,15 @@ function App() {
           .select('id,owner_id,layer_id,shared_with_id,shared_with_email,shared_with_phone,created_at');
         if (shareRecipientFilter) sharedDataQuery = sharedDataQuery.or(shareRecipientFilter);
         const { data: sharedData } = await sharedDataQuery;
-        const ownerIds = Array.from(new Set((sharedData || []).map(s => String(s.owner_id || '')).filter(Boolean)));
+        const acceptedShares = (sharedData || []).filter((row) => String(row?.shared_with_id || '') === me);
+        const sharedLayerIds = Array.from(new Set(acceptedShares.map(s => String(s.layer_id || '')).filter(Boolean)));
         await notifyCalendarShares(sharedData || []);
 
-        if (ownerIds.length > 0) {
+        if (sharedLayerIds.length > 0) {
           const { data: sharedEvents } = await supabase
             .from('events')
-            .select('id,title,created_by,user_id,created_at')
-            .in('user_id', ownerIds)
+            .select('id,title,created_by,user_id,created_at,layer_id')
+            .in('layer_id', sharedLayerIds)
             .gt('created_at', getCursor('events'))
             .order('created_at', { ascending: true })
             .limit(200);
@@ -6290,8 +6321,8 @@ function App() {
 
           const { data: sharedListItems } = await supabase
             .from('shared_lists')
-            .select('id,text,created_by,user_id,created_at')
-            .in('owner_id', ownerIds)
+            .select('id,text,created_by,user_id,created_at,layer_id')
+            .in('layer_id', sharedLayerIds)
             .gt('created_at', getCursor('sharedListItems'))
             .order('created_at', { ascending: true })
             .limit(200);
