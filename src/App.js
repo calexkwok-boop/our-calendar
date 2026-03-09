@@ -8793,11 +8793,16 @@ function App() {
         const lines = unique
           .map((row) => `• ${row.title} (${row.layerName}) at ${formatConflictDateTime(row.date, row.time)}`)
           .filter(Boolean);
+        // Close "What time?" first so the conflict modal is the only active prompt.
+        setShowTimePrompt(false);
         const ok = await openConflictPrompt({
           title: `"${pendingEvent.title}" is within ${SCHEDULING_CONFLICT_WINDOW_HOURS} hours of:`,
           lines,
         });
-        if (!ok) return;
+        if (!ok) {
+          setShowTimePrompt(true);
+          return;
+        }
       }
     }
     const updatedEvents = { ...events };
