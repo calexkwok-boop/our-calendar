@@ -4089,13 +4089,26 @@ function App() {
   const primaryListOwnerId = activeLayerOwnerId;
 
   const loadSharedListGroups = async (ownerId) => {
-    if (!ownerId || !activeLayerId) return;
-    const { data, error } = await supabase
+    if (!activeLayerId) return;
+    let { data, error } = await supabase
       .from('shared_list_groups')
       .select('*')
-      .eq('owner_id', ownerId)
       .eq('layer_id', activeLayerId)
       .order('created_at', { ascending: true });
+
+    // Fallback for stricter policies that still expect owner_id scoping.
+    if ((!data || data.length === 0) && ownerId) {
+      const fallback = await supabase
+        .from('shared_list_groups')
+        .select('*')
+        .eq('owner_id', ownerId)
+        .eq('layer_id', activeLayerId)
+        .order('created_at', { ascending: true });
+      if (!fallback.error && Array.isArray(fallback.data)) {
+        data = fallback.data;
+        error = null;
+      }
+    }
 
     if (error) {
       console.error('Error loading shared list groups:', error);
@@ -4121,17 +4134,31 @@ function App() {
   };
 
   const loadSharedListItems = async (ownerId, listId) => {
-    if (!ownerId || !listId || !activeLayerId) {
+    if (!listId || !activeLayerId) {
       setSharedListItems([]);
       return;
     }
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('shared_lists')
       .select('*')
-      .eq('owner_id', ownerId)
       .eq('layer_id', activeLayerId)
       .eq('list_id', listId)
       .order('created_at', { ascending: true });
+
+    // Fallback for projects where list reads are owner-scoped in RLS.
+    if ((!data || data.length === 0) && ownerId) {
+      const fallback = await supabase
+        .from('shared_lists')
+        .select('*')
+        .eq('owner_id', ownerId)
+        .eq('layer_id', activeLayerId)
+        .eq('list_id', listId)
+        .order('created_at', { ascending: true });
+      if (!fallback.error && Array.isArray(fallback.data)) {
+        data = fallback.data;
+        error = null;
+      }
+    }
 
     if (error) {
       console.error('Error loading shared list items:', error);
@@ -7139,6 +7166,35 @@ function App() {
     };
   };
 
+  const pushPayloadToInAppNotification = (rawPayload, source = 'push') => {
+    try {
+      let payload = rawPayload;
+      if (typeof rawPayload === 'string') {
+        payload = rawPayload ? JSON.parse(rawPayload) : {};
+      }
+      if (!payload || typeof payload !== 'object') return;
+      const formatted = formatPushNotificationContent(payload);
+      const data = (formatted?.data && typeof formatted.data === 'object') ? formatted.data : {};
+      const normalizedType = String(data?.type || 'update').trim().toLowerCase() || 'update';
+      const stableKey = [
+        'push',
+        String(source || 'push'),
+        String(formatted?.tag || ''),
+        String(formatted?.title || ''),
+        String(formatted?.body || ''),
+        String(data?.layerId || ''),
+      ].join(':');
+      const body = String(formatted?.body || '').trim();
+      if (!body) return;
+      addInAppNotification({
+        key: stableKey,
+        type: normalizedType,
+        message: body,
+        createdAt: new Date().toISOString(),
+      });
+    } catch {}
+  };
+
   useEffect(() => {
     let unsubscribe = null;
     const startForegroundListener = async () => {
@@ -7147,6 +7203,7 @@ function App() {
         if (!messaging) return;
         unsubscribe = onMessage(messaging, (payload) => {
           console.log('Foreground FCM payload:', payload);
+          pushPayloadToInAppNotification(payload, 'fcm-foreground');
           if (!('Notification' in window)) return;
           if (Notification.permission !== 'granted') return;
           const formatted = formatPushNotificationContent(payload);
@@ -7183,6 +7240,9 @@ function App() {
     const handleSwDebugMessage = (event) => {
       const data = event?.data || {};
       if (data?.source !== 'firebase-messaging-sw') return;
+      if (data?.type === 'push-received') {
+        pushPayloadToInAppNotification(data?.payload?.rawText || '', 'sw-push');
+      }
       console.log('[SW debug]', data.type, data.payload || {});
     };
     navigator.serviceWorker.addEventListener('message', handleSwDebugMessage);
