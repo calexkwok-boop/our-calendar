@@ -8980,11 +8980,17 @@ function App() {
       if (!/^https?:\/\//i.test(url)) {
         throw new Error('Use a valid http(s) or webcal calendar URL.');
       }
-      const response = await fetch(url, { method: 'GET' });
-      if (!response.ok) {
-        throw new Error(`Could not fetch calendar URL (${response.status}).`);
+      const { data, error } = await supabase.functions.invoke('fetch-ics-url', {
+        body: { url },
+      });
+      if (error) {
+        const msg = String(error?.message || '').trim();
+        if (msg.toLowerCase().includes('non-2xx status code')) {
+          throw new Error('Server calendar fetch failed. Make sure the Edge Function "fetch-ics-url" is deployed.');
+        }
+        throw new Error(msg || 'Server calendar fetch failed.');
       }
-      const text = await response.text();
+      const text = String(data?.icsText || '');
       if (!/BEGIN:VCALENDAR/i.test(text)) {
         throw new Error('That link did not return a valid .ics calendar feed.');
       }
