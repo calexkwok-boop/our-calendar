@@ -72,10 +72,20 @@ Deno.serve(async (req) => {
     };
 
     if (layerId) {
-      const { data: shareRows } = await supabase
-        .from("shared_access")
-        .select("owner_id,shared_with_id,shared_with_email,shared_with_phone")
-        .eq("layer_id", layerId);
+      let shareRows: any[] = [];
+      {
+        let shareQuery = await supabase
+          .from("shared_access")
+          .select("owner_id,shared_with_id,shared_with_email,shared_with_phone")
+          .eq("layer_id", layerId);
+        if (shareQuery.error && /shared_with_phone|column/i.test(String(shareQuery.error.message || ""))) {
+          shareQuery = await supabase
+            .from("shared_access")
+            .select("owner_id,shared_with_id,shared_with_email")
+            .eq("layer_id", layerId);
+        }
+        shareRows = shareQuery.data || [];
+      }
 
       for (const row of shareRows || []) {
         const ownerId = safeString(row?.owner_id);
@@ -110,11 +120,22 @@ Deno.serve(async (req) => {
     }
 
     if (subCalendarId) {
-      const { data: memberRows } = await supabase
-        .from("sub_calendar_members")
-        .select("email,phone")
-        .eq("sub_calendar_id", subCalendarId)
-        .in("status", ["accepted", "pending"]);
+      let memberRows: any[] = [];
+      {
+        let memberQuery = await supabase
+          .from("sub_calendar_members")
+          .select("email,phone")
+          .eq("sub_calendar_id", subCalendarId)
+          .in("status", ["accepted", "pending"]);
+        if (memberQuery.error && /phone|column/i.test(String(memberQuery.error.message || ""))) {
+          memberQuery = await supabase
+            .from("sub_calendar_members")
+            .select("email")
+            .eq("sub_calendar_id", subCalendarId)
+            .in("status", ["accepted", "pending"]);
+        }
+        memberRows = memberQuery.data || [];
+      }
       const emails = Array.from(new Set((memberRows || []).map((row) => safeString(row?.email).toLowerCase()).filter(Boolean)));
       const phones = Array.from(new Set((memberRows || []).map((row) => normalizePhone(row?.phone)).filter(Boolean)));
       if (emails.length > 0 || phones.length > 0) {
