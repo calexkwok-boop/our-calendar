@@ -7669,6 +7669,8 @@ function App() {
       const listIdFromTarget = String(target?.listId || '').trim();
       const keyLayerId = String(parts[2] || targetLayerId || activeLayerId || '').trim();
       if (keyLayerId) switchToLayer(keyLayerId);
+      setBottomNavTab('home');
+      setShowDateDetailModal(false);
       setShowListPanel(true);
       setShowChatPanel(false);
       setShowNotificationSettings(false);
@@ -7678,7 +7680,6 @@ function App() {
           const { data } = await supabase
             .from('shared_lists')
             .select('list_id')
-            .eq('layer_id', keyLayerId || activeLayerId)
             .eq('id', itemId)
             .maybeSingle();
           listId = String(data?.list_id || '').trim();
@@ -7767,6 +7768,8 @@ function App() {
 
     if (type === 'list') {
       if (targetLayerId) switchToLayer(targetLayerId);
+      setBottomNavTab('home');
+      setShowDateDetailModal(false);
       setShowListPanel(true);
       setShowChatPanel(false);
       setShowNotificationSettings(false);
