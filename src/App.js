@@ -8984,11 +8984,19 @@ function App() {
         body: { url },
       });
       if (error) {
-        const msg = String(error?.message || '').trim();
-        if (msg.toLowerCase().includes('non-2xx status code')) {
+        const status = Number(error?.context?.status || 0);
+        let serverMessage = '';
+        try {
+          const context = error?.context;
+          if (context && typeof context.clone === 'function' && typeof context.clone().json === 'function') {
+            const payload = await context.clone().json();
+            serverMessage = String(payload?.error || payload?.message || '').trim();
+          }
+        } catch {}
+        if (status === 404) {
           throw new Error('Server calendar fetch failed. Make sure the Edge Function "fetch-ics-url" is deployed.');
         }
-        throw new Error(msg || 'Server calendar fetch failed.');
+        throw new Error(serverMessage || String(error?.message || '').trim() || 'Server calendar fetch failed.');
       }
       const text = String(data?.icsText || '');
       if (!/BEGIN:VCALENDAR/i.test(text)) {
