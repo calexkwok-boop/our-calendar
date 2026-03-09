@@ -3691,6 +3691,7 @@ function App() {
   const saveCategories = async (newCategories) => {
     try {
       setCategories(newCategories);
+      if (!user?.id || !activeLayerId) return;
       const categoriesArray = Object.entries(newCategories).map(([key, cat]) => ({
         key,
         label: cat.label,
@@ -3698,10 +3699,40 @@ function App() {
         light_bg: cat.lightBg,
         border: cat.border,
         text: cat.text,
-        user_id: user?.id
+        user_id: user?.id,
+        layer_id: activeLayerId,
+        calendar_id: activeLayerId,
       }));
-      await supabase.from('categories').delete().eq('user_id', user?.id);
-      const { error } = await supabase.from('categories').insert(categoriesArray);
+      let deleteError = null;
+      try {
+        const del = await supabase
+          .from('categories')
+          .delete()
+          .eq('user_id', user?.id)
+          .eq('layer_id', activeLayerId);
+        deleteError = del?.error || null;
+      } catch (err) {
+        deleteError = err;
+      }
+      if (deleteError && /column .*layer_id|schema cache|does not exist/i.test(String(deleteError?.message || ''))) {
+        await supabase.from('categories').delete().eq('user_id', user?.id);
+      } else if (deleteError) {
+        console.error('Error deleting categories in Supabase:', deleteError);
+      }
+
+      let insertError = null;
+      try {
+        const ins = await supabase.from('categories').insert(categoriesArray);
+        insertError = ins?.error || null;
+      } catch (err) {
+        insertError = err;
+      }
+      if (insertError && /column .*layer_id|column .*calendar_id|schema cache|does not exist/i.test(String(insertError?.message || ''))) {
+        const legacyRows = categoriesArray.map(({ layer_id, calendar_id, ...row }) => row);
+        const legacyInsert = await supabase.from('categories').insert(legacyRows);
+        insertError = legacyInsert?.error || null;
+      }
+      const error = insertError;
       if (error) console.error('Error saving categories to Supabase:', error);
     } catch (error) {
       console.error('Error saving categories:', error);
@@ -5251,10 +5282,31 @@ function App() {
           .eq('layer_id', selectedLayerId);
         setMyShares(mySharesData || []);
 
-        const { data: categoriesData } = await supabase
-          .from('categories')
-          .select('*')
-          .eq('user_id', userId);
+        let categoriesData = [];
+        let categoriesError = null;
+        try {
+          const scoped = await supabase
+            .from('categories')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('layer_id', selectedLayerId);
+          categoriesData = scoped?.data || [];
+          categoriesError = scoped?.error || null;
+        } catch (err) {
+          categoriesError = err;
+        }
+
+        if (categoriesError && /column .*layer_id|schema cache|does not exist/i.test(String(categoriesError?.message || ''))) {
+          const legacy = await supabase
+            .from('categories')
+            .select('*')
+            .eq('user_id', userId);
+          categoriesData = legacy?.data || [];
+          categoriesError = legacy?.error || null;
+        }
+        if (categoriesError) {
+          console.error('Error loading categories:', categoriesError);
+        }
 
         if (categoriesData && categoriesData.length > 0) {
           const categoriesObj = {};
