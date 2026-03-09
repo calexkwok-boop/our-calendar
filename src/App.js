@@ -8318,9 +8318,14 @@ function App() {
       }).length;
       if (insertedCount === 0) {
         if (duplicateCount > 0) {
-          alert(
-            'No new Google events were imported (all matched existing events).\n'
-            + `Diagnostics: calendar birthday events=${calendarBirthdayEventCount}, contacts birthday candidates=${contactBirthdayCandidateCount}, birthday drafts=${birthdayDraftCount}, contacts status=${contactsFetchStatus}.`
+          console.info(
+            'Google import matched existing events only.',
+            {
+              calendarBirthdayEvents: calendarBirthdayEventCount,
+              contactsBirthdayCandidates: contactBirthdayCandidateCount,
+              birthdayDrafts: birthdayDraftCount,
+              contactsStatus: contactsFetchStatus,
+            }
           );
           return;
         }
