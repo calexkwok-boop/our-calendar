@@ -7170,7 +7170,14 @@ function App() {
     try {
       let payload = rawPayload;
       if (typeof rawPayload === 'string') {
-        payload = rawPayload ? JSON.parse(rawPayload) : {};
+        const text = String(rawPayload || '').trim();
+        if (!text) return;
+        try {
+          payload = JSON.parse(text);
+        } catch {
+          // Match SW behavior: treat non-JSON push as notification body text.
+          payload = { notification: { body: text } };
+        }
       }
       if (!payload || typeof payload !== 'object') return;
       const formatted = formatPushNotificationContent(payload);
