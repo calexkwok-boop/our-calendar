@@ -8253,12 +8253,15 @@ function App() {
           const inclusiveEnd = new Date(endParsed.date);
           inclusiveEnd.setDate(inclusiveEnd.getDate() - 1);
           if (!Number.isNaN(inclusiveEnd.getTime()) && inclusiveEnd >= start) {
-            const multiDayId = `gimpmd_${nowTs}_${idx}`;
-            for (let d = new Date(start); d <= inclusiveEnd; d.setDate(d.getDate() + 1)) {
-              pushEvent(new Date(d), { allDay: true, multiDayId });
-              if (importedEventsDraft.length > 5000) break;
+            const spanDays = Math.round((inclusiveEnd.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+            if (spanDays > 1) {
+              const multiDayId = `gimpmd_${nowTs}_${idx}`;
+              for (let d = new Date(start); d <= inclusiveEnd; d.setDate(d.getDate() + 1)) {
+                pushEvent(new Date(d), { allDay: true, multiDayId });
+                if (importedEventsDraft.length > 5000) break;
+              }
+              return;
             }
-            return;
           }
         }
 
@@ -8683,6 +8686,23 @@ function App() {
   const selectedEvents = getEventsForDate(selectedDate);
   const todayKey = getDateKey(new Date());
   const todayEvents = getEventsForDate(new Date()).filter(e => !e.isHoliday);
+  const multiDaySpanCounts = {};
+  Object.values(events || {}).forEach((rows) => {
+    (rows || []).forEach((row) => {
+      if (!row?.isMultiDay) return;
+      const key = String(row?.multiDayId || '').trim();
+      if (!key) return;
+      multiDaySpanCounts[key] = (multiDaySpanCounts[key] || 0) + 1;
+    });
+  });
+  const shouldShowCategoryDot = (event) => {
+    if (!event || event.isHoliday) return false;
+    if (!event.isMultiDay) return true;
+    const key = String(event?.multiDayId || '').trim();
+    if (!key) return false;
+    // Backward-compat: older imports marked single-day all-day rows as multi-day.
+    return Number(multiDaySpanCounts[key] || 0) <= 1;
+  };
   const getSubCalStartRaw = (sc) => sc?.start_date ?? sc?.startDate ?? sc?.start ?? sc?.date ?? null;
   const getSubCalEndRaw = (sc) => sc?.end_date ?? sc?.endDate ?? sc?.end ?? getSubCalStartRaw(sc);
   const toDateOnlyTs = (value) => {
@@ -10707,7 +10727,7 @@ function App() {
                         {dateEvents.length > 0 && (
                           <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 flex gap-0.5">
                             {hasHoliday && <div className={`w-1 h-1 rounded-full ${isSelected || isInSelection ? 'bg-white' : 'bg-red-400'}`} />}
-                            {[...new Set(dateEvents.filter(e => !e.isMultiDay && !e.isHoliday).map(e => e.category || 'other'))].slice(0, 2).map((cat, i) => (
+                            {[...new Set(dateEvents.filter(shouldShowCategoryDot).map(e => e.category || 'other'))].slice(0, 2).map((cat, i) => (
                               <div key={i} className={`w-1 h-1 rounded-full ${isSelected || isInSelection ? 'bg-white' : categories[cat]?.color || 'bg-gray-500'}`} />
                             ))}
                           </div>
