@@ -158,6 +158,7 @@ function App() {
   const [authBusy, setAuthBusy] = useState(false);
   const [isImportingCalendar, setIsImportingCalendar] = useState(false);
   const [showFirstImportPrompt, setShowFirstImportPrompt] = useState(false);
+  const [appleCalendarUrlInput, setAppleCalendarUrlInput] = useState('');
   const IMPORT_PROMPT_HIDE_KEY = 'calendar-hide-import-prompt';
   const GOOGLE_IMPORT_PENDING_KEY = 'calendar-google-import-pending';
   const GOOGLE_CALENDAR_READ_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
@@ -8874,92 +8875,139 @@ function App() {
     }
   };
 
+  const importIcsTextContent = async (text, sourceLabel = 'this source') => {
+    const parsedEvents = parseIcsText(text);
+    if (parsedEvents.length === 0) {
+      alert('No calendar events found in this .ics source.');
+      return false;
+    }
+
+    const importedEventsDraft = [];
+    const nowTs = Date.now();
+
+    parsedEvents.forEach((ev, idx) => {
+      const summary = String(ev?.SUMMARY?.value || '').trim() || 'Imported Event';
+      const location = String(ev?.LOCATION?.value || '').trim() || null;
+      const startRaw = ev?.DTSTART?.value || '';
+      const endRaw = ev?.DTEND?.value || '';
+      const startParsed = parseIcsDateTime(startRaw);
+      const endParsed = parseIcsDateTime(endRaw);
+      if (!startParsed?.date || Number.isNaN(startParsed.date.getTime())) return;
+
+      const recurrence = mapIcsFreqToRecurrence(ev?.RRULE?.value || '');
+
+      const pushEvent = (dateObj, opts = {}) => {
+        const dateKey = getDateKey(dateObj);
+        const hours = dateObj.getHours();
+        const minutes = dateObj.getMinutes();
+        const hasTime = !opts.allDay;
+        const time = hasTime ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}` : null;
+        const newEvent = {
+          id: `imp_${nowTs}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
+          title: summary,
+          time,
+          date: dateKey,
+          category: 'other',
+          isPrivate: false,
+          isUrgent: false,
+          isAnnual: recurrence === 'annual',
+          recurrence,
+          annualMonth: recurrence === 'annual' ? (dateObj.getMonth() + 1) : null,
+          annualDay: recurrence === 'annual' ? dateObj.getDate() : null,
+          createdBy: currentUser || user?.email || user?.phone || 'User',
+          createdAt: new Date().toISOString(),
+          isMultiDay: Boolean(opts.multiDayId),
+          multiDayId: opts.multiDayId || null,
+          userId: user.id,
+          location,
+          reactions: {},
+          exceptions: [],
+        };
+        importedEventsDraft.push(newEvent);
+      };
+
+      const start = new Date(startParsed.date);
+      const isAllDay = Boolean(startParsed.isAllDay);
+      if (isAllDay && endParsed?.date) {
+        const inclusiveEnd = new Date(endParsed.date);
+        inclusiveEnd.setDate(inclusiveEnd.getDate() - 1); // ICS all-day DTEND is exclusive
+        if (!Number.isNaN(inclusiveEnd.getTime()) && inclusiveEnd >= start) {
+          const multiDayId = `impmd_${nowTs}_${idx}`;
+          for (let d = new Date(start); d <= inclusiveEnd; d.setDate(d.getDate() + 1)) {
+            pushEvent(new Date(d), { allDay: true, multiDayId });
+            if (importedEventsDraft.length > 5000) break;
+          }
+          return;
+        }
+      }
+
+      pushEvent(start, { allDay: isAllDay });
+    });
+
+    const { insertedCount, duplicateCount } = await persistImportedEvents(importedEventsDraft);
+    if (insertedCount === 0) {
+      if (duplicateCount > 0) {
+        alert('No new events were imported (all matched existing events).');
+        return true;
+      }
+      alert('No valid events were imported from this source.');
+      return false;
+    }
+
+    alert(
+      `Imported ${insertedCount} event${insertedCount === 1 ? '' : 's'} from ${sourceLabel}`
+      + (duplicateCount > 0 ? ` (${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'} skipped).` : '.')
+    );
+    return true;
+  };
+
+  const normalizeIcsUrl = (raw) => {
+    const trimmed = String(raw || '').trim();
+    if (!trimmed) return '';
+    if (/^webcal:\/\//i.test(trimmed)) return trimmed.replace(/^webcal:\/\//i, 'https://');
+    return trimmed;
+  };
+
+  const importIcsFromUrl = async (rawUrl) => {
+    if (!activeLayerId || !user?.id) return false;
+    const url = normalizeIcsUrl(rawUrl);
+    if (!url) {
+      alert('Paste your Apple calendar share link first.');
+      return false;
+    }
+    setIsImportingCalendar(true);
+    try {
+      if (!/^https?:\/\//i.test(url)) {
+        throw new Error('Use a valid http(s) or webcal calendar URL.');
+      }
+      const response = await fetch(url, { method: 'GET' });
+      if (!response.ok) {
+        throw new Error(`Could not fetch calendar URL (${response.status}).`);
+      }
+      const text = await response.text();
+      if (!/BEGIN:VCALENDAR/i.test(text)) {
+        throw new Error('That link did not return a valid .ics calendar feed.');
+      }
+      const success = await importIcsTextContent(text, 'Apple calendar URL');
+      return success;
+    } catch (err) {
+      console.error('ICS URL import failed:', err);
+      alert(
+        `Import from URL failed: ${err?.message || 'Unknown error'}\n\n`
+        + 'If this is an Apple share link, make sure it starts with webcal:// or https:// and is publicly accessible.'
+      );
+      return false;
+    } finally {
+      setIsImportingCalendar(false);
+    }
+  };
+
   const importIcsFile = async (file) => {
     if (!file || !activeLayerId || !user?.id) return;
     setIsImportingCalendar(true);
     try {
       const text = await file.text();
-      const parsedEvents = parseIcsText(text);
-      if (parsedEvents.length === 0) {
-        alert('No calendar events found in this .ics file.');
-        return;
-      }
-
-      const importedEventsDraft = [];
-      const nowTs = Date.now();
-
-      parsedEvents.forEach((ev, idx) => {
-        const summary = String(ev?.SUMMARY?.value || '').trim() || 'Imported Event';
-        const location = String(ev?.LOCATION?.value || '').trim() || null;
-        const startRaw = ev?.DTSTART?.value || '';
-        const endRaw = ev?.DTEND?.value || '';
-        const startParsed = parseIcsDateTime(startRaw);
-        const endParsed = parseIcsDateTime(endRaw);
-        if (!startParsed?.date || Number.isNaN(startParsed.date.getTime())) return;
-
-        const recurrence = mapIcsFreqToRecurrence(ev?.RRULE?.value || '');
-
-        const pushEvent = (dateObj, opts = {}) => {
-          const dateKey = getDateKey(dateObj);
-          const hours = dateObj.getHours();
-          const minutes = dateObj.getMinutes();
-          const hasTime = !opts.allDay;
-          const time = hasTime ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}` : null;
-          const newEvent = {
-            id: `imp_${nowTs}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
-            title: summary,
-            time,
-            date: dateKey,
-            category: 'other',
-            isPrivate: false,
-            isUrgent: false,
-            isAnnual: recurrence === 'annual',
-            recurrence,
-            annualMonth: recurrence === 'annual' ? (dateObj.getMonth() + 1) : null,
-            annualDay: recurrence === 'annual' ? dateObj.getDate() : null,
-            createdBy: currentUser || user?.email || user?.phone || 'User',
-            createdAt: new Date().toISOString(),
-            isMultiDay: Boolean(opts.multiDayId),
-            multiDayId: opts.multiDayId || null,
-            userId: user.id,
-            location,
-            reactions: {},
-            exceptions: [],
-          };
-          importedEventsDraft.push(newEvent);
-        };
-
-        const start = new Date(startParsed.date);
-        const isAllDay = Boolean(startParsed.isAllDay);
-        if (isAllDay && endParsed?.date) {
-          const inclusiveEnd = new Date(endParsed.date);
-          inclusiveEnd.setDate(inclusiveEnd.getDate() - 1); // ICS all-day DTEND is exclusive
-          if (!Number.isNaN(inclusiveEnd.getTime()) && inclusiveEnd >= start) {
-            const multiDayId = `impmd_${nowTs}_${idx}`;
-            for (let d = new Date(start); d <= inclusiveEnd; d.setDate(d.getDate() + 1)) {
-              pushEvent(new Date(d), { allDay: true, multiDayId });
-              if (importedEventsDraft.length > 5000) break;
-            }
-            return;
-          }
-        }
-
-        pushEvent(start, { allDay: isAllDay });
-      });
-
-      const { insertedCount, duplicateCount } = await persistImportedEvents(importedEventsDraft);
-      if (insertedCount === 0) {
-        if (duplicateCount > 0) {
-          alert('No new events were imported from this file (all matched existing events).');
-          return;
-        }
-        alert('No valid events were imported from this file.');
-        return;
-      }
-      alert(
-        `Imported ${insertedCount} event${insertedCount === 1 ? '' : 's'} from ${file.name}`
-        + (duplicateCount > 0 ? ` (${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'} skipped).` : '.')
-      );
+      await importIcsTextContent(text, file.name || '.ics file');
     } catch (err) {
       console.error('ICS import failed:', err);
       alert(`Import failed: ${err?.message || 'Unknown error'}`);
@@ -8970,18 +9018,37 @@ function App() {
   };
 
   const handleFirstImportPromptChoice = async (provider) => {
-    if (dontShowImportPromptChecked) {
-      localStorage.setItem(IMPORT_PROMPT_HIDE_KEY, 'true');
-      setHideImportPromptForever(true);
-    }
-    setImportPromptDismissedThisSession(true);
-    setDontShowImportPromptChecked(false);
+    const finalizePromptDismissal = () => {
+      if (dontShowImportPromptChecked) {
+        localStorage.setItem(IMPORT_PROMPT_HIDE_KEY, 'true');
+        setHideImportPromptForever(true);
+      }
+      setImportPromptDismissedThisSession(true);
+      setDontShowImportPromptChecked(false);
+      setShowFirstImportPrompt(false);
+    };
+
     if (provider === 'google') {
       await importGoogleCalendarEvents();
-    } else if (provider === 'apple') {
-      importCalendarInputRef.current?.click();
+      finalizePromptDismissal();
+      return;
     }
-    setShowFirstImportPrompt(false);
+
+    if (provider === 'apple') {
+      importCalendarInputRef.current?.click();
+      finalizePromptDismissal();
+      return;
+    }
+
+    if (provider === 'apple_url') {
+      const imported = await importIcsFromUrl(appleCalendarUrlInput);
+      if (!imported) return;
+      setAppleCalendarUrlInput('');
+      finalizePromptDismissal();
+      return;
+    }
+
+    finalizePromptDismissal();
   };
 
   useEffect(() => {
@@ -9764,7 +9831,7 @@ function App() {
             Would you like to import your Google or Apple calendar now?
           </p>
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            Google can connect directly. Apple uses an <code>.ics</code> export upload.
+            Google can connect directly. Apple can use a shared calendar URL or an <code>.ics</code> export upload.
           </p>
           <label className="mt-3 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
             <input
@@ -9788,8 +9855,37 @@ function App() {
               disabled={isImportingCalendar || !activeLayerId || !user?.id}
               className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
             >
-              Import Apple
+              Upload .ics File
             </button>
+            <div className="sm:col-span-2 mt-1 rounded-xl border border-gray-200 dark:border-gray-700 p-2 bg-gray-50/80 dark:bg-gray-900/30">
+              <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-300 mb-1">
+                Apple Share Link
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={appleCalendarUrlInput}
+                  onChange={(e) => setAppleCalendarUrlInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (!isImportingCalendar && activeLayerId && user?.id && appleCalendarUrlInput.trim()) {
+                        handleFirstImportPromptChoice('apple_url');
+                      }
+                    }
+                  }}
+                  placeholder="webcal://... or https://... .ics"
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+                <button
+                  onClick={() => handleFirstImportPromptChoice('apple_url')}
+                  disabled={isImportingCalendar || !activeLayerId || !user?.id || !appleCalendarUrlInput.trim()}
+                  className="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all whitespace-nowrap"
+                >
+                  Import URL
+                </button>
+              </div>
+            </div>
             <button
               onClick={() => handleFirstImportPromptChoice('later')}
               className="sm:col-span-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
