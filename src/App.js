@@ -3575,16 +3575,19 @@ function App() {
           });
 
           if (requestId !== saveRequestIdRef.current) return;
-          // Save own events via delete+reinsert
-          const { error: deleteError } = await supabase.from('events').delete().eq('user_id', saveUserId).eq('layer_id', saveLayerId);
-          if (deleteError) {
-            console.error('Error deleting existing events in Supabase:', deleteError);
-            return;
-          }
-          if (requestId !== saveRequestIdRef.current) return;
+          // Non-destructive save: upsert local owned events, never bulk-delete.
           if (myEvents.length > 0) {
-            const { error } = await supabase.from('events').insert(myEvents);
-            if (error) console.error('Error saving events to Supabase:', error);
+            for (let i = 0; i < myEvents.length; i += 250) {
+              if (requestId !== saveRequestIdRef.current) return;
+              const chunk = myEvents.slice(i, i + 250);
+              const { error } = await supabase
+                .from('events')
+                .upsert(chunk, { onConflict: 'id' });
+              if (error) {
+                console.error('Error upserting events to Supabase:', error);
+                break;
+              }
+            }
           }
 
           // Save shared event edits via targeted UPDATE on each row
@@ -8060,7 +8063,7 @@ function App() {
       }
 
       const authHeaders = { Authorization: `Bearer ${providerToken}` };
-      const calendarListResp = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader&showHidden=false', {
+      const calendarListResp = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=freeBusyReader&showHidden=true', {
         headers: authHeaders,
       });
 
@@ -8083,8 +8086,7 @@ function App() {
       const readableCalendars = calendars.filter((c) => {
         const calId = String(c?.id || '').trim();
         const accessRole = String(c?.accessRole || '').toLowerCase();
-        const selected = c?.selected !== false;
-        return Boolean(calId) && selected && ['owner', 'writer', 'reader', 'freebusyreader'].includes(accessRole);
+        return Boolean(calId) && ['owner', 'writer', 'reader', 'freebusyreader'].includes(accessRole);
       });
       if (readableCalendars.length === 0) {
         throw new Error('No readable Google calendars were found for this account.');
