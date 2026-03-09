@@ -157,6 +157,7 @@ function App() {
   const IMPORT_PROMPT_HIDE_KEY = 'calendar-hide-import-prompt';
   const GOOGLE_IMPORT_PENDING_KEY = 'calendar-google-import-pending';
   const GOOGLE_CALENDAR_READ_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+  const GOOGLE_CONTACTS_READ_SCOPE = 'https://www.googleapis.com/auth/contacts.readonly';
   const googleImportResumeRef = useRef(false);
   const [hideImportPromptForever, setHideImportPromptForever] = useState(() => localStorage.getItem(IMPORT_PROMPT_HIDE_KEY) === 'true');
   const [dontShowImportPromptChecked, setDontShowImportPromptChecked] = useState(false);
@@ -8034,7 +8035,7 @@ function App() {
       provider: 'google',
       options: {
         redirectTo: window.location.origin,
-        scopes: `openid email profile ${GOOGLE_CALENDAR_READ_SCOPE}`,
+        scopes: `openid email profile ${GOOGLE_CALENDAR_READ_SCOPE} ${GOOGLE_CONTACTS_READ_SCOPE}`,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
@@ -8046,6 +8047,44 @@ function App() {
       localStorage.removeItem(GOOGLE_IMPORT_PENDING_KEY);
       throw new Error(error.message || 'Could not connect Google Calendar.');
     }
+  };
+
+  const buildBirthdayTitle = (name) => {
+    const base = String(name || '').trim() || 'Contact';
+    return base.endsWith('s') ? `${base}' birthday` : `${base}'s birthday`;
+  };
+
+  const fetchGoogleContactBirthdays = async (providerToken) => {
+    const headers = { Authorization: `Bearer ${providerToken}` };
+    let pageToken = '';
+    const rows = [];
+    for (let page = 0; page < 8; page += 1) {
+      const params = new URLSearchParams({
+        personFields: 'names,birthdays',
+        pageSize: '1000',
+      });
+      if (pageToken) params.set('pageToken', pageToken);
+      const resp = await fetch(`https://people.googleapis.com/v1/people/me/connections?${params.toString()}`, {
+        headers,
+      });
+      // Missing People API enablement or scope should not break calendar import.
+      if (resp.status === 403 || resp.status === 404) return rows;
+      if (!resp.ok) {
+        let message = `Google Contacts request failed (${resp.status}).`;
+        try {
+          const errData = await resp.json();
+          const errMsg = String(errData?.error?.message || '').trim();
+          if (errMsg) message = errMsg;
+        } catch {}
+        throw new Error(message);
+      }
+      const json = await resp.json();
+      const people = Array.isArray(json?.connections) ? json.connections : [];
+      rows.push(...people);
+      pageToken = String(json?.nextPageToken || '').trim();
+      if (!pageToken || rows.length >= 7000) break;
+    }
+    return rows;
   };
 
   const importGoogleCalendarEvents = async ({ allowReconnect = true } = {}) => {
@@ -8153,7 +8192,6 @@ function App() {
 
       if (googleEvents.length === 0) {
         alert('No Google Calendar events were found to import.');
-        return;
       }
 
       const importedEventsDraft = [];
@@ -8218,6 +8256,47 @@ function App() {
 
         pushEvent(start, { allDay: isAllDay });
       });
+
+      // Fallback for contact birthdays that may not surface as calendar events.
+      try {
+        const peopleRows = await fetchGoogleContactBirthdays(providerToken);
+        peopleRows.forEach((person, idx) => {
+          const rawName = Array.isArray(person?.names) ? String(person.names[0]?.displayName || '').trim() : '';
+          const displayName = rawName || 'Contact';
+          const birthdays = Array.isArray(person?.birthdays) ? person.birthdays : [];
+          birthdays.forEach((entry, bIdx) => {
+            const d = entry?.date || {};
+            const month = Number(d?.month || 0);
+            const day = Number(d?.day || 0);
+            if (!Number.isInteger(month) || !Number.isInteger(day) || month < 1 || month > 12 || day < 1 || day > 31) return;
+            const eventDate = new Date(new Date().getFullYear(), month - 1, day);
+            if (Number.isNaN(eventDate.getTime())) return;
+            importedEventsDraft.push({
+              id: `gbday_${nowTs}_${idx}_${bIdx}_${Math.random().toString(36).slice(2, 7)}`,
+              title: buildBirthdayTitle(displayName),
+              time: null,
+              date: getDateKey(eventDate),
+              category: 'other',
+              isPrivate: false,
+              isUrgent: false,
+              isAnnual: true,
+              recurrence: 'annual',
+              annualMonth: month,
+              annualDay: day,
+              createdBy: createdByLabel,
+              createdAt: new Date().toISOString(),
+              isMultiDay: false,
+              multiDayId: null,
+              userId: user.id,
+              location: null,
+              reactions: {},
+              exceptions: [],
+            });
+          });
+        });
+      } catch (contactsErr) {
+        console.warn('Google Contacts birthday import skipped:', contactsErr?.message || contactsErr);
+      }
 
       const { insertedCount, duplicateCount } = await persistImportedEvents(importedEventsDraft);
       if (insertedCount === 0) {
