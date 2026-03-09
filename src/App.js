@@ -3658,6 +3658,34 @@ function App() {
       .toLowerCase()
       .replace(/^us\s*holiday[:\s-]*/i, '')
       .replace(/[^a-z0-9]/g, '');
+    const isAllDayLike = (event) => {
+      const time = String(event?.time || '').trim();
+      return !time || time === '00:00' || time === '00:00:00';
+    };
+    const isHolidayLikeTitle = (normalizedTitle) => {
+      const t = String(normalizedTitle || '');
+      if (!t) return false;
+      return (
+        t.includes('holiday')
+        || t.includes('newyear')
+        || t.includes('mlk')
+        || t.includes('presidentsday')
+        || t.includes('washingtonsbirthday')
+        || t.includes('memorialday')
+        || t.includes('juneteenth')
+        || t.includes('independenceday')
+        || t.includes('laborday')
+        || t.includes('columbusday')
+        || t.includes('veteransday')
+        || t.includes('thanksgiving')
+        || t.includes('christmas')
+        || t.includes('easter')
+        || t.includes('goodfriday')
+        || t.includes('taxday')
+        || t.includes('stpatrick')
+        || t.includes('cincodemayo')
+      );
+    };
 
     const month = date.getMonth() + 1;
     const day = date.getDate();
@@ -3703,12 +3731,9 @@ function App() {
     const dedupedDirectEvents = [];
     (directEvents || []).forEach((event) => {
       const normalizedTitle = normalizeHolidayTitle(event?.title);
-      const isHolidayLike = !event?.time && normalizedTitle && (
+      const isHolidayLike = normalizedTitle && isAllDayLike(event) && (
         holidayNames.has(normalizedTitle)
-        || normalizedTitle.includes('easter')
-        || normalizedTitle.includes('goodfriday')
-        || normalizedTitle.includes('taxday')
-        || normalizedTitle.includes('cincodemayo')
+        || isHolidayLikeTitle(normalizedTitle)
       );
       if (isHolidayLike) {
         if (seenHolidayTitles.has(normalizedTitle)) return;
@@ -3736,7 +3761,24 @@ function App() {
       });
     }
 
-    return [...holidayEvents, ...dedupedDirectEvents, ...virtualRecurrences].sort((a, b) => {
+    const mergedEvents = [...holidayEvents, ...dedupedDirectEvents, ...virtualRecurrences];
+    const seenHolidayKeys = new Set();
+    const dedupedMergedEvents = [];
+    mergedEvents.forEach((event) => {
+      const normalizedTitle = normalizeHolidayTitle(event?.title);
+      const isHolidayLike = normalizedTitle && isAllDayLike(event) && (
+        holidayNames.has(normalizedTitle)
+        || isHolidayLikeTitle(normalizedTitle)
+      );
+      if (isHolidayLike) {
+        const holidayKey = `${dateKey}|${normalizedTitle}`;
+        if (seenHolidayKeys.has(holidayKey)) return;
+        seenHolidayKeys.add(holidayKey);
+      }
+      dedupedMergedEvents.push(event);
+    });
+
+    return dedupedMergedEvents.sort((a, b) => {
       if (a.isHoliday) return -1;
       if (b.isHoliday) return 1;
       if (!a.time) return 1;
