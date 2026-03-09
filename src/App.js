@@ -275,6 +275,29 @@ function App() {
       localStorage.setItem(getDeletedPhotosLocalKey(subCalId), JSON.stringify(normalized));
     } catch {}
   };
+  const getLayerCategoriesLocalKey = (userId, layerId) => `layer-categories-${String(userId || '').trim()}-${String(layerId || '').trim()}`;
+  const readLocalLayerCategories = (userId, layerId) => {
+    try {
+      const uid = String(userId || '').trim();
+      const lid = String(layerId || '').trim();
+      if (!uid || !lid) return null;
+      const raw = localStorage.getItem(getLayerCategoriesLocalKey(uid, lid));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+  const writeLocalLayerCategories = (userId, layerId, categoriesObj) => {
+    try {
+      const uid = String(userId || '').trim();
+      const lid = String(layerId || '').trim();
+      if (!uid || !lid) return;
+      localStorage.setItem(getLayerCategoriesLocalKey(uid, lid), JSON.stringify(categoriesObj || {}));
+    } catch {}
+  };
   const normalizeIdentityKey = (value) => String(value || '').trim().toLowerCase();
   const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
   const isEmailValue = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim().toLowerCase());
@@ -3692,6 +3715,7 @@ function App() {
     try {
       setCategories(newCategories);
       if (!user?.id || !activeLayerId) return;
+      writeLocalLayerCategories(user.id, activeLayerId, newCategories);
       const categoriesArray = Object.entries(newCategories).map(([key, cat]) => ({
         key,
         label: cat.label,
@@ -3715,7 +3739,9 @@ function App() {
         deleteError = err;
       }
       if (deleteError && /column .*layer_id|schema cache|does not exist/i.test(String(deleteError?.message || ''))) {
-        await supabase.from('categories').delete().eq('user_id', user?.id);
+        // Backward-compatible fallback: keep per-layer categories local-only when DB lacks layer_id.
+        console.warn('categories.layer_id missing; saved categories per-layer in local storage only.');
+        return;
       } else if (deleteError) {
         console.error('Error deleting categories in Supabase:', deleteError);
       }
@@ -3728,9 +3754,8 @@ function App() {
         insertError = err;
       }
       if (insertError && /column .*layer_id|column .*calendar_id|schema cache|does not exist/i.test(String(insertError?.message || ''))) {
-        const legacyRows = categoriesArray.map(({ layer_id, calendar_id, ...row }) => row);
-        const legacyInsert = await supabase.from('categories').insert(legacyRows);
-        insertError = legacyInsert?.error || null;
+        console.warn('categories.layer_id missing; saved categories per-layer in local storage only.');
+        return;
       }
       const error = insertError;
       if (error) console.error('Error saving categories to Supabase:', error);
@@ -5282,8 +5307,10 @@ function App() {
           .eq('layer_id', selectedLayerId);
         setMyShares(mySharesData || []);
 
+        const localLayerCategories = readLocalLayerCategories(userId, selectedLayerId);
         let categoriesData = [];
         let categoriesError = null;
+        let categoriesLayerScopedUnavailable = false;
         try {
           const scoped = await supabase
             .from('categories')
@@ -5297,12 +5324,9 @@ function App() {
         }
 
         if (categoriesError && /column .*layer_id|schema cache|does not exist/i.test(String(categoriesError?.message || ''))) {
-          const legacy = await supabase
-            .from('categories')
-            .select('*')
-            .eq('user_id', userId);
-          categoriesData = legacy?.data || [];
-          categoriesError = legacy?.error || null;
+          categoriesLayerScopedUnavailable = true;
+          categoriesData = [];
+          categoriesError = null;
         }
         if (categoriesError) {
           console.error('Error loading categories:', categoriesError);
@@ -5320,8 +5344,14 @@ function App() {
             };
           });
           setCategories({ ...DEFAULT_CATEGORIES, ...categoriesObj });
+          writeLocalLayerCategories(userId, selectedLayerId, categoriesObj);
+        } else if (localLayerCategories && typeof localLayerCategories === 'object') {
+          setCategories({ ...DEFAULT_CATEGORIES, ...localLayerCategories });
         } else {
           setCategories(DEFAULT_CATEGORIES);
+          if (categoriesLayerScopedUnavailable) {
+            console.warn('categories.layer_id missing; using default per-layer categories until saved locally.');
+          }
         }
 
         const activeLayerRow = loadedLayers.find(layer => String(layer.id) === String(selectedLayerId));
