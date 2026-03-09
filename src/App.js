@@ -2223,6 +2223,7 @@ function App() {
   const [myShares, setMyShares] = useState([]); // people I've shared with
   const [showSharePanel, setShowSharePanel] = useState(false);
   const [showListPanel, setShowListPanel] = useState(false);
+  const [listPanelAttention, setListPanelAttention] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [sharedListGroups, setSharedListGroups] = useState([]);
   const [sharedListItems, setSharedListItems] = useState([]);
@@ -2273,6 +2274,7 @@ function App() {
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
   const [showWeather, setShowWeather] = useState(true);
   const calendarChatScrollRef = useRef(null);
+  const listPanelRef = useRef(null);
   const CHAT_POLL_PREFIX = '[poll-v1]';
   const CHAT_POPUP_PREFIX = '[popup-v1]';
   const CHAT_DELETED_PREFIX = '[deleted-v1]';
@@ -7634,6 +7636,15 @@ function App() {
       setShowListPanel(false);
       setShowNotificationSettings(false);
     }
+    const revealListPanel = () => {
+      setListPanelAttention(true);
+      setTimeout(() => setListPanelAttention(false), 1300);
+      setTimeout(() => {
+        try {
+          listPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch {}
+      }, 120);
+    };
 
     if (key.startsWith('events:')) {
       const parts = key.split(':');
@@ -7675,6 +7686,7 @@ function App() {
       setShowListPanel(true);
       setShowChatPanel(false);
       setShowNotificationSettings(false);
+      revealListPanel();
       if ((itemId || listIdFromTarget) && (keyLayerId || activeLayerId)) {
         let listId = String(listIdFromTarget || (sharedListItems || []).find((row) => String(row?.id || '') === itemId)?.list_id || '').trim();
         if (!listId) {
@@ -7775,6 +7787,7 @@ function App() {
       setShowListPanel(true);
       setShowChatPanel(false);
       setShowNotificationSettings(false);
+      revealListPanel();
       const listId = String(target?.listId || '').trim();
       if (listId) setSelectedSharedListId(listId);
       return;
@@ -7789,6 +7802,7 @@ function App() {
       setShowListPanel(true);
       setShowChatPanel(false);
       setShowNotificationSettings(false);
+      revealListPanel();
       const listId = String(target?.listId || '').trim();
       if (listId) setSelectedSharedListId(listId);
       return;
@@ -11533,7 +11547,12 @@ function App() {
         )}
 
         {showListPanel && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border border-purple-100 dark:border-gray-700">
+          <div
+            ref={listPanelRef}
+            className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border dark:border-gray-700 transition-all ${
+              listPanelAttention ? 'border-purple-400 ring-2 ring-purple-300 dark:ring-purple-700' : 'border-purple-100'
+            }`}
+          >
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
                 <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Shared Lists</h3>
