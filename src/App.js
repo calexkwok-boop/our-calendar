@@ -9839,13 +9839,10 @@ function App() {
     )}
     {showFirstImportPrompt && (
       <div className="fixed inset-0 z-[90] bg-black/40 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Import your calendar?</h3>
+        <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Import Calendar</h3>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-            Would you like to import your Google or Apple calendar now?
-          </p>
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            Google can connect directly. Apple can use a shared calendar URL or an <code>.ics</code> export upload.
+            Choose Google or Apple, then import events into this calendar layer.
           </p>
           <label className="mt-3 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
             <input
@@ -9869,10 +9866,14 @@ function App() {
               disabled={isImportingCalendar || !activeLayerId || !user?.id}
               className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
             >
-              Upload .ics File
+              Import Apple Calendar (.ics)
             </button>
-            <div className="sm:col-span-2 mt-1 rounded-xl border border-gray-200 dark:border-gray-700 p-2 bg-gray-50/80 dark:bg-gray-900/30">
-              <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-300 mb-1">
+            <div className="sm:col-span-2 mt-1 rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-gray-50/80 dark:bg-gray-900/30">
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Apple Import</h4>
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                Paste your Apple share link, or upload an exported <code>.ics</code> file.
+              </p>
+              <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-300 mt-2 mb-1">
                 Apple Share Link
               </label>
               <div className="flex gap-2">
@@ -9898,6 +9899,15 @@ function App() {
                 >
                   Import URL
                 </button>
+              </div>
+              <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/60 p-2.5">
+                <div className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">How to get Apple link / file</div>
+                <ol className="mt-1 text-[11px] text-gray-600 dark:text-gray-300 space-y-1 list-decimal pl-4">
+                  <li>Open Calendar on iPhone/Mac and find the calendar you want.</li>
+                  <li>Tap the info icon, then Share Calendar.</li>
+                  <li>Turn on Public Calendar and copy the link (webcal://...).</li>
+                  <li>If link import fails, export or download a .ics file and use Upload.</li>
+                </ol>
               </div>
             </div>
             <button
