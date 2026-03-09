@@ -3536,16 +3536,16 @@ function App() {
 
   // Weather code ? display object with emoji/label and a color
   const weatherDisplay = (code) => {
-    if (code === 0) return { icon: '??', color: 'text-yellow-500' };
-    if (code <= 2) return { icon: '?', color: 'text-yellow-400' };
-    if (code <= 3) return { icon: '??', color: 'text-gray-400' };
+    if (code === 0) return { icon: '☀️', color: 'text-yellow-500' };
+    if (code <= 2) return { icon: '⛅', color: 'text-yellow-400' };
+    if (code <= 3) return { icon: '☁️', color: 'text-gray-400' };
     if (code <= 49) return { icon: 'FOG', color: 'text-gray-400' };
-    if (code <= 59) return { icon: '???', color: 'text-blue-400' };
-    if (code <= 67) return { icon: '???', color: 'text-blue-500' };
-    if (code <= 77) return { icon: '???', color: 'text-blue-200' };
-    if (code <= 84) return { icon: '???', color: 'text-blue-500' };
-    if (code <= 99) return { icon: '??', color: 'text-purple-500' };
-    return { icon: '??', color: 'text-purple-500' };
+    if (code <= 59) return { icon: '🌦️', color: 'text-blue-400' };
+    if (code <= 67) return { icon: '🌧️', color: 'text-blue-500' };
+    if (code <= 77) return { icon: '🌨️', color: 'text-blue-200' };
+    if (code <= 84) return { icon: '🌧️', color: 'text-blue-500' };
+    if (code <= 99) return { icon: '⛈️', color: 'text-purple-500' };
+    return { icon: '⛈️', color: 'text-purple-500' };
   };
 
   const fetchWeather = async (lat, lon) => {
@@ -9300,7 +9300,7 @@ function App() {
             {pendingEvent.isMultiDay ? "Multi-day events don't need a time" : 'Enter a time or skip to add without time'}
             {recurrence !== 'once' && (
               <span className="ml-2 px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
-                {recurrence === 'weekly' ? '?? Weekly' : recurrence === 'monthly' ? '?? Monthly' : '?? Annual'}
+                {recurrence === 'weekly' ? '🔁 Weekly' : recurrence === 'monthly' ? '🗓️ Monthly' : '🎂 Annual'}
               </span>
             )}
           </p>
@@ -9611,7 +9611,7 @@ function App() {
                 className={`p-2 rounded-xl transition-all duration-200 text-sm ${showWeather ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
                 title={showWeather ? 'Hide weather' : 'Show weather'}
               >
-                ???
+                🌤️
               </button>
               <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
@@ -9918,7 +9918,7 @@ function App() {
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${onlyNotifyUrgent ? 'translate-x-6' : 'translate-x-1'}`} />
                   </button>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Only send notifications for events marked as urgent ??</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Only send notifications for events marked as urgent 🚨</p>
               </div>
             </div>
           </div>
@@ -10064,7 +10064,7 @@ function App() {
                   <>
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">?? Live Location</h4>
+                        <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">📍 Live Location</h4>
                         <p className="text-xs text-emerald-600/90 dark:text-emerald-400/90">
                           {hasCollaborators
                             ? `${liveLocations.length} member${liveLocations.length === 1 ? '' : 's'} sharing now in this calendar.`
@@ -10095,7 +10095,7 @@ function App() {
                             rel="noopener noreferrer"
                             className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800 hover:border-emerald-400"
                           >
-                            <span className="text-gray-700 dark:text-gray-200 truncate">?? {loc.name || loc.email || loc.userId}</span>
+                            <span className="text-gray-700 dark:text-gray-200 truncate">📍 {loc.name || loc.email || loc.userId}</span>
                             <span className="text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
                           </a>
                         ))}
@@ -10287,13 +10287,13 @@ function App() {
                             <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold mb-1 ${mine ? 'bg-indigo-400/40 text-indigo-100' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'}`}>
                               Pop-up Event
                             </div>
-                            <div className="font-semibold">?? {popupInvite.title}</div>
+                            <div className="font-semibold">📌 {popupInvite.title}</div>
                             <div className={`text-[11px] mt-0.5 ${mine ? 'text-indigo-100/90' : 'text-gray-600 dark:text-gray-300'}`}>
                               {formatDateKeyMMDDYYYY(popupInvite.dateKey)}{popupInvite.time ? ` at ${formatTime(popupInvite.time)}` : ''}
                             </div>
                             {popupInvite.location && (
                               <div className={`text-[11px] mt-0.5 ${mine ? 'text-indigo-100/90' : 'text-gray-600 dark:text-gray-300'}`}>
-                                ?? {popupInvite.location}
+                                📍 {popupInvite.location}
                               </div>
                             )}
                             {(() => {
@@ -10457,14 +10457,14 @@ function App() {
                         onClick={() => setPollComposerStep('when')}
                         className="w-full px-3 py-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
                       >
-                        <div className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">???? Create an event poll</div>
+                        <div className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">🗳️ Create an event poll</div>
                         <div className="text-xs text-indigo-600/90 dark:text-indigo-400/90 mt-0.5">Ask members to vote, then auto-add the winner.</div>
                       </button>
                       <button
                         onClick={() => setPollComposerStep('popup')}
                         className="w-full px-3 py-3 rounded-xl border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-left hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors"
                       >
-                        <div className="text-sm font-semibold text-rose-700 dark:text-rose-300">?? Create a pop-up event</div>
+                        <div className="text-sm font-semibold text-rose-700 dark:text-rose-300">🎟️ Create a pop-up event</div>
                         <div className="text-xs text-rose-700/90 dark:text-rose-300/90 mt-0.5">First come, first served with max headcount.</div>
                       </button>
                     </div>
@@ -10503,7 +10503,7 @@ function App() {
                       <PlacesAutocomplete
                         value={popupDraftLocation}
                         onSelect={(val) => setPopupDraftLocation(val || '')}
-                        placeholder="?? Location (optional)"
+                        placeholder="📍 Location (optional)"
                         className="w-full px-3 py-2 text-sm border border-rose-200 dark:border-rose-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
                       />
                       <div className="flex items-center gap-2">
@@ -11073,14 +11073,14 @@ function App() {
                           className="relative z-10 w-full flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 hover:shadow-md transition-all text-left cursor-pointer"
                           style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                         >
-                          <span className="text-xl">???</span>
+                          <span className="text-xl">🧳</span>
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-sm text-green-800 dark:text-green-300">{sc.name}</div>
                             <div className="text-xs text-green-600 dark:text-green-400">
                               Happening now · {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </div>
                           </div>
-                          <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open ?</span>
+                          <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open →</span>
                         </div>
                       </div>
                     );
@@ -11096,7 +11096,7 @@ function App() {
                   className="absolute top-2 right-2 text-purple-400 hover:text-purple-600 dark:text-purple-500 dark:hover:text-purple-300 leading-none"
                 >?</button>
                 <p className="text-sm text-purple-700 dark:text-purple-300 text-center pr-4">
-                  ?? <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
+                  💡 <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
                 </p>
                 <label className="flex items-center justify-center gap-1.5 mt-2 cursor-pointer">
                   <input
@@ -11204,7 +11204,7 @@ function App() {
                         <div className={`text-xs sm:text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
                           {date ? date.getDate() : ''}
                           {hasHoliday && !isSelected && !isInSelection && (
-                            <span className="absolute top-0.5 right-0.5 text-xs">????</span>
+                            <span className="absolute top-0.5 right-0.5 text-xs">🎉</span>
                           )}
                         </div>
                         {weatherData && !isSelected && !isInSelection && (
@@ -11277,7 +11277,7 @@ function App() {
                       {/* Date number */}
                       <div className={`text-xs font-bold mb-1 ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-200' : 'text-gray-700 dark:text-gray-200'}`}>
                         {date.getDate()}
-                        {hasHoliday && <span className="ml-1">????</span>}
+                        {hasHoliday && <span className="ml-1">🎉</span>}
                       </div>
 
                       {/* Weather */}
@@ -11294,7 +11294,7 @@ function App() {
                           const cat = categories[event.category || 'other'] || categories.other;
                           if (event.isHoliday) return (
                             <div key={event.id} className="text-xs px-1.5 py-1 rounded-md bg-red-500 text-white truncate font-medium shadow-sm">
-                              ???? {event.title}
+                              🎉 {event.title}
                             </div>
                           );
                           return (
@@ -11306,7 +11306,7 @@ function App() {
                               `}
                             >
                               {event.time && <span className="opacity-80 mr-1">{formatTime(event.time)}</span>}
-                              {event.isPrivate && '?? '}
+                              {event.isPrivate && '🔒 '}
                               {event.title}
                             </div>
                           );
@@ -11408,7 +11408,7 @@ function App() {
                       onClick={() => setShowSubCalendarModal(true)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-xs rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
                     >
-                      ??? Create Sub-Calendar
+                      🗓️ Create Sub-Calendar
                     </button>
                   </div>
                 </div>
@@ -11456,7 +11456,7 @@ function App() {
                 }`}
               >
                 <AlertTriangle className="w-4 h-4" />
-                {isUrgent ? '?? Urgent Event' : 'Normal Event'}
+                {isUrgent ? '🚨 Urgent Event' : 'Normal Event'}
               </button>
               <div className="w-full">
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
@@ -11465,10 +11465,10 @@ function App() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: 'once', label: '??? One-time' },
-                    { value: 'weekly', label: '?? Weekly' },
-                    { value: 'monthly', label: '?? Monthly' },
-                    { value: 'annual', label: '?? Annual' },
+                    { value: 'once', label: '🕐 One-time' },
+                    { value: 'weekly', label: '🔁 Weekly' },
+                    { value: 'monthly', label: '🗓️ Monthly' },
+                    { value: 'annual', label: '🎂 Annual' },
                   ].map(opt => (
                     <button
                       key={opt.value}
@@ -11550,7 +11550,7 @@ function App() {
                       <div key={event.id} className="bg-red-50 dark:bg-red-900/30 rounded-xl p-3 border-2 border-red-200 dark:border-red-700 transition-all duration-200 hover:shadow-md">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">????</span>
+                            <span className="text-lg">🎉</span>
                             <div>
                               <div className="text-gray-800 dark:text-gray-200 font-medium">{event.title}</div>
                               {event.fullName !== event.title && (
@@ -11606,7 +11606,7 @@ function App() {
                                 handleUpdateEventField(event.date, event.id, { location: val });
                               }
                             }}
-                            placeholder="?? Add location (optional)"
+                            placeholder="📍 Add location (optional)"
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
                           <select
@@ -11653,7 +11653,7 @@ function App() {
                               })}
                               className="rounded"
                             />
-                            ?? Annual (repeats every year)
+                            🎂 Annual (repeats every year)
                           </label>
                           <button
                             onClick={() => setEditingEvent(null)}
@@ -11698,7 +11698,7 @@ function App() {
                                 className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 mb-1"
                                 onClick={(e) => handleLocationLinkClick(e, event.location)}
                               >
-                                ?? {event.location}
+                                📍 {event.location}
                               </button>
                             )}
                             {event.createdBy && (
@@ -11988,12 +11988,12 @@ function App() {
                           <div key={`upcoming-popup-${event.id}`} className="rounded-xl p-3 ring-1 ring-inset ring-rose-200 dark:ring-rose-700 bg-rose-50/70 dark:bg-rose-900/20">
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
-                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">?? {event.title}</div>
+                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">📌 {event.title}</div>
                                 <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
                                   {formatDateKeyMMDDYYYY(event.date || event.dateKey)}{event.time ? ` at ${formatTime(event.time)}` : ''}
                                 </div>
                                 {event.location && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">?? {event.location}</div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">📍 {event.location}</div>
                                 )}
                                 <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
                                   {joinedCount} joined · {maxLabel}
@@ -12316,14 +12316,14 @@ function App() {
               onClick={() => setSubCalWeatherExpanded(true)}
               className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-full text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-all"
             >
-              ??? {subCalWeatherLocation}
-              <span className="text-blue-400 text-xs">??</span>
+              📍 {subCalWeatherLocation}
+              <span className="text-blue-400 text-xs">✏️</span>
             </button>
           ) : (
             // Expanded input with autocomplete
             <div className="flex-1 relative">
               <div className="flex items-center gap-2">
-                <span className="text-sm shrink-0">???</span>
+                <span className="text-sm shrink-0">🌤️</span>
                 <input
                   autoFocus={subCalWeatherExpanded}
                   type="text"
@@ -12360,7 +12360,7 @@ function App() {
             <button
               onClick={() => setSubCalWeatherExpanded(true)}
               className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-500 flex items-center gap-1"
-            >??? Add trip weather</button>
+            >🌤️ Add trip weather</button>
           )}
         </div>
 
@@ -12371,7 +12371,7 @@ function App() {
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full text-xs flex items-center gap-1">
-              ?? {currentUser} (you)
+              👤 {currentUser} (you)
             </span>
             {subCalMembers.map(m => (
               <span key={m.identity || m.email || m.phone} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
@@ -12407,7 +12407,7 @@ function App() {
             <div className="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">?? Live Location</div>
+                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">📍 Live Location</div>
                   <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
                     {sharingWindowOpen ? `${liveLocations.length} member${liveLocations.length === 1 ? '' : 's'} sharing now` : 'Available only during trip dates'}
                   </div>
@@ -12516,18 +12516,18 @@ function App() {
           <button
             onClick={() => setSubCalTab('itinerary')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'itinerary' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-          >??? Itinerary</button>
+          >🗺️ Itinerary</button>
           <button
             onClick={() => setSubCalTab('photos')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 relative ${subCalTab === 'photos' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >
-            ?? Photos
+            📸 Photos
             {tripPhotos.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{tripPhotos.length}</span>}
           </button>
           <button
             onClick={() => setSubCalTab('expenses')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'expenses' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-          >?? Expenses</button>
+          >💰 Expenses</button>
         </div>
 
         <input
@@ -12573,7 +12573,7 @@ function App() {
 
               {/* Notes / Reminders */}
               <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-xl border border-yellow-300 dark:border-yellow-700">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">?? Reminders &amp; Notes</h4>
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📝 Reminders &amp; Notes</h4>
                 <div className="space-y-1.5 mb-2">
                   {subCalNotes.length === 0 && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 italic">No reminders yet</p>
@@ -12759,7 +12759,7 @@ function App() {
                                 <PlacesAutocomplete
                                   value={event.location || ''}
                                   onSelect={(val) => updateSubCalEvent(event.id, { location: val })}
-                                  placeholder="?? Add location (optional)"
+                                  placeholder="📍 Add location (optional)"
                                   className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-sm"
                                 />
                                 <button onClick={() => setSubCalEditingEvent(null)} className="w-full py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg text-sm font-medium">Done</button>
@@ -12780,7 +12780,7 @@ function App() {
                                       type="button"
                                       className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 mt-0.5"
                                       onClick={(e) => handleLocationLinkClick(e, event.location)}
-                                    >?? {event.location}</button>
+                                    >📍 {event.location}</button>
                                   )}
                                   {getEventPhotos(event.id).length > 0 && (
                                     <button
@@ -12825,7 +12825,7 @@ function App() {
                                     onClick={() => { setPhotoEventId(event.id); setPhotoDate(dk); photoInputRef.current?.click(); }}
                                     className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-lg"
                                     title="Add photo"
-                                  >??</button>
+                                  >📸</button>
                                   <button onClick={() => setSubCalEditingEvent(event.id)} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-lg"><Edit2 className="w-3.5 h-3.5 text-gray-500" /></button>
                                   <button onClick={() => deleteSubCalEvent(event.id, dk)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
                                 </div>
@@ -12863,7 +12863,7 @@ function App() {
                             <PlacesAutocomplete
                               value={subCalNewEventForm.location}
                               onSelect={val => setSubCalNewEventForm(f => ({ ...f, location: val || '' }))}
-                              placeholder="?? Add location (optional)"
+                              placeholder="📍 Add location (optional)"
                               className="w-full text-xs px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
                             />
                             <div className="flex gap-2">
@@ -12973,7 +12973,7 @@ function App() {
                               rel="noopener noreferrer"
                               className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 hover:border-green-300"
                             >
-                              <span className="text-gray-700 dark:text-gray-200 truncate">?? {loc.name || loc.email || loc.userId}</span>
+                              <span className="text-gray-700 dark:text-gray-200 truncate">📍 {loc.name || loc.email || loc.userId}</span>
                               <span className="text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
                             </a>
                           ))}
@@ -13052,7 +13052,7 @@ function App() {
                   onClick={() => toggleExpensePanel('splitter')}
                   className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">?? Expense Splitter</h4>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">💸 Expense Splitter</h4>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.splitter ? '-' : '+'}</span>
                 </button>
                 {expensePanels.splitter ? (
@@ -13120,7 +13120,7 @@ function App() {
                   onClick={() => toggleExpensePanel('summary')}
                   className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">?? Split Summary</h4>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">📊 Split Summary</h4>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.summary ? '-' : '+'}</span>
                 </button>
                 {expensePanels.summary ? (
@@ -13150,7 +13150,7 @@ function App() {
                   onClick={() => toggleExpensePanel('handles')}
                   className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">?? Payment Handles</h4>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">💳 Payment Handles</h4>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.handles ? '-' : '+'}</span>
                 </button>
                 {expensePanels.handles ? (
@@ -13209,7 +13209,7 @@ function App() {
                   onClick={() => toggleExpensePanel('settlements')}
                   className="w-full flex items-center justify-between mb-2 text-left"
                 >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">?? Who Pays Whom</h4>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">🤝 Who Pays Whom</h4>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.settlements ? '-' : '+'}</span>
                 </button>
                 {expensePanels.settlements ? (
@@ -13276,7 +13276,7 @@ function App() {
                 disabled={uploadingPhoto || isPhotoSelectionMode || photoDeleteMode}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl text-sm font-medium shadow hover:shadow-lg transition-all disabled:opacity-50"
               >
-                {uploadingPhoto ? '? Uploading…' : '?? Add Photos'}
+                {uploadingPhoto ? '⏳ Uploading…' : '📸 Add Photos'}
               </button>
               {isPhotoSelectionMode ? (
                 <>
@@ -13488,7 +13488,7 @@ function App() {
                             <div className="px-3 py-2 flex items-start justify-between gap-2">
                               <div>
                                 {photo.caption && <p className="text-sm text-gray-800 dark:text-gray-200 mb-0.5">{photo.caption}</p>}
-                                <p className="text-xs text-gray-400 dark:text-gray-500">?? {photo.uploaded_by}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500">👤 {photo.uploaded_by}</p>
                               </div>
                               {!isPhotoSelectionMode && photoDeleteMode && <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Delete mode</span>}
                             </div>
@@ -13638,7 +13638,7 @@ function App() {
             />
             <div className="mt-3 text-center" onClick={e => e.stopPropagation()}>
               {lightboxPhoto.caption && <p className="text-white text-sm mb-1">{lightboxPhoto.caption}</p>}
-              <p className="text-gray-400 text-xs">?? {lightboxPhoto.uploaded_by} · {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
+              <p className="text-gray-400 text-xs">👤 {lightboxPhoto.uploaded_by} · {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
             </div>
           </div>
         )}
@@ -13764,7 +13764,7 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
             if (val !== (value || null)) onSelect(val);
           }, 200);
         }}
-        placeholder={placeholder || '?? Add location (optional)'}
+        placeholder={placeholder || '📍 Add location (optional)'}
         className={className}
       />
       {showSuggestions && suggestions.length > 0 && (
@@ -13775,7 +13775,7 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
               onMouseDown={(e) => { e.preventDefault(); handleSelect(s); }}
               className="w-full text-left px-3 py-2 text-xs hover:bg-purple-50 dark:hover:bg-purple-900/30 border-b border-gray-100 dark:border-gray-700 last:border-0"
             >
-              <span className="text-gray-400 mr-1">??</span>
+              <span className="text-gray-400 mr-1">📍</span>
               <span className="font-medium text-gray-800 dark:text-white">{s.structured_formatting?.main_text}</span>
               {s.structured_formatting?.secondary_text && (
                 <span className="text-gray-400 ml-1">{s.structured_formatting.secondary_text}</span>
