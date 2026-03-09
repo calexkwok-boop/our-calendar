@@ -275,13 +275,17 @@ function App() {
       localStorage.setItem(getDeletedPhotosLocalKey(subCalId), JSON.stringify(normalized));
     } catch {}
   };
-  const getLayerCategoriesLocalKey = (userId, layerId) => `layer-categories-${String(userId || '').trim()}-${String(layerId || '').trim()}`;
+  const getLayerCategoriesLocalKey = (_userId, layerId) => `layer-categories-${String(layerId || '').trim()}`;
   const readLocalLayerCategories = (userId, layerId) => {
     try {
-      const uid = String(userId || '').trim();
       const lid = String(layerId || '').trim();
-      if (!uid || !lid) return null;
-      const raw = localStorage.getItem(getLayerCategoriesLocalKey(uid, lid));
+      if (!lid) return null;
+      let raw = localStorage.getItem(getLayerCategoriesLocalKey('', lid));
+      if (!raw) {
+        // Legacy fallback for old key format.
+        const uid = String(userId || '').trim();
+        if (uid) raw = localStorage.getItem(`layer-categories-${uid}-${lid}`);
+      }
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
@@ -292,10 +296,12 @@ function App() {
   };
   const writeLocalLayerCategories = (userId, layerId, categoriesObj) => {
     try {
-      const uid = String(userId || '').trim();
       const lid = String(layerId || '').trim();
-      if (!uid || !lid) return;
-      localStorage.setItem(getLayerCategoriesLocalKey(uid, lid), JSON.stringify(categoriesObj || {}));
+      if (!lid) return;
+      const payload = JSON.stringify(categoriesObj || {});
+      localStorage.setItem(getLayerCategoriesLocalKey('', lid), payload);
+      const uid = String(userId || '').trim();
+      if (uid) localStorage.setItem(`layer-categories-${uid}-${lid}`, payload); // compatibility
     } catch {}
   };
   const normalizeIdentityKey = (value) => String(value || '').trim().toLowerCase();
@@ -3711,10 +3717,77 @@ function App() {
     }
   };
 
+  const loadCategoriesForLayer = async (layerId, viewerUserId, layerOwnerId) => {
+    const normalizedLayerId = String(layerId || '').trim();
+    const normalizedViewerId = String(viewerUserId || '').trim();
+    const normalizedOwnerId = String(layerOwnerId || normalizedViewerId || '').trim();
+    if (!normalizedLayerId || !normalizedViewerId) {
+      setCategories(DEFAULT_CATEGORIES);
+      return;
+    }
+
+    const localLayerCategories = readLocalLayerCategories(normalizedViewerId, normalizedLayerId);
+    let categoriesData = [];
+    let categoriesError = null;
+    let categoriesLayerScopedUnavailable = false;
+
+    try {
+      const scoped = await supabase
+        .from('categories')
+        .select('*')
+        .eq('layer_id', normalizedLayerId)
+        .eq('user_id', normalizedOwnerId);
+      categoriesData = scoped?.data || [];
+      categoriesError = scoped?.error || null;
+    } catch (err) {
+      categoriesError = err;
+    }
+
+    if (categoriesError && /column .*layer_id|schema cache|does not exist/i.test(String(categoriesError?.message || ''))) {
+      categoriesLayerScopedUnavailable = true;
+      const legacy = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', normalizedOwnerId);
+      categoriesData = legacy?.data || [];
+      categoriesError = legacy?.error || null;
+    }
+    if (categoriesError) {
+      console.error('Error loading categories:', categoriesError);
+    }
+
+    if (categoriesData && categoriesData.length > 0) {
+      const categoriesObj = {};
+      categoriesData.forEach(cat => {
+        categoriesObj[cat.key] = {
+          label: cat.label,
+          color: cat.color,
+          lightBg: cat.light_bg,
+          border: cat.border,
+          text: cat.text
+        };
+      });
+      setCategories({ ...DEFAULT_CATEGORIES, ...categoriesObj });
+      writeLocalLayerCategories(normalizedViewerId, normalizedLayerId, categoriesObj);
+      return;
+    }
+
+    if (localLayerCategories && typeof localLayerCategories === 'object') {
+      setCategories({ ...DEFAULT_CATEGORIES, ...localLayerCategories });
+      return;
+    }
+
+    setCategories(DEFAULT_CATEGORIES);
+    if (categoriesLayerScopedUnavailable) {
+      console.warn('categories.layer_id missing; using default per-layer categories until saved locally.');
+    }
+  };
+
   const saveCategories = async (newCategories) => {
     try {
       setCategories(newCategories);
       if (!user?.id || !activeLayerId) return;
+      const categoryOwnerId = String(activeLayerOwnerId || user.id || '').trim();
       writeLocalLayerCategories(user.id, activeLayerId, newCategories);
       const categoriesArray = Object.entries(newCategories).map(([key, cat]) => ({
         key,
@@ -3723,7 +3796,7 @@ function App() {
         light_bg: cat.lightBg,
         border: cat.border,
         text: cat.text,
-        user_id: user?.id,
+        user_id: categoryOwnerId,
         layer_id: activeLayerId,
         calendar_id: activeLayerId,
       }));
@@ -3732,7 +3805,7 @@ function App() {
         const del = await supabase
           .from('categories')
           .delete()
-          .eq('user_id', user?.id)
+          .eq('user_id', categoryOwnerId)
           .eq('layer_id', activeLayerId);
         deleteError = del?.error || null;
       } catch (err) {
@@ -5307,54 +5380,8 @@ function App() {
           .eq('layer_id', selectedLayerId);
         setMyShares(mySharesData || []);
 
-        const localLayerCategories = readLocalLayerCategories(userId, selectedLayerId);
-        let categoriesData = [];
-        let categoriesError = null;
-        let categoriesLayerScopedUnavailable = false;
-        try {
-          const scoped = await supabase
-            .from('categories')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('layer_id', selectedLayerId);
-          categoriesData = scoped?.data || [];
-          categoriesError = scoped?.error || null;
-        } catch (err) {
-          categoriesError = err;
-        }
-
-        if (categoriesError && /column .*layer_id|schema cache|does not exist/i.test(String(categoriesError?.message || ''))) {
-          categoriesLayerScopedUnavailable = true;
-          categoriesData = [];
-          categoriesError = null;
-        }
-        if (categoriesError) {
-          console.error('Error loading categories:', categoriesError);
-        }
-
-        if (categoriesData && categoriesData.length > 0) {
-          const categoriesObj = {};
-          categoriesData.forEach(cat => {
-            categoriesObj[cat.key] = {
-              label: cat.label,
-              color: cat.color,
-              lightBg: cat.light_bg,
-              border: cat.border,
-              text: cat.text
-            };
-          });
-          setCategories({ ...DEFAULT_CATEGORIES, ...categoriesObj });
-          writeLocalLayerCategories(userId, selectedLayerId, categoriesObj);
-        } else if (localLayerCategories && typeof localLayerCategories === 'object') {
-          setCategories({ ...DEFAULT_CATEGORIES, ...localLayerCategories });
-        } else {
-          setCategories(DEFAULT_CATEGORIES);
-          if (categoriesLayerScopedUnavailable) {
-            console.warn('categories.layer_id missing; using default per-layer categories until saved locally.');
-          }
-        }
-
         const activeLayerRow = loadedLayers.find(layer => String(layer.id) === String(selectedLayerId));
+        await loadCategoriesForLayer(selectedLayerId, userId, activeLayerRow?.owner_id || userId);
         setCalendarTitle(activeLayerRow?.name || 'Our Calendar');
 
         const userResult = await window.storage.get('calendar-user', false);
@@ -5540,6 +5567,24 @@ function App() {
     }
     loadPopupEventData();
   }, [activeLayerId, layerRefreshToken]);
+
+  useEffect(() => {
+    if (!activeLayerId || !user?.id) return;
+    const ownerIdForLayer = String(
+      (layers || []).find((layer) => String(layer?.id || '') === String(activeLayerId || ''))?.owner_id
+      || user.id
+    ).trim();
+    const categoriesChannel = supabase
+      .channel(`categories-${activeLayerId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `layer_id=eq.${activeLayerId}` }, async () => {
+        await loadCategoriesForLayer(activeLayerId, user.id, ownerIdForLayer);
+      })
+      .subscribe();
+
+    return () => {
+      categoriesChannel.unsubscribe();
+    };
+  }, [activeLayerId, user?.id, layers]);
 
   useEffect(() => {
     if (!activeLayerId) {
