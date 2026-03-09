@@ -3665,10 +3665,11 @@ function App() {
     const isHolidayLikeTitle = (normalizedTitle) => {
       const t = String(normalizedTitle || '');
       if (!t) return false;
-      return (
+    return (
         t.includes('holiday')
         || t.includes('newyear')
         || t.includes('mlk')
+        || t.includes('martinlutherking')
         || t.includes('presidentsday')
         || t.includes('washingtonsbirthday')
         || t.includes('memorialday')
@@ -3679,6 +3680,9 @@ function App() {
         || t.includes('veteransday')
         || t.includes('thanksgiving')
         || t.includes('christmas')
+        || t.includes('fathersday')
+        || t.includes('mothersday')
+        || t.includes('flagday')
         || t.includes('easter')
         || t.includes('goodfriday')
         || t.includes('taxday')
@@ -8465,6 +8469,7 @@ function App() {
       'holiday',
       'newyear',
       'mlk',
+      'martinlutherking',
       'presidentsday',
       'washingtonsbirthday',
       'memorialday',
@@ -8475,6 +8480,9 @@ function App() {
       'veteransday',
       'thanksgiving',
       'christmas',
+      'fathersday',
+      'mothersday',
+      'flagday',
       'easter',
       'goodfriday',
       'taxday',
@@ -8489,7 +8497,8 @@ function App() {
     const titleNorm = normalizeHolidayLikeTitle(row?.title);
     const locationKey = String(row?.location || '').trim().toLowerCase();
     const recurrenceKey = String(row?.recurrence || 'once');
-    if (!timeKey && titleNorm && isLikelyHolidayTitle(titleNorm)) {
+    const allDayLike = !timeKey || timeKey === '00:00' || timeKey === '00:00:00';
+    if (allDayLike && titleNorm && isLikelyHolidayTitle(titleNorm)) {
       return [dateKey, 'holiday', titleNorm].join('|');
     }
     return [dateKey, timeKey, titleNorm, locationKey, recurrenceKey].join('|');
@@ -8595,7 +8604,6 @@ function App() {
       .select('id,date,time,title,created_at')
       .eq('layer_id', activeLayerId)
       .eq('user_id', user.id)
-      .is('time', null)
       .order('created_at', { ascending: true })
       .limit(5000);
     if (error) {
@@ -8607,8 +8615,10 @@ function App() {
     const deleteIds = [];
     (rows || []).forEach((row) => {
       const dateKey = String(row?.date || '').trim();
+      const timeKey = String(row?.time || '').trim();
+      const allDayLike = !timeKey || timeKey === '00:00' || timeKey === '00:00:00';
       const titleNorm = normalizeHolidayTitleForCleanup(row?.title);
-      if (!dateKey || !titleNorm || !isLikelyHolidayTitle(titleNorm)) return;
+      if (!dateKey || !allDayLike || !titleNorm || !isLikelyHolidayTitle(titleNorm)) return;
       const key = `${dateKey}|${titleNorm}`;
       if (!firstByKey.has(key)) {
         firstByKey.set(key, String(row.id));
