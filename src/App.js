@@ -7669,6 +7669,7 @@ function App() {
       const listIdFromTarget = String(target?.listId || '').trim();
       const keyLayerId = String(parts[2] || targetLayerId || activeLayerId || '').trim();
       if (keyLayerId) switchToLayer(keyLayerId);
+      setActiveSubCalendar(null);
       setBottomNavTab('home');
       setShowDateDetailModal(false);
       setShowListPanel(true);
@@ -7768,6 +7769,21 @@ function App() {
 
     if (type === 'list') {
       if (targetLayerId) switchToLayer(targetLayerId);
+      setActiveSubCalendar(null);
+      setBottomNavTab('home');
+      setShowDateDetailModal(false);
+      setShowListPanel(true);
+      setShowChatPanel(false);
+      setShowNotificationSettings(false);
+      const listId = String(target?.listId || '').trim();
+      if (listId) setSelectedSharedListId(listId);
+      return;
+    }
+
+    const msg = String(item?.message || '').toLowerCase();
+    if (msg.includes('to the list') || msg.includes('list item')) {
+      if (targetLayerId) switchToLayer(targetLayerId);
+      setActiveSubCalendar(null);
       setBottomNavTab('home');
       setShowDateDetailModal(false);
       setShowListPanel(true);
