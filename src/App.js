@@ -3718,6 +3718,22 @@ function App() {
   };
 
   const loadCategoriesForLayer = async (layerId, viewerUserId, layerOwnerId) => {
+    const normalizeCategoriesForUse = (raw) => {
+      const next = {};
+      Object.entries(raw || {}).forEach(([key, value]) => {
+        if (!value || typeof value !== 'object') return;
+        next[String(key)] = {
+          label: String(value.label || '').trim() || 'Category',
+          color: String(value.color || '').trim() || 'bg-gray-500',
+          lightBg: String(value.lightBg || '').trim() || 'bg-gray-50',
+          border: String(value.border || '').trim() || 'border-gray-200',
+          text: String(value.text || '').trim() || 'text-gray-700',
+        };
+      });
+      if (!next.other) next.other = { ...DEFAULT_CATEGORIES.other };
+      return next;
+    };
+
     const normalizedLayerId = String(layerId || '').trim();
     const normalizedViewerId = String(viewerUserId || '').trim();
     const normalizedOwnerId = String(layerOwnerId || normalizedViewerId || '').trim();
@@ -3767,13 +3783,13 @@ function App() {
           text: cat.text
         };
       });
-      setCategories({ ...DEFAULT_CATEGORIES, ...categoriesObj });
+      setCategories(normalizeCategoriesForUse(categoriesObj));
       writeLocalLayerCategories(normalizedViewerId, normalizedLayerId, categoriesObj);
       return;
     }
 
     if (localLayerCategories && typeof localLayerCategories === 'object') {
-      setCategories({ ...DEFAULT_CATEGORIES, ...localLayerCategories });
+      setCategories(normalizeCategoriesForUse(localLayerCategories));
       return;
     }
 
