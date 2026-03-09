@@ -4979,9 +4979,11 @@ function App() {
       body: `${pollCreator} created a poll: "${pollTitle}" (${dateKey}).`,
       layerId: activeLayerId,
     });
-    if (!pollPushResult?.ok) {
-      console.warn('Poll push not sent:', pollPushResult?.error || 'Unknown error');
-      setChatError(`Poll created, but push failed: ${pollPushResult?.error || 'Unknown error'}`);
+    const pollSentCount = Number(pollPushResult?.sent || 0);
+    if (!pollPushResult?.ok || pollSentCount <= 0) {
+      const reason = pollPushResult?.error || (pollSentCount <= 0 ? 'No subscribed recipients found' : 'Unknown error');
+      console.warn('Poll push not sent:', reason, pollPushResult);
+      setChatError(`Poll created, but push was not delivered: ${reason}`);
     }
   };
 
@@ -5127,11 +5129,13 @@ function App() {
       body: eventBody,
       layerId: activeLayerId,
     });
-    if (!eventPushResult?.ok) {
-      console.warn('Chat event push not sent:', eventPushResult?.error || 'Unknown error');
-      setChatError(`Event created, but push failed: ${eventPushResult?.error || 'Unknown error'}`);
+    const eventSentCount = Number(eventPushResult?.sent || 0);
+    if (!eventPushResult?.ok || eventSentCount <= 0) {
+      const reason = eventPushResult?.error || (eventSentCount <= 0 ? 'No subscribed recipients found' : 'Unknown error');
+      console.warn('Chat event push not sent:', reason, eventPushResult);
+      setChatError(`Event created, but push was not delivered: ${reason}`);
     }
-    setChatError('');
+    if ((eventPushResult?.ok && eventSentCount > 0)) setChatError('');
     resetPollComposer();
   };
 

@@ -96,6 +96,17 @@ Deno.serve(async (req) => {
           if (match?.id) recipientIds.add(String(match.id));
         }
       }
+
+      // Fallback: include users who have participated in this layer's chat.
+      const { data: chatRows } = await supabase
+        .from("calendar_messages")
+        .select("user_id")
+        .eq("layer_id", layerId)
+        .limit(500);
+      for (const row of chatRows || []) {
+        const chatUserId = safeString(row?.user_id);
+        if (chatUserId) recipientIds.add(chatUserId);
+      }
     }
 
     if (subCalendarId) {
