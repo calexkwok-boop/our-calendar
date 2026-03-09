@@ -9876,7 +9876,7 @@ function App() {
               <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-300 mt-2 mb-1">
                 Apple Share Link
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
                   value={appleCalendarUrlInput}
@@ -9890,12 +9890,12 @@ function App() {
                     }
                   }}
                   placeholder="webcal://... or https://... .ics"
-                  className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-full sm:flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
                 <button
                   onClick={() => handleFirstImportPromptChoice('apple_url')}
                   disabled={isImportingCalendar || !activeLayerId || !user?.id || !appleCalendarUrlInput.trim()}
-                  className="px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all whitespace-nowrap"
+                  className="w-full sm:w-auto px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all whitespace-nowrap"
                 >
                   Import URL
                 </button>
