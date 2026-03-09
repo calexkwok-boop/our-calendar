@@ -3708,6 +3708,7 @@ function App() {
         || normalizedTitle.includes('easter')
         || normalizedTitle.includes('goodfriday')
         || normalizedTitle.includes('taxday')
+        || normalizedTitle.includes('cincodemayo')
       );
       if (isHolidayLike) {
         if (seenHolidayTitles.has(normalizedTitle)) return;
@@ -8402,13 +8403,55 @@ function App() {
     return null;
   };
 
-  const importEventKeyOf = (row) => ([
-    String(row?.date || ''),
-    String(row?.time || ''),
-    String(row?.title || '').trim().toLowerCase(),
-    String(row?.location || '').trim().toLowerCase(),
-    String(row?.recurrence || 'once'),
-  ].join('|'));
+  const normalizeHolidayLikeTitle = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    let normalized = raw.toLowerCase();
+    try {
+      normalized = normalized.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    } catch {}
+    return normalized
+      .replace(/^us\s*holiday[:\s-]*/i, '')
+      .replace(/^public\s*holiday[:\s-]*/i, '')
+      .replace(/[^a-z0-9]/g, '');
+  };
+
+  const isLikelyHolidayTitle = (normalizedTitle) => {
+    const t = String(normalizedTitle || '');
+    if (!t) return false;
+    return [
+      'holiday',
+      'newyear',
+      'mlk',
+      'presidentsday',
+      'washingtonsbirthday',
+      'memorialday',
+      'juneteenth',
+      'independenceday',
+      'laborday',
+      'columbusday',
+      'veteransday',
+      'thanksgiving',
+      'christmas',
+      'easter',
+      'goodfriday',
+      'taxday',
+      'stpatrick',
+      'cincodemayo',
+    ].some((token) => t.includes(token));
+  };
+
+  const importEventKeyOf = (row) => {
+    const dateKey = String(row?.date || '');
+    const timeKey = String(row?.time || '');
+    const titleNorm = normalizeHolidayLikeTitle(row?.title);
+    const locationKey = String(row?.location || '').trim().toLowerCase();
+    const recurrenceKey = String(row?.recurrence || 'once');
+    if (!timeKey && titleNorm && isLikelyHolidayTitle(titleNorm)) {
+      return [dateKey, 'holiday', titleNorm].join('|');
+    }
+    return [dateKey, timeKey, titleNorm, locationKey, recurrenceKey].join('|');
+  };
 
   const persistImportedEvents = async (candidateEvents) => {
     const incoming = Array.isArray(candidateEvents) ? candidateEvents : [];
@@ -8501,35 +8544,7 @@ function App() {
     return { insertedCount: eventsToInsert.length, duplicateCount };
   };
 
-  const normalizeHolidayTitleForCleanup = (value) => String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/^us\s*holiday[:\s-]*/i, '')
-    .replace(/[^a-z0-9]/g, '');
-
-  const isLikelyHolidayTitle = (normalizedTitle) => {
-    const t = String(normalizedTitle || '');
-    if (!t) return false;
-    return [
-      'holiday',
-      'newyear',
-      'mlk',
-      'presidentsday',
-      'washingtonsbirthday',
-      'memorialday',
-      'juneteenth',
-      'independenceday',
-      'laborday',
-      'columbusday',
-      'veteransday',
-      'thanksgiving',
-      'christmas',
-      'easter',
-      'goodfriday',
-      'taxday',
-      'stpatrick',
-    ].some((token) => t.includes(token));
-  };
+  const normalizeHolidayTitleForCleanup = (value) => normalizeHolidayLikeTitle(value);
 
   const cleanupDuplicateHolidayEventsForCurrentUserLayer = async () => {
     if (!activeLayerId || !user?.id) return 0;
