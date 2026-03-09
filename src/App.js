@@ -7183,14 +7183,28 @@ function App() {
       const formatted = formatPushNotificationContent(payload);
       const data = (formatted?.data && typeof formatted.data === 'object') ? formatted.data : {};
       const normalizedType = String(data?.type || 'update').trim().toLowerCase() || 'update';
-      const stableKey = [
-        'push',
-        String(source || 'push'),
-        String(formatted?.tag || ''),
-        String(formatted?.title || ''),
-        String(formatted?.body || ''),
-        String(data?.layerId || ''),
-      ].join(':');
+      const explicitPushId = String(
+        data?.id
+        || data?.eventId
+        || data?.messageId
+        || payload?.messageId
+        || ''
+      ).trim();
+      const hasStrongIdentity = Boolean(explicitPushId || String(formatted?.tag || '').trim());
+      const stableKey = hasStrongIdentity
+        ? [
+            'push',
+            String(source || 'push'),
+            explicitPushId || String(formatted?.tag || '').trim(),
+            String(data?.layerId || '').trim(),
+          ].join(':')
+        : [
+            'push',
+            String(source || 'push'),
+            String(data?.layerId || '').trim(),
+            String(Date.now()),
+            Math.random().toString(36).slice(2, 7),
+          ].join(':');
       const body = String(formatted?.body || '').trim();
       if (!body) return;
       addInAppNotification({
