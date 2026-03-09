@@ -142,6 +142,7 @@ function App() {
   const [pendingEvent, setPendingEvent] = useState(null);
   const [showConflictPrompt, setShowConflictPrompt] = useState(false);
   const [conflictPromptData, setConflictPromptData] = useState({ title: '', lines: [] });
+  const [recurringDeletePrompt, setRecurringDeletePrompt] = useState(null);
   const [isPopupEventDraft, setIsPopupEventDraft] = useState(false);
   const [popupEventMaxPeopleDraft, setPopupEventMaxPeopleDraft] = useState('10');
   const [popupEventsByEventId, setPopupEventsByEventId] = useState({});
@@ -9031,6 +9032,34 @@ function App() {
     }
   };
 
+  const openRecurringDeletePrompt = ({ dateKey, event }) => {
+    if (!event?.id) return;
+    setRecurringDeletePrompt({
+      dateKey: String(dateKey || ''),
+      eventId: String(event.id),
+      title: String(event.title || 'this event'),
+      isVirtualAnnual: Boolean(event.isVirtualAnnual),
+      isVirtualRecurrence: Boolean(event.isVirtualRecurrence),
+    });
+  };
+
+  const closeRecurringDeletePrompt = () => {
+    setRecurringDeletePrompt(null);
+  };
+
+  const confirmRecurringDeleteChoice = async (skipOnce) => {
+    const prompt = recurringDeletePrompt;
+    if (!prompt?.eventId) return;
+    closeRecurringDeletePrompt();
+    await handleDeleteEvent(
+      prompt.dateKey,
+      prompt.eventId,
+      prompt.isVirtualAnnual,
+      prompt.isVirtualRecurrence,
+      Boolean(skipOnce)
+    );
+  };
+
   // Update a field without closing the edit form (for toggles)
   const handleUpdateEventField = async (dateKey, eventId, updates) => {
     if (Object.prototype.hasOwnProperty.call(updates || {}, 'time')) {
@@ -9541,6 +9570,42 @@ function App() {
               className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
             >
               Change Time
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    {recurringDeletePrompt && (
+      <div className="fixed inset-0 z-[96] bg-black/45 flex items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-2xl border border-rose-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-2xl">
+          <h3 className="text-lg font-semibold bg-gradient-to-r from-rose-600 to-purple-600 bg-clip-text text-transparent">
+            Recurring Event
+          </h3>
+          <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">
+            Choose how you want to remove <span className="font-semibold">"{recurringDeletePrompt.title}"</span>.
+          </p>
+          <div className="mt-3 rounded-xl bg-rose-50 dark:bg-gray-700/70 border border-rose-100 dark:border-gray-600 p-3 space-y-1.5">
+            <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-200">Remove only this one occurrence</div>
+            <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-200">or delete the entire series.</div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button
+              onClick={() => confirmRecurringDeleteChoice(true)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-sm font-semibold hover:shadow-lg transition-all"
+            >
+              Just This One
+            </button>
+            <button
+              onClick={() => confirmRecurringDeleteChoice(false)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 text-white text-sm font-semibold hover:shadow-lg transition-all"
+            >
+              Delete All
+            </button>
+            <button
+              onClick={closeRecurringDeletePrompt}
+              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+            >
+              Cancel
             </button>
           </div>
         </div>
@@ -11871,11 +11936,7 @@ function App() {
                               onClick={() => {
                                 const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
                                 if (isRepeating) {
-                                  const choice = window.confirm(
-                                    `"${event.title}" is a recurring event.\n\nOK = Remove just this occurrence\nCancel = Delete ALL occurrences`
-                                  );
-                                  // OK = true = skip once, Cancel = false = delete all
-                                  handleDeleteEvent(selectedDateKey, event.id, event.isVirtualAnnual, event.isVirtualRecurrence, choice);
+                                  openRecurringDeletePrompt({ dateKey: selectedDateKey, event });
                                 } else {
                                   handleDeleteEvent(selectedDateKey, event.id, false, false, false);
                                 }
