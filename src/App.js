@@ -9225,6 +9225,35 @@ function App() {
     if (ts === null) return 'Unknown date';
     return new Date(ts).toLocaleDateString('en-US', withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
   };
+  const parseNotificationTimestamp = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    const direct = new Date(raw);
+    if (!Number.isNaN(direct.getTime())) return direct;
+    const normalized = raw.replace(' ', 'T');
+    const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalized);
+    if (!hasTimezone) {
+      const assumedUtc = new Date(`${normalized}Z`);
+      if (!Number.isNaN(assumedUtc.getTime())) return assumedUtc;
+    }
+    const fallback = new Date(normalized);
+    if (!Number.isNaN(fallback.getTime())) return fallback;
+    return null;
+  };
+  const formatNotificationTime = (value) => {
+    const d = parseNotificationTimestamp(value);
+    if (!d) return 'Just now';
+    const diffMs = Date.now() - d.getTime();
+    if (Number.isFinite(diffMs) && diffMs >= 0) {
+      const sec = Math.floor(diffMs / 1000);
+      if (sec < 60) return 'Just now';
+      const min = Math.floor(sec / 60);
+      if (min < 60) return `${min}m ago`;
+      const hr = Math.floor(min / 60);
+      if (hr < 24) return `${hr}h ago`;
+    }
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  };
   const upcomingTrips = [...subCalendars]
     .filter(sc => {
       const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
@@ -9827,7 +9856,7 @@ function App() {
                           </div>
                         </div>
                         <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                          {new Date(item.createdAt).toLocaleString()}
+                          {formatNotificationTime(item.createdAt)}
                         </div>
                         {item.type === 'invite' && (() => {
                           const parsedInvite = parseInviteNotification(item);
