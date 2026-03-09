@@ -8088,12 +8088,31 @@ function App() {
         const accessRole = String(c?.accessRole || '').toLowerCase();
         return Boolean(calId) && ['owner', 'writer', 'reader', 'freebusyreader'].includes(accessRole);
       });
-      if (readableCalendars.length === 0) {
+      const knownBirthdayCalendarIds = [
+        'addressbook#contacts@group.v.calendar.google.com',
+        'contacts@group.v.calendar.google.com',
+      ];
+      const calendarCandidatesMap = new Map();
+      readableCalendars.forEach((c) => {
+        const id = String(c?.id || '').trim();
+        if (!id) return;
+        calendarCandidatesMap.set(id, {
+          id,
+          summary: String(c?.summary || c?.summaryOverride || '').trim() || id,
+        });
+      });
+      knownBirthdayCalendarIds.forEach((id) => {
+        if (!calendarCandidatesMap.has(id)) {
+          calendarCandidatesMap.set(id, { id, summary: 'Birthdays' });
+        }
+      });
+      const calendarCandidates = Array.from(calendarCandidatesMap.values());
+      if (calendarCandidates.length === 0) {
         throw new Error('No readable Google calendars were found for this account.');
       }
 
       const googleEvents = [];
-      for (const cal of readableCalendars) {
+      for (const cal of calendarCandidates) {
         const targetCalendarId = String(cal?.id || '').trim();
         let pageToken = '';
         for (let page = 0; page < 6; page += 1) {
@@ -8105,11 +8124,16 @@ function App() {
             timeMin: new Date(Date.now() - (365 * 24 * 60 * 60 * 1000)).toISOString(),
             timeMax: new Date(Date.now() + (365 * 2 * 24 * 60 * 60 * 1000)).toISOString(),
           });
+          // Include birthdays explicitly; some Google accounts omit them unless requested.
+          params.append('eventTypes', 'default');
+          params.append('eventTypes', 'birthday');
           if (pageToken) params.set('pageToken', pageToken);
           const eventsResp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCalendarId)}/events?${params.toString()}`, {
             headers: authHeaders,
           });
           if (!eventsResp.ok) {
+            // Some known fallback IDs may not exist for a given account; skip quietly.
+            if ([403, 404].includes(eventsResp.status)) break;
             let message = `Google Calendar events request failed (${eventsResp.status}).`;
             try {
               const errData = await eventsResp.json();
@@ -8205,7 +8229,7 @@ function App() {
         return;
       }
       alert(
-        `Imported ${insertedCount} Google event${insertedCount === 1 ? '' : 's'} from ${readableCalendars.length} calendar${readableCalendars.length === 1 ? '' : 's'}`
+        `Imported ${insertedCount} Google event${insertedCount === 1 ? '' : 's'} from ${calendarCandidates.length} calendar${calendarCandidates.length === 1 ? '' : 's'}`
         + (duplicateCount > 0 ? ` (${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'} skipped).` : '.')
       );
     } catch (err) {
