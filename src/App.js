@@ -8151,6 +8151,7 @@ function App() {
       }
 
       const googleEvents = [];
+      let calendarBirthdayEventCount = 0;
       for (const cal of calendarCandidates) {
         const targetCalendarId = String(cal?.id || '').trim();
         let pageToken = '';
@@ -8184,6 +8185,11 @@ function App() {
           const eventsJson = await eventsResp.json();
           const pageItems = Array.isArray(eventsJson?.items) ? eventsJson.items : [];
           googleEvents.push(...pageItems);
+          pageItems.forEach((item) => {
+            const eventType = String(item?.eventType || '').toLowerCase();
+            const summary = String(item?.summary || '').toLowerCase();
+            if (eventType === 'birthday' || summary.includes('birthday')) calendarBirthdayEventCount += 1;
+          });
           pageToken = String(eventsJson?.nextPageToken || '').trim();
           if (!pageToken || googleEvents.length >= 7000) break;
         }
@@ -8197,6 +8203,8 @@ function App() {
       const importedEventsDraft = [];
       const nowTs = Date.now();
       const createdByLabel = currentUser || user?.email || user?.phone || 'User';
+      let contactBirthdayCandidateCount = 0;
+      let contactsFetchStatus = 'ok';
 
       googleEvents.forEach((ev, idx) => {
         if (String(ev?.status || '').toLowerCase() === 'cancelled') return;
@@ -8271,6 +8279,7 @@ function App() {
             if (!Number.isInteger(month) || !Number.isInteger(day) || month < 1 || month > 12 || day < 1 || day > 31) return;
             const eventDate = new Date(new Date().getFullYear(), month - 1, day);
             if (Number.isNaN(eventDate.getTime())) return;
+            contactBirthdayCandidateCount += 1;
             importedEventsDraft.push({
               id: `gbday_${nowTs}_${idx}_${bIdx}_${Math.random().toString(36).slice(2, 7)}`,
               title: buildBirthdayTitle(displayName),
@@ -8295,16 +8304,27 @@ function App() {
           });
         });
       } catch (contactsErr) {
+        contactsFetchStatus = String(contactsErr?.message || 'contacts-fetch-failed');
         console.warn('Google Contacts birthday import skipped:', contactsErr?.message || contactsErr);
       }
 
       const { insertedCount, duplicateCount } = await persistImportedEvents(importedEventsDraft);
+      const birthdayDraftCount = importedEventsDraft.filter((row) => {
+        const title = String(row?.title || '').toLowerCase();
+        return String(row?.recurrence || '') === 'annual' && title.includes('birthday');
+      }).length;
       if (insertedCount === 0) {
         if (duplicateCount > 0) {
-          alert('No new Google events were imported (all matched existing events).');
+          alert(
+            'No new Google events were imported (all matched existing events).\n'
+            + `Diagnostics: calendar birthday events=${calendarBirthdayEventCount}, contacts birthday candidates=${contactBirthdayCandidateCount}, birthday drafts=${birthdayDraftCount}, contacts status=${contactsFetchStatus}.`
+          );
           return;
         }
-        alert('No valid Google events were found to import.');
+        alert(
+          'No valid Google events were found to import.\n'
+          + `Diagnostics: calendar birthday events=${calendarBirthdayEventCount}, contacts birthday candidates=${contactBirthdayCandidateCount}, birthday drafts=${birthdayDraftCount}, contacts status=${contactsFetchStatus}.`
+        );
         return;
       }
       alert(
