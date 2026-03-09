@@ -5463,11 +5463,10 @@ function App() {
         if (selectedLayerId !== activeLayerId) setActiveLayerId(selectedLayerId);
         localStorage.setItem(`active-layer-${userId}`, selectedLayerId);
 
-        // Load my own events
-        const { data: eventsData, error: eventsError } = await supabase
+        // Load all events visible in this layer (owner + collaborators).
+        const { data: layerEventsData, error: layerEventsError } = await supabase
           .from('events')
           .select('*')
-          .eq('user_id', userId)
           .eq('layer_id', selectedLayerId);
 
         // Load calendars shared WITH me (by email/id)
@@ -5491,21 +5490,16 @@ function App() {
           }
           setSharedCalendars(sharedWithMe);
           await resolveSharedOwnerLabels(sharedWithMe, selectedLayerId);
+        } else {
+          setSharedCalendars([]);
+          setSharedOwnerLabels({});
+        }
 
-          // Load events from all owners who shared with me
-          const ownerIds = Array.from(new Set(sharedWithMe.map(s => s.owner_id).filter(Boolean)));
-          const { data: sharedEventsData } = await supabase
-            .from('events')
-            .select('*')
-            .in('user_id', ownerIds)
-            .eq('layer_id', selectedLayerId);
-
-          // Merge own events + shared events
-          const allEventsData = Array.from(
-            new Map([...(eventsData || []), ...(sharedEventsData || [])].map(evt => [String(evt.id), evt])).values()
-          );
+        if (layerEventsError) {
+          console.error('Error loading events:', layerEventsError);
+        } else if (layerEventsData) {
           const eventsObj = {};
-          allEventsData.forEach(event => {
+          layerEventsData.forEach(event => {
             if (!eventsObj[event.date]) eventsObj[event.date] = [];
             eventsObj[event.date].push({
               id: event.id,
@@ -5527,46 +5521,11 @@ function App() {
               createdBy: event.created_by,
               createdAt: event.created_at,
               userId: event.user_id,
-              isShared: event.user_id !== userId
+              isShared: String(event.user_id || '') !== String(userId),
             });
           });
           setEvents(eventsObj);
           if (typeof window !== 'undefined') window.events = eventsObj;
-        } else {
-          setSharedCalendars([]);
-          setSharedOwnerLabels({});
-          if (eventsError) {
-            console.error('Error loading events:', eventsError);
-          } else if (eventsData) {
-            const eventsObj = {};
-            eventsData.forEach(event => {
-              if (!eventsObj[event.date]) eventsObj[event.date] = [];
-              eventsObj[event.date].push({
-                id: event.id,
-                title: event.title,
-                time: event.time,
-                date: event.date,
-                category: event.category,
-                isPrivate: event.is_private,
-                isUrgent: event.is_urgent,
-                isMultiDay: event.is_multi_day,
-                multiDayId: event.multi_day_id,
-                isAnnual: event.is_annual || false,
-                annualMonth: event.annual_month || null,
-                annualDay: event.annual_day || null,
-                recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
-                exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
-                reactions: event.reactions ? JSON.parse(event.reactions) : {},
-                location: event.location || null,
-                createdBy: event.created_by,
-                createdAt: event.created_at,
-                userId: event.user_id,
-                isShared: false
-              });
-            });
-            setEvents(eventsObj);
-            if (typeof window !== 'undefined') window.events = eventsObj;
-          }
         }
 
         // Load people I've shared with
@@ -5607,66 +5566,45 @@ function App() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
-        const userEmail = session?.user?.email;
-        const userPhone = session?.user?.phone;
         if (!userId || !activeLayerId) return;
-        const shareRecipientFilter = buildShareRecipientFilter(userId, userEmail, userPhone);
 
-        // Get calendars shared with me
-        let sharedDataQuery = supabase
-          .from('shared_access')
-          .select('*')
-          .eq('layer_id', activeLayerId);
-        if (shareRecipientFilter) sharedDataQuery = sharedDataQuery.or(shareRecipientFilter);
-        const { data: sharedDataRaw } = await sharedDataQuery;
-        const sharedData = (sharedDataRaw || []).filter(s => String(s?.owner_id || '') !== String(userId));
-
-        if (!sharedData || sharedData.length === 0) return;
-
-        const ownerIds = Array.from(new Set(sharedData.map(s => s.owner_id).filter(Boolean)));
-        const { data: sharedEventsData } = await supabase
+        const { data: layerEventsData, error: layerEventsError } = await supabase
           .from('events')
           .select('*')
-          .in('user_id', ownerIds)
           .eq('layer_id', activeLayerId);
+        if (layerEventsError) {
+          console.error('Error refreshing layer events:', layerEventsError);
+          return;
+        }
 
-        if (!sharedEventsData) return;
-
-        // Merge shared events into current state without overwriting own events
-        setEvents(prev => {
-          const merged = {};
-          // Keep all own events
-          Object.entries(prev).forEach(([dateKey, evts]) => {
-            merged[dateKey] = evts.filter(e => !e.isShared);
+        const eventsObj = {};
+        (layerEventsData || []).forEach(event => {
+          if (!eventsObj[event.date]) eventsObj[event.date] = [];
+          eventsObj[event.date].push({
+            id: event.id,
+            title: event.title,
+            time: event.time,
+            date: event.date,
+            category: event.category,
+            isPrivate: event.is_private,
+            isUrgent: event.is_urgent,
+            isMultiDay: event.is_multi_day,
+            multiDayId: event.multi_day_id,
+            isAnnual: event.is_annual || false,
+            annualMonth: event.annual_month || null,
+            annualDay: event.annual_day || null,
+            recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
+            exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
+            reactions: event.reactions ? JSON.parse(event.reactions) : {},
+            location: event.location || null,
+            createdBy: event.created_by,
+            createdAt: event.created_at,
+            userId: event.user_id,
+            isShared: String(event.user_id || '') !== String(userId),
           });
-          // Add fresh shared events
-          sharedEventsData.forEach(event => {
-            if (!merged[event.date]) merged[event.date] = [];
-            merged[event.date].push({
-              id: event.id,
-              title: event.title,
-              time: event.time,
-              date: event.date,
-              category: event.category,
-              isPrivate: event.is_private,
-              isUrgent: event.is_urgent,
-              isMultiDay: event.is_multi_day,
-              multiDayId: event.multi_day_id,
-              isAnnual: event.is_annual || false,
-              annualMonth: event.annual_month || null,
-              annualDay: event.annual_day || null,
-              recurrence: event.recurrence || 'once',
-              exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
-              reactions: event.reactions ? JSON.parse(event.reactions) : {},
-              location: event.location || null,
-              createdBy: event.created_by,
-              createdAt: event.created_at,
-              userId: event.user_id,
-              isShared: true
-            });
-          });
-          return merged;
         });
+        setEvents(eventsObj);
+        if (typeof window !== 'undefined') window.events = eventsObj;
       } catch (err) {
         console.error('Error refreshing shared events:', err);
       }
