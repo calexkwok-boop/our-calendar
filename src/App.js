@@ -7925,6 +7925,106 @@ function App() {
     return null;
   };
 
+  const importEventKeyOf = (row) => ([
+    String(row?.date || ''),
+    String(row?.time || ''),
+    String(row?.title || '').trim().toLowerCase(),
+    String(row?.location || '').trim().toLowerCase(),
+    String(row?.recurrence || 'once'),
+  ].join('|'));
+
+  const persistImportedEvents = async (candidateEvents) => {
+    const incoming = Array.isArray(candidateEvents) ? candidateEvents : [];
+    if (!activeLayerId || !user?.id || incoming.length === 0) {
+      return { insertedCount: 0, duplicateCount: 0 };
+    }
+
+    const existingKeys = new Set();
+    Object.values(events || {}).forEach((rows) => {
+      (rows || []).forEach((row) => existingKeys.add(importEventKeyOf(row)));
+    });
+
+    // Defensive check from DB too, so imports remain append-only even if local state is stale.
+    const { data: existingRows } = await supabase
+      .from('events')
+      .select('date,time,title,location,recurrence')
+      .eq('layer_id', activeLayerId)
+      .eq('user_id', user.id);
+    (existingRows || []).forEach((row) => {
+      existingKeys.add(importEventKeyOf({
+        date: row?.date,
+        time: row?.time,
+        title: row?.title,
+        location: row?.location,
+        recurrence: row?.recurrence || 'once',
+      }));
+    });
+
+    const eventsToInsert = [];
+    let duplicateCount = 0;
+    incoming.forEach((row) => {
+      const key = importEventKeyOf(row);
+      if (existingKeys.has(key)) {
+        duplicateCount += 1;
+        return;
+      }
+      existingKeys.add(key);
+      eventsToInsert.push(row);
+    });
+
+    if (eventsToInsert.length === 0) {
+      return { insertedCount: 0, duplicateCount };
+    }
+
+    const asDbRows = eventsToInsert.map((event) => ({
+      id: event.id,
+      date: event.date,
+      title: event.title,
+      time: event.time,
+      category: event.category || 'other',
+      is_private: Boolean(event.isPrivate),
+      is_private_for: event.isPrivate ? (event.createdBy || null) : null,
+      is_urgent: Boolean(event.isUrgent),
+      is_multi_day: Boolean(event.isMultiDay),
+      multi_day_id: event.multiDayId || null,
+      is_annual: Boolean(event.isAnnual),
+      annual_month: event.annualMonth || null,
+      annual_day: event.annualDay || null,
+      recurrence: event.recurrence || 'once',
+      exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
+      reactions: event.reactions ? JSON.stringify(event.reactions) : null,
+      location: event.location || null,
+      created_by: event.createdBy || currentUser || user?.email || user?.phone || 'User',
+      created_at: event.createdAt || new Date().toISOString(),
+      user_id: user.id,
+      layer_id: activeLayerId,
+      calendar_id: activeLayerId,
+    }));
+
+    for (let i = 0; i < asDbRows.length; i += 250) {
+      const chunk = asDbRows.slice(i, i + 250);
+      const { error } = await supabase.from('events').insert(chunk);
+      if (error) throw new Error(error.message || 'Failed to save imported events.');
+    }
+
+    setEvents((prev) => {
+      const next = { ...(prev || {}) };
+      eventsToInsert.forEach((event) => {
+        const dateKey = String(event.date || '');
+        if (!dateKey) return;
+        const dateRows = next[dateKey] || [];
+        next[dateKey] = [...dateRows, event].sort((a, b) => {
+          if (!a.time) return 1;
+          if (!b.time) return -1;
+          return String(a.time).localeCompare(String(b.time));
+        });
+      });
+      return next;
+    });
+
+    return { insertedCount: eventsToInsert.length, duplicateCount };
+  };
+
   const triggerGoogleCalendarOAuthImport = async () => {
     localStorage.setItem(GOOGLE_IMPORT_PENDING_KEY, 'true');
     const { error } = await supabase.auth.signInWithOAuth({
@@ -8030,23 +8130,7 @@ function App() {
         return;
       }
 
-      const updatedEvents = { ...events };
-      const existingKeys = new Set();
-      Object.values(updatedEvents || {}).forEach((rows) => {
-        (rows || []).forEach((row) => {
-          const key = [
-            String(row?.date || ''),
-            String(row?.time || ''),
-            String(row?.title || '').trim().toLowerCase(),
-            String(row?.location || '').trim().toLowerCase(),
-            String(row?.recurrence || 'once'),
-          ].join('|');
-          existingKeys.add(key);
-        });
-      });
-
-      let importCount = 0;
-      let skippedDuplicates = 0;
+      const importedEventsDraft = [];
       const nowTs = Date.now();
       const createdByLabel = currentUser || user?.email || user?.phone || 'User';
 
@@ -8066,18 +8150,6 @@ function App() {
           const time = hasTime
             ? `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`
             : null;
-          const eventKey = [
-            dateKey,
-            String(time || ''),
-            summary.toLowerCase(),
-            String(location || '').toLowerCase(),
-            recurrence,
-          ].join('|');
-          if (existingKeys.has(eventKey)) {
-            skippedDuplicates += 1;
-            return;
-          }
-          existingKeys.add(eventKey);
 
           const newEvent = {
             id: `gimp_${nowTs}_${idx}_${Math.random().toString(36).slice(2, 7)}`,
@@ -8100,14 +8172,7 @@ function App() {
             reactions: {},
             exceptions: [],
           };
-
-          const dateEvents = updatedEvents[dateKey] || [];
-          updatedEvents[dateKey] = [...dateEvents, newEvent].sort((a, b) => {
-            if (!a.time) return 1;
-            if (!b.time) return -1;
-            return a.time.localeCompare(b.time);
-          });
-          importCount += 1;
+          importedEventsDraft.push(newEvent);
         };
 
         const start = new Date(startParsed.date);
@@ -8119,7 +8184,7 @@ function App() {
             const multiDayId = `gimpmd_${nowTs}_${idx}`;
             for (let d = new Date(start); d <= inclusiveEnd; d.setDate(d.getDate() + 1)) {
               pushEvent(new Date(d), { allDay: true, multiDayId });
-              if (importCount > 5000) break;
+              if (importedEventsDraft.length > 5000) break;
             }
             return;
           }
@@ -8128,19 +8193,18 @@ function App() {
         pushEvent(start, { allDay: isAllDay });
       });
 
-      if (importCount === 0) {
-        if (skippedDuplicates > 0) {
+      const { insertedCount, duplicateCount } = await persistImportedEvents(importedEventsDraft);
+      if (insertedCount === 0) {
+        if (duplicateCount > 0) {
           alert('No new Google events were imported (all matched existing events).');
           return;
         }
         alert('No valid Google events were found to import.');
         return;
       }
-
-      await saveEvents(updatedEvents, { immediate: true });
       alert(
-        `Imported ${importCount} Google event${importCount === 1 ? '' : 's'} from ${readableCalendars.length} calendar${readableCalendars.length === 1 ? '' : 's'}`
-        + (skippedDuplicates > 0 ? ` (${skippedDuplicates} duplicate${skippedDuplicates === 1 ? '' : 's'} skipped).` : '.')
+        `Imported ${insertedCount} Google event${insertedCount === 1 ? '' : 's'} from ${readableCalendars.length} calendar${readableCalendars.length === 1 ? '' : 's'}`
+        + (duplicateCount > 0 ? ` (${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'} skipped).` : '.')
       );
     } catch (err) {
       console.error('Google calendar import failed:', err);
@@ -8161,8 +8225,7 @@ function App() {
         return;
       }
 
-      const updatedEvents = { ...events };
-      let importCount = 0;
+      const importedEventsDraft = [];
       const nowTs = Date.now();
 
       parsedEvents.forEach((ev, idx) => {
@@ -8203,13 +8266,7 @@ function App() {
             reactions: {},
             exceptions: [],
           };
-          const dateEvents = updatedEvents[dateKey] || [];
-          updatedEvents[dateKey] = [...dateEvents, newEvent].sort((a, b) => {
-            if (!a.time) return 1;
-            if (!b.time) return -1;
-            return a.time.localeCompare(b.time);
-          });
-          importCount += 1;
+          importedEventsDraft.push(newEvent);
         };
 
         const start = new Date(startParsed.date);
@@ -8221,7 +8278,7 @@ function App() {
             const multiDayId = `impmd_${nowTs}_${idx}`;
             for (let d = new Date(start); d <= inclusiveEnd; d.setDate(d.getDate() + 1)) {
               pushEvent(new Date(d), { allDay: true, multiDayId });
-              if (importCount > 5000) break;
+              if (importedEventsDraft.length > 5000) break;
             }
             return;
           }
@@ -8230,12 +8287,19 @@ function App() {
         pushEvent(start, { allDay: isAllDay });
       });
 
-      if (importCount === 0) {
+      const { insertedCount, duplicateCount } = await persistImportedEvents(importedEventsDraft);
+      if (insertedCount === 0) {
+        if (duplicateCount > 0) {
+          alert('No new events were imported from this file (all matched existing events).');
+          return;
+        }
         alert('No valid events were imported from this file.');
         return;
       }
-      await saveEvents(updatedEvents, { immediate: true });
-      alert(`Imported ${importCount} event${importCount === 1 ? '' : 's'} from ${file.name}.`);
+      alert(
+        `Imported ${insertedCount} event${insertedCount === 1 ? '' : 's'} from ${file.name}`
+        + (duplicateCount > 0 ? ` (${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'} skipped).` : '.')
+      );
     } catch (err) {
       console.error('ICS import failed:', err);
       alert(`Import failed: ${err?.message || 'Unknown error'}`);
