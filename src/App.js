@@ -4395,8 +4395,17 @@ function App() {
         },
       });
       if (error) {
-        console.warn('send-immediate-push invoke error:', error.message || error);
-        return { ok: false, error: error.message || 'Push invoke failed' };
+        let detailed = '';
+        try {
+          const context = error?.context;
+          if (context && typeof context.clone === 'function' && typeof context.clone().json === 'function') {
+            const payload = await context.clone().json();
+            detailed = String(payload?.error || payload?.message || '').trim();
+          }
+        } catch {}
+        const message = detailed || error.message || 'Push invoke failed';
+        console.warn('send-immediate-push invoke error:', message, error);
+        return { ok: false, error: message };
       }
       const sent = Number(data?.sent || 0);
       const ok = Boolean(data?.ok !== false);
