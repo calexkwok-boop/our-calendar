@@ -7980,41 +7980,49 @@ function App() {
 
       const calendarListJson = await calendarListResp.json();
       const calendars = Array.isArray(calendarListJson?.items) ? calendarListJson.items : [];
-      const targetCalendar = calendars.find((c) => c?.primary) || calendars[0] || null;
-      const targetCalendarId = String(targetCalendar?.id || '').trim();
-      if (!targetCalendarId) {
+      const readableCalendars = calendars.filter((c) => {
+        const calId = String(c?.id || '').trim();
+        const accessRole = String(c?.accessRole || '').toLowerCase();
+        const selected = c?.selected !== false;
+        return Boolean(calId) && selected && ['owner', 'writer', 'reader', 'freebusyreader'].includes(accessRole);
+      });
+      if (readableCalendars.length === 0) {
         throw new Error('No readable Google calendars were found for this account.');
       }
 
-      let pageToken = '';
       const googleEvents = [];
-      for (let page = 0; page < 6; page += 1) {
-        const params = new URLSearchParams({
-          showDeleted: 'false',
-          singleEvents: 'true',
-          orderBy: 'startTime',
-          maxResults: '2500',
-          timeMin: new Date(Date.now() - (365 * 24 * 60 * 60 * 1000)).toISOString(),
-          timeMax: new Date(Date.now() + (365 * 2 * 24 * 60 * 60 * 1000)).toISOString(),
-        });
-        if (pageToken) params.set('pageToken', pageToken);
-        const eventsResp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCalendarId)}/events?${params.toString()}`, {
-          headers: authHeaders,
-        });
-        if (!eventsResp.ok) {
-          let message = `Google Calendar events request failed (${eventsResp.status}).`;
-          try {
-            const errData = await eventsResp.json();
-            const errMsg = String(errData?.error?.message || '').trim();
-            if (errMsg) message = errMsg;
-          } catch {}
-          throw new Error(message);
+      for (const cal of readableCalendars) {
+        const targetCalendarId = String(cal?.id || '').trim();
+        let pageToken = '';
+        for (let page = 0; page < 6; page += 1) {
+          const params = new URLSearchParams({
+            showDeleted: 'false',
+            singleEvents: 'true',
+            orderBy: 'startTime',
+            maxResults: '2500',
+            timeMin: new Date(Date.now() - (365 * 24 * 60 * 60 * 1000)).toISOString(),
+            timeMax: new Date(Date.now() + (365 * 2 * 24 * 60 * 60 * 1000)).toISOString(),
+          });
+          if (pageToken) params.set('pageToken', pageToken);
+          const eventsResp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCalendarId)}/events?${params.toString()}`, {
+            headers: authHeaders,
+          });
+          if (!eventsResp.ok) {
+            let message = `Google Calendar events request failed (${eventsResp.status}).`;
+            try {
+              const errData = await eventsResp.json();
+              const errMsg = String(errData?.error?.message || '').trim();
+              if (errMsg) message = errMsg;
+            } catch {}
+            throw new Error(message);
+          }
+          const eventsJson = await eventsResp.json();
+          const pageItems = Array.isArray(eventsJson?.items) ? eventsJson.items : [];
+          googleEvents.push(...pageItems);
+          pageToken = String(eventsJson?.nextPageToken || '').trim();
+          if (!pageToken || googleEvents.length >= 7000) break;
         }
-        const eventsJson = await eventsResp.json();
-        const pageItems = Array.isArray(eventsJson?.items) ? eventsJson.items : [];
-        googleEvents.push(...pageItems);
-        pageToken = String(eventsJson?.nextPageToken || '').trim();
-        if (!pageToken || googleEvents.length >= 7000) break;
+        if (googleEvents.length >= 7000) break;
       }
 
       if (googleEvents.length === 0) {
@@ -8131,7 +8139,7 @@ function App() {
 
       await saveEvents(updatedEvents, { immediate: true });
       alert(
-        `Imported ${importCount} Google event${importCount === 1 ? '' : 's'}`
+        `Imported ${importCount} Google event${importCount === 1 ? '' : 's'} from ${readableCalendars.length} calendar${readableCalendars.length === 1 ? '' : 's'}`
         + (skippedDuplicates > 0 ? ` (${skippedDuplicates} duplicate${skippedDuplicates === 1 ? '' : 's'} skipped).` : '.')
       );
     } catch (err) {
