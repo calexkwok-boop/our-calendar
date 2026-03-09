@@ -2232,6 +2232,7 @@ function App() {
   const [showChatMembersPanel, setShowChatMembersPanel] = useState(false);
   const [chatReactionPickerFor, setChatReactionPickerFor] = useState(null);
   const chatLastTapRef = useRef({ messageId: null, at: 0 });
+  const lastSwPushRawRef = useRef({ at: 0, raw: '' });
   const [deletingChatMessageId, setDeletingChatMessageId] = useState(null);
   const [showCreateEventPopup, setShowCreateEventPopup] = useState(false);
   const [pollComposerStep, setPollComposerStep] = useState('menu');
@@ -6170,6 +6171,20 @@ function App() {
         return true;
       }
 
+      // Support recipient-based shares where shared_with_id may not be populated yet.
+      if (shareRecipientFilter) {
+        const { data: recipientShareRows, error: recipientShareErr } = await supabase
+          .from('shared_access')
+          .select('id')
+          .eq('layer_id', layerId)
+          .or(shareRecipientFilter)
+          .limit(1);
+        if (!recipientShareErr && (recipientShareRows || []).length > 0) {
+          accessibleLayerIdCache.add(layerId);
+          return true;
+        }
+      }
+
       return false;
     };
 
@@ -6545,8 +6560,12 @@ function App() {
           .select('id,owner_id,layer_id,shared_with_id,shared_with_email,shared_with_phone,created_at');
         if (shareRecipientFilter) sharedDataQuery = sharedDataQuery.or(shareRecipientFilter);
         const { data: sharedData } = await sharedDataQuery;
-        const acceptedShares = (sharedData || []).filter((row) => String(row?.shared_with_id || '') === me);
-        const sharedLayerIds = Array.from(new Set(acceptedShares.map(s => String(s.layer_id || '')).filter(Boolean)));
+        const accessibleShares = (sharedData || []).filter((row) => {
+          const sharedWithId = String(row?.shared_with_id || '');
+          const sharedRecipient = getShareRecipientFromRow(row);
+          return sharedWithId === me || sharedRecipient === myEmail || sharedRecipient === myPhone;
+        });
+        const sharedLayerIds = Array.from(new Set(accessibleShares.map(s => String(s.layer_id || '')).filter(Boolean)));
         await notifyCalendarShares(sharedData || []);
 
         if (sharedLayerIds.length > 0) {
@@ -7262,7 +7281,21 @@ function App() {
       const data = event?.data || {};
       if (data?.source !== 'firebase-messaging-sw') return;
       if (data?.type === 'push-received') {
-        pushPayloadToInAppNotification(data?.payload?.rawText || '', 'sw-push');
+        const rawText = String(data?.payload?.rawText || '');
+        lastSwPushRawRef.current = { at: Date.now(), raw: rawText };
+        pushPayloadToInAppNotification(rawText, 'sw-push');
+      } else if (data?.type === 'notification-shown') {
+        const last = lastSwPushRawRef.current || { at: 0, raw: '' };
+        const isRecent = (Date.now() - Number(last.at || 0)) < 5000;
+        const hasRawPayload = Boolean(String(last.raw || '').trim());
+        if (!isRecent || !hasRawPayload) {
+          addInAppNotification({
+            key: `push:sw-shown:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
+            type: 'update',
+            message: 'You have a new calendar update.',
+            createdAt: new Date().toISOString(),
+          });
+        }
       }
       console.log('[SW debug]', data.type, data.payload || {});
     };
