@@ -7542,6 +7542,186 @@ function App() {
     setInAppNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
   };
 
+  const focusDateFromKey = (dateKey) => {
+    const raw = String(dateKey || '').trim();
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return false;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    if (Number.isNaN(d.getTime())) return false;
+    setCurrentDate(new Date(d.getFullYear(), d.getMonth(), 1));
+    setSelectedDate(d);
+    setShowDateDetailModal(true);
+    setBottomNavTab('home');
+    setShowChatPanel(false);
+    setShowListPanel(false);
+    setShowNotificationSettings(false);
+    return true;
+  };
+
+  const openSubCalendarById = async (subCalendarId) => {
+    const id = String(subCalendarId || '').trim();
+    if (!id) return false;
+    let target = (subCalendars || []).find((sc) => String(sc?.id || '') === id) || null;
+    if (!target) {
+      const { data } = await supabase
+        .from('sub_calendars')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      target = data || null;
+    }
+    if (!target) return false;
+    await openSubCalendar(target);
+    setShowNotificationSettings(false);
+    setShowChatPanel(false);
+    setShowListPanel(false);
+    return true;
+  };
+
+  const handleInAppNotificationClick = async (item) => {
+    if (!item) return;
+    markInAppNotificationRead(item.id);
+    const key = String(item?.key || '');
+    const type = String(item?.type || '').trim().toLowerCase();
+
+    if (key.startsWith('events:')) {
+      const eventId = String(key.split(':')[1] || '').trim();
+      if (eventId) {
+        let eventDateKey = '';
+        Object.entries(events || {}).some(([dk, rows]) => {
+          const found = (rows || []).some((row) => String(row?.id || '') === eventId);
+          if (found) eventDateKey = dk;
+          return found;
+        });
+        if (!eventDateKey) {
+          const { data } = await supabase
+            .from('events')
+            .select('date')
+            .eq('id', eventId)
+            .eq('layer_id', activeLayerId)
+            .maybeSingle();
+          eventDateKey = String(data?.date || '');
+        }
+        if (eventDateKey) {
+          focusDateFromKey(eventDateKey);
+          return;
+        }
+      }
+    }
+
+    if (key.startsWith('shared_lists:')) {
+      const itemId = String(key.split(':')[1] || '').trim();
+      setShowListPanel(true);
+      setShowChatPanel(false);
+      setShowNotificationSettings(false);
+      if (itemId && activeLayerId) {
+        let listId = String((sharedListItems || []).find((row) => String(row?.id || '') === itemId)?.list_id || '').trim();
+        if (!listId) {
+          const { data } = await supabase
+            .from('shared_lists')
+            .select('list_id')
+            .eq('layer_id', activeLayerId)
+            .eq('id', itemId)
+            .maybeSingle();
+          listId = String(data?.list_id || '').trim();
+        }
+        if (listId) {
+          setSelectedSharedListId(listId);
+          if (primaryListOwnerId) await loadSharedListItems(primaryListOwnerId, listId);
+        }
+      }
+      return;
+    }
+
+    if (key.startsWith('sub_calendar_events:')) {
+      const subCalEventId = String(key.split(':')[1] || '').trim();
+      if (subCalEventId) {
+        const { data } = await supabase
+          .from('sub_calendar_events')
+          .select('sub_calendar_id,date')
+          .eq('id', subCalEventId)
+          .maybeSingle();
+        const subCalId = String(data?.sub_calendar_id || '').trim();
+        if (subCalId) {
+          const opened = await openSubCalendarById(subCalId);
+          if (opened) {
+            const dateKey = String(data?.date || '').trim();
+            const m = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (m) {
+              const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+              if (!Number.isNaN(d.getTime())) setSubCalSelectedDate(d);
+            }
+          }
+          return;
+        }
+      }
+    }
+
+    if (key.startsWith('expense:')) {
+      const parts = key.split(':');
+      const subCalId = String(parts[1] || '').trim();
+      if (subCalId) {
+        const opened = await openSubCalendarById(subCalId);
+        if (opened) setSubCalTab('expenses');
+        return;
+      }
+    }
+
+    if (key.startsWith('trip_photos:')) {
+      const photoId = String(key.split(':')[1] || '').trim();
+      if (photoId) {
+        const { data } = await supabase
+          .from('trip_photos')
+          .select('sub_calendar_id')
+          .eq('id', photoId)
+          .maybeSingle();
+        const subCalId = String(data?.sub_calendar_id || '').trim();
+        if (subCalId) {
+          const opened = await openSubCalendarById(subCalId);
+          if (opened) setSubCalTab('photos');
+          return;
+        }
+      }
+    }
+
+    if (key.startsWith('trip_invite:')) {
+      const parts = key.split(':');
+      const subCalId = String(parts[1] || '').trim();
+      if (subCalId) {
+        const opened = await openSubCalendarById(subCalId);
+        if (opened) return;
+      }
+      setShowNotificationSettings(true);
+      return;
+    }
+
+    if (key.startsWith('calendar_invite:')) {
+      const parts = key.split(':');
+      const layerId = String(parts[2] || '').trim();
+      if (layerId && user?.id) {
+        setActiveLayerId(layerId);
+        localStorage.setItem(`active-layer-${user.id}`, layerId);
+        setLayerRefreshToken(prev => prev + 1);
+      }
+      setShowNotificationSettings(true);
+      return;
+    }
+
+    if (type === 'list') {
+      setShowListPanel(true);
+      setShowChatPanel(false);
+      setShowNotificationSettings(false);
+      return;
+    }
+
+    if (type === 'chat_poll' || type === 'chat_event') {
+      setShowChatPanel(true);
+      setShowListPanel(false);
+      setShowNotificationSettings(false);
+      return;
+    }
+  };
+
   const deleteInAppNotification = (notificationId) => {
     setInAppNotifications(prev => prev.filter(n => n.id !== notificationId));
   };
@@ -10327,7 +10507,7 @@ function App() {
                     inAppNotifications.map(item => (
                       <button
                         key={item.id}
-                        onClick={() => markInAppNotificationRead(item.id)}
+                        onClick={() => { void handleInAppNotificationClick(item); }}
                         className={`w-full text-left rounded-lg border px-2.5 py-2 transition-colors ${item.read ? 'bg-white/70 dark:bg-gray-800 border-indigo-100 dark:border-indigo-800' : 'bg-white dark:bg-gray-800 border-indigo-300 dark:border-indigo-600'}`}
                       >
                         <div className="flex items-start justify-between gap-2">
