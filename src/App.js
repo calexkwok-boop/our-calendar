@@ -3650,6 +3650,11 @@ function App() {
     if (!date) return [];
     const dateKey = getDateKey(date);
     const directEvents = events[dateKey] || [];
+    const normalizeHolidayTitle = (value) => String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/^us\s*holiday[:\s-]*/i, '')
+      .replace(/[^a-z0-9]/g, '');
 
     const month = date.getMonth() + 1;
     const day = date.getDate();
@@ -3685,9 +3690,36 @@ function App() {
       });
     });
 
-    const holidayEvents = [];
     const holiday = getHolidayForDate(dateKey);
-    if (holiday) {
+    const holidayNames = new Set(
+      [holiday?.localName, holiday?.name]
+        .map(normalizeHolidayTitle)
+        .filter(Boolean)
+    );
+    const seenHolidayTitles = new Set();
+    const dedupedDirectEvents = [];
+    (directEvents || []).forEach((event) => {
+      const normalizedTitle = normalizeHolidayTitle(event?.title);
+      const isHolidayLike = !event?.time && normalizedTitle && (
+        holidayNames.has(normalizedTitle)
+        || normalizedTitle.includes('easter')
+        || normalizedTitle.includes('goodfriday')
+        || normalizedTitle.includes('taxday')
+      );
+      if (isHolidayLike) {
+        if (seenHolidayTitles.has(normalizedTitle)) return;
+        seenHolidayTitles.add(normalizedTitle);
+      }
+      dedupedDirectEvents.push(event);
+    });
+
+    const holidayEvents = [];
+    const alreadyHasHolidayEvent = holiday
+      && dedupedDirectEvents.some((event) => {
+        const title = normalizeHolidayTitle(event?.title);
+        return title && holidayNames.has(title);
+      });
+    if (holiday && !alreadyHasHolidayEvent) {
       holidayEvents.push({
         id: `holiday-${dateKey}`,
         title: holiday.localName,
@@ -3700,7 +3732,7 @@ function App() {
       });
     }
 
-    return [...holidayEvents, ...directEvents, ...virtualRecurrences].sort((a, b) => {
+    return [...holidayEvents, ...dedupedDirectEvents, ...virtualRecurrences].sort((a, b) => {
       if (a.isHoliday) return -1;
       if (b.isHoliday) return 1;
       if (!a.time) return 1;
@@ -8334,8 +8366,7 @@ function App() {
     const { data: existingRows } = await supabase
       .from('events')
       .select('date,time,title,location,recurrence')
-      .eq('layer_id', activeLayerId)
-      .eq('user_id', user.id);
+      .eq('layer_id', activeLayerId);
     (existingRows || []).forEach((row) => {
       existingKeys.add(importEventKeyOf({
         date: row?.date,
@@ -8509,12 +8540,18 @@ function App() {
         const accessRole = String(c?.accessRole || '').toLowerCase();
         return Boolean(calId) && ['owner', 'writer', 'reader', 'freebusyreader'].includes(accessRole);
       });
+      const isHolidayCalendar = (c) => {
+        const id = String(c?.id || '').trim().toLowerCase();
+        const summary = String(c?.summary || c?.summaryOverride || '').trim().toLowerCase();
+        return id.includes('#holiday@group.v.calendar.google.com') || summary.includes('holiday');
+      };
+      const importableCalendars = readableCalendars.filter((c) => !isHolidayCalendar(c));
       const knownBirthdayCalendarIds = [
         'addressbook#contacts@group.v.calendar.google.com',
         'contacts@group.v.calendar.google.com',
       ];
       const calendarCandidatesMap = new Map();
-      readableCalendars.forEach((c) => {
+      importableCalendars.forEach((c) => {
         const id = String(c?.id || '').trim();
         if (!id) return;
         calendarCandidatesMap.set(id, {
