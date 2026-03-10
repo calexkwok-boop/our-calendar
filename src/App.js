@@ -107,6 +107,7 @@ function App() {
   const dateTapTimeoutRef = useRef(null);
   const layerMediaInputRef = useRef(null);
   const pendingLayerMediaKindRef = useRef('');
+  const layerCropDragRef = useRef({ active: false, startX: 0, startY: 0, baseX: 0, baseY: 0 });
   const scanReminderInputRef = useRef(null);
   const scanReminderUploadInputRef = useRef(null);
   const importCalendarInputRef = useRef(null);
@@ -2303,6 +2304,12 @@ function App() {
   const [publishLayerDescription, setPublishLayerDescription] = useState('');
   const [publishLayerTagsInput, setPublishLayerTagsInput] = useState('');
   const [showLayerMediaMenu, setShowLayerMediaMenu] = useState(false);
+  const [showLayerMediaCropModal, setShowLayerMediaCropModal] = useState(false);
+  const [layerMediaCropKind, setLayerMediaCropKind] = useState('');
+  const [layerMediaCropImageUrl, setLayerMediaCropImageUrl] = useState('');
+  const [layerMediaCropNatural, setLayerMediaCropNatural] = useState({ width: 0, height: 0 });
+  const [layerMediaCropZoom, setLayerMediaCropZoom] = useState(1);
+  const [layerMediaCropOffset, setLayerMediaCropOffset] = useState({ x: 0, y: 0 });
   const [newLayerName, setNewLayerName] = useState('');
   const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
   const [sharedOwnerLabels, setSharedOwnerLabels] = useState({});
@@ -3118,50 +3125,7 @@ function App() {
 
     setUploadingLayerMedia(true);
     try {
-      const processLayerMediaFile = async (inputFile, mediaType) => {
-        const objectUrl = URL.createObjectURL(inputFile);
-        try {
-          const img = await new Promise((resolve, reject) => {
-            const el = new Image();
-            el.onload = () => resolve(el);
-            el.onerror = reject;
-            el.src = objectUrl;
-          });
-          const srcW = Number(img?.naturalWidth || 0);
-          const srcH = Number(img?.naturalHeight || 0);
-          if (!srcW || !srcH) return inputFile;
-
-          const targetW = mediaType === 'icon' ? 512 : 1800;
-          const targetH = mediaType === 'icon' ? 512 : 900;
-          const srcRatio = srcW / srcH;
-          const targetRatio = targetW / targetH;
-
-          let cropW = srcW;
-          let cropH = srcH;
-          if (srcRatio > targetRatio) cropW = Math.round(srcH * targetRatio);
-          else if (srcRatio < targetRatio) cropH = Math.round(srcW / targetRatio);
-
-          const cropX = Math.max(0, Math.round((srcW - cropW) / 2));
-          const cropY = Math.max(0, Math.round((srcH - cropH) / 2));
-          const canvas = document.createElement('canvas');
-          canvas.width = targetW;
-          canvas.height = targetH;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return inputFile;
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
-          const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-          if (!blob) return inputFile;
-          return new File([blob], `layer-${mediaType}.jpg`, { type: 'image/jpeg' });
-        } catch {
-          return inputFile;
-        } finally {
-          URL.revokeObjectURL(objectUrl);
-        }
-      };
-
-      const processedFile = await processLayerMediaFile(file, mediaKind);
+      const processedFile = file;
       const ext = String((processedFile?.type || '').split('/')[1] || (String(file.name || '').split('.').pop() || 'jpg')).toLowerCase();
       const filename = `layer-media/${activeLayerId}/${mediaKind}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
       const buckets = ['layer-media', 'layer_media', 'trip-photos', 'trip_photos'];
@@ -3236,6 +3200,155 @@ function App() {
   const chooseLayerMediaKind = (kind) => {
     setShowLayerMediaMenu(false);
     openLayerMediaPicker(kind);
+  };
+
+  const handleLayerCropPointerDown = (e) => {
+    if (!showLayerMediaCropModal) return;
+    if (typeof e.button === 'number' && e.button !== 0) return;
+    const base = clampLayerCropOffset(layerMediaCropKind, layerMediaCropNatural, layerMediaCropZoom, layerMediaCropOffset);
+    layerCropDragRef.current = {
+      active: true,
+      startX: Number(e.clientX || 0),
+      startY: Number(e.clientY || 0),
+      baseX: base.x,
+      baseY: base.y,
+    };
+    if (typeof e.currentTarget?.setPointerCapture === 'function') {
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+    }
+  };
+
+  const handleLayerCropPointerMove = (e) => {
+    const drag = layerCropDragRef.current;
+    if (!drag?.active) return;
+    const nextOffset = clampLayerCropOffset(
+      layerMediaCropKind,
+      layerMediaCropNatural,
+      layerMediaCropZoom,
+      {
+        x: drag.baseX + (Number(e.clientX || 0) - Number(drag.startX || 0)),
+        y: drag.baseY + (Number(e.clientY || 0) - Number(drag.startY || 0)),
+      },
+    );
+    setLayerMediaCropOffset(nextOffset);
+  };
+
+  const handleLayerCropPointerUp = (e) => {
+    if (typeof e.currentTarget?.releasePointerCapture === 'function') {
+      try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+    }
+    layerCropDragRef.current = {
+      ...layerCropDragRef.current,
+      active: false,
+    };
+  };
+
+  const getLayerCropFrame = (kind) => {
+    if (String(kind || '') === 'icon') return { width: 240, height: 240, targetW: 512, targetH: 512 };
+    return { width: 360, height: 200, targetW: 1800, targetH: 900 };
+  };
+
+  const getLayerCropMetrics = (kind, natural, zoom) => {
+    const frame = getLayerCropFrame(kind);
+    const srcW = Number(natural?.width || 0);
+    const srcH = Number(natural?.height || 0);
+    if (!srcW || !srcH) {
+      return { ...frame, scale: 1, renderedW: frame.width, renderedH: frame.height };
+    }
+    const baseScale = Math.max(frame.width / srcW, frame.height / srcH);
+    const scale = baseScale * Math.max(1, Number(zoom || 1));
+    return {
+      ...frame,
+      scale,
+      renderedW: srcW * scale,
+      renderedH: srcH * scale,
+    };
+  };
+
+  const clampLayerCropOffset = (kind, natural, zoom, offset) => {
+    const metrics = getLayerCropMetrics(kind, natural, zoom);
+    const maxX = Math.max(0, (metrics.renderedW - metrics.width) / 2);
+    const maxY = Math.max(0, (metrics.renderedH - metrics.height) / 2);
+    return {
+      x: Math.max(-maxX, Math.min(maxX, Number(offset?.x || 0))),
+      y: Math.max(-maxY, Math.min(maxY, Number(offset?.y || 0))),
+    };
+  };
+
+  const closeLayerMediaCropModal = () => {
+    if (layerMediaCropImageUrl) URL.revokeObjectURL(layerMediaCropImageUrl);
+    setShowLayerMediaCropModal(false);
+    setLayerMediaCropKind('');
+    setLayerMediaCropImageUrl('');
+    setLayerMediaCropNatural({ width: 0, height: 0 });
+    setLayerMediaCropZoom(1);
+    setLayerMediaCropOffset({ x: 0, y: 0 });
+    layerCropDragRef.current = { active: false, startX: 0, startY: 0, baseX: 0, baseY: 0 };
+  };
+
+  const beginLayerMediaCrop = (kind, file) => {
+    if (!file) return;
+    const mediaKind = String(kind || '').trim();
+    if (mediaKind !== 'icon' && mediaKind !== 'header') return;
+    if (layerMediaCropImageUrl) URL.revokeObjectURL(layerMediaCropImageUrl);
+    const objectUrl = URL.createObjectURL(file);
+    setLayerMediaCropKind(mediaKind);
+    setLayerMediaCropImageUrl(objectUrl);
+    setLayerMediaCropNatural({ width: 0, height: 0 });
+    setLayerMediaCropZoom(1);
+    setLayerMediaCropOffset({ x: 0, y: 0 });
+    setShowLayerMediaCropModal(true);
+  };
+
+  const commitLayerMediaCrop = async () => {
+    const kind = String(layerMediaCropKind || '').trim();
+    if (!kind || !layerMediaCropImageUrl) return;
+    const img = await new Promise((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = reject;
+      el.src = layerMediaCropImageUrl;
+    }).catch(() => null);
+    if (!img) {
+      alert('Could not process image crop.');
+      return;
+    }
+
+    const natural = {
+      width: Number(img?.naturalWidth || layerMediaCropNatural.width || 0),
+      height: Number(img?.naturalHeight || layerMediaCropNatural.height || 0),
+    };
+    if (!natural.width || !natural.height) {
+      alert('Could not read image dimensions.');
+      return;
+    }
+
+    const metrics = getLayerCropMetrics(kind, natural, layerMediaCropZoom);
+    const safeOffset = clampLayerCropOffset(kind, natural, layerMediaCropZoom, layerMediaCropOffset);
+    const srcCropW = metrics.width / metrics.scale;
+    const srcCropH = metrics.height / metrics.scale;
+    const srcX = Math.max(0, Math.min(natural.width - srcCropW, ((natural.width - srcCropW) / 2) - (safeOffset.x / metrics.scale)));
+    const srcY = Math.max(0, Math.min(natural.height - srcCropH, ((natural.height - srcCropH) / 2) - (safeOffset.y / metrics.scale)));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = metrics.targetW;
+    canvas.height = metrics.targetH;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      alert('Could not process image crop.');
+      return;
+    }
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, srcX, srcY, srcCropW, srcCropH, 0, 0, metrics.targetW, metrics.targetH);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.94));
+    if (!blob) {
+      alert('Could not finalize cropped image.');
+      return;
+    }
+    const croppedFile = new File([blob], `layer-${kind}.jpg`, { type: 'image/jpeg' });
+    closeLayerMediaCropModal();
+    await uploadLayerMedia(kind, croppedFile);
   };
 
   const removeLayerMedia = async (kind) => {
@@ -11042,18 +11155,13 @@ function App() {
         const file = e.target.files?.[0];
         const kind = pendingLayerMediaKindRef.current;
         pendingLayerMediaKindRef.current = '';
-        if (file && kind) uploadLayerMedia(kind, file);
+        if (file && kind) beginLayerMediaCrop(kind, file);
       }}
     />
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-2 sm:p-3 pb-24" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))', paddingBottom: 'max(4.75rem, env(safe-area-inset-bottom))' }}>
       <div className="max-w-6xl mx-auto">
         <div
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4"
-          onClick={(e) => {
-            if (!isActiveLayerOwner || uploadingLayerMedia) return;
-            if (e.target.closest('button,input,textarea,select,a,[role="button"]')) return;
-            openLayerMediaMenu();
-          }}
           style={activeLayer?.header_bg_url
             ? {
               backgroundImage: `linear-gradient(rgba(17,24,39,0.22), rgba(17,24,39,0.16)), url(${activeLayer.header_bg_url})`,
@@ -11064,21 +11172,28 @@ function App() {
         >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
             <div className="flex items-center gap-3 min-w-0">
-              {activeLayer?.icon_url ? (
-                <img
-                  src={activeLayer.icon_url}
-                  alt="Calendar icon"
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600 shrink-0"
-                  onClick={openLayerMediaMenu}
-                />
-              ) : (
-                <div
-                  className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl shrink-0"
-                  onClick={openLayerMediaMenu}
-                >
-                  <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                </div>
-              )}
+              <div className="relative shrink-0">
+                {activeLayer?.icon_url ? (
+                  <img
+                    src={activeLayer.icon_url}
+                    alt="Calendar icon"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
+                  />
+                ) : (
+                  <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
+                    <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                  </div>
+                )}
+                {isActiveLayerOwner && (
+                  <button
+                    onClick={openLayerMediaMenu}
+                    className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700"
+                    title="Edit cover/icon"
+                  >
+                    <Camera className="w-3 h-3 text-gray-600 dark:text-gray-300" />
+                  </button>
+                )}
+              </div>
               <div className="min-w-0">
                 {isEditingTitle ? (
                   <input
@@ -11118,9 +11233,6 @@ function App() {
                     </span>
                   )}
                   <button onClick={handleLogout} className="ml-2 text-xs text-purple-500 hover:text-purple-700 underline">logout</button>
-                  {isActiveLayerOwner && (
-                    <span className="ml-2 text-[10px] text-gray-500 dark:text-gray-400">Click header to edit cover/icon</span>
-                  )}
                 </p>
               </div>
             </div>
@@ -13949,6 +14061,96 @@ function App() {
       </div>
     )}
 
+    {showLayerMediaCropModal && (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              {layerMediaCropKind === 'icon' ? 'Crop Icon' : 'Crop Cover Photo'}
+            </h3>
+            <button onClick={closeLayerMediaCropModal} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Drag to position. Use zoom to crop before saving.
+          </div>
+          <div
+            className={`relative mx-auto overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 ${layerMediaCropKind === 'icon' ? 'rounded-2xl' : 'rounded-xl'}`}
+            style={{
+              width: `${getLayerCropFrame(layerMediaCropKind).width}px`,
+              height: `${getLayerCropFrame(layerMediaCropKind).height}px`,
+              maxWidth: '100%',
+              touchAction: 'none',
+              cursor: 'grab',
+            }}
+            onPointerDown={handleLayerCropPointerDown}
+            onPointerMove={handleLayerCropPointerMove}
+            onPointerUp={handleLayerCropPointerUp}
+            onPointerCancel={handleLayerCropPointerUp}
+            onPointerLeave={handleLayerCropPointerUp}
+          >
+            {!!layerMediaCropImageUrl && (
+              <img
+                src={layerMediaCropImageUrl}
+                alt="Crop preview"
+                draggable={false}
+                onLoad={(e) => {
+                  const natural = {
+                    width: Number(e.currentTarget.naturalWidth || 0),
+                    height: Number(e.currentTarget.naturalHeight || 0),
+                  };
+                  setLayerMediaCropNatural(natural);
+                  setLayerMediaCropOffset({ x: 0, y: 0 });
+                }}
+                className="absolute select-none max-w-none pointer-events-none"
+                style={{
+                  width: `${getLayerCropMetrics(layerMediaCropKind, layerMediaCropNatural, layerMediaCropZoom).renderedW}px`,
+                  height: `${getLayerCropMetrics(layerMediaCropKind, layerMediaCropNatural, layerMediaCropZoom).renderedH}px`,
+                  left: `calc(50% + ${clampLayerCropOffset(layerMediaCropKind, layerMediaCropNatural, layerMediaCropZoom, layerMediaCropOffset).x}px)`,
+                  top: `calc(50% + ${clampLayerCropOffset(layerMediaCropKind, layerMediaCropNatural, layerMediaCropZoom, layerMediaCropOffset).y}px)`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              />
+            )}
+          </div>
+          <div className="mt-4">
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+              Zoom
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="3"
+              step="0.01"
+              value={layerMediaCropZoom}
+              onChange={(e) => {
+                const nextZoom = Math.max(1, Math.min(3, Number(e.target.value || 1)));
+                setLayerMediaCropZoom(nextZoom);
+                setLayerMediaCropOffset(prev => clampLayerCropOffset(layerMediaCropKind, layerMediaCropNatural, nextZoom, prev));
+              }}
+              className="w-full accent-purple-500"
+            />
+          </div>
+          <div className="flex items-center justify-end gap-2 mt-4">
+            <button
+              onClick={closeLayerMediaCropModal}
+              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={commitLayerMediaCrop}
+              disabled={uploadingLayerMedia || !layerMediaCropImageUrl}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold ${uploadingLayerMedia || !layerMediaCropImageUrl ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'}`}
+            >
+              Save Photo
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     {showLayerMediaMenu && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm">
@@ -13988,7 +14190,7 @@ function App() {
               </button>
             </div>
             <div className="text-[11px] text-gray-500 dark:text-gray-400 px-1">
-              Photos are center-cropped automatically for best fit and color.
+              Photos open in a manual crop screen before saving.
             </div>
             <button
               onClick={() => setShowLayerMediaMenu(false)}
