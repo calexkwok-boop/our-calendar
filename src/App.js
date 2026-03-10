@@ -2295,6 +2295,7 @@ function App() {
   const [layers, setLayers] = useState([]);
   const [activeLayerId, setActiveLayerId] = useState(null);
   const [publicCalendars, setPublicCalendars] = useState([]);
+  const [expandedExploreDescriptions, setExpandedExploreDescriptions] = useState({});
   const [exploreSearch, setExploreSearch] = useState('');
   const [exploreLoading, setExploreLoading] = useState(false);
   const [exploreError, setExploreError] = useState('');
@@ -2980,11 +2981,12 @@ function App() {
       public_description: nextPublish ? (nextDescription || null) : null,
       public_tags: nextPublish ? (nextTags.length > 0 ? nextTags : null) : null,
     };
-    const { error } = await supabase
+    const { data: updatedRows, error } = await supabase
       .from('calendar_layers')
       .update(payload)
       .eq('id', lid)
-      .eq('owner_id', user.id);
+      .eq('owner_id', user.id)
+      .select('id,is_public,public_description,public_tags');
     if (error) {
       console.error('Publish calendar update failed:', error);
       if (/column .*is_public|schema cache/i.test(String(error.message || ''))) {
@@ -2994,8 +2996,15 @@ function App() {
       }
       return;
     }
+    if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+      alert('Could not update public settings: no writable row found for this calendar.');
+      return;
+    }
 
     setLayers(prev => prev.map(item => String(item?.id || '') === lid
+      ? { ...item, ...payload }
+      : item));
+    setPublicCalendars(prev => prev.map(item => String(item?.id || '') === lid
       ? { ...item, ...payload }
       : item));
     setLayerRefreshToken(prev => prev + 1);
@@ -13960,6 +13969,9 @@ function App() {
                       const isJoined = Boolean(joinedLayer);
                       const ownerLabel = String(row?.created_by || sharedOwnerLabels[String(row?.owner_id || '')] || fallbackOwnerLabel(row?.owner_id) || 'Creator');
                       const tags = Array.isArray(row?.public_tags) ? row.public_tags : [];
+                      const description = String(row?.public_description || '').trim();
+                      const isExpanded = Boolean(expandedExploreDescriptions[layerId]);
+                      const descriptionPreview = description.length > 160 ? `${description.slice(0, 160).trim()}...` : description;
                       return (
                         <div key={`explore-${layerId}`} className="rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-900/20 p-3">
                           <div className="flex items-start justify-between gap-2">
@@ -13968,8 +13980,20 @@ function App() {
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                 by {ownerLabel} · {Math.max(1, Number(row?.member_count || 0) + 1)} member{Math.max(1, Number(row?.member_count || 0) + 1) === 1 ? '' : 's'}
                               </div>
-                              {row?.public_description && (
-                                <div className="text-xs text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">{row.public_description}</div>
+                              {description && (
+                                <div className="mt-1">
+                                  <div className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                    {isExpanded ? description : descriptionPreview}
+                                  </div>
+                                  {description.length > 160 && (
+                                    <button
+                                      onClick={() => setExpandedExploreDescriptions(prev => ({ ...prev, [layerId]: !prev[layerId] }))}
+                                      className="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-300 hover:underline"
+                                    >
+                                      {isExpanded ? 'Show less' : 'Show more'}
+                                    </button>
+                                  )}
+                                </div>
                               )}
                               {tags.length > 0 && (
                                 <div className="mt-1.5 flex flex-wrap gap-1">
