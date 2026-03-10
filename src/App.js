@@ -2290,6 +2290,10 @@ function App() {
   const [holidays, setHolidays] = useState({});
   const [layers, setLayers] = useState([]);
   const [activeLayerId, setActiveLayerId] = useState(null);
+  const [publicCalendars, setPublicCalendars] = useState([]);
+  const [exploreSearch, setExploreSearch] = useState('');
+  const [exploreLoading, setExploreLoading] = useState(false);
+  const [exploreError, setExploreError] = useState('');
   const [showLayerModal, setShowLayerModal] = useState(false);
   const [newLayerName, setNewLayerName] = useState('');
   const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
@@ -2865,6 +2869,167 @@ function App() {
     const merged = Array.from(new Map([...(ownedLayers || []), ...sharedLayers].map(layer => [String(layer.id), layer])).values());
     setLayers(merged);
     return merged;
+  };
+
+  const parsePublicTags = (raw) => {
+    if (Array.isArray(raw)) return raw.map(v => String(v || '').trim()).filter(Boolean);
+    const txt = String(raw || '').trim();
+    if (!txt) return [];
+    try {
+      const parsed = JSON.parse(txt);
+      if (Array.isArray(parsed)) return parsed.map(v => String(v || '').trim()).filter(Boolean);
+    } catch {}
+    return txt.split(',').map(v => String(v || '').trim()).filter(Boolean);
+  };
+
+  const normalizePublicCalendarRow = (row, memberCount = 0) => ({
+    ...row,
+    public_description: String(row?.public_description || '').trim(),
+    public_tags: parsePublicTags(row?.public_tags),
+    member_count: Number(memberCount || 0),
+  });
+
+  const loadPublicCalendars = async () => {
+    if (!user?.id) {
+      setPublicCalendars([]);
+      setExploreError('');
+      return;
+    }
+    setExploreLoading(true);
+    setExploreError('');
+    try {
+      const { data: rows, error } = await supabase
+        .from('calendar_layers')
+        .select('id,name,owner_id,created_by,created_at,is_public,public_description,public_tags')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .limit(300);
+
+      if (error) {
+        if (/column .*is_public|schema cache|42P01/i.test(String(error.message || ''))) {
+          setPublicCalendars([]);
+          setExploreError('Explore needs DB setup for public calendars.');
+          return;
+        }
+        throw error;
+      }
+
+      const ids = (rows || []).map(r => String(r?.id || '')).filter(Boolean);
+      let countsMap = {};
+      if (ids.length > 0) {
+        const { data: memberRows } = await supabase
+          .from('shared_access')
+          .select('layer_id')
+          .in('layer_id', ids);
+        countsMap = (memberRows || []).reduce((acc, row) => {
+          const key = String(row?.layer_id || '');
+          if (!key) return acc;
+          acc[key] = Number(acc[key] || 0) + 1;
+          return acc;
+        }, {});
+      }
+
+      const normalized = (rows || []).map((row) => normalizePublicCalendarRow(row, countsMap[String(row?.id || '')] || 0));
+      setPublicCalendars(normalized);
+    } catch (err) {
+      console.error('Error loading public calendars:', err);
+      setExploreError(`Could not load Explore calendars: ${String(err?.message || 'Unknown error')}`);
+    } finally {
+      setExploreLoading(false);
+    }
+  };
+
+  const publishLayerCalendar = async (layerId, publish) => {
+    const lid = String(layerId || '').trim();
+    if (!lid || !user?.id) return;
+    const layer = (layers || []).find(item => String(item?.id || '') === lid);
+    if (!layer || String(layer?.owner_id || '') !== String(user.id)) return;
+    const nextPublish = !!publish;
+    let nextDescription = String(layer?.public_description || '').trim();
+    let nextTags = Array.isArray(layer?.public_tags) ? layer.public_tags : parsePublicTags(layer?.public_tags);
+    if (nextPublish) {
+      const descPrompt = window.prompt('Public calendar description (optional):', nextDescription);
+      if (descPrompt === null) return;
+      nextDescription = String(descPrompt || '').trim();
+      const tagsPrompt = window.prompt('Tags (comma-separated, optional):', nextTags.join(', '));
+      if (tagsPrompt === null) return;
+      nextTags = parsePublicTags(tagsPrompt);
+    }
+
+    const payload = {
+      is_public: nextPublish,
+      public_description: nextPublish ? (nextDescription || null) : null,
+      public_tags: nextPublish ? (nextTags.length > 0 ? nextTags : null) : null,
+    };
+    const { error } = await supabase
+      .from('calendar_layers')
+      .update(payload)
+      .eq('id', lid)
+      .eq('owner_id', user.id);
+    if (error) {
+      console.error('Publish calendar update failed:', error);
+      if (/column .*is_public|schema cache/i.test(String(error.message || ''))) {
+        alert('Public calendar columns are missing. Run the SQL migration first.');
+      } else {
+        alert(`Could not update public setting: ${error.message || 'Unknown error'}`);
+      }
+      return;
+    }
+
+    setLayers(prev => prev.map(item => String(item?.id || '') === lid
+      ? { ...item, ...payload }
+      : item));
+    setLayerRefreshToken(prev => prev + 1);
+    if (bottomNavTab === 'explore') loadPublicCalendars();
+  };
+
+  const joinPublicCalendar = async (layer) => {
+    const layerId = String(layer?.id || '').trim();
+    if (!layerId || !user?.id) return;
+    const isAlreadyVisible = (layers || []).some(item => String(item?.id || '') === layerId);
+    if (isAlreadyVisible) return;
+    const payload = {
+      owner_id: layer.owner_id,
+      layer_id: layerId,
+      calendar_id: layerId,
+      shared_with_id: user.id,
+      shared_with_email: normalizeEmail(user?.email) || null,
+      shared_with_phone: normalizePhoneNumber(user?.phone) || null,
+      can_edit: false,
+    };
+    let { error } = await supabase.from('shared_access').insert(payload);
+    if (error && /column .*can_edit|schema cache/i.test(String(error.message || ''))) {
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.can_edit;
+      const fallback = await supabase.from('shared_access').insert(fallbackPayload);
+      error = fallback.error;
+    }
+    if (error && !/duplicate key|already exists|unique constraint|23505/i.test(String(error.message || ''))) {
+      alert(`Could not join calendar: ${error.message || 'Unknown error'}`);
+      return;
+    }
+    await loadLayersForUser(user.id, user.email, user.phone);
+    setLayerRefreshToken(prev => prev + 1);
+  };
+
+  const leavePublicCalendarById = async (layerId) => {
+    const lid = String(layerId || '').trim();
+    if (!lid || !user?.id) return;
+    const myEmail = normalizeEmail(user?.email);
+    const myPhone = normalizePhoneNumber(user?.phone);
+    const shareRecipientFilter = buildShareRecipientFilter(user.id, myEmail, myPhone);
+    let query = supabase
+      .from('shared_access')
+      .delete()
+      .eq('layer_id', lid);
+    if (shareRecipientFilter) query = query.or(shareRecipientFilter);
+    const { error } = await query;
+    if (error) {
+      alert(`Could not leave calendar: ${error.message || 'Unknown error'}`);
+      return;
+    }
+    await loadLayersForUser(user.id, user.email, user.phone);
+    setLayerRefreshToken(prev => prev + 1);
   };
 
   const createLayerCalendar = async () => {
@@ -10191,6 +10356,12 @@ function App() {
     setUpcomingPopupSortOrder((prev) => normalizeSortOrder(ids, prev));
   }, [upcomingPopupEvents]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    if (bottomNavTab !== 'explore') return;
+    loadPublicCalendars();
+  }, [bottomNavTab, user?.id, layerRefreshToken]);
+
   const orderedVisibleLayerCalendars = (() => {
     const byId = new Map((visibleLayerCalendars || []).map((layer) => [String(layer?.id || ''), layer]));
     const order = normalizeSortOrder(Array.from(byId.keys()), activeCalendarSortOrder);
@@ -10207,6 +10378,21 @@ function App() {
     const byId = new Map((upcomingPopupEvents || []).map((event) => [String(event?.id || ''), event]));
     const order = normalizeSortOrder(Array.from(byId.keys()), upcomingPopupSortOrder);
     return order.map((id) => byId.get(id)).filter(Boolean);
+  })();
+
+  const filteredPublicCalendars = (() => {
+    const q = String(exploreSearch || '').trim().toLowerCase();
+    if (!q) return publicCalendars;
+    return (publicCalendars || []).filter((row) => {
+      const tags = Array.isArray(row?.public_tags) ? row.public_tags : [];
+      const hay = [
+        String(row?.name || ''),
+        String(row?.public_description || ''),
+        String(row?.created_by || ''),
+        tags.join(' '),
+      ].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
   })();
 
   const handleDropActiveCalendar = (targetId) => {
@@ -12998,6 +13184,7 @@ function App() {
                       {orderedVisibleLayerCalendars.map(layer => {
                         const isActiveLayer = String(layer.id) === String(activeLayerId);
                         const isOwnedLayer = String(layer?.owner_id) === String(user?.id);
+                        const isPublicLayer = Boolean(layer?.is_public);
                         const canDeleteLayer = isOwnedLayer && layers.length > 1;
                         const canLeaveLayer = !isOwnedLayer;
                         const canSwipeLayerAction = canDeleteLayer || canLeaveLayer;
@@ -13062,6 +13249,11 @@ function App() {
                                       ? 'Owned by you'
                                       : `Shared by ${sharedOwnerLabels[String(layer?.owner_id || '')] || fallbackOwnerLabel(layer?.owner_id)}`}
                                   </div>
+                                  {isOwnedLayer && (
+                                    <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                                      {isPublicLayer ? 'Public in Explore' : 'Private calendar'}
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                   <span
@@ -13072,6 +13264,22 @@ function App() {
                                     ⋮⋮
                                   </span>
                                   {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
+                                  {isOwnedLayer && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        publishLayerCalendar(layer.id, !isPublicLayer);
+                                      }}
+                                      className={`hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
+                                        isPublicLayer
+                                          ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                      }`}
+                                      title={isPublicLayer ? 'Unpublish from Explore' : 'Publish to Explore'}
+                                    >
+                                      {isPublicLayer ? 'Public' : 'Publish'}
+                                    </button>
+                                  )}
                                   {canDeleteLayer && (
                                     <button
                                       onClick={(e) => {
@@ -13306,6 +13514,110 @@ function App() {
                 )}
               </>
             )}
+
+            {bottomNavTab === 'explore' && (
+              <>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Explore Calendars</h3>
+                  <button
+                    onClick={loadPublicCalendars}
+                    className="px-3 py-1.5 text-xs rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60"
+                  >
+                    Refresh
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={exploreSearch}
+                  onChange={(e) => setExploreSearch(e.target.value)}
+                  placeholder="Search by name, tag, or description"
+                  className="w-full px-3 py-2 mb-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                />
+                {exploreLoading && (
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Loading public calendars...</div>
+                )}
+                {!exploreLoading && exploreError && (
+                  <div className="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2">{exploreError}</div>
+                )}
+                {!exploreLoading && !exploreError && filteredPublicCalendars.length === 0 && (
+                  <div className="text-sm text-gray-500 dark:text-gray-400">No public calendars found yet.</div>
+                )}
+                {!exploreLoading && !exploreError && filteredPublicCalendars.length > 0 && (
+                  <div className="space-y-2">
+                    {filteredPublicCalendars.map((row) => {
+                      const layerId = String(row?.id || '');
+                      const isOwner = String(row?.owner_id || '') === String(user?.id || '');
+                      const joinedLayer = (layers || []).find((layer) => String(layer?.id || '') === layerId);
+                      const isJoined = Boolean(joinedLayer);
+                      const ownerLabel = String(row?.created_by || sharedOwnerLabels[String(row?.owner_id || '')] || fallbackOwnerLabel(row?.owner_id) || 'Creator');
+                      const tags = Array.isArray(row?.public_tags) ? row.public_tags : [];
+                      return (
+                        <div key={`explore-${layerId}`} className="rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-900/20 p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{row?.name || 'Public Calendar'}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                by {ownerLabel} · {Math.max(1, Number(row?.member_count || 0) + 1)} member{Math.max(1, Number(row?.member_count || 0) + 1) === 1 ? '' : 's'}
+                              </div>
+                              {row?.public_description && (
+                                <div className="text-xs text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">{row.public_description}</div>
+                              )}
+                              {tags.length > 0 && (
+                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                  {tags.slice(0, 6).map((tag) => (
+                                    <span key={`${layerId}-${tag}`} className="text-[10px] px-2 py-0.5 rounded-full bg-white/90 dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700">
+                                      #{tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="shrink-0 flex items-center gap-2">
+                              {isJoined && (
+                                <button
+                                  onClick={() => {
+                                    setActiveLayerId(layerId);
+                                    if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layerId);
+                                    setBottomNavTab('home');
+                                  }}
+                                  className="px-3 py-1.5 text-xs rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white"
+                                >
+                                  Open
+                                </button>
+                              )}
+                              {!isOwner && isJoined && (
+                                <button
+                                  onClick={() => leavePublicCalendarById(layerId)}
+                                  className="px-3 py-1.5 text-xs rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50"
+                                >
+                                  Leave
+                                </button>
+                              )}
+                              {!isOwner && !isJoined && (
+                                <button
+                                  onClick={() => joinPublicCalendar(row)}
+                                  className="px-3 py-1.5 text-xs rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white"
+                                >
+                                  Join
+                                </button>
+                              )}
+                              {isOwner && (
+                                <button
+                                  onClick={() => publishLayerCalendar(layerId, false)}
+                                  className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                >
+                                  Unpublish
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
           </div>
           )}
         </div>
@@ -13359,7 +13671,7 @@ function App() {
     {!activeSubCalendar && (
       <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-white/95 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
+          <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-white/95 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
             <button
               onClick={() => {
                 setBottomNavTab('home');
@@ -13386,6 +13698,15 @@ function App() {
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'archived' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
             >
               Archived
+            </button>
+            <button
+              onClick={() => {
+                setBottomNavTab('explore');
+                setShowDateDetailModal(false);
+              }}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'explore' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+            >
+              Explore
             </button>
           </div>
         </div>
