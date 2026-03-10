@@ -10701,6 +10701,8 @@ function App() {
       return hay.includes(q);
     });
   })();
+  const publishTargetLayer = (layers || []).find((layer) => String(layer?.id || '') === String(publishLayerTargetId || '')) || null;
+  const publishTargetIsPublic = Boolean(publishTargetLayer?.is_public);
 
   const handleDropActiveCalendar = (targetId) => {
     const ids = visibleLayerCalendars.map((layer) => String(layer?.id || ''));
@@ -13615,17 +13617,16 @@ function App() {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        if (isPublicLayer) publishLayerCalendar(layer.id, false);
-                                        else openPublishLayerModal(layer);
+                                        openPublishLayerModal(layer);
                                       }}
                                       className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
                                         isPublicLayer
                                           ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
                                           : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                                       }`}
-                                      title={isPublicLayer ? 'Unpublish from Explore' : 'Publish to Explore'}
+                                      title={isPublicLayer ? 'Edit public settings' : 'Publish to Explore'}
                                     >
-                                      {isPublicLayer ? 'Public' : 'Publish'}
+                                      {isPublicLayer ? 'Edit Public' : 'Publish'}
                                     </button>
                                   )}
                                   {canDeleteLayer && (
@@ -13950,12 +13951,20 @@ function App() {
                                 </button>
                               )}
                               {isOwner && (
-                                <button
-                                  onClick={() => publishLayerCalendar(layerId, false)}
-                                  className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                                >
-                                  Unpublish
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => openPublishLayerModal(row)}
+                                    className="px-3 py-1.5 text-xs rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => publishLayerCalendar(layerId, false)}
+                                    className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                  >
+                                    Unpublish
+                                  </button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -14207,7 +14216,9 @@ function App() {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Publish Calendar</h3>
+            <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              {publishTargetIsPublic ? 'Edit Public Calendar' : 'Publish Calendar'}
+            </h3>
             <button
               onClick={() => {
                 setShowPublishLayerModal(false);
@@ -14238,7 +14249,21 @@ function App() {
             placeholder="e.g. pickleball, fresno, community"
             className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
           />
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-between gap-2">
+            {publishTargetIsPublic ? (
+              <button
+                onClick={async () => {
+                  if (!publishLayerTargetId) return;
+                  await publishLayerCalendar(publishLayerTargetId, false);
+                  setShowPublishLayerModal(false);
+                  setPublishLayerTargetId(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                Unpublish
+              </button>
+            ) : <div />}
+            <div className="flex items-center gap-2">
             <button
               onClick={() => {
                 setShowPublishLayerModal(false);
@@ -14252,8 +14277,9 @@ function App() {
               onClick={submitPublishLayerModal}
               className="px-4 py-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-sm font-semibold"
             >
-              Publish
+              {publishTargetIsPublic ? 'Save' : 'Publish'}
             </button>
+            </div>
           </div>
         </div>
       </div>
