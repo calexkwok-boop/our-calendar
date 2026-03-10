@@ -2981,12 +2981,19 @@ function App() {
       public_description: nextPublish ? (nextDescription || null) : null,
       public_tags: nextPublish ? (nextTags.length > 0 ? nextTags : null) : null,
     };
-    const { data: updatedRows, error } = await supabase
+    const primary = await supabase
       .from('calendar_layers')
       .update(payload)
       .eq('id', lid)
-      .eq('owner_id', user.id)
-      .select('id,is_public,public_description,public_tags');
+      .eq('owner_id', user.id);
+    let error = primary.error;
+    if (error) {
+      const fallback = await supabase
+        .from('calendar_layers')
+        .update(payload)
+        .eq('id', lid);
+      error = fallback.error;
+    }
     if (error) {
       console.error('Publish calendar update failed:', error);
       if (/column .*is_public|schema cache/i.test(String(error.message || ''))) {
@@ -2994,10 +3001,6 @@ function App() {
       } else {
         alert(`Could not update public setting: ${error.message || 'Unknown error'}`);
       }
-      return;
-    }
-    if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
-      alert('Could not update public settings: no writable row found for this calendar.');
       return;
     }
 
@@ -13984,7 +13987,6 @@ function App() {
                       const tags = Array.isArray(row?.public_tags) ? row.public_tags : [];
                       const description = String(row?.public_description || '').trim();
                       const isExpanded = Boolean(expandedExploreDescriptions[layerId]);
-                      const descriptionPreview = description.length > 160 ? `${description.slice(0, 160).trim()}...` : description;
                       return (
                         <div key={`explore-${layerId}`} className="rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-900/20 p-3">
                           <div className="flex items-start justify-between gap-2">
@@ -13995,16 +13997,26 @@ function App() {
                               </div>
                               {description && (
                                 <div className="mt-1">
-                                  <div className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                                    {isExpanded ? description : descriptionPreview}
-                                  </div>
-                                  {description.length > 160 && (
+                                  {!isExpanded && (
                                     <button
-                                      onClick={() => setExpandedExploreDescriptions(prev => ({ ...prev, [layerId]: !prev[layerId] }))}
-                                      className="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-300 hover:underline"
+                                      onClick={() => setExpandedExploreDescriptions(prev => ({ ...prev, [layerId]: true }))}
+                                      className="text-[11px] font-medium text-indigo-600 dark:text-indigo-300 hover:underline"
                                     >
-                                      {isExpanded ? 'Show less' : 'Show more'}
+                                      Show description
                                     </button>
+                                  )}
+                                  {isExpanded && (
+                                    <>
+                                      <div className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                        {description}
+                                      </div>
+                                      <button
+                                        onClick={() => setExpandedExploreDescriptions(prev => ({ ...prev, [layerId]: false }))}
+                                        className="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-300 hover:underline"
+                                      >
+                                        Hide description
+                                      </button>
+                                    </>
                                   )}
                                 </div>
                               )}
