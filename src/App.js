@@ -2883,7 +2883,7 @@ function App() {
       sharedLayers = sharedLayerData || [];
     }
 
-    const merged = Array.from(new Map([...(ownedLayers || []), ...sharedLayers].map(layer => [String(layer.id), layer])).values());
+    const merged = Array.from(new Map([...(ownedLayers || []), ...sharedLayers].map(layer => [String(layer.id), normalizeLayerRow(layer)])).values());
     setLayers(merged);
     return merged;
   };
@@ -2899,11 +2899,79 @@ function App() {
     return txt.split(',').map(v => String(v || '').trim()).filter(Boolean);
   };
 
-  const normalizePublicCalendarRow = (row, memberCount = 0) => ({
+  const normalizeLayerRow = (row) => ({
     ...row,
+    icon_url: String(row?.icon_url || '').trim() || null,
+    header_bg_url: String(row?.header_bg_url || '').trim() || null,
     public_description: String(row?.public_description || '').trim(),
     public_tags: parsePublicTags(row?.public_tags),
+  });
+
+  const normalizePublicCalendarRow = (row, memberCount = 0) => ({
+    ...normalizeLayerRow(row),
     member_count: Number(memberCount || 0),
+  });
+
+  const mergeLayerIntoState = (layerRow) => {
+    const incoming = layerRow || {};
+    const lid = String(incoming?.id || '').trim();
+    if (!lid) return normalizeLayerRow(incoming);
+    const existing = (layers || []).find(item => String(item?.id || '') === lid)
+      || (publicCalendars || []).find(item => String(item?.id || '') === lid)
+      || {};
+    const normalized = normalizeLayerRow({ ...existing, ...incoming });
+    setLayers(prev => {
+      const found = prev.some(item => String(item?.id || '') === lid);
+      return found
+        ? prev.map(item => (String(item?.id || '') === lid ? { ...item, ...normalized } : item))
+        : [...prev, normalized];
+    });
+    setPublicCalendars(prev => prev.map(item => (
+      String(item?.id || '') === lid
+        ? { ...item, ...normalized }
+        : item
+    )));
+    return normalized;
+  };
+
+  const refreshLayerById = async (layerId) => {
+    const lid = String(layerId || '').trim();
+    if (!lid) return null;
+    const { data, error } = await supabase
+      .from('calendar_layers')
+      .select('*')
+      .eq('id', lid)
+      .maybeSingle();
+    if (error) {
+      console.error('Could not refresh calendar layer:', error);
+      return null;
+    }
+    if (!data) return null;
+    return mergeLayerIntoState(data);
+  };
+
+  const mapSupabaseEventRow = (event, currentUserId) => ({
+    id: event.id,
+    title: event.title,
+    time: event.time,
+    date: event.date,
+    category: event.category,
+    description: String(event?.description || '').trim(),
+    isPrivate: event.is_private,
+    isUrgent: event.is_urgent,
+    isMultiDay: event.is_multi_day,
+    multiDayId: event.multi_day_id,
+    isAnnual: event.is_annual || false,
+    annualMonth: event.annual_month || null,
+    annualDay: event.annual_day || null,
+    recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
+    exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
+    reactions: event.reactions ? JSON.parse(event.reactions) : {},
+    location: event.location || null,
+    createdBy: event.created_by,
+    createdAt: event.created_at,
+    userId: event.user_id,
+    isShared: String(event.user_id || '') !== String(currentUserId || ''),
   });
 
   const loadPublicCalendars = async () => {
@@ -3002,12 +3070,8 @@ function App() {
       return false;
     }
 
-    setLayers(prev => prev.map(item => String(item?.id || '') === lid
-      ? { ...item, ...payload }
-      : item));
-    setPublicCalendars(prev => prev.map(item => String(item?.id || '') === lid
-      ? { ...item, ...payload }
-      : item));
+    mergeLayerIntoState({ id: lid, ...payload });
+    await refreshLayerById(lid);
     setLayerRefreshToken(prev => prev + 1);
     if (bottomNavTab === 'explore') loadPublicCalendars();
     return true;
@@ -3118,7 +3182,7 @@ function App() {
       setShareMessage(`Could not create calendar: ${error.message}`);
       return;
     }
-    const created = data || payload;
+    const created = normalizeLayerRow(data || payload);
     setLayers(prev => [...prev, created]);
     setActiveLayerId(created.id);
     localStorage.setItem(`active-layer-${user.id}`, created.id);
@@ -3191,11 +3255,8 @@ function App() {
         return false;
       }
 
-      setLayers(prev => prev.map(layer => (
-        String(layer?.id || '') === String(activeLayerId || '')
-          ? { ...layer, [field]: publicUrl }
-          : layer
-      )));
+      mergeLayerIntoState({ id: activeLayerId, [field]: publicUrl });
+      await refreshLayerById(activeLayerId);
       setLayerRefreshToken(prev => prev + 1);
       setShowLayerMediaMenu(false);
       return true;
@@ -3452,11 +3513,8 @@ function App() {
       alert(`Could not remove image: ${error.message || 'Unknown error'}`);
       return;
     }
-    setLayers(prev => prev.map(layer => (
-      String(layer?.id || '') === String(activeLayerId || '')
-        ? { ...layer, [field]: null }
-        : layer
-    )));
+    mergeLayerIntoState({ id: activeLayerId, [field]: null });
+    await refreshLayerById(activeLayerId);
     setLayerRefreshToken(prev => prev + 1);
     setShowLayerMediaMenu(false);
   };
@@ -4475,6 +4533,7 @@ function App() {
                 title: event.title,
                 time: event.time,
                 category: event.category,
+                description: event.description || null,
                 is_private: event.isPrivate || false,
                 is_private_for: event.isPrivate ? event.createdBy : null,
                 is_urgent: event.isUrgent || false,
@@ -4502,9 +4561,16 @@ function App() {
             for (let i = 0; i < myEvents.length; i += 250) {
               if (requestId !== saveRequestIdRef.current) return;
               const chunk = myEvents.slice(i, i + 250);
-              const { error } = await supabase
+              let { error } = await supabase
                 .from('events')
                 .upsert(chunk, { onConflict: 'id' });
+              if (error && /column .*description|schema cache/i.test(String(error.message || ''))) {
+                const fallbackChunk = chunk.map(({ description, ...rest }) => rest);
+                const fallbackResult = await supabase
+                  .from('events')
+                  .upsert(fallbackChunk, { onConflict: 'id' });
+                error = fallbackResult.error;
+              }
               if (error) {
                 console.error('Error upserting events to Supabase:', error);
                 break;
@@ -4515,10 +4581,11 @@ function App() {
           // Save shared event edits via targeted UPDATE on each row
           for (const event of sharedUpdates) {
             if (requestId !== saveRequestIdRef.current) return;
-            await supabase.from('events').update({
+            let updateResult = await supabase.from('events').update({
               title: event.title,
               time: event.time,
               category: event.category,
+              description: event.description || null,
               is_private: event.isPrivate || false,
               is_urgent: event.isUrgent || false,
               is_annual: event.isAnnual || false,
@@ -4529,6 +4596,22 @@ function App() {
               reactions: event.reactions ? JSON.stringify(event.reactions) : null,
               location: event.location || null,
             }).eq('id', event.id).eq('layer_id', saveLayerId);
+            if (updateResult.error && /column .*description|schema cache/i.test(String(updateResult.error.message || ''))) {
+              updateResult = await supabase.from('events').update({
+                title: event.title,
+                time: event.time,
+                category: event.category,
+                is_private: event.isPrivate || false,
+                is_urgent: event.isUrgent || false,
+                is_annual: event.isAnnual || false,
+                annual_month: event.annualMonth || null,
+                annual_day: event.annualDay || null,
+                recurrence: event.recurrence || 'once',
+                exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
+                reactions: event.reactions ? JSON.stringify(event.reactions) : null,
+                location: event.location || null,
+              }).eq('id', event.id).eq('layer_id', saveLayerId);
+            }
           }
         } catch (err) {
           console.error('Error writing to Supabase:', err);
@@ -6364,28 +6447,7 @@ function App() {
           const eventsObj = {};
           layerEventsData.forEach(event => {
             if (!eventsObj[event.date]) eventsObj[event.date] = [];
-            eventsObj[event.date].push({
-              id: event.id,
-              title: event.title,
-              time: event.time,
-              date: event.date,
-              category: event.category,
-              isPrivate: event.is_private,
-              isUrgent: event.is_urgent,
-              isMultiDay: event.is_multi_day,
-              multiDayId: event.multi_day_id,
-              isAnnual: event.is_annual || false,
-              annualMonth: event.annual_month || null,
-              annualDay: event.annual_day || null,
-              recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
-              exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
-              reactions: event.reactions ? JSON.parse(event.reactions) : {},
-              location: event.location || null,
-              createdBy: event.created_by,
-              createdAt: event.created_at,
-              userId: event.user_id,
-              isShared: String(event.user_id || '') !== String(userId),
-            });
+            eventsObj[event.date].push(mapSupabaseEventRow(event, userId));
           });
           setEvents(eventsObj);
           if (typeof window !== 'undefined') window.events = eventsObj;
@@ -6443,28 +6505,7 @@ function App() {
         const eventsObj = {};
         (layerEventsData || []).forEach(event => {
           if (!eventsObj[event.date]) eventsObj[event.date] = [];
-          eventsObj[event.date].push({
-            id: event.id,
-            title: event.title,
-            time: event.time,
-            date: event.date,
-            category: event.category,
-            isPrivate: event.is_private,
-            isUrgent: event.is_urgent,
-            isMultiDay: event.is_multi_day,
-            multiDayId: event.multi_day_id,
-            isAnnual: event.is_annual || false,
-            annualMonth: event.annual_month || null,
-            annualDay: event.annual_day || null,
-            recurrence: event.recurrence || (event.is_annual ? 'annual' : 'once'),
-            exceptions: event.exceptions ? JSON.parse(event.exceptions) : [],
-            reactions: event.reactions ? JSON.parse(event.reactions) : {},
-            location: event.location || null,
-            createdBy: event.created_by,
-            createdAt: event.created_at,
-            userId: event.user_id,
-            isShared: String(event.user_id || '') !== String(userId),
-          });
+          eventsObj[event.date].push(mapSupabaseEventRow(event, userId));
         });
         setEvents(eventsObj);
         if (typeof window !== 'undefined') window.events = eventsObj;
@@ -10254,6 +10295,7 @@ function App() {
         time: pendingEvent.isMultiDay ? null : (time || null),
         date: dateKey,
         category: pendingEvent.isPopupEvent ? 'popup_event' : selectedCategory,
+        description: String(pendingEvent.description || '').trim(),
         isPrivate: isPrivate,
         isUrgent: isUrgent,
         isAnnual: recurrence === 'annual',
@@ -13402,6 +13444,13 @@ function App() {
                             placeholder="📍 Add location (optional)"
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
+                          <textarea
+                            defaultValue={event.description || ''}
+                            onBlur={(e) => handleUpdateEventField(event.date, event.id, { description: e.target.value })}
+                            placeholder="Add description"
+                            rows={3}
+                            className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm resize-none"
+                          />
                           <select
                             defaultValue={event.category || 'other'}
                             onChange={(e) => handleUpdateEventField(event.date, event.id, { category: e.target.value })}
@@ -13493,6 +13542,11 @@ function App() {
                               >
                                 📍 {event.location}
                               </button>
+                            )}
+                            {event.description && (
+                              <div className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap mb-1">
+                                {event.description}
+                              </div>
                             )}
                             {event.createdBy && (
                               <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
