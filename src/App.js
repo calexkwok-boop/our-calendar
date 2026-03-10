@@ -105,6 +105,8 @@ function App() {
   const saveRequestIdRef = useRef(0);
   const holidayCleanupRunRef = useRef(new Set());
   const dateTapTimeoutRef = useRef(null);
+  const layerMediaInputRef = useRef(null);
+  const pendingLayerMediaKindRef = useRef('');
   const scanReminderInputRef = useRef(null);
   const scanReminderUploadInputRef = useRef(null);
   const importCalendarInputRef = useRef(null);
@@ -164,6 +166,7 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
   const [isImportingCalendar, setIsImportingCalendar] = useState(false);
+  const [uploadingLayerMedia, setUploadingLayerMedia] = useState(false);
   const [showFirstImportPrompt, setShowFirstImportPrompt] = useState(false);
   const [importPromptStep, setImportPromptStep] = useState('main');
   const [appleCalendarUrlInput, setAppleCalendarUrlInput] = useState('');
@@ -3071,12 +3074,26 @@ function App() {
       name,
       is_default: false,
       created_by: currentUser || user.email || 'User',
+      icon_url: null,
+      header_bg_url: null,
     };
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('calendar_layers')
       .insert(payload)
       .select('*')
       .single();
+    if (error && /column .*icon_url|column .*header_bg_url|schema cache/i.test(String(error.message || ''))) {
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.icon_url;
+      delete fallbackPayload.header_bg_url;
+      const fallback = await supabase
+        .from('calendar_layers')
+        .insert(fallbackPayload)
+        .select('*')
+        .single();
+      data = fallback.data;
+      error = fallback.error;
+    }
     if (error) {
       setShareMessage(`Could not create calendar: ${error.message}`);
       return;
@@ -3087,6 +3104,82 @@ function App() {
     localStorage.setItem(`active-layer-${user.id}`, created.id);
     setNewLayerName('');
     setShowLayerModal(false);
+  };
+
+  const uploadLayerMedia = async (kind, file) => {
+    const mediaKind = String(kind || '').trim();
+    if (!file || !user?.id || !activeLayerId || !isActiveLayerOwner) return;
+    if (mediaKind !== 'icon' && mediaKind !== 'header') return;
+    if (!String(file.type || '').startsWith('image/')) {
+      alert('Please choose an image file.');
+      return;
+    }
+
+    setUploadingLayerMedia(true);
+    try {
+      const ext = (String(file.name || '').split('.').pop() || 'jpg').toLowerCase();
+      const filename = `layer-media/${activeLayerId}/${mediaKind}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+      const buckets = ['layer-media', 'layer_media', 'trip-photos', 'trip_photos'];
+      let selectedBucket = null;
+      let lastError = null;
+
+      for (const bucket of buckets) {
+        const { error: uploadErr } = await supabase.storage.from(bucket).upload(filename, file, { contentType: file.type });
+        if (!uploadErr) {
+          selectedBucket = bucket;
+          lastError = null;
+          break;
+        }
+        lastError = uploadErr;
+        if (!/bucket.*not found/i.test(String(uploadErr?.message || ''))) break;
+      }
+
+      if (!selectedBucket) {
+        alert(`Could not upload image: ${String(lastError?.message || 'Unknown upload error')}`);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from(selectedBucket).getPublicUrl(filename);
+      const publicUrl = String(urlData?.publicUrl || '').trim();
+      if (!publicUrl) {
+        alert('Upload succeeded but no public URL was returned.');
+        return;
+      }
+
+      const field = mediaKind === 'icon' ? 'icon_url' : 'header_bg_url';
+      const { error: updateErr } = await supabase
+        .from('calendar_layers')
+        .update({ [field]: publicUrl })
+        .eq('id', activeLayerId)
+        .eq('owner_id', user.id);
+      if (updateErr) {
+        if (/column .*icon_url|column .*header_bg_url|schema cache/i.test(String(updateErr.message || ''))) {
+          alert('Calendar media columns are missing. Run SQL migration: add icon_url and header_bg_url to calendar_layers.');
+        } else {
+          alert(`Could not save image on calendar: ${updateErr.message || 'Unknown error'}`);
+        }
+        return;
+      }
+
+      setLayers(prev => prev.map(layer => (
+        String(layer?.id || '') === String(activeLayerId || '')
+          ? { ...layer, [field]: publicUrl }
+          : layer
+      )));
+      setLayerRefreshToken(prev => prev + 1);
+    } catch (err) {
+      console.error('Layer media upload failed:', err);
+      alert(`Upload failed: ${String(err?.message || 'Unknown error')}`);
+    } finally {
+      setUploadingLayerMedia(false);
+      if (layerMediaInputRef.current) layerMediaInputRef.current.value = '';
+    }
+  };
+
+  const openLayerMediaPicker = (kind) => {
+    if (!isActiveLayerOwner || !activeLayerId) return;
+    pendingLayerMediaKindRef.current = String(kind || '');
+    layerMediaInputRef.current?.click();
   };
 
   const deleteLayerCalendar = async (layerId) => {
@@ -10861,14 +10954,43 @@ function App() {
         if (file) importIcsFile(file);
       }}
     />
+    <input
+      ref={layerMediaInputRef}
+      type="file"
+      accept="image/*"
+      className="hidden"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        const kind = pendingLayerMediaKindRef.current;
+        pendingLayerMediaKindRef.current = '';
+        if (file && kind) uploadLayerMedia(kind, file);
+      }}
+    />
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-2 sm:p-3 pb-24" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))', paddingBottom: 'max(4.75rem, env(safe-area-inset-bottom))' }}>
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4">
+        <div
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4"
+          style={activeLayer?.header_bg_url
+            ? {
+              backgroundImage: `linear-gradient(rgba(255,255,255,0.88), rgba(255,255,255,0.88)), url(${activeLayer.header_bg_url})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }
+            : undefined}
+        >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl shrink-0">
-                <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-              </div>
+              {activeLayer?.icon_url ? (
+                <img
+                  src={activeLayer.icon_url}
+                  alt="Calendar icon"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600 shrink-0"
+                />
+              ) : (
+                <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl shrink-0">
+                  <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                </div>
+              )}
               <div className="min-w-0">
                 {isEditingTitle ? (
                   <input
@@ -10912,6 +11034,26 @@ function App() {
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
+              {isActiveLayerOwner && (
+                <>
+                  <button
+                    onClick={() => openLayerMediaPicker('icon')}
+                    disabled={uploadingLayerMedia}
+                    className={`px-2 py-1.5 rounded-xl transition-all duration-200 text-[11px] font-semibold ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/70'}`}
+                    title="Upload calendar icon"
+                  >
+                    Icon
+                  </button>
+                  <button
+                    onClick={() => openLayerMediaPicker('header')}
+                    disabled={uploadingLayerMedia}
+                    className={`px-2 py-1.5 rounded-xl transition-all duration-200 text-[11px] font-semibold ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/70'}`}
+                    title="Upload header background"
+                  >
+                    Header
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => setShowSharePanel(!showSharePanel)}
                 className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
