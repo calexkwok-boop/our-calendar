@@ -2967,9 +2967,13 @@ function App() {
 
   const publishLayerCalendar = async (layerId, publish, details = {}) => {
     const lid = String(layerId || '').trim();
-    if (!lid || !user?.id) return;
-    const layer = (layers || []).find(item => String(item?.id || '') === lid);
-    if (!layer || String(layer?.owner_id || '') !== String(user.id)) return;
+    if (!lid || !user?.id) return false;
+    const layer = (layers || []).find(item => String(item?.id || '') === lid)
+      || (publicCalendars || []).find(item => String(item?.id || '') === lid);
+    if (!layer || String(layer?.owner_id || '') !== String(user.id)) {
+      alert('Only the calendar owner can edit public description/settings.');
+      return false;
+    }
     const nextPublish = !!publish;
     let nextDescription = String((details?.description ?? layer?.public_description) || '').trim();
     let nextTags = Array.isArray(details?.tags)
@@ -3001,7 +3005,7 @@ function App() {
       } else {
         alert(`Could not update public setting: ${error.message || 'Unknown error'}`);
       }
-      return;
+      return false;
     }
 
     setLayers(prev => prev.map(item => String(item?.id || '') === lid
@@ -3012,16 +3016,18 @@ function App() {
       : item));
     setLayerRefreshToken(prev => prev + 1);
     if (bottomNavTab === 'explore') loadPublicCalendars();
+    return true;
   };
 
   const submitPublishLayerModal = async () => {
     const layerId = String(publishLayerTargetId || '').trim();
     if (!layerId) return;
     const tags = parsePublicTags(publishLayerTagsInput);
-    await publishLayerCalendar(layerId, true, {
+    const ok = await publishLayerCalendar(layerId, true, {
       description: publishLayerDescription,
       tags,
     });
+    if (!ok) return;
     setShowPublishLayerModal(false);
     setPublishLayerTargetId(null);
     setPublishLayerDescription('');
