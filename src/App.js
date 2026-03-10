@@ -2302,6 +2302,7 @@ function App() {
   const [publishLayerTargetId, setPublishLayerTargetId] = useState(null);
   const [publishLayerDescription, setPublishLayerDescription] = useState('');
   const [publishLayerTagsInput, setPublishLayerTagsInput] = useState('');
+  const [showLayerMediaMenu, setShowLayerMediaMenu] = useState(false);
   const [newLayerName, setNewLayerName] = useState('');
   const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
   const [sharedOwnerLabels, setSharedOwnerLabels] = useState({});
@@ -3117,14 +3118,58 @@ function App() {
 
     setUploadingLayerMedia(true);
     try {
-      const ext = (String(file.name || '').split('.').pop() || 'jpg').toLowerCase();
+      const processLayerMediaFile = async (inputFile, mediaType) => {
+        const objectUrl = URL.createObjectURL(inputFile);
+        try {
+          const img = await new Promise((resolve, reject) => {
+            const el = new Image();
+            el.onload = () => resolve(el);
+            el.onerror = reject;
+            el.src = objectUrl;
+          });
+          const srcW = Number(img?.naturalWidth || 0);
+          const srcH = Number(img?.naturalHeight || 0);
+          if (!srcW || !srcH) return inputFile;
+
+          const targetW = mediaType === 'icon' ? 512 : 1800;
+          const targetH = mediaType === 'icon' ? 512 : 900;
+          const srcRatio = srcW / srcH;
+          const targetRatio = targetW / targetH;
+
+          let cropW = srcW;
+          let cropH = srcH;
+          if (srcRatio > targetRatio) cropW = Math.round(srcH * targetRatio);
+          else if (srcRatio < targetRatio) cropH = Math.round(srcW / targetRatio);
+
+          const cropX = Math.max(0, Math.round((srcW - cropW) / 2));
+          const cropY = Math.max(0, Math.round((srcH - cropH) / 2));
+          const canvas = document.createElement('canvas');
+          canvas.width = targetW;
+          canvas.height = targetH;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return inputFile;
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
+          const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+          if (!blob) return inputFile;
+          return new File([blob], `layer-${mediaType}.jpg`, { type: 'image/jpeg' });
+        } catch {
+          return inputFile;
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      };
+
+      const processedFile = await processLayerMediaFile(file, mediaKind);
+      const ext = String((processedFile?.type || '').split('/')[1] || (String(file.name || '').split('.').pop() || 'jpg')).toLowerCase();
       const filename = `layer-media/${activeLayerId}/${mediaKind}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
       const buckets = ['layer-media', 'layer_media', 'trip-photos', 'trip_photos'];
       let selectedBucket = null;
       let lastError = null;
 
       for (const bucket of buckets) {
-        const { error: uploadErr } = await supabase.storage.from(bucket).upload(filename, file, { contentType: file.type });
+        const { error: uploadErr } = await supabase.storage.from(bucket).upload(filename, processedFile, { contentType: processedFile.type || file.type });
         if (!uploadErr) {
           selectedBucket = bucket;
           lastError = null;
@@ -3167,6 +3212,7 @@ function App() {
           : layer
       )));
       setLayerRefreshToken(prev => prev + 1);
+      setShowLayerMediaMenu(false);
     } catch (err) {
       console.error('Layer media upload failed:', err);
       alert(`Upload failed: ${String(err?.message || 'Unknown error')}`);
@@ -3180,6 +3226,39 @@ function App() {
     if (!isActiveLayerOwner || !activeLayerId) return;
     pendingLayerMediaKindRef.current = String(kind || '');
     layerMediaInputRef.current?.click();
+  };
+
+  const openLayerMediaMenu = () => {
+    if (!isActiveLayerOwner || !activeLayerId || uploadingLayerMedia) return;
+    setShowLayerMediaMenu(true);
+  };
+
+  const chooseLayerMediaKind = (kind) => {
+    setShowLayerMediaMenu(false);
+    openLayerMediaPicker(kind);
+  };
+
+  const removeLayerMedia = async (kind) => {
+    const mediaKind = String(kind || '').trim();
+    if (!user?.id || !activeLayerId || !isActiveLayerOwner) return;
+    if (mediaKind !== 'icon' && mediaKind !== 'header') return;
+    const field = mediaKind === 'icon' ? 'icon_url' : 'header_bg_url';
+    const { error } = await supabase
+      .from('calendar_layers')
+      .update({ [field]: null })
+      .eq('id', activeLayerId)
+      .eq('owner_id', user.id);
+    if (error) {
+      alert(`Could not remove image: ${error.message || 'Unknown error'}`);
+      return;
+    }
+    setLayers(prev => prev.map(layer => (
+      String(layer?.id || '') === String(activeLayerId || '')
+        ? { ...layer, [field]: null }
+        : layer
+    )));
+    setLayerRefreshToken(prev => prev + 1);
+    setShowLayerMediaMenu(false);
   };
 
   const deleteLayerCalendar = async (layerId) => {
@@ -10970,9 +11049,14 @@ function App() {
       <div className="max-w-6xl mx-auto">
         <div
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4"
+          onClick={(e) => {
+            if (!isActiveLayerOwner || uploadingLayerMedia) return;
+            if (e.target.closest('button,input,textarea,select,a,[role="button"]')) return;
+            openLayerMediaMenu();
+          }}
           style={activeLayer?.header_bg_url
             ? {
-              backgroundImage: `linear-gradient(rgba(255,255,255,0.88), rgba(255,255,255,0.88)), url(${activeLayer.header_bg_url})`,
+              backgroundImage: `linear-gradient(rgba(17,24,39,0.22), rgba(17,24,39,0.16)), url(${activeLayer.header_bg_url})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }
@@ -10985,9 +11069,13 @@ function App() {
                   src={activeLayer.icon_url}
                   alt="Calendar icon"
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600 shrink-0"
+                  onClick={openLayerMediaMenu}
                 />
               ) : (
-                <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl shrink-0">
+                <div
+                  className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl shrink-0"
+                  onClick={openLayerMediaMenu}
+                >
                   <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                 </div>
               )}
@@ -11030,30 +11118,13 @@ function App() {
                     </span>
                   )}
                   <button onClick={handleLogout} className="ml-2 text-xs text-purple-500 hover:text-purple-700 underline">logout</button>
+                  {isActiveLayerOwner && (
+                    <span className="ml-2 text-[10px] text-gray-500 dark:text-gray-400">Click header to edit cover/icon</span>
+                  )}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              {isActiveLayerOwner && (
-                <>
-                  <button
-                    onClick={() => openLayerMediaPicker('icon')}
-                    disabled={uploadingLayerMedia}
-                    className={`px-2 py-1.5 rounded-xl transition-all duration-200 text-[11px] font-semibold ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/70'}`}
-                    title="Upload calendar icon"
-                  >
-                    Icon
-                  </button>
-                  <button
-                    onClick={() => openLayerMediaPicker('header')}
-                    disabled={uploadingLayerMedia}
-                    className={`px-2 py-1.5 rounded-xl transition-all duration-200 text-[11px] font-semibold ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/70'}`}
-                    title="Upload header background"
-                  >
-                    Header
-                  </button>
-                </>
-              )}
               <button
                 onClick={() => setShowSharePanel(!showSharePanel)}
                 className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
@@ -13872,6 +13943,58 @@ function App() {
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'explore' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
             >
               Explore
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {showLayerMediaMenu && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Edit Calendar Photos</h3>
+            <button onClick={() => setShowLayerMediaMenu(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          <div className="space-y-2">
+            <button
+              onClick={() => chooseLayerMediaKind('header')}
+              disabled={uploadingLayerMedia}
+              className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'}`}
+            >
+              Choose Cover Photo
+            </button>
+            <button
+              onClick={() => chooseLayerMediaKind('icon')}
+              disabled={uploadingLayerMedia}
+              className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'}`}
+            >
+              Change Icon
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => removeLayerMedia('header')}
+                className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                Remove Cover
+              </button>
+              <button
+                onClick={() => removeLayerMedia('icon')}
+                className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                Remove Icon
+              </button>
+            </div>
+            <div className="text-[11px] text-gray-500 dark:text-gray-400 px-1">
+              Photos are center-cropped automatically for best fit and color.
+            </div>
+            <button
+              onClick={() => setShowLayerMediaMenu(false)}
+              className="w-full px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              Cancel
             </button>
           </div>
         </div>
