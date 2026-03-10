@@ -3165,12 +3165,24 @@ function App() {
       }
 
       const field = mediaKind === 'icon' ? 'icon_url' : 'header_bg_url';
-      const { data: updatedRows, error: updateErr } = await supabase
+      const primaryUpdate = await supabase
         .from('calendar_layers')
         .update({ [field]: publicUrl })
         .eq('id', activeLayerId)
         .eq('owner_id', user.id)
         .select('id');
+      let updatedRows = primaryUpdate.data;
+      let updateErr = primaryUpdate.error;
+      if (!updateErr && Array.isArray(updatedRows) && updatedRows.length === 0) {
+        // Fallback for legacy rows where owner_id is missing/misaligned.
+        const fallbackUpdate = await supabase
+          .from('calendar_layers')
+          .update({ [field]: publicUrl })
+          .eq('id', activeLayerId)
+          .select('id');
+        updatedRows = fallbackUpdate.data;
+        updateErr = fallbackUpdate.error;
+      }
       if (updateErr) {
         if (/column .*icon_url|column .*header_bg_url|schema cache/i.test(String(updateErr.message || ''))) {
           alert('Calendar media columns are missing. Run SQL migration: add icon_url and header_bg_url to calendar_layers.');
@@ -3314,7 +3326,8 @@ function App() {
 
   const getLayerCropFrame = (kind) => {
     if (String(kind || '') === 'icon') return { width: 240, height: 240, targetW: 512, targetH: 512 };
-    return { width: 360, height: 200, targetW: 1800, targetH: 1000 };
+    // Wide frame to match the live calendar header composition more closely.
+    return { width: 360, height: 120, targetW: 1800, targetH: 600 };
   };
 
   const getLayerCropMetrics = (kind, natural, zoom) => {
