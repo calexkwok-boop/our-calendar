@@ -3172,18 +3172,14 @@ function App() {
         .from('calendar_layers')
         .update({ [field]: publicUrl })
         .eq('id', activeLayerId)
-        .eq('owner_id', user.id)
-        .select('id');
-      let updatedRows = primaryUpdate.data;
+        .eq('owner_id', user.id);
       let updateErr = primaryUpdate.error;
-      if (!updateErr && Array.isArray(updatedRows) && updatedRows.length === 0) {
+      if (updateErr) {
         // Fallback for legacy rows where owner_id is missing/misaligned.
         const fallbackUpdate = await supabase
           .from('calendar_layers')
           .update({ [field]: publicUrl })
-          .eq('id', activeLayerId)
-          .select('id');
-        updatedRows = fallbackUpdate.data;
+          .eq('id', activeLayerId);
         updateErr = fallbackUpdate.error;
       }
       if (updateErr) {
@@ -3192,10 +3188,6 @@ function App() {
         } else {
           alert(`Could not save image on calendar: ${updateErr.message || 'Unknown error'}`);
         }
-        return;
-      }
-      if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
-        alert('Could not save image on calendar: no writable row found for this calendar.');
         return;
       }
 
