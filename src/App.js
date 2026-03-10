@@ -13270,7 +13270,7 @@ function App() {
                                         e.stopPropagation();
                                         publishLayerCalendar(layer.id, !isPublicLayer);
                                       }}
-                                      className={`hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
+                                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
                                         isPublicLayer
                                           ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
                                           : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
