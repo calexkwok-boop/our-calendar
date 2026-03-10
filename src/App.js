@@ -185,6 +185,12 @@ function App() {
   const [layerSwipeDrag, setLayerSwipeDrag] = useState({ id: null, offset: 0 });
   const layerSwipeStartXRef = useRef(0);
   const swipingLayerIdRef = useRef(null);
+  const [activeCalendarSortOrder, setActiveCalendarSortOrder] = useState([]);
+  const [upcomingTripSortOrder, setUpcomingTripSortOrder] = useState([]);
+  const [upcomingPopupSortOrder, setUpcomingPopupSortOrder] = useState([]);
+  const [draggingActiveCalendarId, setDraggingActiveCalendarId] = useState(null);
+  const [draggingUpcomingTripId, setDraggingUpcomingTripId] = useState(null);
+  const [draggingUpcomingPopupId, setDraggingUpcomingPopupId] = useState(null);
   const conflictPromptResolverRef = useRef(null);
 
   // Sub-calendar state
@@ -312,6 +318,43 @@ function App() {
       const uid = String(userId || '').trim();
       if (uid) localStorage.setItem(`layer-categories-${uid}-${lid}`, payload); // compatibility
     } catch {}
+  };
+  const getActiveCalendarsSortLocalKey = (userId) => `active-calendars-order-${String(userId || '').trim()}`;
+  const getUpcomingTripsSortLocalKey = (userId, layerId) => `upcoming-trips-order-${String(userId || '').trim()}-${String(layerId || '').trim()}`;
+  const getUpcomingPopupsSortLocalKey = (userId, layerId) => `upcoming-popups-order-${String(userId || '').trim()}-${String(layerId || '').trim()}`;
+  const readLocalSortOrder = (key) => {
+    try {
+      const raw = localStorage.getItem(String(key || ''));
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((id) => String(id || '')).filter(Boolean);
+    } catch {
+      return [];
+    }
+  };
+  const writeLocalSortOrder = (key, ids) => {
+    try {
+      const normalized = Array.from(new Set((ids || []).map((id) => String(id || '')).filter(Boolean)));
+      localStorage.setItem(String(key || ''), JSON.stringify(normalized));
+    } catch {}
+  };
+  const normalizeSortOrder = (ids, order) => {
+    const idList = Array.from(new Set((ids || []).map((id) => String(id || '')).filter(Boolean)));
+    const orderList = Array.from(new Set((order || []).map((id) => String(id || '')).filter(Boolean)));
+    return [...orderList.filter((id) => idList.includes(id)), ...idList.filter((id) => !orderList.includes(id))];
+  };
+  const reorderSortOrder = (ids, fromId, toId) => {
+    const normalized = normalizeSortOrder(ids, ids);
+    const source = String(fromId || '');
+    const target = String(toId || '');
+    if (!source || !target || source === target) return normalized;
+    const fromIndex = normalized.indexOf(source);
+    const toIndex = normalized.indexOf(target);
+    if (fromIndex < 0 || toIndex < 0) return normalized;
+    const next = [...normalized];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    return next;
   };
   const normalizeIdentityKey = (value) => String(value || '').trim().toLowerCase();
   const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
@@ -1002,6 +1045,7 @@ function App() {
   };
 
   const createSubCalendar = async () => {
+    if (!assertCanEditActiveLayer('create itineraries')) return;
     console.log('createSubCalendar called', { name: newSubCalName, dates: selectedDates.length, user: user?.id });
     if (!newSubCalName.trim() || selectedDates.length < 2) {
       alert(selectedDates.length < 2 ? `Please select at least 2 dates first. Currently selected: ${selectedDates.length}` : 'Please enter a name.');
@@ -1039,6 +1083,7 @@ function App() {
   };
 
   const deleteSubCalendar = async (id) => {
+    if (!assertCanEditActiveLayer('delete itineraries')) return;
     if (!window.confirm('Delete this sub-calendar and all its events?')) return;
     await supabase.from('sub_calendar_events').delete().eq('sub_calendar_id', id);
     await supabase.from('sub_calendar_members').delete().eq('sub_calendar_id', id);
@@ -1116,6 +1161,7 @@ function App() {
   };
 
   const inviteToSubCalendar = async (recipientOverride) => {
+    if (!assertCanEditActiveLayer('invite members to itineraries')) return;
     const recipient = resolveInviteRecipient(recipientOverride || subCalInviteEmail);
     if (!recipient?.value || !activeSubCalendar) return;
     if (!user?.id) {
@@ -1182,6 +1228,7 @@ function App() {
   };
 
   const removeMemberFromSubCal = async (identity) => {
+    if (!assertCanEditActiveLayer('remove itinerary members')) return;
     const recipient = resolveInviteRecipient(identity);
     if (!recipient?.value) return;
     let deleteQuery = supabase.from('sub_calendar_members')
@@ -1597,6 +1644,7 @@ function App() {
   };
 
   const addSubCalNote = async () => {
+    if (!assertCanEditActiveLayer('add itinerary notes')) return;
     if (!newNote.trim() || !activeSubCalendar) return;
     const note = {
       id: `scn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -1614,12 +1662,14 @@ function App() {
   };
 
   const deleteSubCalNote = async (noteId) => {
+    if (!assertCanEditActiveLayer('delete itinerary notes')) return;
     await supabase.from('sub_calendar_notes').delete().eq('id', noteId);
     setSubCalNotes(prev => prev.filter(n => n.id !== noteId));
     if (expandedNote === noteId) setExpandedNote(null);
   };
 
   const updateNoteText = async (noteId, newText) => {
+    if (!assertCanEditActiveLayer('edit itinerary notes')) return;
     if (!newText.trim()) return;
     await supabase.from('sub_calendar_notes').update({ text: newText.trim() }).eq('id', noteId);
     setSubCalNotes(prev => prev.map(n => n.id === noteId ? { ...n, text: newText.trim() } : n));
@@ -1627,6 +1677,7 @@ function App() {
   };
 
   const updateSubCalTitle = async (newName) => {
+    if (!assertCanEditActiveLayer('rename itineraries')) return;
     if (!newName.trim() || !activeSubCalendar) return;
     await supabase.from('sub_calendars').update({ name: newName.trim() }).eq('id', activeSubCalendar.id);
     setActiveSubCalendar(prev => ({ ...prev, name: newName.trim() }));
@@ -1635,6 +1686,7 @@ function App() {
   };
 
   const saveExpenseLedger = async (expenses) => {
+    if (!assertCanEditActiveLayer('edit itinerary expenses')) return false;
     if (!activeSubCalendar) return false;
     const payload = {
       checklist: JSON.stringify(expenses),
@@ -1666,6 +1718,7 @@ function App() {
   };
 
   const saveVenmoHandles = async (nextHandles) => {
+    if (!assertCanEditActiveLayer('edit payment handles')) return false;
     if (!activeSubCalendar) return false;
     const payload = {
       checklist: JSON.stringify(nextHandles),
@@ -1697,6 +1750,7 @@ function App() {
   };
 
   const saveVenmoHandleEverywhere = async (identity, handle) => {
+    if (!assertCanEditActiveLayer('edit payment handles')) return false;
     const key = normalizeIdentityKey(identity);
     if (!key || !activeSubCalendar) return false;
     const cleaned = cleanVenmoHandle(handle);
@@ -1765,6 +1819,7 @@ function App() {
   };
 
   const saveCashAppHandles = async (nextHandles) => {
+    if (!assertCanEditActiveLayer('edit payment handles')) return false;
     if (!activeSubCalendar) return false;
     const payload = {
       checklist: JSON.stringify(nextHandles),
@@ -1796,6 +1851,7 @@ function App() {
   };
 
   const saveCashAppHandleEverywhere = async (identity, handle) => {
+    if (!assertCanEditActiveLayer('edit payment handles')) return false;
     const key = normalizeIdentityKey(identity);
     if (!key || !activeSubCalendar) return false;
     const cleaned = cleanCashAppHandle(handle);
@@ -1896,6 +1952,7 @@ function App() {
   };
 
   const saveDeletedPhotoIds = async (nextDeletedIds) => {
+    if (!assertCanEditActiveLayer('delete itinerary photos')) return false;
     if (!activeSubCalendar) return false;
     const subCalId = activeSubCalendar.id;
     const normalizedDeleted = Array.from(new Set((nextDeletedIds || []).map(id => String(id)).filter(Boolean)));
@@ -1946,6 +2003,7 @@ function App() {
   };
 
   const addSubCalExpense = async () => {
+    if (!assertCanEditActiveLayer('add itinerary expenses')) return;
     const participants = getExpenseParticipants();
     const payer = (newExpenseDraft.payer || participants[0] || '').trim();
     const description = newExpenseDraft.description.trim();
@@ -1970,6 +2028,7 @@ function App() {
   };
 
   const deleteSubCalExpense = async (expenseId) => {
+    if (!assertCanEditActiveLayer('delete itinerary expenses')) return;
     const updated = subCalExpenses.filter(e => e.id !== expenseId);
     const ok = await saveExpenseLedger(updated);
     if (!ok) return;
@@ -1978,6 +2037,7 @@ function App() {
   };
 
   const extendSubCalDates = async (direction) => {
+    if (!assertCanEditActiveLayer('change itinerary dates')) return;
     // direction: 'before' adds 1 day before start, 'after' adds 1 day after end
     const start = new Date(activeSubCalendar.start_date + 'T00:00:00');
     const end = new Date(activeSubCalendar.end_date + 'T00:00:00');
@@ -1994,6 +2054,7 @@ function App() {
   };
 
   const shrinkSubCalDate = async (direction) => {
+    if (!assertCanEditActiveLayer('change itinerary dates')) return;
     const start = new Date(activeSubCalendar.start_date + 'T00:00:00');
     const end = new Date(activeSubCalendar.end_date + 'T00:00:00');
     if (start.getTime() === end.getTime()) return; // keep at least 1 day
@@ -2053,6 +2114,7 @@ function App() {
   };
 
   const addChecklistItem = async (noteId, itemText) => {
+    if (!assertCanEditActiveLayer('edit itinerary checklists')) return;
     if (!itemText.trim()) return;
     const note = subCalNotes.find(n => n.id === noteId);
     const checklist = [...(note.checklist || []), { id: Date.now(), text: itemText.trim(), done: false }];
@@ -2062,6 +2124,7 @@ function App() {
   };
 
   const toggleChecklistItem = async (noteId, itemId) => {
+    if (!assertCanEditActiveLayer('edit itinerary checklists')) return;
     const note = subCalNotes.find(n => n.id === noteId);
     const checklist = note.checklist.map(item => item.id === itemId ? { ...item, done: !item.done } : item);
     await supabase.from('sub_calendar_notes').update({ checklist: JSON.stringify(checklist) }).eq('id', noteId);
@@ -2069,6 +2132,7 @@ function App() {
   };
 
   const deleteChecklistItem = async (noteId, itemId) => {
+    if (!assertCanEditActiveLayer('edit itinerary checklists')) return;
     const note = subCalNotes.find(n => n.id === noteId);
     const checklist = note.checklist.filter(item => item.id !== itemId);
     await supabase.from('sub_calendar_notes').update({ checklist: JSON.stringify(checklist) }).eq('id', noteId);
@@ -2076,6 +2140,7 @@ function App() {
   };
 
   const addSubCalEvent = async (date, title, time, endTime, location = null) => {
+    if (!assertCanEditActiveLayer('add itinerary events')) return;
     if (!title?.trim() || !activeSubCalendar) { console.log('addSubCalEvent bail: no title or no activeSubCalendar', {title, activeSubCalendar}); return; }
     if (!user?.id) { console.log('addSubCalEvent bail: no user'); return; }
     const id = `sce_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -2108,6 +2173,7 @@ function App() {
   };
 
   const updateSubCalEvent = async (eventId, updates) => {
+    if (!assertCanEditActiveLayer('edit itinerary events')) return;
     const dbUpdates = {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.time !== undefined) dbUpdates.time = updates.time;
@@ -2129,6 +2195,7 @@ function App() {
   };
 
   const deleteSubCalEvent = async (eventId, dateKey) => {
+    if (!assertCanEditActiveLayer('delete itinerary events')) return;
     const { data, error } = await supabase
       .from('sub_calendar_events')
       .delete()
@@ -2661,6 +2728,21 @@ function App() {
   }, [activeLayerId]);
   const activeLayer = layers.find(layer => layer.id === activeLayerId) || null;
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
+  const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
+  const activeShareRowForMe = (sharedCalendars || []).find((row) => {
+    const layerId = String(row?.layer_id || row?.calendar_id || '');
+    if (layerId !== String(activeLayerId || '')) return false;
+    const byId = String(row?.shared_with_id || '') === String(user?.id || '');
+    const byEmail = normalizeEmail(row?.shared_with_email) && normalizeEmail(row?.shared_with_email) === normalizeEmail(user?.email);
+    const byPhone = normalizePhoneNumber(row?.shared_with_phone) && normalizePhoneNumber(row?.shared_with_phone) === normalizePhoneNumber(user?.phone);
+    return byId || byEmail || byPhone;
+  }) || null;
+  const canEditActiveLayer = isActiveLayerOwner || !activeShareRowForMe || activeShareRowForMe?.can_edit !== false;
+  const assertCanEditActiveLayer = (actionLabel = 'make changes to this calendar') => {
+    if (canEditActiveLayer) return true;
+    alert(`Read-only access: you can chat and join events, but you cannot ${actionLabel}.`);
+    return false;
+  };
 
   const resolveSharedOwnerLabels = async (shares, layerId) => {
     const ownerIds = Array.from(new Set((shares || []).map(s => String(s?.owner_id || '')).filter(Boolean)));
@@ -3796,6 +3878,7 @@ function App() {
   const saveEvents = async (newEvents, options = {}) => {
     const { immediate = false } = options;
     try {
+      if (!assertCanEditActiveLayer('edit events in this calendar')) return;
       if (!activeLayerId || !user?.id) return;
       setEvents(newEvents);
       const requestId = ++saveRequestIdRef.current;
@@ -4040,6 +4123,7 @@ function App() {
 
   const saveCategories = async (newCategories) => {
     try {
+      if (!assertCanEditActiveLayer('edit categories in this calendar')) return;
       setCategories(newCategories);
       if (!user?.id || !activeLayerId) return;
       const categoryOwnerId = String(activeLayerOwnerId || user.id || '').trim();
@@ -4114,6 +4198,10 @@ function App() {
 
   const handleShareCalendar = async () => {
     if (!shareEmailInput.trim() || !activeLayerId) return;
+    if (!isActiveLayerOwner) {
+      setShareMessage('Only the calendar owner can change sharing settings.');
+      return;
+    }
     const recipient = resolveInviteRecipient(shareEmailInput);
     if (!recipient?.value) {
       setShareMessage('Enter a valid email or phone number.');
@@ -4136,25 +4224,46 @@ function App() {
       return;
     }
 
-    const { error } = await supabase.from('shared_access').insert({
+    let { error } = await supabase.from('shared_access').insert({
       owner_id: user.id,
       layer_id: activeLayerId,
       calendar_id: activeLayerId,
       shared_with_email: email || null,
       shared_with_phone: phone || null,
+      can_edit: false,
     });
+    if (error && /column .*can_edit|schema cache/i.test(String(error.message || ''))) {
+      const fallback = await supabase.from('shared_access').insert({
+        owner_id: user.id,
+        layer_id: activeLayerId,
+        calendar_id: activeLayerId,
+        shared_with_email: email || null,
+        shared_with_phone: phone || null,
+      });
+      error = fallback.error;
+    }
 
     if (error) {
       setShareMessage('Error sharing calendar. Try again.');
       console.error(error);
     } else {
-      setMyShares(prev => [...prev, { owner_id: user.id, layer_id: activeLayerId, shared_with_email: email || null, shared_with_phone: phone || null }]);
+      setMyShares(prev => [...prev, {
+        owner_id: user.id,
+        layer_id: activeLayerId,
+        shared_with_email: email || null,
+        shared_with_phone: phone || null,
+        can_edit: false,
+      }]);
       setShareEmailInput('');
-      setShareMessage(`? Shared! When ${recipient.value} logs in they'll see your calendar.`);
+      setShareMessage(`Shared! ${recipient.value} is Read only by default (you can change to Editor).`);
     }
   };
 
   const handleRemoveShare = async (identity) => {
+    if (!isActiveLayerOwner) {
+      setShareMessage('Only the calendar owner can change sharing settings.');
+      return;
+    }
     const recipient = resolveInviteRecipient(identity);
     if (!recipient?.value) return;
     let query = supabase
@@ -4170,6 +4279,40 @@ function App() {
       setMyShares(prev => prev.filter(s => getShareRecipientFromRow(s) !== recipient.value));
       setShareMessage(`Removed access for ${recipient.value}.`);
     }
+  };
+
+  const handleToggleShareEditPermission = async (identity, nextCanEdit) => {
+    if (!isActiveLayerOwner) {
+      setShareMessage('Only the calendar owner can change sharing settings.');
+      return;
+    }
+    const recipient = resolveInviteRecipient(identity);
+    if (!recipient?.value) return;
+
+    let query = supabase
+      .from('shared_access')
+      .update({ can_edit: !!nextCanEdit })
+      .eq('owner_id', user.id)
+      .eq('layer_id', activeLayerId);
+    const recipientFilter = buildShareRecipientFilter('', recipient.email, recipient.phone);
+    if (recipientFilter) query = query.or(recipientFilter);
+    const { error } = await query;
+
+    if (error) {
+      if (/column .*can_edit|schema cache/i.test(String(error.message || ''))) {
+        setShareMessage('Permissions column missing. Add shared_access.can_edit BOOLEAN DEFAULT TRUE.');
+      } else {
+        setShareMessage(`Could not update permission: ${error.message}`);
+      }
+      return;
+    }
+
+    setMyShares(prev => prev.map(share => (
+      getShareRecipientFromRow(share) === recipient.value
+        ? { ...share, can_edit: !!nextCanEdit }
+        : share
+    )));
+    setShareMessage(`${recipient.value} is now ${nextCanEdit ? 'Editor' : 'Read only'}.`);
   };
 
   const primaryListOwnerId = activeLayerOwnerId;
@@ -4261,6 +4404,7 @@ function App() {
   };
 
   const createSharedList = async () => {
+    if (!assertCanEditActiveLayer('create shared lists')) return;
     const title = newSharedListTitle.trim();
     if (!title || !primaryListOwnerId || !user?.id || !activeLayerId) return;
 
@@ -4294,6 +4438,7 @@ function App() {
   };
 
   const deleteSharedList = async (listId) => {
+    if (!assertCanEditActiveLayer('delete shared lists')) return;
     if (!listId || !primaryListOwnerId || !activeLayerId) return;
     if (!window.confirm('Delete this list and all its items?')) return;
 
@@ -4328,6 +4473,7 @@ function App() {
   };
 
   const renameSharedList = async (listId, nextTitleRaw) => {
+    if (!assertCanEditActiveLayer('rename shared lists')) return false;
     if (!listId || !primaryListOwnerId || !activeLayerId) return false;
     const nextTitle = String(nextTitleRaw || '').trim();
     if (!nextTitle) {
@@ -4467,6 +4613,7 @@ function App() {
   };
 
   const addSharedListItem = async () => {
+    if (!assertCanEditActiveLayer('add list items')) return;
     const text = newListItemText.trim();
     if (!text || !primaryListOwnerId || !selectedSharedListId || !user?.id || !activeLayerId) return;
 
@@ -4526,6 +4673,7 @@ function App() {
   };
 
   const toggleSharedListItem = async (item) => {
+    if (!assertCanEditActiveLayer('edit list items')) return;
     const { error } = await supabase
       .from('shared_lists')
       .update({ done: !item.done })
@@ -4543,6 +4691,7 @@ function App() {
   };
 
   const removeSharedListItem = async (itemId) => {
+    if (!assertCanEditActiveLayer('delete list items')) return;
     const { data, error } = await supabase
       .from('shared_lists')
       .delete()
@@ -4570,6 +4719,7 @@ function App() {
   };
 
   const saveSharedListItemText = async (item) => {
+    if (!assertCanEditActiveLayer('edit list items')) return;
     const nextText = editingListText.trim();
     if (!nextText) {
       setListError('List item text cannot be empty.');
@@ -4979,6 +5129,7 @@ function App() {
   };
 
   const sendCalendarChatPollMessage = async () => {
+    if (!assertCanEditActiveLayer('create event polls')) return;
     if (!activeLayerId || !user?.id) return;
     const eventName = String(pollQuestionInput || '').trim();
     const dateKey = String(pollDateInput || '').trim();
@@ -5055,6 +5206,7 @@ function App() {
   };
 
   const createPopupEventFromChat = async () => {
+    if (!assertCanEditActiveLayer('create pop-up events')) return;
     if (!activeLayerId || !user?.id) return;
     if (!popupFeatureAvailable) {
       setChatError('Popup events need DB setup first.');
@@ -8805,6 +8957,9 @@ function App() {
   };
 
   const persistImportedEvents = async (candidateEvents) => {
+    if (!assertCanEditActiveLayer('import events into this calendar')) {
+      return { insertedCount: 0, duplicateCount: 0 };
+    }
     const incoming = Array.isArray(candidateEvents) ? candidateEvents : [];
     if (!activeLayerId || !user?.id || incoming.length === 0) {
       return { insertedCount: 0, duplicateCount: 0 };
@@ -9974,6 +10129,100 @@ function App() {
     if (aOwned !== bOwned) return aOwned - bOwned;
     return String(a?.name || '').localeCompare(String(b?.name || ''));
   });
+  useEffect(() => {
+    if (!user?.id) {
+      setActiveCalendarSortOrder([]);
+      setUpcomingTripSortOrder([]);
+      setUpcomingPopupSortOrder([]);
+      return;
+    }
+    const activeCalendarsKey = getActiveCalendarsSortLocalKey(user.id);
+    setActiveCalendarSortOrder(readLocalSortOrder(activeCalendarsKey));
+    if (!activeLayerId) {
+      setUpcomingTripSortOrder([]);
+      setUpcomingPopupSortOrder([]);
+      return;
+    }
+    const tripsKey = getUpcomingTripsSortLocalKey(user.id, activeLayerId);
+    const popupsKey = getUpcomingPopupsSortLocalKey(user.id, activeLayerId);
+    setUpcomingTripSortOrder(readLocalSortOrder(tripsKey));
+    setUpcomingPopupSortOrder(readLocalSortOrder(popupsKey));
+  }, [user?.id, activeLayerId]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    writeLocalSortOrder(getActiveCalendarsSortLocalKey(user.id), activeCalendarSortOrder);
+  }, [user?.id, activeCalendarSortOrder]);
+
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) return;
+    writeLocalSortOrder(getUpcomingTripsSortLocalKey(user.id, activeLayerId), upcomingTripSortOrder);
+  }, [user?.id, activeLayerId, upcomingTripSortOrder]);
+
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) return;
+    writeLocalSortOrder(getUpcomingPopupsSortLocalKey(user.id, activeLayerId), upcomingPopupSortOrder);
+  }, [user?.id, activeLayerId, upcomingPopupSortOrder]);
+
+  useEffect(() => {
+    const ids = visibleLayerCalendars.map((layer) => String(layer?.id || ''));
+    setActiveCalendarSortOrder((prev) => normalizeSortOrder(ids, prev));
+  }, [visibleLayerCalendars]);
+
+  useEffect(() => {
+    const ids = upcomingTrips.map((trip) => String(trip?.id || ''));
+    setUpcomingTripSortOrder((prev) => normalizeSortOrder(ids, prev));
+  }, [upcomingTrips]);
+
+  useEffect(() => {
+    const ids = upcomingPopupEvents.map((event) => String(event?.id || ''));
+    setUpcomingPopupSortOrder((prev) => normalizeSortOrder(ids, prev));
+  }, [upcomingPopupEvents]);
+
+  const orderedVisibleLayerCalendars = (() => {
+    const byId = new Map((visibleLayerCalendars || []).map((layer) => [String(layer?.id || ''), layer]));
+    const order = normalizeSortOrder(Array.from(byId.keys()), activeCalendarSortOrder);
+    return order.map((id) => byId.get(id)).filter(Boolean);
+  })();
+
+  const orderedUpcomingTrips = (() => {
+    const byId = new Map((upcomingTrips || []).map((trip) => [String(trip?.id || ''), trip]));
+    const order = normalizeSortOrder(Array.from(byId.keys()), upcomingTripSortOrder);
+    return order.map((id) => byId.get(id)).filter(Boolean);
+  })();
+
+  const orderedUpcomingPopupEvents = (() => {
+    const byId = new Map((upcomingPopupEvents || []).map((event) => [String(event?.id || ''), event]));
+    const order = normalizeSortOrder(Array.from(byId.keys()), upcomingPopupSortOrder);
+    return order.map((id) => byId.get(id)).filter(Boolean);
+  })();
+
+  const handleDropActiveCalendar = (targetId) => {
+    const ids = visibleLayerCalendars.map((layer) => String(layer?.id || ''));
+    setActiveCalendarSortOrder((prev) => {
+      const normalized = normalizeSortOrder(ids, prev);
+      return reorderSortOrder(normalized, draggingActiveCalendarId, targetId);
+    });
+    setDraggingActiveCalendarId(null);
+  };
+
+  const handleDropUpcomingTrip = (targetId) => {
+    const ids = upcomingTrips.map((trip) => String(trip?.id || ''));
+    setUpcomingTripSortOrder((prev) => {
+      const normalized = normalizeSortOrder(ids, prev);
+      return reorderSortOrder(normalized, draggingUpcomingTripId, targetId);
+    });
+    setDraggingUpcomingTripId(null);
+  };
+
+  const handleDropUpcomingPopup = (targetId) => {
+    const ids = upcomingPopupEvents.map((event) => String(event?.id || ''));
+    setUpcomingPopupSortOrder((prev) => {
+      const normalized = normalizeSortOrder(ids, prev);
+      return reorderSortOrder(normalized, draggingUpcomingPopupId, targetId);
+    });
+    setDraggingUpcomingPopupId(null);
+  };
 
   if (isLoading) {
     return (
@@ -10419,15 +10668,23 @@ function App() {
                   />
                 ) : (
                   <h1
-                    onClick={() => setIsEditingTitle(true)}
-                    className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer hover:opacity-70 transition-opacity truncate"
-                    title="Click to rename calendar"
+                    onClick={() => {
+                      if (!canEditActiveLayer) return;
+                      setIsEditingTitle(true);
+                    }}
+                    className={`text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent transition-opacity truncate ${canEditActiveLayer ? 'cursor-pointer hover:opacity-70' : 'cursor-default opacity-90'}`}
+                    title={canEditActiveLayer ? 'Click to rename calendar' : 'Read-only calendar'}
                   >
                     {calendarTitle}
                   </h1>
                 )}
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                   <span className="font-semibold text-purple-600 dark:text-purple-400">{user?.email || user?.phone || currentUser}</span>
+                  {!canEditActiveLayer && (
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 align-middle">
+                      Read only
+                    </span>
+                  )}
                   <button onClick={handleLogout} className="ml-2 text-xs text-purple-500 hover:text-purple-700 underline">logout</button>
                 </p>
               </div>
@@ -10875,16 +11132,21 @@ function App() {
                   value={shareEmailInput}
                   onChange={(e) => { setShareEmailInput(e.target.value); setShareMessage(''); }}
                   placeholder="wife@gmail.com or +15551234567"
+                  disabled={!isActiveLayerOwner}
                   className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
                   onKeyPress={(e) => e.key === 'Enter' && handleShareCalendar()}
                 />
                 <button
                   onClick={handleShareCalendar}
-                  className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all"
+                  disabled={!isActiveLayerOwner}
+                  className={`px-4 py-2 rounded-xl transition-all ${isActiveLayerOwner ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white hover:shadow-lg' : 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'}`}
                 >
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
+              {!isActiveLayerOwner && (
+                <p className="text-xs text-amber-600 dark:text-amber-300 mt-2">Only the calendar owner can add/remove members or change permissions.</p>
+              )}
               {shareMessage && (
                 <p className={`text-sm mt-2 ${shareMessage.startsWith('?') ? 'text-green-600' : 'text-red-500'}`}>
                   {shareMessage}
@@ -10910,9 +11172,24 @@ function App() {
                           {getRecipientKindLabel(recipient)}
                         </span>
                       </div>
-                      <button onClick={() => handleRemoveShare(recipient)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all" title="Remove access">
-                        <X className="w-4 h-4 text-red-500" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {isActiveLayerOwner && (
+                          <button
+                            onClick={() => handleToggleShareEditPermission(recipient, !(share?.can_edit !== false))}
+                            className={`px-2 py-1 text-[11px] rounded-lg border transition-all ${
+                              share?.can_edit !== false
+                                ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
+                                : 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
+                            }`}
+                            title="Toggle edit permission"
+                          >
+                            {share?.can_edit !== false ? 'Editor' : 'Read only'}
+                          </button>
+                        )}
+                        <button onClick={() => handleRemoveShare(recipient)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all" title="Remove access">
+                          <X className="w-4 h-4 text-red-500" />
+                        </button>
+                      </div>
                     </div>
                       );
                     })()
@@ -12701,7 +12978,7 @@ function App() {
                     <div className="text-sm text-gray-500 dark:text-gray-400">No calendars found.</div>
                   ) : (
                     <div className="space-y-2">
-                      {visibleLayerCalendars.map(layer => {
+                      {orderedVisibleLayerCalendars.map(layer => {
                         const isActiveLayer = String(layer.id) === String(activeLayerId);
                         const isOwnedLayer = String(layer?.owner_id) === String(user?.id);
                         const canDeleteLayer = isOwnedLayer && layers.length > 1;
@@ -12710,7 +12987,15 @@ function App() {
                         const layerRowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
                         const isLayerActionRevealed = layerRowOffset < 0;
                         return (
-                          <div key={layer.id} className="relative rounded-xl overflow-hidden">
+                          <div
+                            key={layer.id}
+                            className="relative rounded-xl overflow-hidden"
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              handleDropActiveCalendar(String(layer.id));
+                            }}
+                          >
                             {canSwipeLayerAction && (
                               <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${
                                 isLayerActionRevealed
@@ -12730,6 +13015,15 @@ function App() {
                               </div>
                             )}
                             <button
+                              draggable
+                              onDragStart={(e) => {
+                                try {
+                                  e.dataTransfer.setData('text/plain', String(layer.id));
+                                  e.dataTransfer.effectAllowed = 'move';
+                                } catch {}
+                                setDraggingActiveCalendarId(String(layer.id));
+                              }}
+                              onDragEnd={() => setDraggingActiveCalendarId(null)}
                               onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canSwipeLayerAction)}
                               onTouchMove={handleLayerSwipeMove}
                               onTouchEnd={handleLayerSwipeEnd}
@@ -12753,6 +13047,13 @@ function App() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
+                                  <span
+                                    onClick={(e) => e.stopPropagation()}
+                                    title="Drag to reorder"
+                                    className="inline-flex select-none cursor-grab active:cursor-grabbing items-center justify-center px-1 py-0.5 rounded text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                                  >
+                                    ⋮⋮
+                                  </span>
                                   {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
                                   {canDeleteLayer && (
                                     <button
@@ -12797,16 +13098,24 @@ function App() {
 
                 <div>
                   <h4 className="text-xs uppercase tracking-wide font-semibold text-green-600 dark:text-green-400 mb-2">Upcoming Itineraries</h4>
-                  {upcomingTrips.length === 0 ? (
+                  {orderedUpcomingTrips.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming itineraries yet.</div>
                   ) : (
                     <div className="space-y-2">
-                      {upcomingTrips.map(sc => {
+                      {orderedUpcomingTrips.map(sc => {
                       const canDelete = sc.owner_id === user?.id;
                       const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
                       const isDeleteRevealed = rowOffset < 0;
                       return (
-                        <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-green-200 dark:ring-green-700">
+                        <div
+                          key={sc.id}
+                          className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-green-200 dark:ring-green-700"
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            handleDropUpcomingTrip(String(sc.id));
+                          }}
+                        >
                           {canDelete && (
                             <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
                               <button
@@ -12818,6 +13127,15 @@ function App() {
                             </div>
                           )}
                           <div
+                            draggable
+                            onDragStart={(e) => {
+                              try {
+                                e.dataTransfer.setData('text/plain', String(sc.id));
+                                e.dataTransfer.effectAllowed = 'move';
+                              } catch {}
+                              setDraggingUpcomingTripId(String(sc.id));
+                            }}
+                            onDragEnd={() => setDraggingUpcomingTripId(null)}
                             onTouchStart={(e) => handleTripSwipeStart(e, sc.id, canDelete)}
                             onTouchMove={handleTripSwipeMove}
                             onTouchEnd={handleTripSwipeEnd}
@@ -12831,12 +13149,20 @@ function App() {
                                 {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
                               </div>
                             </div>
-                            <button
-                              onClick={() => openSubCalendar(sc)}
-                              className="ml-3 px-3 py-1.5 text-xs rounded-lg bg-green-500 hover:bg-green-600 text-white"
-                            >
-                              Open
-                            </button>
+                            <div className="ml-3 flex items-center gap-2 shrink-0">
+                              <span
+                                title="Drag to reorder"
+                                className="inline-flex select-none cursor-grab active:cursor-grabbing items-center justify-center px-1 py-0.5 rounded text-green-500/80 dark:text-green-300/80 hover:text-green-700 dark:hover:text-green-200"
+                              >
+                                ⋮⋮
+                              </span>
+                              <button
+                                onClick={() => openSubCalendar(sc)}
+                                className="px-3 py-1.5 text-xs rounded-lg bg-green-500 hover:bg-green-600 text-white"
+                              >
+                                Open
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -12846,18 +13172,35 @@ function App() {
                 </div>
                 <div className="mt-5">
                   <h4 className="text-xs uppercase tracking-wide font-semibold text-rose-600 dark:text-rose-400 mb-2">Upcoming Pop-up Events</h4>
-                  {upcomingPopupEvents.length === 0 ? (
+                  {orderedUpcomingPopupEvents.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming pop-up events yet.</div>
                   ) : (
                     <div className="space-y-2">
-                      {upcomingPopupEvents.slice(0, 8).map((event) => {
+                      {orderedUpcomingPopupEvents.slice(0, 8).map((event) => {
                         const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
                         const signups = popupSignupsByEventId[String(event.id || '')] || [];
                         const joinedCount = signups.length;
                         const noMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
                         const maxLabel = noMax ? 'No max' : `${Number(popupMeta?.maxPeople || 0)} max`;
                         return (
-                          <div key={`upcoming-popup-${event.id}`} className="rounded-xl p-3 ring-1 ring-inset ring-rose-200 dark:ring-rose-700 bg-rose-50/70 dark:bg-rose-900/20">
+                          <div
+                            key={`upcoming-popup-${event.id}`}
+                            className="rounded-xl p-3 ring-1 ring-inset ring-rose-200 dark:ring-rose-700 bg-rose-50/70 dark:bg-rose-900/20"
+                            draggable
+                            onDragStart={(e) => {
+                              try {
+                                e.dataTransfer.setData('text/plain', String(event.id || ''));
+                                e.dataTransfer.effectAllowed = 'move';
+                              } catch {}
+                              setDraggingUpcomingPopupId(String(event.id || ''));
+                            }}
+                            onDragEnd={() => setDraggingUpcomingPopupId(null)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              handleDropUpcomingPopup(String(event.id || ''));
+                            }}
+                          >
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
                                 <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">📌 {event.title}</div>
@@ -12871,12 +13214,20 @@ function App() {
                                   {joinedCount} joined · {maxLabel}
                                 </div>
                               </div>
-                              <button
-                                onClick={() => focusOnPopupEventDate(event.id, event.date || event.dateKey)}
-                                className="shrink-0 ml-2 px-3 py-1.5 text-xs rounded-lg bg-rose-500 hover:bg-rose-600 text-white"
-                              >
-                                Open
-                              </button>
+                              <div className="shrink-0 ml-2 flex items-center gap-2">
+                                <span
+                                  title="Drag to reorder"
+                                  className="inline-flex select-none cursor-grab active:cursor-grabbing items-center justify-center px-1 py-0.5 rounded text-rose-500/80 dark:text-rose-300/80 hover:text-rose-700 dark:hover:text-rose-200"
+                                >
+                                  ⋮⋮
+                                </span>
+                                <button
+                                  onClick={() => focusOnPopupEventDate(event.id, event.date || event.dateKey)}
+                                  className="px-3 py-1.5 text-xs rounded-lg bg-rose-500 hover:bg-rose-600 text-white"
+                                >
+                                  Open
+                                </button>
+                              </div>
                             </div>
                           </div>
                         );
