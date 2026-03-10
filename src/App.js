@@ -106,6 +106,7 @@ function App() {
   const holidayCleanupRunRef = useRef(new Set());
   const dateTapTimeoutRef = useRef(null);
   const layerMediaInputRef = useRef(null);
+  const layerHeaderCardRef = useRef(null);
   const pendingLayerMediaKindRef = useRef('');
   const layerCropDragRef = useRef({ active: false, startX: 0, startY: 0, baseX: 0, baseY: 0 });
   const scanReminderInputRef = useRef(null);
@@ -3134,11 +3135,11 @@ function App() {
 
   const uploadLayerMedia = async (kind, file) => {
     const mediaKind = String(kind || '').trim();
-    if (!file || !user?.id || !activeLayerId || !isActiveLayerOwner) return;
-    if (mediaKind !== 'icon' && mediaKind !== 'header') return;
+    if (!file || !user?.id || !activeLayerId || !isActiveLayerOwner) return false;
+    if (mediaKind !== 'icon' && mediaKind !== 'header') return false;
     if (!String(file.type || '').startsWith('image/')) {
       alert('Please choose an image file.');
-      return;
+      return false;
     }
 
     setUploadingLayerMedia(true);
@@ -3163,14 +3164,14 @@ function App() {
 
       if (!selectedBucket) {
         alert(`Could not upload image: ${String(lastError?.message || 'Unknown upload error')}`);
-        return;
+        return false;
       }
 
       const { data: urlData } = supabase.storage.from(selectedBucket).getPublicUrl(filename);
       const publicUrl = String(urlData?.publicUrl || '').trim();
       if (!publicUrl) {
         alert('Upload succeeded but no public URL was returned.');
-        return;
+        return false;
       }
 
       const field = mediaKind === 'icon' ? 'icon_url' : 'header_bg_url';
@@ -3194,7 +3195,7 @@ function App() {
         } else {
           alert(`Could not save image on calendar: ${updateErr.message || 'Unknown error'}`);
         }
-        return;
+        return false;
       }
 
       setLayers(prev => prev.map(layer => (
@@ -3204,9 +3205,11 @@ function App() {
       )));
       setLayerRefreshToken(prev => prev + 1);
       setShowLayerMediaMenu(false);
+      return true;
     } catch (err) {
       console.error('Layer media upload failed:', err);
       alert(`Upload failed: ${String(err?.message || 'Unknown error')}`);
+      return false;
     } finally {
       setUploadingLayerMedia(false);
       if (layerMediaInputRef.current) layerMediaInputRef.current.value = '';
@@ -3327,8 +3330,16 @@ function App() {
 
   const getLayerCropFrame = (kind) => {
     if (String(kind || '') === 'icon') return { width: 240, height: 240, targetW: 512, targetH: 512 };
-    // Wide frame to match the live calendar header composition more closely.
-    return { width: 360, height: 120, targetW: 1800, targetH: 600 };
+    // Match the crop frame ratio to the live header card so saved positioning matches what user sees.
+    const headerEl = layerHeaderCardRef.current;
+    const measuredW = Number(headerEl?.clientWidth || 0);
+    const measuredH = Number(headerEl?.clientHeight || 0);
+    const ratio = (measuredW > 0 && measuredH > 0) ? (measuredW / measuredH) : 3;
+    const width = 360;
+    const height = Math.max(90, Math.min(220, Math.round(width / ratio)));
+    const targetW = 1800;
+    const targetH = Math.max(300, Math.round(targetW / ratio));
+    return { width, height, targetW, targetH };
   };
 
   const getLayerCropMetrics = (kind, natural, zoom) => {
@@ -3430,8 +3441,8 @@ function App() {
       return;
     }
     const croppedFile = new File([blob], `layer-${kind}.jpg`, { type: 'image/jpeg' });
-    closeLayerMediaCropModal();
-    await uploadLayerMedia(kind, croppedFile);
+    const ok = await uploadLayerMedia(kind, croppedFile);
+    if (ok) closeLayerMediaCropModal();
   };
 
   const removeLayerMedia = async (kind) => {
@@ -11246,6 +11257,7 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-2 sm:p-3 pb-24" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))', paddingBottom: 'max(4.75rem, env(safe-area-inset-bottom))' }}>
       <div className="max-w-6xl mx-auto">
         <div
+          ref={layerHeaderCardRef}
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4"
           style={activeLayer?.header_bg_url
             ? {
