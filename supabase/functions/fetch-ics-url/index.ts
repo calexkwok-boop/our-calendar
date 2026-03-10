@@ -3,7 +3,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const MAX_ICS_BYTES = 2 * 1024 * 1024; // 2MB
+const MAX_FETCH_BYTES = 2 * 1024 * 1024; // 2MB
 
 const toText = (value: unknown) => String(value || "").trim();
 
@@ -33,6 +33,76 @@ const isPrivateOrLocalHost = (hostname: string) => {
   return false;
 };
 
+const parseSymbolList = (raw: unknown) => {
+  const text = toText(raw);
+  if (!text) return new Set<string>();
+  return new Set(
+    text
+      .split(",")
+      .map((v) => toText(v).toUpperCase())
+      .filter(Boolean),
+  );
+};
+
+const parseAlphaHorizon = (raw: unknown) => {
+  const value = toText(raw).toLowerCase();
+  if (value === "3month" || value === "6month" || value === "12month") return value;
+  return "3month";
+};
+
+const fetchAlphaVantageEarningsCsv = async (horizonRaw: unknown, symbolsRaw: unknown) => {
+  const apiKey = toText(Deno.env.get("ALPHA_VANTAGE_API_KEY"));
+  if (!apiKey) throw new Error("Missing ALPHA_VANTAGE_API_KEY secret in edge function.");
+  const horizon = parseAlphaHorizon(horizonRaw);
+  const url = `https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=${encodeURIComponent(horizon)}&apikey=${encodeURIComponent(apiKey)}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    redirect: "follow",
+    headers: {
+      "User-Agent": "our-calendar-edge/1.0",
+      Accept: "text/csv,application/json,text/plain,*/*",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Alpha Vantage fetch failed (${response.status}).`);
+  }
+  const text = await response.text();
+  if (!text.trim()) return "";
+
+  // Rate-limit/error payloads are JSON strings; bubble readable error.
+  if (/^\s*\{/.test(text)) {
+    try {
+      const parsed = JSON.parse(text);
+      const msg = toText(parsed?.Information || parsed?.Note || parsed?.Error || parsed?.Message);
+      if (msg) throw new Error(msg);
+    } catch (err) {
+      throw err instanceof Error ? err : new Error("Alpha Vantage returned JSON response.");
+    }
+  }
+
+  const symbolFilter = parseSymbolList(symbolsRaw);
+  if (symbolFilter.size === 0) return text;
+
+  // Filter CSV rows server-side by symbol if requested.
+  const lines = text.split(/\r?\n/).filter((line) => toText(line));
+  if (lines.length < 2) return text;
+  const header = lines[0];
+  const headers = header.split(",").map((h) => toText(h).toLowerCase());
+  const symbolIdx = headers.indexOf("symbol");
+  if (symbolIdx < 0) return text;
+  const filtered = [header];
+  for (let i = 1; i < lines.length; i += 1) {
+    const row = lines[i];
+    const cols = row.split(",");
+    const symbol = toText(cols[symbolIdx]).replace(/^"|"$/g, "").toUpperCase();
+    if (!symbol || !symbolFilter.has(symbol)) continue;
+    filtered.push(row);
+  }
+  return filtered.join("\n");
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") {
@@ -44,6 +114,21 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
+    const modeRaw = toText(body?.mode).toLowerCase();
+    const mode = modeRaw === "text" || modeRaw === "alpha_earnings" ? modeRaw : "ics";
+    if (mode === "alpha_earnings") {
+      const csvText = await fetchAlphaVantageEarningsCsv(body?.horizon, body?.symbols);
+      return new Response(JSON.stringify({
+        ok: true,
+        mode,
+        provider: "alpha_vantage",
+        contentType: "text/csv",
+        text: csvText,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const normalizedUrl = normalizeInputUrl(body?.url);
     if (!normalizedUrl) {
       return new Response(JSON.stringify({ ok: false, error: "Missing URL" }), {
@@ -82,8 +167,10 @@ Deno.serve(async (req) => {
       redirect: "follow",
       signal: controller.signal,
       headers: {
-        "User-Agent": "our-calendar-ics-import/1.0",
-        Accept: "text/calendar,text/plain,*/*",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        Accept: mode === "text" ? "text/html,text/plain,application/json,*/*" : "text/calendar,text/plain,*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        Referer: `${parsed.protocol}//${parsed.hostname}/`,
       },
     });
     clearTimeout(timer);
@@ -91,7 +178,9 @@ Deno.serve(async (req) => {
     if (!response.ok) {
       return new Response(JSON.stringify({
         ok: false,
-        error: `Calendar URL fetch failed (${response.status})`,
+        error: `URL fetch failed (${response.status}) for ${parsed.hostname}`,
+        status: response.status,
+        finalUrl: response.url,
       }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -99,34 +188,47 @@ Deno.serve(async (req) => {
     }
 
     const contentLength = Number(response.headers.get("content-length") || "0");
-    if (contentLength > MAX_ICS_BYTES) {
-      return new Response(JSON.stringify({ ok: false, error: "Calendar file too large" }), {
+    if (contentLength > MAX_FETCH_BYTES) {
+      return new Response(JSON.stringify({ ok: false, error: "Fetched file too large" }), {
         status: 413,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength > MAX_ICS_BYTES) {
-      return new Response(JSON.stringify({ ok: false, error: "Calendar file too large" }), {
+    if (bytes.byteLength > MAX_FETCH_BYTES) {
+      return new Response(JSON.stringify({ ok: false, error: "Fetched file too large" }), {
         status: 413,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const icsText = new TextDecoder().decode(bytes);
-    if (!/BEGIN:VCALENDAR/i.test(icsText)) {
-      return new Response(JSON.stringify({ ok: false, error: "URL did not return valid ICS data" }), {
-        status: 400,
+    const text = new TextDecoder().decode(bytes);
+    if (mode === "ics") {
+      if (!/BEGIN:VCALENDAR/i.test(text)) {
+        return new Response(JSON.stringify({ ok: false, error: "URL did not return valid ICS data" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({
+        ok: true,
+        mode,
+        finalUrl: response.url,
+        contentType: toText(response.headers.get("content-type")),
+        icsText: text,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     return new Response(JSON.stringify({
       ok: true,
+      mode,
       finalUrl: response.url,
       contentType: toText(response.headers.get("content-type")),
-      icsText,
+      text,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
