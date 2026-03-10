@@ -3156,17 +3156,22 @@ function App() {
       }
 
       const field = mediaKind === 'icon' ? 'icon_url' : 'header_bg_url';
-      const { error: updateErr } = await supabase
+      const { data: updatedRows, error: updateErr } = await supabase
         .from('calendar_layers')
         .update({ [field]: publicUrl })
         .eq('id', activeLayerId)
-        .eq('owner_id', user.id);
+        .eq('owner_id', user.id)
+        .select('id');
       if (updateErr) {
         if (/column .*icon_url|column .*header_bg_url|schema cache/i.test(String(updateErr.message || ''))) {
           alert('Calendar media columns are missing. Run SQL migration: add icon_url and header_bg_url to calendar_layers.');
         } else {
           alert(`Could not save image on calendar: ${updateErr.message || 'Unknown error'}`);
         }
+        return;
+      }
+      if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+        alert('Could not save image on calendar: no writable row found for this calendar.');
         return;
       }
 
@@ -3243,9 +3248,64 @@ function App() {
     };
   };
 
+  const startLayerCropDragAt = (clientX, clientY) => {
+    const base = clampLayerCropOffset(layerMediaCropKind, layerMediaCropNatural, layerMediaCropZoom, layerMediaCropOffset);
+    layerCropDragRef.current = {
+      active: true,
+      startX: Number(clientX || 0),
+      startY: Number(clientY || 0),
+      baseX: base.x,
+      baseY: base.y,
+    };
+  };
+
+  const moveLayerCropDragAt = (clientX, clientY) => {
+    const drag = layerCropDragRef.current;
+    if (!drag?.active) return;
+    const nextOffset = clampLayerCropOffset(
+      layerMediaCropKind,
+      layerMediaCropNatural,
+      layerMediaCropZoom,
+      {
+        x: drag.baseX + (Number(clientX || 0) - Number(drag.startX || 0)),
+        y: drag.baseY + (Number(clientY || 0) - Number(drag.startY || 0)),
+      },
+    );
+    setLayerMediaCropOffset(nextOffset);
+  };
+
+  const endLayerCropDrag = () => {
+    layerCropDragRef.current = {
+      ...layerCropDragRef.current,
+      active: false,
+    };
+  };
+
+  const handleLayerCropMouseDown = (e) => {
+    if (typeof e.button === 'number' && e.button !== 0) return;
+    startLayerCropDragAt(e.clientX, e.clientY);
+  };
+
+  const handleLayerCropMouseMove = (e) => moveLayerCropDragAt(e.clientX, e.clientY);
+  const handleLayerCropMouseUp = () => endLayerCropDrag();
+
+  const handleLayerCropTouchStart = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    startLayerCropDragAt(touch.clientX, touch.clientY);
+  };
+
+  const handleLayerCropTouchMove = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    moveLayerCropDragAt(touch.clientX, touch.clientY);
+  };
+
+  const handleLayerCropTouchEnd = () => endLayerCropDrag();
+
   const getLayerCropFrame = (kind) => {
     if (String(kind || '') === 'icon') return { width: 240, height: 240, targetW: 512, targetH: 512 };
-    return { width: 360, height: 200, targetW: 1800, targetH: 900 };
+    return { width: 360, height: 200, targetW: 1800, targetH: 1000 };
   };
 
   const getLayerCropMetrics = (kind, natural, zoom) => {
@@ -14098,6 +14158,14 @@ function App() {
             onPointerUp={handleLayerCropPointerUp}
             onPointerCancel={handleLayerCropPointerUp}
             onPointerLeave={handleLayerCropPointerUp}
+            onMouseDown={handleLayerCropMouseDown}
+            onMouseMove={handleLayerCropMouseMove}
+            onMouseUp={handleLayerCropMouseUp}
+            onMouseLeave={handleLayerCropMouseUp}
+            onTouchStart={handleLayerCropTouchStart}
+            onTouchMove={handleLayerCropTouchMove}
+            onTouchEnd={handleLayerCropTouchEnd}
+            onTouchCancel={handleLayerCropTouchEnd}
           >
             {!!layerMediaCropImageUrl && (
               <img
