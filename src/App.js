@@ -2948,6 +2948,7 @@ function App() {
 
       const normalized = (rows || []).map((row) => normalizePublicCalendarRow(row, countsMap[String(row?.id || '')] || 0));
       setPublicCalendars(normalized);
+      setExpandedExploreDescriptions({});
     } catch (err) {
       console.error('Error loading public calendars:', err);
       setExploreError(`Could not load Explore calendars: ${String(err?.message || 'Unknown error')}`);
@@ -2989,16 +2990,8 @@ function App() {
     const primary = await supabase
       .from('calendar_layers')
       .update(payload)
-      .eq('id', lid)
-      .eq('owner_id', user.id);
+      .eq('id', lid);
     let error = primary.error;
-    if (error) {
-      const fallback = await supabase
-        .from('calendar_layers')
-        .update(payload)
-        .eq('id', lid);
-      error = fallback.error;
-    }
     if (error) {
       console.error('Publish calendar update failed:', error);
       if (/column .*is_public|schema cache/i.test(String(error.message || ''))) {
