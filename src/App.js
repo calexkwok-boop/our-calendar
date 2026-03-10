@@ -2934,22 +2934,6 @@ function App() {
     return normalized;
   };
 
-  const refreshLayerById = async (layerId) => {
-    const lid = String(layerId || '').trim();
-    if (!lid) return null;
-    const { data, error } = await supabase
-      .from('calendar_layers')
-      .select('*')
-      .eq('id', lid)
-      .maybeSingle();
-    if (error) {
-      console.error('Could not refresh calendar layer:', error);
-      return null;
-    }
-    if (!data) return null;
-    return mergeLayerIntoState(data);
-  };
-
   const mapSupabaseEventRow = (event, currentUserId) => ({
     id: event.id,
     title: event.title,
@@ -3058,20 +3042,35 @@ function App() {
     const primary = await supabase
       .from('calendar_layers')
       .update(payload)
-      .eq('id', lid);
+      .eq('id', lid)
+      .eq('owner_id', user.id)
+      .select('*')
+      .maybeSingle();
     let error = primary.error;
-    if (error) {
-      console.error('Publish calendar update failed:', error);
-      if (/column .*is_public|schema cache/i.test(String(error.message || ''))) {
+    let updatedLayer = primary.data || null;
+    if (!updatedLayer && !error) {
+      const fallback = await supabase
+        .from('calendar_layers')
+        .update(payload)
+        .eq('id', lid)
+        .select('*')
+        .maybeSingle();
+      error = fallback.error;
+      updatedLayer = fallback.data || null;
+    }
+    if (error || !updatedLayer) {
+      console.error('Publish calendar update failed:', error || 'No rows updated');
+      if (/column .*is_public|schema cache/i.test(String(error?.message || ''))) {
         alert('Public calendar columns are missing. Run the SQL migration first.');
+      } else if (!updatedLayer) {
+        alert('Could not save calendar description/settings. The calendar row was not updated.');
       } else {
-        alert(`Could not update public setting: ${error.message || 'Unknown error'}`);
+        alert(`Could not update public setting: ${error?.message || 'Unknown error'}`);
       }
       return false;
     }
 
-    mergeLayerIntoState({ id: lid, ...payload });
-    await refreshLayerById(lid);
+    mergeLayerIntoState(updatedLayer);
     setLayerRefreshToken(prev => prev + 1);
     if (bottomNavTab === 'explore') loadPublicCalendars();
     return true;
@@ -3236,27 +3235,37 @@ function App() {
         .from('calendar_layers')
         .update({ [field]: publicUrl })
         .eq('id', activeLayerId)
-        .eq('owner_id', user.id);
+        .eq('owner_id', user.id)
+        .select('*')
+        .maybeSingle();
       let updateErr = primaryUpdate.error;
-      if (updateErr) {
+      let updatedLayer = primaryUpdate.data || null;
+      if (updateErr || !updatedLayer) {
         // Fallback for legacy rows where owner_id is missing/misaligned.
         const fallbackUpdate = await supabase
           .from('calendar_layers')
           .update({ [field]: publicUrl })
           .eq('id', activeLayerId);
-        updateErr = fallbackUpdate.error;
+        const fallbackSelect = await supabase
+          .from('calendar_layers')
+          .select('*')
+          .eq('id', activeLayerId)
+          .maybeSingle();
+        updateErr = fallbackUpdate.error || fallbackSelect.error;
+        updatedLayer = fallbackSelect.data || null;
       }
-      if (updateErr) {
-        if (/column .*icon_url|column .*header_bg_url|schema cache/i.test(String(updateErr.message || ''))) {
+      if (updateErr || !updatedLayer) {
+        if (/column .*icon_url|column .*header_bg_url|schema cache/i.test(String(updateErr?.message || ''))) {
           alert('Calendar media columns are missing. Run SQL migration: add icon_url and header_bg_url to calendar_layers.');
+        } else if (!updatedLayer) {
+          alert('Could not save the image on this calendar. The calendar row was not updated.');
         } else {
-          alert(`Could not save image on calendar: ${updateErr.message || 'Unknown error'}`);
+          alert(`Could not save image on calendar: ${updateErr?.message || 'Unknown error'}`);
         }
         return false;
       }
 
-      mergeLayerIntoState({ id: activeLayerId, [field]: publicUrl });
-      await refreshLayerById(activeLayerId);
+      mergeLayerIntoState(updatedLayer);
       setLayerRefreshToken(prev => prev + 1);
       setShowLayerMediaMenu(false);
       return true;
@@ -3504,17 +3513,18 @@ function App() {
     if (!user?.id || !activeLayerId || !isActiveLayerOwner) return;
     if (mediaKind !== 'icon' && mediaKind !== 'header') return;
     const field = mediaKind === 'icon' ? 'icon_url' : 'header_bg_url';
-    const { error } = await supabase
+    const { data: updatedLayer, error } = await supabase
       .from('calendar_layers')
       .update({ [field]: null })
       .eq('id', activeLayerId)
-      .eq('owner_id', user.id);
-    if (error) {
-      alert(`Could not remove image: ${error.message || 'Unknown error'}`);
+      .eq('owner_id', user.id)
+      .select('*')
+      .maybeSingle();
+    if (error || !updatedLayer) {
+      alert(`Could not remove image: ${error?.message || (!updatedLayer ? 'Calendar row was not updated.' : 'Unknown error')}`);
       return;
     }
-    mergeLayerIntoState({ id: activeLayerId, [field]: null });
-    await refreshLayerById(activeLayerId);
+    mergeLayerIntoState(updatedLayer);
     setLayerRefreshToken(prev => prev + 1);
     setShowLayerMediaMenu(false);
   };
