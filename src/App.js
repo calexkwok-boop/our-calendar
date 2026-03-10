@@ -2295,6 +2295,10 @@ function App() {
   const [exploreLoading, setExploreLoading] = useState(false);
   const [exploreError, setExploreError] = useState('');
   const [showLayerModal, setShowLayerModal] = useState(false);
+  const [showPublishLayerModal, setShowPublishLayerModal] = useState(false);
+  const [publishLayerTargetId, setPublishLayerTargetId] = useState(null);
+  const [publishLayerDescription, setPublishLayerDescription] = useState('');
+  const [publishLayerTagsInput, setPublishLayerTagsInput] = useState('');
   const [newLayerName, setNewLayerName] = useState('');
   const [sharedCalendars, setSharedCalendars] = useState([]); // calendars others shared with me
   const [sharedOwnerLabels, setSharedOwnerLabels] = useState({});
@@ -2939,22 +2943,26 @@ function App() {
     }
   };
 
-  const publishLayerCalendar = async (layerId, publish) => {
+  const openPublishLayerModal = (layer) => {
+    const lid = String(layer?.id || '').trim();
+    if (!lid) return;
+    setPublishLayerTargetId(lid);
+    setPublishLayerDescription(String(layer?.public_description || '').trim());
+    const tags = Array.isArray(layer?.public_tags) ? layer.public_tags : parsePublicTags(layer?.public_tags);
+    setPublishLayerTagsInput(tags.join(', '));
+    setShowPublishLayerModal(true);
+  };
+
+  const publishLayerCalendar = async (layerId, publish, details = {}) => {
     const lid = String(layerId || '').trim();
     if (!lid || !user?.id) return;
     const layer = (layers || []).find(item => String(item?.id || '') === lid);
     if (!layer || String(layer?.owner_id || '') !== String(user.id)) return;
     const nextPublish = !!publish;
-    let nextDescription = String(layer?.public_description || '').trim();
-    let nextTags = Array.isArray(layer?.public_tags) ? layer.public_tags : parsePublicTags(layer?.public_tags);
-    if (nextPublish) {
-      const descPrompt = window.prompt('Public calendar description (optional):', nextDescription);
-      if (descPrompt === null) return;
-      nextDescription = String(descPrompt || '').trim();
-      const tagsPrompt = window.prompt('Tags (comma-separated, optional):', nextTags.join(', '));
-      if (tagsPrompt === null) return;
-      nextTags = parsePublicTags(tagsPrompt);
-    }
+    let nextDescription = String((details?.description ?? layer?.public_description) || '').trim();
+    let nextTags = Array.isArray(details?.tags)
+      ? details.tags
+      : parsePublicTags(details?.tags ?? layer?.public_tags);
 
     const payload = {
       is_public: nextPublish,
@@ -2981,6 +2989,20 @@ function App() {
       : item));
     setLayerRefreshToken(prev => prev + 1);
     if (bottomNavTab === 'explore') loadPublicCalendars();
+  };
+
+  const submitPublishLayerModal = async () => {
+    const layerId = String(publishLayerTargetId || '').trim();
+    if (!layerId) return;
+    const tags = parsePublicTags(publishLayerTagsInput);
+    await publishLayerCalendar(layerId, true, {
+      description: publishLayerDescription,
+      tags,
+    });
+    setShowPublishLayerModal(false);
+    setPublishLayerTargetId(null);
+    setPublishLayerDescription('');
+    setPublishLayerTagsInput('');
   };
 
   const joinPublicCalendar = async (layer) => {
@@ -13268,7 +13290,8 @@ function App() {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        publishLayerCalendar(layer.id, !isPublicLayer);
+                                        if (isPublicLayer) publishLayerCalendar(layer.id, false);
+                                        else openPublishLayerModal(layer);
                                       }}
                                       className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
                                         isPublicLayer
@@ -13707,6 +13730,62 @@ function App() {
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'explore' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
             >
               Explore
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {showPublishLayerModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Publish Calendar</h3>
+            <button
+              onClick={() => {
+                setShowPublishLayerModal(false);
+                setPublishLayerTargetId(null);
+              }}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+            Public description
+          </label>
+          <textarea
+            value={publishLayerDescription}
+            onChange={(e) => setPublishLayerDescription(e.target.value)}
+            placeholder="What is this calendar about?"
+            rows={3}
+            className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-3 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+          />
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+            Tags
+          </label>
+          <input
+            type="text"
+            value={publishLayerTagsInput}
+            onChange={(e) => setPublishLayerTagsInput(e.target.value)}
+            placeholder="e.g. pickleball, fresno, community"
+            className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+          />
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => {
+                setShowPublishLayerModal(false);
+                setPublishLayerTargetId(null);
+              }}
+              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={submitPublishLayerModal}
+              className="px-4 py-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-sm font-semibold"
+            >
+              Publish
             </button>
           </div>
         </div>
