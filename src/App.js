@@ -142,7 +142,14 @@ function App() {
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
   const [showConflictPrompt, setShowConflictPrompt] = useState(false);
-  const [conflictPromptData, setConflictPromptData] = useState({ title: '', lines: [] });
+  const [conflictPromptData, setConflictPromptData] = useState({
+    heading: 'Scheduling Conflict',
+    title: '',
+    lines: [],
+    confirmLabel: 'Save Anyway',
+    cancelLabel: 'Change Time',
+    showCancel: true,
+  });
   const [recurringDeletePrompt, setRecurringDeletePrompt] = useState(null);
   const [isPopupEventDraft, setIsPopupEventDraft] = useState(false);
   const [popupEventMaxPeopleDraft, setPopupEventMaxPeopleDraft] = useState('10');
@@ -3473,11 +3480,15 @@ function App() {
       minute: '2-digit',
     });
   };
-  const openConflictPrompt = ({ title, lines }) => new Promise((resolve) => {
+  const openConflictPrompt = ({ heading, title, lines, confirmLabel, cancelLabel, showCancel = true }) => new Promise((resolve) => {
     conflictPromptResolverRef.current = resolve;
     setConflictPromptData({
+      heading: String(heading || 'Scheduling Conflict'),
       title: String(title || 'Scheduling conflict'),
       lines: Array.isArray(lines) ? lines : [],
+      confirmLabel: String(confirmLabel || 'Save Anyway'),
+      cancelLabel: String(cancelLabel || 'Change Time'),
+      showCancel: showCancel !== false,
     });
     setShowConflictPrompt(true);
   });
@@ -9643,6 +9654,7 @@ function App() {
   }, [isLoading, showAuth, showUserSetup, user?.id, activeLayerId]);
 
   const handleTimeSubmit = async (time) => {
+    if (!assertCanEditActiveLayer('add events to this calendar')) return;
     if (!pendingEvent) return;
     if (!pendingEvent.isMultiDay && time) {
       const proposedDates = pendingEvent.datesToAdd || [];
@@ -10436,7 +10448,7 @@ function App() {
       <div className="fixed inset-0 z-[95] bg-black/45 flex items-center justify-center p-4">
         <div className="w-full max-w-md rounded-2xl border border-purple-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-2xl">
           <h3 className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-            Scheduling Conflict
+            {conflictPromptData.heading || 'Scheduling Conflict'}
           </h3>
           <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">{conflictPromptData.title}</p>
           <div className="mt-3 rounded-xl bg-purple-50 dark:bg-gray-700/70 border border-purple-100 dark:border-gray-600 p-3 space-y-1.5">
@@ -10444,19 +10456,21 @@ function App() {
               <div key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-200">{line}</div>
             ))}
           </div>
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className={`mt-4 grid grid-cols-1 ${conflictPromptData.showCancel !== false ? 'sm:grid-cols-2' : ''} gap-2`}>
             <button
               onClick={() => closeConflictPrompt(true)}
               className="px-4 py-2 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-sm font-semibold hover:shadow-lg transition-all"
             >
-              Save Anyway
+              {conflictPromptData.confirmLabel || 'Save Anyway'}
             </button>
-            <button
-              onClick={() => closeConflictPrompt(false)}
-              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
-            >
-              Change Time
-            </button>
+            {conflictPromptData.showCancel !== false && (
+              <button
+                onClick={() => closeConflictPrompt(false)}
+                className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+              >
+                {conflictPromptData.cancelLabel || 'Change Time'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -12246,8 +12260,11 @@ function App() {
               <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-xl border border-purple-200 dark:border-purple-700 relative">
                 <button
                   onClick={() => setShowTipBanner(false)}
+                  aria-label="Close tip"
                   className="absolute top-2 right-2 text-purple-400 hover:text-purple-600 dark:text-purple-500 dark:hover:text-purple-300 leading-none"
-                >?</button>
+                >
+                  <X className="w-4 h-4" />
+                </button>
                 <p className="text-sm text-purple-700 dark:text-purple-300 text-center pr-4">
                   💡 <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
                 </p>
