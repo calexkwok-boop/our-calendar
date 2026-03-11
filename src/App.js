@@ -11734,7 +11734,9 @@ function App() {
                 onClick={() => setShowSharePanel(!showSharePanel)}
                 className={`p-2 rounded-xl transition-all duration-200 border ${
                   useLegacyNeutralCalendarControls
-                    ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
+                    ? showSharePanel
+                      ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                     : showSharePanel
                       ? ''
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
@@ -11760,7 +11762,9 @@ function App() {
                 onClick={() => setShowListPanel(!showListPanel)}
                 className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${
                   useLegacyNeutralCalendarControls
-                    ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
+                    ? showListPanel
+                      ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                     : showListPanel
                       ? ''
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
@@ -11799,14 +11803,20 @@ function App() {
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
                 className={`p-2 rounded-xl transition-all duration-200 ${
                   useLegacyNeutralCalendarControls
-                  ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+                  ? showCategoryEditor
+                    ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                   : ''
               }`}
                 style={useLegacyNeutralCalendarControls ? undefined : themeAccentSoftButtonStyle}
               >
                 <Settings
                   className={`w-4 h-4 sm:w-5 sm:h-5 ${
-                  useLegacyNeutralCalendarControls ? 'text-indigo-700 dark:text-indigo-300' : ''
+                  useLegacyNeutralCalendarControls
+                    ? showCategoryEditor
+                      ? 'text-indigo-700 dark:text-indigo-300'
+                      : 'text-gray-600 dark:text-gray-300'
+                    : ''
                 }`}
                   style={useLegacyNeutralCalendarControls ? undefined : themeAccentTextStyle}
                 />
