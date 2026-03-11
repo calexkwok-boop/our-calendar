@@ -11820,9 +11820,10 @@ function App() {
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+              className="p-2 rounded-xl transition-all duration-200 border"
+              style={themeAccentSoftButtonStyle}
             >
-              <ChevronLeft className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <ChevronLeft className="w-6 h-6" style={themeAccentTextStyle} />
             </button>
             <div className="flex flex-col items-center gap-1">
               <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
@@ -11864,9 +11865,10 @@ function App() {
             </div>
             <button
               onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+              className="p-2 rounded-xl transition-all duration-200 border"
+              style={themeAccentSoftButtonStyle}
             >
-              <ChevronRight className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <ChevronRight className="w-6 h-6" style={themeAccentTextStyle} />
             </button>
           </div>
         </div>
