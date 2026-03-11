@@ -16396,11 +16396,11 @@ function App() {
                 <div className="relative ml-auto">
                   <button
                     onClick={() => setShowPhotoSortMenu((prev) => !prev)}
-                    className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                    className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 leading-none align-middle"
                     title="Sort photos"
                     aria-label="Sort photos"
                   >
-                    <span className="inline-flex flex-col justify-center gap-1" aria-hidden="true">
+                    <span className="inline-flex h-4 flex-col items-center justify-center gap-1" aria-hidden="true">
                       <span className="block w-4 h-0.5 rounded-full bg-current" />
                       <span className="block w-4 h-0.5 rounded-full bg-current" />
                       <span className="block w-4 h-0.5 rounded-full bg-current" />
