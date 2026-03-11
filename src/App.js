@@ -2922,6 +2922,7 @@ function App() {
     backgroundFrom: '#fff1f2',
     backgroundVia: '#f5f3ff',
     backgroundTo: '#e0e7ff',
+    coverOpacity: 0.82,
   };
 
   const TITLE_STYLE_PRESETS = [
@@ -3052,6 +3053,7 @@ function App() {
       backgroundFrom: normalizeHexColor(parsed?.backgroundFrom, fallback.backgroundFrom),
       backgroundVia: normalizeHexColor(parsed?.backgroundVia, fallback.backgroundVia),
       backgroundTo: normalizeHexColor(parsed?.backgroundTo, fallback.backgroundTo),
+      coverOpacity: Math.max(0, Math.min(1, Number(parsed?.coverOpacity ?? fallback.coverOpacity ?? DEFAULT_LAYER_PAGE_THEME.coverOpacity))),
     };
   }
 
@@ -11591,7 +11593,7 @@ function App() {
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4"
           style={activeLayer?.header_bg_url
             ? {
-              backgroundImage: `linear-gradient(rgba(17,24,39,0.22), rgba(17,24,39,0.16)), url(${activeLayer.header_bg_url})`,
+              backgroundImage: `linear-gradient(rgba(17,24,39,${Number((1 - activeLayerPageTheme.coverOpacity) * 0.7 + 0.06).toFixed(3)}), rgba(17,24,39,${Number((1 - activeLayerPageTheme.coverOpacity) * 0.52 + 0.03).toFixed(3)})), url(${activeLayer.header_bg_url})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }
@@ -14686,6 +14688,31 @@ function App() {
               >
                 Remove Icon
               </button>
+            </div>
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/30 p-3">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Cover Photo Opacity
+                </label>
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                  {Math.round(activeLayerPageTheme.coverOpacity * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={Math.round(activeLayerPageTheme.coverOpacity * 100)}
+                onChange={async (e) => {
+                  const coverOpacity = Math.max(0, Math.min(1, Number(e.target.value || 0) / 100));
+                  await saveLayerPageTheme({ ...activeLayerPageTheme, coverOpacity }, activeLayerTitleStyle);
+                }}
+                className="w-full accent-purple-500"
+              />
+              <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                Lower opacity softens the cover image. Higher opacity makes the photo show through more.
+              </div>
             </div>
             <div className="text-[11px] text-gray-500 dark:text-gray-400 px-1">
               Photos open in a manual crop screen before saving.
