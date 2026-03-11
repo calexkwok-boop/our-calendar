@@ -2926,10 +2926,10 @@ function App() {
     { name: 'Charcoal', mode: 'solid', solidColor: '#1f2937' },
   ];
 
-  const normalizeHexColor = (value, fallback) => {
+  function normalizeHexColor(value, fallback) {
     const txt = String(value || '').trim();
     return /^#([0-9a-fA-F]{6})$/.test(txt) ? txt.toLowerCase() : fallback;
-  };
+  }
 
   const getLayerTitleStyleStorageKey = (layerId) => `calendar-layer-title-style-${String(layerId || '').trim()}`;
 
