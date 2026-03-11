@@ -14665,7 +14665,7 @@ function App() {
 
     {showLayerMediaMenu && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Edit Calendar Photos</h3>
             <button onClick={() => setShowLayerMediaMenu(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
