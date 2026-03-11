@@ -3117,9 +3117,9 @@ function App() {
   };
   const themeAccentTextStyle = { color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent };
   const themeAccentSoftButtonStyle = {
-    backgroundColor: '#ffffff',
+    backgroundColor: themeAccentSoftBg,
     color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent,
-    borderColor: '#e5e7eb',
+    borderColor: themeAccentBorder,
   };
   const themeAccentHeadingStyle = {
     color: activeLayerPageTheme.accent,
@@ -11794,10 +11794,9 @@ function App() {
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-              className="p-2 rounded-xl transition-all duration-200 border"
-              style={themeAccentSoftButtonStyle}
+              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
             >
-              <ChevronLeft className="w-6 h-6" style={themeAccentTextStyle} />
+              <ChevronLeft className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </button>
             <div className="flex flex-col items-center gap-1">
               <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
@@ -11813,25 +11812,25 @@ function App() {
                     : `Agenda · Next ${agendaRangeDays} days`
                 }
               </h2>
-              <div className="flex rounded-lg overflow-hidden border text-xs font-medium" style={{ borderColor: themeAccentBorder }}>
+              <div className="flex rounded-lg overflow-hidden border border-purple-200 dark:border-gray-600 text-xs font-medium">
                 <button
                   onClick={() => setCalendarView('month')}
-                  className={`px-2.5 py-0.5 transition-all border ${calendarView === 'month' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                  style={calendarView === 'month' ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                  style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
                 >
                   Month
                 </button>
                 <button
                   onClick={() => setCalendarView('week')}
-                  className={`px-2.5 py-0.5 transition-all border ${calendarView === 'week' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                  style={calendarView === 'week' ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                  style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
                 >
                   Week
                 </button>
                 <button
                   onClick={() => setCalendarView('agenda')}
-                  className={`px-2.5 py-0.5 transition-all border ${calendarView === 'agenda' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
-                  style={calendarView === 'agenda' ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                  style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
                 >
                   Agenda
                 </button>
@@ -11839,10 +11838,9 @@ function App() {
             </div>
             <button
               onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-              className="p-2 rounded-xl transition-all duration-200 border"
-              style={themeAccentSoftButtonStyle}
+              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
             >
-              <ChevronRight className="w-6 h-6" style={themeAccentTextStyle} />
+              <ChevronRight className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </button>
           </div>
         </div>
@@ -13191,8 +13189,7 @@ function App() {
                   setSelectedDates([]);
                   setShowDateDetailModal(true);
                 }}
-                className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all border"
-                style={themeAccentSoftButtonStyle}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-all"
               >
                 Open Today
               </button>
