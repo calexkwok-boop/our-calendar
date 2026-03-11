@@ -163,6 +163,14 @@ function App() {
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [showTitleStyleModal, setShowTitleStyleModal] = useState(false);
+  const [titleStyleDraft, setTitleStyleDraft] = useState({
+    mode: 'gradient',
+    solidColor: '#7c3aed',
+    gradientFrom: '#e11d48',
+    gradientVia: '#7c3aed',
+    gradientTo: '#4f46e5',
+  });
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(true);
   const [authError, setAuthError] = useState('');
@@ -2757,6 +2765,8 @@ function App() {
   const activeLayer = layers.find(layer => layer.id === activeLayerId) || null;
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
   const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
+  const activeLayerTitleStyle = normalizeLayerTitleStyle(activeLayer?.title_style);
+  const activeLayerTitleTextStyle = getLayerTitleDisplayStyle(activeLayerTitleStyle);
   const activeShareRowForMe = (sharedCalendars || []).find((row) => {
     const layerId = String(row?.layer_id || row?.calendar_id || '');
     if (layerId !== String(activeLayerId || '')) return false;
@@ -2899,12 +2909,95 @@ function App() {
     return txt.split(',').map(v => String(v || '').trim()).filter(Boolean);
   };
 
+  const DEFAULT_LAYER_TITLE_STYLE = {
+    mode: 'gradient',
+    solidColor: '#7c3aed',
+    gradientFrom: '#e11d48',
+    gradientVia: '#7c3aed',
+    gradientTo: '#4f46e5',
+  };
+
+  const TITLE_STYLE_PRESETS = [
+    { name: 'Sunset', mode: 'gradient', gradientFrom: '#fb7185', gradientVia: '#f59e0b', gradientTo: '#f97316' },
+    { name: 'Berry', mode: 'gradient', gradientFrom: '#e11d48', gradientVia: '#7c3aed', gradientTo: '#4f46e5' },
+    { name: 'Ocean', mode: 'gradient', gradientFrom: '#06b6d4', gradientVia: '#2563eb', gradientTo: '#4f46e5' },
+    { name: 'Mint', mode: 'gradient', gradientFrom: '#10b981', gradientVia: '#14b8a6', gradientTo: '#0ea5e9' },
+    { name: 'Gold', mode: 'solid', solidColor: '#b45309' },
+    { name: 'Charcoal', mode: 'solid', solidColor: '#1f2937' },
+  ];
+
+  const normalizeHexColor = (value, fallback) => {
+    const txt = String(value || '').trim();
+    return /^#([0-9a-fA-F]{6})$/.test(txt) ? txt.toLowerCase() : fallback;
+  };
+
+  const getLayerTitleStyleStorageKey = (layerId) => `calendar-layer-title-style-${String(layerId || '').trim()}`;
+
+  function normalizeLayerTitleStyle(raw) {
+    let parsed = raw;
+    if (typeof parsed === 'string') {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch {
+        parsed = {};
+      }
+    }
+    if (!parsed || typeof parsed !== 'object') parsed = {};
+    const mode = String(parsed?.mode || '').trim() === 'solid' ? 'solid' : 'gradient';
+    return {
+      mode,
+      solidColor: normalizeHexColor(parsed?.solidColor, DEFAULT_LAYER_TITLE_STYLE.solidColor),
+      gradientFrom: normalizeHexColor(parsed?.gradientFrom, DEFAULT_LAYER_TITLE_STYLE.gradientFrom),
+      gradientVia: normalizeHexColor(parsed?.gradientVia, DEFAULT_LAYER_TITLE_STYLE.gradientVia),
+      gradientTo: normalizeHexColor(parsed?.gradientTo, DEFAULT_LAYER_TITLE_STYLE.gradientTo),
+    };
+  }
+
+  const readStoredLayerTitleStyle = (layerId) => {
+    const lid = String(layerId || '').trim();
+    if (!lid || typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(getLayerTitleStyleStorageKey(lid));
+      if (!raw) return null;
+      return normalizeLayerTitleStyle(raw);
+    } catch {
+      return null;
+    }
+  };
+
+  const writeStoredLayerTitleStyle = (layerId, style) => {
+    const lid = String(layerId || '').trim();
+    if (!lid || typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(getLayerTitleStyleStorageKey(lid), JSON.stringify(normalizeLayerTitleStyle(style)));
+    } catch {}
+  };
+
+  function getLayerTitleDisplayStyle(style) {
+    const normalized = normalizeLayerTitleStyle(style);
+    if (normalized.mode === 'solid') {
+      return {
+        color: normalized.solidColor,
+        backgroundImage: 'none',
+        WebkitTextFillColor: normalized.solidColor,
+      };
+    }
+    return {
+      backgroundImage: `linear-gradient(90deg, ${normalized.gradientFrom} 0%, ${normalized.gradientVia} 55%, ${normalized.gradientTo} 100%)`,
+      color: 'transparent',
+      WebkitBackgroundClip: 'text',
+      backgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+    };
+  }
+
   const normalizeLayerRow = (row) => ({
     ...row,
     icon_url: String(row?.icon_url || '').trim() || null,
     header_bg_url: String(row?.header_bg_url || '').trim() || null,
     public_description: String(row?.public_description || '').trim(),
     public_tags: parsePublicTags(row?.public_tags),
+    title_style: normalizeLayerTitleStyle(readStoredLayerTitleStyle(row?.id) || row?.title_style),
   });
 
   const normalizePublicCalendarRow = (row, memberCount = 0) => ({
@@ -2931,6 +3024,7 @@ function App() {
         ? { ...item, ...normalized }
         : item
     )));
+    writeStoredLayerTitleStyle(lid, normalized?.title_style);
     return normalized;
   };
 
@@ -3288,6 +3382,55 @@ function App() {
   const openLayerMediaMenu = () => {
     if (!isActiveLayerOwner || !activeLayerId || uploadingLayerMedia) return;
     setShowLayerMediaMenu(true);
+  };
+
+  const openTitleStyleModal = () => {
+    if (!isActiveLayerOwner || !activeLayerId) return;
+    setTitleStyleDraft(normalizeLayerTitleStyle(activeLayer?.title_style));
+    setShowTitleStyleModal(true);
+  };
+
+  const saveLayerTitleStyle = async () => {
+    const lid = String(activeLayerId || '').trim();
+    if (!lid || !user?.id || !isActiveLayerOwner) return false;
+    const normalizedStyle = normalizeLayerTitleStyle(titleStyleDraft);
+    writeStoredLayerTitleStyle(lid, normalizedStyle);
+
+    const primary = await supabase
+      .from('calendar_layers')
+      .update({ title_style: normalizedStyle })
+      .eq('id', lid)
+      .eq('owner_id', user.id)
+      .select('*')
+      .maybeSingle();
+    let error = primary.error;
+    let updatedLayer = primary.data || null;
+    if (error && /column .*title_style|schema cache/i.test(String(error?.message || ''))) {
+      mergeLayerIntoState({ id: lid, title_style: normalizedStyle });
+      setShowTitleStyleModal(false);
+      return true;
+    }
+    if (!updatedLayer && !error) {
+      const fallbackSelect = await supabase
+        .from('calendar_layers')
+        .select('*')
+        .eq('id', lid)
+        .maybeSingle();
+      error = fallbackSelect.error;
+      updatedLayer = fallbackSelect.data || null;
+    }
+    if (error) {
+      alert(`Could not save title style: ${error?.message || 'Unknown error'}`);
+      return false;
+    }
+    if (!updatedLayer) {
+      mergeLayerIntoState({ id: lid, title_style: normalizedStyle });
+      setShowTitleStyleModal(false);
+      return true;
+    }
+    mergeLayerIntoState({ ...updatedLayer, title_style: normalizedStyle });
+    setShowTitleStyleModal(false);
+    return true;
   };
 
   const chooseLayerMediaKind = (kind) => {
@@ -11352,20 +11495,33 @@ function App() {
                         await renameActiveLayer(calendarTitle);
                       }
                     }}
-                    className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent px-2 py-1 border-2 border-purple-300 rounded-lg w-full"
+                    className="text-xl sm:text-2xl font-bold px-2 py-1 border-2 border-purple-300 rounded-lg w-full bg-white/90 dark:bg-gray-800/90"
+                    style={activeLayerTitleStyle.mode === 'solid' ? { color: activeLayerTitleStyle.solidColor } : undefined}
                     autoFocus
                   />
                 ) : (
-                  <h1
-                    onClick={() => {
-                      if (!canEditActiveLayer) return;
-                      setIsEditingTitle(true);
-                    }}
-                    className={`text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent transition-opacity truncate ${canEditActiveLayer ? 'cursor-pointer hover:opacity-70' : 'cursor-default opacity-90'}`}
-                    title={canEditActiveLayer ? 'Click to rename calendar' : 'Read-only calendar'}
-                  >
-                    {calendarTitle}
-                  </h1>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h1
+                      onClick={() => {
+                        if (!canEditActiveLayer) return;
+                        setIsEditingTitle(true);
+                      }}
+                      className={`text-xl sm:text-2xl font-bold transition-opacity truncate ${canEditActiveLayer ? 'cursor-pointer hover:opacity-70' : 'cursor-default opacity-90'}`}
+                      style={activeLayerTitleTextStyle}
+                      title={canEditActiveLayer ? 'Click to rename calendar' : 'Read-only calendar'}
+                    >
+                      {calendarTitle}
+                    </h1>
+                    {isActiveLayerOwner && (
+                      <button
+                        onClick={openTitleStyleModal}
+                        className="shrink-0 px-2 py-1 rounded-lg border border-purple-200 dark:border-gray-600 bg-white/80 dark:bg-gray-800/80 text-[11px] font-semibold text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-gray-700"
+                        title="Customize title"
+                      >
+                        Style
+                      </button>
+                    )}
+                  </div>
                 )}
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                   <span className="font-semibold text-purple-600 dark:text-purple-400">{user?.email || user?.phone || currentUser}</span>
@@ -14390,6 +14546,135 @@ function App() {
               className="w-full px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
             >
               Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {showTitleStyleModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              Customize Title
+            </h3>
+            <button onClick={() => setShowTitleStyleModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/70 dark:bg-purple-900/20 px-4 py-3 mb-4">
+            <div
+              className="text-2xl sm:text-3xl font-bold truncate"
+              style={getLayerTitleDisplayStyle(titleStyleDraft)}
+            >
+              {calendarTitle || activeLayer?.name || 'Calendar Title'}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <button
+              onClick={() => setTitleStyleDraft(prev => ({ ...prev, mode: 'gradient' }))}
+              className={`px-3 py-2 rounded-xl text-sm font-semibold border ${titleStyleDraft.mode === 'gradient' ? 'bg-gradient-to-r from-rose-500 via-purple-500 to-indigo-500 text-white border-transparent' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600'}`}
+            >
+              Gradient
+            </button>
+            <button
+              onClick={() => setTitleStyleDraft(prev => ({ ...prev, mode: 'solid' }))}
+              className={`px-3 py-2 rounded-xl text-sm font-semibold border ${titleStyleDraft.mode === 'solid' ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:border-gray-100' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600'}`}
+            >
+              Solid
+            </button>
+          </div>
+
+          <div className="mb-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+              Presets
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {TITLE_STYLE_PRESETS.map((preset) => (
+                <button
+                  key={preset.name}
+                  onClick={() => setTitleStyleDraft(normalizeLayerTitleStyle(preset))}
+                  className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-left hover:border-purple-300 dark:hover:border-purple-500"
+                >
+                  <div
+                    className="text-sm font-bold truncate"
+                    style={getLayerTitleDisplayStyle(preset)}
+                  >
+                    {preset.name}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {titleStyleDraft.mode === 'solid' ? (
+            <div className="mb-4">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+                Font Color
+              </label>
+              <div className="flex items-center gap-3 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700">
+                <input
+                  type="color"
+                  value={titleStyleDraft.solidColor}
+                  onChange={(e) => setTitleStyleDraft(prev => ({ ...prev, solidColor: e.target.value }))}
+                  className="w-10 h-10 rounded-lg border-0 bg-transparent p-0"
+                />
+                <input
+                  type="text"
+                  value={titleStyleDraft.solidColor}
+                  onChange={(e) => setTitleStyleDraft(prev => ({ ...prev, solidColor: e.target.value }))}
+                  className="flex-1 bg-transparent text-sm text-gray-700 dark:text-gray-100 outline-none"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+              {[
+                ['gradientFrom', 'From'],
+                ['gradientVia', 'Middle'],
+                ['gradientTo', 'To'],
+              ].map(([key, label]) => (
+                <div key={key}>
+                  <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+                    {label}
+                  </label>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700">
+                    <input
+                      type="color"
+                      value={titleStyleDraft[key]}
+                      onChange={(e) => setTitleStyleDraft(prev => ({ ...prev, [key]: e.target.value }))}
+                      className="w-9 h-9 rounded-lg border-0 bg-transparent p-0"
+                    />
+                    <input
+                      type="text"
+                      value={titleStyleDraft[key]}
+                      onChange={(e) => setTitleStyleDraft(prev => ({ ...prev, [key]: e.target.value }))}
+                      className="w-full min-w-0 bg-transparent text-sm text-gray-700 dark:text-gray-100 outline-none"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => {
+                setTitleStyleDraft(activeLayerTitleStyle);
+                setShowTitleStyleModal(false);
+              }}
+              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={saveLayerTitleStyle}
+              className="px-4 py-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-sm font-semibold"
+            >
+              Save Style
             </button>
           </div>
         </div>
