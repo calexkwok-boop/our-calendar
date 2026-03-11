@@ -16556,7 +16556,9 @@ function App() {
                   <div>
                     <div className="text-sm font-medium text-gray-800 dark:text-gray-100">Share my location</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {sharingWindowOpen ? 'Visible only during this trip window.' : 'Trip is not active today, so sharing stays off.'}
+                      {sharingWindowOpen
+                        ? 'Shared only with members in this trip, and only during the trip dates.'
+                        : 'Available only during the trip dates, and only shared with members in this trip.'}
                     </div>
                   </div>
                   <button
@@ -16573,6 +16575,9 @@ function App() {
                 </div>
 
                 <div className="mt-4">
+                  <div className="mb-2 text-[11px] text-gray-500 dark:text-gray-400">
+                    Live location is limited to this trip’s member list and does not share outside the trip.
+                  </div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
                     Members Sharing
                   </div>
