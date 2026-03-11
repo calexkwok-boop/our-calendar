@@ -14088,9 +14088,9 @@ function App() {
                                 </div>
                               )}
                               {tags.length > 0 && (
-                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                <div className="mt-1.5 flex gap-1 overflow-x-auto whitespace-nowrap pb-1 pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                   {tags.slice(0, 6).map((tag) => (
-                                    <span key={`${layerId}-${tag}`} className="text-[10px] px-2 py-0.5 rounded-full bg-white/90 dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700">
+                                    <span key={`${layerId}-${tag}`} className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-white/90 dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700">
                                       #{tag}
                                     </span>
                                   ))}
