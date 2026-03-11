@@ -284,7 +284,7 @@ function App() {
   const [newSubCalName, setNewSubCalName] = useState('');
   const [subCalInviteEmail, setSubCalInviteEmail] = useState('');
   const [subCalMembers, setSubCalMembers] = useState([]);
-  const [subCalMembersCollapsed, setSubCalMembersCollapsed] = useState(false);
+  const [subCalMembersCollapsed, setSubCalMembersCollapsed] = useState(true);
   const [showSubCalLocationSheet, setShowSubCalLocationSheet] = useState(false);
   const [subCalEditingEvent, setSubCalEditingEvent] = useState(null);
   const [subCalSelectedDate, setSubCalSelectedDate] = useState(null);
@@ -11215,7 +11215,7 @@ function App() {
   }, [bottomNavTab, user?.id, layerRefreshToken]);
 
   useEffect(() => {
-    setSubCalMembersCollapsed(false);
+    setSubCalMembersCollapsed(true);
   }, [activeSubCalendar?.id]);
 
   const orderedVisibleLayerCalendars = (() => {
@@ -16347,12 +16347,12 @@ function App() {
                   onClick={() => setPhotoView('grid')}
                   className={`p-1.5 rounded-lg transition-all ${photoView === 'grid' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
                   title="Grid view"
-                >\uD83D\uDD52</button>
+                >{'🖼️'}</button>
                 <button
                   onClick={() => setPhotoView('timeline')}
                   className={`p-1.5 rounded-lg transition-all ${photoView === 'timeline' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
                   title="Timeline view"
-                >?</button>
+                >{'🕒'}</button>
             </div>
 
             {tripPhotos.length === 0 ? (
