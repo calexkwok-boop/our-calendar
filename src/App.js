@@ -11779,13 +11779,12 @@ function App() {
               >
                 🌤️
               </button>
-              <button
-                onClick={() => setShowCategoryEditor(!showCategoryEditor)}
-                className="p-2 rounded-xl transition-all duration-200"
-                style={themeAccentSoftButtonStyle}
-              >
-                <Settings className="w-4 h-4 sm:w-5 sm:h-5" style={themeAccentTextStyle} />
-              </button>
+            <button
+              onClick={() => setShowCategoryEditor(!showCategoryEditor)}
+              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+            >
+              <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
+            </button>
               <button
                 onClick={() => setDarkMode(!darkMode)}
                 className="p-2 rounded-xl transition-all duration-200 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-yellow-400"
@@ -11799,10 +11798,9 @@ function App() {
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-              className="p-2 rounded-xl transition-all duration-200 border"
-              style={themeAccentSoftButtonStyle}
+              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
             >
-              <ChevronLeft className="w-6 h-6" style={themeAccentTextStyle} />
+              <ChevronLeft className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </button>
             <div className="flex flex-col items-center gap-1">
               <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
@@ -11844,10 +11842,9 @@ function App() {
             </div>
             <button
               onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-              className="p-2 rounded-xl transition-all duration-200 border"
-              style={themeAccentSoftButtonStyle}
+              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
             >
-              <ChevronRight className="w-6 h-6" style={themeAccentTextStyle} />
+              <ChevronRight className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </button>
           </div>
         </div>
@@ -13196,8 +13193,7 @@ function App() {
                   setSelectedDates([]);
                   setShowDateDetailModal(true);
                 }}
-                className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
-                style={themeAccentSoftButtonStyle}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-all"
               >
                 Open Today
               </button>
