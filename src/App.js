@@ -69,6 +69,37 @@ const COLOR_OPTIONS = [
 const WEB_PUSH_VAPID_PUBLIC_KEY = String(process.env.REACT_APP_VAPID_PUBLIC_KEY || process.env.REACT_APP_FCM_VAPID_PUBLIC_KEY || '').trim();
 const FCM_WEB_VAPID_PUBLIC_KEY = String(process.env.REACT_APP_FCM_VAPID_PUBLIC_KEY || process.env.REACT_APP_VAPID_PUBLIC_KEY || '').trim();
 
+const LOCKED_DEFAULT_LAYER_TITLE_STYLE = Object.freeze({
+  mode: 'gradient',
+  solidColor: '#7c3aed',
+  gradientFrom: '#e11d48',
+  gradientVia: '#7c3aed',
+  gradientTo: '#4f46e5',
+});
+
+const LOCKED_DEFAULT_LAYER_PAGE_THEME = Object.freeze({
+  matchTitle: true,
+  accent: '#7c3aed',
+  backgroundFrom: '#fdf2f8',
+  backgroundVia: '#f5f3ff',
+  backgroundTo: '#eef2ff',
+  coverOpacity: 0.82,
+});
+
+const createDefaultLayerTitleStyle = () => ({ ...LOCKED_DEFAULT_LAYER_TITLE_STYLE });
+const createDefaultLayerPageTheme = () => ({ ...LOCKED_DEFAULT_LAYER_PAGE_THEME });
+const DEFAULT_LAYER_TITLE_STYLE = createDefaultLayerTitleStyle();
+const DEFAULT_LAYER_PAGE_THEME = createDefaultLayerPageTheme();
+
+const TITLE_STYLE_PRESETS = [
+  { name: 'Sunset', mode: 'gradient', gradientFrom: '#fb7185', gradientVia: '#f59e0b', gradientTo: '#f97316' },
+  { name: 'Gradient Berry', ...LOCKED_DEFAULT_LAYER_TITLE_STYLE },
+  { name: 'Ocean', mode: 'gradient', gradientFrom: '#06b6d4', gradientVia: '#2563eb', gradientTo: '#4f46e5' },
+  { name: 'Mint', mode: 'gradient', gradientFrom: '#10b981', gradientVia: '#14b8a6', gradientTo: '#0ea5e9' },
+  { name: 'Gold', mode: 'solid', solidColor: '#b45309' },
+  { name: 'Charcoal', mode: 'solid', solidColor: '#1f2937' },
+];
+
 
 const urlBase64ToUint8Array = (base64String) => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -253,6 +284,7 @@ function App() {
   const [newSubCalName, setNewSubCalName] = useState('');
   const [subCalInviteEmail, setSubCalInviteEmail] = useState('');
   const [subCalMembers, setSubCalMembers] = useState([]);
+  const [subCalMembersCollapsed, setSubCalMembersCollapsed] = useState(false);
   const [subCalEditingEvent, setSubCalEditingEvent] = useState(null);
   const [subCalSelectedDate, setSubCalSelectedDate] = useState(null);
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
@@ -2851,8 +2883,8 @@ function App() {
         name: 'Main Calendar',
         is_default: true,
         created_by: currentUser || userEmail || 'User',
-        title_style: DEFAULT_LAYER_TITLE_STYLE,
-        page_theme: DEFAULT_LAYER_PAGE_THEME,
+        title_style: createDefaultLayerTitleStyle(),
+        page_theme: createDefaultLayerPageTheme(),
       };
       let { data: insertedLayer, error: insertErr } = await supabase
         .from('calendar_layers')
@@ -2919,35 +2951,6 @@ function App() {
     } catch {}
     return txt.split(',').map(v => String(v || '').trim()).filter(Boolean);
   };
-
-  const LOCKED_DEFAULT_LAYER_TITLE_STYLE = Object.freeze({
-    mode: 'gradient',
-    solidColor: '#7c3aed',
-    gradientFrom: '#e11d48',
-    gradientVia: '#7c3aed',
-    gradientTo: '#4f46e5',
-  });
-  const LOCKED_DEFAULT_LAYER_PAGE_THEME = Object.freeze({
-    matchTitle: true,
-    accent: '#7c3aed',
-    backgroundFrom: '#fdf2f8',
-    backgroundVia: '#f5f3ff',
-    backgroundTo: '#eef2ff',
-    coverOpacity: 0.82,
-  });
-  const createDefaultLayerTitleStyle = () => ({ ...LOCKED_DEFAULT_LAYER_TITLE_STYLE });
-  const createDefaultLayerPageTheme = () => ({ ...LOCKED_DEFAULT_LAYER_PAGE_THEME });
-  const DEFAULT_LAYER_TITLE_STYLE = createDefaultLayerTitleStyle();
-  const DEFAULT_LAYER_PAGE_THEME = createDefaultLayerPageTheme();
-
-  const TITLE_STYLE_PRESETS = [
-    { name: 'Sunset', mode: 'gradient', gradientFrom: '#fb7185', gradientVia: '#f59e0b', gradientTo: '#f97316' },
-    { name: 'Gradient Berry', ...LOCKED_DEFAULT_LAYER_TITLE_STYLE },
-    { name: 'Ocean', mode: 'gradient', gradientFrom: '#06b6d4', gradientVia: '#2563eb', gradientTo: '#4f46e5' },
-    { name: 'Mint', mode: 'gradient', gradientFrom: '#10b981', gradientVia: '#14b8a6', gradientTo: '#0ea5e9' },
-    { name: 'Gold', mode: 'solid', solidColor: '#b45309' },
-    { name: 'Charcoal', mode: 'solid', solidColor: '#1f2937' },
-  ];
 
   function normalizeHexColor(value, fallback) {
     const txt = String(value || '').trim();
@@ -3419,8 +3422,8 @@ function App() {
       created_by: currentUser || user.email || 'User',
       icon_url: null,
       header_bg_url: null,
-      title_style: DEFAULT_LAYER_TITLE_STYLE,
-      page_theme: DEFAULT_LAYER_PAGE_THEME,
+      title_style: createDefaultLayerTitleStyle(),
+      page_theme: createDefaultLayerPageTheme(),
     };
     let { data, error } = await supabase
       .from('calendar_layers')
@@ -11210,6 +11213,10 @@ function App() {
     loadPublicCalendars();
   }, [bottomNavTab, user?.id, layerRefreshToken]);
 
+  useEffect(() => {
+    setSubCalMembersCollapsed(false);
+  }, [activeSubCalendar?.id]);
+
   const orderedVisibleLayerCalendars = (() => {
     const byId = new Map((visibleLayerCalendars || []).map((layer) => [String(layer?.id || ''), layer]));
     const order = normalizeSortOrder(Array.from(byId.keys()), activeCalendarSortOrder);
@@ -15412,32 +15419,40 @@ function App() {
         <div className="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">Members ({subCalMembers.length + 1})</h4>
+            <button
+              onClick={() => setSubCalMembersCollapsed((prev) => !prev)}
+              className="text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition-colors"
+            >
+              {subCalMembersCollapsed ? 'Show' : 'Hide'}
+            </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full text-xs flex items-center gap-1">
-              👤 {currentUser} (you)
-            </span>
-            {subCalMembers.map(m => (
-              <span key={m.identity || m.email || m.phone} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
-                {m.identity || m.email || m.phone}
-                <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200">
-                  {getRecipientKindLabel(m.identity || m.email || m.phone)}
-                </span>
-                {activeSubCalendar.owner_id === user?.id && m.removable !== false && (
-                  <button onClick={() => removeMemberFromSubCal(m.identity || m.email || m.phone)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
-                )}
+          {!subCalMembersCollapsed && (
+            <div className="flex flex-wrap gap-2">
+              <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full text-xs flex items-center gap-1">
+                👤 {currentUser} (you)
               </span>
-            ))}
-            {activeSubCalendar.owner_id === user?.id && (
-              <button
-                onClick={() => {
-                  const target = window.prompt('Invite by email or phone:');
-                  if (target) { inviteToSubCalendar(target); }
-                }}
-                className="px-2 py-1 border border-dashed border-purple-300 dark:border-purple-600 text-purple-500 rounded-full text-xs hover:bg-purple-50 dark:hover:bg-purple-900/20"
-              >+ Invite</button>
-            )}
-          </div>
+              {subCalMembers.map(m => (
+                <span key={m.identity || m.email || m.phone} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
+                  {m.identity || m.email || m.phone}
+                  <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200">
+                    {getRecipientKindLabel(m.identity || m.email || m.phone)}
+                  </span>
+                  {activeSubCalendar.owner_id === user?.id && m.removable !== false && (
+                    <button onClick={() => removeMemberFromSubCal(m.identity || m.email || m.phone)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
+                  )}
+                </span>
+              ))}
+              {activeSubCalendar.owner_id === user?.id && (
+                <button
+                  onClick={() => {
+                    const target = window.prompt('Invite by email or phone:');
+                    if (target) { inviteToSubCalendar(target); }
+                  }}
+                  className="px-2 py-1 border border-dashed border-purple-300 dark:border-purple-600 text-purple-500 rounded-full text-xs hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                >+ Invite</button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Location sharing quick controls (mobile-friendly placement) */}
