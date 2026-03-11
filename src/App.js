@@ -81,6 +81,8 @@ const urlBase64ToUint8Array = (base64String) => {
   return outputArray;
 };
 
+const getLayerDarkModeStorageKey = (userId, layerId) => `darkMode:${String(userId || '').trim()}:${String(layerId || '').trim()}`;
+
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -2375,7 +2377,7 @@ function App() {
   const [mergeTargetLayerId, setMergeTargetLayerId] = useState('');
   const [mergeInProgress, setMergeInProgress] = useState(false);
   const autoMergeSeenRef = useRef(new Set());
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+  const [darkMode, setDarkMode] = useState(false);
   const [showTipBanner, setShowTipBanner] = useState(() => localStorage.getItem('hideTipBanner') !== 'true');
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
   const [showWeather, setShowWeather] = useState(true);
@@ -4369,8 +4371,32 @@ function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    const userId = String(user?.id || '').trim();
+    const layerId = String(activeLayerId || '').trim();
+    if (!userId || !layerId) {
+      const legacy = typeof window !== 'undefined' ? localStorage.getItem('darkMode') : null;
+      setDarkMode(legacy === 'true');
+      return;
+    }
+    const scopedKey = getLayerDarkModeStorageKey(userId, layerId);
+    const scopedValue = localStorage.getItem(scopedKey);
+    if (scopedValue === 'true' || scopedValue === 'false') {
+      setDarkMode(scopedValue === 'true');
+      return;
+    }
+    const legacy = localStorage.getItem('darkMode');
+    setDarkMode(legacy === 'true');
+  }, [user?.id, activeLayerId]);
+
+  useEffect(() => {
+    const userId = String(user?.id || '').trim();
+    const layerId = String(activeLayerId || '').trim();
+    if (!userId || !layerId) return;
+    localStorage.setItem(getLayerDarkModeStorageKey(userId, layerId), String(darkMode));
+  }, [darkMode, user?.id, activeLayerId]);
 
   useEffect(() => {
     if (!user?.id) {
