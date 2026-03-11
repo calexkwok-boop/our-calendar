@@ -11732,8 +11732,14 @@ function App() {
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setShowSharePanel(!showSharePanel)}
-                className={`p-2 rounded-xl transition-all duration-200 border ${showSharePanel ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'}`}
-                style={showSharePanel ? themeAccentSoftButtonStyle : undefined}
+                className={`p-2 rounded-xl transition-all duration-200 border ${
+                  useLegacyNeutralCalendarControls
+                    ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
+                    : showSharePanel
+                      ? ''
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                }`}
+                style={useLegacyNeutralCalendarControls ? undefined : showSharePanel ? themeAccentSoftButtonStyle : undefined}
                 title="Share calendar"
               >
                 <User className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -11752,8 +11758,14 @@ function App() {
               </button>
               <button
                 onClick={() => setShowListPanel(!showListPanel)}
-                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${showListPanel ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'}`}
-                style={showListPanel ? themeAccentSoftButtonStyle : undefined}
+                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${
+                  useLegacyNeutralCalendarControls
+                    ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
+                    : showListPanel
+                      ? ''
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                }`}
+                style={useLegacyNeutralCalendarControls ? undefined : showListPanel ? themeAccentSoftButtonStyle : undefined}
                 title="Shared list"
               >
                 List
@@ -11783,21 +11795,21 @@ function App() {
               >
                 🌤️
               </button>
-            <button
-              onClick={() => setShowCategoryEditor(!showCategoryEditor)}
-              className={`p-2 rounded-xl transition-all duration-200 ${
-                useLegacyNeutralCalendarControls
-                  ? 'hover:bg-purple-100 dark:hover:bg-gray-700'
+              <button
+                onClick={() => setShowCategoryEditor(!showCategoryEditor)}
+                className={`p-2 rounded-xl transition-all duration-200 ${
+                  useLegacyNeutralCalendarControls
+                  ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
                   : ''
               }`}
-              style={useLegacyNeutralCalendarControls ? undefined : themeAccentSoftButtonStyle}
-            >
-              <Settings
-                className={`w-4 h-4 sm:w-5 sm:h-5 ${
-                  useLegacyNeutralCalendarControls ? 'text-purple-600 dark:text-purple-400' : ''
+                style={useLegacyNeutralCalendarControls ? undefined : themeAccentSoftButtonStyle}
+              >
+                <Settings
+                  className={`w-4 h-4 sm:w-5 sm:h-5 ${
+                  useLegacyNeutralCalendarControls ? 'text-indigo-700 dark:text-indigo-300' : ''
                 }`}
-                style={useLegacyNeutralCalendarControls ? undefined : themeAccentTextStyle}
-              />
+                  style={useLegacyNeutralCalendarControls ? undefined : themeAccentTextStyle}
+                />
             </button>
               <button
                 onClick={() => setDarkMode(!darkMode)}
