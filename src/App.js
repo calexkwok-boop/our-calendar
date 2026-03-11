@@ -3089,6 +3089,10 @@ function App() {
   const activeLayerTitleStyle = normalizeLayerTitleStyle(activeLayer?.title_style);
   const activeLayerTitleTextStyle = getLayerTitleDisplayStyle(activeLayerTitleStyle);
   const activeLayerPageTheme = normalizeLayerPageTheme(activeLayer?.page_theme, activeLayerTitleStyle);
+  const activeLayerNameKey = String(activeLayer?.name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+  const useLegacyNeutralCalendarControls = activeLayerNameKey === 'elliemiles';
   const effectiveCoverOpacity = coverOpacityPreview == null
     ? activeLayerPageTheme.coverOpacity
     : Math.max(0, Math.min(1, Number(coverOpacityPreview)));
@@ -11781,9 +11785,19 @@ function App() {
               </button>
             <button
               onClick={() => setShowCategoryEditor(!showCategoryEditor)}
-              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+              className={`p-2 rounded-xl transition-all duration-200 ${
+                useLegacyNeutralCalendarControls
+                  ? 'hover:bg-purple-100 dark:hover:bg-gray-700'
+                  : ''
+              }`}
+              style={useLegacyNeutralCalendarControls ? undefined : themeAccentSoftButtonStyle}
             >
-              <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
+              <Settings
+                className={`w-4 h-4 sm:w-5 sm:h-5 ${
+                  useLegacyNeutralCalendarControls ? 'text-purple-600 dark:text-purple-400' : ''
+                }`}
+                style={useLegacyNeutralCalendarControls ? undefined : themeAccentTextStyle}
+              />
             </button>
               <button
                 onClick={() => setDarkMode(!darkMode)}
@@ -11798,9 +11812,19 @@ function App() {
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+              className={`p-2 rounded-xl transition-all duration-200 ${
+                useLegacyNeutralCalendarControls
+                  ? 'hover:bg-purple-100 dark:hover:bg-gray-700'
+                  : ''
+              }`}
+              style={useLegacyNeutralCalendarControls ? undefined : themeAccentSoftButtonStyle}
             >
-              <ChevronLeft className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <ChevronLeft
+                className={`w-6 h-6 ${
+                  useLegacyNeutralCalendarControls ? 'text-purple-600 dark:text-purple-400' : ''
+                }`}
+                style={useLegacyNeutralCalendarControls ? undefined : themeAccentTextStyle}
+              />
             </button>
             <div className="flex flex-col items-center gap-1">
               <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
@@ -11842,9 +11866,19 @@ function App() {
             </div>
             <button
               onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+              className={`p-2 rounded-xl transition-all duration-200 ${
+                useLegacyNeutralCalendarControls
+                  ? 'hover:bg-purple-100 dark:hover:bg-gray-700'
+                  : ''
+              }`}
+              style={useLegacyNeutralCalendarControls ? undefined : themeAccentSoftButtonStyle}
             >
-              <ChevronRight className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <ChevronRight
+                className={`w-6 h-6 ${
+                  useLegacyNeutralCalendarControls ? 'text-purple-600 dark:text-purple-400' : ''
+                }`}
+                style={useLegacyNeutralCalendarControls ? undefined : themeAccentTextStyle}
+              />
             </button>
           </div>
         </div>
@@ -13193,7 +13227,12 @@ function App() {
                   setSelectedDates([]);
                   setShowDateDetailModal(true);
                 }}
-                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-all"
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                  useLegacyNeutralCalendarControls
+                    ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'
+                    : 'text-white hover:shadow-lg'
+                }`}
+                style={useLegacyNeutralCalendarControls ? undefined : themeAccentButtonStyle}
               >
                 Open Today
               </button>
