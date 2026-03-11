@@ -2765,8 +2765,6 @@ function App() {
   const activeLayer = layers.find(layer => layer.id === activeLayerId) || null;
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
   const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
-  const activeLayerTitleStyle = normalizeLayerTitleStyle(activeLayer?.title_style);
-  const activeLayerTitleTextStyle = getLayerTitleDisplayStyle(activeLayerTitleStyle);
   const activeShareRowForMe = (sharedCalendars || []).find((row) => {
     const layerId = String(row?.layer_id || row?.calendar_id || '');
     if (layerId !== String(activeLayerId || '')) return false;
@@ -2990,6 +2988,9 @@ function App() {
       WebkitTextFillColor: 'transparent',
     };
   }
+
+  const activeLayerTitleStyle = normalizeLayerTitleStyle(activeLayer?.title_style);
+  const activeLayerTitleTextStyle = getLayerTitleDisplayStyle(activeLayerTitleStyle);
 
   const normalizeLayerRow = (row) => ({
     ...row,
