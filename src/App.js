@@ -15286,7 +15286,7 @@ function App() {
             type="text"
             value={newSubCalName}
             onChange={e => setNewSubCalName(e.target.value)}
-            placeholder="e.g. SF Trip ??, Cabo 2026 ??"
+            placeholder={'e.g. SF Trip \u2708\uFE0F, Cabo 2026 \uD83C\uDF34'}
             className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
             autoFocus
             onKeyPress={e => e.key === 'Enter' && createSubCalendar()}
@@ -15321,7 +15321,7 @@ function App() {
               <div
                 className="font-bold text-gray-800 dark:text-white cursor-pointer hover:text-purple-600 dark:hover:text-purple-400"
                 onClick={() => setEditingSubCalTitle(true)}
-              >{activeSubCalendar.name} ??</div>
+              >{`${activeSubCalendar.name} \u2708\uFE0F`}</div>
             )}
             <div className="text-xs text-gray-500 dark:text-gray-400">
               {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -16384,7 +16384,7 @@ function App() {
                   onClick={() => setPhotoView('grid')}
                   className={`p-1.5 rounded-lg transition-all ${photoView === 'grid' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
                   title="Grid view"
-                >?</button>
+                >\uD83D\uDD52</button>
                 <button
                   onClick={() => setPhotoView('timeline')}
                   className={`p-1.5 rounded-lg transition-all ${photoView === 'timeline' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
@@ -16394,7 +16394,7 @@ function App() {
 
             {tripPhotos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center px-8">
-                <div className="text-6xl mb-4">??</div>
+                <div className="text-6xl mb-4">{'\uD83D\uDCF8'}</div>
                 <div className="text-gray-500 dark:text-gray-400 font-medium mb-1">No photos yet</div>
                 <div className="text-sm text-gray-400 dark:text-gray-500">Tap "Add Photos" to share memories from this trip</div>
               </div>
