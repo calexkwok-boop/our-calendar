@@ -15519,7 +15519,9 @@ function App() {
                   onTouchStart={() => {
                     shakingTimeoutRef.current = setTimeout(() => setShakingDates(true), 500);
                   }}
+                  onTouchMove={() => clearTimeout(shakingTimeoutRef.current)}
                   onTouchEnd={() => clearTimeout(shakingTimeoutRef.current)}
+                  onTouchCancel={() => clearTimeout(shakingTimeoutRef.current)}
                 >
                   <button
                     onClick={() => { if (shakingDates) return; setSubCalSelectedDate(date); }}
