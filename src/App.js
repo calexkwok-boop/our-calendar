@@ -304,6 +304,7 @@ function App() {
   const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
   const [deletedPhotosNoteId, setDeletedPhotosNoteId] = useState(null);
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
+  const [showPhotoSortMenu, setShowPhotoSortMenu] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUploadMessage, setPhotoUploadMessage] = useState('');
   const [photoUploadError, setPhotoUploadError] = useState(false);
@@ -16343,16 +16344,45 @@ function App() {
                   {photoUploadMessage}
                 </span>
               )}
-                <button
-                  onClick={() => setPhotoView('grid')}
-                  className={`p-1.5 rounded-lg transition-all ${photoView === 'grid' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
-                  title="Grid view"
-                >{'🖼️'}</button>
-                <button
-                  onClick={() => setPhotoView('timeline')}
-                  className={`p-1.5 rounded-lg transition-all ${photoView === 'timeline' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300' : 'text-gray-400 hover:text-gray-600'}`}
-                  title="Timeline view"
-                >{'🕒'}</button>
+                <div className="relative ml-auto">
+                  <button
+                    onClick={() => setShowPhotoSortMenu((prev) => !prev)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-200"
+                    title="Sort photos"
+                  >
+                    <span className="inline-flex flex-col justify-center gap-1" aria-hidden="true">
+                      <span className="block w-4 h-0.5 rounded-full bg-current" />
+                      <span className="block w-4 h-0.5 rounded-full bg-current" />
+                      <span className="block w-4 h-0.5 rounded-full bg-current" />
+                    </span>
+                    <span>Sort by</span>
+                  </button>
+                  {showPhotoSortMenu && (
+                    <div className="absolute right-0 top-full mt-2 w-44 rounded-2xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl overflow-hidden z-20">
+                      <div className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                        Sort by
+                      </div>
+                      <button
+                        onClick={() => {
+                          setPhotoView('grid');
+                          setShowPhotoSortMenu(false);
+                        }}
+                        className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${photoView === 'grid' ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                      >
+                        Day grid
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPhotoView('timeline');
+                          setShowPhotoSortMenu(false);
+                        }}
+                        className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${photoView === 'timeline' ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                      >
+                        Timeline
+                      </button>
+                    </div>
+                  )}
+                </div>
             </div>
 
             {tripPhotos.length === 0 ? (
@@ -16363,7 +16393,7 @@ function App() {
               </div>
             ) : photoView === 'grid' ? (
               /* -- GRID VIEW -- */
-              <div className="p-4">
+              <div className="px-4 pb-4 pt-6">
                 {/* Group by date */}
                 {(() => {
                   const byDate = {};
@@ -16402,7 +16432,7 @@ function App() {
                             />
                             {isPhotoSelectionMode && (
                               <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
-                                <span className={`text-xs ${isSelectedPhoto ? 'text-emerald-300' : 'text-white/70'}`}>{isSelectedPhoto ? '?' : ''}</span>
+                                <span className={`text-xs ${isSelectedPhoto ? 'text-emerald-300' : 'text-white/70'}`}>{isSelectedPhoto ? '✓' : ''}</span>
                               </div>
                             )}
                             {photo.caption && (
@@ -16415,7 +16445,7 @@ function App() {
                                 onClick={e => { e.stopPropagation(); deleteTripPhoto(photo); }}
                                 className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center shadow"
                               >
-                                ?
+                                <X className="w-3.5 h-3.5" />
                               </button>
                             )}
                             <div className="absolute bottom-1 left-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
@@ -16437,7 +16467,7 @@ function App() {
               </div>
             ) : (
               /* -- TIMELINE VIEW -- */
-              <div className="p-4 space-y-8">
+              <div className="px-4 pb-4 pt-6 space-y-8">
                 {(() => {
                   const byDate = {};
                   tripPhotos.forEach(p => {
@@ -16501,7 +16531,7 @@ function App() {
                                 onClick={() => deleteTripPhoto(photo)}
                                 className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow"
                               >
-                                ?
+                                <X className="w-3.5 h-3.5" />
                               </button>
                             )}
                           </div>
@@ -16720,7 +16750,7 @@ function App() {
               style={{ top: 'max(1.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
               aria-label="Close photo"
             >
-              ?
+              <X className="w-5 h-5" />
             </button>
             <img
               src={lightboxPhoto.url}
