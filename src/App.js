@@ -14449,9 +14449,9 @@ function App() {
                                 </div>
                               )}
                               {tags.length > 0 && (
-                                <div className="mt-1.5 w-full max-w-full flex gap-1 overflow-x-auto overflow-y-visible whitespace-nowrap pb-1 pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                <div className="mt-1.5 w-full max-w-full flex flex-wrap gap-1">
                                   {tags.slice(0, 6).map((tag) => (
-                                    <span key={`${layerId}-${tag}`} className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-white/90 dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700">
+                                    <span key={`${layerId}-${tag}`} className="text-[10px] px-2 py-0.5 rounded-full bg-white/90 dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700 break-words">
                                       #{tag}
                                     </span>
                                   ))}
@@ -14719,34 +14719,6 @@ function App() {
             </button>
           </div>
           <div className="space-y-2">
-            <button
-              onClick={() => chooseLayerMediaKind('header')}
-              disabled={uploadingLayerMedia}
-              className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'}`}
-            >
-              Choose Cover Photo
-            </button>
-            <button
-              onClick={() => chooseLayerMediaKind('icon')}
-              disabled={uploadingLayerMedia}
-              className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'}`}
-            >
-              Change Icon
-            </button>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => removeLayerMedia('header')}
-                className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
-              >
-                Remove Cover
-              </button>
-              <button
-                onClick={() => removeLayerMedia('icon')}
-                className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
-              >
-                Remove Icon
-              </button>
-            </div>
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/30 p-3">
               <div className="flex items-center justify-between gap-3 mb-2">
                 <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -14778,6 +14750,34 @@ function App() {
               <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
                 Lower opacity softens the cover image. Higher opacity makes the photo show through more.
               </div>
+            </div>
+            <button
+              onClick={() => chooseLayerMediaKind('header')}
+              disabled={uploadingLayerMedia}
+              className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'}`}
+            >
+              Choose Cover Photo
+            </button>
+            <button
+              onClick={() => chooseLayerMediaKind('icon')}
+              disabled={uploadingLayerMedia}
+              className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'}`}
+            >
+              Change Icon
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => removeLayerMedia('header')}
+                className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                Remove Cover
+              </button>
+              <button
+                onClick={() => removeLayerMedia('icon')}
+                className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                Remove Icon
+              </button>
             </div>
             <div className="text-[11px] text-gray-500 dark:text-gray-400 px-1">
               Photos open in a manual crop screen before saving.
