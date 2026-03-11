@@ -2956,6 +2956,12 @@ function App() {
     return `#${[mix(a.r, b.r), mix(a.g, b.g), mix(a.b, b.b)].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
   }
 
+  function isLightHexColor(value) {
+    const { r, g, b } = hexToRgb(value);
+    const luminance = ((0.2126 * r) + (0.7152 * g) + (0.0722 * b)) / 255;
+    return luminance > 0.72;
+  }
+
   const getLayerTitleStyleStorageKey = (layerId) => `calendar-layer-title-style-${String(layerId || '').trim()}`;
   const getLayerPageThemeStorageKey = (layerId) => `calendar-layer-page-theme-${String(layerId || '').trim()}`;
 
@@ -3107,13 +3113,13 @@ function App() {
     };
   const themeAccentButtonStyle = {
     backgroundColor: activeLayerPageTheme.accent,
-    color: '#ffffff',
+    color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : '#ffffff',
   };
-  const themeAccentTextStyle = { color: activeLayerPageTheme.accent };
+  const themeAccentTextStyle = { color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent };
   const themeAccentSoftButtonStyle = {
-    backgroundColor: themeAccentSoftBg,
-    color: activeLayerPageTheme.accent,
-    borderColor: themeAccentBorder,
+    backgroundColor: '#ffffff',
+    color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent,
+    borderColor: '#e5e7eb',
   };
   const themeAccentHeadingStyle = {
     color: activeLayerPageTheme.accent,
@@ -14759,7 +14765,7 @@ function App() {
             <button
               onClick={() => chooseLayerMediaKind('icon')}
               disabled={uploadingLayerMedia}
-              className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'}`}
+              className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed border-gray-200' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}
             >
               Change Icon
             </button>
