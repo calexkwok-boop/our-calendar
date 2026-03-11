@@ -13,6 +13,7 @@ alter table public.calendar_layers
   add column if not exists icon_url text,
   add column if not exists header_bg_url text,
   add column if not exists title_style jsonb,
+  add column if not exists page_theme jsonb,
   add column if not exists is_public boolean not null default false,
   add column if not exists public_description text,
   add column if not exists public_tags jsonb;

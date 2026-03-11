@@ -171,6 +171,8 @@ function App() {
     gradientVia: '#7c3aed',
     gradientTo: '#4f46e5',
   });
+  const [showThemeMatchPrompt, setShowThemeMatchPrompt] = useState(false);
+  const [pendingThemeMatchStyle, setPendingThemeMatchStyle] = useState(null);
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(true);
   const [authError, setAuthError] = useState('');
@@ -2914,6 +2916,13 @@ function App() {
     gradientVia: '#7c3aed',
     gradientTo: '#4f46e5',
   };
+  const DEFAULT_LAYER_PAGE_THEME = {
+    matchTitle: false,
+    accent: '#7c3aed',
+    backgroundFrom: '#fff1f2',
+    backgroundVia: '#f5f3ff',
+    backgroundTo: '#e0e7ff',
+  };
 
   const TITLE_STYLE_PRESETS = [
     { name: 'Sunset', mode: 'gradient', gradientFrom: '#fb7185', gradientVia: '#f59e0b', gradientTo: '#f97316' },
@@ -2929,7 +2938,24 @@ function App() {
     return /^#([0-9a-fA-F]{6})$/.test(txt) ? txt.toLowerCase() : fallback;
   }
 
+  function hexToRgb(value) {
+    const hex = normalizeHexColor(value, '#000000').slice(1);
+    return {
+      r: parseInt(hex.slice(0, 2), 16),
+      g: parseInt(hex.slice(2, 4), 16),
+      b: parseInt(hex.slice(4, 6), 16),
+    };
+  }
+
+  function mixHexColors(base, target, weight = 0.5) {
+    const a = hexToRgb(base);
+    const b = hexToRgb(target);
+    const mix = (x, y) => Math.round((x * (1 - weight)) + (y * weight));
+    return `#${[mix(a.r, b.r), mix(a.g, b.g), mix(a.b, b.b)].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
+  }
+
   const getLayerTitleStyleStorageKey = (layerId) => `calendar-layer-title-style-${String(layerId || '').trim()}`;
+  const getLayerPageThemeStorageKey = (layerId) => `calendar-layer-page-theme-${String(layerId || '').trim()}`;
 
   function normalizeLayerTitleStyle(raw) {
     let parsed = raw;
@@ -2989,8 +3015,89 @@ function App() {
     };
   }
 
+  const derivePageThemeFromTitleStyle = (style) => {
+    const normalized = normalizeLayerTitleStyle(style);
+    if (normalized.mode === 'solid') {
+      return {
+        matchTitle: true,
+        accent: normalized.solidColor,
+        backgroundFrom: mixHexColors(normalized.solidColor, '#ffffff', 0.9),
+        backgroundVia: mixHexColors(normalized.solidColor, '#ffffff', 0.82),
+        backgroundTo: mixHexColors(normalized.solidColor, '#dbeafe', 0.72),
+      };
+    }
+    return {
+      matchTitle: true,
+      accent: normalized.gradientVia,
+      backgroundFrom: mixHexColors(normalized.gradientFrom, '#ffffff', 0.88),
+      backgroundVia: mixHexColors(normalized.gradientVia, '#ffffff', 0.84),
+      backgroundTo: mixHexColors(normalized.gradientTo, '#ffffff', 0.8),
+    };
+  };
+
+  function normalizeLayerPageTheme(raw, titleStyle = DEFAULT_LAYER_TITLE_STYLE) {
+    let parsed = raw;
+    if (typeof parsed === 'string') {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch {
+        parsed = {};
+      }
+    }
+    if (!parsed || typeof parsed !== 'object') parsed = {};
+    const fallback = parsed?.matchTitle ? derivePageThemeFromTitleStyle(titleStyle) : DEFAULT_LAYER_PAGE_THEME;
+    return {
+      matchTitle: parsed?.matchTitle === true,
+      accent: normalizeHexColor(parsed?.accent, fallback.accent),
+      backgroundFrom: normalizeHexColor(parsed?.backgroundFrom, fallback.backgroundFrom),
+      backgroundVia: normalizeHexColor(parsed?.backgroundVia, fallback.backgroundVia),
+      backgroundTo: normalizeHexColor(parsed?.backgroundTo, fallback.backgroundTo),
+    };
+  }
+
+  const readStoredLayerPageTheme = (layerId, titleStyle) => {
+    const lid = String(layerId || '').trim();
+    if (!lid || typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(getLayerPageThemeStorageKey(lid));
+      if (!raw) return null;
+      return normalizeLayerPageTheme(raw, titleStyle);
+    } catch {
+      return null;
+    }
+  };
+
+  const writeStoredLayerPageTheme = (layerId, theme, titleStyle) => {
+    const lid = String(layerId || '').trim();
+    if (!lid || typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(getLayerPageThemeStorageKey(lid), JSON.stringify(normalizeLayerPageTheme(theme, titleStyle)));
+    } catch {}
+  };
+
   const activeLayerTitleStyle = normalizeLayerTitleStyle(activeLayer?.title_style);
   const activeLayerTitleTextStyle = getLayerTitleDisplayStyle(activeLayerTitleStyle);
+  const activeLayerPageTheme = normalizeLayerPageTheme(activeLayer?.page_theme, activeLayerTitleStyle);
+  const themedPageBackgroundStyle = darkMode
+    ? {
+      backgroundImage: `linear-gradient(135deg, ${mixHexColors(activeLayerPageTheme.backgroundFrom, '#111827', 0.85)} 0%, ${mixHexColors(activeLayerPageTheme.backgroundVia, '#111827', 0.9)} 55%, ${mixHexColors(activeLayerPageTheme.backgroundTo, '#111827', 0.93)} 100%)`,
+      paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
+      paddingLeft: 'max(0.5rem, env(safe-area-inset-left))',
+      paddingRight: 'max(0.5rem, env(safe-area-inset-right))',
+      paddingBottom: 'max(4.75rem, env(safe-area-inset-bottom))',
+    }
+    : {
+      backgroundImage: `linear-gradient(135deg, ${activeLayerPageTheme.backgroundFrom} 0%, ${activeLayerPageTheme.backgroundVia} 50%, ${activeLayerPageTheme.backgroundTo} 100%)`,
+      paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
+      paddingLeft: 'max(0.5rem, env(safe-area-inset-left))',
+      paddingRight: 'max(0.5rem, env(safe-area-inset-right))',
+      paddingBottom: 'max(4.75rem, env(safe-area-inset-bottom))',
+    };
+  const themeAccentButtonStyle = {
+    backgroundColor: activeLayerPageTheme.accent,
+    color: '#ffffff',
+  };
+  const themeAccentTextStyle = { color: activeLayerPageTheme.accent };
 
   const normalizeLayerRow = (row) => ({
     ...row,
@@ -2999,6 +3106,7 @@ function App() {
     public_description: String(row?.public_description || '').trim(),
     public_tags: parsePublicTags(row?.public_tags),
     title_style: normalizeLayerTitleStyle(readStoredLayerTitleStyle(row?.id) || row?.title_style),
+    page_theme: normalizeLayerPageTheme(readStoredLayerPageTheme(row?.id, row?.title_style) || row?.page_theme, row?.title_style),
   });
 
   const normalizePublicCalendarRow = (row, memberCount = 0) => ({
@@ -3026,6 +3134,7 @@ function App() {
         : item
     )));
     writeStoredLayerTitleStyle(lid, normalized?.title_style);
+    writeStoredLayerPageTheme(lid, normalized?.page_theme, normalized?.title_style);
     return normalized;
   };
 
@@ -3391,6 +3500,32 @@ function App() {
     setShowTitleStyleModal(true);
   };
 
+  const saveLayerPageTheme = async (themeInput, titleStyleInput = null) => {
+    const lid = String(activeLayerId || '').trim();
+    if (!lid || !user?.id || !isActiveLayerOwner) return false;
+    const normalizedTitleStyle = normalizeLayerTitleStyle(titleStyleInput || activeLayer?.title_style);
+    const normalizedTheme = normalizeLayerPageTheme(themeInput, normalizedTitleStyle);
+    writeStoredLayerPageTheme(lid, normalizedTheme, normalizedTitleStyle);
+
+    const primary = await supabase
+      .from('calendar_layers')
+      .update({ page_theme: normalizedTheme })
+      .eq('id', lid)
+      .eq('owner_id', user.id)
+      .select('*')
+      .maybeSingle();
+    if (primary.error && /column .*page_theme|schema cache/i.test(String(primary.error?.message || ''))) {
+      mergeLayerIntoState({ id: lid, page_theme: normalizedTheme, title_style: normalizedTitleStyle });
+      return true;
+    }
+    if (primary.error) {
+      alert(`Could not save page theme: ${primary.error.message || 'Unknown error'}`);
+      return false;
+    }
+    mergeLayerIntoState({ ...(primary.data || { id: lid }), page_theme: normalizedTheme, title_style: normalizedTitleStyle });
+    return true;
+  };
+
   const saveLayerTitleStyle = async () => {
     const lid = String(activeLayerId || '').trim();
     if (!lid || !user?.id || !isActiveLayerOwner) return false;
@@ -3409,6 +3544,8 @@ function App() {
     if (error && /column .*title_style|schema cache/i.test(String(error?.message || ''))) {
       mergeLayerIntoState({ id: lid, title_style: normalizedStyle });
       setShowTitleStyleModal(false);
+      setPendingThemeMatchStyle(normalizedStyle);
+      setShowThemeMatchPrompt(true);
       return true;
     }
     if (!updatedLayer && !error) {
@@ -3427,10 +3564,14 @@ function App() {
     if (!updatedLayer) {
       mergeLayerIntoState({ id: lid, title_style: normalizedStyle });
       setShowTitleStyleModal(false);
+      setPendingThemeMatchStyle(normalizedStyle);
+      setShowThemeMatchPrompt(true);
       return true;
     }
     mergeLayerIntoState({ ...updatedLayer, title_style: normalizedStyle });
     setShowTitleStyleModal(false);
+    setPendingThemeMatchStyle(normalizedStyle);
+    setShowThemeMatchPrompt(true);
     return true;
   };
 
@@ -11443,7 +11584,7 @@ function App() {
         if (file && kind) beginLayerMediaCrop(kind, file);
       }}
     />
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-2 sm:p-3 pb-24" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))', paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))', paddingBottom: 'max(4.75rem, env(safe-area-inset-bottom))' }}>
+    <div className="min-h-screen p-2 sm:p-3 pb-24" style={themedPageBackgroundStyle}>
       <div className="max-w-6xl mx-auto">
         <div
           ref={layerHeaderCardRef}
@@ -11525,7 +11666,7 @@ function App() {
                   </div>
                 )}
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                  <span className="font-semibold text-purple-600 dark:text-purple-400">{user?.email || user?.phone || currentUser}</span>
+                  <span className="font-semibold" style={themeAccentTextStyle}>{user?.email || user?.phone || currentUser}</span>
                   {!canEditActiveLayer && (
                     <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 align-middle">
                       Read only
@@ -11627,19 +11768,22 @@ function App() {
               <div className="flex rounded-lg overflow-hidden border border-purple-200 dark:border-gray-600 text-xs font-medium">
                 <button
                   onClick={() => setCalendarView('month')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? 'bg-purple-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                  style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
                 >
                   Month
                 </button>
                 <button
                   onClick={() => setCalendarView('week')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? 'bg-purple-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                  style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
                 >
                   Week
                 </button>
                 <button
                   onClick={() => setCalendarView('agenda')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? 'bg-purple-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
+                  style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
                 >
                   Agenda
                 </button>
@@ -14367,7 +14511,8 @@ function App() {
                 setBottomNavTab('home');
                 setShowDateDetailModal(false);
               }}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'home' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'home' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              style={bottomNavTab === 'home' ? themeAccentButtonStyle : undefined}
             >
               Home
             </button>
@@ -14376,7 +14521,8 @@ function App() {
                 setBottomNavTab('active');
                 setShowDateDetailModal(false);
               }}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'active' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'active' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              style={bottomNavTab === 'active' ? themeAccentButtonStyle : undefined}
             >
               Active
             </button>
@@ -14385,7 +14531,8 @@ function App() {
                 setBottomNavTab('archived');
                 setShowDateDetailModal(false);
               }}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'archived' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'archived' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              style={bottomNavTab === 'archived' ? themeAccentButtonStyle : undefined}
             >
               Archived
             </button>
@@ -14394,7 +14541,8 @@ function App() {
                 setBottomNavTab('explore');
                 setShowDateDetailModal(false);
               }}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'explore' ? 'bg-purple-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'explore' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              style={bottomNavTab === 'explore' ? themeAccentButtonStyle : undefined}
             >
               Explore
             </button>
@@ -14676,6 +14824,50 @@ function App() {
               className="px-4 py-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-sm font-semibold"
             >
               Save Style
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {showThemeMatchPrompt && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[55] p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Match the page theme too?</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            Use your title colors for the page background and main accent buttons on this calendar.
+          </p>
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-3 mb-4" style={{
+            backgroundImage: `linear-gradient(135deg, ${derivePageThemeFromTitleStyle(pendingThemeMatchStyle || activeLayerTitleStyle).backgroundFrom} 0%, ${derivePageThemeFromTitleStyle(pendingThemeMatchStyle || activeLayerTitleStyle).backgroundVia} 50%, ${derivePageThemeFromTitleStyle(pendingThemeMatchStyle || activeLayerTitleStyle).backgroundTo} 100%)`,
+          }}>
+            <div
+              className="text-xl font-bold truncate"
+              style={getLayerTitleDisplayStyle(pendingThemeMatchStyle || activeLayerTitleStyle)}
+            >
+              {calendarTitle || activeLayer?.name || 'Calendar Title'}
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => {
+                setShowThemeMatchPrompt(false);
+                setPendingThemeMatchStyle(null);
+              }}
+              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium"
+            >
+              No
+            </button>
+            <button
+              onClick={async () => {
+                const nextStyle = normalizeLayerTitleStyle(pendingThemeMatchStyle || activeLayerTitleStyle);
+                await saveLayerPageTheme(derivePageThemeFromTitleStyle(nextStyle), nextStyle);
+                setShowThemeMatchPrompt(false);
+                setPendingThemeMatchStyle(null);
+              }}
+              className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
+              style={themeAccentButtonStyle}
+            >
+              Yes, match it
             </button>
           </div>
         </div>
