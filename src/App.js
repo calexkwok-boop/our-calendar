@@ -11181,6 +11181,8 @@ function App() {
     const order = normalizeSortOrder(Array.from(byId.keys()), activeCalendarSortOrder);
     return order.map((id) => byId.get(id)).filter(Boolean);
   })();
+  const orderedPrivateLayerCalendars = orderedVisibleLayerCalendars.filter((layer) => !Boolean(layer?.is_public));
+  const orderedPublicLayerCalendars = orderedVisibleLayerCalendars.filter((layer) => Boolean(layer?.is_public));
 
   const orderedUpcomingTrips = (() => {
     const byId = new Map((upcomingTrips || []).map((trip) => [String(trip?.id || ''), trip]));
@@ -11211,8 +11213,10 @@ function App() {
   const publishTargetLayer = (layers || []).find((layer) => String(layer?.id || '') === String(publishLayerTargetId || '')) || null;
   const publishTargetIsPublic = Boolean(publishTargetLayer?.is_public);
 
-  const handleDropActiveCalendar = (targetId) => {
-    const ids = visibleLayerCalendars.map((layer) => String(layer?.id || ''));
+  const handleDropActiveCalendar = (targetId, groupIds = null) => {
+    const ids = Array.isArray(groupIds) && groupIds.length > 0
+      ? groupIds
+      : visibleLayerCalendars.map((layer) => String(layer?.id || ''));
     setActiveCalendarSortOrder((prev) => {
       const normalized = normalizeSortOrder(ids, prev);
       return reorderSortOrder(normalized, draggingActiveCalendarId, targetId);
@@ -14122,134 +14126,155 @@ function App() {
                   {layers.length === 0 ? (
                     <div className="text-sm text-gray-500 dark:text-gray-400">No calendars found.</div>
                   ) : (
-                    <div className="space-y-2">
-                      {orderedVisibleLayerCalendars.map(layer => {
-                        const isActiveLayer = String(layer.id) === String(activeLayerId);
-                        const isOwnedLayer = String(layer?.owner_id) === String(user?.id);
-                        const isPublicLayer = Boolean(layer?.is_public);
-                        const canDeleteLayer = isOwnedLayer && layers.length > 1;
-                        const canLeaveLayer = !isOwnedLayer;
-                        const canSwipeLayerAction = canDeleteLayer || canLeaveLayer;
-                        const layerRowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
-                        const isLayerActionRevealed = layerRowOffset < 0;
+                    <div className="space-y-4">
+                      {[
+                        { key: 'private', label: 'Private Calendars', items: orderedPrivateLayerCalendars },
+                        { key: 'public', label: 'Public Calendars', items: orderedPublicLayerCalendars },
+                      ].map((group) => {
+                        const groupIds = group.items.map((layer) => String(layer?.id || ''));
                         return (
-                          <div
-                            key={layer.id}
-                            className="relative rounded-xl overflow-hidden"
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              handleDropActiveCalendar(String(layer.id));
-                            }}
-                          >
-                            {canSwipeLayerAction && (
-                              <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${
-                                isLayerActionRevealed
-                                  ? (canDeleteLayer ? 'bg-red-500' : 'bg-amber-500')
-                                  : 'bg-transparent'
-                              }`}>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (canDeleteLayer) deleteLayerCalendar(layer.id);
-                                    else if (canLeaveLayer) leaveSharedLayerCalendar(layer.id);
-                                  }}
-                                  className={`w-full h-full text-sm font-semibold transition-opacity ${isLayerActionRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
-                                >
-                                  {canDeleteLayer ? 'Delete' : 'Leave'}
-                                </button>
+                          <div key={group.key}>
+                            <h4 className="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">
+                              {group.label}
+                            </h4>
+                            {group.items.length === 0 ? (
+                              <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/40 rounded-xl px-3 py-2">
+                                No {group.key} calendars yet.
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {group.items.map(layer => {
+                                  const isActiveLayer = String(layer.id) === String(activeLayerId);
+                                  const isOwnedLayer = String(layer?.owner_id) === String(user?.id);
+                                  const isPublicLayer = Boolean(layer?.is_public);
+                                  const canDeleteLayer = isOwnedLayer && layers.length > 1;
+                                  const canLeaveLayer = !isOwnedLayer;
+                                  const canSwipeLayerAction = canDeleteLayer || canLeaveLayer;
+                                  const layerRowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
+                                  const isLayerActionRevealed = layerRowOffset < 0;
+                                  return (
+                                    <div
+                                      key={layer.id}
+                                      className="relative rounded-xl overflow-hidden"
+                                      onDragOver={(e) => e.preventDefault()}
+                                      onDrop={(e) => {
+                                        e.preventDefault();
+                                        handleDropActiveCalendar(String(layer.id), groupIds);
+                                      }}
+                                    >
+                                      {canSwipeLayerAction && (
+                                        <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${
+                                          isLayerActionRevealed
+                                            ? (canDeleteLayer ? 'bg-red-500' : 'bg-amber-500')
+                                            : 'bg-transparent'
+                                        }`}>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (canDeleteLayer) deleteLayerCalendar(layer.id);
+                                              else if (canLeaveLayer) leaveSharedLayerCalendar(layer.id);
+                                            }}
+                                            className={`w-full h-full text-sm font-semibold transition-opacity ${isLayerActionRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+                                          >
+                                            {canDeleteLayer ? 'Delete' : 'Leave'}
+                                          </button>
+                                        </div>
+                                      )}
+                                      <button
+                                        draggable
+                                        onDragStart={(e) => {
+                                          try {
+                                            e.dataTransfer.setData('text/plain', String(layer.id));
+                                            e.dataTransfer.effectAllowed = 'move';
+                                          } catch {}
+                                          setDraggingActiveCalendarId(String(layer.id));
+                                        }}
+                                        onDragEnd={() => setDraggingActiveCalendarId(null)}
+                                        onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canSwipeLayerAction)}
+                                        onTouchMove={handleLayerSwipeMove}
+                                        onTouchEnd={handleLayerSwipeEnd}
+                                        onTouchCancel={handleLayerSwipeEnd}
+                                        onClick={() => {
+                                          setActiveLayerId(layer.id);
+                                          if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layer.id);
+                                          setBottomNavTab('home');
+                                          setShowDateDetailModal(false);
+                                        }}
+                                        className={`relative z-10 w-full text-left p-3 rounded-xl border transition-all ${isActiveLayer ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300'}`}
+                                        style={{ transform: `translateX(${layerRowOffset}px)`, transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease' }}
+                                      >
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="min-w-0">
+                                            <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{layer.name || 'Calendar'}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                              {isOwnedLayer
+                                                ? 'Owned by you'
+                                                : `Shared by ${sharedOwnerLabels[String(layer?.owner_id || '')] || fallbackOwnerLabel(layer?.owner_id)}`}
+                                            </div>
+                                            {isOwnedLayer && (
+                                              <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                                                {isPublicLayer ? 'Public in Explore' : 'Private calendar'}
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-2 shrink-0">
+                                            <span
+                                              onClick={(e) => e.stopPropagation()}
+                                              title="Drag to reorder"
+                                              className="inline-flex select-none cursor-grab active:cursor-grabbing items-center justify-center px-1 py-0.5 rounded text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                                            >
+                                              ⋮⋮
+                                            </span>
+                                            {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
+                                            {isOwnedLayer && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openPublishLayerModal(layer);
+                                                }}
+                                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
+                                                  isPublicLayer
+                                                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                                }`}
+                                                title={isPublicLayer ? 'Edit public settings' : 'Publish to Explore'}
+                                              >
+                                                {isPublicLayer ? 'Edit Public' : 'Publish'}
+                                              </button>
+                                            )}
+                                            {canDeleteLayer && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  deleteLayerCalendar(layer.id);
+                                                }}
+                                                className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 text-xs font-medium"
+                                                title="Delete calendar"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                                Delete
+                                              </button>
+                                            )}
+                                            {canLeaveLayer && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  leaveSharedLayerCalendar(layer.id);
+                                                }}
+                                                className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-xs font-medium"
+                                                title="Leave shared calendar"
+                                              >
+                                                Leave
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </button>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
-                            <button
-                              draggable
-                              onDragStart={(e) => {
-                                try {
-                                  e.dataTransfer.setData('text/plain', String(layer.id));
-                                  e.dataTransfer.effectAllowed = 'move';
-                                } catch {}
-                                setDraggingActiveCalendarId(String(layer.id));
-                              }}
-                              onDragEnd={() => setDraggingActiveCalendarId(null)}
-                              onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canSwipeLayerAction)}
-                              onTouchMove={handleLayerSwipeMove}
-                              onTouchEnd={handleLayerSwipeEnd}
-                              onTouchCancel={handleLayerSwipeEnd}
-                              onClick={() => {
-                                setActiveLayerId(layer.id);
-                                if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layer.id);
-                                setBottomNavTab('home');
-                                setShowDateDetailModal(false);
-                              }}
-                              className={`relative z-10 w-full text-left p-3 rounded-xl border transition-all ${isActiveLayer ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300'}`}
-                              style={{ transform: `translateX(${layerRowOffset}px)`, transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease' }}
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="min-w-0">
-                                  <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{layer.name || 'Calendar'}</div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                    {isOwnedLayer
-                                      ? 'Owned by you'
-                                      : `Shared by ${sharedOwnerLabels[String(layer?.owner_id || '')] || fallbackOwnerLabel(layer?.owner_id)}`}
-                                  </div>
-                                  {isOwnedLayer && (
-                                    <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                                      {isPublicLayer ? 'Public in Explore' : 'Private calendar'}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span
-                                    onClick={(e) => e.stopPropagation()}
-                                    title="Drag to reorder"
-                                    className="inline-flex select-none cursor-grab active:cursor-grabbing items-center justify-center px-1 py-0.5 rounded text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                                  >
-                                    ⋮⋮
-                                  </span>
-                                  {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
-                                  {isOwnedLayer && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openPublishLayerModal(layer);
-                                      }}
-                                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
-                                        isPublicLayer
-                                          ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
-                                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                      }`}
-                                      title={isPublicLayer ? 'Edit public settings' : 'Publish to Explore'}
-                                    >
-                                      {isPublicLayer ? 'Edit Public' : 'Publish'}
-                                    </button>
-                                  )}
-                                  {canDeleteLayer && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        deleteLayerCalendar(layer.id);
-                                      }}
-                                      className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 text-xs font-medium"
-                                      title="Delete calendar"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                      Delete
-                                    </button>
-                                  )}
-                                  {canLeaveLayer && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        leaveSharedLayerCalendar(layer.id);
-                                      }}
-                                      className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-xs font-medium"
-                                      title="Leave shared calendar"
-                                    >
-                                      Leave
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </button>
                           </div>
                         );
                       })}
