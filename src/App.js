@@ -3084,6 +3084,12 @@ function App() {
   const effectiveCoverOpacity = coverOpacityPreview == null
     ? activeLayerPageTheme.coverOpacity
     : Math.max(0, Math.min(1, Number(coverOpacityPreview)));
+  const themeAccentSoftBg = mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.78 : 0.82);
+  const themeAccentSofterBg = mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.88 : 0.9);
+  const themeAccentBorder = mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.5 : 0.62);
+  const themeAccentGradient = activeLayerTitleStyle.mode === 'solid'
+    ? `linear-gradient(135deg, ${mixHexColors(activeLayerPageTheme.accent, '#ffffff', 0.05)} 0%, ${activeLayerPageTheme.accent} 100%)`
+    : `linear-gradient(135deg, ${activeLayerTitleStyle.gradientFrom} 0%, ${activeLayerTitleStyle.gradientVia} 55%, ${activeLayerTitleStyle.gradientTo} 100%)`;
   const themedPageBackgroundStyle = darkMode
     ? {
       backgroundImage: `linear-gradient(135deg, ${mixHexColors(activeLayerPageTheme.backgroundFrom, '#111827', 0.85)} 0%, ${mixHexColors(activeLayerPageTheme.backgroundVia, '#111827', 0.9)} 55%, ${mixHexColors(activeLayerPageTheme.backgroundTo, '#111827', 0.93)} 100%)`,
@@ -3104,6 +3110,24 @@ function App() {
     color: '#ffffff',
   };
   const themeAccentTextStyle = { color: activeLayerPageTheme.accent };
+  const themeAccentSoftButtonStyle = {
+    backgroundColor: themeAccentSoftBg,
+    color: activeLayerPageTheme.accent,
+    borderColor: themeAccentBorder,
+  };
+  const themeAccentHeadingStyle = {
+    color: activeLayerPageTheme.accent,
+  };
+  const themeSelectedSurfaceStyle = {
+    backgroundImage: themeAccentGradient,
+    color: '#ffffff',
+    boxShadow: `0 10px 24px ${mixHexColors(activeLayerPageTheme.accent, '#000000', 0.72)}22`,
+  };
+  const themeTodaySurfaceStyle = {
+    backgroundImage: `linear-gradient(135deg, ${themeAccentSofterBg} 0%, ${themeAccentSoftBg} 100%)`,
+    color: darkMode ? '#f3f4f6' : '#111827',
+    borderColor: themeAccentBorder,
+  };
 
   const normalizeLayerRow = (row) => ({
     ...row,
@@ -11686,14 +11710,15 @@ function App() {
                       Read only
                     </span>
                   )}
-                  <button onClick={handleLogout} className="ml-2 text-xs text-purple-500 hover:text-purple-700 underline">logout</button>
+                  <button onClick={handleLogout} className="ml-2 text-xs underline" style={themeAccentTextStyle}>logout</button>
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setShowSharePanel(!showSharePanel)}
-                className={`p-2 rounded-xl transition-all duration-200 ${showSharePanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                className={`p-2 rounded-xl transition-all duration-200 border ${showSharePanel ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'}`}
+                style={showSharePanel ? themeAccentSoftButtonStyle : undefined}
                 title="Share calendar"
               >
                 <User className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -11712,7 +11737,8 @@ function App() {
               </button>
               <button
                 onClick={() => setShowListPanel(!showListPanel)}
-                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showListPanel ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${showListPanel ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'}`}
+                style={showListPanel ? themeAccentSoftButtonStyle : undefined}
                 title="Shared list"
               >
                 List
@@ -11744,9 +11770,10 @@ function App() {
               </button>
               <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
-                className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+                className="p-2 rounded-xl transition-all duration-200"
+                style={themeAccentSoftButtonStyle}
               >
-                <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
+                <Settings className="w-4 h-4 sm:w-5 sm:h-5" style={themeAccentTextStyle} />
               </button>
               <button
                 onClick={() => setDarkMode(!darkMode)}
@@ -11761,12 +11788,13 @@ function App() {
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+              className="p-2 rounded-xl transition-all duration-200 border"
+              style={themeAccentSoftButtonStyle}
             >
-              <ChevronLeft className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <ChevronLeft className="w-6 h-6" style={themeAccentTextStyle} />
             </button>
             <div className="flex flex-col items-center gap-1">
-              <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-r from-rose-600 to-purple-600 bg-clip-text text-transparent">
+              <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
                 {calendarView === 'month'
                   ? currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
                   : calendarView === 'week'
@@ -11779,25 +11807,25 @@ function App() {
                     : `Agenda · Next ${agendaRangeDays} days`
                 }
               </h2>
-              <div className="flex rounded-lg overflow-hidden border border-purple-200 dark:border-gray-600 text-xs font-medium">
+              <div className="flex rounded-lg overflow-hidden border text-xs font-medium" style={{ borderColor: themeAccentBorder }}>
                 <button
                   onClick={() => setCalendarView('month')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
+                  className={`px-2.5 py-0.5 transition-all border ${calendarView === 'month' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                  style={calendarView === 'month' ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
                 >
                   Month
                 </button>
                 <button
                   onClick={() => setCalendarView('week')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
+                  className={`px-2.5 py-0.5 transition-all border ${calendarView === 'week' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                  style={calendarView === 'week' ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
                 >
                   Week
                 </button>
                 <button
                   onClick={() => setCalendarView('agenda')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
+                  className={`px-2.5 py-0.5 transition-all border ${calendarView === 'agenda' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                  style={calendarView === 'agenda' ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
                 >
                   Agenda
                 </button>
@@ -11805,9 +11833,10 @@ function App() {
             </div>
             <button
               onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-              className="p-2 hover:bg-purple-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200"
+              className="p-2 rounded-xl transition-all duration-200 border"
+              style={themeAccentSoftButtonStyle}
             >
-              <ChevronRight className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <ChevronRight className="w-6 h-6" style={themeAccentTextStyle} />
             </button>
           </div>
         </div>
@@ -13069,7 +13098,7 @@ function App() {
         {showCategoryEditor && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400">Manage Categories</h3>
+              <h3 className="text-xl font-semibold" style={themeAccentHeadingStyle}>Manage Categories</h3>
               <button onClick={() => setShowCategoryEditor(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
@@ -13084,9 +13113,9 @@ function App() {
                   placeholder="Category name"
                   className="flex-1 px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-400"
                 />
-                <button onClick={handleAddCategory} className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg">
-                  <Plus className="w-5 h-5" />
-                </button>
+                  <button onClick={handleAddCategory} className="px-4 py-2 rounded-lg" style={themeAccentButtonStyle}>
+                    <Plus className="w-5 h-5" />
+                  </button>
               </div>
               <div className="grid grid-cols-6 gap-2">
                 {COLOR_OPTIONS.map((colorOption, idx) => (
@@ -13149,14 +13178,15 @@ function App() {
         {bottomNavTab === 'home' && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base sm:text-lg font-semibold text-purple-600 dark:text-purple-400">Today At A Glance</h3>
+              <h3 className="text-base sm:text-lg font-semibold" style={themeAccentHeadingStyle}>Today At A Glance</h3>
               <button
                 onClick={() => {
                   setSelectedDate(new Date());
                   setSelectedDates([]);
                   setShowDateDetailModal(true);
                 }}
-                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-all"
+                className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all border"
+                style={themeAccentSoftButtonStyle}
               >
                 Open Today
               </button>
@@ -13273,7 +13303,7 @@ function App() {
             )}
 
             {calendarView === 'agenda' && (
-              <div className="mb-3 rounded-xl border border-purple-100 dark:border-gray-700 bg-purple-50/60 dark:bg-gray-700/40 p-2.5 space-y-2">
+              <div className="mb-3 rounded-xl border p-2.5 space-y-2 dark:bg-gray-700/40" style={{ borderColor: themeAccentBorder, backgroundColor: themeAccentSofterBg }}>
                 <div className="flex gap-2 overflow-x-auto">
                   {[7, 30, 90].map((days) => (
                     <button
@@ -13281,10 +13311,11 @@ function App() {
                       onClick={() => setAgendaRangeDays(days)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap ${
                         agendaRangeDays === days
-                          ? 'bg-purple-500 text-white'
-                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-purple-100 dark:border-gray-600'
-                      }`}
-                    >
+                          ? ''
+                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border'
+                        }`}
+                        style={agendaRangeDays === days ? themeAccentButtonStyle : { borderColor: themeAccentBorder }}
+                      >
                       Next {days}d
                     </button>
                   ))}
@@ -13294,7 +13325,8 @@ function App() {
                   value={agendaSearchQuery}
                   onChange={(e) => setAgendaSearchQuery(e.target.value)}
                   placeholder="Search agenda (title, location, category)"
-                  className="w-full px-3 py-2 text-sm border border-purple-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-400"
+                  className="w-full px-3 py-2 text-sm border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white"
+                  style={{ borderColor: themeAccentBorder }}
                 />
               </div>
             )}
@@ -13341,13 +13373,22 @@ function App() {
                           w-full aspect-square rounded-lg p-1 transition-all duration-200 relative select-none
                           ${!date ? 'invisible' : 'bg-white dark:bg-gray-700'}
                           ${hasUrgentEvent && !isSelected && !isInSelection ? 'ring-2 ring-red-500 shadow-lg shadow-red-200' : ''}
-                          ${isInSelection ? 'bg-gradient-to-br from-purple-400 to-indigo-400 text-white shadow-lg scale-105 ring-2 ring-purple-300' : ''}
-                          ${isSelected && !isInSelection ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg scale-105' : ''}
-                          ${!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 text-purple-900 dark:text-purple-200 ring-2 ring-purple-400' : ''}
-                          ${!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent ? 'text-gray-700 dark:text-gray-100 hover:bg-purple-50 dark:hover:bg-gray-600' : ''}
+                          ${isInSelection ? 'text-white shadow-lg scale-105 ring-2' : ''}
+                          ${isSelected && !isInSelection ? 'text-white shadow-lg scale-105' : ''}
+                          ${!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent ? 'ring-2' : ''}
+                          ${!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent ? 'text-gray-700 dark:text-gray-100 dark:hover:bg-gray-600' : ''}
                           ${hasUrgentEvent && !isSelected && !isInSelection ? 'bg-red-50 dark:bg-red-900/30' : ''}
                         `}
-                        style={{ zIndex: 10 }}
+                        style={{
+                          zIndex: 10,
+                          ...(isInSelection || isSelected ? themeSelectedSurfaceStyle : {}),
+                          ...(!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent
+                            ? { ...themeTodaySurfaceStyle, borderWidth: 0, boxShadow: `inset 0 0 0 2px ${themeAccentBorder}` }
+                            : {}),
+                          ...(!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent
+                            ? { '--theme-hover-bg': themeAccentSofterBg }
+                            : {}),
+                        }}
                       >
                         {hasSubCalendarRange && (
                           <div
@@ -13416,11 +13457,16 @@ function App() {
                       onClick={() => handleDateTap(date)}
                       className={`
                         min-h-24 rounded-lg p-1.5 cursor-pointer transition-all duration-200 flex flex-col gap-1 relative
-                        ${isSelected ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg ring-2 ring-purple-300' : ''}
-                        ${!isSelected && isTodayDate ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : ''}
-                        ${!isSelected && !isTodayDate ? 'bg-gray-50 dark:bg-gray-700 hover:bg-purple-50 dark:hover:bg-gray-600' : ''}
+                        ${isSelected ? 'text-white shadow-lg ring-2' : ''}
+                        ${!isSelected && isTodayDate ? 'ring-2' : ''}
+                        ${!isSelected && !isTodayDate ? 'bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600' : ''}
                         ${hasUrgentEvent && !isSelected ? 'ring-2 ring-red-500' : ''}
                       `}
+                      style={{
+                        ...(isSelected ? themeSelectedSurfaceStyle : {}),
+                        ...(!isSelected && isTodayDate ? { ...themeTodaySurfaceStyle, boxShadow: `inset 0 0 0 2px ${themeAccentBorder}` } : {}),
+                        ...(!isSelected && !isTodayDate ? { '--theme-hover-bg': themeAccentSofterBg } : {}),
+                      }}
                       >
                       {hasSubCalendarRange && (
                         <div
@@ -13498,7 +13544,7 @@ function App() {
                       return (
                         <div key={`${event.id}-${dk}-${event.time || 'all-day'}`}>
                           {showHeader && (
-                            <div className="sticky top-0 z-10 -mx-1 px-2 py-1 rounded-lg bg-white/95 dark:bg-gray-800/95 backdrop-blur border border-purple-100 dark:border-gray-700 text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">
+                            <div className="sticky top-0 z-10 -mx-1 px-2 py-1 rounded-lg bg-white/95 dark:bg-gray-800/95 backdrop-blur border text-xs font-semibold mb-1" style={{ borderColor: themeAccentBorder, color: activeLayerPageTheme.accent }}>
                               {Number.isNaN(dateObj.getTime())
                                 ? dk
                                 : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
@@ -13543,7 +13589,7 @@ function App() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Date Details</h3>
+              <h3 className="text-lg font-semibold" style={themeAccentHeadingStyle}>Date Details</h3>
               <button
                 onClick={() => setShowDateDetailModal(false)}
                 className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
@@ -13554,13 +13600,13 @@ function App() {
             </div>
             <div className="mb-4">
               {selectedDates.length > 1 ? (
-                <div className="p-4 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40 rounded-xl border-2 border-purple-300 dark:border-purple-600">
-                  <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400 mb-2">Multi-Day Selection</h3>
+                <div className="p-4 rounded-xl border-2" style={{ ...themeTodaySurfaceStyle, borderColor: themeAccentBorder }}>
+                  <h3 className="text-xl font-semibold mb-2" style={themeAccentHeadingStyle}>Multi-Day Selection</h3>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-purple-700 dark:text-purple-300 font-medium">
+                    <p className="text-sm font-medium" style={themeAccentTextStyle}>
                       {selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {selectedDates[selectedDates.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </p>
-                    <span className="px-2 py-1 bg-purple-500 text-white text-xs rounded-full">{selectedDates.length} days</span>
+                    <span className="px-2 py-1 text-white text-xs rounded-full" style={themeAccentButtonStyle}>{selectedDates.length} days</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <button onClick={() => setSelectedDates([])} className="text-xs text-purple-700 dark:text-purple-300 hover:text-purple-900 underline font-medium">Clear selection</button>
@@ -13573,7 +13619,7 @@ function App() {
                   </div>
                 </div>
               ) : (
-                <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400 mb-2">
+                <h3 className="text-xl font-semibold mb-2" style={themeAccentHeadingStyle}>
                   {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                 </h3>
               )}
