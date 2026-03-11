@@ -2857,12 +2857,26 @@ function App() {
         name: 'Main Calendar',
         is_default: true,
         created_by: currentUser || userEmail || 'User',
+        title_style: DEFAULT_LAYER_TITLE_STYLE,
+        page_theme: DEFAULT_LAYER_PAGE_THEME,
       };
-      const { data: insertedLayer, error: insertErr } = await supabase
+      let { data: insertedLayer, error: insertErr } = await supabase
         .from('calendar_layers')
         .insert(defaultPayload)
         .select('*')
         .single();
+      if (insertErr && /column .*title_style|column .*page_theme|schema cache/i.test(String(insertErr.message || ''))) {
+        const fallbackPayload = { ...defaultPayload };
+        delete fallbackPayload.title_style;
+        delete fallbackPayload.page_theme;
+        const fallback = await supabase
+          .from('calendar_layers')
+          .insert(fallbackPayload)
+          .select('*')
+          .single();
+        insertedLayer = fallback.data;
+        insertErr = fallback.error;
+      }
       if (insertErr) {
         // If another session created it first, continue by reloading owned layers.
         const { data: reloadedOwned, error: reloadErr } = await supabase
@@ -2920,17 +2934,17 @@ function App() {
     gradientTo: '#4f46e5',
   };
   const DEFAULT_LAYER_PAGE_THEME = {
-    matchTitle: false,
+    matchTitle: true,
     accent: '#7c3aed',
-    backgroundFrom: '#fff1f2',
+    backgroundFrom: '#fdf2f8',
     backgroundVia: '#f5f3ff',
-    backgroundTo: '#e0e7ff',
+    backgroundTo: '#eef2ff',
     coverOpacity: 0.82,
   };
 
   const TITLE_STYLE_PRESETS = [
     { name: 'Sunset', mode: 'gradient', gradientFrom: '#fb7185', gradientVia: '#f59e0b', gradientTo: '#f97316' },
-    { name: 'Berry', mode: 'gradient', gradientFrom: '#e11d48', gradientVia: '#7c3aed', gradientTo: '#4f46e5' },
+    { name: 'Gradient Berry', mode: 'gradient', gradientFrom: '#e11d48', gradientVia: '#7c3aed', gradientTo: '#4f46e5' },
     { name: 'Ocean', mode: 'gradient', gradientFrom: '#06b6d4', gradientVia: '#2563eb', gradientTo: '#4f46e5' },
     { name: 'Mint', mode: 'gradient', gradientFrom: '#10b981', gradientVia: '#14b8a6', gradientTo: '#0ea5e9' },
     { name: 'Gold', mode: 'solid', solidColor: '#b45309' },
@@ -3407,6 +3421,8 @@ function App() {
       created_by: currentUser || user.email || 'User',
       icon_url: null,
       header_bg_url: null,
+      title_style: DEFAULT_LAYER_TITLE_STYLE,
+      page_theme: DEFAULT_LAYER_PAGE_THEME,
     };
     let { data, error } = await supabase
       .from('calendar_layers')
@@ -3417,6 +3433,24 @@ function App() {
       const fallbackPayload = { ...payload };
       delete fallbackPayload.icon_url;
       delete fallbackPayload.header_bg_url;
+      if (/column .*title_style|column .*page_theme|schema cache/i.test(String(error.message || ''))) {
+        delete fallbackPayload.title_style;
+        delete fallbackPayload.page_theme;
+      }
+      const fallback = await supabase
+        .from('calendar_layers')
+        .insert(fallbackPayload)
+        .select('*')
+        .single();
+      data = fallback.data;
+      error = fallback.error;
+    }
+    if (error && /column .*title_style|column .*page_theme|schema cache/i.test(String(error.message || ''))) {
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.icon_url;
+      delete fallbackPayload.header_bg_url;
+      delete fallbackPayload.title_style;
+      delete fallbackPayload.page_theme;
       const fallback = await supabase
         .from('calendar_layers')
         .insert(fallbackPayload)
@@ -13265,7 +13299,7 @@ function App() {
                 }}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                   useNeutralDarkControlSurfaces
-                    ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'
+                    ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-200 hover:bg-purple-100 dark:hover:bg-purple-900/45'
                     : 'text-white hover:shadow-lg'
                 }`}
                 style={useNeutralDarkControlSurfaces ? undefined : themeAccentButtonStyle}
