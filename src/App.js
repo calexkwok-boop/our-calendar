@@ -3092,7 +3092,9 @@ function App() {
   const activeLayerNameKey = String(activeLayer?.name || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '');
-  const useLegacyNeutralCalendarControls = activeLayerNameKey === 'elliemiles';
+  const useLegacyEllieMilesTheme = activeLayerNameKey === 'elliemiles';
+  const useNeutralDarkControlSurfaces = darkMode || useLegacyEllieMilesTheme;
+  const useDarkTopButtonActiveState = darkMode || useLegacyEllieMilesTheme;
   const effectiveCoverOpacity = coverOpacityPreview == null
     ? activeLayerPageTheme.coverOpacity
     : Math.max(0, Math.min(1, Number(coverOpacityPreview)));
@@ -11737,7 +11739,7 @@ function App() {
               <button
                 onClick={() => setShowSharePanel(!showSharePanel)}
                 className={`p-2 rounded-xl transition-all duration-200 border ${
-                  useLegacyNeutralCalendarControls
+                  useDarkTopButtonActiveState
                     ? showSharePanel
                       ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
@@ -11745,7 +11747,7 @@ function App() {
                       ? ''
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                style={useLegacyNeutralCalendarControls ? undefined : showSharePanel ? themeAccentSoftButtonStyle : undefined}
+                style={useDarkTopButtonActiveState ? undefined : showSharePanel ? themeAccentSoftButtonStyle : undefined}
                 title="Share calendar"
               >
                 <User className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -11771,7 +11773,7 @@ function App() {
               <button
                 onClick={() => setShowListPanel(!showListPanel)}
                 className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${
-                  useLegacyNeutralCalendarControls
+                  useDarkTopButtonActiveState
                     ? showListPanel
                       ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
@@ -11779,7 +11781,7 @@ function App() {
                       ? ''
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                style={useLegacyNeutralCalendarControls ? undefined : showListPanel ? themeAccentSoftButtonStyle : undefined}
+                style={useDarkTopButtonActiveState ? undefined : showListPanel ? themeAccentSoftButtonStyle : undefined}
                 title="Shared list"
               >
                 List
@@ -11812,23 +11814,23 @@ function App() {
               <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
                 className={`p-2 rounded-xl transition-all duration-200 ${
-                  useLegacyNeutralCalendarControls
+                  useDarkTopButtonActiveState
                   ? showCategoryEditor
                     ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                   : ''
               }`}
-                style={useLegacyNeutralCalendarControls ? undefined : themeAccentSoftButtonStyle}
+                style={useDarkTopButtonActiveState ? undefined : themeAccentSoftButtonStyle}
               >
                 <Settings
                   className={`w-4 h-4 sm:w-5 sm:h-5 ${
-                  useLegacyNeutralCalendarControls
+                  useDarkTopButtonActiveState
                     ? showCategoryEditor
                       ? 'text-indigo-700 dark:text-indigo-300'
                       : 'text-gray-600 dark:text-gray-300'
                     : ''
                 }`}
-                  style={useLegacyNeutralCalendarControls ? undefined : themeAccentTextStyle}
+                  style={useDarkTopButtonActiveState ? undefined : themeAccentTextStyle}
                 />
             </button>
               <button
@@ -11845,17 +11847,17 @@ function App() {
             <button
               onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
               className={`p-2 rounded-xl transition-all duration-200 ${
-                useLegacyNeutralCalendarControls
+                useNeutralDarkControlSurfaces
                   ? 'hover:bg-purple-100 dark:hover:bg-gray-700'
                   : ''
               }`}
-              style={useLegacyNeutralCalendarControls ? undefined : themeAccentSoftButtonStyle}
+              style={useNeutralDarkControlSurfaces ? undefined : themeAccentSoftButtonStyle}
             >
               <ChevronLeft
                 className={`w-6 h-6 ${
-                  useLegacyNeutralCalendarControls ? 'text-purple-600 dark:text-purple-400' : ''
+                  useNeutralDarkControlSurfaces ? 'text-purple-600 dark:text-purple-400' : ''
                 }`}
-                style={useLegacyNeutralCalendarControls ? undefined : themeAccentTextStyle}
+                style={useNeutralDarkControlSurfaces ? undefined : themeAccentTextStyle}
               />
             </button>
             <div className="flex flex-col items-center gap-1">
@@ -11899,17 +11901,17 @@ function App() {
             <button
               onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
               className={`p-2 rounded-xl transition-all duration-200 ${
-                useLegacyNeutralCalendarControls
+                useNeutralDarkControlSurfaces
                   ? 'hover:bg-purple-100 dark:hover:bg-gray-700'
                   : ''
               }`}
-              style={useLegacyNeutralCalendarControls ? undefined : themeAccentSoftButtonStyle}
+              style={useNeutralDarkControlSurfaces ? undefined : themeAccentSoftButtonStyle}
             >
               <ChevronRight
                 className={`w-6 h-6 ${
-                  useLegacyNeutralCalendarControls ? 'text-purple-600 dark:text-purple-400' : ''
+                  useNeutralDarkControlSurfaces ? 'text-purple-600 dark:text-purple-400' : ''
                 }`}
-                style={useLegacyNeutralCalendarControls ? undefined : themeAccentTextStyle}
+                style={useNeutralDarkControlSurfaces ? undefined : themeAccentTextStyle}
               />
             </button>
           </div>
@@ -13262,11 +13264,11 @@ function App() {
                   setShowDateDetailModal(true);
                 }}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  useLegacyNeutralCalendarControls
+                  useNeutralDarkControlSurfaces
                     ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'
                     : 'text-white hover:shadow-lg'
                 }`}
-                style={useLegacyNeutralCalendarControls ? undefined : themeAccentButtonStyle}
+                style={useNeutralDarkControlSurfaces ? undefined : themeAccentButtonStyle}
               >
                 Open Today
               </button>
@@ -13453,16 +13455,16 @@ function App() {
                           w-full aspect-square rounded-lg p-1 transition-all duration-200 relative select-none
                           ${!date ? 'invisible' : 'bg-white dark:bg-gray-700'}
                           ${hasUrgentEvent && !isSelected && !isInSelection ? 'ring-2 ring-red-500 shadow-lg shadow-red-200' : ''}
-                          ${isInSelection ? `text-white shadow-lg scale-105 ring-2 ${useLegacyNeutralCalendarControls ? 'bg-gradient-to-br from-purple-400 to-indigo-400 ring-purple-300' : ''}` : ''}
-                          ${isSelected && !isInSelection ? `text-white shadow-lg scale-105 ${useLegacyNeutralCalendarControls ? 'bg-gradient-to-br from-purple-500 to-indigo-500' : ''}` : ''}
-                          ${!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent ? `${useLegacyNeutralCalendarControls ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : 'ring-2'}` : ''}
+                          ${isInSelection ? `text-white shadow-lg scale-105 ring-2 ${useLegacyEllieMilesTheme ? 'bg-gradient-to-br from-purple-400 to-indigo-400 ring-purple-300' : ''}` : ''}
+                          ${isSelected && !isInSelection ? `text-white shadow-lg scale-105 ${useLegacyEllieMilesTheme ? 'bg-gradient-to-br from-purple-500 to-indigo-500' : ''}` : ''}
+                          ${!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent ? `${useLegacyEllieMilesTheme ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : 'ring-2'}` : ''}
                           ${!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent ? 'text-gray-700 dark:text-gray-100 dark:hover:bg-gray-600' : ''}
                           ${hasUrgentEvent && !isSelected && !isInSelection ? 'bg-red-50 dark:bg-red-900/30' : ''}
                         `}
                         style={{
                           zIndex: 10,
-                          ...(isInSelection || isSelected) && !useLegacyNeutralCalendarControls ? themeSelectedSurfaceStyle : {},
-                          ...(!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent && !useLegacyNeutralCalendarControls
+                          ...(isInSelection || isSelected) && !useLegacyEllieMilesTheme ? themeSelectedSurfaceStyle : {},
+                          ...(!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent && !useLegacyEllieMilesTheme
                             ? { ...themeTodaySurfaceStyle, borderWidth: 0, boxShadow: `inset 0 0 0 2px ${themeAccentBorder}` }
                             : {}),
                           ...(!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent
@@ -13537,14 +13539,14 @@ function App() {
                       onClick={() => handleDateTap(date)}
                       className={`
                         min-h-24 rounded-lg p-1.5 cursor-pointer transition-all duration-200 flex flex-col gap-1 relative
-                        ${isSelected ? `text-white shadow-lg ring-2 ${useLegacyNeutralCalendarControls ? 'bg-gradient-to-br from-purple-500 to-indigo-500 ring-purple-300' : ''}` : ''}
-                        ${!isSelected && isTodayDate ? `${useLegacyNeutralCalendarControls ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : 'ring-2'}` : ''}
+                        ${isSelected ? `text-white shadow-lg ring-2 ${useLegacyEllieMilesTheme ? 'bg-gradient-to-br from-purple-500 to-indigo-500 ring-purple-300' : ''}` : ''}
+                        ${!isSelected && isTodayDate ? `${useLegacyEllieMilesTheme ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : 'ring-2'}` : ''}
                         ${!isSelected && !isTodayDate ? 'bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600' : ''}
                         ${hasUrgentEvent && !isSelected ? 'ring-2 ring-red-500' : ''}
                       `}
                       style={{
-                        ...(isSelected && !useLegacyNeutralCalendarControls ? themeSelectedSurfaceStyle : {}),
-                        ...(!isSelected && isTodayDate && !useLegacyNeutralCalendarControls ? { ...themeTodaySurfaceStyle, boxShadow: `inset 0 0 0 2px ${themeAccentBorder}` } : {}),
+                        ...(isSelected && !useLegacyEllieMilesTheme ? themeSelectedSurfaceStyle : {}),
+                        ...(!isSelected && isTodayDate && !useLegacyEllieMilesTheme ? { ...themeTodaySurfaceStyle, boxShadow: `inset 0 0 0 2px ${themeAccentBorder}` } : {}),
                         ...(!isSelected && !isTodayDate ? { '--theme-hover-bg': themeAccentSofterBg } : {}),
                       }}
                       >
