@@ -173,6 +173,7 @@ function App() {
   });
   const [showThemeMatchPrompt, setShowThemeMatchPrompt] = useState(false);
   const [pendingThemeMatchStyle, setPendingThemeMatchStyle] = useState(null);
+  const [coverOpacityPreview, setCoverOpacityPreview] = useState(null);
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(true);
   const [authError, setAuthError] = useState('');
@@ -3080,6 +3081,9 @@ function App() {
   const activeLayerTitleStyle = normalizeLayerTitleStyle(activeLayer?.title_style);
   const activeLayerTitleTextStyle = getLayerTitleDisplayStyle(activeLayerTitleStyle);
   const activeLayerPageTheme = normalizeLayerPageTheme(activeLayer?.page_theme, activeLayerTitleStyle);
+  const effectiveCoverOpacity = coverOpacityPreview == null
+    ? activeLayerPageTheme.coverOpacity
+    : Math.max(0, Math.min(1, Number(coverOpacityPreview)));
   const themedPageBackgroundStyle = darkMode
     ? {
       backgroundImage: `linear-gradient(135deg, ${mixHexColors(activeLayerPageTheme.backgroundFrom, '#111827', 0.85)} 0%, ${mixHexColors(activeLayerPageTheme.backgroundVia, '#111827', 0.9)} 55%, ${mixHexColors(activeLayerPageTheme.backgroundTo, '#111827', 0.93)} 100%)`,
@@ -3493,6 +3497,7 @@ function App() {
 
   const openLayerMediaMenu = () => {
     if (!isActiveLayerOwner || !activeLayerId || uploadingLayerMedia) return;
+    setCoverOpacityPreview(null);
     setShowLayerMediaMenu(true);
   };
 
@@ -3526,6 +3531,13 @@ function App() {
     }
     mergeLayerIntoState({ ...(primary.data || { id: lid }), page_theme: normalizedTheme, title_style: normalizedTitleStyle });
     return true;
+  };
+
+  const commitCoverOpacityPreview = async () => {
+    if (coverOpacityPreview == null) return;
+    const nextOpacity = Math.max(0, Math.min(1, Number(coverOpacityPreview)));
+    setCoverOpacityPreview(null);
+    await saveLayerPageTheme({ ...activeLayerPageTheme, coverOpacity: nextOpacity }, activeLayerTitleStyle);
   };
 
   const saveLayerTitleStyle = async () => {
@@ -11593,7 +11605,7 @@ function App() {
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4"
           style={activeLayer?.header_bg_url
             ? {
-              backgroundImage: `linear-gradient(rgba(17,24,39,${Number((1 - activeLayerPageTheme.coverOpacity) * 0.7 + 0.06).toFixed(3)}), rgba(17,24,39,${Number((1 - activeLayerPageTheme.coverOpacity) * 0.52 + 0.03).toFixed(3)})), url(${activeLayer.header_bg_url})`,
+              backgroundImage: `linear-gradient(rgba(17,24,39,${Number((1 - effectiveCoverOpacity) * 0.7 + 0.06).toFixed(3)}), rgba(17,24,39,${Number((1 - effectiveCoverOpacity) * 0.52 + 0.03).toFixed(3)})), url(${activeLayer.header_bg_url})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }
@@ -14695,7 +14707,7 @@ function App() {
                   Cover Photo Opacity
                 </label>
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                  {Math.round(activeLayerPageTheme.coverOpacity * 100)}%
+                  {Math.round(effectiveCoverOpacity * 100)}%
                 </span>
               </div>
               <input
@@ -14703,10 +14715,17 @@ function App() {
                 min="0"
                 max="100"
                 step="1"
-                value={Math.round(activeLayerPageTheme.coverOpacity * 100)}
-                onChange={async (e) => {
+                value={Math.round(effectiveCoverOpacity * 100)}
+                onChange={(e) => {
                   const coverOpacity = Math.max(0, Math.min(1, Number(e.target.value || 0) / 100));
-                  await saveLayerPageTheme({ ...activeLayerPageTheme, coverOpacity }, activeLayerTitleStyle);
+                  setCoverOpacityPreview(coverOpacity);
+                }}
+                onMouseUp={commitCoverOpacityPreview}
+                onTouchEnd={commitCoverOpacityPreview}
+                onKeyUp={(e) => {
+                  if (e.key.startsWith('Arrow') || e.key === 'Home' || e.key === 'End' || e.key === 'PageUp' || e.key === 'PageDown') {
+                    commitCoverOpacityPreview();
+                  }
                 }}
                 className="w-full accent-purple-500"
               />
