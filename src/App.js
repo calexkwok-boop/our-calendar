@@ -166,13 +166,7 @@ function App() {
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
   const [showTitleStyleModal, setShowTitleStyleModal] = useState(false);
   const [titleNameDraft, setTitleNameDraft] = useState('');
-  const [titleStyleDraft, setTitleStyleDraft] = useState({
-    mode: 'gradient',
-    solidColor: '#7c3aed',
-    gradientFrom: '#e11d48',
-    gradientVia: '#7c3aed',
-    gradientTo: '#4f46e5',
-  });
+  const [titleStyleDraft, setTitleStyleDraft] = useState(createDefaultLayerTitleStyle());
   const [showThemeMatchPrompt, setShowThemeMatchPrompt] = useState(false);
   const [pendingThemeMatchStyle, setPendingThemeMatchStyle] = useState(null);
   const [coverOpacityPreview, setCoverOpacityPreview] = useState(null);
@@ -2926,25 +2920,29 @@ function App() {
     return txt.split(',').map(v => String(v || '').trim()).filter(Boolean);
   };
 
-  const DEFAULT_LAYER_TITLE_STYLE = {
+  const LOCKED_DEFAULT_LAYER_TITLE_STYLE = Object.freeze({
     mode: 'gradient',
     solidColor: '#7c3aed',
     gradientFrom: '#e11d48',
     gradientVia: '#7c3aed',
     gradientTo: '#4f46e5',
-  };
-  const DEFAULT_LAYER_PAGE_THEME = {
+  });
+  const LOCKED_DEFAULT_LAYER_PAGE_THEME = Object.freeze({
     matchTitle: true,
     accent: '#7c3aed',
     backgroundFrom: '#fdf2f8',
     backgroundVia: '#f5f3ff',
     backgroundTo: '#eef2ff',
     coverOpacity: 0.82,
-  };
+  });
+  const createDefaultLayerTitleStyle = () => ({ ...LOCKED_DEFAULT_LAYER_TITLE_STYLE });
+  const createDefaultLayerPageTheme = () => ({ ...LOCKED_DEFAULT_LAYER_PAGE_THEME });
+  const DEFAULT_LAYER_TITLE_STYLE = createDefaultLayerTitleStyle();
+  const DEFAULT_LAYER_PAGE_THEME = createDefaultLayerPageTheme();
 
   const TITLE_STYLE_PRESETS = [
     { name: 'Sunset', mode: 'gradient', gradientFrom: '#fb7185', gradientVia: '#f59e0b', gradientTo: '#f97316' },
-    { name: 'Gradient Berry', mode: 'gradient', gradientFrom: '#e11d48', gradientVia: '#7c3aed', gradientTo: '#4f46e5' },
+    { name: 'Gradient Berry', ...LOCKED_DEFAULT_LAYER_TITLE_STYLE },
     { name: 'Ocean', mode: 'gradient', gradientFrom: '#06b6d4', gradientVia: '#2563eb', gradientTo: '#4f46e5' },
     { name: 'Mint', mode: 'gradient', gradientFrom: '#10b981', gradientVia: '#14b8a6', gradientTo: '#0ea5e9' },
     { name: 'Gold', mode: 'solid', solidColor: '#b45309' },
@@ -13297,7 +13295,12 @@ function App() {
                   setSelectedDates([]);
                   setShowDateDetailModal(true);
                 }}
-                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-all"
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                  useLegacyEllieMilesTheme
+                    ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'
+                    : 'text-white hover:shadow-lg'
+                }`}
+                style={useLegacyEllieMilesTheme ? undefined : themeAccentButtonStyle}
               >
                 Open Today
               </button>
