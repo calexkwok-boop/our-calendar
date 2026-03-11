@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
 import { getMessagingIfSupported } from "./firebase";
@@ -285,6 +285,7 @@ function App() {
   const [subCalInviteEmail, setSubCalInviteEmail] = useState('');
   const [subCalMembers, setSubCalMembers] = useState([]);
   const [subCalMembersCollapsed, setSubCalMembersCollapsed] = useState(false);
+  const [showSubCalLocationSheet, setShowSubCalLocationSheet] = useState(false);
   const [subCalEditingEvent, setSubCalEditingEvent] = useState(null);
   const [subCalSelectedDate, setSubCalSelectedDate] = useState(null);
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
@@ -15338,6 +15339,18 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSubCalLocationSheet(true)}
+              className="relative p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+              title="Trip live location"
+            >
+              <MapPin className="w-4 h-4" />
+              {Object.values(memberLocations).filter(loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number').length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[1rem] h-[1rem] px-1 rounded-full bg-emerald-500 text-white text-[9px] leading-none font-bold flex items-center justify-center">
+                  {Object.values(memberLocations).filter(loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number').length}
+                </span>
+              )}
+            </button>
             {/* Dark mode toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
@@ -15456,38 +15469,6 @@ function App() {
             </div>
           )}
         </div>
-
-        {/* Location sharing quick controls (mobile-friendly placement) */}
-        {(() => {
-          const todayKey = getDateKey(new Date());
-          const sharingWindowOpen = todayKey >= activeSubCalendar.start_date && todayKey <= activeSubCalendar.end_date;
-          const liveLocations = Object.values(memberLocations).filter(
-            loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number'
-          );
-          return (
-            <div className="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">📍 Live Location</div>
-                  <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                    {sharingWindowOpen ? `${liveLocations.length} member${liveLocations.length === 1 ? '' : 's'} sharing now` : 'Available only during trip dates'}
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    const next = !shareMyLocation;
-                    setShareMyLocation(next);
-                    localStorage.setItem('subcal-share-location', next.toString());
-                  }}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareMyLocation && sharingWindowOpen ? 'bg-green-500' : 'bg-gray-300'}`}
-                  title="Share my location with trip members"
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${shareMyLocation && sharingWindowOpen ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-              </div>
-            </div>
-          );
-        })()}
 
         {/* Day tabs */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -15999,53 +15980,6 @@ function App() {
                 )}
               </div>
 
-              {/* Live location details */}
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                {(() => {
-                  const todayKey = getDateKey(new Date());
-                  const sharingWindowOpen = todayKey >= activeSubCalendar.start_date && todayKey <= activeSubCalendar.end_date;
-                  const liveLocations = Object.values(memberLocations).filter(loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number');
-                  return (
-                    <div className="mt-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <div className="text-xs font-semibold text-gray-700 dark:text-gray-200">Live Location Sharing</div>
-                          <div className="text-[11px] text-gray-500 dark:text-gray-400">
-                            {sharingWindowOpen ? 'Shared only during this trip window.' : 'Trip is not active today; location stays off.'}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            const next = !shareMyLocation;
-                            setShareMyLocation(next);
-                            localStorage.setItem('subcal-share-location', next.toString());
-                          }}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareMyLocation && sharingWindowOpen ? 'bg-green-500' : 'bg-gray-300'}`}
-                          title="Share my location with members"
-                        >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${shareMyLocation && sharingWindowOpen ? 'translate-x-6' : 'translate-x-1'}`} />
-                        </button>
-                      </div>
-                      {liveLocations.length > 0 && (
-                        <div className="mt-2 space-y-1.5">
-                          {liveLocations.map((loc, idx) => (
-                            <a
-                              key={`${loc.userId}-${idx}`}
-                              href={`https://www.google.com/maps?q=${loc.lat},${loc.lon}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 hover:border-green-300"
-                            >
-                              <span className="text-gray-700 dark:text-gray-200 truncate">📍 {loc.name || loc.email || loc.userId}</span>
-                              <span className="text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
             </div>
           );
         })()}
@@ -16579,6 +16513,87 @@ function App() {
             )}
           </div>
         )}
+
+        {showSubCalLocationSheet && (() => {
+          const todayKey = getDateKey(new Date());
+          const sharingWindowOpen = todayKey >= activeSubCalendar.start_date && todayKey <= activeSubCalendar.end_date;
+          const liveLocations = Object.values(memberLocations).filter(
+            (loc) => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number'
+          );
+          return (
+            <div
+              className="fixed inset-0 z-50 bg-black/45 flex items-end sm:items-center justify-center"
+              onClick={() => setShowSubCalLocationSheet(false)}
+            >
+              <div
+                className="w-full sm:w-[28rem] bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-800 dark:text-white">Trip Live Location</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {sharingWindowOpen ? `${liveLocations.length} member${liveLocations.length === 1 ? '' : 's'} sharing right now.` : 'Available only during trip dates.'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowSubCalLocationSheet(false)}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                    aria-label="Close live location"
+                  >
+                    <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  </button>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 px-3 py-3">
+                  <div>
+                    <div className="text-sm font-medium text-gray-800 dark:text-gray-100">Share my location</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {sharingWindowOpen ? 'Visible only during this trip window.' : 'Trip is not active today, so sharing stays off.'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !shareMyLocation;
+                      setShareMyLocation(next);
+                      localStorage.setItem('subcal-share-location', next.toString());
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareMyLocation && sharingWindowOpen ? 'bg-green-500' : 'bg-gray-300'}`}
+                    title="Share my location with trip members"
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${shareMyLocation && sharingWindowOpen ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+
+                <div className="mt-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+                    Members Sharing
+                  </div>
+                  {liveLocations.length === 0 ? (
+                    <div className="text-sm text-gray-500 dark:text-gray-400 rounded-xl bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600 px-3 py-3">
+                      Nobody is sharing location right now.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {liveLocations.map((loc, idx) => (
+                        <a
+                          key={`${loc.userId || 'member'}-${idx}`}
+                          href={`https://www.google.com/maps?q=${loc.lat},${loc.lon}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between text-sm px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 hover:border-emerald-300 dark:hover:border-emerald-700"
+                        >
+                          <span className="text-gray-700 dark:text-gray-200 truncate">📍 {loc.name || loc.email || loc.userId}</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         </div>
 
