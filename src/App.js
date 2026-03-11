@@ -13297,12 +13297,7 @@ function App() {
                   setSelectedDates([]);
                   setShowDateDetailModal(true);
                 }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  useNeutralDarkControlSurfaces
-                    ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-200 hover:bg-purple-100 dark:hover:bg-purple-900/45'
-                    : 'text-white hover:shadow-lg'
-                }`}
-                style={useNeutralDarkControlSurfaces ? undefined : themeAccentButtonStyle}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-all"
               >
                 Open Today
               </button>
