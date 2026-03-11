@@ -12270,17 +12270,17 @@ function App() {
                       const recipient = getShareRecipientFromRow(share);
                       if (!recipient) return null;
                       return (
-                    <div key={i} className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-200 dark:border-purple-700">
-                      <div className="flex items-center gap-2">
+                    <div key={i} className="flex items-center justify-between gap-3 p-3 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-200 dark:border-purple-700">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-purple-400 flex items-center justify-center text-white text-xs font-bold">
                           {recipient[0]?.toUpperCase() || '?'}
                         </div>
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{recipient}</span>
+                        <span className="min-w-0 truncate text-sm text-gray-700 dark:text-gray-300">{recipient}</span>
                         <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-purple-100 dark:bg-purple-800 text-purple-700 dark:text-purple-200">
                           {getRecipientKindLabel(recipient)}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex shrink-0 items-center gap-3">
                         {isActiveLayerOwner && (
                           <button
                             onClick={() => handleToggleShareEditPermission(recipient, !(share?.can_edit !== false))}
