@@ -14372,7 +14372,7 @@ function App() {
                       return (
                         <div key={`explore-${layerId}`} className="rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-900/20 p-3">
                           <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{row?.name || 'Public Calendar'}</div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                 by {ownerLabel} · {Math.max(1, Number(row?.member_count || 0) + 1)} member{Math.max(1, Number(row?.member_count || 0) + 1) === 1 ? '' : 's'}
@@ -14403,7 +14403,7 @@ function App() {
                                 </div>
                               )}
                               {tags.length > 0 && (
-                                <div className="mt-1.5 flex gap-1 overflow-x-auto whitespace-nowrap pb-1 pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                <div className="mt-1.5 w-full max-w-full flex gap-1 overflow-x-auto overflow-y-visible whitespace-nowrap pb-1 pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                   {tags.slice(0, 6).map((tag) => (
                                     <span key={`${layerId}-${tag}`} className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-white/90 dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700">
                                       #{tag}
