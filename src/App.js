@@ -305,6 +305,7 @@ function App() {
   const [deletedPhotosNoteId, setDeletedPhotosNoteId] = useState(null);
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
   const [showPhotoSortMenu, setShowPhotoSortMenu] = useState(false);
+  const [showSubCalInviteModal, setShowSubCalInviteModal] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUploadMessage, setPhotoUploadMessage] = useState('');
   const [photoUploadError, setPhotoUploadError] = useState(false);
@@ -1278,6 +1279,7 @@ function App() {
 
     await loadSubCalendarMembers(activeSubCalendar.id);
     setSubCalInviteEmail('');
+    setShowSubCalInviteModal(false);
   };
 
   const removeMemberFromSubCal = async (identity) => {
@@ -15311,6 +15313,59 @@ function App() {
       </div>
     )}
 
+    {showSubCalInviteModal && activeSubCalendar && (
+      <div
+        className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center"
+        onClick={() => setShowSubCalInviteModal(false)}
+      >
+        <div
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                Invite to Trip
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Add someone to {activeSubCalendar.name}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowSubCalInviteModal(false)}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              aria-label="Close invite modal"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          <input
+            type="text"
+            value={subCalInviteEmail}
+            onChange={(e) => setSubCalInviteEmail(e.target.value)}
+            placeholder="Enter email or phone"
+            className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+            autoFocus
+            onKeyPress={(e) => e.key === 'Enter' && inviteToSubCalendar()}
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowSubCalInviteModal(false)}
+              className="flex-1 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => inviteToSubCalendar()}
+              className="flex-1 px-3 py-2 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-sm font-semibold"
+            >
+              Send Invite
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* -- Sub-Calendar Full View -- */}
     {activeSubCalendar && (
       <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden">
@@ -15362,11 +15417,8 @@ function App() {
             </button>
             {/* Invite button */}
             <button
-              onClick={() => {
-                const target = window.prompt('Enter email or phone to invite:');
-                if (target) { inviteToSubCalendar(target); }
-              }}
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs rounded-xl font-medium"
+              onClick={() => setShowSubCalInviteModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-xs rounded-xl font-semibold shadow-sm hover:shadow-md transition-all"
             >
               <Plus className="w-3.5 h-3.5" /> Invite
             </button>
@@ -15467,11 +15519,8 @@ function App() {
               ))}
               {activeSubCalendar.owner_id === user?.id && (
                 <button
-                  onClick={() => {
-                    const target = window.prompt('Invite by email or phone:');
-                    if (target) { inviteToSubCalendar(target); }
-                  }}
-                  className="px-2 py-1 border border-dashed border-purple-300 dark:border-purple-600 text-purple-500 rounded-full text-xs hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                  onClick={() => setShowSubCalInviteModal(true)}
+                  className="px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-colors"
                 >+ Invite</button>
               )}
             </div>
@@ -15568,18 +15617,18 @@ function App() {
           <button
             onClick={() => setSubCalTab('itinerary')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'itinerary' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-          >🗺️ Itinerary</button>
+          >Itinerary</button>
           <button
             onClick={() => setSubCalTab('photos')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 relative ${subCalTab === 'photos' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >
-            📸 Photos
+            Photos
             {tripPhotos.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{tripPhotos.length}</span>}
           </button>
           <button
             onClick={() => setSubCalTab('expenses')}
             className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'expenses' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-          >💰 Expenses</button>
+          >Expenses</button>
         </div>
 
         <input
@@ -16281,7 +16330,7 @@ function App() {
                 disabled={uploadingPhoto || isPhotoSelectionMode || photoDeleteMode}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl text-sm font-medium shadow hover:shadow-lg transition-all disabled:opacity-50"
               >
-                {uploadingPhoto ? '⏳ Uploading…' : '📸 Add Photos'}
+                {uploadingPhoto ? 'Uploading…' : 'Add Photos'}
               </button>
               {isPhotoSelectionMode ? (
                 <>
@@ -16347,15 +16396,15 @@ function App() {
                 <div className="relative ml-auto">
                   <button
                     onClick={() => setShowPhotoSortMenu((prev) => !prev)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-200"
+                    className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
                     title="Sort photos"
+                    aria-label="Sort photos"
                   >
                     <span className="inline-flex flex-col justify-center gap-1" aria-hidden="true">
                       <span className="block w-4 h-0.5 rounded-full bg-current" />
                       <span className="block w-4 h-0.5 rounded-full bg-current" />
                       <span className="block w-4 h-0.5 rounded-full bg-current" />
                     </span>
-                    <span>Sort by</span>
                   </button>
                   {showPhotoSortMenu && (
                     <div className="absolute right-0 top-full mt-2 w-44 rounded-2xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl overflow-hidden z-20">
