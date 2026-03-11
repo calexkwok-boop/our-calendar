@@ -11748,7 +11748,13 @@ function App() {
               </button>
               <button
                 onClick={() => setShowNotificationSettings(!showNotificationSettings)}
-                className={`relative p-2 rounded-xl transition-all duration-200 ${notificationsEnabled ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                className={`relative p-2 rounded-xl transition-all duration-200 ${
+                  notificationsEnabled
+                    ? showNotificationSettings
+                      ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200'
+                      : 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                }`}
                 title={notificationsEnabled ? 'Notifications enabled' : 'Enable notifications'}
               >
                 {notificationsEnabled ? <Bell className="w-4 h-4 sm:w-5 sm:h-5" /> : <BellOff className="w-4 h-4 sm:w-5 sm:h-5" />}
