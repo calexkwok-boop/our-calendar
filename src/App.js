@@ -12218,7 +12218,7 @@ function App() {
         {showSharePanel && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400">
+              <h3 className="text-xl font-semibold" style={themeAccentHeadingStyle}>
                 Share Calendar
               </h3>
               <button onClick={() => { setShowSharePanel(false); setShareMessage(''); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
@@ -12242,7 +12242,8 @@ function App() {
                 <button
                   onClick={handleShareCalendar}
                   disabled={!isActiveLayerOwner}
-                  className={`px-4 py-2 rounded-xl transition-all ${isActiveLayerOwner ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white hover:shadow-lg' : 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'}`}
+                  className={`px-4 py-2 rounded-xl transition-all ${isActiveLayerOwner ? 'text-white hover:shadow-lg' : 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'}`}
+                  style={isActiveLayerOwner ? themeAccentButtonStyle : undefined}
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -12935,7 +12936,7 @@ function App() {
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
-                <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Shared Lists</h3>
+                <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Shared Lists</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Clean space for groceries, reminders, and quick to-dos.</p>
               </div>
               <button onClick={() => setShowListPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
@@ -12955,7 +12956,8 @@ function App() {
                 />
                 <button
                   onClick={createSharedList}
-                  className="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  className="px-3 py-2 text-sm text-white rounded-lg hover:shadow-lg transition-all"
+                  style={themeAccentButtonStyle}
                   title="Create list"
                 >
                   Create
