@@ -14521,8 +14521,7 @@ function App() {
                   <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Explore Calendars</h3>
                   <button
                     onClick={loadPublicCalendars}
-                    className="px-3 py-1.5 text-xs rounded-lg hover:shadow-sm transition-all"
-                    style={themeAccentSoftButtonStyle}
+                    className="px-3 py-1.5 text-xs rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-all"
                   >
                     Refresh
                   </button>
