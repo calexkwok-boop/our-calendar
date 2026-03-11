@@ -13189,7 +13189,8 @@ function App() {
                   setSelectedDates([]);
                   setShowDateDetailModal(true);
                 }}
-                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-all"
+                className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+                style={themeAccentSoftButtonStyle}
               >
                 Open Today
               </button>
@@ -13612,10 +13613,11 @@ function App() {
                     <span className="px-2 py-1 text-white text-xs rounded-full" style={themeAccentButtonStyle}>{selectedDates.length} days</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <button onClick={() => setSelectedDates([])} className="text-xs text-purple-700 dark:text-purple-300 hover:text-purple-900 underline font-medium">Clear selection</button>
+                    <button onClick={() => setSelectedDates([])} className="text-xs underline font-medium" style={themeAccentTextStyle}>Clear selection</button>
                     <button
                       onClick={() => setShowSubCalendarModal(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-xs rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
+                      style={themeAccentButtonStyle}
                     >
                       🗓️ Create Sub-Calendar
                     </button>
@@ -13649,23 +13651,25 @@ function App() {
             </div>
 
             <div className="mb-4 space-y-2">
-              <button
-                onClick={() => setIsPrivate(!isPrivate)}
-                className={`w-full px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ${
-                  isPrivate ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                <Lock className="w-4 h-4" />
-                {isPrivate ? 'Private Event (Only You)' : 'Shared Event'}
-              </button>
-              <button
-                onClick={() => setIsUrgent(!isUrgent)}
-                className={`w-full px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ${
-                  isUrgent ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md animate-pulse' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                <AlertTriangle className="w-4 h-4" />
-                {isUrgent ? '🚨 Urgent Event' : 'Normal Event'}
+                <button
+                  onClick={() => setIsPrivate(!isPrivate)}
+                  className={`w-full px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ${
+                    isPrivate ? 'text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                  style={isPrivate ? themeAccentButtonStyle : undefined}
+                >
+                  <Lock className="w-4 h-4" />
+                  {isPrivate ? 'Private Event (Only You)' : 'Shared Event'}
+                </button>
+                <button
+                  onClick={() => setIsUrgent(!isUrgent)}
+                  className={`w-full px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ${
+                    isUrgent ? 'text-white shadow-md animate-pulse' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                  style={isUrgent ? themeAccentButtonStyle : undefined}
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                  {isUrgent ? '🚨 Urgent Event' : 'Normal Event'}
               </button>
               <div className="w-full">
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
@@ -13686,9 +13690,10 @@ function App() {
                       }}
                       className={`px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                         recurrence === opt.value
-                          ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md'
+                          ? 'text-white shadow-md'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
+                      style={recurrence === opt.value ? themeAccentButtonStyle : undefined}
                     >
                       {opt.label}
                     </button>
@@ -13708,7 +13713,7 @@ function App() {
                   placeholder={selectedDates.length > 1 ? "Vacation in Mexico" : "Ed working, or Playdate 3pm"}
                   className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-purple-400"
                 />
-                <button onClick={handleQuickAdd} className="px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all">
+                <button onClick={handleQuickAdd} className="px-4 py-2 text-white rounded-xl hover:shadow-lg transition-all" style={themeAccentButtonStyle}>
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
