@@ -13431,14 +13431,18 @@ function App() {
                           w-full aspect-square rounded-lg p-1 transition-all duration-200 relative select-none
                           ${!date ? 'invisible' : 'bg-white dark:bg-gray-700'}
                           ${hasUrgentEvent && !isSelected && !isInSelection ? 'ring-2 ring-red-500 shadow-lg shadow-red-200' : ''}
-                          ${isInSelection ? 'bg-gradient-to-br from-purple-400 to-indigo-400 text-white shadow-lg scale-105 ring-2 ring-purple-300' : ''}
-                          ${isSelected && !isInSelection ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg scale-105' : ''}
-                          ${!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : ''}
+                          ${isInSelection ? `text-white shadow-lg scale-105 ring-2 ${useLegacyNeutralCalendarControls ? 'bg-gradient-to-br from-purple-400 to-indigo-400 ring-purple-300' : ''}` : ''}
+                          ${isSelected && !isInSelection ? `text-white shadow-lg scale-105 ${useLegacyNeutralCalendarControls ? 'bg-gradient-to-br from-purple-500 to-indigo-500' : ''}` : ''}
+                          ${!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent ? `${useLegacyNeutralCalendarControls ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : 'ring-2'}` : ''}
                           ${!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent ? 'text-gray-700 dark:text-gray-100 dark:hover:bg-gray-600' : ''}
                           ${hasUrgentEvent && !isSelected && !isInSelection ? 'bg-red-50 dark:bg-red-900/30' : ''}
                         `}
                         style={{
                           zIndex: 10,
+                          ...(isInSelection || isSelected) && !useLegacyNeutralCalendarControls ? themeSelectedSurfaceStyle : {},
+                          ...(!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent && !useLegacyNeutralCalendarControls
+                            ? { ...themeTodaySurfaceStyle, borderWidth: 0, boxShadow: `inset 0 0 0 2px ${themeAccentBorder}` }
+                            : {}),
                           ...(!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent
                             ? { '--theme-hover-bg': themeAccentSofterBg }
                             : {}),
@@ -13511,12 +13515,14 @@ function App() {
                       onClick={() => handleDateTap(date)}
                       className={`
                         min-h-24 rounded-lg p-1.5 cursor-pointer transition-all duration-200 flex flex-col gap-1 relative
-                        ${isSelected ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-lg ring-2 ring-purple-300' : ''}
-                        ${!isSelected && isTodayDate ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : ''}
+                        ${isSelected ? `text-white shadow-lg ring-2 ${useLegacyNeutralCalendarControls ? 'bg-gradient-to-br from-purple-500 to-indigo-500 ring-purple-300' : ''}` : ''}
+                        ${!isSelected && isTodayDate ? `${useLegacyNeutralCalendarControls ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : 'ring-2'}` : ''}
                         ${!isSelected && !isTodayDate ? 'bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600' : ''}
                         ${hasUrgentEvent && !isSelected ? 'ring-2 ring-red-500' : ''}
                       `}
                       style={{
+                        ...(isSelected && !useLegacyNeutralCalendarControls ? themeSelectedSurfaceStyle : {}),
+                        ...(!isSelected && isTodayDate && !useLegacyNeutralCalendarControls ? { ...themeTodaySurfaceStyle, boxShadow: `inset 0 0 0 2px ${themeAccentBorder}` } : {}),
                         ...(!isSelected && !isTodayDate ? { '--theme-hover-bg': themeAccentSofterBg } : {}),
                       }}
                       >
