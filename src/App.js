@@ -15359,6 +15359,8 @@ function App() {
           </div>
         </div>
 
+        <div className="flex-1 overflow-y-auto">
+
         {/* Weather location — collapsed pill or expanding input */}
         <div className="relative px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2" ref={weatherAutocompleteRef}>
           {subCalWeatherLocation && !subCalWeatherExpanded ? (
@@ -15615,7 +15617,7 @@ function App() {
           const getEventPhotos = (eventId) => dayEventPhotos.filter(p => p.event_id === eventId);
 
           return (
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            <div className="px-4 py-4 space-y-4">
 
               {/* Weather for selected day */}
               {subCalWeather[dk] && (
@@ -16107,7 +16109,7 @@ function App() {
           }
 
           return (
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            <div className="px-4 py-4 space-y-4">
               <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-700">
                 <button
                   onClick={() => toggleExpensePanel('splitter')}
@@ -16328,7 +16330,7 @@ function App() {
 
         {/* Photos tab */}
         {subCalTab === 'photos' && (
-          <div className="flex-1 overflow-y-auto">
+          <div>
 
             {/* Upload bar */}
             <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3">
@@ -16577,6 +16579,8 @@ function App() {
             )}
           </div>
         )}
+
+        </div>
 
         {smartLeavePrompt && (
           <div
