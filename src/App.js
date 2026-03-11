@@ -164,8 +164,8 @@ function App() {
   const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [showTitleStyleModal, setShowTitleStyleModal] = useState(false);
+  const [titleNameDraft, setTitleNameDraft] = useState('');
   const [titleStyleDraft, setTitleStyleDraft] = useState({
     mode: 'gradient',
     solidColor: '#7c3aed',
@@ -3535,6 +3535,7 @@ function App() {
 
   const openTitleStyleModal = () => {
     if (!isActiveLayerOwner || !activeLayerId) return;
+    setTitleNameDraft(String(calendarTitle || activeLayer?.name || '').trim());
     setTitleStyleDraft(normalizeLayerTitleStyle(activeLayer?.title_style));
     setShowTitleStyleModal(true);
   };
@@ -3575,6 +3576,14 @@ function App() {
   const saveLayerTitleStyle = async () => {
     const lid = String(activeLayerId || '').trim();
     if (!lid || !user?.id || !isActiveLayerOwner) return false;
+    const trimmedTitle = String(titleNameDraft || '').trim();
+    if (!trimmedTitle) {
+      alert('Enter a calendar title.');
+      return false;
+    }
+    if (trimmedTitle !== String(activeLayer?.name || calendarTitle || '').trim()) {
+      await renameActiveLayer(trimmedTitle);
+    }
     const normalizedStyle = normalizeLayerTitleStyle(titleStyleDraft);
     writeStoredLayerTitleStyle(lid, normalizedStyle);
 
@@ -11692,49 +11701,19 @@ function App() {
                 )}
               </div>
               <div className="min-w-0">
-                {isEditingTitle ? (
-                  <input
-                    type="text"
-                    value={calendarTitle}
-                    onChange={(e) => setCalendarTitle(e.target.value)}
-                    onBlur={async () => {
-                      setIsEditingTitle(false);
-                      await renameActiveLayer(calendarTitle);
+                <div className="flex items-center gap-2 min-w-0">
+                  <h1
+                    onClick={() => {
+                      if (!canEditActiveLayer) return;
+                      openTitleStyleModal();
                     }}
-                    onKeyPress={async (e) => {
-                      if (e.key === 'Enter') {
-                        setIsEditingTitle(false);
-                        await renameActiveLayer(calendarTitle);
-                      }
-                    }}
-                    className="text-xl sm:text-2xl font-bold px-2 py-1 border-2 border-purple-300 rounded-lg w-full bg-white/90 dark:bg-gray-800/90"
-                    style={activeLayerTitleStyle.mode === 'solid' ? { color: activeLayerTitleStyle.solidColor } : undefined}
-                    autoFocus
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 min-w-0">
-                    <h1
-                      onClick={() => {
-                        if (!canEditActiveLayer) return;
-                        setIsEditingTitle(true);
-                      }}
-                      className={`text-xl sm:text-2xl font-bold transition-opacity truncate ${canEditActiveLayer ? 'cursor-pointer hover:opacity-70' : 'cursor-default opacity-90'}`}
-                      style={activeLayerTitleTextStyle}
-                      title={canEditActiveLayer ? 'Click to rename calendar' : 'Read-only calendar'}
-                    >
-                      {calendarTitle}
-                    </h1>
-                    {isActiveLayerOwner && (
-                      <button
-                        onClick={openTitleStyleModal}
-                        className="shrink-0 px-2 py-1 rounded-lg border border-purple-200 dark:border-gray-600 bg-white/80 dark:bg-gray-800/80 text-[11px] font-semibold text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-gray-700"
-                        title="Customize title"
-                      >
-                        Style
-                      </button>
-                    )}
-                  </div>
-                )}
+                    className={`text-xl sm:text-2xl font-bold transition-opacity truncate ${canEditActiveLayer ? 'cursor-pointer hover:opacity-70' : 'cursor-default opacity-90'}`}
+                    style={activeLayerTitleTextStyle}
+                    title={canEditActiveLayer ? 'Click to edit title and style' : 'Read-only calendar'}
+                  >
+                    {calendarTitle}
+                  </h1>
+                </div>
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                   <span className="font-semibold" style={themeAccentTextStyle}>{user?.email || user?.phone || currentUser}</span>
                   {!canEditActiveLayer && (
@@ -14832,11 +14811,25 @@ function App() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Customize Title
+              Edit Title
             </h3>
             <button onClick={() => setShowTitleStyleModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <X className="w-5 h-5 text-gray-500" />
             </button>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+              Calendar Title
+            </label>
+            <input
+              type="text"
+              value={titleNameDraft}
+              onChange={(e) => setTitleNameDraft(e.target.value)}
+              placeholder="Calendar title"
+              className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+              autoFocus
+            />
           </div>
 
           <div className="rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/70 dark:bg-purple-900/20 px-4 py-3 mb-4">
@@ -14844,7 +14837,7 @@ function App() {
               className="text-2xl sm:text-3xl font-bold truncate"
               style={getLayerTitleDisplayStyle(titleStyleDraft)}
             >
-              {calendarTitle || activeLayer?.name || 'Calendar Title'}
+              {titleNameDraft || calendarTitle || activeLayer?.name || 'Calendar Title'}
             </div>
           </div>
 
@@ -14938,6 +14931,7 @@ function App() {
           <div className="flex items-center justify-end gap-2">
             <button
               onClick={() => {
+                setTitleNameDraft(String(calendarTitle || activeLayer?.name || '').trim());
                 setTitleStyleDraft(activeLayerTitleStyle);
                 setShowTitleStyleModal(false);
               }}
@@ -14949,7 +14943,7 @@ function App() {
               onClick={saveLayerTitleStyle}
               className="px-4 py-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-sm font-semibold"
             >
-              Save Style
+              Save Title
             </button>
           </div>
         </div>
