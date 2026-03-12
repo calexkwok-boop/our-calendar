@@ -2950,13 +2950,48 @@ function App() {
           recurrence: null,
         }));
 
+      const mergeWarriorsEventsIntoLocalState = () => {
+        if (cancelled) return;
+        setEvents((prev) => {
+          const next = { ...(prev || {}) };
+          for (const event of WARRIORS_REMAINING_2026_EVENTS_PT) {
+            const dayKey = event.date;
+            const existingDay = Array.isArray(next[dayKey]) ? [...next[dayKey]] : [];
+            const exists = existingDay.some((row) => String(row?.title || '').trim().toLowerCase() === event.title.trim().toLowerCase());
+            if (exists) {
+              next[dayKey] = existingDay;
+              continue;
+            }
+            existingDay.push({
+              id: `warriors-local-${dayKey}-${event.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`,
+              title: event.title,
+              date: dayKey,
+              time: event.time,
+              endTime: null,
+              category: 'other',
+              createdBy: currentUser || user?.email || user?.phone || 'User',
+              userId,
+              reactions: {},
+              location: event.location,
+              notes: null,
+              recurrence: null,
+            });
+            next[dayKey] = existingDay;
+          }
+          return next;
+        });
+      };
+
       if (rowsToInsert.length > 0) {
         const { error: insertError } = await supabase.from('events').insert(rowsToInsert);
         if (insertError) {
           console.error('Warriors seed insert failed:', insertError);
+          mergeWarriorsEventsIntoLocalState();
           return;
         }
         if (!cancelled) setLayerRefreshToken((prev) => prev + 1);
+      } else if ((existingRows || []).length === 0) {
+        mergeWarriorsEventsIntoLocalState();
       }
 
       localStorage.setItem(seedKey, 'done');
