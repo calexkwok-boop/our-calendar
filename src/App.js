@@ -16378,11 +16378,15 @@ function App() {
                     Select
                   </button>
                   <button
-                    onClick={() => {
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.preventDefault();
                       setIsPhotoSelectionMode(false);
                       setPhotoDeleteMode(true);
+                      setShowPhotoSortMenu(false);
                     }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300"
+                    className="min-h-[2rem] px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
                     Edit
                   </button>
