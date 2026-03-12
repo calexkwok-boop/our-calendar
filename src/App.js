@@ -2933,12 +2933,20 @@ function App() {
     const byPhone = normalizePhoneNumber(row?.shared_with_phone) && normalizePhoneNumber(row?.shared_with_phone) === normalizePhoneNumber(user?.phone);
     return byId || byEmail || byPhone;
   }) || null;
-  const canEditActiveLayer = isActiveLayerOwner || !activeShareRowForMe || activeShareRowForMe?.can_edit !== false;
+  const activeShareRole = String(activeShareRowForMe?.role || '').trim().toLowerCase() || 'member';
+  const isActiveLayerBanned = Boolean(activeShareRowForMe?.is_banned);
+  const canModerateActiveLayer = isActiveLayerOwner || activeShareRole === 'admin' || activeShareRole === 'moderator';
+  const defaultModerationStatusForNewEvent = canModerateActiveLayer ? 'approved' : 'pending';
+  const canEditActiveLayer = !isActiveLayerBanned && (isActiveLayerOwner || !activeShareRowForMe || activeShareRowForMe?.can_edit !== false);
   const normalizedActiveLayerName = String(activeLayer?.name || calendarTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const canEditEllieMilesSharedTitle = normalizedActiveLayerName === 'elliemiles' && canEditActiveLayer;
   const canEditActiveLayerTitle = isActiveLayerOwner || canEditEllieMilesSharedTitle;
   const assertCanEditActiveLayer = (actionLabel = 'make changes to this calendar') => {
     if (canEditActiveLayer) return true;
+    if (isActiveLayerBanned) {
+      alert('Access removed: you have been banned from editing this calendar.');
+      return false;
+    }
     alert(`Read-only access: you can chat and join events, but you cannot ${actionLabel}.`);
     return false;
   };
@@ -2996,6 +3004,10 @@ function App() {
           location: String(event.location || '').trim() || null,
           notes: null,
           recurrence: null,
+          moderation_status: defaultModerationStatusForNewEvent,
+          moderated_by: null,
+          moderated_at: null,
+          moderation_reason: null,
         }));
 
       if (rowsToInsert.length > 0) {
@@ -3107,6 +3119,10 @@ function App() {
           location: event.location,
           notes: null,
           recurrence: null,
+          moderation_status: defaultModerationStatusForNewEvent,
+          moderated_by: null,
+          moderated_at: null,
+          moderation_reason: null,
         }));
 
       if (rowsToInsert.length > 0) {
@@ -3252,10 +3268,25 @@ function App() {
     const shareRecipientFilter = buildShareRecipientFilter(userId, userEmail, userPhone);
     let sharedRowsQuery = supabase
       .from('shared_access')
-      .select('layer_id');
+      .select('layer_id,is_banned');
     if (shareRecipientFilter) sharedRowsQuery = sharedRowsQuery.or(shareRecipientFilter);
-    const { data: sharedRows } = await sharedRowsQuery;
-    const sharedLayerIds = Array.from(new Set((sharedRows || []).map(r => String(r?.layer_id || '')).filter(Boolean)));
+    let { data: sharedRows, error: sharedRowsErr } = await sharedRowsQuery;
+    if (sharedRowsErr && /column .*is_banned|schema cache/i.test(String(sharedRowsErr.message || ''))) {
+      let fallbackQuery = supabase
+        .from('shared_access')
+        .select('layer_id');
+      if (shareRecipientFilter) fallbackQuery = fallbackQuery.or(shareRecipientFilter);
+      const fallback = await fallbackQuery;
+      sharedRows = fallback.data || [];
+      sharedRowsErr = fallback.error || null;
+    }
+    if (sharedRowsErr) throw sharedRowsErr;
+    const sharedLayerIds = Array.from(new Set(
+      (sharedRows || [])
+        .filter((row) => !row?.is_banned)
+        .map(r => String(r?.layer_id || ''))
+        .filter(Boolean)
+    ));
 
     let sharedLayers = [];
     if (sharedLayerIds.length > 0) {
@@ -3585,6 +3616,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     createdAt: event.created_at,
     userId: event.user_id,
     isShared: String(event.user_id || '') !== String(currentUserId || ''),
+    moderationStatus: String(event?.moderation_status || 'approved').trim().toLowerCase() || 'approved',
+    moderatedBy: event?.moderated_by || null,
+    moderatedAt: event?.moderated_at || null,
+    moderationReason: String(event?.moderation_reason || '').trim() || null,
   });
 
   const loadPublicCalendars = async () => {
@@ -3898,11 +3933,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       shared_with_email: normalizeEmail(user?.email) || null,
       shared_with_phone: normalizePhoneNumber(user?.phone) || null,
       can_edit: false,
+      role: 'member',
+      is_banned: false,
     };
     let { error } = await supabase.from('shared_access').insert(payload);
-    if (error && /column .*can_edit|schema cache/i.test(String(error.message || ''))) {
+    if (error && /column .*can_edit|column .*role|column .*is_banned|schema cache/i.test(String(error.message || ''))) {
       const fallbackPayload = { ...payload };
       delete fallbackPayload.can_edit;
+      delete fallbackPayload.role;
+      delete fallbackPayload.is_banned;
       const fallback = await supabase.from('shared_access').insert(fallbackPayload);
       error = fallback.error;
     }
@@ -5477,6 +5516,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const seenHolidayKeys = new Set();
     const dedupedMergedEvents = [];
     mergedEvents.forEach((event) => {
+      const moderationStatus = String(event?.moderationStatus || 'approved').trim().toLowerCase() || 'approved';
+      const isOwnEvent = String(event?.userId || '') === String(user?.id || '');
+      const canSeeUnapproved = canModerateActiveLayer || isOwnEvent;
+      if (!event?.isHoliday) {
+        if (moderationStatus === 'pending' && !canSeeUnapproved) return;
+        if (moderationStatus === 'rejected' && !canSeeUnapproved) return;
+      }
       const normalizedTitle = normalizeHolidayTitle(event?.title);
       const isHolidayLike = normalizedTitle && isAllDayLike(event) && (
         holidayNames.has(normalizedTitle)
@@ -5544,6 +5590,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 location: event.location || null,
                 created_by: event.createdBy,
                 created_at: event.createdAt,
+                moderation_status: String(event.moderationStatus || defaultModerationStatusForNewEvent),
+                moderated_by: event.moderatedBy || null,
+                moderated_at: event.moderatedAt || null,
+                moderation_reason: event.moderationReason || null,
                 user_id: saveUserId,
                 layer_id: saveLayerId,
                 calendar_id: saveLayerId
@@ -5560,8 +5610,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               let { error } = await supabase
                 .from('events')
                 .upsert(chunk, { onConflict: 'id' });
-              if (error && /column .*description|schema cache/i.test(String(error.message || ''))) {
-                const fallbackChunk = chunk.map(({ description, ...rest }) => rest);
+              if (error && /column .*description|column .*moderation_status|column .*moderated_|schema cache/i.test(String(error.message || ''))) {
+                const fallbackChunk = chunk.map(({ description, moderation_status, moderated_by, moderated_at, moderation_reason, ...rest }) => rest);
                 const fallbackResult = await supabase
                   .from('events')
                   .upsert(fallbackChunk, { onConflict: 'id' });
@@ -5880,8 +5930,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       shared_with_email: email || null,
       shared_with_phone: phone || null,
       can_edit: false,
+      role: 'member',
+      is_banned: false,
     });
-    if (error && /column .*can_edit|schema cache/i.test(String(error.message || ''))) {
+    if (error && /column .*can_edit|column .*role|column .*is_banned|schema cache/i.test(String(error.message || ''))) {
       const fallback = await supabase.from('shared_access').insert({
         owner_id: user.id,
         layer_id: activeLayerId,
@@ -5902,6 +5954,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         shared_with_email: email || null,
         shared_with_phone: phone || null,
         can_edit: false,
+        role: 'member',
+        is_banned: false,
       }]);
       setShareEmailInput('');
       setShareMessage(`Shared! ${recipient.value} is Read only by default (you can change to Editor).`);
@@ -5962,6 +6016,133 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         : share
     )));
     setShareMessage(`${recipient.value} is now ${nextCanEdit ? 'Editor' : 'Read only'}.`);
+  };
+
+  const handleUpdateShareRole = async (identity, nextRoleRaw) => {
+    if (!isActiveLayerOwner) {
+      setShareMessage('Only the calendar owner can update member roles.');
+      return;
+    }
+    const recipient = resolveInviteRecipient(identity);
+    if (!recipient?.value) return;
+    const nextRole = ['member', 'moderator', 'admin'].includes(String(nextRoleRaw || '').toLowerCase())
+      ? String(nextRoleRaw).toLowerCase()
+      : 'member';
+    let query = supabase
+      .from('shared_access')
+      .update({ role: nextRole })
+      .eq('owner_id', user.id)
+      .eq('layer_id', activeLayerId);
+    const recipientFilter = buildShareRecipientFilter('', recipient.email, recipient.phone);
+    if (recipientFilter) query = query.or(recipientFilter);
+    const { error } = await query;
+    if (error) {
+      if (/column .*role|schema cache/i.test(String(error.message || ''))) {
+        setShareMessage("Role column missing. Add shared_access.role TEXT DEFAULT 'member'.");
+      } else {
+        setShareMessage(`Could not update role: ${error.message}`);
+      }
+      return;
+    }
+    setMyShares(prev => prev.map(share => (
+      getShareRecipientFromRow(share) === recipient.value
+        ? { ...share, role: nextRole }
+        : share
+    )));
+    setShareMessage(`${recipient.value} is now ${nextRole}.`);
+  };
+
+  const handleToggleShareBan = async (identity, shouldBan) => {
+    if (!isActiveLayerOwner) {
+      setShareMessage('Only the calendar owner can ban/unban members.');
+      return;
+    }
+    const recipient = resolveInviteRecipient(identity);
+    if (!recipient?.value) return;
+    const updates = {
+      is_banned: !!shouldBan,
+      banned_reason: shouldBan ? 'moderation_action' : null,
+      banned_at: shouldBan ? new Date().toISOString() : null,
+      banned_by: shouldBan ? user.id : null,
+      can_edit: shouldBan ? false : undefined,
+    };
+    const payload = { ...updates };
+    if (payload.can_edit === undefined) delete payload.can_edit;
+    let query = supabase
+      .from('shared_access')
+      .update(payload)
+      .eq('owner_id', user.id)
+      .eq('layer_id', activeLayerId);
+    const recipientFilter = buildShareRecipientFilter('', recipient.email, recipient.phone);
+    if (recipientFilter) query = query.or(recipientFilter);
+    let { error } = await query;
+    if (error && /column .*is_banned|column .*banned_|schema cache/i.test(String(error.message || ''))) {
+      setShareMessage('Ban columns missing. Add shared_access.is_banned / banned_reason / banned_at / banned_by.');
+      return;
+    }
+    if (error) {
+      setShareMessage(`Could not update ban status: ${error.message}`);
+      return;
+    }
+    setMyShares(prev => prev.map(share => (
+      getShareRecipientFromRow(share) === recipient.value
+        ? {
+          ...share,
+          is_banned: !!shouldBan,
+          banned_reason: shouldBan ? 'moderation_action' : null,
+          banned_at: shouldBan ? new Date().toISOString() : null,
+          banned_by: shouldBan ? user.id : null,
+          can_edit: shouldBan ? false : share?.can_edit,
+        }
+        : share
+    )));
+    setShareMessage(`${recipient.value} has been ${shouldBan ? 'banned' : 'unbanned'}.`);
+  };
+
+  const handleReviewEventModeration = async (event, nextStatusRaw) => {
+    if (!canModerateActiveLayer) {
+      alert('Only owner/admin/moderator can review pending events.');
+      return;
+    }
+    const eventId = String(event?.id || '').trim();
+    const eventDate = String(event?.date || '').trim();
+    const nextStatus = String(nextStatusRaw || '').trim().toLowerCase();
+    if (!eventId || !eventDate || !['approved', 'rejected'].includes(nextStatus)) return;
+    const payload = {
+      moderation_status: nextStatus,
+      moderated_by: user?.id || null,
+      moderated_at: new Date().toISOString(),
+      moderation_reason: nextStatus === 'rejected' ? 'rejected_by_moderator' : null,
+    };
+    let { error } = await supabase
+      .from('events')
+      .update(payload)
+      .eq('id', eventId)
+      .eq('layer_id', activeLayerId);
+    if (error && /column .*moderation_status|column .*moderated_|schema cache/i.test(String(error.message || ''))) {
+      alert('Moderation columns are missing on events. Run the moderation SQL migration first.');
+      return;
+    }
+    if (error) {
+      alert(`Could not review event: ${error.message || 'Unknown error'}`);
+      return;
+    }
+    setEvents((prev) => {
+      const next = { ...(prev || {}) };
+      const dayEvents = Array.isArray(next[eventDate]) ? [...next[eventDate]] : [];
+      next[eventDate] = dayEvents.map((row) => (
+        String(row?.id || '') === eventId
+          ? {
+            ...row,
+            moderationStatus: nextStatus,
+            moderatedBy: user?.id || null,
+            moderatedAt: payload.moderated_at,
+            moderationReason: payload.moderation_reason,
+          }
+          : row
+      ));
+      return next;
+    });
   };
 
   const primaryListOwnerId = activeLayerOwnerId;
@@ -6896,15 +7077,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       location,
       created_by: currentUser || user?.email || user?.phone || 'User',
       created_at: new Date().toISOString(),
+      moderation_status: defaultModerationStatusForNewEvent,
+      moderated_by: null,
+      moderated_at: null,
+      moderation_reason: null,
       user_id: user.id,
       layer_id: activeLayerId,
       calendar_id: activeLayerId,
     };
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('events')
       .insert(eventRow)
       .select('*')
       .single();
+    if (error && /column .*moderation_status|column .*moderated_|schema cache/i.test(String(error.message || ''))) {
+      const fallbackRow = { ...eventRow };
+      delete fallbackRow.moderation_status;
+      delete fallbackRow.moderated_by;
+      delete fallbackRow.moderated_at;
+      delete fallbackRow.moderation_reason;
+      const fallback = await supabase.from('events').insert(fallbackRow).select('*').single();
+      data = fallback.data || null;
+      error = fallback.error || null;
+    }
     if (error) {
       setChatError(`Could not create popup event: ${error.message}`);
       return;
@@ -6936,6 +7131,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         createdAt: inserted.created_at,
         userId: inserted.user_id,
         isShared: String(inserted.user_id || '') !== String(user?.id || ''),
+        moderationStatus: String(inserted?.moderation_status || defaultModerationStatusForNewEvent),
       };
       next[key] = [...curr, mapped].sort((a, b) => {
         if (!a.time) return 1;
@@ -7224,16 +7420,33 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       location: eventLocation,
       created_by: currentUser || user?.email || user?.phone || 'User',
       created_at: nowIso,
+      moderation_status: defaultModerationStatusForNewEvent,
+      moderated_by: null,
+      moderated_at: null,
+      moderation_reason: null,
       user_id: user.id,
       layer_id: activeLayerId,
       calendar_id: activeLayerId,
     }));
 
-    const { data: insertedEvents, error: eventErr } = await supabase
+    let { data: insertedEvents, error: eventErr } = await supabase
       .from('events')
       .insert(eventRows)
       .select('*')
       .order('date', { ascending: true });
+    if (eventErr && /column .*moderation_status|column .*moderated_|schema cache/i.test(String(eventErr.message || ''))) {
+      const fallbackRows = (eventRows || []).map((row) => {
+        const next = { ...row };
+        delete next.moderation_status;
+        delete next.moderated_by;
+        delete next.moderated_at;
+        delete next.moderation_reason;
+        return next;
+      });
+      const fallback = await supabase.from('events').insert(fallbackRows).select('*').order('date', { ascending: true });
+      insertedEvents = fallback.data || null;
+      eventErr = fallback.error || null;
+    }
     if (eventErr) {
       console.error('Error inserting poll winner event:', eventErr);
       setChatError(`Could not create event from poll: ${eventErr.message}`);
@@ -7266,6 +7479,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           createdAt: insertedEvent.created_at,
           userId: insertedEvent.user_id,
           isShared: String(insertedEvent.user_id || '') !== String(user?.id || ''),
+          moderationStatus: String(insertedEvent?.moderation_status || defaultModerationStatusForNewEvent),
         };
         next[dayKey] = [...dateEvents, nextEvent].sort((a, b) => {
           if (!a.time) return 1;
@@ -7418,7 +7632,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           .eq('layer_id', selectedLayerId);
         if (shareRecipientFilter) sharedWithMeQuery = sharedWithMeQuery.or(shareRecipientFilter);
         const { data: sharedWithMeRaw } = await sharedWithMeQuery;
-        const sharedWithMe = (sharedWithMeRaw || []).filter(s => String(s?.owner_id || '') !== String(userId));
+        const sharedWithMe = (sharedWithMeRaw || [])
+          .filter((s) => String(s?.owner_id || '') !== String(userId))
+          .filter((s) => !s?.is_banned);
 
         // Update shared_with_id if not yet set (first time they log in)
         if (sharedWithMe && sharedWithMe.length > 0) {
@@ -10628,6 +10844,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       location: event.location || null,
       created_by: event.createdBy || currentUser || user?.email || user?.phone || 'User',
       created_at: event.createdAt || new Date().toISOString(),
+      moderation_status: String(event?.moderationStatus || defaultModerationStatusForNewEvent),
+      moderated_by: event?.moderatedBy || null,
+      moderated_at: event?.moderatedAt || null,
+      moderation_reason: event?.moderationReason || null,
       user_id: user.id,
       layer_id: activeLayerId,
       calendar_id: activeLayerId,
@@ -10635,7 +10855,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     for (let i = 0; i < asDbRows.length; i += 250) {
       const chunk = asDbRows.slice(i, i + 250);
-      const { error } = await supabase.from('events').insert(chunk);
+      let { error } = await supabase.from('events').insert(chunk);
+      if (error && /column .*moderation_status|column .*moderated_|schema cache/i.test(String(error.message || ''))) {
+        const fallbackChunk = chunk.map((row) => {
+          const next = { ...row };
+          delete next.moderation_status;
+          delete next.moderated_by;
+          delete next.moderated_at;
+          delete next.moderation_reason;
+          return next;
+        });
+        const fallback = await supabase.from('events').insert(fallbackChunk);
+        error = fallback.error || null;
+      }
       if (error) throw new Error(error.message || 'Failed to save imported events.');
     }
 
@@ -11302,7 +11534,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         createdAt: new Date().toISOString(),
         isMultiDay: pendingEvent.isMultiDay,
         multiDayId,
-        userId: user?.id || null
+        userId: user?.id || null,
+        moderationStatus: defaultModerationStatusForNewEvent,
       };
       createdEventIds.push(eventId);
       const dateEvents = updatedEvents[dateKey] || [];
@@ -11852,6 +12085,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     return sorted;
   })();
+  const pendingModerationEvents = Object.entries(events || {})
+    .flatMap(([dateKey, dateEvents]) => (dateEvents || []).map((event) => ({ ...event, date: event?.date || dateKey })))
+    .filter((event) => !event?.isHoliday && String(event?.moderationStatus || 'approved').toLowerCase() === 'pending')
+    .sort((a, b) => {
+      const aTs = new Date(`${String(a?.date || '')}T${String(a?.time || '00:00')}`).getTime();
+      const bTs = new Date(`${String(b?.date || '')}T${String(b?.time || '00:00')}`).getTime();
+      return aTs - bTs;
+    });
   const publishTargetLayer = (layers || []).find((layer) => String(layer?.id || '') === String(publishLayerTargetId || '')) || null;
   const publishTargetIsPublic = Boolean(publishTargetLayer?.is_public);
 
@@ -13076,17 +13317,40 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       </div>
                       <div className="flex shrink-0 items-center gap-3">
                         {isActiveLayerOwner && (
-                          <button
-                            onClick={() => handleToggleShareEditPermission(recipient, !(share?.can_edit !== false))}
-                            className={`px-2 py-1 text-[11px] rounded-lg border transition-all ${
-                              share?.can_edit !== false
-                                ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
-                                : 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
-                            }`}
-                            title="Toggle edit permission"
-                          >
-                            {share?.can_edit !== false ? 'Editor' : 'Read only'}
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleToggleShareEditPermission(recipient, !(share?.can_edit !== false))}
+                              className={`px-2 py-1 text-[11px] rounded-lg border transition-all ${
+                                share?.can_edit !== false
+                                  ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
+                                  : 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
+                              }`}
+                              title="Toggle edit permission"
+                            >
+                              {share?.can_edit !== false ? 'Editor' : 'Read only'}
+                            </button>
+                            <select
+                              value={String(share?.role || 'member')}
+                              onChange={(e) => handleUpdateShareRole(recipient, e.target.value)}
+                              className="px-2 py-1 text-[11px] rounded-lg border bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600"
+                              title="Member role"
+                            >
+                              <option value="member">Member</option>
+                              <option value="moderator">Moderator</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                            <button
+                              onClick={() => handleToggleShareBan(recipient, !share?.is_banned)}
+                              className={`px-2 py-1 text-[11px] rounded-lg border transition-all ${
+                                share?.is_banned
+                                  ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
+                                  : 'bg-rose-100 dark:bg-rose-900/30 border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300'
+                              }`}
+                              title={share?.is_banned ? 'Unban member' : 'Ban member'}
+                            >
+                              {share?.is_banned ? 'Unban' : 'Ban'}
+                            </button>
+                          </>
                         )}
                         <button onClick={() => handleRemoveShare(recipient)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all" title="Remove access">
                           <X className="w-4 h-4 text-red-500" />
@@ -13097,6 +13361,45 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     })()
                   ))}
                 </div>
+              </div>
+            )}
+            {canModerateActiveLayer && (
+              <div className="mb-5 p-3 rounded-xl border bg-gray-100 dark:bg-gray-700/60" style={{ borderColor: themeAccentBorder }}>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Pending Event Approvals</h4>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {pendingModerationEvents.length} pending
+                  </span>
+                </div>
+                {pendingModerationEvents.length === 0 ? (
+                  <div className="text-xs text-gray-500 dark:text-gray-400">No pending events right now.</div>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {pendingModerationEvents.slice(0, 40).map((evt) => (
+                      <div key={`mod-${evt.id}`} className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white/80 dark:bg-gray-800 p-2">
+                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{evt.title || 'Untitled Event'}</div>
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                          {evt.date}{evt.time ? ` at ${formatTime(evt.time)}` : ''}
+                        </div>
+                        <div className="mt-1.5 flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleReviewEventModeration(evt, 'rejected')}
+                            className="px-2 py-1 text-[11px] rounded-lg bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-700"
+                          >
+                            Reject
+                          </button>
+                          <button
+                            onClick={() => handleReviewEventModeration(evt, 'approved')}
+                            className="px-2 py-1 text-[11px] rounded-lg text-white"
+                            style={themeAccentButtonStyle}
+                          >
+                            Approve
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <div className="mb-1 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700">
