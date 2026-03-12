@@ -2821,6 +2821,9 @@ function App() {
     return byId || byEmail || byPhone;
   }) || null;
   const canEditActiveLayer = isActiveLayerOwner || !activeShareRowForMe || activeShareRowForMe?.can_edit !== false;
+  const normalizedActiveLayerName = String(activeLayer?.name || calendarTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const canEditEllieMilesSharedTitle = normalizedActiveLayerName === 'elliemiles' && canEditActiveLayer;
+  const canEditActiveLayerTitle = isActiveLayerOwner || canEditEllieMilesSharedTitle;
   const assertCanEditActiveLayer = (actionLabel = 'make changes to this calendar') => {
     if (canEditActiveLayer) return true;
     alert(`Read-only access: you can chat and join events, but you cannot ${actionLabel}.`);
@@ -3591,7 +3594,7 @@ function App() {
   };
 
   const openTitleStyleModal = () => {
-    if (!isActiveLayerOwner || !activeLayerId) return;
+    if (!canEditActiveLayerTitle || !activeLayerId) return;
     setTitleNameDraft(String(calendarTitle || activeLayer?.name || '').trim());
     setTitleStyleDraft(normalizeLayerTitleStyle(activeLayer?.title_style));
     setShowTitleStyleModal(true);
@@ -3632,7 +3635,7 @@ function App() {
 
   const saveLayerTitleStyle = async () => {
     const lid = String(activeLayerId || '').trim();
-    if (!lid || !user?.id || !isActiveLayerOwner) return false;
+    if (!lid || !user?.id || !canEditActiveLayerTitle) return false;
     const trimmedTitle = String(titleNameDraft || '').trim();
     if (!trimmedTitle) {
       alert('Enter a calendar title.');
@@ -3661,12 +3664,16 @@ function App() {
       return true;
     }
     if (!updatedLayer && !error) {
+      const fallbackUpdate = await supabase
+        .from('calendar_layers')
+        .update({ title_style: normalizedStyle })
+        .eq('id', lid);
       const fallbackSelect = await supabase
         .from('calendar_layers')
         .select('*')
         .eq('id', lid)
         .maybeSingle();
-      error = fallbackSelect.error;
+      error = fallbackUpdate.error || fallbackSelect.error;
       updatedLayer = fallbackSelect.data || null;
     }
     if (error) {
@@ -4006,15 +4013,23 @@ function App() {
 
   const renameActiveLayer = async (nextName) => {
     const trimmed = String(nextName || '').trim();
-    if (!trimmed || !activeLayerId || String(activeLayerOwnerId) !== String(user?.id)) {
+    if (!trimmed || !activeLayerId || !canEditActiveLayerTitle) {
       setCalendarTitle(activeLayer?.name || 'Our Calendar');
       return;
     }
-    const { error } = await supabase
+    const primary = await supabase
       .from('calendar_layers')
       .update({ name: trimmed })
       .eq('id', activeLayerId)
       .eq('owner_id', user.id);
+    let error = primary.error;
+    if (!error && !isActiveLayerOwner) {
+      const fallback = await supabase
+        .from('calendar_layers')
+        .update({ name: trimmed })
+        .eq('id', activeLayerId);
+      error = fallback.error;
+    }
     if (error) {
       console.error('Could not rename calendar layer:', error);
       setCalendarTitle(activeLayer?.name || 'Our Calendar');
@@ -11769,12 +11784,12 @@ function App() {
                 <div className="flex items-center gap-2 min-w-0">
                   <h1
                     onClick={() => {
-                      if (!canEditActiveLayer) return;
+                      if (!canEditActiveLayerTitle) return;
                       openTitleStyleModal();
                     }}
-                    className={`text-xl sm:text-2xl font-bold transition-opacity truncate ${canEditActiveLayer ? 'cursor-pointer hover:opacity-70' : 'cursor-default opacity-90'}`}
+                    className={`text-xl sm:text-2xl font-bold transition-opacity truncate ${canEditActiveLayerTitle ? 'cursor-pointer hover:opacity-70' : 'cursor-default opacity-90'}`}
                     style={activeLayerTitleTextStyle}
-                    title={canEditActiveLayer ? 'Click to edit title and style' : 'Read-only calendar'}
+                    title={canEditActiveLayerTitle ? 'Click to edit title and style' : 'Read-only calendar'}
                   >
                     {calendarTitle}
                   </h1>
@@ -14984,7 +14999,6 @@ function App() {
               placeholder="Calendar Title"
               className="w-full bg-transparent border-0 p-0 text-2xl sm:text-3xl font-bold focus:outline-none"
               style={getLayerTitleDisplayStyle(titleStyleDraft)}
-              autoFocus
             />
           </div>
 
