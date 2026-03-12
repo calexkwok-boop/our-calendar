@@ -13000,7 +13000,8 @@ function App() {
                   value={newSharedListTitle}
                   onChange={(e) => setNewSharedListTitle(e.target.value)}
                   placeholder="Create new list title"
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
+                  className="flex-1 px-3 py-2 text-base sm:text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
+                  style={{ fontSize: '16px' }}
                   onKeyPress={(e) => e.key === 'Enter' && createSharedList()}
                 />
                 <button
@@ -13027,7 +13028,8 @@ function App() {
                         if (e.key === 'Escape') cancelEditingListGroup();
                       }}
                       onBlur={submitEditingListGroup}
-                      className="w-36 px-2 py-1 text-xs border border-purple-200 dark:border-purple-600 rounded-md bg-white dark:bg-gray-800 dark:text-white"
+                      className="w-36 px-2 py-1 text-base sm:text-xs border border-purple-200 dark:border-purple-600 rounded-md bg-white dark:bg-gray-800 dark:text-white"
+                      style={{ fontSize: '16px' }}
                     />
                     <button
                       onMouseDown={(e) => e.preventDefault()}
@@ -14970,7 +14972,8 @@ function App() {
               value={titleNameDraft}
               onChange={(e) => setTitleNameDraft(e.target.value)}
               placeholder="Calendar title"
-              className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+              className="w-full px-3 py-2 text-base sm:text-sm border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+              style={{ fontSize: '16px' }}
               autoFocus
             />
           </div>
@@ -15224,7 +15227,8 @@ function App() {
             value={newLayerName}
             onChange={e => setNewLayerName(e.target.value)}
             placeholder="e.g. Work, Friends, Family"
-            className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+            className="w-full px-3 py-2 text-base sm:text-sm border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+            style={{ fontSize: '16px' }}
             autoFocus
             onKeyPress={e => e.key === 'Enter' && createLayerCalendar()}
           />
@@ -15304,7 +15308,8 @@ function App() {
             value={newSubCalName}
             onChange={e => setNewSubCalName(e.target.value)}
             placeholder={'e.g. SF Trip \u2708\uFE0F, Cabo 2026 \uD83C\uDF34'}
-            className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+            className="w-full px-3 py-2 text-base sm:text-sm border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+            style={{ fontSize: '16px' }}
             autoFocus
             onKeyPress={e => e.key === 'Enter' && createSubCalendar()}
           />
@@ -15385,7 +15390,8 @@ function App() {
                 defaultValue={activeSubCalendar.name}
                 onBlur={e => updateSubCalTitle(e.target.value)}
                 onKeyPress={e => e.key === 'Enter' && updateSubCalTitle(e.target.value)}
-                className="font-bold text-gray-800 dark:text-white bg-transparent border-b-2 border-purple-400 text-center outline-none w-40"
+                className="font-bold text-base sm:text-sm text-gray-800 dark:text-white bg-transparent border-b-2 border-purple-400 text-center outline-none w-40"
+                style={{ fontSize: '16px' }}
               />
             ) : (
               <div
@@ -16904,6 +16910,15 @@ function App() {
         </div>
       </div>
     )}
+      <style>{`
+        @media (max-width: 640px) {
+          input,
+          textarea,
+          select {
+            font-size: 16px !important;
+          }
+        }
+      `}</style>
     </>
   );
 }
