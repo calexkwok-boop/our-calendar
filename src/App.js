@@ -84,6 +84,7 @@ const LOCKED_DEFAULT_LAYER_PAGE_THEME = Object.freeze({
   backgroundVia: '#f5f3ff',
   backgroundTo: '#eef2ff',
   coverOpacity: 0.82,
+  publicMemberPostsRequireApproval: true,
 });
 
 const createDefaultLayerTitleStyle = () => ({ ...LOCKED_DEFAULT_LAYER_TITLE_STYLE });
@@ -2948,7 +2949,12 @@ function App() {
   const canManageActiveLayer = isActiveLayerOwner || isActiveLayerAdmin;
   const canModerateActiveLayer = canManageActiveLayer || isActiveLayerModerator;
   const canMuteMembersInActiveLayer = canModerateActiveLayer;
-  const defaultModerationStatusForNewEvent = canModerateActiveLayer ? 'approved' : 'pending';
+  const activeLayerThemeForPosting = normalizeLayerPageTheme(activeLayer?.page_theme, normalizeLayerTitleStyle(activeLayer?.title_style));
+  const memberPostsRequireApproval = !Boolean(activeLayer?.is_public)
+    || activeLayerThemeForPosting.publicMemberPostsRequireApproval !== false;
+  const defaultModerationStatusForNewEvent = canModerateActiveLayer
+    ? 'approved'
+    : (memberPostsRequireApproval ? 'pending' : 'approved');
   const isShareRowForCurrentAccount = (share) => {
     if (!share) return false;
     const byId = String(share?.shared_with_id || '') && String(share?.shared_with_id || '') === String(user?.id || '');
@@ -3467,6 +3473,9 @@ function App() {
     }
     if (!parsed || typeof parsed !== 'object') parsed = {};
     const fallback = parsed?.matchTitle ? derivePageThemeFromTitleStyle(titleStyle) : DEFAULT_LAYER_PAGE_THEME;
+    const fallbackRequireApproval = typeof fallback?.publicMemberPostsRequireApproval === 'boolean'
+      ? fallback.publicMemberPostsRequireApproval
+      : DEFAULT_LAYER_PAGE_THEME.publicMemberPostsRequireApproval;
     return {
       matchTitle: parsed?.matchTitle === true,
       accent: normalizeHexColor(parsed?.accent, fallback.accent),
@@ -3474,6 +3483,11 @@ function App() {
       backgroundVia: normalizeHexColor(parsed?.backgroundVia, fallback.backgroundVia),
       backgroundTo: normalizeHexColor(parsed?.backgroundTo, fallback.backgroundTo),
       coverOpacity: Math.max(0, Math.min(1, Number(parsed?.coverOpacity ?? fallback.coverOpacity ?? DEFAULT_LAYER_PAGE_THEME.coverOpacity))),
+      publicMemberPostsRequireApproval: parsed?.publicMemberPostsRequireApproval === false
+        ? false
+        : parsed?.publicMemberPostsRequireApproval === true
+          ? true
+          : fallbackRequireApproval,
     };
   }
 
@@ -4219,6 +4233,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     mergeLayerIntoState({ ...(updatedLayer || { id: lid }), page_theme: normalizedTheme, title_style: normalizedTitleStyle });
     return true;
+  };
+
+  const setPublicMemberPostApproval = async (requireApproval) => {
+    if (!canManageActiveLayer || !activeLayerId || !activeLayer?.is_public) return;
+    const nextRequire = Boolean(requireApproval);
+    const saved = await saveLayerPageTheme(
+      { ...activeLayerPageTheme, publicMemberPostsRequireApproval: nextRequire },
+      activeLayerTitleStyle,
+    );
+    if (!saved) return;
+    setShareMessage(
+      nextRequire
+        ? 'Public members can post, but posts require moderator/admin approval.'
+        : 'Public members can post without moderation (auto-approved).',
+    );
   };
 
   const commitCoverOpacityPreview = async () => {
@@ -6049,7 +6078,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         is_banned: false,
       }]);
       setShareEmailInput('');
-      setShareMessage(`Shared! ${recipient.value} can post events, and posts from members are pending moderator/admin review.`);
+      const postingPolicyNote = activeLayer?.is_public
+        ? (memberPostsRequireApproval ? 'member posts are pending moderator/admin review.' : 'member posts are auto-approved.')
+        : 'member posts are pending moderator/admin review.';
+      setShareMessage(`Shared! ${recipient.value} can post events, and ${postingPolicyNote}`);
     }
   };
 
@@ -13430,6 +13462,37 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </p>
               )}
             </div>
+            {activeLayer?.is_public && (
+              <div className="mb-5 p-3 rounded-xl border bg-gray-50 dark:bg-gray-800/60" style={{ borderColor: themeAccentBorder }}>
+                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Public Member Posting</h4>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Choose whether member-posted events need moderator/admin approval.
+                </p>
+                <div className="mt-2 inline-flex rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+                  <button
+                    onClick={() => setPublicMemberPostApproval(true)}
+                    disabled={!canManageActiveLayer}
+                    className={`px-3 py-1.5 text-xs font-semibold transition-all ${memberPostsRequireApproval ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'} ${!canManageActiveLayer ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    style={memberPostsRequireApproval ? themeAccentButtonStyle : undefined}
+                  >
+                    Require Review
+                  </button>
+                  <button
+                    onClick={() => setPublicMemberPostApproval(false)}
+                    disabled={!canManageActiveLayer}
+                    className={`px-3 py-1.5 text-xs font-semibold transition-all ${!memberPostsRequireApproval ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'} ${!canManageActiveLayer ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    style={!memberPostsRequireApproval ? themeAccentButtonStyle : undefined}
+                  >
+                    Auto-Approve
+                  </button>
+                </div>
+                {!canManageActiveLayer && (
+                  <div className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+                    Owner/admin can change this setting.
+                  </div>
+                )}
+              </div>
+            )}
             {activeLayerId && (
               <div className="mb-5">
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Admins & Moderators</h4>
