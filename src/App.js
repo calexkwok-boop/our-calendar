@@ -14051,6 +14051,11 @@ function App() {
                   style={{
                     borderColor: themeAccentBorder,
                     backgroundColor: darkMode ? '#374151' : '#f3f4f6',
+                    boxShadow: `inset 0 0 0 9999px ${darkMode ? '#374151' : '#f3f4f6'}`,
+                    WebkitBoxShadow: `inset 0 0 0 9999px ${darkMode ? '#374151' : '#f3f4f6'}`,
+                    WebkitTextFillColor: darkMode ? '#ffffff' : '#374151',
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
                   }}
                 />
               </div>

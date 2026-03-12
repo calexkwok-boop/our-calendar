@@ -1,27 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-.agenda-search-input {
-  background-color: #f3f4f6 !important;
-  color: #374151 !important;
-}
-
-.dark .agenda-search-input {
-  background-color: #374151 !important;
-  color: #ffffff !important;
-}
-
-.agenda-search-input:-webkit-autofill,
-.agenda-search-input:-webkit-autofill:hover,
-.agenda-search-input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0px 1000px #f3f4f6 inset !important;
-  -webkit-text-fill-color: #374151 !important;
-}
-
-.dark .agenda-search-input:-webkit-autofill,
-.dark .agenda-search-input:-webkit-autofill:hover,
-.dark .agenda-search-input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0px 1000px #374151 inset !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
