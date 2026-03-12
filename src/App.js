@@ -15455,13 +15455,41 @@ function App() {
                   type="text"
                   value={subCalWeatherInput}
                   onChange={e => { setSubCalWeatherInput(e.target.value); searchWeatherLocations(e.target.value); }}
-                  onKeyDown={e => { if (e.key === 'Escape') { setSubCalWeatherExpanded(false); setSubCalWeatherSuggestions([]); } }}
+                  onKeyDown={e => {
+                    if (e.key === 'Escape') {
+                      setSubCalWeatherExpanded(false);
+                      setSubCalWeatherSuggestions([]);
+                      e.currentTarget.blur();
+                      return;
+                    }
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const firstSuggestion = subCalWeatherSuggestions[0];
+                      if (firstSuggestion) {
+                        fetchSubCalWeather(firstSuggestion);
+                      } else {
+                        setSubCalWeatherExpanded(false);
+                        setSubCalWeatherSuggestions([]);
+                      }
+                      e.currentTarget.blur();
+                    }
+                  }}
                   placeholder="Search city for weather…"
                   className="flex-1 text-xs px-2.5 py-1.5 bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
                 />
                 {subCalWeatherLoading && <span className="text-xs text-blue-400 animate-pulse shrink-0">Loading…</span>}
                 {subCalWeatherLocation && (
-                  <button onClick={() => { setSubCalWeatherExpanded(false); setSubCalWeatherInput(subCalWeatherLocation); setSubCalWeatherSuggestions([]); }} className="text-xs text-gray-400 hover:text-gray-600 shrink-0">?</button>
+                  <button
+                    onClick={() => {
+                      setSubCalWeatherExpanded(false);
+                      setSubCalWeatherInput(subCalWeatherLocation);
+                      setSubCalWeatherSuggestions([]);
+                    }}
+                    className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0"
+                    aria-label="Close weather search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
               {/* Suggestions dropdown */}
