@@ -14805,11 +14805,7 @@ function App() {
                                   {tags.slice(0, 6).map((tag) => (
                                     <span
                                       key={`${layerId}-${tag}`}
-                                      className="shrink-0 text-[10px] px-2 py-0.5 rounded-full border text-gray-700 dark:text-gray-200"
-                                      style={{
-                                        borderColor: themeAccentBorder,
-                                        backgroundColor: mixHexColors(activeLayerPageTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.76 : 0.9),
-                                      }}
+                                      className="shrink-0 text-[10px] px-2 py-0.5 rounded-full border text-gray-700 dark:text-gray-200 bg-white/80 dark:bg-gray-800 border-gray-200 dark:border-gray-600"
                                     >
                                       #{tag}
                                     </span>
@@ -14850,8 +14846,7 @@ function App() {
                                 <>
                                    <button
                                      onClick={() => openPublishLayerModal(row)}
-                                     className="px-3 py-1.5 text-xs rounded-lg text-white hover:shadow-lg transition-all"
-                                     style={themeAccentButtonStyle}
+                                     className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-700"
                                    >
                                      Edit
                                    </button>
@@ -14884,7 +14879,7 @@ function App() {
     </div>
 
     {!activeSubCalendar && (
-      <div className="fixed right-3 z-30 flex flex-row gap-2" style={{ bottom: 'calc(3.35rem + env(safe-area-inset-bottom))' }}>
+      <div className="fixed right-3 z-30 flex flex-row gap-2" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
         <button
           onClick={() => setShowAiAssistant(true)}
           className={`w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all ${useLegacyEllieMilesTheme ? 'bg-indigo-500 hover:bg-indigo-600 text-white' : 'text-white'}`}
