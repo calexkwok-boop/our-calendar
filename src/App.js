@@ -111,6 +111,14 @@ const SPORTS_TITLE_STYLE_PRESETS = [
   { name: 'Emerald Navy', mode: 'gradient', gradientFrom: '#065f46', gradientVia: '#0f766e', gradientTo: '#1e3a8a' },
 ];
 
+const CALENDAR_REPORT_REASONS = [
+  { value: 'copyright', label: 'Copyright issue' },
+  { value: 'trademark', label: 'Trademark or impersonation' },
+  { value: 'harassment', label: 'Harassment' },
+  { value: 'adult', label: 'Adult or unsafe content' },
+  { value: 'spam', label: 'Spam' },
+];
+
 
 const urlBase64ToUint8Array = (base64String) => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -2360,6 +2368,12 @@ function App() {
   const [publishLayerTargetId, setPublishLayerTargetId] = useState(null);
   const [publishLayerDescription, setPublishLayerDescription] = useState('');
   const [publishLayerTagsInput, setPublishLayerTagsInput] = useState('');
+  const [publishPolicyConfirmed, setPublishPolicyConfirmed] = useState(false);
+  const [showCalendarReportModal, setShowCalendarReportModal] = useState(false);
+  const [reportCalendarTarget, setReportCalendarTarget] = useState(null);
+  const [reportCalendarReason, setReportCalendarReason] = useState('copyright');
+  const [reportCalendarDetails, setReportCalendarDetails] = useState('');
+  const [submittingCalendarReport, setSubmittingCalendarReport] = useState(false);
   const [showLayerMediaMenu, setShowLayerMediaMenu] = useState(false);
   const [showLayerMediaCropModal, setShowLayerMediaCropModal] = useState(false);
   const [layerMediaCropKind, setLayerMediaCropKind] = useState('');
@@ -3320,7 +3334,15 @@ function App() {
     setPublishLayerDescription(String(layer?.public_description || '').trim());
     const tags = Array.isArray(layer?.public_tags) ? layer.public_tags : parsePublicTags(layer?.public_tags);
     setPublishLayerTagsInput(tags.join(', '));
+    setPublishPolicyConfirmed(Boolean(layer?.is_public));
     setShowPublishLayerModal(true);
+  };
+
+  const openCalendarReportModal = (layer) => {
+    setReportCalendarTarget(layer || null);
+    setReportCalendarReason('copyright');
+    setReportCalendarDetails('');
+    setShowCalendarReportModal(true);
   };
 
   const publishLayerCalendar = async (layerId, publish, details = {}) => {
@@ -3383,6 +3405,10 @@ function App() {
   const submitPublishLayerModal = async () => {
     const layerId = String(publishLayerTargetId || '').trim();
     if (!layerId) return;
+    if (!publishTargetIsPublic && !publishPolicyConfirmed) {
+      alert('Confirm that you have rights to publish this content before making the calendar public.');
+      return;
+    }
     const tags = parsePublicTags(publishLayerTagsInput);
     const ok = await publishLayerCalendar(layerId, true, {
       description: publishLayerDescription,
@@ -3393,6 +3419,36 @@ function App() {
     setPublishLayerTargetId(null);
     setPublishLayerDescription('');
     setPublishLayerTagsInput('');
+  };
+
+  const submitCalendarReport = async () => {
+    const layerId = String(reportCalendarTarget?.id || '').trim();
+    if (!layerId || !user?.id || submittingCalendarReport) return;
+    setSubmittingCalendarReport(true);
+    try {
+      const payload = {
+        calendar_id: layerId,
+        reported_by: user.id,
+        reason: reportCalendarReason,
+        details: String(reportCalendarDetails || '').trim() || null,
+        status: 'open',
+      };
+      const { error } = await supabase.from('calendar_reports').insert(payload);
+      if (error) {
+        if (/relation .*calendar_reports|does not exist|schema cache/i.test(String(error?.message || ''))) {
+          alert('Reporting is not set up in Supabase yet. Run the SQL migration first.');
+        } else {
+          alert(`Could not submit report: ${error.message || 'Unknown error'}`);
+        }
+        return;
+      }
+      setShowCalendarReportModal(false);
+      setReportCalendarTarget(null);
+      setReportCalendarDetails('');
+      alert('Report submitted. We can review and remove public calendars if needed.');
+    } finally {
+      setSubmittingCalendarReport(false);
+    }
   };
 
   const joinPublicCalendar = async (layer) => {
@@ -14716,6 +14772,12 @@ function App() {
                                   </button>
                                 </>
                               )}
+                              <button
+                                onClick={() => openCalendarReportModal(row)}
+                                className="px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+                              >
+                                Report
+                              </button>
                           </div>
                         </div>
                       );
@@ -15248,6 +15310,19 @@ function App() {
             placeholder="e.g. pickleball, fresno, community"
             className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
           />
+          {!publishTargetIsPublic && (
+            <label className="flex items-start gap-3 mb-4 text-sm text-gray-700 dark:text-gray-300">
+              <input
+                type="checkbox"
+                checked={publishPolicyConfirmed}
+                onChange={(e) => setPublishPolicyConfirmed(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <span>
+                I have the rights or permission to publish this content, and I understand public calendars can be reported and removed.
+              </span>
+            </label>
+          )}
           <div className="flex items-center justify-between gap-2">
             {publishTargetIsPublic ? (
               <button
@@ -15279,6 +15354,70 @@ function App() {
               {publishTargetIsPublic ? 'Save' : 'Publish'}
             </button>
             </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {showCalendarReportModal && reportCalendarTarget && (
+      <div
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        onClick={() => setShowCalendarReportModal(false)}
+      >
+        <div
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Report Calendar</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {reportCalendarTarget?.name || 'Public Calendar'}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowCalendarReportModal(false)}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+            Reason
+          </label>
+          <select
+            value={reportCalendarReason}
+            onChange={(e) => setReportCalendarReason(e.target.value)}
+            className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-3"
+          >
+            {CALENDAR_REPORT_REASONS.map((reason) => (
+              <option key={reason.value} value={reason.value}>{reason.label}</option>
+            ))}
+          </select>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+            Details
+          </label>
+          <textarea
+            value={reportCalendarDetails}
+            onChange={(e) => setReportCalendarDetails(e.target.value)}
+            placeholder="Tell us what looks wrong."
+            rows={4}
+            className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4"
+          />
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => setShowCalendarReportModal(false)}
+              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={submitCalendarReport}
+              disabled={submittingCalendarReport}
+              className="px-4 py-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-sm font-semibold disabled:opacity-60"
+            >
+              {submittingCalendarReport ? 'Submitting...' : 'Submit Report'}
+            </button>
           </div>
         </div>
       </div>

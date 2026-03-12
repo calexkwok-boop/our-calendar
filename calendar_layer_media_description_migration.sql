@@ -60,3 +60,29 @@ create policy calendar_layers_delete_own
   for delete
   to authenticated
   using (auth.uid() = owner_id);
+
+create table if not exists public.calendar_reports (
+  id uuid primary key default gen_random_uuid(),
+  calendar_id uuid not null references public.calendar_layers(id) on delete cascade,
+  reported_by uuid not null references auth.users(id) on delete cascade,
+  reason text not null,
+  details text,
+  status text not null default 'open',
+  created_at timestamptz not null default now()
+);
+
+alter table public.calendar_reports enable row level security;
+
+drop policy if exists calendar_reports_insert_authenticated on public.calendar_reports;
+create policy calendar_reports_insert_authenticated
+  on public.calendar_reports
+  for insert
+  to authenticated
+  with check (auth.uid() = reported_by);
+
+drop policy if exists calendar_reports_select_own on public.calendar_reports;
+create policy calendar_reports_select_own
+  on public.calendar_reports
+  for select
+  to authenticated
+  using (auth.uid() = reported_by);
