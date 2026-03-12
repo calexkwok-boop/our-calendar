@@ -3204,6 +3204,15 @@ function App() {
     color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent,
     borderColor: themeAccentBorder,
   };
+  const themeAccentSoftActiveButtonStyle = {
+    backgroundColor: themeAccentSoftBg,
+    color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent,
+    borderColor: 'transparent',
+  };
+  const themeAccentSoftSurfaceStyle = {
+    backgroundImage: `linear-gradient(135deg, ${themeAccentSofterBg} 0%, ${themeAccentSoftBg} 100%)`,
+    borderColor: themeAccentBorder,
+  };
   const themeAccentHeadingStyle = {
     color: activeLayerPageTheme.accent,
   };
@@ -11901,10 +11910,10 @@ function App() {
                       ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                     : showSharePanel
-                      ? 'border-transparent'
+                      ? ''
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                style={showSharePanel && !useLegacyEllieMilesTheme ? themeAccentButtonStyle : undefined}
+                style={showSharePanel && !useLegacyEllieMilesTheme ? themeAccentSoftActiveButtonStyle : undefined}
                 title="Share calendar"
               >
                 <User className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -11933,10 +11942,10 @@ function App() {
                       ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                     : showListPanel
-                      ? 'border-transparent'
+                      ? ''
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                style={showListPanel && !useLegacyEllieMilesTheme ? themeAccentButtonStyle : undefined}
+                style={showListPanel && !useLegacyEllieMilesTheme ? themeAccentSoftActiveButtonStyle : undefined}
                 title="Shared list"
               >
                 List
@@ -11955,10 +11964,10 @@ function App() {
                       ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                     : showChatPanel
-                      ? 'border-transparent'
+                      ? ''
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                style={showChatPanel && !useLegacyEllieMilesTheme ? themeAccentButtonStyle : undefined}
+                style={showChatPanel && !useLegacyEllieMilesTheme ? themeAccentSoftActiveButtonStyle : undefined}
                 title="Calendar chat"
               >
                 Chat
@@ -11983,10 +11992,10 @@ function App() {
                       ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                     : showCategoryEditor
-                      ? 'border-transparent'
+                      ? ''
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                style={showCategoryEditor && !useLegacyEllieMilesTheme ? themeAccentButtonStyle : undefined}
+                style={showCategoryEditor && !useLegacyEllieMilesTheme ? themeAccentSoftActiveButtonStyle : undefined}
               >
                 <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
@@ -12109,8 +12118,11 @@ function App() {
                 </div>
               )}
               <div
-                className={`p-4 rounded-xl border ${useLegacyEllieMilesTheme ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : ''}`}
-                style={useLegacyEllieMilesTheme ? undefined : { backgroundColor: themeAccentSofterBg, borderColor: themeAccentBorder }}
+                className="p-4 rounded-xl border"
+                style={{
+                  backgroundColor: mixHexColors(activeLayerPageTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.76 : 0.9),
+                  borderColor: mixHexColors(activeLayerPageTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.5 : 0.7),
+                }}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -12146,15 +12158,18 @@ function App() {
                       <button
                         key={item.id}
                         onClick={() => { void handleInAppNotificationClick(item); }}
-                        className={`w-full text-left rounded-lg border px-2.5 py-2 transition-colors ${
-                          useLegacyEllieMilesTheme
-                            ? (item.read ? 'bg-white/70 dark:bg-gray-800 border-indigo-100 dark:border-indigo-800' : 'bg-white dark:bg-gray-800 border-indigo-300 dark:border-indigo-600')
-                            : (item.read ? 'bg-white/70 dark:bg-gray-800' : 'bg-white dark:bg-gray-800')
-                        }`}
-                        style={useLegacyEllieMilesTheme ? undefined : { borderColor: item.read ? mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.8 : 0.85) : themeAccentBorder }}
+                        className="w-full text-left rounded-lg border px-2.5 py-2 transition-colors"
+                        style={{
+                          borderColor: item.read
+                            ? mixHexColors(activeLayerPageTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.72 : 0.82)
+                            : mixHexColors(activeLayerPageTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.5 : 0.66),
+                          backgroundColor: item.read
+                            ? mixHexColors(activeLayerPageTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.8 : 0.9)
+                            : mixHexColors(activeLayerPageTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.72 : 0.84),
+                        }}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <span className={`text-xs ${item.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-800 dark:text-gray-100 font-medium'}`}>{item.message}</span>
+                          <span className={`text-xs ${item.read ? 'text-gray-600 dark:text-gray-300' : 'text-gray-900 dark:text-gray-100 font-medium'}`}>{item.message}</span>
                           <div className="flex items-center gap-2 shrink-0">
                             {!item.read && <span className="w-2 h-2 rounded-full bg-red-500 mt-1" />}
                             {item.read && (
@@ -12542,7 +12557,7 @@ function App() {
                         ? 'border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/25 text-indigo-700 dark:text-indigo-200'
                         : ''
                     }`}
-                    style={useLegacyEllieMilesTheme ? undefined : (showChatMembersPanel ? themeAccentButtonStyle : themeAccentSoftButtonStyle)}
+                    style={useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle}
                     title="Show member status"
                   >
                     {chatOnlineMemberCount}/{chatTotalMembers} members
@@ -13128,7 +13143,7 @@ function App() {
 
             <div
               className={`p-3 rounded-xl border mb-3 ${useLegacyEllieMilesTheme ? 'bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700 border-purple-100 dark:border-gray-600' : ''}`}
-              style={useLegacyEllieMilesTheme ? undefined : { backgroundColor: themeAccentSofterBg, borderColor: themeAccentBorder }}
+              style={useLegacyEllieMilesTheme ? undefined : themeAccentSoftSurfaceStyle}
             >
               <div className="flex flex-col sm:flex-row gap-2">
                 <input
@@ -13457,9 +13472,9 @@ function App() {
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                   useLegacyEllieMilesTheme
                     ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'
-                    : 'text-white hover:shadow-lg'
+                    : 'hover:shadow-md'
                 }`}
-                style={useLegacyEllieMilesTheme ? undefined : themeAccentButtonStyle}
+                style={useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle}
               >
                 Open Today
               </button>
