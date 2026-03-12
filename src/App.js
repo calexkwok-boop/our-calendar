@@ -13390,6 +13390,31 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </div>
               </div>
             )}
+            {!activeLayer?.is_public && (
+              <div className="mb-5">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Members</h4>
+                <div className="space-y-2">
+                  {(() => {
+                    const members = (myShares || []).filter((share) => String(share?.role || 'member').toLowerCase() === 'member');
+                    if (members.length === 0) {
+                      return <div className="text-xs text-gray-500 dark:text-gray-400">No members added yet.</div>;
+                    }
+                    return members.map((share, i) => {
+                      const recipient = getShareRecipientFromRow(share);
+                      if (!recipient) return null;
+                      return (
+                        <div key={`member-${i}`} className="flex items-center justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
+                          <div className="min-w-0 text-sm text-gray-700 dark:text-gray-200 truncate">{recipient}</div>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                            member
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            )}
             {canModerateActiveLayer && (
               <div className="mb-5 p-3 rounded-xl border bg-gray-100 dark:bg-gray-700/60" style={{ borderColor: themeAccentBorder }}>
                 <div className="flex items-center justify-between gap-2 mb-2">
