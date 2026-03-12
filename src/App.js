@@ -14046,7 +14046,7 @@ function App() {
                   className="w-full rounded-lg border"
                   style={{
                     borderColor: themeAccentBorder,
-                    backgroundColor: darkMode ? '#374151' : '#f3f4f6',
+                    backgroundColor: darkMode ? '#1f2937' : '#e5e7eb',
                   }}
                 >
                   <input
@@ -14059,7 +14059,8 @@ function App() {
                       backgroundColor: 'transparent',
                       boxShadow: 'none',
                       WebkitBoxShadow: 'none',
-                      WebkitTextFillColor: darkMode ? '#ffffff' : '#374151',
+                      WebkitTextFillColor: darkMode ? '#f3f4f6' : '#374151',
+                      color: darkMode ? '#f3f4f6' : '#374151',
                       appearance: 'none',
                       WebkitAppearance: 'none',
                     }}
