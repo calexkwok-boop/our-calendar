@@ -605,10 +605,51 @@ function App() {
     const current = String(user?.email || currentUser || '').trim().toLowerCase();
     if (current && raw.toLowerCase() === current) return 'You';
     if (!raw.includes('@')) return raw;
-    const local = raw.split('@')[0] || raw;
-    const cleaned = local.replace(/[._-]+/g, ' ').trim();
-    if (!cleaned) return raw;
-    return cleaned.replace(/\b\w/g, c => c.toUpperCase());
+    return String(raw.split('@')[0] || raw).trim() || raw;
+  };
+  const isLikelyRawIdentity = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return true;
+    if (raw.includes('@')) return true;
+    if (/^\+?\d[\d\s()-]{6,}$/.test(raw)) return true;
+    return false;
+  };
+  const resolveHandleLikeLabel = (value, userId = '') => {
+    const raw = String(value || '').trim();
+    const uid = String(userId || '').trim();
+    if (!raw && !uid) return 'Member';
+    if (uid && String(user?.id || '').trim() === uid) return currentUser || 'You';
+    const myEmail = normalizeEmail(user?.email);
+    const myPhone = normalizePhoneNumber(user?.phone);
+    if (raw && (
+      normalizeEmail(raw) === myEmail
+      || normalizePhoneNumber(raw) === myPhone
+      || raw.toLowerCase() === String(currentUser || '').trim().toLowerCase()
+    )) {
+      return currentUser || 'You';
+    }
+    if (!isLikelyRawIdentity(raw)) return raw;
+
+    const knownFromMembers = (chatMembers || []).find((member) => {
+      const memberUid = String(member?.userId || '').trim();
+      const memberLabel = String(member?.label || '').trim();
+      if (!memberLabel || isLikelyRawIdentity(memberLabel)) return false;
+      if (uid && memberUid) return memberUid === uid;
+      return false;
+    });
+    if (knownFromMembers?.label) return String(knownFromMembers.label).trim();
+
+    const knownFromChat = (calendarChatMessages || []).find((row) => {
+      const rowUid = String(row?.user_id || '').trim();
+      const rowLabel = String(row?.created_by || '').trim();
+      if (!rowLabel || isLikelyRawIdentity(rowLabel)) return false;
+      if (uid && rowUid) return rowUid === uid;
+      return false;
+    });
+    if (knownFromChat?.created_by) return String(knownFromChat.created_by).trim();
+
+    if (raw.includes('@')) return String(raw.split('@')[0] || raw).trim() || raw;
+    return raw || 'Member';
   };
   const getVenmoHandleForIdentity = (identity) => {
     const key = normalizeIdentityKey(identity);
@@ -13664,7 +13705,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     ];
                     return rows.map((row) => {
                       const role = String(row?.role || 'member').toLowerCase();
-                      const recipient = String(row?.label || '').trim();
+                      const recipient = resolveHandleLikeLabel(String(row?.label || '').trim());
                       if (!recipient) return null;
                       return (
                         <div key={row.id} className="flex items-center justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
@@ -13706,7 +13747,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       return <div className="text-xs text-gray-500 dark:text-gray-400">No members added yet.</div>;
                     }
                     return members.map((share, i) => {
-                      const recipient = getShareRecipientFromRow(share);
+                      const recipient = resolveHandleLikeLabel(getShareRecipientFromRow(share));
                       if (!recipient) return null;
                       return (
                         <div key={`member-${i}`} className="flex items-center justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
@@ -13819,7 +13860,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                             rel="noopener noreferrer"
                             className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800 hover:border-emerald-400"
                           >
-                            <span className="text-gray-700 dark:text-gray-200 truncate">📍 {loc.name || loc.email || loc.userId}</span>
+                            <span className="text-gray-700 dark:text-gray-200 truncate">📍 {resolveHandleLikeLabel(loc.name || loc.email || loc.userId, loc.userId)}</span>
                             <span className="text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
                           </a>
                         ))}
@@ -13859,9 +13900,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   <div className="mt-2 w-full max-w-xs rounded-xl border bg-gray-100 dark:bg-gray-800 shadow-md p-2" style={{ borderColor: themeAccentBorder }}>
                     {chatMembersWithStatus.map((member, idx) => {
                       const online = Boolean(member?.userId && chatPresenceByUserId[String(member.userId)]);
+                      const memberLabel = resolveHandleLikeLabel(member?.label || 'Member', member?.userId);
                       return (
                         <div key={String(member?.key || `${member?.label || 'member'}-${idx}`)} className="flex items-center justify-between gap-2 px-1.5 py-1">
-                          <span className="text-xs text-gray-700 dark:text-gray-200 truncate">{member?.label || 'Member'}</span>
+                          <span className="text-xs text-gray-700 dark:text-gray-200 truncate">{memberLabel}</span>
                           <span className={`inline-block w-2 h-2 rounded-full ${online ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
                         </div>
                       );
@@ -13880,7 +13922,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               ) : (
                 calendarChatMessages.map((msg) => {
                   const mine = String(msg?.user_id || '') === String(user?.id || '');
-                  const who = String(msg?.created_by || msg?.email || 'Member');
+                  const who = resolveHandleLikeLabel(String(msg?.created_by || msg?.email || 'Member'), msg?.user_id);
                   const poll = parsePollMessage(msg?.message);
                   const popupInvite = poll ? null : parsePopupInviteMessage(msg?.message);
                   const textPayload = (poll || popupInvite) ? null : parseTextChatMessage(msg?.message);
@@ -17346,7 +17388,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </span>
               {subCalMembers.map(m => (
                 <span key={m.identity || m.email || m.phone} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
-                  {m.identity || m.email || m.phone}
+                  {resolveHandleLikeLabel(m.identity || m.email || m.phone)}
                   <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200">
                     {getRecipientKindLabel(m.identity || m.email || m.phone)}
                   </span>
@@ -18428,7 +18470,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                           rel="noopener noreferrer"
                           className="flex items-center justify-between text-sm px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 hover:border-emerald-300 dark:hover:border-emerald-700"
                         >
-                          <span className="text-gray-700 dark:text-gray-200 truncate">📍 {loc.name || loc.email || loc.userId}</span>
+                          <span className="text-gray-700 dark:text-gray-200 truncate">📍 {resolveHandleLikeLabel(loc.name || loc.email || loc.userId, loc.userId)}</span>
                           <span className="text-xs text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
                         </a>
                       ))}
