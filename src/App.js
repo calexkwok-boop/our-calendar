@@ -220,6 +220,7 @@ function App() {
   const [showThemeMatchPrompt, setShowThemeMatchPrompt] = useState(false);
   const [pendingThemeMatchStyle, setPendingThemeMatchStyle] = useState(null);
   const [coverOpacityPreview, setCoverOpacityPreview] = useState(null);
+  const [coverHeaderControlsVisible, setCoverHeaderControlsVisible] = useState(true);
   const coverOpacityPreviewValueRef = useRef(null);
   const coverOpacityPreviewRafRef = useRef(null);
   const [user, setUser] = useState(null);
@@ -2848,6 +2849,9 @@ function App() {
     };
   }, [showTitleStyleModal]);
   const activeLayer = layers.find(layer => layer.id === activeLayerId) || null;
+  useEffect(() => {
+    setCoverHeaderControlsVisible(!activeLayer?.header_bg_url);
+  }, [activeLayerId, activeLayer?.header_bg_url]);
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
   const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
   const activeShareRowForMe = (sharedCalendars || []).find((row) => {
@@ -3171,6 +3175,8 @@ function App() {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '');
   const useLegacyEllieMilesTheme = activeLayerNameKey === 'elliemiles';
+  const hasActiveCoverPhoto = Boolean(activeLayer?.header_bg_url);
+  const isCoverTapToRevealMode = hasActiveCoverPhoto && !coverHeaderControlsVisible;
   const effectiveCoverOpacity = coverOpacityPreview == null
     ? activeLayerPageTheme.coverOpacity
     : Math.max(0, Math.min(1, Number(coverOpacityPreview)));
@@ -11874,6 +11880,16 @@ function App() {
             }
             : undefined}
         >
+          {isCoverTapToRevealMode ? (
+            <button
+              type="button"
+              onClick={() => setCoverHeaderControlsVisible(true)}
+              className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/20 text-white text-sm sm:text-base font-semibold tracking-wide"
+            >
+              Tap cover photo to show controls
+            </button>
+          ) : (
+            <>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="relative shrink-0">
@@ -12114,6 +12130,8 @@ function App() {
             </button>
           </div>
         )}
+            </>
+          )}
         </div>
 
         {/* Notification Settings Panel */}
