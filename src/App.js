@@ -11826,11 +11826,15 @@ function App() {
         if (file && kind) beginLayerMediaCrop(kind, file);
       }}
     />
-    <div className="min-h-screen p-2 sm:p-3 pb-24" style={themedPageBackgroundStyle}>
+    <div className="min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24" style={themedPageBackgroundStyle}>
       <div className="max-w-6xl mx-auto">
         <div
           ref={layerHeaderCardRef}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4"
+          className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 ${
+            activeLayer?.header_bg_url
+              ? 'p-4 sm:p-5 min-h-[210px] sm:min-h-[250px]'
+              : 'p-3 sm:p-4'
+          }`}
           style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
             ? {
               backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
@@ -11907,12 +11911,10 @@ function App() {
               </button>
               <button
                 onClick={() => setShowNotificationSettings(!showNotificationSettings)}
-                className={`relative p-2 rounded-xl transition-all duration-200 ${
+                className={`relative p-2 rounded-xl transition-all duration-200 bg-gray-100 dark:bg-gray-700 ${
                   notificationsEnabled
-                    ? showNotificationSettings
-                      ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200'
-                      : 'bg-green-100 dark:bg-green-100 text-green-700 dark:text-green-700'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                    ? 'text-green-700 dark:text-green-300'
+                    : 'text-gray-600 dark:text-gray-300'
                 }`}
                 title={notificationsEnabled ? 'Notifications enabled' : 'Enable notifications'}
               >
@@ -14329,6 +14331,9 @@ function App() {
                                   const isActiveLayer = String(layer.id) === String(activeLayerId);
                                   const isOwnedLayer = String(layer?.owner_id) === String(user?.id);
                                   const isPublicLayer = Boolean(layer?.is_public);
+                                  const rowTheme = normalizeLayerPageTheme(layer?.page_theme, layer?.title_style);
+                                  const rowAccentBorder = mixHexColors(rowTheme.accent, '#ffffff', darkMode ? 0.5 : 0.62);
+                                  const rowSoftBg = mixHexColors(rowTheme.accent, '#ffffff', darkMode ? 0.78 : 0.82);
                                   const canDeleteLayer = isOwnedLayer && layers.length > 1;
                                   const canLeaveLayer = !isOwnedLayer;
                                   const canSwipeLayerAction = canDeleteLayer || canLeaveLayer;
@@ -14382,8 +14387,14 @@ function App() {
                                           setBottomNavTab('home');
                                           setShowDateDetailModal(false);
                                         }}
-                                        className={`relative z-10 w-full text-left p-3 rounded-xl border transition-all ${isActiveLayer ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300'}`}
-                                        style={{ transform: `translateX(${layerRowOffset}px)`, transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease' }}
+                                        className={`relative z-10 w-full text-left p-3 rounded-xl border transition-all ${isActiveLayer ? '' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}
+                                        style={{
+                                          transform: `translateX(${layerRowOffset}px)`,
+                                          transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease',
+                                          ...(isActiveLayer
+                                            ? { borderColor: rowAccentBorder, backgroundColor: rowSoftBg }
+                                            : {}),
+                                        }}
                                       >
                                         <div className="flex items-center justify-between gap-2">
                                           <div className="min-w-0">
@@ -14407,7 +14418,17 @@ function App() {
                                             >
                                               ⋮⋮
                                             </span>
-                                            {isActiveLayer && <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-indigo-500 text-white">Active</span>}
+                                            {isActiveLayer && (
+                                              <span
+                                                className="text-[10px] font-semibold px-2 py-1 rounded-full"
+                                                style={{
+                                                  backgroundColor: rowTheme.accent,
+                                                  color: isLightHexColor(rowTheme.accent) ? '#111111' : '#ffffff',
+                                                }}
+                                              >
+                                                Active
+                                              </span>
+                                            )}
                                             {isOwnedLayer && (
                                               <button
                                                 onClick={(e) => {
@@ -14672,7 +14693,8 @@ function App() {
                   <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Explore Calendars</h3>
                   <button
                     onClick={loadPublicCalendars}
-                    className="px-3 py-1.5 text-xs rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-all"
+                    className="px-3 py-1.5 text-xs rounded-lg transition-all"
+                    style={themeAccentSoftButtonStyle}
                   >
                     Refresh
                   </button>
@@ -14705,7 +14727,11 @@ function App() {
                       const description = String(row?.public_description || '').trim();
                       const isExpanded = Boolean(expandedExploreDescriptions[layerId]);
                       return (
-                        <div key={`explore-${layerId}`} className="rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-900/20 p-3">
+                        <div
+                          key={`explore-${layerId}`}
+                          className="rounded-xl border p-3"
+                          style={{ borderColor: themeAccentBorder, backgroundColor: themeAccentSofterBg }}
+                        >
                           <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{row?.name || 'Public Calendar'}</div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -14714,12 +14740,13 @@ function App() {
                               {description && (
                                 <div className="mt-1">
                                   {!isExpanded && (
-                                    <button
-                                      onClick={() => setExpandedExploreDescriptions(prev => ({ ...prev, [layerId]: true }))}
-                                      className="text-[11px] font-medium text-indigo-600 dark:text-indigo-300 hover:underline"
-                                    >
-                                      Show description
-                                    </button>
+                                      <button
+                                        onClick={() => setExpandedExploreDescriptions(prev => ({ ...prev, [layerId]: true }))}
+                                        className="text-[11px] font-medium hover:underline"
+                                        style={themeAccentTextStyle}
+                                      >
+                                        Show description
+                                      </button>
                                   )}
                                   {isExpanded && (
                                     <>
@@ -14728,7 +14755,8 @@ function App() {
                                       </div>
                                       <button
                                         onClick={() => setExpandedExploreDescriptions(prev => ({ ...prev, [layerId]: false }))}
-                                        className="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-300 hover:underline"
+                                        className="mt-1 text-[11px] font-medium hover:underline"
+                                        style={themeAccentTextStyle}
                                       >
                                         Hide description
                                       </button>
@@ -14739,7 +14767,11 @@ function App() {
                               {tags.length > 0 && (
                                 <div className="mt-1.5 w-full max-w-full flex gap-1 overflow-x-auto whitespace-nowrap pb-1 pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                   {tags.slice(0, 6).map((tag) => (
-                                    <span key={`${layerId}-${tag}`} className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-white/90 dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700">
+                                    <span
+                                      key={`${layerId}-${tag}`}
+                                      className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-white/90 dark:bg-gray-700 border"
+                                      style={{ color: activeLayerPageTheme.accent, borderColor: themeAccentBorder }}
+                                    >
                                       #{tag}
                                     </span>
                                   ))}
@@ -15532,7 +15564,7 @@ function App() {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">New Sub-Calendar</h3>
+            <h3 className="text-lg font-bold" style={themeAccentHeadingStyle}>New Sub-Calendar</h3>
             <button onClick={() => setShowSubCalendarModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -15545,14 +15577,15 @@ function App() {
             value={newSubCalName}
             onChange={e => setNewSubCalName(e.target.value)}
             placeholder={'e.g. SF Trip \u2708\uFE0F, Cabo 2026 \uD83C\uDF34'}
-            className="w-full px-3 py-2 text-base sm:text-sm border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
-            style={{ fontSize: '16px' }}
+            className="w-full px-3 py-2 text-base sm:text-sm border-2 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2"
+            style={{ fontSize: '16px', borderColor: themeAccentBorder }}
             autoFocus
             onKeyPress={e => e.key === 'Enter' && createSubCalendar()}
           />
           <button
             onClick={createSubCalendar}
-            className="w-full py-2.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl font-medium"
+            className="w-full py-2.5 text-white rounded-xl font-medium"
+            style={themeAccentButtonStyle}
           >Create Sub-Calendar</button>
         </div>
       </div>
