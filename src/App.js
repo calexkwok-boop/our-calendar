@@ -12397,7 +12397,7 @@ function App() {
                 style={themeAccentSoftButtonStyle}
                 title="Import sports schedule"
               >
-                Sports
+                Import
               </button>
               <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
@@ -15649,7 +15649,7 @@ function App() {
 
           <div className="mb-4">
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
-              Sports
+              Import
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {SPORTS_TITLE_STYLE_PRESETS.map((preset) => (
