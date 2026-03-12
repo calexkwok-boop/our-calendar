@@ -11925,8 +11925,8 @@ function App() {
                 className="absolute inset-0 z-10 rounded-2xl"
                 aria-label="Show cover controls"
               />
-              <div className="absolute inset-x-4 sm:inset-x-5 bottom-4 sm:bottom-5 z-20 pointer-events-none space-y-2">
-                <div className="flex items-center justify-between gap-2">
+              <div className="absolute inset-x-4 sm:inset-x-5 bottom-4 sm:bottom-5 z-20 pointer-events-none space-y-2 relative pb-5">
+                <div className="flex items-center gap-2">
                   <div className="flex items-center gap-3 min-w-0">
                     {activeLayer?.icon_url ? (
                       <img
@@ -11946,13 +11946,13 @@ function App() {
                       {calendarTitle}
                     </h1>
                   </div>
-                  <span className="px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-black/35">
-                    Tap to show controls
-                  </span>
                 </div>
                 <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
                   {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </h2>
+                <span className="absolute right-0 -bottom-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-black/35">
+                  Tap to show controls
+                </span>
               </div>
             </>
           ) : (
