@@ -14722,10 +14722,11 @@ function App() {
                   <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Explore Calendars</h3>
                   <button
                     onClick={loadPublicCalendars}
-                    className="px-3 py-1.5 text-xs rounded-lg transition-all"
+                    disabled={exploreLoading}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     style={themeAccentSoftButtonStyle}
                   >
-                    Refresh
+                    {exploreLoading ? 'Refreshing...' : 'Refresh'}
                   </button>
                 </div>
                 <input
@@ -14733,7 +14734,8 @@ function App() {
                   value={exploreSearch}
                   onChange={(e) => setExploreSearch(e.target.value)}
                   placeholder="Search by name, tag, or description"
-                  className="w-full px-3 py-2 mb-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                  className="w-full px-3 py-2 mb-3 border-2 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                  style={{ borderColor: themeAccentBorder }}
                 />
                 {exploreLoading && (
                   <div className="text-sm text-gray-500 dark:text-gray-400">Loading public calendars...</div>
@@ -14758,8 +14760,11 @@ function App() {
                       return (
                         <div
                           key={`explore-${layerId}`}
-                          className="rounded-xl border p-3"
-                          style={{ borderColor: themeAccentBorder, backgroundColor: themeAccentSofterBg }}
+                          className="rounded-xl border p-3 shadow-sm"
+                          style={{
+                            borderColor: themeAccentBorder,
+                            backgroundImage: `linear-gradient(135deg, ${themeAccentSofterBg} 0%, ${themeAccentSoftBg} 100%)`,
+                          }}
                         >
                           <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{row?.name || 'Public Calendar'}</div>
@@ -14798,8 +14803,12 @@ function App() {
                                   {tags.slice(0, 6).map((tag) => (
                                     <span
                                       key={`${layerId}-${tag}`}
-                                      className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-white/90 dark:bg-gray-700 border"
-                                      style={{ color: activeLayerPageTheme.accent, borderColor: themeAccentBorder }}
+                                      className="shrink-0 text-[10px] px-2 py-0.5 rounded-full border"
+                                      style={{
+                                        ...themeAccentTextStyle,
+                                        borderColor: themeAccentBorder,
+                                        backgroundColor: mixHexColors(activeLayerPageTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.76 : 0.9),
+                                      }}
                                     >
                                       #{tag}
                                     </span>
@@ -14807,7 +14816,7 @@ function App() {
                                 </div>
                               )}
                           </div>
-                          <div className="mt-2 flex items-center justify-end gap-2">
+                          <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
                               {isJoined && (
                                   <button
                                     onClick={() => {
