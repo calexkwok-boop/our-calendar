@@ -306,6 +306,7 @@ function App() {
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
   const [showPhotoSortMenu, setShowPhotoSortMenu] = useState(false);
   const [showSubCalInviteModal, setShowSubCalInviteModal] = useState(false);
+  const [showSubCalNotesModal, setShowSubCalNotesModal] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUploadMessage, setPhotoUploadMessage] = useState('');
   const [photoUploadError, setPhotoUploadError] = useState(false);
@@ -15365,6 +15366,138 @@ function App() {
       </div>
     )}
 
+    {showSubCalNotesModal && activeSubCalendar && (
+      <div
+        className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center"
+        onClick={() => setShowSubCalNotesModal(false)}
+      >
+        <div
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md max-h-[80vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-bold text-yellow-700 dark:text-yellow-300">Reminders & Notes</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Notes for {activeSubCalendar.name}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowSubCalNotesModal(false)}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              aria-label="Close reminders and notes"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-xl border border-yellow-300 dark:border-yellow-700">
+            <div className="space-y-1.5 mb-2">
+              {subCalNotes.length === 0 && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 italic">No reminders yet</p>
+              )}
+              {subCalNotes.map((note, noteIdx) => (
+                <div
+                  key={note.id}
+                  draggable
+                  onDragStart={() => setDraggedNoteId(note.id)}
+                  onDragOver={e => { e.preventDefault(); }}
+                  onDrop={() => {
+                    if (!draggedNoteId || draggedNoteId === note.id) return;
+                    const from = subCalNotes.findIndex(n => n.id === draggedNoteId);
+                    const to = noteIdx;
+                    const newNotes = [...subCalNotes];
+                    const [moved] = newNotes.splice(from, 1);
+                    newNotes.splice(to, 0, moved);
+                    setSubCalNotes(newNotes);
+                    setDraggedNoteId(null);
+                    newNotes.forEach((n, i) => {
+                      supabase.from('sub_calendar_notes').update({ created_at: new Date(Date.now() - (newNotes.length - i) * 1000).toISOString() }).eq('id', n.id);
+                    });
+                  }}
+                  onDragEnd={() => setDraggedNoteId(null)}
+                  className={`bg-yellow-50 dark:bg-gray-700 rounded-lg border border-yellow-300 dark:border-yellow-700 overflow-hidden transition-opacity ${draggedNoteId === note.id ? 'opacity-40' : 'opacity-100'}`}
+                >
+                  <div className="flex items-center gap-2 px-2.5 py-2">
+                    <span className="text-gray-300 dark:text-gray-500 cursor-grab active:cursor-grabbing shrink-0 select-none text-sm">::</span>
+                    <button onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)} className="text-xs text-gray-400 shrink-0 w-3">
+                      {expandedNote === note.id ? '−' : '+'}
+                    </button>
+                    <span className="text-xs">📝</span>
+                    {editingNote === note.id ? (
+                      <input
+                        autoFocus
+                        defaultValue={note.text}
+                        onBlur={e => updateNoteText(note.id, e.target.value)}
+                        onKeyPress={e => e.key === 'Enter' && updateNoteText(note.id, e.target.value)}
+                        className="flex-1 text-base sm:text-xs px-1.5 py-0.5 border border-purple-300 rounded dark:bg-gray-600 dark:text-white"
+                        style={{ fontSize: '16px' }}
+                      />
+                    ) : (
+                      <span
+                        className="flex-1 text-xs text-gray-700 dark:text-gray-300 cursor-pointer hover:text-purple-600"
+                        onClick={() => setEditingNote(note.id)}
+                      >{note.text}</span>
+                    )}
+                    {(note.checklist || []).length > 0 && (
+                      <span className="text-xs text-gray-400">
+                        {(note.checklist || []).filter(i => i.done).length}/{(note.checklist || []).length}
+                      </span>
+                    )}
+                    <button onClick={() => deleteSubCalNote(note.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {expandedNote === note.id && (
+                    <div className="px-3 pb-2.5 space-y-1.5 border-t border-yellow-200 dark:border-yellow-800 pt-2">
+                      {(note.checklist || []).map(item => (
+                        <div key={item.id} className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleChecklistItem(note.id, item.id)}
+                            className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
+                          >
+                            {item.done && <span className="text-xs leading-none">✓</span>}
+                          </button>
+                          <span className={`text-xs flex-1 ${item.done ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>{item.text}</span>
+                          <button onClick={() => deleteChecklistItem(note.id, item.id)} className="text-gray-300 hover:text-red-400 text-xs">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      <div className="flex gap-1.5 mt-1">
+                        <input
+                          type="text"
+                          value={newChecklistItem}
+                          onChange={e => setNewChecklistItem(e.target.value)}
+                          onKeyPress={e => { if (e.key === 'Enter') { addChecklistItem(note.id, newChecklistItem); } }}
+                          placeholder="Add item..."
+                          className="flex-1 px-2 py-1 text-base sm:text-xs border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg"
+                          style={{ fontSize: '16px' }}
+                        />
+                        <button onClick={() => addChecklistItem(note.id, newChecklistItem)} className="px-2 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs">+</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newNote}
+                onChange={e => setNewNote(e.target.value)}
+                onKeyPress={e => e.key === 'Enter' && addSubCalNote()}
+                placeholder="Add a note..."
+                className="flex-1 px-2.5 py-1.5 text-base sm:text-xs border border-yellow-300 dark:border-yellow-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-yellow-400"
+                style={{ fontSize: '16px' }}
+              />
+              <button onClick={addSubCalNote} className="px-2.5 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs font-medium">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* -- Sub-Calendar Full View -- */}
     {activeSubCalendar && (
       <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden">
@@ -15517,6 +15650,23 @@ function App() {
               className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-500 flex items-center gap-1"
             >🌤️ Add trip weather</button>
           )}
+          <button
+            onClick={() => setShowSubCalNotesModal(true)}
+            className="ml-auto shrink-0 w-9 h-9 rounded-xl border border-yellow-300 dark:border-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center relative hover:bg-yellow-200 dark:hover:bg-yellow-900/45 transition-colors"
+            title="Open reminders and notes"
+            aria-label="Open reminders and notes"
+          >
+            <span className="relative block w-4 h-5 rounded-[3px] bg-yellow-300 dark:bg-yellow-200 shadow-sm">
+              <span className="absolute left-0 right-0 top-[4px] border-t border-yellow-700/40" />
+              <span className="absolute left-0 right-0 top-[8px] border-t border-yellow-700/40" />
+              <span className="absolute left-0 right-0 top-[12px] border-t border-yellow-700/40" />
+            </span>
+            {subCalNotes.length > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[1rem] h-[1rem] px-1 rounded-full bg-yellow-500 text-white text-[9px] leading-none font-bold flex items-center justify-center">
+                {subCalNotes.length}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Members (quick access near top) */}
@@ -15700,109 +15850,6 @@ function App() {
                   </div>
                 </div>
               )}
-
-              {/* Notes / Reminders */}
-              <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-xl border border-yellow-300 dark:border-yellow-700">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📝 Reminders &amp; Notes</h4>
-                <div className="space-y-1.5 mb-2">
-                  {subCalNotes.length === 0 && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 italic">No reminders yet</p>
-                  )}
-                  {subCalNotes.map((note, noteIdx) => (
-                    <div
-                      key={note.id}
-                      draggable
-                      onDragStart={() => setDraggedNoteId(note.id)}
-                      onDragOver={e => { e.preventDefault(); }}
-                      onDrop={() => {
-                        if (!draggedNoteId || draggedNoteId === note.id) return;
-                        const from = subCalNotes.findIndex(n => n.id === draggedNoteId);
-                        const to = noteIdx;
-                        const newNotes = [...subCalNotes];
-                        const [moved] = newNotes.splice(from, 1);
-                        newNotes.splice(to, 0, moved);
-                        setSubCalNotes(newNotes);
-                        setDraggedNoteId(null);
-                        // Persist order via timestamps
-                        newNotes.forEach((n, i) => {
-                          supabase.from('sub_calendar_notes').update({ created_at: new Date(Date.now() - (newNotes.length - i) * 1000).toISOString() }).eq('id', n.id);
-                        });
-                      }}
-                      onDragEnd={() => setDraggedNoteId(null)}
-                      className={`bg-yellow-50 dark:bg-gray-700 rounded-lg border border-yellow-300 dark:border-yellow-700 overflow-hidden transition-opacity ${draggedNoteId === note.id ? 'opacity-40' : 'opacity-100'}`}
-                    >
-                      <div className="flex items-center gap-2 px-2.5 py-2">
-                        {/* Drag handle */}
-                        <span className="text-gray-300 dark:text-gray-500 cursor-grab active:cursor-grabbing shrink-0 select-none text-sm">?</span>
-                        <button onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)} className="text-xs text-gray-400 shrink-0 w-3">
-                          {expandedNote === note.id ? '?' : '?'}
-                        </button>
-                        <span className="text-xs">??</span>
-                        {editingNote === note.id ? (
-                          <input
-                            autoFocus
-                            defaultValue={note.text}
-                            onBlur={e => updateNoteText(note.id, e.target.value)}
-                            onKeyPress={e => e.key === 'Enter' && updateNoteText(note.id, e.target.value)}
-                            className="flex-1 text-xs px-1.5 py-0.5 border border-purple-300 rounded dark:bg-gray-600 dark:text-white"
-                          />
-                        ) : (
-                          <span
-                            className="flex-1 text-xs text-gray-700 dark:text-gray-300 cursor-pointer hover:text-purple-600"
-                            onClick={() => setEditingNote(note.id)}
-                          >{note.text}</span>
-                        )}
-                        {(note.checklist || []).length > 0 && (
-                          <span className="text-xs text-gray-400">
-                            {(note.checklist || []).filter(i => i.done).length}/{(note.checklist || []).length}
-                          </span>
-                        )}
-                        <button onClick={() => deleteSubCalNote(note.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">?</button>
-                      </div>
-                      {expandedNote === note.id && (
-                        <div className="px-3 pb-2.5 space-y-1.5 border-t border-yellow-200 dark:border-yellow-800 pt-2">
-                          {(note.checklist || []).map(item => (
-                            <div key={item.id} className="flex items-center gap-2">
-                              <button
-                                onClick={() => toggleChecklistItem(note.id, item.id)}
-                                className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
-                              >
-                                {item.done && <span className="text-xs leading-none">?</span>}
-                              </button>
-                              <span className={`text-xs flex-1 ${item.done ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>{item.text}</span>
-                              <button onClick={() => deleteChecklistItem(note.id, item.id)} className="text-gray-300 hover:text-red-400 text-xs">?</button>
-                            </div>
-                          ))}
-                          <div className="flex gap-1.5 mt-1">
-                            <input
-                              type="text"
-                              value={newChecklistItem}
-                              onChange={e => setNewChecklistItem(e.target.value)}
-                              onKeyPress={e => { if (e.key === 'Enter') { addChecklistItem(note.id, newChecklistItem); } }}
-                              placeholder="Add item..."
-                              className="flex-1 px-2 py-1 text-base sm:text-xs border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg"
-                              style={{ fontSize: '16px' }}
-                            />
-                            <button onClick={() => addChecklistItem(note.id, newChecklistItem)} className="px-2 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs">+</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newNote}
-                    onChange={e => setNewNote(e.target.value)}
-                    onKeyPress={e => e.key === 'Enter' && addSubCalNote()}
-                    placeholder="Add a note..."
-                    className="flex-1 px-2.5 py-1.5 text-base sm:text-xs border border-yellow-300 dark:border-yellow-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-yellow-400"
-                    style={{ fontSize: '16px' }}
-                  />
-                  <button onClick={addSubCalNote} className="px-2.5 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs font-medium">Add</button>
-                </div>
-              </div>
 
               {/* Timeline */}
               <div className="relative">
