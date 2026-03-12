@@ -15841,7 +15841,8 @@ function App() {
                                   type="text"
                                   defaultValue={event.title}
                                   onBlur={e => updateSubCalEvent(event.id, { title: e.target.value })}
-                                  className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-sm"
+                                  className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-base sm:text-sm"
+                                  style={{ fontSize: '16px' }}
                                   autoFocus
                                 />
                                 <div className="flex gap-2 min-w-0">
@@ -15862,7 +15863,8 @@ function App() {
                                         updateSubCalEvent(event.id, { time: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` });
                                       }
                                     }}
-                                    className="flex-1 min-w-0 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-xs"
+                                    className="flex-1 min-w-0 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-base sm:text-xs"
+                                    style={{ fontSize: '16px' }}
                                   />
                                   <input
                                     type="text"
@@ -15881,7 +15883,8 @@ function App() {
                                         updateSubCalEvent(event.id, { endTime: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` });
                                       }
                                     }}
-                                    className="flex-1 min-w-0 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-xs"
+                                    className="flex-1 min-w-0 px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-base sm:text-xs"
+                                    style={{ fontSize: '16px' }}
                                   />
                                 </div>
                                 <textarea
@@ -15889,13 +15892,14 @@ function App() {
                                   onBlur={e => updateSubCalEvent(event.id, { notes: e.target.value })}
                                   placeholder="Notes..."
                                   rows={2}
-                                  className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-sm resize-none"
+                                  className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-base sm:text-sm resize-none"
+                                  style={{ fontSize: '16px' }}
                                 />
                                 <PlacesAutocomplete
                                   value={event.location || ''}
                                   onSelect={(val) => updateSubCalEvent(event.id, { location: val })}
                                   placeholder="📍 Add location (optional)"
-                                  className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-sm"
+                                  className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-base sm:text-sm"
                                 />
                                 <button onClick={() => setSubCalEditingEvent(null)} className="w-full py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg text-sm font-medium">Done</button>
                               </div>
@@ -15978,28 +15982,31 @@ function App() {
                               placeholder="Event title *"
                               value={subCalNewEventForm.title}
                               onChange={e => setSubCalNewEventForm(f => ({ ...f, title: e.target.value }))}
-                              className="w-full text-sm px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
+                              className="w-full text-base sm:text-sm px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
+                              style={{ fontSize: '16px' }}
                             />
                             <div className="flex gap-2 min-w-0">
                               <input
                                 type="text"
                                 readOnly
                                 value={`${hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`}
-                                className="w-24 shrink-0 text-xs px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-gray-300 rounded-lg bg-gray-50"
+                                className="w-24 shrink-0 text-base sm:text-xs px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-gray-300 rounded-lg bg-gray-50"
+                                style={{ fontSize: '16px' }}
                               />
                               <input
                                 type="text"
                                 placeholder="End time (optional)"
                                 value={subCalNewEventForm.endTime}
                                 onChange={e => setSubCalNewEventForm(f => ({ ...f, endTime: e.target.value }))}
-                                className="flex-1 min-w-0 text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
+                                className="flex-1 min-w-0 text-base sm:text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
+                                style={{ fontSize: '16px' }}
                               />
                             </div>
                             <PlacesAutocomplete
                               value={subCalNewEventForm.location}
                               onSelect={val => setSubCalNewEventForm(f => ({ ...f, location: val || '' }))}
                               placeholder="📍 Add location (optional)"
-                              className="w-full text-xs px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
+                              className="w-full text-base sm:text-xs px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
                             />
                             <div className="flex gap-2">
                               <button
