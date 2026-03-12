@@ -3212,6 +3212,12 @@ function App() {
     color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent,
     borderColor: themeAccentBorder,
   };
+  const themeAccentEllieChipButtonStyle = {
+    backgroundColor: mixHexColors(activeLayerPageTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.64 : 0.78),
+    color: darkMode
+      ? mixHexColors(activeLayerPageTheme.accent, '#ffffff', 0.4)
+      : mixHexColors(activeLayerPageTheme.accent, '#111827', 0.18),
+  };
   const themeAccentSoftActiveButtonStyle = {
     backgroundColor: themeAccentSoftBg,
     color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent,
@@ -13534,7 +13540,7 @@ function App() {
                     ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'
                     : 'hover:shadow-md'
                 }`}
-                style={useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle}
+                style={useLegacyEllieMilesTheme ? undefined : themeAccentEllieChipButtonStyle}
               >
                 Open Today
               </button>
@@ -14792,7 +14798,7 @@ function App() {
                         ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'
                         : 'hover:shadow-md'
                     }`}
-                    style={useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle}
+                    style={useLegacyEllieMilesTheme ? undefined : themeAccentEllieChipButtonStyle}
                   >
                     {exploreLoading ? 'Refreshing...' : 'Refresh'}
                   </button>
