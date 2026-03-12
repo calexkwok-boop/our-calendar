@@ -14956,9 +14956,7 @@ function App() {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Edit Title
-            </h3>
+            <div />
             <button onClick={() => setShowTitleStyleModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <X className="w-5 h-5 text-gray-500" />
             </button>
