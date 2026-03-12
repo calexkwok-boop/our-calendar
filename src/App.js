@@ -11839,7 +11839,7 @@ function App() {
       <div className="max-w-6xl mx-auto">
         <div
           ref={layerHeaderCardRef}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[240px] sm:min-h-[300px]"
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[240px] sm:min-h-[300px] relative"
           style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
             ? {
               backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
@@ -12068,6 +12068,26 @@ function App() {
                 />
               </button>
           </div>
+          {!activeSubCalendar && (
+          <div className="absolute right-3 bottom-3 z-10 flex flex-row gap-2">
+            <button
+              onClick={() => setShowAiAssistant(true)}
+              className={`w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all ${useLegacyEllieMilesTheme ? 'bg-indigo-500 hover:bg-indigo-600 text-white' : 'text-white'}`}
+              style={useLegacyEllieMilesTheme ? undefined : themeAccentButtonStyle}
+              title="Ask AI"
+            >
+              <MessageSquare className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setShowScanHelpModal(true)}
+              disabled={isScanningReminder}
+              className={`w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all ${isScanningReminder ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'}`}
+              title="Scan document"
+            >
+              <Camera className="w-5 h-5" />
+            </button>
+          </div>
+        )}
         </div>
 
         {/* Notification Settings Panel */}
@@ -14878,26 +14898,6 @@ function App() {
       </div>
     </div>
 
-    {!activeSubCalendar && (
-      <div className="fixed right-3 z-30 flex flex-row gap-2" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
-        <button
-          onClick={() => setShowAiAssistant(true)}
-          className={`w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all ${useLegacyEllieMilesTheme ? 'bg-indigo-500 hover:bg-indigo-600 text-white' : 'text-white'}`}
-          style={useLegacyEllieMilesTheme ? undefined : themeAccentButtonStyle}
-          title="Ask AI"
-        >
-          <MessageSquare className="w-5 h-5" />
-        </button>
-        <button
-          onClick={() => setShowScanHelpModal(true)}
-          disabled={isScanningReminder}
-          className={`w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all ${isScanningReminder ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'}`}
-          title="Scan document"
-        >
-          <Camera className="w-5 h-5" />
-        </button>
-      </div>
-    )}
     <input
       ref={scanReminderInputRef}
       type="file"
@@ -15443,9 +15443,9 @@ function App() {
               className="px-4 py-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-sm font-semibold"
             >
               {publishTargetIsPublic ? 'Save' : 'Publish'}
-            </button>
-            </div>
+              </button>
           </div>
+        </div>
         </div>
       </div>
     )}
