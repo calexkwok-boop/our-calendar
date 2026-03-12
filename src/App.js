@@ -12393,9 +12393,13 @@ function App() {
               </button>
               <button
                 onClick={openSportsImportModal}
-                className="px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent"
-                style={themeAccentSoftButtonStyle}
-                title="Import sports schedule"
+                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${
+                  showSportsImportModal
+                    ? 'shadow-sm border-transparent'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                }`}
+                style={showSportsImportModal ? themeAccentButtonStyle : undefined}
+                title="Import schedule"
               >
                 Import
               </button>
