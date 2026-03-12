@@ -12021,7 +12021,7 @@ function App() {
               <div className="absolute inset-x-4 sm:inset-x-5 bottom-4 sm:bottom-5 z-20 pointer-events-none">
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 w-full">
                       {activeLayer?.icon_url ? (
                         <img
                           src={activeLayer.icon_url}
@@ -12034,7 +12034,7 @@ function App() {
                         </div>
                       )}
                       <h1
-                        className="text-xl sm:text-2xl font-bold truncate"
+                        className="text-xl sm:text-2xl font-bold leading-tight whitespace-normal break-words"
                         style={activeLayerTitleTextStyle}
                       >
                         {calendarTitle}
