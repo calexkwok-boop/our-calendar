@@ -2894,6 +2894,41 @@ function App() {
     alert(`Read-only access: you can chat and join events, but you cannot ${actionLabel}.`);
     return false;
   };
+  const ensureWarriorsEventsVisibleLocally = () => {
+    const layerId = String(activeLayerId || '').trim();
+    const userId = String(user?.id || '').trim();
+    if (!layerId || !userId) return;
+    setEvents((prev) => {
+      const next = { ...(prev || {}) };
+      let added = false;
+      for (const event of WARRIORS_REMAINING_2026_EVENTS_PT) {
+        const dayKey = event.date;
+        const existingDay = Array.isArray(next[dayKey]) ? [...next[dayKey]] : [];
+        const exists = existingDay.some((row) => String(row?.title || '').trim().toLowerCase() === event.title.trim().toLowerCase());
+        if (exists) {
+          next[dayKey] = existingDay;
+          continue;
+        }
+        existingDay.push({
+          id: `warriors-local-${dayKey}-${event.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`,
+          title: event.title,
+          date: dayKey,
+          time: event.time,
+          endTime: null,
+          category: 'other',
+          createdBy: currentUser || user?.email || user?.phone || 'User',
+          userId,
+          reactions: {},
+          location: event.location,
+          notes: null,
+          recurrence: null,
+        });
+        next[dayKey] = existingDay;
+        added = true;
+      }
+      return added ? next : prev;
+    });
+  };
   useEffect(() => {
     let cancelled = false;
     const seedWarriorsEventsIfNeeded = async () => {
@@ -2950,48 +2985,16 @@ function App() {
           recurrence: null,
         }));
 
-      const mergeWarriorsEventsIntoLocalState = () => {
-        if (cancelled) return;
-        setEvents((prev) => {
-          const next = { ...(prev || {}) };
-          for (const event of WARRIORS_REMAINING_2026_EVENTS_PT) {
-            const dayKey = event.date;
-            const existingDay = Array.isArray(next[dayKey]) ? [...next[dayKey]] : [];
-            const exists = existingDay.some((row) => String(row?.title || '').trim().toLowerCase() === event.title.trim().toLowerCase());
-            if (exists) {
-              next[dayKey] = existingDay;
-              continue;
-            }
-            existingDay.push({
-              id: `warriors-local-${dayKey}-${event.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`,
-              title: event.title,
-              date: dayKey,
-              time: event.time,
-              endTime: null,
-              category: 'other',
-              createdBy: currentUser || user?.email || user?.phone || 'User',
-              userId,
-              reactions: {},
-              location: event.location,
-              notes: null,
-              recurrence: null,
-            });
-            next[dayKey] = existingDay;
-          }
-          return next;
-        });
-      };
-
       if (rowsToInsert.length > 0) {
         const { error: insertError } = await supabase.from('events').insert(rowsToInsert);
         if (insertError) {
           console.error('Warriors seed insert failed:', insertError);
-          mergeWarriorsEventsIntoLocalState();
+          if (!cancelled) ensureWarriorsEventsVisibleLocally();
           return;
         }
         if (!cancelled) setLayerRefreshToken((prev) => prev + 1);
       } else if ((existingRows || []).length === 0) {
-        mergeWarriorsEventsIntoLocalState();
+        if (!cancelled) ensureWarriorsEventsVisibleLocally();
       }
 
       localStorage.setItem(seedKey, 'done');
@@ -3000,6 +3003,21 @@ function App() {
     void seedWarriorsEventsIfNeeded();
     return () => { cancelled = true; };
   }, [activeLayerId, normalizedActiveLayerName, user?.id, user?.email, user?.phone, currentUser]);
+  useEffect(() => {
+    const layerId = String(activeLayerId || '').trim();
+    const userId = String(user?.id || '').trim();
+    if (!layerId || !userId) return;
+    const isWarriorsLayer =
+      normalizedActiveLayerName.includes('goldenstatewarriors')
+      || normalizedActiveLayerName.includes('goldenstatewariors')
+      || normalizedActiveLayerName.includes('warriors')
+      || normalizedActiveLayerName.includes('wariors');
+    if (!isWarriorsLayer) return;
+    const hasAnyWarriorsEvent = Object.values(events || {}).some((dayEvents) =>
+      Array.isArray(dayEvents) && dayEvents.some((event) => String(event?.title || '').toLowerCase().includes('warriors'))
+    );
+    if (!hasAnyWarriorsEvent) ensureWarriorsEventsVisibleLocally();
+  }, [activeLayerId, normalizedActiveLayerName, user?.id, events, currentUser]);
 
   const resolveSharedOwnerLabels = async (shares, layerId) => {
     const ownerIds = Array.from(new Set((shares || []).map(s => String(s?.owner_id || '')).filter(Boolean)));
@@ -12068,12 +12086,6 @@ function App() {
                           <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                         </div>
                       )}
-                      <h1
-                        className="text-xl sm:text-2xl font-bold leading-tight whitespace-normal break-words"
-                        style={activeLayerTitleTextStyle}
-                      >
-                        {calendarTitle}
-                      </h1>
                     </div>
                     <h2 className="mt-1 text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
                       {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
