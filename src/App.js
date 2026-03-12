@@ -2935,12 +2935,20 @@ function App() {
   }) || null;
   const activeShareRole = String(activeShareRowForMe?.role || '').trim().toLowerCase() || 'member';
   const isActiveLayerBanned = Boolean(activeShareRowForMe?.is_banned);
-  const canModerateActiveLayer = isActiveLayerOwner || activeShareRole === 'admin' || activeShareRole === 'moderator';
+  const isActiveLayerAdmin = activeShareRole === 'admin';
+  const isActiveLayerModerator = activeShareRole === 'moderator';
+  const canManageActiveLayer = isActiveLayerOwner || isActiveLayerAdmin;
+  const canModerateActiveLayer = canManageActiveLayer || isActiveLayerModerator;
+  const canMuteMembersInActiveLayer = canModerateActiveLayer;
   const defaultModerationStatusForNewEvent = canModerateActiveLayer ? 'approved' : 'pending';
-  const canEditActiveLayer = !isActiveLayerBanned && (isActiveLayerOwner || !activeShareRowForMe || activeShareRowForMe?.can_edit !== false);
+  const canEditActiveLayer = !isActiveLayerBanned && (
+    canModerateActiveLayer
+    || !activeShareRowForMe
+    || activeShareRowForMe?.can_edit !== false
+  );
   const normalizedActiveLayerName = String(activeLayer?.name || calendarTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const canEditEllieMilesSharedTitle = normalizedActiveLayerName === 'elliemiles' && canEditActiveLayer;
-  const canEditActiveLayerTitle = isActiveLayerOwner || canEditEllieMilesSharedTitle;
+  const canEditActiveLayerTitle = canManageActiveLayer || canEditEllieMilesSharedTitle;
   const assertCanEditActiveLayer = (actionLabel = 'make changes to this calendar') => {
     if (canEditActiveLayer) return true;
     if (isActiveLayerBanned) {
@@ -4044,7 +4052,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const uploadLayerMedia = async (kind, file) => {
     const mediaKind = String(kind || '').trim();
-    if (!file || !user?.id || !activeLayerId || !isActiveLayerOwner) return false;
+    if (!file || !user?.id || !activeLayerId || !canManageActiveLayer) return false;
     if (mediaKind !== 'icon' && mediaKind !== 'header') return false;
     if (!String(file.type || '').startsWith('image/')) {
       alert('Please choose an image file.');
@@ -4133,13 +4141,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const openLayerMediaPicker = (kind) => {
-    if (!isActiveLayerOwner || !activeLayerId) return;
+    if (!canManageActiveLayer || !activeLayerId) return;
     pendingLayerMediaKindRef.current = String(kind || '');
     layerMediaInputRef.current?.click();
   };
 
   const openLayerMediaMenu = () => {
-    if (!isActiveLayerOwner || !activeLayerId || uploadingLayerMedia) return;
+    if (!canManageActiveLayer || !activeLayerId || uploadingLayerMedia) return;
     setCoverOpacityPreview(null);
     setShowLayerMediaMenu(true);
   };
@@ -4153,7 +4161,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const saveLayerPageTheme = async (themeInput, titleStyleInput = null) => {
     const lid = String(activeLayerId || '').trim();
-    if (!lid || !user?.id || !isActiveLayerOwner) return false;
+    if (!lid || !user?.id || !canManageActiveLayer) return false;
     const normalizedTitleStyle = normalizeLayerTitleStyle(titleStyleInput || activeLayer?.title_style);
     const normalizedTheme = normalizeLayerPageTheme(themeInput, normalizedTitleStyle);
     writeStoredLayerPageTheme(lid, normalizedTheme, normalizedTitleStyle);
@@ -4173,7 +4181,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       alert(`Could not save page theme: ${primary.error.message || 'Unknown error'}`);
       return false;
     }
-    mergeLayerIntoState({ ...(primary.data || { id: lid }), page_theme: normalizedTheme, title_style: normalizedTitleStyle });
+    let updatedLayer = primary.data || null;
+    if (!updatedLayer) {
+      const fallbackUpdate = await supabase
+        .from('calendar_layers')
+        .update({ page_theme: normalizedTheme })
+        .eq('id', lid);
+      const fallbackSelect = await supabase
+        .from('calendar_layers')
+        .select('*')
+        .eq('id', lid)
+        .maybeSingle();
+      if (fallbackUpdate.error || fallbackSelect.error) {
+        alert(`Could not save page theme: ${fallbackUpdate.error?.message || fallbackSelect.error?.message || 'Unknown error'}`);
+        return false;
+      }
+      updatedLayer = fallbackSelect.data || null;
+    }
+    mergeLayerIntoState({ ...(updatedLayer || { id: lid }), page_theme: normalizedTheme, title_style: normalizedTitleStyle });
     return true;
   };
 
@@ -4503,18 +4528,33 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const removeLayerMedia = async (kind) => {
     const mediaKind = String(kind || '').trim();
-    if (!user?.id || !activeLayerId || !isActiveLayerOwner) return;
+    if (!user?.id || !activeLayerId || !canManageActiveLayer) return;
     if (mediaKind !== 'icon' && mediaKind !== 'header') return;
     const field = mediaKind === 'icon' ? 'icon_url' : 'header_bg_url';
-    const { data: updatedLayer, error } = await supabase
+    const primary = await supabase
       .from('calendar_layers')
       .update({ [field]: null })
       .eq('id', activeLayerId)
       .eq('owner_id', user.id)
       .select('*')
       .maybeSingle();
+    let error = primary.error;
+    let updatedLayer = primary.data || null;
+    if (!updatedLayer && !error) {
+      const fallbackUpdate = await supabase
+        .from('calendar_layers')
+        .update({ [field]: null })
+        .eq('id', activeLayerId);
+      const fallbackSelect = await supabase
+        .from('calendar_layers')
+        .select('*')
+        .eq('id', activeLayerId)
+        .maybeSingle();
+      error = fallbackUpdate.error || fallbackSelect.error;
+      updatedLayer = fallbackSelect.data || null;
+    }
     if (error || !updatedLayer) {
-      alert(`Could not remove image: ${error?.message || (!updatedLayer ? 'Calendar row was not updated.' : 'Unknown error')}`);
+      alert(`Could not remove image: ${error?.message || 'Calendar row was not updated.'}`);
       return;
     }
     mergeLayerIntoState(updatedLayer);
@@ -5897,8 +5937,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const handleShareCalendar = async () => {
     if (!shareEmailInput.trim() || !activeLayerId) return;
-    if (!isActiveLayerOwner) {
-      setShareMessage('Only the calendar owner can change sharing settings.');
+    if (!canManageActiveLayer) {
+      setShareMessage('Only owner/admin can change sharing settings.');
       return;
     }
     const recipient = resolveInviteRecipient(shareEmailInput);
@@ -5924,7 +5964,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
 
     let { error } = await supabase.from('shared_access').insert({
-      owner_id: user.id,
+      owner_id: activeLayerOwnerId || user.id,
       layer_id: activeLayerId,
       calendar_id: activeLayerId,
       shared_with_email: email || null,
@@ -5949,7 +5989,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       console.error(error);
     } else {
       setMyShares(prev => [...prev, {
-        owner_id: user.id,
+        owner_id: activeLayerOwnerId || user.id,
         layer_id: activeLayerId,
         shared_with_email: email || null,
         shared_with_phone: phone || null,
@@ -5963,8 +6003,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const handleRemoveShare = async (identity) => {
-    if (!isActiveLayerOwner) {
-      setShareMessage('Only the calendar owner can change sharing settings.');
+    if (!canManageActiveLayer) {
+      setShareMessage('Only owner/admin can change sharing settings.');
       return;
     }
     const recipient = resolveInviteRecipient(identity);
@@ -5972,7 +6012,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     let query = supabase
       .from('shared_access')
       .delete()
-      .eq('owner_id', user.id)
       .eq('layer_id', activeLayerId);
     const recipientFilter = buildShareRecipientFilter('', recipient.email, recipient.phone);
     if (recipientFilter) query = query.or(recipientFilter);
@@ -5985,8 +6024,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const handleToggleShareEditPermission = async (identity, nextCanEdit) => {
-    if (!isActiveLayerOwner) {
-      setShareMessage('Only the calendar owner can change sharing settings.');
+    if (!canMuteMembersInActiveLayer) {
+      setShareMessage('Only owner/admin/moderator can mute or unmute members.');
       return;
     }
     const recipient = resolveInviteRecipient(identity);
@@ -5995,7 +6034,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     let query = supabase
       .from('shared_access')
       .update({ can_edit: !!nextCanEdit })
-      .eq('owner_id', user.id)
       .eq('layer_id', activeLayerId);
     const recipientFilter = buildShareRecipientFilter('', recipient.email, recipient.phone);
     if (recipientFilter) query = query.or(recipientFilter);
@@ -6015,12 +6053,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         ? { ...share, can_edit: !!nextCanEdit }
         : share
     )));
-    setShareMessage(`${recipient.value} is now ${nextCanEdit ? 'Editor' : 'Read only'}.`);
+    setShareMessage(`${recipient.value} is now ${nextCanEdit ? 'Unmuted' : 'Muted'}.`);
   };
 
   const handleUpdateShareRole = async (identity, nextRoleRaw) => {
-    if (!isActiveLayerOwner) {
-      setShareMessage('Only the calendar owner can update member roles.');
+    if (!canManageActiveLayer) {
+      setShareMessage('Only owner/admin can update member roles.');
       return;
     }
     const recipient = resolveInviteRecipient(identity);
@@ -6031,7 +6069,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     let query = supabase
       .from('shared_access')
       .update({ role: nextRole })
-      .eq('owner_id', user.id)
       .eq('layer_id', activeLayerId);
     const recipientFilter = buildShareRecipientFilter('', recipient.email, recipient.phone);
     if (recipientFilter) query = query.or(recipientFilter);
@@ -6053,8 +6090,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const handleToggleShareBan = async (identity, shouldBan) => {
-    if (!isActiveLayerOwner) {
-      setShareMessage('Only the calendar owner can ban/unban members.');
+    if (!canManageActiveLayer) {
+      setShareMessage('Only owner/admin can ban/unban members.');
       return;
     }
     const recipient = resolveInviteRecipient(identity);
@@ -6071,7 +6108,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     let query = supabase
       .from('shared_access')
       .update(payload)
-      .eq('owner_id', user.id)
       .eq('layer_id', activeLayerId);
     const recipientFilter = buildShareRecipientFilter('', recipient.email, recipient.phone);
     if (recipientFilter) query = query.or(recipientFilter);
@@ -7666,11 +7702,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
 
         // Load people I've shared with
-        const { data: mySharesData } = await supabase
+        let { data: mySharesData, error: mySharesError } = await supabase
           .from('shared_access')
           .select('*')
-          .eq('owner_id', userId)
           .eq('layer_id', selectedLayerId);
+        if (mySharesError) {
+          const fallback = await supabase
+            .from('shared_access')
+            .select('*')
+            .eq('owner_id', userId)
+            .eq('layer_id', selectedLayerId);
+          mySharesData = fallback.data || [];
+        }
         setMyShares(mySharesData || []);
 
         const activeLayerRow = loadedLayers.find(layer => String(layer.id) === String(selectedLayerId));
@@ -12627,7 +12670,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       <div className="max-w-6xl mx-auto">
         <div
           ref={layerHeaderCardRef}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[240px] sm:min-h-[300px] relative"
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[240px] sm:min-h-[300px] lg:min-h-[420px] relative"
           onPointerDownCapture={() => {
             if (!hasActiveCoverPhoto || !coverHeaderControlsVisible) return;
             setCoverHeaderInteractionTick((v) => v + 1);
@@ -12635,7 +12678,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
             ? {
               backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
-              backgroundSize: 'cover',
+              backgroundSize: 'contain',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center',
               backgroundPosition: 'center',
             }
             : undefined}
@@ -12693,7 +12738,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                   </div>
                 )}
-                {isActiveLayerOwner && (
+                {canManageActiveLayer && (
                   <button
                     onClick={openLayerMediaMenu}
                     className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -13274,21 +13319,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   value={shareEmailInput}
                   onChange={(e) => { setShareEmailInput(e.target.value); setShareMessage(''); }}
                   placeholder="wife@gmail.com or +15551234567"
-                  disabled={!isActiveLayerOwner}
+                  disabled={!canManageActiveLayer}
                   className="flex-1 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
                   onKeyPress={(e) => e.key === 'Enter' && handleShareCalendar()}
                 />
                 <button
                   onClick={handleShareCalendar}
-                  disabled={!isActiveLayerOwner}
-                  className={`px-4 py-2 rounded-xl transition-all ${isActiveLayerOwner ? 'text-white hover:shadow-lg' : 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'}`}
-                  style={isActiveLayerOwner ? themeAccentButtonStyle : undefined}
+                  disabled={!canManageActiveLayer}
+                  className={`px-4 py-2 rounded-xl transition-all ${canManageActiveLayer ? 'text-white hover:shadow-lg' : 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'}`}
+                  style={canManageActiveLayer ? themeAccentButtonStyle : undefined}
                 >
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
-              {!isActiveLayerOwner && (
-                <p className="text-xs text-amber-600 dark:text-amber-300 mt-2">Only the calendar owner can add/remove members or change permissions.</p>
+              {!canManageActiveLayer && (
+                <p className="text-xs text-amber-600 dark:text-amber-300 mt-2">Only owner/admin can add/remove members or change permissions.</p>
               )}
               {shareMessage && (
                 <p className={`text-sm mt-2 ${shareMessage.startsWith('?') ? 'text-green-600' : 'text-red-500'}`}>
@@ -13296,7 +13341,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </p>
               )}
             </div>
-            {myShares.length > 0 && (
+            {!activeLayer?.is_public && myShares.length > 0 && (
               <div className="mb-5">
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Shared with:</h4>
                 <div className="space-y-2">
@@ -13316,7 +13361,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                         </span>
                       </div>
                       <div className="flex shrink-0 items-center gap-3">
-                        {isActiveLayerOwner && (
+                        {(canManageActiveLayer || canMuteMembersInActiveLayer) && (
                           <>
                             <button
                               onClick={() => handleToggleShareEditPermission(recipient, !(share?.can_edit !== false))}
@@ -13325,41 +13370,97 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                   ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
                                   : 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
                               }`}
-                              title="Toggle edit permission"
+                              title="Mute or unmute posting"
                             >
-                              {share?.can_edit !== false ? 'Editor' : 'Read only'}
+                              {share?.can_edit !== false ? 'Unmuted' : 'Muted'}
                             </button>
-                            <select
-                              value={String(share?.role || 'member')}
-                              onChange={(e) => handleUpdateShareRole(recipient, e.target.value)}
-                              className="px-2 py-1 text-[11px] rounded-lg border bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600"
-                              title="Member role"
-                            >
-                              <option value="member">Member</option>
-                              <option value="moderator">Moderator</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                            <button
-                              onClick={() => handleToggleShareBan(recipient, !share?.is_banned)}
-                              className={`px-2 py-1 text-[11px] rounded-lg border transition-all ${
-                                share?.is_banned
-                                  ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
-                                  : 'bg-rose-100 dark:bg-rose-900/30 border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300'
-                              }`}
-                              title={share?.is_banned ? 'Unban member' : 'Ban member'}
-                            >
-                              {share?.is_banned ? 'Unban' : 'Ban'}
-                            </button>
+                            {canManageActiveLayer && (
+                              <>
+                                <select
+                                  value={String(share?.role || 'member')}
+                                  onChange={(e) => handleUpdateShareRole(recipient, e.target.value)}
+                                  className="px-2 py-1 text-[11px] rounded-lg border bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600"
+                                  title="Member role"
+                                >
+                                  <option value="member">Member</option>
+                                  <option value="moderator">Moderator</option>
+                                  <option value="admin">Admin</option>
+                                </select>
+                                <button
+                                  onClick={() => handleToggleShareBan(recipient, !share?.is_banned)}
+                                  className={`px-2 py-1 text-[11px] rounded-lg border transition-all ${
+                                    share?.is_banned
+                                      ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
+                                      : 'bg-rose-100 dark:bg-rose-900/30 border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300'
+                                  }`}
+                                  title={share?.is_banned ? 'Unban member' : 'Ban member'}
+                                >
+                                  {share?.is_banned ? 'Unban' : 'Ban'}
+                                </button>
+                              </>
+                            )}
                           </>
                         )}
-                        <button onClick={() => handleRemoveShare(recipient)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all" title="Remove access">
-                          <X className="w-4 h-4 text-red-500" />
-                        </button>
+                        {canManageActiveLayer && (
+                          <button onClick={() => handleRemoveShare(recipient)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all" title="Remove access">
+                            <X className="w-4 h-4 text-red-500" />
+                          </button>
+                        )}
                       </div>
                     </div>
                       );
                     })()
                   ))}
+                </div>
+              </div>
+            )}
+            {activeLayer?.is_public && (
+              <div className="mb-5">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Admins & Moderators</h4>
+                <div className="space-y-2">
+                  {(() => {
+                    const ownerLabel = String(
+                      activeLayer?.created_by
+                      || (String(activeLayer?.owner_id || '') === String(user?.id || '') ? (currentUser || user?.email || user?.phone || 'You') : '')
+                      || sharedOwnerLabels?.[String(activeLayer?.owner_id || '')]
+                      || fallbackOwnerLabel(activeLayer?.owner_id)
+                      || 'Owner'
+                    ).trim();
+                    const elevated = (myShares || []).filter((share) => {
+                      const role = String(share?.role || 'member').toLowerCase();
+                      return role === 'admin' || role === 'moderator';
+                    });
+                    const rows = [
+                      {
+                        id: `owner-${String(activeLayer?.owner_id || 'unknown')}`,
+                        label: ownerLabel,
+                        role: 'admin',
+                        owner: true,
+                      },
+                      ...elevated.map((share, i) => {
+                        const recipient = getShareRecipientFromRow(share);
+                        return {
+                          id: `elevated-${i}`,
+                          label: recipient,
+                          role: String(share?.role || 'member').toLowerCase(),
+                          owner: false,
+                        };
+                      }).filter((item) => Boolean(item?.label)),
+                    ];
+                    return rows.map((row) => {
+                      const role = String(row?.role || 'member').toLowerCase();
+                      const recipient = String(row?.label || '').trim();
+                      if (!recipient) return null;
+                      return (
+                        <div key={row.id} className="flex items-center justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
+                          <div className="min-w-0 text-sm text-gray-700 dark:text-gray-200 truncate">{recipient}</div>
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${role === 'admin' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'}`}>
+                            {row?.owner ? 'owner/admin' : role}
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             )}
@@ -13458,7 +13559,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 );
               })()}
             </div>
-            {myShares.length === 0 && (
+            {!activeLayer?.is_public && myShares.length === 0 && (
               <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add an email or phone above to get started.</p>
             )}
           </div>
