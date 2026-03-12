@@ -2966,6 +2966,27 @@ function App() {
   const defaultModerationStatusForNewEvent = canModerateActiveLayer
     ? 'approved'
     : (memberPostsRequireApproval ? 'pending' : 'approved');
+  const isEventOwnedByCurrentUser = (event) => {
+    if (!event) return false;
+    const eventUserId = String(event?.userId || event?.user_id || '').trim();
+    if (eventUserId && String(user?.id || '').trim()) {
+      return eventUserId === String(user?.id || '').trim();
+    }
+    const createdBy = String(event?.createdBy || event?.created_by || '').trim().toLowerCase();
+    if (!createdBy) return false;
+    const aliases = new Set([
+      String(currentUser || '').trim().toLowerCase(),
+      normalizeEmail(user?.email),
+      normalizePhoneNumber(user?.phone),
+    ].filter(Boolean));
+    return aliases.has(createdBy);
+  };
+  const canDeleteEventInActiveLayer = (event) => {
+    if (!event) return false;
+    if (!activeLayer?.is_public) return canEditActiveLayer;
+    if (canModerateActiveLayer) return true;
+    return isEventOwnedByCurrentUser(event);
+  };
   const isShareRowForCurrentAccount = (share) => {
     if (!share) return false;
     const byId = String(share?.shared_with_id || '') && String(share?.shared_with_id || '') === String(user?.id || '');
@@ -11837,6 +11858,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     const actualDateKey = Object.keys(events).find(k => events[k]?.some(e => e.id === eventId)) || dateKey;
     const eventToDelete = events[actualDateKey]?.find(e => e.id === eventId);
+    if (!canDeleteEventInActiveLayer(eventToDelete)) {
+      alert('In public calendars, members can only delete events they created.');
+      return;
+    }
 
     if (isVirtualAnnual || isVirtualRecurrence) {
       // Find the original event
@@ -11847,6 +11872,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (found) { originalDateKey = key; originalEvent = found; }
       });
       if (!originalDateKey || !originalEvent) return;
+      if (!canDeleteEventInActiveLayer(originalEvent)) {
+        alert('In public calendars, members can only delete events they created.');
+        return;
+      }
 
       if (skipOnce) {
         // Add this date as an exception so it's skipped in future renders
@@ -15324,6 +15353,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   const popupJoined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
                   const popupNoMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
                   const popupFull = popupMeta ? (!popupNoMax && popupSignups.length >= Number(popupMeta.maxPeople || 1)) : false;
+                  const canDeleteThisEvent = canDeleteEventInActiveLayer(event);
 
                   if (event.isHoliday) {
                     return (
@@ -15578,20 +15608,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                 <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                               </button>
                             )}
-                            <button
-                              onClick={() => {
-                                const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
-                                if (isRepeating) {
-                                  openRecurringDeletePrompt({ dateKey: selectedDateKey, event });
-                                } else {
-                                  handleDeleteEvent(selectedDateKey, event.id, false, false, false);
-                                }
-                              }}
-                              className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all"
-                              title="Delete event"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </button>
+                            {canDeleteThisEvent && (
+                              <button
+                                onClick={() => {
+                                  const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
+                                  if (isRepeating) {
+                                    openRecurringDeletePrompt({ dateKey: selectedDateKey, event });
+                                  } else {
+                                    handleDeleteEvent(selectedDateKey, event.id, false, false, false);
+                                  }
+                                }}
+                                className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all"
+                                title="Delete event"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}
