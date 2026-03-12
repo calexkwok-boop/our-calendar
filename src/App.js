@@ -14723,8 +14723,12 @@ function App() {
                   <button
                     onClick={loadPublicCalendars}
                     disabled={exploreLoading}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                    style={themeAccentSoftButtonStyle}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                      useLegacyEllieMilesTheme
+                        ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'
+                        : 'hover:shadow-md'
+                    }`}
+                    style={useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle}
                   >
                     {exploreLoading ? 'Refreshing...' : 'Refresh'}
                   </button>
@@ -14753,6 +14757,9 @@ function App() {
                       const isOwner = String(row?.owner_id || '') === String(user?.id || '');
                       const joinedLayer = (layers || []).find((layer) => String(layer?.id || '') === layerId);
                       const isJoined = Boolean(joinedLayer);
+                      const rowTheme = normalizeLayerPageTheme(row?.page_theme, row?.title_style);
+                      const rowAccentBorder = mixHexColors(rowTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.35 : 0.62);
+                      const rowSoftBg = mixHexColors(rowTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.72 : 0.84);
                       const ownerLabel = String(row?.created_by || sharedOwnerLabels[String(row?.owner_id || '')] || fallbackOwnerLabel(row?.owner_id) || 'Creator');
                       const tags = Array.isArray(row?.public_tags) ? row.public_tags : [];
                       const description = String(row?.public_description || '').trim();
@@ -14760,11 +14767,8 @@ function App() {
                       return (
                         <div
                           key={`explore-${layerId}`}
-                          className="rounded-xl border p-3 shadow-sm"
-                          style={{
-                            borderColor: themeAccentBorder,
-                            backgroundImage: `linear-gradient(135deg, ${themeAccentSofterBg} 0%, ${themeAccentSoftBg} 100%)`,
-                          }}
+                          className={`rounded-xl border p-3 shadow-sm ${isJoined ? '' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}
+                          style={isJoined ? { borderColor: rowAccentBorder, backgroundColor: rowSoftBg } : undefined}
                         >
                           <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{row?.name || 'Public Calendar'}</div>
@@ -14824,8 +14828,8 @@ function App() {
                                       if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layerId);
                                       setBottomNavTab('home');
                                     }}
-                                    className="px-3 py-1.5 text-xs rounded-lg text-white hover:shadow-lg transition-all"
-                                    style={themeAccentButtonStyle}
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all"
+                                    style={themeAccentSoftButtonStyle}
                                   >
                                     Open
                                   </button>
@@ -14833,7 +14837,7 @@ function App() {
                               {!isOwner && isJoined && (
                                 <button
                                   onClick={() => leavePublicCalendarById(layerId)}
-                                  className="px-3 py-1.5 text-xs rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-all"
                                 >
                                   Leave
                                 </button>
@@ -14841,8 +14845,8 @@ function App() {
                               {!isOwner && !isJoined && (
                                   <button
                                     onClick={() => joinPublicCalendar(row)}
-                                    className="px-3 py-1.5 text-xs rounded-lg text-white hover:shadow-lg transition-all"
-                                    style={themeAccentButtonStyle}
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all"
+                                    style={themeAccentSoftButtonStyle}
                                   >
                                     Join
                                   </button>
