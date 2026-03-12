@@ -2900,11 +2900,24 @@ function App() {
       const layerId = String(activeLayerId || '').trim();
       const userId = String(user?.id || '').trim();
       if (!layerId || !userId) return;
-      if (!normalizedActiveLayerName.includes('goldenstatewarriors')) return;
+      const isWarriorsLayer =
+        normalizedActiveLayerName.includes('goldenstatewarriors')
+        || normalizedActiveLayerName.includes('goldenstatewariors')
+        || normalizedActiveLayerName.includes('warriors')
+        || normalizedActiveLayerName.includes('wariors');
+      if (!isWarriorsLayer) return;
       if (typeof window === 'undefined') return;
 
       const seedKey = `warriors-events-seeded-2026-${layerId}`;
-      if (localStorage.getItem(seedKey) === 'done') return;
+      if (localStorage.getItem(seedKey) === 'done') {
+        const { data: existingWarriorsSeedRows, error: existingWarriorsSeedError } = await supabase
+          .from('events')
+          .select('id')
+          .eq('layer_id', layerId)
+          .ilike('title', 'Warriors%')
+          .limit(1);
+        if (!existingWarriorsSeedError && (existingWarriorsSeedRows || []).length > 0) return;
+      }
 
       const eventDates = Array.from(new Set(WARRIORS_REMAINING_2026_EVENTS_PT.map((event) => event.date)));
       const { data: existingRows, error: existingError } = await supabase
