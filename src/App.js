@@ -2949,9 +2949,19 @@ function App() {
   const canManageActiveLayer = isActiveLayerOwner || isActiveLayerAdmin;
   const canModerateActiveLayer = canManageActiveLayer || isActiveLayerModerator;
   const canMuteMembersInActiveLayer = canModerateActiveLayer;
-  const activeLayerThemeForPosting = normalizeLayerPageTheme(activeLayer?.page_theme, normalizeLayerTitleStyle(activeLayer?.title_style));
-  const memberPostsRequireApproval = !Boolean(activeLayer?.is_public)
-    || activeLayerThemeForPosting.publicMemberPostsRequireApproval !== false;
+  let memberPostsRequireApproval = true;
+  if (Boolean(activeLayer?.is_public)) {
+    try {
+      let parsedTheme = activeLayer?.page_theme;
+      if (typeof parsedTheme === 'string') {
+        try { parsedTheme = JSON.parse(parsedTheme); } catch { parsedTheme = {}; }
+      }
+      if (!parsedTheme || typeof parsedTheme !== 'object') parsedTheme = {};
+      memberPostsRequireApproval = parsedTheme.publicMemberPostsRequireApproval !== false;
+    } catch {
+      memberPostsRequireApproval = true;
+    }
+  }
   const defaultModerationStatusForNewEvent = canModerateActiveLayer
     ? 'approved'
     : (memberPostsRequireApproval ? 'pending' : 'approved');
