@@ -14780,8 +14780,7 @@ function App() {
                                   {!isExpanded && (
                                       <button
                                         onClick={() => setExpandedExploreDescriptions(prev => ({ ...prev, [layerId]: true }))}
-                                        className="text-[11px] font-medium hover:underline"
-                                        style={themeAccentTextStyle}
+                                        className="text-[11px] font-medium text-gray-600 dark:text-gray-300 hover:underline"
                                       >
                                         Show description
                                       </button>
@@ -14793,8 +14792,7 @@ function App() {
                                       </div>
                                       <button
                                         onClick={() => setExpandedExploreDescriptions(prev => ({ ...prev, [layerId]: false }))}
-                                        className="mt-1 text-[11px] font-medium hover:underline"
-                                        style={themeAccentTextStyle}
+                                        className="mt-1 text-[11px] font-medium text-gray-600 dark:text-gray-300 hover:underline"
                                       >
                                         Hide description
                                       </button>
@@ -14807,9 +14805,8 @@ function App() {
                                   {tags.slice(0, 6).map((tag) => (
                                     <span
                                       key={`${layerId}-${tag}`}
-                                      className="shrink-0 text-[10px] px-2 py-0.5 rounded-full border"
+                                      className="shrink-0 text-[10px] px-2 py-0.5 rounded-full border text-gray-700 dark:text-gray-200"
                                       style={{
-                                        ...themeAccentTextStyle,
                                         borderColor: themeAccentBorder,
                                         backgroundColor: mixHexColors(activeLayerPageTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.76 : 0.9),
                                       }}
@@ -14828,8 +14825,7 @@ function App() {
                                       if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layerId);
                                       setBottomNavTab('home');
                                     }}
-                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all"
-                                    style={themeAccentSoftButtonStyle}
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-700"
                                   >
                                     Open
                                   </button>
@@ -14837,7 +14833,7 @@ function App() {
                               {!isOwner && isJoined && (
                                 <button
                                   onClick={() => leavePublicCalendarById(layerId)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-all"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-700"
                                 >
                                   Leave
                                 </button>
@@ -14845,8 +14841,7 @@ function App() {
                               {!isOwner && !isJoined && (
                                   <button
                                     onClick={() => joinPublicCalendar(row)}
-                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all"
-                                    style={themeAccentSoftButtonStyle}
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-700"
                                   >
                                     Join
                                   </button>
