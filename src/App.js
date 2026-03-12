@@ -6391,8 +6391,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const handleRemoveShare = async (identity) => {
-    if (!canManageActiveLayer) {
-      setShareMessage('Only owner/admin can change sharing settings.');
+    if (!canModerateActiveLayer) {
+      setShareMessage('Only owner/admin/moderator can remove members.');
       return;
     }
     const recipient = resolveInviteRecipient(identity);
@@ -6478,8 +6478,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const handleToggleShareBan = async (identity, shouldBan) => {
-    if (!canManageActiveLayer) {
-      setShareMessage('Only owner/admin can ban/unban members.');
+    if (!canModerateActiveLayer) {
+      setShareMessage('Only owner/admin/moderator can ban/unban members.');
       return;
     }
     const recipient = resolveInviteRecipient(identity);
@@ -13829,6 +13829,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       {
                         id: `owner-${String(activeLayer?.owner_id || 'unknown')}`,
                         label: ownerLabel,
+                        identity: '',
                         role: 'admin',
                         owner: true,
                         share: null,
@@ -13838,6 +13839,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                         return {
                           id: `elevated-${i}`,
                           label: recipient,
+                          identity: recipient,
                           role: String(share?.role || 'member').toLowerCase(),
                           owner: false,
                           share,
@@ -13846,16 +13848,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     ];
                     return rows.map((row) => {
                       const role = String(row?.role || 'member').toLowerCase();
-                      const recipient = resolveHandleLikeLabel(String(row?.label || '').trim());
-                      if (!recipient) return null;
+                      const identity = String(row?.identity || '').trim();
+                      const displayLabel = row?.owner
+                        ? resolveHandleLikeLabel(String(row?.label || '').trim())
+                        : resolveHandleLikeLabel(identity);
+                      if (!displayLabel) return null;
                       return (
                         <div key={row.id} className="flex items-center justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
-                          <div className="min-w-0 text-sm text-gray-700 dark:text-gray-200 truncate">{recipient}</div>
+                          <div className="min-w-0 text-sm text-gray-700 dark:text-gray-200 truncate">{displayLabel}</div>
                           <div className="flex items-center gap-2">
                             {canManageActiveLayer && !row?.owner ? (
                               <select
                                 value={role}
-                                onChange={(e) => handleUpdateShareRole(recipient, e.target.value)}
+                                onChange={(e) => handleUpdateShareRole(identity, e.target.value)}
                                 className="px-2 py-1 text-[11px] rounded-lg border bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600"
                                 title="Role"
                               >
@@ -13876,46 +13881,85 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </div>
               </div>
             )}
-            {!activeLayer?.is_public && (
-              <div className="mb-5">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Members</h4>
-                <div className="space-y-2">
-                  {(() => {
-                    const members = (myShares || [])
-                      .filter((share) => String(share?.role || 'member').toLowerCase() === 'member')
-                      .filter((share) => !isShareRowForCurrentAccount(share));
-                    if (members.length === 0) {
-                      return <div className="text-xs text-gray-500 dark:text-gray-400">No members added yet.</div>;
-                    }
-                    return members.map((share, i) => {
-                      const recipient = resolveHandleLikeLabel(getShareRecipientFromRow(share));
-                      if (!recipient) return null;
-                      return (
-                        <div key={`member-${i}`} className="flex items-center justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
-                          <div className="min-w-0 text-sm text-gray-700 dark:text-gray-200 truncate">{recipient}</div>
-                          {canManageActiveLayer ? (
-                            <select
-                              value={String(share?.role || 'member').toLowerCase()}
-                              onChange={(e) => handleUpdateShareRole(recipient, e.target.value)}
-                              className="px-2 py-1 text-[11px] rounded-lg border bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600"
-                              title="Promote member"
-                            >
-                              <option value="member">Member</option>
-                              <option value="moderator">Moderator</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+            <div className="mb-5">
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Members</h4>
+              <div className="space-y-2">
+                {(() => {
+                  const members = (myShares || [])
+                    .filter((share) => String(share?.role || 'member').toLowerCase() === 'member')
+                    .filter((share) => !isShareRowForCurrentAccount(share));
+                  if (members.length === 0) {
+                    return <div className="text-xs text-gray-500 dark:text-gray-400">No members added yet.</div>;
+                  }
+                  return members.map((share, i) => {
+                    const memberIdentity = getShareRecipientFromRow(share);
+                    const displayLabel = resolveHandleLikeLabel(memberIdentity);
+                    if (!memberIdentity || !displayLabel) return null;
+                    const isMuted = share?.can_edit === false;
+                    const isBanned = share?.is_banned === true;
+                    return (
+                      <div key={`member-${i}`} className="flex items-center justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
+                        <div className="min-w-0">
+                          <div className="text-sm text-gray-700 dark:text-gray-200 truncate">{displayLabel}</div>
+                          <div className="mt-1 flex items-center gap-1.5">
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                               member
                             </span>
-                          )}
+                            {isMuted && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+                                muted
+                              </span>
+                            )}
+                            {isBanned && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300">
+                                banned
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      );
-                    });
-                  })()}
-                </div>
+                        {canModerateActiveLayer ? (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={() => handleToggleShareEditPermission(memberIdentity, isMuted)}
+                              className={`px-2 py-1 text-[11px] rounded-lg border transition-all ${
+                                isMuted
+                                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700'
+                                  : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700'
+                              }`}
+                              title={isMuted ? 'Unmute member' : 'Mute member'}
+                            >
+                              {isMuted ? 'Unmute' : 'Mute'}
+                            </button>
+                            <button
+                              onClick={() => handleToggleShareBan(memberIdentity, !isBanned)}
+                              className={`px-2 py-1 text-[11px] rounded-lg border transition-all ${
+                                isBanned
+                                  ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700'
+                                  : 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-700'
+                              }`}
+                              title={isBanned ? 'Unban member' : 'Ban member'}
+                            >
+                              {isBanned ? 'Unban' : 'Ban'}
+                            </button>
+                            <button
+                              onClick={() => handleRemoveShare(memberIdentity)}
+                              className="px-2 py-1 text-[11px] rounded-lg border bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
+                              title="Kick member from calendar"
+                            >
+                              Kick
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                            member
+                          </span>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
-            )}
+            </div>
             {canModerateActiveLayer && (
               <div className="mb-5 p-3 rounded-xl border bg-gray-100 dark:bg-gray-700/60" style={{ borderColor: themeAccentBorder }}>
                 <div className="flex items-center justify-between gap-2 mb-2">
