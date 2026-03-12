@@ -68,6 +68,7 @@ const COLOR_OPTIONS = [
 
 const WEB_PUSH_VAPID_PUBLIC_KEY = String(process.env.REACT_APP_VAPID_PUBLIC_KEY || process.env.REACT_APP_FCM_VAPID_PUBLIC_KEY || '').trim();
 const FCM_WEB_VAPID_PUBLIC_KEY = String(process.env.REACT_APP_FCM_VAPID_PUBLIC_KEY || process.env.REACT_APP_VAPID_PUBLIC_KEY || '').trim();
+const ACCOUNT_HANDLE_TABLE = 'user_handles';
 
 const LOCKED_DEFAULT_LAYER_TITLE_STYLE = Object.freeze({
   mode: 'gradient',
@@ -5973,10 +5974,106 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
   };
 
+  const loadAccountHandleForUser = async (authUser) => {
+    const fallback = (await window.storage.get('calendar-user', false))?.value || '';
+    const email = normalizeEmail(authUser?.email);
+    if (!email) {
+      const localHandle = String(fallback || '').trim();
+      if (localHandle) {
+        setCurrentUser(localHandle);
+        setUserNameInput(localHandle);
+        setShowUserSetup(false);
+      } else {
+        setShowUserSetup(true);
+      }
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from(ACCOUNT_HANDLE_TABLE)
+        .select('handle')
+        .eq('email', email)
+        .maybeSingle();
+      if (error) {
+        if (/relation .* does not exist|42P01|schema cache/i.test(String(error?.message || ''))) {
+          const localHandle = String(fallback || '').trim();
+          if (localHandle) {
+            setCurrentUser(localHandle);
+            setUserNameInput(localHandle);
+            setShowUserSetup(false);
+          } else {
+            setShowUserSetup(true);
+          }
+          return;
+        }
+        throw error;
+      }
+      const dbHandle = String(data?.handle || '').trim();
+      if (dbHandle) {
+        await window.storage.set('calendar-user', dbHandle, false);
+        setCurrentUser(dbHandle);
+        setUserNameInput(dbHandle);
+        setShowUserSetup(false);
+        return;
+      }
+      const localHandle = String(fallback || '').trim();
+      if (localHandle) {
+        setCurrentUser(localHandle);
+        setUserNameInput(localHandle);
+        setShowUserSetup(false);
+      } else {
+        setShowUserSetup(true);
+      }
+    } catch (error) {
+      console.error('Error loading account handle:', error);
+      const localHandle = String(fallback || '').trim();
+      if (localHandle) {
+        setCurrentUser(localHandle);
+        setUserNameInput(localHandle);
+        setShowUserSetup(false);
+      } else {
+        setShowUserSetup(true);
+      }
+    }
+  };
+
+  const persistAccountHandleForUser = async (handleValue, authUser = user) => {
+    const nextHandle = String(handleValue || '').trim();
+    if (!nextHandle) return { ok: false, reason: 'empty' };
+    const email = normalizeEmail(authUser?.email);
+    if (!email) {
+      await window.storage.set('calendar-user', nextHandle, false);
+      return { ok: true, localOnly: true };
+    }
+    const payload = {
+      email,
+      handle: nextHandle,
+      user_id: authUser?.id || null,
+      updated_at: new Date().toISOString(),
+    };
+    let { error } = await supabase
+      .from(ACCOUNT_HANDLE_TABLE)
+      .upsert(payload, { onConflict: 'email' });
+    if (error && /column .*user_id|column .*updated_at|schema cache/i.test(String(error?.message || ''))) {
+      const fallback = await supabase
+        .from(ACCOUNT_HANDLE_TABLE)
+        .upsert({ email, handle: nextHandle }, { onConflict: 'email' });
+      error = fallback.error;
+    }
+    if (error && /relation .* does not exist|42P01|schema cache/i.test(String(error?.message || ''))) {
+      await window.storage.set('calendar-user', nextHandle, false);
+      return { ok: true, localOnly: true, missingTable: true };
+    }
+    if (error) return { ok: false, error };
+    await window.storage.set('calendar-user', nextHandle, false);
+    return { ok: true };
+  };
+
   const saveUser = async (userName) => {
     if (!userName || userName.trim() === '') userName = 'User';
     try {
-      await window.storage.set('calendar-user', userName, false);
+      await persistAccountHandleForUser(userName);
       setCurrentUser(userName);
       setUserNameInput(userName);
       setShowUserSetup(false);
@@ -6004,10 +6101,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     setSavingAccountHandle(true);
     try {
-      await window.storage.set('calendar-user', nextHandle, false);
+      const result = await persistAccountHandleForUser(nextHandle);
+      if (!result?.ok) {
+        setAccountHandleMessage(`Could not save handle: ${result?.error?.message || 'Unknown error'}`);
+        setSavingAccountHandle(false);
+        return;
+      }
       setCurrentUser(nextHandle);
       setUserNameInput(nextHandle);
-      setAccountHandleMessage('Handle updated.');
+      setAccountHandleMessage(result?.localOnly ? 'Handle updated locally (email mapping table not ready yet).' : 'Handle updated.');
     } catch (error) {
       console.error('Error saving account handle:', error);
       setCurrentUser(nextHandle);
@@ -7813,14 +7915,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         await loadCategoriesForLayer(selectedLayerId, userId, activeLayerRow?.owner_id || userId);
         setCalendarTitle(activeLayerRow?.name || 'Our Calendar');
 
-        const userResult = await window.storage.get('calendar-user', false);
-        if (userResult && userResult.value) {
-          setCurrentUser(userResult.value);
-          setUserNameInput(String(userResult.value || ''));
-          setShowUserSetup(false);
-        } else {
-          setShowUserSetup(true);
-        }
+        await loadAccountHandleForUser(session?.user || { id: userId, email: userEmail, phone: userPhone });
 
         // Load sub-calendars now that we know user is authenticated
         await loadSubCalendars();
