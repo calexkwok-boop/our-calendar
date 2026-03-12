@@ -11925,34 +11925,36 @@ function App() {
                 className="absolute inset-0 z-10 rounded-2xl"
                 aria-label="Show cover controls"
               />
-              <div className="absolute inset-x-4 sm:inset-x-5 bottom-4 sm:bottom-5 z-20 pointer-events-none space-y-2 relative pb-5">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-3 min-w-0">
-                    {activeLayer?.icon_url ? (
-                      <img
-                        src={activeLayer.icon_url}
-                        alt="Calendar icon"
-                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
-                      />
-                    ) : (
-                      <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
-                        <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                      </div>
-                    )}
-                    <h1
-                      className="text-xl sm:text-2xl font-bold truncate"
-                      style={activeLayerTitleTextStyle}
-                    >
-                      {calendarTitle}
-                    </h1>
+              <div className="absolute inset-x-4 sm:inset-x-5 bottom-4 sm:bottom-5 z-20 pointer-events-none">
+                <div className="flex items-end justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {activeLayer?.icon_url ? (
+                        <img
+                          src={activeLayer.icon_url}
+                          alt="Calendar icon"
+                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
+                        />
+                      ) : (
+                        <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
+                          <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                        </div>
+                      )}
+                      <h1
+                        className="text-xl sm:text-2xl font-bold truncate"
+                        style={activeLayerTitleTextStyle}
+                      >
+                        {calendarTitle}
+                      </h1>
+                    </div>
+                    <h2 className="mt-1 text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
+                      {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </h2>
                   </div>
+                  <span className="shrink-0 mb-0.5 px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-black/35">
+                    Tap to show controls
+                  </span>
                 </div>
-                <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
-                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </h2>
-                <span className="absolute right-0 -bottom-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-black/35">
-                  Tap to show controls
-                </span>
               </div>
             </>
           ) : (
@@ -16073,11 +16075,15 @@ function App() {
           )}
           <button
             onClick={() => setShowSubCalNotesModal(true)}
-            className="ml-auto shrink-0 relative leading-none text-yellow-600 dark:text-yellow-300 hover:text-yellow-700 dark:hover:text-yellow-200 transition-colors"
+            className="shrink-0 relative leading-none text-yellow-600 dark:text-yellow-300 hover:text-yellow-700 dark:hover:text-yellow-200 transition-colors"
             title="Open reminders and notes"
             aria-label="Open reminders and notes"
           >
-            <span className="text-sm">🗒️</span>
+            <span className="relative block w-3.5 h-4.5 rounded-[3px] bg-yellow-300 dark:bg-yellow-200 shadow-sm">
+              <span className="absolute left-0 right-0 top-[3px] border-t border-yellow-700/40" />
+              <span className="absolute left-0 right-0 top-[6px] border-t border-yellow-700/40" />
+              <span className="absolute left-0 right-0 top-[9px] border-t border-yellow-700/40" />
+            </span>
             {subCalNotes.length > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[1rem] h-[1rem] px-1 rounded-full bg-yellow-500 text-white text-[9px] leading-none font-bold flex items-center justify-center">
                 {subCalNotes.length}
