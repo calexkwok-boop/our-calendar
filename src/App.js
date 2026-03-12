@@ -16496,7 +16496,7 @@ function App() {
                           return (
                           <div
                             key={photo.id}
-                            className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer ${isSelectedPhoto ? 'ring-2 ring-purple-500' : ''} ${photoDeleteMode ? 'shake-wiggle' : ''}`}
+                            className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer ${isSelectedPhoto ? 'ring-2 ring-purple-500' : ''}`}
                             onClick={() => handlePhotoTap(photo)}
                             onMouseDown={() => startPhotoHoldAction(photo)}
                             onMouseUp={clearPhotoReactionHold}
@@ -16576,7 +16576,7 @@ function App() {
                         {photos.map(photo => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
                           return (
-                          <div key={photo.id} className={`relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'} ${photoDeleteMode ? 'shake-wiggle' : ''}`}>
+                          <div key={photo.id} className={`relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'}`}>
                             <img
                               src={photo.url}
                               alt={photo.caption || ''}
