@@ -11919,31 +11919,31 @@ function App() {
                 className="absolute inset-0 z-10 rounded-2xl"
                 aria-label="Show cover controls"
               />
-              <div className="relative z-20 flex items-center justify-between gap-2 mb-3 pointer-events-none">
-                <div className="flex items-center gap-3 min-w-0">
-                  {activeLayer?.icon_url ? (
-                    <img
-                      src={activeLayer.icon_url}
-                      alt="Calendar icon"
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
-                    />
-                  ) : (
-                    <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
-                      <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                    </div>
-                  )}
-                  <h1
-                    className="text-xl sm:text-2xl font-bold truncate"
-                    style={activeLayerTitleTextStyle}
-                  >
-                    {calendarTitle}
-                  </h1>
+              <div className="absolute inset-x-4 sm:inset-x-5 bottom-4 sm:bottom-5 z-20 pointer-events-none space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {activeLayer?.icon_url ? (
+                      <img
+                        src={activeLayer.icon_url}
+                        alt="Calendar icon"
+                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
+                      />
+                    ) : (
+                      <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
+                        <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                      </div>
+                    )}
+                    <h1
+                      className="text-xl sm:text-2xl font-bold truncate"
+                      style={activeLayerTitleTextStyle}
+                    >
+                      {calendarTitle}
+                    </h1>
+                  </div>
+                  <span className="px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-black/35">
+                    Tap to show controls
+                  </span>
                 </div>
-                <span className="px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-black/35">
-                  Tap to show controls
-                </span>
-              </div>
-              <div className="relative z-20 pointer-events-none">
                 <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
                   {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </h2>
