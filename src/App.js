@@ -100,6 +100,17 @@ const TITLE_STYLE_PRESETS = [
   { name: 'Charcoal', mode: 'solid', solidColor: '#1f2937' },
 ];
 
+const SPORTS_TITLE_STYLE_PRESETS = [
+  { name: 'Bay Gold', mode: 'gradient', gradientFrom: '#1d4ed8', gradientVia: '#2563eb', gradientTo: '#fbbf24' },
+  { name: 'Scarlet Faithful', mode: 'gradient', gradientFrom: '#991b1b', gradientVia: '#dc2626', gradientTo: '#fbbf24' },
+  { name: 'Midnight Silver', mode: 'gradient', gradientFrom: '#111827', gradientVia: '#374151', gradientTo: '#9ca3af' },
+  { name: 'Celtic Green', mode: 'gradient', gradientFrom: '#065f46', gradientVia: '#059669', gradientTo: '#d1fae5' },
+  { name: 'Dodger Blue', mode: 'gradient', gradientFrom: '#1d4ed8', gradientVia: '#2563eb', gradientTo: '#93c5fd' },
+  { name: 'Purple Gold', mode: 'gradient', gradientFrom: '#4c1d95', gradientVia: '#7c3aed', gradientTo: '#facc15' },
+  { name: 'Orange Black', mode: 'gradient', gradientFrom: '#111827', gradientVia: '#f97316', gradientTo: '#fb923c' },
+  { name: 'Emerald Navy', mode: 'gradient', gradientFrom: '#065f46', gradientVia: '#0f766e', gradientTo: '#1e3a8a' },
+];
+
 
 const urlBase64ToUint8Array = (base64String) => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -14998,6 +15009,28 @@ function App() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {TITLE_STYLE_PRESETS.map((preset) => (
+                <button
+                  key={preset.name}
+                  onClick={() => setTitleStyleDraft(normalizeLayerTitleStyle(preset))}
+                  className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-left hover:border-purple-300 dark:hover:border-purple-500"
+                >
+                  <div
+                    className="text-sm font-bold truncate"
+                    style={getLayerTitleDisplayStyle(preset)}
+                  >
+                    {preset.name}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+              Sports
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {SPORTS_TITLE_STYLE_PRESETS.map((preset) => (
                 <button
                   key={preset.name}
                   onClick={() => setTitleStyleDraft(normalizeLayerTitleStyle(preset))}
