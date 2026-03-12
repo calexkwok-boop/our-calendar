@@ -14034,7 +14034,7 @@ function App() {
                   value={agendaSearchQuery}
                   onChange={(e) => setAgendaSearchQuery(e.target.value)}
                   placeholder="Search agenda (title, location, category)"
-                  className="w-full px-3 py-2 text-sm border dark:border-gray-600 rounded-lg text-gray-700 dark:text-white"
+                  className="agenda-search-input w-full px-3 py-2 text-sm border dark:border-gray-600 rounded-lg text-gray-700 dark:text-white"
                   style={{
                     borderColor: themeAccentBorder,
                     backgroundColor: darkMode ? '#374151' : '#f3f4f6',
