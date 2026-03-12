@@ -8686,6 +8686,30 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
       return false;
     };
+    const layerNameCache = new Map();
+    const getLayerNameForNotification = async (layerIdValue) => {
+      const layerId = String(layerIdValue || '').trim();
+      if (!layerId) return 'this calendar';
+      if (layerNameCache.has(layerId)) return layerNameCache.get(layerId);
+      const { data: layerRow } = await supabase
+        .from('calendar_layers')
+        .select('name')
+        .eq('id', layerId)
+        .maybeSingle();
+      const maybeName = String(layerRow?.name || '').trim();
+      const label = maybeName ? `"${maybeName}"` : 'this calendar';
+      layerNameCache.set(layerId, label);
+      return label;
+    };
+    const shareRowTargetsMe = (row) => {
+      if (!row) return false;
+      const sharedWithId = String(row.shared_with_id || '');
+      const sharedRecipient = getShareRecipientFromRow(row);
+      return Boolean(
+        (sharedWithId && sharedWithId === me)
+        || (sharedRecipient && (sharedRecipient === myEmail || sharedRecipient === myPhone))
+      );
+    };
 
     const updatesChannel = supabase
       .channel(`in-app-updates-${me}`)
@@ -8785,6 +8809,52 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           type: 'invite',
           message: `You were invited to ${calendarName}.`,
           createdAt: row.created_at || new Date().toISOString(),
+        });
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'shared_access' }, async (payload) => {
+        const row = payload?.new || null;
+        const oldRow = payload?.old || null;
+        if (!row || !shareRowTargetsMe(row)) return;
+        if (String(row.owner_id || '') === me) return;
+        const oldBanned = oldRow?.is_banned === true;
+        const nextBanned = row?.is_banned === true;
+        const oldMuted = oldRow?.can_edit === false;
+        const nextMuted = row?.can_edit === false;
+        const layerName = await getLayerNameForNotification(row.layer_id || row.calendar_id);
+        const createdAt = row.updated_at || row.created_at || new Date().toISOString();
+        if (oldBanned !== nextBanned) {
+          addInAppNotification({
+            key: `share_moderation:ban:${String(row.id || '')}:${String(createdAt)}`,
+            type: 'moderation',
+            message: nextBanned
+              ? `You were banned from ${layerName}.`
+              : `You were unbanned in ${layerName}.`,
+            createdAt,
+          });
+          return;
+        }
+        if (oldMuted !== nextMuted) {
+          addInAppNotification({
+            key: `share_moderation:mute:${String(row.id || '')}:${String(createdAt)}`,
+            type: 'moderation',
+            message: nextMuted
+              ? `You were muted in ${layerName}. Your posts now require approval.`
+              : `You were unmuted in ${layerName}.`,
+            createdAt,
+          });
+        }
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'shared_access' }, async (payload) => {
+        const row = payload?.old || null;
+        if (!row || !shareRowTargetsMe(row)) return;
+        if (String(row.owner_id || '') === me) return;
+        const layerName = await getLayerNameForNotification(row.layer_id || row.calendar_id);
+        const createdAt = row.updated_at || row.created_at || new Date().toISOString();
+        addInAppNotification({
+          key: `share_moderation:kick:${String(row.id || '')}:${String(createdAt)}`,
+          type: 'moderation',
+          message: `You were removed from ${layerName}.`,
+          createdAt,
         });
       })
       .subscribe();
