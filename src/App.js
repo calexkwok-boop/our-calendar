@@ -6064,6 +6064,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         setCurrentUser(localHandle);
         setUserNameInput(localHandle);
         setShowUserSetup(false);
+        // If the user is authenticated and only has a local fallback,
+        // try to backfill the handle to Supabase so it persists across devices.
+        try {
+          await persistAccountHandleForUser(localHandle, authUser);
+        } catch {}
       } else {
         setShowUserSetup(true);
       }
@@ -6252,16 +6257,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           alert('Handle must be 3-30 chars: lowercase letters, numbers, dot, underscore, or dash.');
           return;
         }
+        alert(`Could not save handle: ${result?.error?.message || 'Unknown error'}`);
+        return;
       }
       setCurrentUser(normalized);
       setUserNameInput(normalized);
       setShowUserSetup(false);
     } catch (error) {
       console.error('Error saving user:', error);
-      const normalized = normalizeUsernameHandle(userName);
-      setCurrentUser(normalized);
-      setUserNameInput(normalized);
-      setShowUserSetup(false);
+      alert(`Could not save handle: ${error?.message || 'Unknown error'}`);
     }
   };
 
