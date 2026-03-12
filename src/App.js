@@ -6401,6 +6401,28 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     const recipient = resolveInviteRecipient(identity);
     if (!recipient?.value) return;
+    // Emit a moderation update first so the target user can receive
+    // a reliable realtime "kicked" notification before the share row is deleted.
+    try {
+      let preKickQuery = supabase
+        .from('shared_access')
+        .update({
+          is_banned: true,
+          banned_reason: 'kicked',
+          banned_at: new Date().toISOString(),
+          banned_by: user?.id || null,
+          can_edit: false,
+        })
+        .eq('layer_id', activeLayerId);
+      const preKickFilter = buildShareRecipientFilter('', recipient.email, recipient.phone);
+      if (preKickFilter) preKickQuery = preKickQuery.or(preKickFilter);
+      const { error: preKickError } = await preKickQuery;
+      if (preKickError && !/column .*is_banned|column .*banned_|column .*can_edit|schema cache/i.test(String(preKickError.message || ''))) {
+        console.error('Pre-kick update failed:', preKickError);
+      }
+    } catch (preKickErr) {
+      console.error('Pre-kick update exception:', preKickErr);
+    }
     let query = supabase
       .from('shared_access')
       .delete()
@@ -8824,9 +8846,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const nextBanned = row?.is_banned === true;
         const oldMuted = oldRow?.can_edit === false;
         const nextMuted = row?.can_edit === false;
+        const nextReason = String(row?.banned_reason || '').trim().toLowerCase();
         const layerName = await getLayerNameForNotification(row.layer_id || row.calendar_id);
         const createdAt = row.updated_at || row.created_at || new Date().toISOString();
         if (oldBanned !== nextBanned) {
+          if (nextBanned && nextReason === 'kicked') {
+            addInAppNotification({
+              key: `share_moderation:kick:${String(row.id || '')}:${String(createdAt)}`,
+              type: 'moderation',
+              message: `You were removed from ${layerName}.`,
+              createdAt,
+            });
+            return;
+          }
           addInAppNotification({
             key: `share_moderation:ban:${String(row.id || '')}:${String(createdAt)}`,
             type: 'moderation',
@@ -8852,6 +8884,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const row = payload?.old || null;
         if (!row || !shareRowTargetsMe(row)) return;
         if (String(row.owner_id || '') === me) return;
+        if (String(row?.banned_reason || '').trim().toLowerCase() === 'kicked') return;
         const layerName = await getLayerNameForNotification(row.layer_id || row.calendar_id);
         const createdAt = row.updated_at || row.created_at || new Date().toISOString();
         addInAppNotification({
