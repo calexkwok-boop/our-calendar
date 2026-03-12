@@ -614,14 +614,29 @@ function App() {
     if (/^\+?\d[\d\s()-]{6,}$/.test(raw)) return true;
     return false;
   };
+  const formatHandleForDisplay = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const spaced = raw.replace(/[._-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!spaced) return raw;
+    return spaced.replace(/\b\w/g, (c) => c.toUpperCase());
+  };
   const resolveHandleLikeLabel = (value, userId = '') => {
     const raw = String(value || '').trim();
     const uid = String(userId || '').trim();
     if (!raw && !uid) return 'Member';
+    if (uid) {
+      const byUserId = String(knownHandlesByUserId?.[uid] || '').trim();
+      if (byUserId) return formatHandleForDisplay(byUserId);
+    }
+    const rawEmail = normalizeEmail(raw);
+    if (rawEmail) {
+      const byEmail = String(knownHandlesByEmail?.[rawEmail] || '').trim();
+      if (byEmail) return formatHandleForDisplay(byEmail);
+    }
     if (uid && String(user?.id || '').trim() === uid) return currentUser || 'You';
     const myEmail = normalizeEmail(user?.email);
     const myPhone = normalizePhoneNumber(user?.phone);
-    const rawEmail = normalizeEmail(raw);
     const rawPhone = normalizePhoneNumber(raw);
     if (raw && (
       (myEmail && rawEmail && rawEmail === myEmail)
@@ -2516,6 +2531,8 @@ function App() {
   const [calendarChatMessages, setCalendarChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState('');
+  const [knownHandlesByEmail, setKnownHandlesByEmail] = useState({});
+  const [knownHandlesByUserId, setKnownHandlesByUserId] = useState({});
   const [chatUnreadCounts, setChatUnreadCounts] = useState({});
   const [chatLastSeenByLayer, setChatLastSeenByLayer] = useState({});
   const [chatMembers, setChatMembers] = useState([]);
@@ -6141,6 +6158,86 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return { ok: true };
   };
 
+  const loadKnownHandlesForActiveLayer = async () => {
+    if (!activeLayerId) return;
+    const emails = new Set();
+    const userIds = new Set();
+    const addEmail = (value) => {
+      const email = normalizeEmail(value);
+      if (email) emails.add(email);
+    };
+    const addUserId = (value) => {
+      const uid = String(value || '').trim();
+      if (uid) userIds.add(uid);
+    };
+
+    addEmail(user?.email);
+    addUserId(user?.id);
+    addUserId(activeLayerOwnerId);
+    (myShares || []).forEach((row) => {
+      addEmail(row?.shared_with_email);
+      addUserId(row?.shared_with_id);
+    });
+    (sharedCalendars || []).forEach((row) => {
+      addEmail(row?.shared_with_email);
+      addUserId(row?.shared_with_id);
+    });
+    (chatMembers || []).forEach((member) => {
+      addUserId(member?.userId);
+      addEmail(member?.label);
+    });
+    (calendarChatMessages || []).forEach((msg) => {
+      addUserId(msg?.user_id);
+      addEmail(msg?.created_by);
+      addEmail(msg?.email);
+    });
+
+    const nextByEmail = {};
+    const nextByUserId = {};
+
+    try {
+      const emailList = Array.from(emails);
+      if (emailList.length > 0) {
+        const { data, error } = await supabase
+          .from(ACCOUNT_HANDLE_TABLE)
+          .select('email,handle,user_id')
+          .in('email', emailList);
+        if (!error) {
+          (data || []).forEach((row) => {
+            const email = normalizeEmail(row?.email);
+            const handle = String(row?.handle || '').trim();
+            const uid = String(row?.user_id || '').trim();
+            if (email && handle) nextByEmail[email] = handle;
+            if (uid && handle) nextByUserId[uid] = handle;
+          });
+        }
+      }
+
+      const userIdList = Array.from(userIds);
+      if (userIdList.length > 0) {
+        const { data, error } = await supabase
+          .from(ACCOUNT_HANDLE_TABLE)
+          .select('email,handle,user_id')
+          .in('user_id', userIdList);
+        if (!error) {
+          (data || []).forEach((row) => {
+            const email = normalizeEmail(row?.email);
+            const handle = String(row?.handle || '').trim();
+            const uid = String(row?.user_id || '').trim();
+            if (email && handle) nextByEmail[email] = handle;
+            if (uid && handle) nextByUserId[uid] = handle;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading known handles:', error);
+      return;
+    }
+
+    if (Object.keys(nextByEmail).length > 0) setKnownHandlesByEmail(prev => ({ ...prev, ...nextByEmail }));
+    if (Object.keys(nextByUserId).length > 0) setKnownHandlesByUserId(prev => ({ ...prev, ...nextByUserId }));
+  };
+
   const saveUser = async (userName) => {
     if (!userName || userName.trim() === '') userName = 'User';
     try {
@@ -6197,6 +6294,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
       setCurrentUser(nextHandle);
       setUserNameInput(nextHandle);
+      if (user?.email) {
+        const email = normalizeEmail(user.email);
+        if (email) setKnownHandlesByEmail(prev => ({ ...prev, [email]: nextHandle }));
+      }
+      if (user?.id) {
+        const uid = String(user.id).trim();
+        if (uid) setKnownHandlesByUserId(prev => ({ ...prev, [uid]: nextHandle }));
+      }
       setAccountHandleMessage(result?.localOnly ? 'Handle updated locally (email mapping table not ready yet).' : 'Handle updated.');
     } catch (error) {
       console.error('Error saving account handle:', error);
@@ -8179,6 +8284,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     loadChatMembers();
   }, [activeLayerId, activeLayerOwnerId, user?.id, user?.email, user?.phone, currentUser, myShares, sharedOwnerLabels, layerRefreshToken]);
+
+  useEffect(() => {
+    if (!activeLayerId) return;
+    loadKnownHandlesForActiveLayer();
+  }, [activeLayerId, user?.id, user?.email, activeLayerOwnerId, myShares, sharedCalendars, chatMembers, calendarChatMessages, layerRefreshToken]);
 
   useEffect(() => {
     if (!activeLayerId || !user?.id) {
