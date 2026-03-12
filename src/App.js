@@ -12678,9 +12678,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
             ? {
               backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
-              backgroundSize: 'contain',
+              backgroundSize: 'cover',
               backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'center',
               backgroundPosition: 'center',
             }
             : undefined}
@@ -13341,80 +13340,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </p>
               )}
             </div>
-            {!activeLayer?.is_public && myShares.length > 0 && (
-              <div className="mb-5">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Shared with:</h4>
-                <div className="space-y-2">
-                  {myShares.map((share, i) => (
-                    (() => {
-                      const recipient = getShareRecipientFromRow(share);
-                      if (!recipient) return null;
-                      return (
-                    <div key={i} className="flex items-center justify-between gap-3 p-3 bg-purple-50 dark:bg-purple-900/30 rounded-xl border border-purple-200 dark:border-purple-700">
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-purple-400 flex items-center justify-center text-white text-xs font-bold">
-                          {recipient[0]?.toUpperCase() || '?'}
-                        </div>
-                        <span className="min-w-0 truncate text-sm text-gray-700 dark:text-gray-300">{recipient}</span>
-                        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-purple-100 dark:bg-purple-800 text-purple-700 dark:text-purple-200">
-                          {getRecipientKindLabel(recipient)}
-                        </span>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-3">
-                        {(canManageActiveLayer || canMuteMembersInActiveLayer) && (
-                          <>
-                            <button
-                              onClick={() => handleToggleShareEditPermission(recipient, !(share?.can_edit !== false))}
-                              className={`px-2 py-1 text-[11px] rounded-lg border transition-all ${
-                                share?.can_edit !== false
-                                  ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
-                                  : 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
-                              }`}
-                              title="Mute or unmute posting"
-                            >
-                              {share?.can_edit !== false ? 'Unmuted' : 'Muted'}
-                            </button>
-                            {canManageActiveLayer && (
-                              <>
-                                <select
-                                  value={String(share?.role || 'member')}
-                                  onChange={(e) => handleUpdateShareRole(recipient, e.target.value)}
-                                  className="px-2 py-1 text-[11px] rounded-lg border bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600"
-                                  title="Member role"
-                                >
-                                  <option value="member">Member</option>
-                                  <option value="moderator">Moderator</option>
-                                  <option value="admin">Admin</option>
-                                </select>
-                                <button
-                                  onClick={() => handleToggleShareBan(recipient, !share?.is_banned)}
-                                  className={`px-2 py-1 text-[11px] rounded-lg border transition-all ${
-                                    share?.is_banned
-                                      ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
-                                      : 'bg-rose-100 dark:bg-rose-900/30 border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300'
-                                  }`}
-                                  title={share?.is_banned ? 'Unban member' : 'Ban member'}
-                                >
-                                  {share?.is_banned ? 'Unban' : 'Ban'}
-                                </button>
-                              </>
-                            )}
-                          </>
-                        )}
-                        {canManageActiveLayer && (
-                          <button onClick={() => handleRemoveShare(recipient)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-all" title="Remove access">
-                            <X className="w-4 h-4 text-red-500" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                      );
-                    })()
-                  ))}
-                </div>
-              </div>
-            )}
-            {activeLayer?.is_public && (
+            {activeLayerId && (
               <div className="mb-5">
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Admins & Moderators</h4>
                 <div className="space-y-2">
