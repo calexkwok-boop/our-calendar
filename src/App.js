@@ -2970,6 +2970,10 @@ function App() {
       alert('Access removed: you have been banned from editing this calendar.');
       return false;
     }
+    if (activeShareRowForMe?.can_edit === false) {
+      alert('Posting is currently muted for this calendar. Ask an admin or moderator to unmute you.');
+      return false;
+    }
     alert(`Read-only access: you can chat and join events, but you cannot ${actionLabel}.`);
     return false;
   };
@@ -3955,7 +3959,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       shared_with_id: user.id,
       shared_with_email: normalizeEmail(user?.email) || null,
       shared_with_phone: normalizePhoneNumber(user?.phone) || null,
-      can_edit: false,
+      can_edit: true,
       role: 'member',
       is_banned: false,
     };
@@ -6016,7 +6020,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       calendar_id: activeLayerId,
       shared_with_email: email || null,
       shared_with_phone: phone || null,
-      can_edit: false,
+      can_edit: true,
       role: 'member',
       is_banned: false,
     });
@@ -6040,12 +6044,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         layer_id: activeLayerId,
         shared_with_email: email || null,
         shared_with_phone: phone || null,
-        can_edit: false,
+        can_edit: true,
         role: 'member',
         is_banned: false,
       }]);
       setShareEmailInput('');
-      setShareMessage(`Shared! ${recipient.value} is Read only by default (you can change to Editor).`);
+      setShareMessage(`Shared! ${recipient.value} can post events, and posts from members are pending moderator/admin review.`);
     }
   };
 
