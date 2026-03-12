@@ -15911,7 +15911,10 @@ function App() {
                         {slotEvents.map(event => (
                           <div key={event.id}>
                             {subCalEditingEvent === event.id ? (
-                              <div className="bg-white dark:bg-gray-700 rounded-xl p-3 border-2 border-purple-300 shadow space-y-2 mb-1">
+                              <div
+                                className="bg-white dark:bg-gray-700 rounded-xl p-3 border-2 border-purple-300 shadow space-y-2 mb-1"
+                                style={{ touchAction: 'pan-y' }}
+                              >
                                 <input
                                   type="text"
                                   defaultValue={event.title}
@@ -15979,7 +15982,10 @@ function App() {
                                 <button onClick={() => setSubCalEditingEvent(null)} className="w-full py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg text-sm font-medium">Done</button>
                               </div>
                            ) : (
-                              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl px-2.5 py-2 mb-1 border border-purple-200 dark:border-purple-700">
+                              <div
+                                className="bg-purple-50 dark:bg-purple-900/20 rounded-xl px-2.5 py-2 mb-1 border border-purple-200 dark:border-purple-700"
+                                style={{ touchAction: 'pan-y' }}
+                              >
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium text-sm text-gray-800 dark:text-gray-200">{event.title}</div>
                                   {(event.time || event.endTime) && (
