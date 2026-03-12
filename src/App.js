@@ -14025,7 +14025,13 @@ function App() {
             )}
 
             {calendarView === 'agenda' && (
-              <div className="mb-3 rounded-xl border p-2.5 space-y-2 dark:bg-gray-700/40" style={{ borderColor: themeAccentBorder, backgroundColor: themeAccentSofterBg }}>
+              <div
+                className="mb-3 rounded-xl border p-2.5 space-y-2"
+                style={{
+                  borderColor: themeAccentBorder,
+                  backgroundColor: darkMode ? '#374151' : themeAccentSofterBg,
+                }}
+              >
                 <div className="flex gap-2 overflow-x-auto">
                   {[7, 30, 90].map((days) => (
                     <button
@@ -14043,11 +14049,8 @@ function App() {
                   ))}
                 </div>
                 <div
-                  className="w-full rounded-lg border"
-                  style={{
-                    borderColor: themeAccentBorder,
-                    backgroundColor: darkMode ? '#1f2937' : '#e5e7eb',
-                  }}
+                  className="w-full rounded-lg border bg-gray-100 dark:bg-gray-700"
+                  style={{ borderColor: themeAccentBorder }}
                 >
                   <input
                     type="text"
