@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.agenda-search-input,
+.agenda-search-input:focus,
+.agenda-search-input:active {
+  background: transparent !important;
+}
+
+.agenda-search-input:-webkit-autofill,
+.agenda-search-input:-webkit-autofill:hover,
+.agenda-search-input:-webkit-autofill:focus,
+.agenda-search-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  box-shadow: 0 0 0 1000px transparent inset !important;
+}

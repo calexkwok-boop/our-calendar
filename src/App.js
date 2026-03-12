@@ -14042,22 +14042,29 @@ function App() {
                     </button>
                   ))}
                 </div>
-                <input
-                  type="text"
-                  value={agendaSearchQuery}
-                  onChange={(e) => setAgendaSearchQuery(e.target.value)}
-                  placeholder="Search agenda (title, location, category)"
-                  className="agenda-search-input w-full px-3 py-2 text-sm border dark:border-gray-600 rounded-lg text-gray-700 dark:text-white"
+                <div
+                  className="w-full rounded-lg border"
                   style={{
                     borderColor: themeAccentBorder,
                     backgroundColor: darkMode ? '#374151' : '#f3f4f6',
-                    boxShadow: `inset 0 0 0 9999px ${darkMode ? '#374151' : '#f3f4f6'}`,
-                    WebkitBoxShadow: `inset 0 0 0 9999px ${darkMode ? '#374151' : '#f3f4f6'}`,
-                    WebkitTextFillColor: darkMode ? '#ffffff' : '#374151',
-                    appearance: 'none',
-                    WebkitAppearance: 'none',
                   }}
-                />
+                >
+                  <input
+                    type="text"
+                    value={agendaSearchQuery}
+                    onChange={(e) => setAgendaSearchQuery(e.target.value)}
+                    placeholder="Search agenda (title, location, category)"
+                    className="agenda-search-input w-full px-3 py-2 text-sm rounded-lg bg-transparent text-gray-700 dark:text-white"
+                    style={{
+                      backgroundColor: 'transparent',
+                      boxShadow: 'none',
+                      WebkitBoxShadow: 'none',
+                      WebkitTextFillColor: darkMode ? '#ffffff' : '#374151',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                    }}
+                  />
+                </div>
               </div>
             )}
 
@@ -15202,7 +15209,7 @@ function App() {
                       const rowTheme = normalizeLayerPageTheme(row?.page_theme, row?.title_style);
                       const rowAccentBorder = mixHexColors(rowTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.35 : 0.62);
                       const rowSoftBg = mixHexColors(rowTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.72 : 0.84);
-                      const ownerLabel = String(row?.created_by || sharedOwnerLabels[String(row?.owner_id || '')] || fallbackOwnerLabel(row?.owner_id) || 'Creator');
+                      const memberCount = Math.max(1, Number(row?.member_count || 0) + 1);
                       const tags = Array.isArray(row?.public_tags) ? row.public_tags : [];
                       const description = String(row?.public_description || '').trim();
                       const isExpanded = Boolean(expandedExploreDescriptions[layerId]);
@@ -15215,7 +15222,7 @@ function App() {
                           <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{row?.name || 'Public Calendar'}</div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                by {ownerLabel} · {Math.max(1, Number(row?.member_count || 0) + 1)} member{Math.max(1, Number(row?.member_count || 0) + 1) === 1 ? '' : 's'}
+                                {memberCount} member{memberCount === 1 ? '' : 's'}
                               </div>
                               {description && (
                                 <div className="mt-1">
