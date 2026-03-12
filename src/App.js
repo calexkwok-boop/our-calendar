@@ -14996,7 +14996,14 @@ function App() {
 
     {showTitleStyleModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md">
+        <div
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehaviorY: 'contain',
+            touchAction: 'pan-y',
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <div />
             <button onClick={() => setShowTitleStyleModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
