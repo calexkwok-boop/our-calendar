@@ -14963,28 +14963,19 @@ function App() {
             </button>
           </div>
 
-          <div className="mb-4">
-            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+          <div className="rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/70 dark:bg-purple-900/20 px-4 py-3 mb-4">
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
               Calendar Title
             </label>
             <input
               type="text"
               value={titleNameDraft}
               onChange={(e) => setTitleNameDraft(e.target.value)}
-              placeholder="Calendar title"
-              className="w-full px-3 py-2 text-base sm:text-sm border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
-              style={{ fontSize: '16px' }}
+              placeholder="Calendar Title"
+              className="w-full bg-transparent border-0 p-0 text-2xl sm:text-3xl font-bold focus:outline-none"
+              style={getLayerTitleDisplayStyle(titleStyleDraft)}
               autoFocus
             />
-          </div>
-
-          <div className="rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/70 dark:bg-purple-900/20 px-4 py-3 mb-4">
-            <div
-              className="text-2xl sm:text-3xl font-bold truncate"
-              style={getLayerTitleDisplayStyle(titleStyleDraft)}
-            >
-              {titleNameDraft || calendarTitle || activeLayer?.name || 'Calendar Title'}
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 mb-4">
