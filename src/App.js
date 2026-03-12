@@ -1458,7 +1458,7 @@ function App() {
       }
       setTripPhotos(prev => [...prev, photo]);
       setPhotoUploadError(false);
-      setPhotoUploadMessage(`Uploaded: ${file.name}`);
+      setPhotoUploadMessage('');
       return true;
     } catch (e) {
       console.error(e);
@@ -13086,7 +13086,8 @@ function App() {
                 value={newListItemText}
                 onChange={(e) => setNewListItemText(e.target.value)}
                 placeholder="Add an item..."
-                className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
+                className="flex-1 px-3 py-2 text-base sm:text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
+                style={{ fontSize: '16px' }}
                 onKeyPress={(e) => e.key === 'Enter' && addSharedListItem()}
                 disabled={!selectedSharedListId}
               />
@@ -13232,7 +13233,8 @@ function App() {
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="Category name"
-                  className="flex-1 px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-400"
+                  className="flex-1 px-3 py-2 text-base sm:text-sm border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-400"
+                  style={{ fontSize: '16px' }}
                 />
                   <button onClick={handleAddCategory} className="px-4 py-2 rounded-lg" style={themeAccentButtonStyle}>
                     <Plus className="w-5 h-5" />
@@ -13257,7 +13259,8 @@ function App() {
                         type="text"
                         defaultValue={cat.label}
                         onBlur={(e) => handleUpdateCategory(key, { label: e.target.value })}
-                        className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
+                        className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-base sm:text-sm"
+                        style={{ fontSize: '16px' }}
                         autoFocus
                       />
                       <div className="grid grid-cols-6 gap-1">
@@ -15780,7 +15783,8 @@ function App() {
                               onChange={e => setNewChecklistItem(e.target.value)}
                               onKeyPress={e => { if (e.key === 'Enter') { addChecklistItem(note.id, newChecklistItem); } }}
                               placeholder="Add item..."
-                              className="flex-1 px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg"
+                              className="flex-1 px-2 py-1 text-base sm:text-xs border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg"
+                              style={{ fontSize: '16px' }}
                             />
                             <button onClick={() => addChecklistItem(note.id, newChecklistItem)} className="px-2 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs">+</button>
                           </div>
@@ -15796,7 +15800,8 @@ function App() {
                     onChange={e => setNewNote(e.target.value)}
                     onKeyPress={e => e.key === 'Enter' && addSubCalNote()}
                     placeholder="Add a note..."
-                    className="flex-1 px-2.5 py-1.5 text-xs border border-yellow-300 dark:border-yellow-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-yellow-400"
+                    className="flex-1 px-2.5 py-1.5 text-base sm:text-xs border border-yellow-300 dark:border-yellow-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-yellow-400"
+                    style={{ fontSize: '16px' }}
                   />
                   <button onClick={addSubCalNote} className="px-2.5 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs font-medium">Add</button>
                 </div>
