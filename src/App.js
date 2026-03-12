@@ -16067,15 +16067,11 @@ function App() {
           )}
           <button
             onClick={() => setShowSubCalNotesModal(true)}
-            className="ml-auto shrink-0 w-9 h-9 rounded-xl border border-yellow-300 dark:border-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center relative hover:bg-yellow-200 dark:hover:bg-yellow-900/45 transition-colors"
+            className="ml-auto shrink-0 relative leading-none text-yellow-600 dark:text-yellow-300 hover:text-yellow-700 dark:hover:text-yellow-200 transition-colors"
             title="Open reminders and notes"
             aria-label="Open reminders and notes"
           >
-            <span className="relative block w-4 h-5 rounded-[3px] bg-yellow-300 dark:bg-yellow-200 shadow-sm">
-              <span className="absolute left-0 right-0 top-[4px] border-t border-yellow-700/40" />
-              <span className="absolute left-0 right-0 top-[8px] border-t border-yellow-700/40" />
-              <span className="absolute left-0 right-0 top-[12px] border-t border-yellow-700/40" />
-            </span>
+            <span className="text-sm">🗒️</span>
             {subCalNotes.length > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[1rem] h-[1rem] px-1 rounded-full bg-yellow-500 text-white text-[9px] leading-none font-bold flex items-center justify-center">
                 {subCalNotes.length}
