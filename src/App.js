@@ -11827,7 +11827,7 @@ function App() {
       }}
     />
     <div className="min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24" style={themedPageBackgroundStyle}>
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto mt-12 sm:mt-16">
         <div
           ref={layerHeaderCardRef}
           className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 ${
