@@ -3169,8 +3169,6 @@ function App() {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '');
   const useLegacyEllieMilesTheme = activeLayerNameKey === 'elliemiles';
-  const useNeutralDarkControlSurfaces = darkMode || useLegacyEllieMilesTheme;
-  const useDarkTopButtonActiveState = darkMode || useLegacyEllieMilesTheme;
   const effectiveCoverOpacity = coverOpacityPreview == null
     ? activeLayerPageTheme.coverOpacity
     : Math.max(0, Math.min(1, Number(coverOpacityPreview)));
@@ -11894,15 +11892,11 @@ function App() {
               <button
                 onClick={() => setShowSharePanel(!showSharePanel)}
                 className={`p-2 rounded-xl transition-all duration-200 border ${
-                  useDarkTopButtonActiveState
-                    ? showSharePanel
-                      ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
-                    : showSharePanel
-                      ? ''
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                  showSharePanel
+                    ? 'border-transparent'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                style={useDarkTopButtonActiveState ? undefined : showSharePanel ? themeAccentSoftButtonStyle : undefined}
+                style={showSharePanel ? themeAccentButtonStyle : undefined}
                 title="Share calendar"
               >
                 <User className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -11928,15 +11922,11 @@ function App() {
               <button
                 onClick={() => setShowListPanel(!showListPanel)}
                 className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${
-                  useDarkTopButtonActiveState
-                    ? showListPanel
-                      ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
-                    : showListPanel
-                      ? ''
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                  showListPanel
+                    ? 'border-transparent'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                style={useDarkTopButtonActiveState ? undefined : showListPanel ? themeAccentSoftButtonStyle : undefined}
+                style={showListPanel ? themeAccentButtonStyle : undefined}
                 title="Shared list"
               >
                 List
@@ -11949,7 +11939,8 @@ function App() {
                   if (!next) setShowChatMembersPanel(false);
                   if (next && layerKey) markChatSeenForLayer(layerKey);
                 }}
-                className={`relative px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold ${showChatPanel ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                className={`relative px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${showChatPanel ? 'border-transparent' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'}`}
+                style={showChatPanel ? themeAccentButtonStyle : undefined}
                 title="Calendar chat"
               >
                 Chat
@@ -11968,25 +11959,14 @@ function App() {
               </button>
               <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
-                className={`p-2 rounded-xl transition-all duration-200 ${
-                  useDarkTopButtonActiveState
-                  ? showCategoryEditor
-                    ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                  : ''
-              }`}
-                style={useDarkTopButtonActiveState ? undefined : themeAccentSoftButtonStyle}
-              >
-                <Settings
-                  className={`w-4 h-4 sm:w-5 sm:h-5 ${
-                  useDarkTopButtonActiveState
-                    ? showCategoryEditor
-                      ? 'text-indigo-700 dark:text-indigo-300'
-                      : 'text-gray-600 dark:text-gray-300'
-                    : ''
+                className={`p-2 rounded-xl transition-all duration-200 border ${
+                  showCategoryEditor
+                    ? 'border-transparent'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                  style={useDarkTopButtonActiveState ? undefined : themeAccentTextStyle}
-                />
+                style={showCategoryEditor ? themeAccentButtonStyle : undefined}
+              >
+                <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
               <button
                 onClick={() => setDarkMode(!darkMode)}
@@ -11999,22 +11979,16 @@ function App() {
           </div>
 
           <div className="flex items-center justify-between gap-2">
-            <button
-              onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-              className={`p-2 rounded-xl transition-all duration-200 ${
-                useNeutralDarkControlSurfaces
-                  ? 'hover:bg-purple-100 dark:hover:bg-gray-700'
-                  : ''
-              }`}
-              style={useNeutralDarkControlSurfaces ? undefined : themeAccentSoftButtonStyle}
-            >
-              <ChevronLeft
-                className={`w-6 h-6 ${
-                  useNeutralDarkControlSurfaces ? 'text-purple-600 dark:text-purple-400' : ''
-                }`}
-                style={useNeutralDarkControlSurfaces ? undefined : themeAccentTextStyle}
-              />
-            </button>
+              <button
+                onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
+                className="p-2 rounded-xl transition-all duration-200"
+                style={themeAccentSoftButtonStyle}
+              >
+                <ChevronLeft
+                  className="w-6 h-6"
+                  style={themeAccentTextStyle}
+                />
+              </button>
             <div className="flex flex-col items-center gap-1">
               <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
                 {calendarView === 'month'
@@ -12029,46 +12003,40 @@ function App() {
                     : `Agenda · Next ${agendaRangeDays} days`
                 }
               </h2>
-              <div className="flex rounded-lg overflow-hidden border border-purple-200 dark:border-gray-600 text-xs font-medium">
+              <div className="flex rounded-lg overflow-hidden border text-xs font-medium" style={{ borderColor: themeAccentBorder }}>
                 <button
                   onClick={() => setCalendarView('month')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                  style={calendarView === 'month' ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
                 >
                   Month
                 </button>
                 <button
                   onClick={() => setCalendarView('week')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                  style={calendarView === 'week' ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
                 >
                   Week
                 </button>
                 <button
                   onClick={() => setCalendarView('agenda')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                  style={calendarView === 'agenda' ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
                 >
                   Agenda
                 </button>
               </div>
             </div>
-            <button
-              onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-              className={`p-2 rounded-xl transition-all duration-200 ${
-                useNeutralDarkControlSurfaces
-                  ? 'hover:bg-purple-100 dark:hover:bg-gray-700'
-                  : ''
-              }`}
-              style={useNeutralDarkControlSurfaces ? undefined : themeAccentSoftButtonStyle}
-            >
-              <ChevronRight
-                className={`w-6 h-6 ${
-                  useNeutralDarkControlSurfaces ? 'text-purple-600 dark:text-purple-400' : ''
-                }`}
-                style={useNeutralDarkControlSurfaces ? undefined : themeAccentTextStyle}
-              />
-            </button>
+              <button
+                onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
+                className="p-2 rounded-xl transition-all duration-200"
+                style={themeAccentSoftButtonStyle}
+              >
+                <ChevronRight
+                  className="w-6 h-6"
+                  style={themeAccentTextStyle}
+                />
+              </button>
           </div>
         </div>
 
@@ -12115,10 +12083,10 @@ function App() {
                   </div>
                 </div>
               )}
-              <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
+              <div className="p-4 rounded-xl border" style={{ backgroundColor: themeAccentSofterBg, borderColor: themeAccentBorder }}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Bell className="w-5 h-5 text-indigo-600" />
+                    <Bell className="w-5 h-5" style={themeAccentTextStyle} />
                     <span className="font-semibold text-gray-800 dark:text-gray-200">In-App Updates</span>
                     {unreadInAppCount > 0 && (
                       <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">{unreadInAppCount}</span>
@@ -12128,7 +12096,8 @@ function App() {
                     <button
                       onClick={markAllInAppNotificationsRead}
                       disabled={unreadInAppCount === 0}
-                      className="px-2 py-1 rounded-md text-xs font-medium bg-indigo-500 hover:bg-indigo-600 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="px-2 py-1 rounded-md text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={themeAccentButtonStyle}
                     >
                       Mark all read
                     </button>
@@ -12149,7 +12118,8 @@ function App() {
                       <button
                         key={item.id}
                         onClick={() => { void handleInAppNotificationClick(item); }}
-                        className={`w-full text-left rounded-lg border px-2.5 py-2 transition-colors ${item.read ? 'bg-white/70 dark:bg-gray-800 border-indigo-100 dark:border-indigo-800' : 'bg-white dark:bg-gray-800 border-indigo-300 dark:border-indigo-600'}`}
+                        className={`w-full text-left rounded-lg border px-2.5 py-2 transition-colors ${item.read ? 'bg-white/70 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+                        style={{ borderColor: item.read ? mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.8 : 0.85) : themeAccentBorder }}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <span className={`text-xs ${item.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-800 dark:text-gray-100 font-medium'}`}>{item.message}</span>
@@ -12317,10 +12287,10 @@ function App() {
         )}
 
         {showAiAssistant && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border border-indigo-200 dark:border-indigo-800">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="text-lg sm:text-xl font-semibold text-indigo-600 dark:text-indigo-400">AI Assistant</h3>
+                <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>AI Assistant</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Ask for help planning events, reminders, and trip ideas.</p>
               </div>
               <button
@@ -12335,14 +12305,15 @@ function App() {
               {aiMessages.map((msg, idx) => (
                 <div
                   key={`${msg.role}-${idx}`}
-                  className={`max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap ${
-                    msg.role === 'user'
-                      ? 'ml-auto bg-indigo-600 text-white'
+                    className={`max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap ${
+                      msg.role === 'user'
+                      ? 'ml-auto text-white'
                       : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'
-                  }`}
-                >
-                  {msg.content}
-                </div>
+                    }`}
+                    style={msg.role === 'user' ? themeAccentButtonStyle : undefined}
+                  >
+                    {msg.content}
+                  </div>
               ))}
               {aiLoading && (
                 <div className="max-w-[92%] px-3 py-2 rounded-xl text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300">
@@ -12363,12 +12334,14 @@ function App() {
                   }
                 }}
                 placeholder="Ask anything about your calendar..."
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2"
+                style={{ borderColor: themeAccentBorder }}
               />
               <button
                 onClick={sendAiAssistantMessage}
                 disabled={aiLoading || !aiInput.trim()}
-                className="px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold disabled:opacity-50"
+                className="px-3 py-2 rounded-xl text-white text-sm font-semibold disabled:opacity-50"
+                style={themeAccentButtonStyle}
               >
                 Send
               </button>
@@ -12525,14 +12498,15 @@ function App() {
         )}
 
         {showChatPanel && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border border-indigo-100 dark:border-indigo-800">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
             <div className="flex items-center justify-between mb-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg sm:text-xl font-semibold text-indigo-600 dark:text-indigo-400">Calendar Chat</h3>
+                  <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Calendar Chat</h3>
                   <button
                     onClick={() => setShowChatMembersPanel(prev => !prev)}
-                    className="px-2 py-1 rounded-full text-[11px] font-semibold border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/25 text-indigo-700 dark:text-indigo-200"
+                    className="px-2 py-1 rounded-full text-[11px] font-semibold border"
+                    style={showChatMembersPanel ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
                     title="Show member status"
                   >
                     {chatOnlineMemberCount}/{chatTotalMembers} members
@@ -12540,7 +12514,7 @@ function App() {
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Messages in this calendar are shared with everyone who has access.</p>
                 {showChatMembersPanel && (
-                  <div className="mt-2 w-full max-w-xs rounded-xl border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-gray-900 shadow-md p-2">
+                  <div className="mt-2 w-full max-w-xs rounded-xl border bg-white dark:bg-gray-900 shadow-md p-2" style={{ borderColor: themeAccentBorder }}>
                     {chatMembersWithStatus.map((member, idx) => {
                       const online = Boolean(member?.userId && chatPresenceByUserId[String(member.userId)]);
                       return (
@@ -12558,7 +12532,7 @@ function App() {
               </button>
             </div>
 
-            <div ref={calendarChatScrollRef} className="h-64 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3 space-y-2">
+            <div ref={calendarChatScrollRef} className="h-64 overflow-y-auto rounded-xl border bg-gray-50 dark:bg-gray-900 p-3 space-y-2" style={{ borderColor: themeAccentBorder }}>
               {calendarChatMessages.length === 0 ? (
                 <p className="text-xs text-gray-500 dark:text-gray-400 italic">No messages yet. Start the conversation.</p>
               ) : (
@@ -12590,7 +12564,8 @@ function App() {
                           chatLastTapRef.current = { messageId, at: now };
                         }
                       }}
-                      className={`max-w-[90%] sm:max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap break-words ${mine ? 'ml-auto bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}
+                      className={`max-w-[90%] sm:max-w-[92%] px-3 py-2 rounded-xl text-sm whitespace-pre-wrap break-words ${mine ? 'ml-auto text-white' : 'bg-white dark:bg-gray-800 border text-gray-800 dark:text-gray-100'}`}
+                      style={mine ? themeAccentButtonStyle : { borderColor: themeAccentBorder }}
                     >
                       <div className="mb-1 flex items-center justify-between gap-2">
                         <div className={`text-[10px] ${mine ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>{mine ? 'You' : who}</div>
@@ -12830,12 +12805,14 @@ function App() {
                   }
                 }}
                 placeholder="Send a message to this calendar..."
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                className="flex-1 px-3 py-2 border dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2"
+                style={{ borderColor: themeAccentBorder }}
               />
               <button
                 onClick={sendCalendarChatMessage}
                 disabled={!chatInput.trim()}
-                className="px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold disabled:opacity-50"
+                className="px-3 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+                style={themeAccentButtonStyle}
               >
                 Send
               </button>
@@ -12843,9 +12820,9 @@ function App() {
 
             {showCreateEventPopup && (
               <div className="fixed inset-0 z-[70] bg-black/45 flex items-center justify-center p-4">
-                <div className="w-full max-w-md rounded-2xl border border-indigo-100 dark:border-indigo-800 bg-white dark:bg-gray-800 p-4 shadow-2xl">
+                <div className="w-full max-w-md rounded-2xl border bg-white dark:bg-gray-800 p-4 shadow-2xl" style={{ borderColor: themeAccentBorder }}>
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-base font-semibold text-indigo-600 dark:text-indigo-400">
+                    <h4 className="text-base font-semibold" style={themeAccentHeadingStyle}>
                       {pollComposerStep === 'menu'
                         ? 'Create'
                         : pollComposerStep === 'when'
@@ -12868,10 +12845,11 @@ function App() {
                     <div className="space-y-2">
                       <button
                         onClick={() => setPollComposerStep('when')}
-                        className="w-full px-3 py-3 rounded-xl border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-left hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
+                        className="w-full px-3 py-3 rounded-xl border text-left transition-colors"
+                        style={{ borderColor: themeAccentBorder, backgroundColor: themeAccentSofterBg }}
                       >
-                        <div className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">🗳️ Create an event poll</div>
-                        <div className="text-xs text-indigo-600/90 dark:text-indigo-400/90 mt-0.5">Ask members to vote, then auto-add the winner.</div>
+                        <div className="text-sm font-semibold" style={themeAccentHeadingStyle}>🗳️ Create an event poll</div>
+                        <div className="text-xs mt-0.5" style={themeAccentTextStyle}>Ask members to vote, then auto-add the winner.</div>
                       </button>
                       <button
                         onClick={() => setPollComposerStep('popup')}
@@ -12958,13 +12936,13 @@ function App() {
 
                   {pollComposerStep === 'when' && (
                     <div className="space-y-3 min-w-0 overflow-hidden">
-                      <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800">
+                      <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border bg-white/90 dark:bg-gray-800" style={{ borderColor: themeAccentBorder }}>
                         <input
                           autoFocus
                           type="date"
                           value={pollDateInput}
                           onChange={(e) => setPollDateInput(e.target.value)}
-                          className="block w-full min-w-0 max-w-full px-3 py-2 text-sm bg-transparent dark:text-white focus:ring-2 focus:ring-indigo-400 outline-none"
+                          className="block w-full min-w-0 max-w-full px-3 py-2 text-sm bg-transparent dark:text-white focus:ring-2 outline-none"
                           style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', WebkitAppearance: 'none' }}
                         />
                       </div>
@@ -12984,7 +12962,8 @@ function App() {
                             setChatError('');
                             setPollComposerStep('what');
                           }}
-                          className="px-3 py-2 text-sm rounded-xl bg-indigo-600 text-white font-semibold"
+                          className="px-3 py-2 text-sm rounded-xl font-semibold"
+                          style={themeAccentButtonStyle}
                         >
                           Next
                         </button>
@@ -13000,7 +12979,8 @@ function App() {
                         value={pollQuestionInput}
                         onChange={(e) => setPollQuestionInput(e.target.value)}
                         placeholder="What's the event? (e.g. Team lunch)"
-                        className="w-full px-3 py-2 text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400"
+                        className="w-full px-3 py-2 text-sm border bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2"
+                        style={{ borderColor: themeAccentBorder }}
                       />
                       <div className="flex justify-end gap-2">
                         <button
@@ -13018,7 +12998,8 @@ function App() {
                             setChatError('');
                             setPollComposerStep('structured');
                           }}
-                          className="px-3 py-2 text-sm rounded-xl bg-indigo-600 text-white font-semibold"
+                          className="px-3 py-2 text-sm rounded-xl font-semibold"
+                          style={themeAccentButtonStyle}
                         >
                           Next
                         </button>
@@ -13029,10 +13010,10 @@ function App() {
                   {pollComposerStep === 'structured' && (
                     <div className="space-y-3">
                       <div className="px-1">
-                        <div className="text-sm sm:text-base font-semibold text-indigo-700 dark:text-indigo-200">
+                        <div className="text-sm sm:text-base font-semibold" style={themeAccentHeadingStyle}>
                           {pollQuestionInput || 'Event'}
                         </div>
-                        <div className="text-xs sm:text-sm text-indigo-600 dark:text-indigo-300">
+                        <div className="text-xs sm:text-sm" style={themeAccentTextStyle}>
                           {formatDateKeyMMDDYYYY(pollDateInput || getDateKey(selectedDate || new Date()))}
                         </div>
                       </div>
@@ -13047,7 +13028,8 @@ function App() {
                               setPollOptionInputs(next);
                             }}
                             placeholder={`Option ${idx + 1}`}
-                            className="flex-1 px-3 py-2 text-xs sm:text-sm border border-indigo-200 dark:border-indigo-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                            className="flex-1 px-3 py-2 text-xs sm:text-sm border bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
+                            style={{ borderColor: themeAccentBorder }}
                           />
                           {pollOptionInputs.length > 2 && (
                             <button
@@ -13061,7 +13043,8 @@ function App() {
                       ))}
                       <button
                         onClick={() => setPollOptionInputs(prev => prev.length >= 8 ? prev : [...prev, ''])}
-                        className="text-xs px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-200"
+                        className="text-xs px-2.5 py-1.5 rounded-lg border"
+                        style={themeAccentSoftButtonStyle}
                       >
                         + Add option
                       </button>
@@ -13075,7 +13058,8 @@ function App() {
                         </button>
                         <button
                           onClick={sendCalendarChatPollMessage}
-                          className="px-3 py-2 text-sm rounded-xl bg-indigo-600 text-white font-semibold"
+                          className="px-3 py-2 text-sm rounded-xl font-semibold"
+                          style={themeAccentButtonStyle}
                         >
                           Post vote
                         </button>
@@ -13092,8 +13076,9 @@ function App() {
           <div
             ref={listPanelRef}
             className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border dark:border-gray-700 transition-all ${
-              listPanelAttention ? 'border-purple-400 ring-2 ring-purple-300 dark:ring-purple-700' : 'border-purple-100'
+              listPanelAttention ? 'ring-2' : ''
             }`}
+            style={listPanelAttention ? { borderColor: themeAccentBorder, boxShadow: `0 0 0 2px ${themeAccentBorder}` } : { borderColor: themeAccentBorder }}
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
@@ -13105,15 +13090,15 @@ function App() {
               </button>
             </div>
 
-            <div className="p-3 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700 border border-purple-100 dark:border-gray-600 mb-3">
+            <div className="p-3 rounded-xl border mb-3" style={{ backgroundColor: themeAccentSofterBg, borderColor: themeAccentBorder }}>
               <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
                   value={newSharedListTitle}
                   onChange={(e) => setNewSharedListTitle(e.target.value)}
                   placeholder="Create new list title"
-                  className="flex-1 px-3 py-2 text-base sm:text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
-                  style={{ fontSize: '16px' }}
+                  className="flex-1 px-3 py-2 text-base sm:text-sm border dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1"
+                  style={{ fontSize: '16px', borderColor: themeAccentBorder }}
                   onKeyPress={(e) => e.key === 'Enter' && createSharedList()}
                 />
                 <button
@@ -13130,7 +13115,7 @@ function App() {
             <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-2">
               {sharedListGroups.map(group => (
                 editingListGroupId === group.id ? (
-                  <div key={group.id} className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-full border border-purple-300 bg-white dark:bg-gray-700 dark:border-purple-700">
+                  <div key={group.id} className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-full border bg-white dark:bg-gray-700" style={{ borderColor: themeAccentBorder }}>
                     <input
                       autoFocus
                       value={editingListGroupTitle}
@@ -13140,13 +13125,14 @@ function App() {
                         if (e.key === 'Escape') cancelEditingListGroup();
                       }}
                       onBlur={submitEditingListGroup}
-                      className="w-36 px-2 py-1 text-base sm:text-xs border border-purple-200 dark:border-purple-600 rounded-md bg-white dark:bg-gray-800 dark:text-white"
-                      style={{ fontSize: '16px' }}
+                      className="w-36 px-2 py-1 text-base sm:text-xs border rounded-md bg-white dark:bg-gray-800 dark:text-white"
+                      style={{ fontSize: '16px', borderColor: themeAccentBorder }}
                     />
                     <button
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={submitEditingListGroup}
-                      className="px-2 py-1 text-[11px] rounded-md bg-purple-600 text-white"
+                      className="px-2 py-1 text-[11px] rounded-md"
+                      style={themeAccentButtonStyle}
                     >
                       Save
                     </button>
@@ -13160,9 +13146,10 @@ function App() {
                     }}
                     className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                       selectedSharedListId === group.id
-                        ? 'bg-purple-600 text-white border-purple-600'
+                        ? 'text-white border-transparent'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
                     }`}
+                    style={selectedSharedListId === group.id ? themeAccentButtonStyle : undefined}
                   >
                     {group.title}
                   </button>
@@ -13200,14 +13187,15 @@ function App() {
                 value={newListItemText}
                 onChange={(e) => setNewListItemText(e.target.value)}
                 placeholder="Add an item..."
-                className="flex-1 px-3 py-2 text-base sm:text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-purple-400"
-                style={{ fontSize: '16px' }}
+                className="flex-1 px-3 py-2 text-base sm:text-sm border dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1"
+                style={{ fontSize: '16px', borderColor: themeAccentBorder }}
                 onKeyPress={(e) => e.key === 'Enter' && addSharedListItem()}
                 disabled={!selectedSharedListId}
               />
               <button
                 onClick={addSharedListItem}
-                className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="px-3 py-2 text-sm rounded-lg transition-colors disabled:opacity-50"
+                style={themeAccentButtonStyle}
                 title="Add item"
                 disabled={!selectedSharedListId || !newListItemText.trim()}
               >
@@ -13249,7 +13237,8 @@ function App() {
                         if (e.key === 'Enter') saveSharedListItemText(item);
                         if (e.key === 'Escape') { setEditingListItemId(null); setEditingListText(''); }
                       }}
-                      className="flex-1 text-sm px-2 py-1 border border-purple-300 dark:border-purple-600 dark:bg-gray-800 dark:text-white rounded-md focus:ring-1 focus:ring-purple-400"
+                      className="flex-1 text-sm px-2 py-1 border dark:bg-gray-800 dark:text-white rounded-md focus:ring-1"
+                      style={{ borderColor: themeAccentBorder }}
                     />
                   ) : (
                     <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>
@@ -13259,10 +13248,11 @@ function App() {
                   {editingListItemId !== item.id && (
                     <button
                       onClick={() => startEditingListItem(item)}
-                      className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900 rounded-lg"
+                      className="p-1 rounded-lg"
+                      style={themeAccentSoftButtonStyle}
                       title="Edit item"
                     >
-                      <Edit2 className="w-3.5 h-3.5 text-purple-500" />
+                      <Edit2 className="w-3.5 h-3.5" style={themeAccentTextStyle} />
                     </button>
                   )}
                   <button
@@ -13299,7 +13289,8 @@ function App() {
                               if (e.key === 'Enter') saveSharedListItemText(item);
                               if (e.key === 'Escape') { setEditingListItemId(null); setEditingListText(''); }
                             }}
-                            className="flex-1 text-sm px-2 py-1 border border-purple-300 dark:border-purple-600 dark:bg-gray-800 dark:text-white rounded-md focus:ring-1 focus:ring-purple-400"
+                            className="flex-1 text-sm px-2 py-1 border dark:bg-gray-800 dark:text-white rounded-md focus:ring-1"
+                            style={{ borderColor: themeAccentBorder }}
                           />
                         ) : (
                           <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>
@@ -13309,10 +13300,11 @@ function App() {
                         {editingListItemId !== item.id && (
                           <button
                             onClick={() => startEditingListItem(item)}
-                            className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900 rounded-lg"
+                            className="p-1 rounded-lg"
+                            style={themeAccentSoftButtonStyle}
                             title="Edit item"
                           >
-                            <Edit2 className="w-3.5 h-3.5 text-purple-500" />
+                            <Edit2 className="w-3.5 h-3.5" style={themeAccentTextStyle} />
                           </button>
                         )}
                         <button
@@ -14803,7 +14795,8 @@ function App() {
       <div className="fixed right-3 z-30 flex flex-row gap-2" style={{ bottom: 'calc(3.35rem + env(safe-area-inset-bottom))' }}>
         <button
           onClick={() => setShowAiAssistant(true)}
-          className="w-11 h-11 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg flex items-center justify-center transition-all"
+          className="w-11 h-11 rounded-xl text-white shadow-lg flex items-center justify-center transition-all"
+          style={themeAccentButtonStyle}
           title="Ask AI"
         >
           <MessageSquare className="w-5 h-5" />
