@@ -220,6 +220,8 @@ function App() {
   const [showThemeMatchPrompt, setShowThemeMatchPrompt] = useState(false);
   const [pendingThemeMatchStyle, setPendingThemeMatchStyle] = useState(null);
   const [coverOpacityPreview, setCoverOpacityPreview] = useState(null);
+  const coverOpacityPreviewValueRef = useRef(null);
+  const coverOpacityPreviewRafRef = useRef(null);
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(true);
   const [authError, setAuthError] = useState('');
@@ -3719,11 +3721,35 @@ function App() {
   };
 
   const commitCoverOpacityPreview = async () => {
-    if (coverOpacityPreview == null) return;
-    const nextOpacity = Math.max(0, Math.min(1, Number(coverOpacityPreview)));
+    const rawPreview = coverOpacityPreviewValueRef.current ?? coverOpacityPreview;
+    if (rawPreview == null) return;
+    const nextOpacity = Math.max(0, Math.min(1, Number(rawPreview)));
+    if (coverOpacityPreviewRafRef.current != null) {
+      window.cancelAnimationFrame(coverOpacityPreviewRafRef.current);
+      coverOpacityPreviewRafRef.current = null;
+    }
+    coverOpacityPreviewValueRef.current = null;
     setCoverOpacityPreview(null);
     await saveLayerPageTheme({ ...activeLayerPageTheme, coverOpacity: nextOpacity }, activeLayerTitleStyle);
   };
+
+  const queueCoverOpacityPreview = (nextOpacity) => {
+    const normalized = Math.max(0, Math.min(1, Number(nextOpacity)));
+    coverOpacityPreviewValueRef.current = normalized;
+    if (coverOpacityPreviewRafRef.current != null) return;
+    coverOpacityPreviewRafRef.current = window.requestAnimationFrame(() => {
+      coverOpacityPreviewRafRef.current = null;
+      setCoverOpacityPreview(coverOpacityPreviewValueRef.current);
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (coverOpacityPreviewRafRef.current != null) {
+        window.cancelAnimationFrame(coverOpacityPreviewRafRef.current);
+      }
+    };
+  }, []);
 
   const saveLayerTitleStyle = async () => {
     const lid = String(activeLayerId || '').trim();
@@ -15099,7 +15125,7 @@ function App() {
                 value={Math.round(effectiveCoverOpacity * 100)}
                 onChange={(e) => {
                   const coverOpacity = Math.max(0, Math.min(1, Number(e.target.value || 0) / 100));
-                  setCoverOpacityPreview(coverOpacity);
+                  queueCoverOpacityPreview(coverOpacity);
                 }}
                 onMouseUp={commitCoverOpacityPreview}
                 onTouchEnd={commitCoverOpacityPreview}
