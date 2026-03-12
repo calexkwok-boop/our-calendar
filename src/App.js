@@ -2432,7 +2432,7 @@ function App() {
   const [publicCalendars, setPublicCalendars] = useState([]);
   const [expandedExploreDescriptions, setExpandedExploreDescriptions] = useState({});
   const [exploreSearch, setExploreSearch] = useState('');
-  const [exploreSortBy, setExploreSortBy] = useState('popular');
+  const [exploreSortBy, setExploreSortBy] = useState('newest');
   const [exploreVotesMode, setExploreVotesMode] = useState('db');
   const [exploreVoteBusyByLayer, setExploreVoteBusyByLayer] = useState({});
   const [exploreLoading, setExploreLoading] = useState(false);
@@ -3666,7 +3666,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
       }
 
-      const normalized = (rows || []).map((row) => {
+      const normalized = (rows || [])
+        .filter((row) => String(row?.id || '').trim())
+        .map((row) => {
         const layerId = String(row?.id || '').trim();
         const voteSummary = voteSummaryByLayer[layerId] || { up: 0, down: 0 };
         const myVote = normalizeVoteValue(myVotesByLayer[layerId] || 0);
