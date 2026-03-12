@@ -12382,15 +12382,11 @@ function App() {
               <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
                 className={`p-2 rounded-xl transition-all duration-200 border ${
-                  useLegacyEllieMilesTheme
-                    ? showCategoryEditor
-                      ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
-                    : showCategoryEditor
-                      ? ''
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                  showCategoryEditor
+                    ? 'shadow-sm border-transparent'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                style={showCategoryEditor && !useLegacyEllieMilesTheme ? themeAccentSoftActiveButtonStyle : undefined}
+                style={showCategoryEditor ? themeAccentButtonStyle : undefined}
               >
                 <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
@@ -12471,8 +12467,8 @@ function App() {
           <div className="absolute right-3 bottom-3 z-10 flex flex-row gap-2">
             <button
               onClick={() => setShowAiAssistant(true)}
-              className={`w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all ${useLegacyEllieMilesTheme ? 'bg-indigo-500 hover:bg-indigo-600 text-white' : 'text-white'}`}
-              style={useLegacyEllieMilesTheme ? undefined : themeAccentButtonStyle}
+              className="w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all text-white"
+              style={themeAccentButtonStyle}
               title="Ask AI"
             >
               <MessageSquare className="w-5 h-5" />
@@ -12555,7 +12551,7 @@ function App() {
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Bell className="w-5 h-5" style={useLegacyEllieMilesTheme ? undefined : themeAccentTextStyle} />
+                    <Bell className="w-5 h-5" style={themeAccentTextStyle} />
                     <span className="font-semibold text-gray-800 dark:text-gray-200">In-App Updates</span>
                     {unreadInAppCount > 0 && (
                       <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">{unreadInAppCount}</span>
@@ -12565,8 +12561,8 @@ function App() {
                     <button
                       onClick={markAllInAppNotificationsRead}
                       disabled={unreadInAppCount === 0}
-                      className={`px-2 py-1 rounded-md text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed ${useLegacyEllieMilesTheme ? 'bg-indigo-500 hover:bg-indigo-600 text-white' : ''}`}
-                      style={useLegacyEllieMilesTheme ? undefined : themeAccentButtonStyle}
+                      className="px-2 py-1 rounded-md text-xs font-medium text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={themeAccentButtonStyle}
                     >
                       Mark all read
                     </button>
@@ -12981,12 +12977,12 @@ function App() {
                   <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Calendar Chat</h3>
                   <button
                     onClick={() => setShowChatMembersPanel(prev => !prev)}
-                    className={`px-2 py-1 rounded-full text-[11px] font-semibold border ${
-                      useLegacyEllieMilesTheme
-                        ? 'border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/25 text-indigo-700 dark:text-indigo-200'
-                        : ''
+                    className={`px-2 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                      showChatMembersPanel
+                        ? 'border-transparent shadow-sm'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-transparent'
                     }`}
-                    style={useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle}
+                    style={showChatMembersPanel ? themeAccentButtonStyle : undefined}
                     title="Show member status"
                   >
                     {chatOnlineMemberCount}/{chatTotalMembers} members
@@ -12994,7 +12990,7 @@ function App() {
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Messages in this calendar are shared with everyone who has access.</p>
                 {showChatMembersPanel && (
-                  <div className="mt-2 w-full max-w-xs rounded-xl border bg-white dark:bg-gray-900 shadow-md p-2" style={{ borderColor: themeAccentBorder }}>
+                  <div className="mt-2 w-full max-w-xs rounded-xl border bg-gray-100 dark:bg-gray-800 shadow-md p-2" style={{ borderColor: themeAccentBorder }}>
                     {chatMembersWithStatus.map((member, idx) => {
                       const online = Boolean(member?.userId && chatPresenceByUserId[String(member.userId)]);
                       return (
@@ -13571,8 +13567,8 @@ function App() {
             </div>
 
             <div
-              className={`p-3 rounded-xl border mb-3 ${useLegacyEllieMilesTheme ? 'bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700 border-purple-100 dark:border-gray-600' : ''}`}
-              style={useLegacyEllieMilesTheme ? undefined : themeAccentSoftSurfaceStyle}
+              className="p-3 rounded-xl border mb-3 bg-gray-100 dark:bg-gray-700/70"
+              style={{ borderColor: themeAccentBorder }}
             >
               <div className="flex flex-col sm:flex-row gap-2">
                 <input
@@ -13580,8 +13576,8 @@ function App() {
                   value={newSharedListTitle}
                   onChange={(e) => setNewSharedListTitle(e.target.value)}
                   placeholder="Create new list title"
-                  className={`flex-1 px-3 py-2 text-base sm:text-sm border dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1 ${useLegacyEllieMilesTheme ? 'border-gray-200 dark:border-gray-600 focus:ring-purple-400' : ''}`}
-                  style={useLegacyEllieMilesTheme ? { fontSize: '16px' } : { fontSize: '16px', borderColor: themeAccentBorder }}
+                  className="flex-1 px-3 py-2 text-base sm:text-sm border dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1"
+                  style={{ fontSize: '16px', borderColor: themeAccentBorder }}
                   onKeyPress={(e) => e.key === 'Enter' && createSharedList()}
                 />
                 <button
@@ -13892,21 +13888,17 @@ function App() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base sm:text-lg font-semibold" style={themeAccentHeadingStyle}>Today At A Glance</h3>
-              <button
-                onClick={() => {
-                  setSelectedDate(new Date());
-                  setSelectedDates([]);
-                  setShowDateDetailModal(true);
-                }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  useLegacyEllieMilesTheme
-                    ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'
-                    : 'hover:shadow-md'
-                }`}
-                style={useLegacyEllieMilesTheme ? undefined : themeAccentEllieChipButtonStyle}
-              >
-                Open Today
-              </button>
+                <button
+                  onClick={() => {
+                    setSelectedDate(new Date());
+                    setSelectedDates([]);
+                    setShowDateDetailModal(true);
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:shadow-md"
+                  style={themeAccentEllieChipButtonStyle}
+                >
+                  Open Today
+                </button>
             </div>
             {todayEvents.length === 0 ? (
               <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No events today.</div>
@@ -13936,7 +13928,7 @@ function App() {
         )}
 
         <div className="grid grid-cols-1 gap-4">
-          <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 ${bottomNavTab !== 'home' ? 'hidden' : ''}`}>
+          <div className={`${calendarView === 'agenda' ? 'bg-gray-100 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'} rounded-2xl shadow-xl p-3 sm:p-4 ${bottomNavTab !== 'home' ? 'hidden' : ''}`}>
 
             {/* Active sub-calendar banner */}
             {(() => {
@@ -15156,12 +15148,8 @@ function App() {
                   <button
                     onClick={loadPublicCalendars}
                     disabled={exploreLoading}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
-                      useLegacyEllieMilesTheme
-                        ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'
-                        : 'hover:shadow-md'
-                    }`}
-                    style={useLegacyEllieMilesTheme ? undefined : themeAccentEllieChipButtonStyle}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all disabled:opacity-60 disabled:cursor-not-allowed hover:shadow-md"
+                    style={themeAccentEllieChipButtonStyle}
                   >
                     {exploreLoading ? 'Refreshing...' : 'Refresh'}
                   </button>
