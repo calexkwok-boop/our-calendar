@@ -3028,6 +3028,12 @@ function App() {
     return `#${[mix(a.r, b.r), mix(a.g, b.g), mix(a.b, b.b)].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
   }
 
+  function hexToRgba(value, alpha = 1) {
+    const { r, g, b } = hexToRgb(value);
+    const normalizedAlpha = Math.max(0, Math.min(1, Number(alpha)));
+    return `rgba(${r}, ${g}, ${b}, ${normalizedAlpha})`;
+  }
+
   function isLightHexColor(value) {
     const { r, g, b } = hexToRgb(value);
     const luminance = ((0.2126 * r) + (0.7152 * g) + (0.0722 * b)) / 255;
@@ -3171,6 +3177,7 @@ function App() {
   const themeAccentSoftBg = mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.78 : 0.82);
   const themeAccentSofterBg = mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.88 : 0.9);
   const themeAccentBorder = mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.5 : 0.62);
+  const coverFadeSurfaceColor = darkMode ? '#1f2937' : '#ffffff';
   const themeAccentGradient = activeLayerTitleStyle.mode === 'solid'
     ? `linear-gradient(135deg, ${mixHexColors(activeLayerPageTheme.accent, '#ffffff', 0.05)} 0%, ${activeLayerPageTheme.accent} 100%)`
     : `linear-gradient(135deg, ${activeLayerTitleStyle.gradientFrom} 0%, ${activeLayerTitleStyle.gradientVia} 55%, ${activeLayerTitleStyle.gradientTo} 100%)`;
@@ -11828,7 +11835,7 @@ function App() {
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4"
           style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
             ? {
-              backgroundImage: `linear-gradient(rgba(17,24,39,${Number((1 - effectiveCoverOpacity) * 0.7 + 0.06).toFixed(3)}), rgba(17,24,39,${Number((1 - effectiveCoverOpacity) * 0.52 + 0.03).toFixed(3)})), url(${activeLayer.header_bg_url})`,
+              backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }
