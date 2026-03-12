@@ -11827,12 +11827,12 @@ function App() {
       }}
     />
     <div className="min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24" style={themedPageBackgroundStyle}>
-      <div className="max-w-6xl mx-auto mt-12 sm:mt-16">
+      <div className="max-w-6xl mx-auto">
         <div
           ref={layerHeaderCardRef}
           className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 ${
             activeLayer?.header_bg_url
-              ? 'p-4 sm:p-5 min-h-[210px] sm:min-h-[250px]'
+              ? 'px-4 pb-4 pt-12 sm:px-5 sm:pb-5 sm:pt-16 min-h-[240px] sm:min-h-[300px]'
               : 'p-3 sm:p-4'
           }`}
           style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
