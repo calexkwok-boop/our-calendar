@@ -12435,21 +12435,21 @@ function App() {
               >
                 <button
                   onClick={() => setCalendarView('month')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
                   style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
                 >
                   Month
                 </button>
                 <button
                   onClick={() => setCalendarView('week')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
                   style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
                 >
                   Week
                 </button>
                 <button
                   onClick={() => setCalendarView('agenda')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
                   style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
                 >
                   Agenda
@@ -14029,7 +14029,7 @@ function App() {
                       className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap ${
                         agendaRangeDays === days
                           ? ''
-                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border'
                         }`}
                         style={agendaRangeDays === days ? themeAccentButtonStyle : { borderColor: themeAccentBorder }}
                       >
@@ -14042,7 +14042,7 @@ function App() {
                   value={agendaSearchQuery}
                   onChange={(e) => setAgendaSearchQuery(e.target.value)}
                   placeholder="Search agenda (title, location, category)"
-                  className="w-full px-3 py-2 text-sm border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white"
+                  className="w-full px-3 py-2 text-sm border dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white"
                   style={{ borderColor: themeAccentBorder }}
                 />
               </div>
@@ -14261,7 +14261,7 @@ function App() {
                       return (
                         <div key={`${event.id}-${dk}-${event.time || 'all-day'}`}>
                           {showHeader && (
-                            <div className="sticky top-0 z-10 -mx-1 px-2 py-1 rounded-lg bg-white/95 dark:bg-gray-800/95 backdrop-blur border text-xs font-semibold mb-1" style={{ borderColor: themeAccentBorder, color: activeLayerPageTheme.accent }}>
+                            <div className="sticky top-0 z-10 -mx-1 px-2 py-1 rounded-lg bg-gray-100/95 dark:bg-gray-800/95 backdrop-blur border text-xs font-semibold mb-1" style={{ borderColor: themeAccentBorder, color: activeLayerPageTheme.accent }}>
                               {Number.isNaN(dateObj.getTime())
                                 ? dk
                                 : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
