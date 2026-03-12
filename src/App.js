@@ -2460,6 +2460,9 @@ function App() {
   const [sharedOwnerLabels, setSharedOwnerLabels] = useState({});
   const [myShares, setMyShares] = useState([]); // people I've shared with
   const [showSharePanel, setShowSharePanel] = useState(false);
+  const [accountHandleInput, setAccountHandleInput] = useState('');
+  const [accountHandleMessage, setAccountHandleMessage] = useState('');
+  const [savingAccountHandle, setSavingAccountHandle] = useState(false);
   const [showListPanel, setShowListPanel] = useState(false);
   const [listPanelAttention, setListPanelAttention] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
@@ -2923,6 +2926,11 @@ function App() {
   useEffect(() => {
     setCoverHeaderControlsVisible(!activeLayer?.header_bg_url);
   }, [activeLayerId, activeLayer?.header_bg_url]);
+  useEffect(() => {
+    if (!showSharePanel) return;
+    setAccountHandleInput(String(currentUser || '').trim());
+    setAccountHandleMessage('');
+  }, [showSharePanel, currentUser]);
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
   const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
   const activeShareRowForMe = (sharedCalendars || []).find((row) => {
@@ -2941,6 +2949,13 @@ function App() {
   const canModerateActiveLayer = canManageActiveLayer || isActiveLayerModerator;
   const canMuteMembersInActiveLayer = canModerateActiveLayer;
   const defaultModerationStatusForNewEvent = canModerateActiveLayer ? 'approved' : 'pending';
+  const isShareRowForCurrentAccount = (share) => {
+    if (!share) return false;
+    const byId = String(share?.shared_with_id || '') && String(share?.shared_with_id || '') === String(user?.id || '');
+    const byEmail = normalizeEmail(share?.shared_with_email) && normalizeEmail(share?.shared_with_email) === normalizeEmail(user?.email);
+    const byPhone = normalizePhoneNumber(share?.shared_with_phone) && normalizePhoneNumber(share?.shared_with_phone) === normalizePhoneNumber(user?.phone);
+    return Boolean(byId || byEmail || byPhone);
+  };
   const canEditActiveLayer = !isActiveLayerBanned && (
     canModerateActiveLayer
     || !activeShareRowForMe
@@ -5920,11 +5935,43 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     try {
       await window.storage.set('calendar-user', userName, false);
       setCurrentUser(userName);
+      setUserNameInput(userName);
       setShowUserSetup(false);
     } catch (error) {
       console.error('Error saving user:', error);
       setCurrentUser(userName);
+      setUserNameInput(userName);
       setShowUserSetup(false);
+    }
+  };
+
+  const saveAccountHandle = async () => {
+    const nextHandle = String(accountHandleInput || '').trim();
+    if (!nextHandle) {
+      setAccountHandleMessage('Handle cannot be blank.');
+      return;
+    }
+    if (nextHandle.length > 40) {
+      setAccountHandleMessage('Handle is too long (max 40 characters).');
+      return;
+    }
+    if (nextHandle === String(currentUser || '').trim()) {
+      setAccountHandleMessage('Handle already set.');
+      return;
+    }
+    setSavingAccountHandle(true);
+    try {
+      await window.storage.set('calendar-user', nextHandle, false);
+      setCurrentUser(nextHandle);
+      setUserNameInput(nextHandle);
+      setAccountHandleMessage('Handle updated.');
+    } catch (error) {
+      console.error('Error saving account handle:', error);
+      setCurrentUser(nextHandle);
+      setUserNameInput(nextHandle);
+      setAccountHandleMessage('Handle updated locally.');
+    } finally {
+      setSavingAccountHandle(false);
     }
   };
 
@@ -7723,6 +7770,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const userResult = await window.storage.get('calendar-user', false);
         if (userResult && userResult.value) {
           setCurrentUser(userResult.value);
+          setUserNameInput(String(userResult.value || ''));
           setShowUserSetup(false);
         } else {
           setShowUserSetup(true);
@@ -13297,7 +13345,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Signed in as</div>
-                  <div className="text-sm font-semibold truncate text-gray-800 dark:text-gray-100">{user?.email || user?.phone || currentUser || 'User'}</div>
+                  <div className="text-sm font-semibold truncate text-gray-800 dark:text-gray-100">{currentUser || user?.email || user?.phone || 'User'}</div>
+                  {currentUser && (
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{user?.email || user?.phone || ''}</div>
+                  )}
                 </div>
                 <button
                   onClick={handleLogout}
@@ -13307,6 +13358,41 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   Logout
                 </button>
               </div>
+            </div>
+            <div className="mb-4 p-3 rounded-xl border bg-gray-50 dark:bg-gray-800/70" style={{ borderColor: themeAccentBorder }}>
+              <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Your Handle</div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={accountHandleInput}
+                  onChange={(e) => {
+                    setAccountHandleInput(e.target.value);
+                    setAccountHandleMessage('');
+                  }}
+                  placeholder="Set your handle"
+                  maxLength={40}
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      saveAccountHandle();
+                    }
+                  }}
+                />
+                <button
+                  onClick={saveAccountHandle}
+                  disabled={savingAccountHandle || !String(accountHandleInput || '').trim()}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50"
+                  style={themeAccentButtonStyle}
+                >
+                  {savingAccountHandle ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+              {accountHandleMessage && (
+                <div className={`mt-2 text-xs ${/updated|already set/i.test(accountHandleMessage) ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
+                  {accountHandleMessage}
+                </div>
+              )}
             </div>
             <div className="mb-5">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
@@ -13362,6 +13448,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                         label: ownerLabel,
                         role: 'admin',
                         owner: true,
+                        share: null,
                       },
                       ...elevated.map((share, i) => {
                         const recipient = getShareRecipientFromRow(share);
@@ -13370,6 +13457,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                           label: recipient,
                           role: String(share?.role || 'member').toLowerCase(),
                           owner: false,
+                          share,
                         };
                       }).filter((item) => Boolean(item?.label)),
                     ];
@@ -13380,9 +13468,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       return (
                         <div key={row.id} className="flex items-center justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
                           <div className="min-w-0 text-sm text-gray-700 dark:text-gray-200 truncate">{recipient}</div>
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${role === 'admin' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'}`}>
-                            {row?.owner ? 'owner/admin' : role}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            {canManageActiveLayer && !row?.owner ? (
+                              <select
+                                value={role}
+                                onChange={(e) => handleUpdateShareRole(recipient, e.target.value)}
+                                className="px-2 py-1 text-[11px] rounded-lg border bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600"
+                                title="Role"
+                              >
+                                <option value="member">Member</option>
+                                <option value="moderator">Moderator</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            ) : (
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${role === 'admin' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'}`}>
+                                {row?.owner ? 'owner/admin' : role}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       );
                     });
@@ -13395,7 +13498,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Members</h4>
                 <div className="space-y-2">
                   {(() => {
-                    const members = (myShares || []).filter((share) => String(share?.role || 'member').toLowerCase() === 'member');
+                    const members = (myShares || [])
+                      .filter((share) => String(share?.role || 'member').toLowerCase() === 'member')
+                      .filter((share) => !isShareRowForCurrentAccount(share));
                     if (members.length === 0) {
                       return <div className="text-xs text-gray-500 dark:text-gray-400">No members added yet.</div>;
                     }
@@ -13405,9 +13510,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       return (
                         <div key={`member-${i}`} className="flex items-center justify-between gap-3 p-3 bg-gray-100 dark:bg-gray-700/60 rounded-xl border border-gray-200 dark:border-gray-600">
                           <div className="min-w-0 text-sm text-gray-700 dark:text-gray-200 truncate">{recipient}</div>
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                            member
-                          </span>
+                          {canManageActiveLayer ? (
+                            <select
+                              value={String(share?.role || 'member').toLowerCase()}
+                              onChange={(e) => handleUpdateShareRole(recipient, e.target.value)}
+                              className="px-2 py-1 text-[11px] rounded-lg border bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600"
+                              title="Promote member"
+                            >
+                              <option value="member">Member</option>
+                              <option value="moderator">Moderator</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                              member
+                            </span>
+                          )}
                         </div>
                       );
                     });
