@@ -621,9 +621,11 @@ function App() {
     if (uid && String(user?.id || '').trim() === uid) return currentUser || 'You';
     const myEmail = normalizeEmail(user?.email);
     const myPhone = normalizePhoneNumber(user?.phone);
+    const rawEmail = normalizeEmail(raw);
+    const rawPhone = normalizePhoneNumber(raw);
     if (raw && (
-      normalizeEmail(raw) === myEmail
-      || normalizePhoneNumber(raw) === myPhone
+      (myEmail && rawEmail && rawEmail === myEmail)
+      || (myPhone && rawPhone && rawPhone === myPhone)
       || raw.toLowerCase() === String(currentUser || '').trim().toLowerCase()
     )) {
       return currentUser || 'You';
@@ -6100,9 +6102,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
   };
 
+  const normalizeUsernameHandle = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
+  const isValidUsernameHandle = (value) => /^[a-z0-9._-]{3,30}$/.test(String(value || ''));
+
   const persistAccountHandleForUser = async (handleValue, authUser = user) => {
-    const nextHandle = String(handleValue || '').trim();
+    const nextHandle = normalizeUsernameHandle(handleValue);
     if (!nextHandle) return { ok: false, reason: 'empty' };
+    if (!isValidUsernameHandle(nextHandle)) return { ok: false, reason: 'invalid' };
     const email = normalizeEmail(authUser?.email);
     if (!email) {
       await window.storage.set('calendar-user', nextHandle, false);
@@ -6127,6 +6133,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       await window.storage.set('calendar-user', nextHandle, false);
       return { ok: true, localOnly: true, missingTable: true };
     }
+    if (error && (/duplicate key|23505|user_handles_handle_lower_uq|user_handles_handle_unique/i.test(String(error?.message || '')))) {
+      return { ok: false, reason: 'handle_taken' };
+    }
     if (error) return { ok: false, error };
     await window.storage.set('calendar-user', nextHandle, false);
     return { ok: true };
@@ -6135,26 +6144,38 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const saveUser = async (userName) => {
     if (!userName || userName.trim() === '') userName = 'User';
     try {
-      await persistAccountHandleForUser(userName);
-      setCurrentUser(userName);
-      setUserNameInput(userName);
+      const normalized = normalizeUsernameHandle(userName);
+      const result = await persistAccountHandleForUser(normalized);
+      if (!result?.ok) {
+        if (result?.reason === 'handle_taken') {
+          alert('That handle is already taken. Choose a different username.');
+          return;
+        }
+        if (result?.reason === 'invalid') {
+          alert('Handle must be 3-30 chars: lowercase letters, numbers, dot, underscore, or dash.');
+          return;
+        }
+      }
+      setCurrentUser(normalized);
+      setUserNameInput(normalized);
       setShowUserSetup(false);
     } catch (error) {
       console.error('Error saving user:', error);
-      setCurrentUser(userName);
-      setUserNameInput(userName);
+      const normalized = normalizeUsernameHandle(userName);
+      setCurrentUser(normalized);
+      setUserNameInput(normalized);
       setShowUserSetup(false);
     }
   };
 
   const saveAccountHandle = async () => {
-    const nextHandle = String(accountHandleInput || '').trim();
+    const nextHandle = normalizeUsernameHandle(accountHandleInput);
     if (!nextHandle) {
       setAccountHandleMessage('Handle cannot be blank.');
       return;
     }
-    if (nextHandle.length > 40) {
-      setAccountHandleMessage('Handle is too long (max 40 characters).');
+    if (!isValidUsernameHandle(nextHandle)) {
+      setAccountHandleMessage('Use 3-30 chars: lowercase letters, numbers, dot, underscore, or dash.');
       return;
     }
     if (nextHandle === String(currentUser || '').trim()) {
@@ -6165,6 +6186,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     try {
       const result = await persistAccountHandleForUser(nextHandle);
       if (!result?.ok) {
+        if (result?.reason === 'handle_taken') {
+          setAccountHandleMessage('That handle is already taken.');
+          setSavingAccountHandle(false);
+          return;
+        }
         setAccountHandleMessage(`Could not save handle: ${result?.error?.message || 'Unknown error'}`);
         setSavingAccountHandle(false);
         return;
