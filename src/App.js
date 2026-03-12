@@ -2809,6 +2809,17 @@ function App() {
     setSubCalendars([]);
     setActiveSubCalendar(null);
   }, [activeLayerId]);
+  useEffect(() => {
+    if (!showDateDetailModal) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+    };
+  }, [showDateDetailModal]);
   const activeLayer = layers.find(layer => layer.id === activeLayerId) || null;
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
   const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
@@ -13744,6 +13755,11 @@ function App() {
           <div
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehaviorY: 'contain',
+              touchAction: 'pan-y',
+            }}
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold" style={themeAccentHeadingStyle}>Date Details</h3>
