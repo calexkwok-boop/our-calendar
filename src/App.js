@@ -3751,8 +3751,14 @@ function App() {
       coverOpacityPreviewRafRef.current = null;
     }
     coverOpacityPreviewValueRef.current = null;
+    // Keep the target value rendered while save completes to avoid a brief snap-back to the old persisted value.
+    setCoverOpacityPreview(nextOpacity);
+    const saved = await saveLayerPageTheme({ ...activeLayerPageTheme, coverOpacity: nextOpacity }, activeLayerTitleStyle);
+    if (!saved) {
+      setCoverOpacityPreview(null);
+      return;
+    }
     setCoverOpacityPreview(null);
-    await saveLayerPageTheme({ ...activeLayerPageTheme, coverOpacity: nextOpacity }, activeLayerTitleStyle);
   };
 
   const queueCoverOpacityPreview = (nextOpacity) => {
