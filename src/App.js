@@ -11892,11 +11892,15 @@ function App() {
               <button
                 onClick={() => setShowSharePanel(!showSharePanel)}
                 className={`p-2 rounded-xl transition-all duration-200 border ${
-                  showSharePanel
-                    ? 'border-transparent'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                  useLegacyEllieMilesTheme
+                    ? showSharePanel
+                      ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                    : showSharePanel
+                      ? 'border-transparent'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                style={showSharePanel ? themeAccentButtonStyle : undefined}
+                style={showSharePanel && !useLegacyEllieMilesTheme ? themeAccentButtonStyle : undefined}
                 title="Share calendar"
               >
                 <User className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -11922,11 +11926,15 @@ function App() {
               <button
                 onClick={() => setShowListPanel(!showListPanel)}
                 className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${
-                  showListPanel
-                    ? 'border-transparent'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                  useLegacyEllieMilesTheme
+                    ? showListPanel
+                      ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                    : showListPanel
+                      ? 'border-transparent'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                style={showListPanel ? themeAccentButtonStyle : undefined}
+                style={showListPanel && !useLegacyEllieMilesTheme ? themeAccentButtonStyle : undefined}
                 title="Shared list"
               >
                 List
@@ -11939,8 +11947,16 @@ function App() {
                   if (!next) setShowChatMembersPanel(false);
                   if (next && layerKey) markChatSeenForLayer(layerKey);
                 }}
-                className={`relative px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${showChatPanel ? 'border-transparent' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'}`}
-                style={showChatPanel ? themeAccentButtonStyle : undefined}
+                className={`relative px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${
+                  useLegacyEllieMilesTheme
+                    ? showChatPanel
+                      ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                    : showChatPanel
+                      ? 'border-transparent'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                }`}
+                style={showChatPanel && !useLegacyEllieMilesTheme ? themeAccentButtonStyle : undefined}
                 title="Calendar chat"
               >
                 Chat
@@ -11960,11 +11976,15 @@ function App() {
               <button
                 onClick={() => setShowCategoryEditor(!showCategoryEditor)}
                 className={`p-2 rounded-xl transition-all duration-200 border ${
-                  showCategoryEditor
-                    ? 'border-transparent'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                  useLegacyEllieMilesTheme
+                    ? showCategoryEditor
+                      ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-transparent'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
+                    : showCategoryEditor
+                      ? 'border-transparent'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
-                style={showCategoryEditor ? themeAccentButtonStyle : undefined}
+                style={showCategoryEditor && !useLegacyEllieMilesTheme ? themeAccentButtonStyle : undefined}
               >
                 <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
@@ -11982,11 +12002,11 @@ function App() {
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
                 className="p-2 rounded-xl transition-all duration-200"
-                style={themeAccentSoftButtonStyle}
+                style={useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle}
               >
                 <ChevronLeft
                   className="w-6 h-6"
-                  style={themeAccentTextStyle}
+                  style={useLegacyEllieMilesTheme ? undefined : themeAccentTextStyle}
                 />
               </button>
             <div className="flex flex-col items-center gap-1">
@@ -12003,25 +12023,28 @@ function App() {
                     : `Agenda · Next ${agendaRangeDays} days`
                 }
               </h2>
-              <div className="flex rounded-lg overflow-hidden border text-xs font-medium" style={{ borderColor: themeAccentBorder }}>
+              <div
+                className={`flex rounded-lg overflow-hidden border text-xs font-medium ${useLegacyEllieMilesTheme ? 'dark:border-gray-600' : ''}`}
+                style={useLegacyEllieMilesTheme ? undefined : { borderColor: themeAccentBorder }}
+              >
                 <button
                   onClick={() => setCalendarView('month')}
                   className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'month' ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
+                  style={calendarView === 'month' ? themeAccentButtonStyle : (useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle)}
                 >
                   Month
                 </button>
                 <button
                   onClick={() => setCalendarView('week')}
                   className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'week' ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
+                  style={calendarView === 'week' ? themeAccentButtonStyle : (useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle)}
                 >
                   Week
                 </button>
                 <button
                   onClick={() => setCalendarView('agenda')}
                   className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'agenda' ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
+                  style={calendarView === 'agenda' ? themeAccentButtonStyle : (useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle)}
                 >
                   Agenda
                 </button>
@@ -12030,11 +12053,11 @@ function App() {
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
                 className="p-2 rounded-xl transition-all duration-200"
-                style={themeAccentSoftButtonStyle}
+                style={useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle}
               >
                 <ChevronRight
                   className="w-6 h-6"
-                  style={themeAccentTextStyle}
+                  style={useLegacyEllieMilesTheme ? undefined : themeAccentTextStyle}
                 />
               </button>
           </div>
@@ -14795,8 +14818,8 @@ function App() {
       <div className="fixed right-3 z-30 flex flex-row gap-2" style={{ bottom: 'calc(3.35rem + env(safe-area-inset-bottom))' }}>
         <button
           onClick={() => setShowAiAssistant(true)}
-          className="w-11 h-11 rounded-xl text-white shadow-lg flex items-center justify-center transition-all"
-          style={themeAccentButtonStyle}
+          className={`w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all ${useLegacyEllieMilesTheme ? 'bg-indigo-500 hover:bg-indigo-600 text-white' : 'text-white'}`}
+          style={useLegacyEllieMilesTheme ? undefined : themeAccentButtonStyle}
           title="Ask AI"
         >
           <MessageSquare className="w-5 h-5" />
