@@ -12002,11 +12002,11 @@ function App() {
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
                 className="p-2 rounded-xl transition-all duration-200"
-                style={useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle}
+                style={undefined}
               >
                 <ChevronLeft
                   className="w-6 h-6"
-                  style={useLegacyEllieMilesTheme ? undefined : themeAccentTextStyle}
+                  style={undefined}
                 />
               </button>
             <div className="flex flex-col items-center gap-1">
@@ -12024,27 +12024,27 @@ function App() {
                 }
               </h2>
               <div
-                className={`flex rounded-lg overflow-hidden border text-xs font-medium ${useLegacyEllieMilesTheme ? 'dark:border-gray-600' : ''}`}
-                style={useLegacyEllieMilesTheme ? undefined : { borderColor: themeAccentBorder }}
+                className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium"
+                style={undefined}
               >
                 <button
                   onClick={() => setCalendarView('month')}
                   className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'month' ? themeAccentButtonStyle : (useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle)}
+                  style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
                 >
                   Month
                 </button>
                 <button
                   onClick={() => setCalendarView('week')}
                   className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'week' ? themeAccentButtonStyle : (useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle)}
+                  style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
                 >
                   Week
                 </button>
                 <button
                   onClick={() => setCalendarView('agenda')}
                   className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'agenda' ? themeAccentButtonStyle : (useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle)}
+                  style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
                 >
                   Agenda
                 </button>
@@ -12053,11 +12053,11 @@ function App() {
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
                 className="p-2 rounded-xl transition-all duration-200"
-                style={useLegacyEllieMilesTheme ? undefined : themeAccentSoftButtonStyle}
+                style={undefined}
               >
                 <ChevronRight
                   className="w-6 h-6"
-                  style={useLegacyEllieMilesTheme ? undefined : themeAccentTextStyle}
+                  style={undefined}
                 />
               </button>
           </div>
