@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
 import { getMessagingIfSupported } from "./firebase";
@@ -151,6 +151,36 @@ const SPORTS_SCHEDULE_TEMPLATES = Object.freeze([
     sourceLabel: 'ESPN Schedule',
   }),
 ]);
+
+const normalizeVoteValue = (value) => (Number(value) === 1 ? 1 : Number(value) === -1 ? -1 : 0);
+const getExploreVotesLocalKey = (userId) => `public-calendar-votes:${String(userId || 'anon')}`;
+const readExploreVotesLocal = (userId) => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(getExploreVotesLocalKey(userId));
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (!parsed || typeof parsed !== 'object') return {};
+    return Object.entries(parsed).reduce((acc, [layerId, voteValue]) => {
+      const lid = String(layerId || '').trim();
+      if (!lid) return acc;
+      acc[lid] = normalizeVoteValue(voteValue);
+      return acc;
+    }, {});
+  } catch {
+    return {};
+  }
+};
+const writeExploreVotesLocal = (userId, votesByLayer) => {
+  if (typeof window === 'undefined') return;
+  const next = Object.entries(votesByLayer || {}).reduce((acc, [layerId, voteValue]) => {
+    const lid = String(layerId || '').trim();
+    const normalized = normalizeVoteValue(voteValue);
+    if (!lid || normalized === 0) return acc;
+    acc[lid] = normalized;
+    return acc;
+  }, {});
+  localStorage.setItem(getExploreVotesLocalKey(userId), JSON.stringify(next));
+};
 
 
 const urlBase64ToUint8Array = (base64String) => {
@@ -2402,6 +2432,9 @@ function App() {
   const [publicCalendars, setPublicCalendars] = useState([]);
   const [expandedExploreDescriptions, setExpandedExploreDescriptions] = useState({});
   const [exploreSearch, setExploreSearch] = useState('');
+  const [exploreSortBy, setExploreSortBy] = useState('popular');
+  const [exploreVotesMode, setExploreVotesMode] = useState('db');
+  const [exploreVoteBusyByLayer, setExploreVoteBusyByLayer] = useState({});
   const [exploreLoading, setExploreLoading] = useState(false);
   const [exploreError, setExploreError] = useState('');
   const [showLayerModal, setShowLayerModal] = useState(false);
@@ -3498,10 +3531,13 @@ function App() {
     page_theme: normalizeLayerPageTheme(readStoredLayerPageTheme(row?.id, row?.title_style) || row?.page_theme, row?.title_style),
   });
 
-  const normalizePublicCalendarRow = (row, memberCount = 0) => ({
-    ...normalizeLayerRow(row),
-    member_count: Number(memberCount || 0),
-  });
+const normalizePublicCalendarRow = (row, memberCount = 0) => ({
+  ...normalizeLayerRow(row),
+  member_count: Number(memberCount || 0),
+  upvote_count: Number(row?.upvote_count || 0),
+  downvote_count: Number(row?.downvote_count || 0),
+  my_vote: normalizeVoteValue(row?.my_vote || 0),
+});
 
   const mergeLayerIntoState = (layerRow) => {
     const incoming = layerRow || {};
@@ -3578,6 +3614,9 @@ function App() {
 
       const ids = (rows || []).map(r => String(r?.id || '')).filter(Boolean);
       let countsMap = {};
+      let voteSummaryByLayer = {};
+      let myVotesByLayer = {};
+      let votesMode = 'db';
       if (ids.length > 0) {
         const { data: memberRows } = await supabase
           .from('shared_access')
@@ -3589,9 +3628,56 @@ function App() {
           acc[key] = Number(acc[key] || 0) + 1;
           return acc;
         }, {});
+
+        const { data: voteRows, error: voteError } = await supabase
+          .from('public_calendar_votes')
+          .select('layer_id,user_id,vote_value')
+          .in('layer_id', ids);
+        if (voteError) {
+          const msg = String(voteError?.message || '');
+          if (/public_calendar_votes|42P01|schema cache|does not exist/i.test(msg)) {
+            votesMode = 'local';
+            const localVotes = readExploreVotesLocal(user?.id);
+            myVotesByLayer = localVotes;
+            voteSummaryByLayer = Object.entries(localVotes).reduce((acc, [layerId, voteValue]) => {
+              const lid = String(layerId || '').trim();
+              const normalized = normalizeVoteValue(voteValue);
+              if (!lid || normalized === 0) return acc;
+              if (!acc[lid]) acc[lid] = { up: 0, down: 0 };
+              if (normalized === 1) acc[lid].up += 1;
+              if (normalized === -1) acc[lid].down += 1;
+              return acc;
+            }, {});
+          } else {
+            throw voteError;
+          }
+        } else {
+          votesMode = 'db';
+          voteSummaryByLayer = (voteRows || []).reduce((acc, row) => {
+            const lid = String(row?.layer_id || '').trim();
+            if (!lid) return acc;
+            const value = normalizeVoteValue(row?.vote_value);
+            if (!acc[lid]) acc[lid] = { up: 0, down: 0 };
+            if (value === 1) acc[lid].up += 1;
+            if (value === -1) acc[lid].down += 1;
+            if (String(row?.user_id || '') === String(user?.id || '')) myVotesByLayer[lid] = value;
+            return acc;
+          }, {});
+        }
       }
 
-      const normalized = (rows || []).map((row) => normalizePublicCalendarRow(row, countsMap[String(row?.id || '')] || 0));
+      const normalized = (rows || []).map((row) => {
+        const layerId = String(row?.id || '').trim();
+        const voteSummary = voteSummaryByLayer[layerId] || { up: 0, down: 0 };
+        const myVote = normalizeVoteValue(myVotesByLayer[layerId] || 0);
+        return normalizePublicCalendarRow({
+          ...row,
+          upvote_count: Number(voteSummary.up || 0),
+          downvote_count: Number(voteSummary.down || 0),
+          my_vote: myVote,
+        }, countsMap[layerId] || 0);
+      });
+      setExploreVotesMode(votesMode);
       setPublicCalendars(normalized);
       setExpandedExploreDescriptions({});
     } catch (err) {
@@ -3599,6 +3685,77 @@ function App() {
       setExploreError(`Could not load Explore calendars: ${String(err?.message || 'Unknown error')}`);
     } finally {
       setExploreLoading(false);
+    }
+  };
+
+  const handlePublicCalendarVote = async (layerId, voteValue) => {
+    const lid = String(layerId || '').trim();
+    const desiredVote = normalizeVoteValue(voteValue);
+    if (!lid || !user?.id) return;
+
+    let previousVote = 0;
+    setPublicCalendars((prev) => prev.map((row) => {
+      if (String(row?.id || '') !== lid) return row;
+      const currentVote = normalizeVoteValue(row?.my_vote || 0);
+      previousVote = currentVote;
+      const nextVote = currentVote === desiredVote ? 0 : desiredVote;
+      return {
+        ...row,
+        my_vote: nextVote,
+        upvote_count: Math.max(0, Number(row?.upvote_count || 0) + (nextVote === 1 ? 1 : 0) - (currentVote === 1 ? 1 : 0)),
+        downvote_count: Math.max(0, Number(row?.downvote_count || 0) + (nextVote === -1 ? 1 : 0) - (currentVote === -1 ? 1 : 0)),
+      };
+    }));
+
+    const nextVote = previousVote === desiredVote ? 0 : desiredVote;
+    setExploreVoteBusyByLayer((prev) => ({ ...prev, [lid]: true }));
+    try {
+      if (exploreVotesMode === 'db') {
+        if (nextVote === 0) {
+          const { error } = await supabase
+            .from('public_calendar_votes')
+            .delete()
+            .eq('layer_id', lid)
+            .eq('user_id', user.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('public_calendar_votes')
+            .upsert(
+              [{ layer_id: lid, user_id: user.id, vote_value: nextVote }],
+              { onConflict: 'layer_id,user_id' }
+            );
+          if (error) throw error;
+        }
+      } else {
+        const localVotes = readExploreVotesLocal(user.id);
+        if (nextVote === 0) delete localVotes[lid];
+        else localVotes[lid] = nextVote;
+        writeExploreVotesLocal(user.id, localVotes);
+      }
+    } catch (error) {
+      console.error('Public calendar vote failed:', error);
+      const msg = String(error?.message || '');
+      if (exploreVotesMode === 'db' && /public_calendar_votes|42P01|schema cache|does not exist/i.test(msg)) {
+        setExploreVotesMode('local');
+        const localVotes = readExploreVotesLocal(user.id);
+        if (nextVote === 0) delete localVotes[lid];
+        else localVotes[lid] = nextVote;
+        writeExploreVotesLocal(user.id, localVotes);
+      } else {
+        setPublicCalendars((prev) => prev.map((row) => {
+          if (String(row?.id || '') !== lid) return row;
+          const currentVote = normalizeVoteValue(row?.my_vote || 0);
+          return {
+            ...row,
+            my_vote: previousVote,
+            upvote_count: Math.max(0, Number(row?.upvote_count || 0) + (previousVote === 1 ? 1 : 0) - (currentVote === 1 ? 1 : 0)),
+            downvote_count: Math.max(0, Number(row?.downvote_count || 0) + (previousVote === -1 ? 1 : 0) - (currentVote === -1 ? 1 : 0)),
+          };
+        }));
+      }
+    } finally {
+      setExploreVoteBusyByLayer((prev) => ({ ...prev, [lid]: false }));
     }
   };
 
@@ -11661,8 +11818,7 @@ function App() {
 
   const filteredPublicCalendars = (() => {
     const q = String(exploreSearch || '').trim().toLowerCase();
-    if (!q) return publicCalendars;
-    return (publicCalendars || []).filter((row) => {
+    const filtered = !q ? (publicCalendars || []) : (publicCalendars || []).filter((row) => {
       const tags = Array.isArray(row?.public_tags) ? row.public_tags : [];
       const hay = [
         String(row?.name || ''),
@@ -11672,6 +11828,27 @@ function App() {
       ].join(' ').toLowerCase();
       return hay.includes(q);
     });
+    const scoreOf = (row) => Number(row?.upvote_count || 0) - Number(row?.downvote_count || 0);
+    const memberCountOf = (row) => Math.max(1, Number(row?.member_count || 0) + 1);
+    const sorted = [...filtered];
+    if (exploreSortBy === 'name') {
+      sorted.sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
+    } else if (exploreSortBy === 'members') {
+      sorted.sort((a, b) => memberCountOf(b) - memberCountOf(a));
+    } else if (exploreSortBy === 'newest') {
+      sorted.sort((a, b) => new Date(b?.created_at || 0).getTime() - new Date(a?.created_at || 0).getTime());
+    } else {
+      sorted.sort((a, b) => {
+        const scoreDiff = scoreOf(b) - scoreOf(a);
+        if (scoreDiff !== 0) return scoreDiff;
+        const upvoteDiff = Number(b?.upvote_count || 0) - Number(a?.upvote_count || 0);
+        if (upvoteDiff !== 0) return upvoteDiff;
+        const memberDiff = memberCountOf(b) - memberCountOf(a);
+        if (memberDiff !== 0) return memberDiff;
+        return String(a?.name || '').localeCompare(String(b?.name || ''));
+      });
+    }
+    return sorted;
   })();
   const publishTargetLayer = (layers || []).find((layer) => String(layer?.id || '') === String(publishLayerTargetId || '')) || null;
   const publishTargetIsPublic = Boolean(publishTargetLayer?.is_public);
@@ -15194,6 +15371,27 @@ function App() {
                   className="w-full px-3 py-2 mb-3 border-2 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
                   style={{ borderColor: themeAccentBorder }}
                 />
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Sort
+                  </div>
+                  <select
+                    value={exploreSortBy}
+                    onChange={(e) => setExploreSortBy(String(e.target.value || 'popular'))}
+                    className="px-2.5 py-1.5 text-xs border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                    style={{ borderColor: themeAccentBorder }}
+                  >
+                    <option value="popular">Most Popular</option>
+                    <option value="members">Most Members</option>
+                    <option value="name">Name (A-Z)</option>
+                    <option value="newest">Newest</option>
+                  </select>
+                </div>
+                {exploreVotesMode === 'local' && (
+                  <div className="mb-2 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-2 py-1">
+                    Vote sync is in local mode until the `public_calendar_votes` table is available.
+                  </div>
+                )}
                 {exploreLoading && (
                   <div className="text-sm text-gray-500 dark:text-gray-400">Loading public calendars...</div>
                 )}
@@ -15214,6 +15412,11 @@ function App() {
                       const rowAccentBorder = mixHexColors(rowTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.35 : 0.62);
                       const rowSoftBg = mixHexColors(rowTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.72 : 0.84);
                       const memberCount = Math.max(1, Number(row?.member_count || 0) + 1);
+                      const upvoteCount = Math.max(0, Number(row?.upvote_count || 0));
+                      const downvoteCount = Math.max(0, Number(row?.downvote_count || 0));
+                      const voteScore = upvoteCount - downvoteCount;
+                      const myVote = normalizeVoteValue(row?.my_vote || 0);
+                      const voteBusy = Boolean(exploreVoteBusyByLayer[layerId]);
                       const tags = Array.isArray(row?.public_tags) ? row.public_tags : [];
                       const description = String(row?.public_description || '').trim();
                       const isExpanded = Boolean(expandedExploreDescriptions[layerId]);
@@ -15266,7 +15469,40 @@ function App() {
                                 </div>
                               )}
                           </div>
-                          <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+                          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  onClick={() => handlePublicCalendarVote(layerId, 1)}
+                                  disabled={voteBusy}
+                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all ${
+                                    myVote === 1
+                                      ? 'text-white border-transparent'
+                                      : 'bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-700'
+                                  } disabled:opacity-60`}
+                                  style={myVote === 1 ? themeAccentButtonStyle : undefined}
+                                  title="Upvote calendar"
+                                >
+                                  <ThumbsUp className="w-3.5 h-3.5" />
+                                  {upvoteCount}
+                                </button>
+                                <button
+                                  onClick={() => handlePublicCalendarVote(layerId, -1)}
+                                  disabled={voteBusy}
+                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all ${
+                                    myVote === -1
+                                      ? 'bg-rose-600 text-white border-rose-600'
+                                      : 'bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-700'
+                                  } disabled:opacity-60`}
+                                  title="Downvote calendar"
+                                >
+                                  <ThumbsDown className="w-3.5 h-3.5" />
+                                  {downvoteCount}
+                                </button>
+                                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                                  Score {voteScore >= 0 ? '+' : ''}{voteScore}
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap items-center justify-end gap-2">
                               {isJoined && (
                                   <button
                                     onClick={() => {
@@ -15317,6 +15553,7 @@ function App() {
                               >
                                 Report
                               </button>
+                              </div>
                           </div>
                         </div>
                       );
