@@ -13180,11 +13180,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </button>
               <button
                 onClick={() => setShowNotificationSettings(!showNotificationSettings)}
-                className={`relative p-2 rounded-xl transition-all duration-200 bg-gray-100 dark:bg-gray-700 ${
-                  notificationsEnabled
-                    ? 'text-green-700 dark:text-green-300'
-                    : 'text-gray-600 dark:text-gray-300'
+                className={`relative p-2 rounded-xl transition-all duration-200 border ${
+                  showNotificationSettings
+                    ? 'shadow-sm border-transparent'
+                    : `bg-gray-100 dark:bg-gray-700 border-transparent ${notificationsEnabled ? 'text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-300'}`
                 }`}
+                style={showNotificationSettings ? themeAccentButtonStyle : undefined}
                 title={notificationsEnabled ? 'Notifications enabled' : 'Enable notifications'}
               >
                 {notificationsEnabled ? <Bell className="w-4 h-4 sm:w-5 sm:h-5" /> : <BellOff className="w-4 h-4 sm:w-5 sm:h-5" />}
@@ -13323,9 +13324,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           {!activeSubCalendar && (
           <div className="absolute right-3 bottom-3 z-10 flex flex-row gap-2">
             <button
-              onClick={() => setShowAiAssistant(true)}
-              className="w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all text-white"
-              style={themeAccentButtonStyle}
+              onClick={() => setShowAiAssistant(prev => !prev)}
+              className={`w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all ${
+                showAiAssistant
+                  ? 'text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-transparent'
+              }`}
+              style={showAiAssistant ? themeAccentButtonStyle : undefined}
               title="Ask AI"
             >
               <MessageSquare className="w-5 h-5" />
