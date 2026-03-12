@@ -11839,7 +11839,7 @@ function App() {
       <div className="max-w-6xl mx-auto">
         <div
           ref={layerHeaderCardRef}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[240px] sm:min-h-[300px] flex flex-col justify-end"
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[240px] sm:min-h-[300px]"
           style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
             ? {
               backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
