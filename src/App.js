@@ -11826,7 +11826,7 @@ function App() {
         <div
           ref={layerHeaderCardRef}
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4"
-          style={activeLayer?.header_bg_url
+          style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
             ? {
               backgroundImage: `linear-gradient(rgba(17,24,39,${Number((1 - effectiveCoverOpacity) * 0.7 + 0.06).toFixed(3)}), rgba(17,24,39,${Number((1 - effectiveCoverOpacity) * 0.52 + 0.03).toFixed(3)})), url(${activeLayer.header_bg_url})`,
               backgroundSize: 'cover',
