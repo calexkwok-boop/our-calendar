@@ -12297,15 +12297,13 @@ function App() {
                     {calendarTitle}
                   </h1>
                 </div>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                  <span className="font-semibold" style={themeAccentTextStyle}>{user?.email || user?.phone || currentUser}</span>
-                  {!canEditActiveLayer && (
-                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 align-middle">
+                {!canEditActiveLayer && (
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 align-middle">
                       Read only
                     </span>
-                  )}
-                  <button onClick={handleLogout} className="ml-2 text-xs underline" style={themeAccentTextStyle}>logout</button>
-                </p>
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -12317,7 +12315,7 @@ function App() {
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
                 }`}
                 style={showSharePanel ? themeAccentButtonStyle : undefined}
-                title="Share calendar"
+                title="Account"
               >
                 <User className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
@@ -12825,11 +12823,26 @@ function App() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold" style={themeAccentHeadingStyle}>
-                Share Calendar
+                Account & Sharing
               </h3>
               <button onClick={() => { setShowSharePanel(false); setShareMessage(''); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
+            </div>
+            <div className="mb-4 p-3 rounded-xl border bg-gray-100 dark:bg-gray-700/70" style={{ borderColor: themeAccentBorder }}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Signed in as</div>
+                  <div className="text-sm font-semibold truncate text-gray-800 dark:text-gray-100">{user?.email || user?.phone || currentUser || 'User'}</div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+                  style={themeAccentButtonStyle}
+                >
+                  Logout
+                </button>
+              </div>
             </div>
             <div className="mb-5">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
