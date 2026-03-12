@@ -221,6 +221,7 @@ function App() {
   const [pendingThemeMatchStyle, setPendingThemeMatchStyle] = useState(null);
   const [coverOpacityPreview, setCoverOpacityPreview] = useState(null);
   const [coverHeaderControlsVisible, setCoverHeaderControlsVisible] = useState(true);
+  const [coverHeaderInteractionTick, setCoverHeaderInteractionTick] = useState(0);
   const coverOpacityPreviewValueRef = useRef(null);
   const coverOpacityPreviewRafRef = useRef(null);
   const [user, setUser] = useState(null);
@@ -3177,6 +3178,15 @@ function App() {
   const useLegacyEllieMilesTheme = activeLayerNameKey === 'elliemiles';
   const hasActiveCoverPhoto = Boolean(activeLayer?.header_bg_url);
   const isCoverTapToRevealMode = hasActiveCoverPhoto && !coverHeaderControlsVisible;
+  const isCoverControlsPanelOpen = showSharePanel
+    || showNotificationSettings
+    || showListPanel
+    || showChatPanel
+    || showCategoryEditor
+    || showLayerMediaMenu
+    || showTitleStyleModal
+    || showAiAssistant
+    || showScanHelpModal;
   const effectiveCoverOpacity = coverOpacityPreview == null
     ? activeLayerPageTheme.coverOpacity
     : Math.max(0, Math.min(1, Number(coverOpacityPreview)));
@@ -3762,6 +3772,14 @@ function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!hasActiveCoverPhoto || !coverHeaderControlsVisible || isCoverControlsPanelOpen) return undefined;
+    const timer = window.setTimeout(() => {
+      setCoverHeaderControlsVisible(false);
+    }, 5000);
+    return () => window.clearTimeout(timer);
+  }, [hasActiveCoverPhoto, coverHeaderControlsVisible, isCoverControlsPanelOpen, coverHeaderInteractionTick]);
 
   const saveLayerTitleStyle = async () => {
     const lid = String(activeLayerId || '').trim();
@@ -11878,6 +11896,10 @@ function App() {
         <div
           ref={layerHeaderCardRef}
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[240px] sm:min-h-[300px] relative"
+          onPointerDownCapture={() => {
+            if (!hasActiveCoverPhoto || !coverHeaderControlsVisible) return;
+            setCoverHeaderInteractionTick((v) => v + 1);
+          }}
           style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
             ? {
               backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
@@ -11887,13 +11909,46 @@ function App() {
             : undefined}
         >
           {isCoverTapToRevealMode ? (
-            <button
-              type="button"
-              onClick={() => setCoverHeaderControlsVisible(true)}
-              className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/20 text-white text-sm sm:text-base font-semibold tracking-wide"
-            >
-              Tap cover photo to show controls
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setCoverHeaderControlsVisible(true);
+                  setCoverHeaderInteractionTick((v) => v + 1);
+                }}
+                className="absolute inset-0 z-10 rounded-2xl"
+                aria-label="Show cover controls"
+              />
+              <div className="relative z-20 flex items-center justify-between gap-2 mb-3 pointer-events-none">
+                <div className="flex items-center gap-3 min-w-0">
+                  {activeLayer?.icon_url ? (
+                    <img
+                      src={activeLayer.icon_url}
+                      alt="Calendar icon"
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
+                    />
+                  ) : (
+                    <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
+                      <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                    </div>
+                  )}
+                  <h1
+                    className="text-xl sm:text-2xl font-bold truncate"
+                    style={activeLayerTitleTextStyle}
+                  >
+                    {calendarTitle}
+                  </h1>
+                </div>
+                <span className="px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-black/35">
+                  Tap to show controls
+                </span>
+              </div>
+              <div className="relative z-20 pointer-events-none">
+                <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
+                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </h2>
+              </div>
+            </>
           ) : (
             <>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
