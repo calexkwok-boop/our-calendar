@@ -12108,10 +12108,13 @@ function App() {
                   </div>
                 </div>
               )}
-              <div className="p-4 rounded-xl border" style={{ backgroundColor: themeAccentSofterBg, borderColor: themeAccentBorder }}>
+              <div
+                className={`p-4 rounded-xl border ${useLegacyEllieMilesTheme ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : ''}`}
+                style={useLegacyEllieMilesTheme ? undefined : { backgroundColor: themeAccentSofterBg, borderColor: themeAccentBorder }}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Bell className="w-5 h-5" style={themeAccentTextStyle} />
+                    <Bell className="w-5 h-5" style={useLegacyEllieMilesTheme ? undefined : themeAccentTextStyle} />
                     <span className="font-semibold text-gray-800 dark:text-gray-200">In-App Updates</span>
                     {unreadInAppCount > 0 && (
                       <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">{unreadInAppCount}</span>
@@ -12121,8 +12124,8 @@ function App() {
                     <button
                       onClick={markAllInAppNotificationsRead}
                       disabled={unreadInAppCount === 0}
-                      className="px-2 py-1 rounded-md text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                      style={themeAccentButtonStyle}
+                      className={`px-2 py-1 rounded-md text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed ${useLegacyEllieMilesTheme ? 'bg-indigo-500 hover:bg-indigo-600 text-white' : ''}`}
+                      style={useLegacyEllieMilesTheme ? undefined : themeAccentButtonStyle}
                     >
                       Mark all read
                     </button>
@@ -12143,8 +12146,12 @@ function App() {
                       <button
                         key={item.id}
                         onClick={() => { void handleInAppNotificationClick(item); }}
-                        className={`w-full text-left rounded-lg border px-2.5 py-2 transition-colors ${item.read ? 'bg-white/70 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
-                        style={{ borderColor: item.read ? mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.8 : 0.85) : themeAccentBorder }}
+                        className={`w-full text-left rounded-lg border px-2.5 py-2 transition-colors ${
+                          useLegacyEllieMilesTheme
+                            ? (item.read ? 'bg-white/70 dark:bg-gray-800 border-indigo-100 dark:border-indigo-800' : 'bg-white dark:bg-gray-800 border-indigo-300 dark:border-indigo-600')
+                            : (item.read ? 'bg-white/70 dark:bg-gray-800' : 'bg-white dark:bg-gray-800')
+                        }`}
+                        style={useLegacyEllieMilesTheme ? undefined : { borderColor: item.read ? mixHexColors(activeLayerPageTheme.accent, '#ffffff', darkMode ? 0.8 : 0.85) : themeAccentBorder }}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <span className={`text-xs ${item.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-800 dark:text-gray-100 font-medium'}`}>{item.message}</span>
@@ -12530,8 +12537,12 @@ function App() {
                   <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Calendar Chat</h3>
                   <button
                     onClick={() => setShowChatMembersPanel(prev => !prev)}
-                    className="px-2 py-1 rounded-full text-[11px] font-semibold border"
-                    style={showChatMembersPanel ? themeAccentButtonStyle : themeAccentSoftButtonStyle}
+                    className={`px-2 py-1 rounded-full text-[11px] font-semibold border ${
+                      useLegacyEllieMilesTheme
+                        ? 'border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/25 text-indigo-700 dark:text-indigo-200'
+                        : ''
+                    }`}
+                    style={useLegacyEllieMilesTheme ? undefined : (showChatMembersPanel ? themeAccentButtonStyle : themeAccentSoftButtonStyle)}
                     title="Show member status"
                   >
                     {chatOnlineMemberCount}/{chatTotalMembers} members
@@ -13115,15 +13126,18 @@ function App() {
               </button>
             </div>
 
-            <div className="p-3 rounded-xl border mb-3" style={{ backgroundColor: themeAccentSofterBg, borderColor: themeAccentBorder }}>
+            <div
+              className={`p-3 rounded-xl border mb-3 ${useLegacyEllieMilesTheme ? 'bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700 border-purple-100 dark:border-gray-600' : ''}`}
+              style={useLegacyEllieMilesTheme ? undefined : { backgroundColor: themeAccentSofterBg, borderColor: themeAccentBorder }}
+            >
               <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
                   value={newSharedListTitle}
                   onChange={(e) => setNewSharedListTitle(e.target.value)}
                   placeholder="Create new list title"
-                  className="flex-1 px-3 py-2 text-base sm:text-sm border dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1"
-                  style={{ fontSize: '16px', borderColor: themeAccentBorder }}
+                  className={`flex-1 px-3 py-2 text-base sm:text-sm border dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1 ${useLegacyEllieMilesTheme ? 'border-gray-200 dark:border-gray-600 focus:ring-purple-400' : ''}`}
+                  style={useLegacyEllieMilesTheme ? { fontSize: '16px' } : { fontSize: '16px', borderColor: themeAccentBorder }}
                   onKeyPress={(e) => e.key === 'Enter' && createSharedList()}
                 />
                 <button
@@ -14331,6 +14345,10 @@ function App() {
                                   const isActiveLayer = String(layer.id) === String(activeLayerId);
                                   const isOwnedLayer = String(layer?.owner_id) === String(user?.id);
                                   const isPublicLayer = Boolean(layer?.is_public);
+                                  const rowNameKey = String(layer?.name || '')
+                                    .toLowerCase()
+                                    .replace(/[^a-z0-9]+/g, '');
+                                  const useLegacyRowTheme = rowNameKey === 'elliemiles';
                                   const rowTheme = normalizeLayerPageTheme(layer?.page_theme, layer?.title_style);
                                   const rowAccentBorder = mixHexColors(rowTheme.accent, '#ffffff', darkMode ? 0.5 : 0.62);
                                   const rowSoftBg = mixHexColors(rowTheme.accent, '#ffffff', darkMode ? 0.78 : 0.82);
@@ -14387,11 +14405,15 @@ function App() {
                                           setBottomNavTab('home');
                                           setShowDateDetailModal(false);
                                         }}
-                                        className={`relative z-10 w-full text-left p-3 rounded-xl border transition-all ${isActiveLayer ? '' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}`}
+                                        className={`relative z-10 w-full text-left p-3 rounded-xl border transition-all ${
+                                          isActiveLayer
+                                            ? (useLegacyRowTheme ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : '')
+                                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                                        }`}
                                         style={{
                                           transform: `translateX(${layerRowOffset}px)`,
                                           transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease',
-                                          ...(isActiveLayer
+                                          ...(isActiveLayer && !useLegacyRowTheme
                                             ? { borderColor: rowAccentBorder, backgroundColor: rowSoftBg }
                                             : {}),
                                         }}
@@ -14422,8 +14444,8 @@ function App() {
                                               <span
                                                 className="text-[10px] font-semibold px-2 py-1 rounded-full"
                                                 style={{
-                                                  backgroundColor: rowTheme.accent,
-                                                  color: isLightHexColor(rowTheme.accent) ? '#111111' : '#ffffff',
+                                                  backgroundColor: useLegacyRowTheme ? '#6366f1' : rowTheme.accent,
+                                                  color: useLegacyRowTheme ? '#ffffff' : (isLightHexColor(rowTheme.accent) ? '#111111' : '#ffffff'),
                                                 }}
                                               >
                                                 Active
