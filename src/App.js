@@ -14345,13 +14345,9 @@ function App() {
                                   const isActiveLayer = String(layer.id) === String(activeLayerId);
                                   const isOwnedLayer = String(layer?.owner_id) === String(user?.id);
                                   const isPublicLayer = Boolean(layer?.is_public);
-                                  const rowNameKey = String(layer?.name || '')
-                                    .toLowerCase()
-                                    .replace(/[^a-z0-9]+/g, '');
-                                  const useLegacyRowTheme = rowNameKey === 'elliemiles';
                                   const rowTheme = normalizeLayerPageTheme(layer?.page_theme, layer?.title_style);
-                                  const rowAccentBorder = mixHexColors(rowTheme.accent, '#ffffff', darkMode ? 0.5 : 0.62);
-                                  const rowSoftBg = mixHexColors(rowTheme.accent, '#ffffff', darkMode ? 0.78 : 0.82);
+                                  const rowAccentBorder = mixHexColors(rowTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.35 : 0.62);
+                                  const rowSoftBg = mixHexColors(rowTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.72 : 0.84);
                                   const canDeleteLayer = isOwnedLayer && layers.length > 1;
                                   const canLeaveLayer = !isOwnedLayer;
                                   const canSwipeLayerAction = canDeleteLayer || canLeaveLayer;
@@ -14407,13 +14403,13 @@ function App() {
                                         }}
                                         className={`relative z-10 w-full text-left p-3 rounded-xl border transition-all ${
                                           isActiveLayer
-                                            ? (useLegacyRowTheme ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : '')
+                                            ? 'shadow-sm'
                                             : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
                                         }`}
                                         style={{
                                           transform: `translateX(${layerRowOffset}px)`,
                                           transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease',
-                                          ...(isActiveLayer && !useLegacyRowTheme
+                                          ...(isActiveLayer
                                             ? { borderColor: rowAccentBorder, backgroundColor: rowSoftBg }
                                             : {}),
                                         }}
@@ -14444,8 +14440,8 @@ function App() {
                                               <span
                                                 className="text-[10px] font-semibold px-2 py-1 rounded-full"
                                                 style={{
-                                                  backgroundColor: useLegacyRowTheme ? '#6366f1' : rowTheme.accent,
-                                                  color: useLegacyRowTheme ? '#ffffff' : (isLightHexColor(rowTheme.accent) ? '#111111' : '#ffffff'),
+                                                  backgroundColor: rowTheme.accent,
+                                                  color: isLightHexColor(rowTheme.accent) ? '#111111' : '#ffffff',
                                                 }}
                                               >
                                                 Active
