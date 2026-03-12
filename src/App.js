@@ -119,6 +119,28 @@ const CALENDAR_REPORT_REASONS = [
   { value: 'spam', label: 'Spam' },
 ];
 
+// Source: ESPN Warriors 2025-26 schedule (remaining regular season), captured Mar 12, 2026.
+// Times are set in Pacific Time for this app's event time fields.
+const WARRIORS_REMAINING_2026_EVENTS_PT = Object.freeze([
+  { date: '2026-03-13', time: '19:00', title: 'Warriors vs Timberwolves', location: 'Chase Center' },
+  { date: '2026-03-15', time: '17:00', title: 'Warriors at Knicks', location: 'Madison Square Garden' },
+  { date: '2026-03-16', time: '16:00', title: 'Warriors at Wizards', location: 'Capital One Arena' },
+  { date: '2026-03-18', time: '16:00', title: 'Warriors at Celtics', location: 'TD Garden' },
+  { date: '2026-03-20', time: '16:30', title: 'Warriors at Pistons', location: 'Little Caesars Arena' },
+  { date: '2026-03-21', time: '17:00', title: 'Warriors at Hawks', location: 'State Farm Arena' },
+  { date: '2026-03-23', time: '18:30', title: 'Warriors at Mavericks', location: 'American Airlines Center' },
+  { date: '2026-03-25', time: '19:00', title: 'Warriors vs Nets', location: 'Chase Center' },
+  { date: '2026-03-27', time: '19:00', title: 'Warriors vs Wizards', location: 'Chase Center' },
+  { date: '2026-03-29', time: '19:00', title: 'Warriors at Nuggets', location: 'Ball Arena' },
+  { date: '2026-04-01', time: '19:00', title: 'Warriors vs Spurs', location: 'Chase Center' },
+  { date: '2026-04-02', time: '19:00', title: 'Warriors vs Cavaliers', location: 'Chase Center' },
+  { date: '2026-04-05', time: '19:00', title: 'Warriors vs Rockets', location: 'Chase Center' },
+  { date: '2026-04-07', time: '19:00', title: 'Warriors vs Kings', location: 'Chase Center' },
+  { date: '2026-04-09', time: '19:00', title: 'Warriors vs Clippers', location: 'Chase Center' },
+  { date: '2026-04-10', time: '19:00', title: 'Warriors at Kings', location: 'Golden 1 Center' },
+  { date: '2026-04-12', time: '17:30', title: 'Warriors at Clippers', location: 'Intuit Dome' },
+]);
+
 
 const urlBase64ToUint8Array = (base64String) => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -2872,6 +2894,64 @@ function App() {
     alert(`Read-only access: you can chat and join events, but you cannot ${actionLabel}.`);
     return false;
   };
+  useEffect(() => {
+    let cancelled = false;
+    const seedWarriorsEventsIfNeeded = async () => {
+      const layerId = String(activeLayerId || '').trim();
+      const userId = String(user?.id || '').trim();
+      if (!layerId || !userId) return;
+      if (!normalizedActiveLayerName.includes('goldenstatewarriors')) return;
+      if (typeof window === 'undefined') return;
+
+      const seedKey = `warriors-events-seeded-2026-${layerId}`;
+      if (localStorage.getItem(seedKey) === 'done') return;
+
+      const eventDates = Array.from(new Set(WARRIORS_REMAINING_2026_EVENTS_PT.map((event) => event.date)));
+      const { data: existingRows, error: existingError } = await supabase
+        .from('events')
+        .select('id,date,title')
+        .eq('layer_id', layerId)
+        .in('date', eventDates);
+      if (existingError) {
+        console.error('Warriors seed read failed:', existingError);
+        return;
+      }
+
+      const existingKeys = new Set(
+        (existingRows || []).map((row) => `${String(row?.date || '')}|${String(row?.title || '').trim().toLowerCase()}`)
+      );
+
+      const rowsToInsert = WARRIORS_REMAINING_2026_EVENTS_PT
+        .filter((event) => !existingKeys.has(`${event.date}|${event.title.trim().toLowerCase()}`))
+        .map((event) => ({
+          layer_id: layerId,
+          user_id: userId,
+          title: event.title,
+          date: event.date,
+          time: event.time,
+          end_time: null,
+          category: 'other',
+          created_by: currentUser || user?.email || user?.phone || 'User',
+          location: event.location,
+          notes: null,
+          recurrence: null,
+        }));
+
+      if (rowsToInsert.length > 0) {
+        const { error: insertError } = await supabase.from('events').insert(rowsToInsert);
+        if (insertError) {
+          console.error('Warriors seed insert failed:', insertError);
+          return;
+        }
+        if (!cancelled) setLayerRefreshToken((prev) => prev + 1);
+      }
+
+      localStorage.setItem(seedKey, 'done');
+    };
+
+    void seedWarriorsEventsIfNeeded();
+    return () => { cancelled = true; };
+  }, [activeLayerId, normalizedActiveLayerName, user?.id, user?.email, user?.phone, currentUser]);
 
   const resolveSharedOwnerLabels = async (shares, layerId) => {
     const ownerIds = Array.from(new Set((shares || []).map(s => String(s?.owner_id || '')).filter(Boolean)));
