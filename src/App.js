@@ -15475,7 +15475,8 @@ function App() {
                     }
                   }}
                   placeholder="Search city for weather…"
-                  className="flex-1 text-xs px-2.5 py-1.5 bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="flex-1 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 text-base sm:text-xs"
+                  style={{ fontSize: '16px' }}
                 />
                 {subCalWeatherLoading && <span className="text-xs text-blue-400 animate-pulse shrink-0">Loading…</span>}
                 {subCalWeatherLocation && (
