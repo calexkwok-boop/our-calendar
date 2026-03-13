@@ -2576,6 +2576,8 @@ function App() {
   const [headerModulePrefsReady, setHeaderModulePrefsReady] = useState(false);
   const headerModuleDragRef = useRef(null);
   const headerModulePinchRef = useRef({ active: false, moduleId: '', startDistance: 0, startScale: 1 });
+  const headerModuleLastDragRef = useRef({ moduleId: '', at: 0 });
+  const coverWidgetLastDragRef = useRef({ widgetId: '', at: 0 });
   const [sharedListGroups, setSharedListGroups] = useState([]);
   const [sharedListItems, setSharedListItems] = useState([]);
   const [calendarChatMessages, setCalendarChatMessages] = useState([]);
@@ -13071,6 +13073,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       startY: Number(event.clientY),
       initialX: Number(layout.x || 50),
       initialY: Number(layout.y || 50),
+      moved: false,
     };
   };
 
@@ -13137,6 +13140,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (!rect.width || !rect.height) return;
       const dx = Number(event.clientX) - Number(drag.startX);
       const dy = Number(event.clientY) - Number(drag.startY);
+      if (!drag.moved) {
+        const travelPx = Math.sqrt((dx * dx) + (dy * dy));
+        if (travelPx < 3) return;
+        drag.moved = true;
+      }
       const rawX = drag.initialX + ((dx / rect.width) * 100);
       const rawY = drag.initialY + ((dy / rect.height) * 100);
       const nextX = Math.max(2, Math.min(98, rawX));
@@ -13151,6 +13159,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }));
     };
     const handlePointerUp = () => {
+      const drag = headerModuleDragRef.current;
+      if (drag?.moved) {
+        headerModuleLastDragRef.current = { moduleId: String(drag.moduleId || ''), at: Date.now() };
+      }
       headerModuleDragRef.current = null;
     };
     window.addEventListener('pointermove', handlePointerMove);
@@ -13219,7 +13231,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const dy = Number(event.clientY) - drag.startY;
       if (!drag.moved) {
         const travelPx = Math.sqrt((dx * dx) + (dy * dy));
-        if (travelPx < 6) return;
+        if (travelPx < 2) return;
         drag.moved = true;
       }
       const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
@@ -13293,6 +13305,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
     };
     const handlePointerUp = () => {
+      const drag = coverWidgetDragRef.current;
+      if (drag?.moved) {
+        coverWidgetLastDragRef.current = { widgetId: String(drag.widgetId || ''), at: Date.now() };
+      }
       coverWidgetDragRef.current = null;
       flushControlWidgetPrefs();
     };
@@ -13702,12 +13718,25 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       top: `${y}%`,
       transform: `translate(-50%, -50%) scale(${scale})`,
       transformOrigin: 'center center',
+      touchAction: 'none',
+      userSelect: 'none',
     };
+  };
+  const wasRecentHeaderModuleDrag = (moduleId) => {
+    const id = String(moduleId || '').trim();
+    const last = headerModuleLastDragRef.current;
+    return Boolean(last?.moduleId === id && (Date.now() - Number(last?.at || 0)) < 320);
+  };
+  const wasRecentCoverWidgetDrag = (widgetId) => {
+    const id = String(widgetId || '').trim();
+    const last = coverWidgetLastDragRef.current;
+    return Boolean(last?.widgetId === id && (Date.now() - Number(last?.at || 0)) < 320);
   };
   const onHeaderModulePointerDown = (event, moduleId) => {
     if (!coverHeaderControlsVisible) return;
     if (showControlWidgetAddPanel && moduleId !== 'add') return;
     event.stopPropagation();
+    event.preventDefault();
     startHeaderModulePointerDrag(event, moduleId);
   };
   const hiddenModeInactiveWidgetClassName = 'bg-black/35 text-white border-white/20';
@@ -14061,7 +14090,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 }}
               >
                 <button
-                  onClick={() => handleControlWidgetClick(widgetId)}
+                  onClick={() => {
+                    if (wasRecentCoverWidgetDrag(widgetId)) return;
+                    handleControlWidgetClick(widgetId);
+                  }}
                   onPointerDown={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -14143,6 +14175,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (wasRecentHeaderModuleDrag('icon')) return;
                         openLayerMediaMenu();
                       }}
                       className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -14167,6 +14200,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (wasRecentHeaderModuleDrag('title')) return;
                     if (!canEditActiveLayerTitle) return;
                     openTitleStyleModal();
                   }}
@@ -14204,6 +14238,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (wasRecentHeaderModuleDrag('add')) return;
                     setShowControlWidgetAddPanel(true);
                   }}
                   className={`shrink-0 px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
