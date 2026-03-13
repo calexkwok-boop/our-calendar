@@ -5791,6 +5791,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
           Object.entries(newEvents).forEach(([date, dateEvents]) => {
             dateEvents.forEach(event => {
+              // Virtual recurrence rows are derived UI projections and should never be persisted as standalone DB rows.
+              if (event?.isVirtualAnnual || event?.isVirtualRecurrence) return;
               if (event.userId && event.userId !== saveUserId) {
                 // Shared event — do a targeted update on just the fields we allow editing
                 sharedUpdates.push(event);
@@ -5827,6 +5829,41 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               });
             });
           });
+          // Defensive dedupe: if local state contains both a DB-backed row and a transient clone with same payload,
+          // keep only one upsert candidate (prefer UUID ids).
+          if (myEvents.length > 1) {
+            const dedupedBySemanticKey = new Map();
+            myEvents.forEach((row) => {
+              const semanticKey = [
+                String(row?.date || ''),
+                String(row?.time || ''),
+                String(row?.title || '').trim().toLowerCase(),
+                String(row?.location || '').trim().toLowerCase(),
+                String(row?.layer_id || ''),
+                String(row?.user_id || ''),
+              ].join('|');
+              const existing = dedupedBySemanticKey.get(semanticKey);
+              if (!existing) {
+                dedupedBySemanticKey.set(semanticKey, row);
+                return;
+              }
+              const existingId = String(existing?.id || '');
+              const nextId = String(row?.id || '');
+              const existingIsUuid = isUuidLike(existingId);
+              const nextIsUuid = isUuidLike(nextId);
+              if (!existingIsUuid && nextIsUuid) {
+                dedupedBySemanticKey.set(semanticKey, row);
+                return;
+              }
+              if (existingIsUuid === nextIsUuid) {
+                const existingCreated = Date.parse(String(existing?.created_at || '')) || 0;
+                const nextCreated = Date.parse(String(row?.created_at || '')) || 0;
+                if (nextCreated > existingCreated) dedupedBySemanticKey.set(semanticKey, row);
+              }
+            });
+            myEvents.length = 0;
+            myEvents.push(...dedupedBySemanticKey.values());
+          }
 
           if (requestId !== saveRequestIdRef.current) return;
           // Non-destructive save: upsert local owned events, never bulk-delete.
