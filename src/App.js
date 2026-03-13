@@ -147,8 +147,8 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'theme',
 ]);
 const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([]);
-const WIDGET_GRID_COLUMNS = 16;
-const WIDGET_GRID_ROWS = 24;
+const WIDGET_GRID_COLUMNS = 12;
+const WIDGET_GRID_ROWS = 28;
 const WIDGET_MIN_SIZE = 38;
 const WIDGET_MAX_SIZE = 86;
 
@@ -256,6 +256,7 @@ function App() {
   const layerMediaInputRef = useRef(null);
   const layerHeaderCardRef = useRef(null);
   const widgetSurfaceRef = useRef(null);
+  const widgetOverlayRef = useRef(null);
   const pendingLayerMediaKindRef = useRef('');
   const layerCropDragRef = useRef({ active: false, startX: 0, startY: 0, baseX: 0, baseY: 0 });
   const scanReminderInputRef = useRef(null);
@@ -12856,7 +12857,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const handlePointerMove = (event) => {
       const drag = coverWidgetDragRef.current;
       if (!drag) return;
-      const container = widgetSurfaceRef.current || layerHeaderCardRef.current;
+      const container = widgetOverlayRef.current || widgetSurfaceRef.current || layerHeaderCardRef.current;
       if (!container) return;
       const rect = container.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
@@ -13226,16 +13227,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: showSportsImportModal, disabled: Boolean(activeSubCalendar) };
     return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, disabled: false };
   };
-  const widgetGridOverlayStyle = {
-    backgroundImage: `
-      linear-gradient(to right, ${darkMode ? 'rgba(148,163,184,0.16)' : 'rgba(51,65,85,0.10)'} 1px, transparent 1px),
-      linear-gradient(to bottom, ${darkMode ? 'rgba(148,163,184,0.16)' : 'rgba(51,65,85,0.10)'} 1px, transparent 1px)
-    `,
-    backgroundSize: `calc(100% / ${Math.max(1, WIDGET_GRID_COLUMNS - 1)}) calc(100% / ${Math.max(1, WIDGET_GRID_ROWS - 1)})`,
-    backgroundPosition: '0 0',
-    opacity: coverHeaderControlsVisible ? 1 : 0,
-    transition: 'opacity 180ms ease',
-  };
   const hiddenModeInactiveWidgetClassName = 'bg-black/35 text-white border-white/20';
   const visibleModeInactiveWidgetClassName = 'bg-gray-100/95 dark:bg-gray-700/95 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600';
   const chatTotalMembers = Math.max(1, Number(chatMembers.length || 0));
@@ -13548,11 +13539,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }}
     />
     <div ref={widgetSurfaceRef} className="relative min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24" style={themedPageBackgroundStyle}>
-      <div className="max-w-6xl mx-auto">
-        <div className="absolute inset-0 z-20 pointer-events-none rounded-2xl overflow-hidden">
-          <div className="absolute inset-0" style={widgetGridOverlayStyle} />
-        </div>
-        <div className="absolute inset-0 z-30 pointer-events-none">
+      <div className="relative max-w-6xl mx-auto">
+        <div ref={widgetOverlayRef} className="absolute inset-0 z-30 pointer-events-none">
           {activeControlWidgets.map((widgetId) => {
             const meta = getControlWidgetMeta(widgetId);
             const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: 46 };
