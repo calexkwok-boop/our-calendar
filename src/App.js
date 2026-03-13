@@ -151,6 +151,7 @@ const WIDGET_GRID_COLUMNS = 12;
 const WIDGET_GRID_ROWS = 28;
 const WIDGET_MIN_SIZE = 38;
 const WIDGET_MAX_SIZE = 86;
+const WIDGET_DEFAULT_SIZE = WIDGET_MIN_SIZE;
 
 // Source: ESPN Warriors 2025-26 schedule (remaining regular season), captured Mar 12, 2026.
 // Times are set in Pacific Time for this app's event time fields.
@@ -12828,23 +12829,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     const activeIds = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
+    const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
+    const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
+    const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
     setCoverWidgetLayout((prev) => {
       const next = {};
       activeIds.forEach((id, idx) => {
         const existing = prev?.[id];
         if (existing && Number.isFinite(Number(existing.x)) && Number.isFinite(Number(existing.y)) && Number.isFinite(Number(existing.size))) {
           next[id] = {
-            x: Math.max(2, Math.min(98, Number(existing.x))),
-            y: Math.max(2, Math.min(98, Number(existing.y))),
+            x: Math.max(2, Math.min(98, snap(Number(existing.x), xStep))),
+            y: Math.max(2, Math.min(98, snap(Number(existing.y), yStep))),
             size: Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(existing.size))),
           };
         } else {
-          const col = idx % 6;
-          const row = Math.floor(idx / 6);
+          const columnsPerRow = Math.max(1, Math.min(6, WIDGET_GRID_COLUMNS));
+          const col = idx % columnsPerRow;
+          const row = Math.floor(idx / columnsPerRow);
+          const slotX = ((col + 1) * 100) / (columnsPerRow + 1);
+          const slotY = 10 + (row * Math.max(yStep * 3, 8));
           next[id] = {
-            x: 10 + col * 9,
-            y: 10 + row * 9,
-            size: 46,
+            x: Math.max(2, Math.min(98, snap(slotX, xStep))),
+            y: Math.max(2, Math.min(98, snap(slotY, yStep))),
+            size: WIDGET_DEFAULT_SIZE,
           };
         }
       });
@@ -12867,13 +12874,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
       const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
       const clampCenterPercent = (value, size, totalPx) => {
-        const halfPct = ((Number(size || 46) / 2) / Math.max(1, Number(totalPx || 1))) * 100;
+        const halfPct = ((Number(size || WIDGET_DEFAULT_SIZE) / 2) / Math.max(1, Number(totalPx || 1))) * 100;
         return Math.max(halfPct, Math.min(100 - halfPct, Number(value || 0)));
       };
       if (drag.mode === 'move') {
         const currentSize = Math.max(
           WIDGET_MIN_SIZE,
-          Math.min(WIDGET_MAX_SIZE, Number(drag.initialSize || 46)),
+          Math.min(WIDGET_MAX_SIZE, Number(drag.initialSize || WIDGET_DEFAULT_SIZE)),
         );
         const rawX = drag.initialX + ((dx / rect.width) * 100);
         const rawY = drag.initialY + ((dy / rect.height) * 100);
@@ -13142,7 +13149,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const startCoverWidgetPointerAction = (event, widgetId, mode = 'move') => {
     const id = String(widgetId || '').trim();
     if (!id || !activeControlWidgets.includes(id)) return;
-    const layout = coverWidgetLayout?.[id] || { x: 50, y: 50, size: 46 };
+    const layout = coverWidgetLayout?.[id] || { x: 50, y: 50, size: WIDGET_DEFAULT_SIZE };
     coverWidgetDragRef.current = {
       widgetId: id,
       mode,
@@ -13150,7 +13157,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       startY: Number(event.clientY),
       initialX: Number(layout.x || 50),
       initialY: Number(layout.y || 50),
-      initialSize: Number(layout.size || 46),
+      initialSize: Number(layout.size || WIDGET_DEFAULT_SIZE),
     };
   };
   const handleControlWidgetClick = (widgetId) => {
@@ -13543,8 +13550,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         <div ref={widgetOverlayRef} className="absolute inset-0 z-30 pointer-events-none">
           {activeControlWidgets.map((widgetId) => {
             const meta = getControlWidgetMeta(widgetId);
-            const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: 46 };
-            const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout?.size || 46)));
+            const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: WIDGET_DEFAULT_SIZE };
+            const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout?.size || WIDGET_DEFAULT_SIZE)));
             return (
               <div
                 key={`cover-widget-global-${widgetId}`}
