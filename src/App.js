@@ -14185,19 +14185,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 <ChevronLeft className="w-6 h-6" style={undefined} />
               </button>
               <div className="flex flex-col items-center gap-1 mt-8 sm:mt-10">
-                {calendarView !== 'month' && (
-                  <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
-                    {calendarView === 'week'
-                      ? (() => {
-                        const days = getWeekDays(currentDate);
-                        const start = days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        const end = days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                        return `${start} – ${end}`;
-                      })()
-                      : `Agenda · Next ${agendaRangeDays} days`
-                    }
-                  </h2>
-                )}
                 <div className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium" style={undefined}>
                   <button
                     onClick={() => setCalendarView('month')}
@@ -14221,6 +14208,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     Agenda
                   </button>
                 </div>
+                {calendarView !== 'month' && (
+                  <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
+                    {calendarView === 'week'
+                      ? (() => {
+                        const days = getWeekDays(currentDate);
+                        const start = days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        const end = days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        return `${start} – ${end}`;
+                      })()
+                      : `Agenda · Next ${agendaRangeDays} days`
+                    }
+                  </h2>
+                )}
               </div>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
