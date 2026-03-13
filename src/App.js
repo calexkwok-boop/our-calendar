@@ -121,6 +121,32 @@ const CALENDAR_REPORT_REASONS = [
   { value: 'spam', label: 'Spam' },
 ];
 
+const CONTROL_WIDGET_IDS = Object.freeze([
+  'account',
+  'notifications',
+  'list',
+  'chat',
+  'weather',
+  'categories',
+  'theme',
+  'ai',
+  'scan',
+  'import',
+]);
+
+const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
+  'account',
+  'notifications',
+  'list',
+  'chat',
+  'ai',
+  'scan',
+  'import',
+  'weather',
+  'categories',
+  'theme',
+]);
+
 // Source: ESPN Warriors 2025-26 schedule (remaining regular season), captured Mar 12, 2026.
 // Times are set in Pacific Time for this app's event time fields.
 const WARRIORS_REMAINING_2026_EVENTS_PT = Object.freeze([
@@ -2526,6 +2552,10 @@ function App() {
   const [showListPanel, setShowListPanel] = useState(false);
   const [listPanelAttention, setListPanelAttention] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
+  const [controlWidgetOrder, setControlWidgetOrder] = useState([...DEFAULT_CONTROL_WIDGET_ORDER]);
+  const [showControlWidgetAddPanel, setShowControlWidgetAddPanel] = useState(false);
+  const [draggingControlWidgetId, setDraggingControlWidgetId] = useState('');
+  const [controlWidgetDropTargetId, setControlWidgetDropTargetId] = useState('');
   const [sharedListGroups, setSharedListGroups] = useState([]);
   const [sharedListItems, setSharedListItems] = useState([]);
   const [calendarChatMessages, setCalendarChatMessages] = useState([]);
@@ -12750,6 +12780,43 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setDraggingUpcomingPopupId(null);
   };
 
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) {
+      setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+      setShowControlWidgetAddPanel(false);
+      return;
+    }
+    const key = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) {
+        setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+        return;
+      }
+      const normalized = parsed
+        .map((id) => String(id || '').trim())
+        .filter((id) => CONTROL_WIDGET_IDS.includes(id));
+      const deduped = Array.from(new Set(normalized));
+      const missing = CONTROL_WIDGET_IDS.filter((id) => !deduped.includes(id));
+      setControlWidgetOrder([...deduped, ...missing]);
+    } catch {
+      setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+    }
+  }, [user?.id, activeLayerId]);
+
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) return;
+    const key = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
+    try {
+      localStorage.setItem(key, JSON.stringify(controlWidgetOrder));
+    } catch {}
+  }, [user?.id, activeLayerId, controlWidgetOrder]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
@@ -12939,6 +13006,117 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const unreadInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 0 : 1), 0);
   const readInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 1 : 0), 0);
   const activeChatUnreadCount = Number(chatUnreadCounts[String(activeLayerId || '')] || 0);
+  const widgetOrderVisible = controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id));
+  const widgetOrderMissing = CONTROL_WIDGET_IDS.filter((id) => !widgetOrderVisible.includes(id));
+  const widgetOrderForRender = [...widgetOrderVisible, ...widgetOrderMissing];
+  const activeControlWidgets = widgetOrderForRender.filter((id) => !widgetOrderMissing.includes(id));
+  const hiddenControlWidgets = widgetOrderMissing;
+  const reorderControlWidgets = (dragId, targetId) => {
+    if (!dragId || !targetId || dragId === targetId) return;
+    setControlWidgetOrder((prev) => {
+      const normalized = [...new Set(prev.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
+      const from = normalized.indexOf(dragId);
+      const to = normalized.indexOf(targetId);
+      if (from < 0 || to < 0) return prev;
+      const next = [...normalized];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      const missing = CONTROL_WIDGET_IDS.filter((id) => !next.includes(id));
+      return [...next, ...missing];
+    });
+  };
+  const addControlWidget = (widgetId) => {
+    const id = String(widgetId || '').trim();
+    if (!id || !CONTROL_WIDGET_IDS.includes(id)) return;
+    setControlWidgetOrder((prev) => {
+      const normalized = [...new Set(prev.filter((v) => CONTROL_WIDGET_IDS.includes(v)))];
+      if (normalized.includes(id)) return normalized;
+      return [id, ...normalized];
+    });
+  };
+  const removeControlWidget = (widgetId) => {
+    const id = String(widgetId || '').trim();
+    if (!id) return;
+    setControlWidgetOrder((prev) => {
+      const normalized = [...new Set(prev.filter((v) => CONTROL_WIDGET_IDS.includes(v)))];
+      const next = normalized.filter((v) => v !== id);
+      return next.length > 0 ? next : normalized;
+    });
+  };
+  const handleControlWidgetClick = (widgetId) => {
+    const id = String(widgetId || '').trim();
+    if (id === 'account') {
+      setShowSharePanel((prev) => !prev);
+      return;
+    }
+    if (id === 'notifications') {
+      setShowNotificationSettings((prev) => !prev);
+      return;
+    }
+    if (id === 'list') {
+      setShowListPanel((prev) => !prev);
+      return;
+    }
+    if (id === 'chat') {
+      const layerKey = String(activeLayerId || '');
+      const next = !showChatPanel;
+      setShowChatPanel(next);
+      if (!next) setShowChatMembersPanel(false);
+      if (next && layerKey) markChatSeenForLayer(layerKey);
+      return;
+    }
+    if (id === 'weather') {
+      setShowWeather((prev) => !prev);
+      return;
+    }
+    if (id === 'categories') {
+      setShowCategoryEditor((prev) => !prev);
+      return;
+    }
+    if (id === 'theme') {
+      setDarkMode((prev) => !prev);
+      return;
+    }
+    if (id === 'ai') {
+      setShowAiAssistant((prev) => !prev);
+      return;
+    }
+    if (id === 'scan') {
+      if (isScanningReminder) return;
+      setShowScanHelpModal(true);
+      return;
+    }
+    if (id === 'import') {
+      if (activeSubCalendar) return;
+      openSportsImportModal();
+    }
+  };
+  const getControlWidgetMeta = (widgetId) => {
+    const id = String(widgetId || '').trim();
+    if (id === 'account') return { label: 'Account', icon: <User className="w-4 h-4" />, active: showSharePanel, disabled: false };
+    if (id === 'notifications') return {
+      label: 'Notifications',
+      icon: notificationsEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />,
+      active: showNotificationSettings,
+      disabled: false,
+      badge: unreadInAppCount > 0 ? (unreadInAppCount > 99 ? '99+' : String(unreadInAppCount)) : '',
+    };
+    if (id === 'list') return { label: 'List', icon: <Tag className="w-4 h-4" />, active: showListPanel, disabled: false };
+    if (id === 'chat') return {
+      label: 'Chat',
+      icon: <MessageSquare className="w-4 h-4" />,
+      active: showChatPanel,
+      disabled: false,
+      badge: activeChatUnreadCount > 0 ? (activeChatUnreadCount > 99 ? '99+' : String(activeChatUnreadCount)) : '',
+    };
+    if (id === 'weather') return { label: 'Weather', icon: <span className="text-sm leading-none">🌤️</span>, active: showWeather, disabled: false };
+    if (id === 'categories') return { label: 'Categories', icon: <Settings className="w-4 h-4" />, active: showCategoryEditor, disabled: false };
+    if (id === 'theme') return { label: darkMode ? 'Light' : 'Dark', icon: darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />, active: false, disabled: false };
+    if (id === 'ai') return { label: 'AI', icon: <MessageSquare className="w-4 h-4" />, active: showAiAssistant, disabled: false };
+    if (id === 'scan') return { label: isScanningReminder ? 'Scanning' : 'Scan', icon: <Camera className="w-4 h-4" />, active: showScanHelpModal, disabled: isScanningReminder };
+    if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: showSportsImportModal, disabled: Boolean(activeSubCalendar) };
+    return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, disabled: false };
+  };
   const chatTotalMembers = Math.max(1, Number(chatMembers.length || 0));
   const chatOnlineMemberCount = chatMembers.reduce((sum, member) => (
     member?.userId && chatPresenceByUserId[String(member.userId)] ? sum + 1 : sum
@@ -13352,96 +13530,111 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => setShowSharePanel(!showSharePanel)}
-                className={`p-2 rounded-xl transition-all duration-200 border ${
-                  showSharePanel
-                    ? 'shadow-sm border-transparent'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
-                }`}
-                style={showSharePanel ? themeAccentButtonStyle : undefined}
-                title="Account"
-              >
-                <User className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-              <button
-                onClick={() => setShowNotificationSettings(!showNotificationSettings)}
-                className={`relative p-2 rounded-xl transition-all duration-200 border ${
-                  showNotificationSettings
-                    ? 'shadow-sm border-transparent'
-                    : `bg-gray-100 dark:bg-gray-700 border-transparent ${notificationsEnabled ? 'text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-300'}`
-                }`}
-                style={showNotificationSettings ? themeAccentButtonStyle : undefined}
-                title={notificationsEnabled ? 'Notifications enabled' : 'Enable notifications'}
-              >
-                {notificationsEnabled ? <Bell className="w-4 h-4 sm:w-5 sm:h-5" /> : <BellOff className="w-4 h-4 sm:w-5 sm:h-5" />}
-                {unreadInAppCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
-                    {unreadInAppCount > 99 ? '99+' : unreadInAppCount}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setShowListPanel(!showListPanel)}
-                className={`px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${
-                  showListPanel
-                    ? 'shadow-sm border-transparent'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
-                }`}
-                style={showListPanel ? themeAccentButtonStyle : undefined}
-                title="Shared list"
-              >
-                List
-              </button>
-              <button
-                onClick={() => {
-                  const layerKey = String(activeLayerId || '');
-                  const next = !showChatPanel;
-                  setShowChatPanel(next);
-                  if (!next) setShowChatMembersPanel(false);
-                  if (next && layerKey) markChatSeenForLayer(layerKey);
-                }}
-                className={`relative px-3 py-2 rounded-xl transition-all duration-200 text-xs font-semibold border ${
-                  showChatPanel
-                    ? 'shadow-sm border-transparent'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
-                }`}
-                style={showChatPanel ? themeAccentButtonStyle : undefined}
-                title="Calendar chat"
-              >
-                Chat
-                {activeChatUnreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
-                    {activeChatUnreadCount > 99 ? '99+' : activeChatUnreadCount}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setShowWeather(!showWeather)}
-                className={`p-2 rounded-xl transition-all duration-200 text-sm ${showWeather ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700 opacity-40'}`}
-                title={showWeather ? 'Hide weather' : 'Show weather'}
-              >
-                🌤️
-              </button>
-              <button
-                onClick={() => setShowCategoryEditor(!showCategoryEditor)}
-                className={`p-2 rounded-xl transition-all duration-200 border ${
-                  showCategoryEditor
-                    ? 'shadow-sm border-transparent'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
-                }`}
-                style={showCategoryEditor ? themeAccentButtonStyle : undefined}
-              >
-                <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-2 rounded-xl transition-all duration-200 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-yellow-400"
-                title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-              >
-                {darkMode ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
-              </button>
+            <div className="shrink-0 w-full sm:w-auto">
+              <div className="flex items-center justify-end gap-2 mb-2">
+                <button
+                  onClick={() => setShowControlWidgetAddPanel((prev) => !prev)}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    showControlWidgetAddPanel
+                      ? 'border-transparent shadow-sm'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                  }`}
+                  style={showControlWidgetAddPanel ? themeAccentButtonStyle : undefined}
+                  title="Add widgets"
+                >
+                  + Add
+                </button>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-1.5">
+                {activeControlWidgets.map((widgetId) => {
+                  const meta = getControlWidgetMeta(widgetId);
+                  const isDropTarget = controlWidgetDropTargetId === widgetId && draggingControlWidgetId && draggingControlWidgetId !== widgetId;
+                  return (
+                    <div
+                      key={`widget-${widgetId}`}
+                      draggable
+                      onDragStart={() => {
+                        setDraggingControlWidgetId(widgetId);
+                        setControlWidgetDropTargetId('');
+                      }}
+                      onDragEnd={() => {
+                        setDraggingControlWidgetId('');
+                        setControlWidgetDropTargetId('');
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (draggingControlWidgetId && draggingControlWidgetId !== widgetId) {
+                          setControlWidgetDropTargetId(widgetId);
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        reorderControlWidgets(draggingControlWidgetId, widgetId);
+                        setDraggingControlWidgetId('');
+                        setControlWidgetDropTargetId('');
+                      }}
+                      className={`relative rounded-xl border transition-all ${isDropTarget ? 'ring-2 ring-offset-1 ring-purple-400 dark:ring-purple-500' : ''}`}
+                    >
+                      <button
+                        onClick={() => handleControlWidgetClick(widgetId)}
+                        disabled={meta.disabled}
+                        className={`w-full min-h-[40px] px-2 py-1.5 rounded-xl transition-all duration-200 text-[11px] font-semibold border ${
+                          meta.active
+                            ? 'shadow-sm border-transparent'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent'
+                        } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        style={meta.active ? themeAccentButtonStyle : undefined}
+                        title={meta.label}
+                      >
+                        <span className="flex items-center justify-center gap-1.5">
+                          {meta.icon}
+                          <span className="truncate">{meta.label}</span>
+                        </span>
+                        {meta.badge ? (
+                          <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                            {meta.badge}
+                          </span>
+                        ) : null}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeControlWidget(widgetId);
+                        }}
+                        disabled={activeControlWidgets.length <= 1}
+                        className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-[10px] text-gray-600 dark:text-gray-300 leading-none disabled:opacity-30"
+                        title="Remove widget"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              {showControlWidgetAddPanel && (
+                <div className="mt-2 p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600">
+                  <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Add widgets to your control dock</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {hiddenControlWidgets.map((widgetId) => {
+                      const meta = getControlWidgetMeta(widgetId);
+                      return (
+                        <button
+                          key={`add-${widgetId}`}
+                          onClick={() => addControlWidget(widgetId)}
+                          className="px-2 py-1 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 hover:shadow-sm"
+                          title={`Add ${meta.label}`}
+                        >
+                          + {meta.label}
+                        </button>
+                      );
+                    })}
+                    {hiddenControlWidgets.length === 0 && (
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400">All widgets already added.</span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -13508,42 +13701,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 />
               </button>
           </div>
-          {!activeSubCalendar && (
-          <div className="absolute right-3 bottom-3 z-10 flex flex-row gap-2">
-            <button
-              onClick={() => setShowAiAssistant(prev => !prev)}
-              className={`w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all ${
-                showAiAssistant
-                  ? 'text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-transparent'
-              }`}
-              style={showAiAssistant ? themeAccentButtonStyle : undefined}
-              title="Ask AI"
-            >
-              <MessageSquare className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setShowScanHelpModal(true)}
-              disabled={isScanningReminder}
-              className={`w-11 h-11 rounded-xl shadow-lg flex items-center justify-center transition-all ${isScanningReminder ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'}`}
-              title="Scan document"
-            >
-              <Camera className="w-5 h-5" />
-            </button>
-            <button
-              onClick={openSportsImportModal}
-              className={`h-11 px-3 rounded-xl shadow-lg flex items-center justify-center transition-all text-xs font-semibold border ${
-                showSportsImportModal
-                  ? 'border-transparent'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent'
-              }`}
-              style={showSportsImportModal ? themeAccentButtonStyle : undefined}
-              title="Import schedule"
-            >
-              Import
-            </button>
-          </div>
-        )}
             </>
           )}
         </div>
