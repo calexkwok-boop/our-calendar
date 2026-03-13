@@ -3034,8 +3034,21 @@ function App() {
     if (!coverHeaderControlsVisible) return;
     setCoverControlsInteractionTick((prev) => prev + 1);
   }, [coverHeaderControlsVisible]);
+  const hasOpenWidgetWindow = (
+    showControlWidgetAddPanel
+    || showSharePanel
+    || showListPanel
+    || showChatPanel
+    || showNotificationSettings
+    || showAiAssistant
+    || showScanHelpModal
+    || showSportsImportModal
+    || showCategoryEditor
+  );
   useEffect(() => {
     if (!coverHeaderControlsVisible) return undefined;
+    if (hasOpenWidgetWindow) return undefined;
+    if (bottomNavTab !== 'home') return undefined;
     const timeoutId = window.setTimeout(() => {
       setCoverHeaderControlsVisible(false);
       setShowControlWidgetAddPanel(false);
@@ -3043,7 +3056,7 @@ function App() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [coverHeaderControlsVisible, showControlWidgetAddPanel, activeLayerId, coverControlsInteractionTick]);
+  }, [coverHeaderControlsVisible, activeLayerId, coverControlsInteractionTick, hasOpenWidgetWindow, bottomNavTab]);
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
   const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
   const activeShareRowForMe = (sharedCalendars || []).find((row) => {
