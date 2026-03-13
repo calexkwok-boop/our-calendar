@@ -13697,53 +13697,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     />
     <div ref={widgetSurfaceRef} className="relative min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24" style={themedPageBackgroundStyle}>
       <div className="relative max-w-6xl mx-auto">
-        <div ref={widgetOverlayRef} className="absolute inset-0 z-30 pointer-events-none">
-          {coverHeaderControlsVisible && !showControlWidgetAddPanel && activeControlWidgets.map((widgetId) => {
-            const meta = getControlWidgetMeta(widgetId);
-            const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: WIDGET_DEFAULT_SIZE };
-            const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout?.size || WIDGET_DEFAULT_SIZE)));
-            return (
-              <div
-                key={`cover-widget-global-${widgetId}`}
-                className="absolute pointer-events-auto"
-                style={{
-                  left: `${Math.max(2, Math.min(98, Number(layout?.x || 50)))}%`,
-                  top: `${Math.max(2, Math.min(98, Number(layout?.y || 18)))}%`,
-                  width: `${size}px`,
-                  height: `${size}px`,
-                  transform: 'translate(-50%, -50%)',
-                  touchAction: 'none',
-                  userSelect: 'none',
-                }}
-              >
-                <button
-                  onClick={() => handleControlWidgetClick(widgetId)}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    bumpCoverControlsInteraction();
-                    startCoverWidgetPointerAction(e, widgetId, 'move');
-                  }}
-                  className={`relative w-full h-full rounded-xl border transition-all ${
-                    meta.active
-                      ? 'shadow-sm border-transparent'
-                      : (isCoverTapToRevealMode ? hiddenModeInactiveWidgetClassName : visibleModeInactiveWidgetClassName)
-                  } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  style={meta.active ? themeAccentButtonStyle : undefined}
-                  title={meta.label}
-                  disabled={meta.disabled}
-                >
-                  <span className="flex items-center justify-center">{meta.icon}</span>
-                  {meta.badge ? (
-                    <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
-                      {meta.badge}
-                    </span>
-                  ) : null}
-                </button>
-              </div>
-            );
-          })}
-        </div>
         <div
           ref={layerHeaderCardRef}
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[165px] sm:min-h-[205px] lg:min-h-[285px] relative"
@@ -13760,6 +13713,53 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             }
             : undefined}
         >
+          <div ref={widgetOverlayRef} className="absolute inset-0 z-30 pointer-events-none">
+            {coverHeaderControlsVisible && !showControlWidgetAddPanel && activeControlWidgets.map((widgetId) => {
+              const meta = getControlWidgetMeta(widgetId);
+              const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: WIDGET_DEFAULT_SIZE };
+              const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout?.size || WIDGET_DEFAULT_SIZE)));
+              return (
+                <div
+                  key={`cover-widget-global-${widgetId}`}
+                  className="absolute pointer-events-auto"
+                  style={{
+                    left: `${Math.max(2, Math.min(98, Number(layout?.x || 50)))}%`,
+                    top: `${Math.max(2, Math.min(98, Number(layout?.y || 18)))}%`,
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    transform: 'translate(-50%, -50%)',
+                    touchAction: 'none',
+                    userSelect: 'none',
+                  }}
+                >
+                  <button
+                    onClick={() => handleControlWidgetClick(widgetId)}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      bumpCoverControlsInteraction();
+                      startCoverWidgetPointerAction(e, widgetId, 'move');
+                    }}
+                    className={`relative w-full h-full rounded-xl border transition-all ${
+                      meta.active
+                        ? 'shadow-sm border-transparent'
+                        : (isCoverTapToRevealMode ? hiddenModeInactiveWidgetClassName : visibleModeInactiveWidgetClassName)
+                    } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    style={meta.active ? themeAccentButtonStyle : undefined}
+                    title={meta.label}
+                    disabled={meta.disabled}
+                  >
+                    <span className="flex items-center justify-center">{meta.icon}</span>
+                    {meta.badge ? (
+                      <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                        {meta.badge}
+                      </span>
+                    ) : null}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
           {showControlWidgetAddPanel && (
             <button
               type="button"
