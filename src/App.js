@@ -12841,6 +12841,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const fallback = `control-widgets-${userKey}`;
     return scoped ? [scoped, fallback] : [fallback];
   }, [user?.id, activeLayerId]);
+  const getControlWidgetStorageMapKey = React.useCallback((uid = user?.id) => {
+    const userKey = String(uid || '').trim();
+    if (!userKey) return '';
+    return `control-widgets-map-${userKey}`;
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
@@ -12853,9 +12858,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setControlWidgetPrefsReady(false);
     const keyBases = getControlWidgetStorageBases(user.id, activeLayerId);
     try {
-      const raw = keyBases
+      let raw = keyBases
         .map((base) => localStorage.getItem(`${base}-order`))
         .find((value) => value);
+      if (!raw) {
+        const mapKey = getControlWidgetStorageMapKey(user.id);
+        if (mapKey) {
+          const mapRaw = localStorage.getItem(mapKey);
+          if (mapRaw) {
+            try {
+              const parsedMap = JSON.parse(mapRaw);
+              const layerKey = String(activeLayerId || '').trim();
+              raw = parsedMap?.[layerKey]?.order ? JSON.stringify(parsedMap[layerKey].order) : '';
+            } catch {}
+          }
+        }
+      }
       if (!raw) {
         setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
       } else {
@@ -12871,9 +12889,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
       }
 
-      const rawLayout = keyBases
+      let rawLayout = keyBases
         .map((base) => localStorage.getItem(`${base}-layout`))
         .find((value) => value);
+      if (!rawLayout) {
+        const mapKey = getControlWidgetStorageMapKey(user.id);
+        if (mapKey) {
+          const mapRaw = localStorage.getItem(mapKey);
+          if (mapRaw) {
+            try {
+              const parsedMap = JSON.parse(mapRaw);
+              const layerKey = String(activeLayerId || '').trim();
+              rawLayout = parsedMap?.[layerKey]?.layout ? JSON.stringify(parsedMap[layerKey].layout) : '';
+            } catch {}
+          }
+        }
+      }
       if (rawLayout) {
         const parsedLayout = JSON.parse(rawLayout);
         const nextLayout = {};
@@ -12900,7 +12931,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setCoverWidgetLayout({});
       setControlWidgetPrefsReady(true);
     }
-  }, [user?.id, activeLayerId, getControlWidgetStorageBases]);
+  }, [user?.id, activeLayerId, getControlWidgetStorageBases, getControlWidgetStorageMapKey]);
 
   useEffect(() => {
     if (!user?.id || !activeLayerId || !controlWidgetPrefsReady) return;
@@ -12910,8 +12941,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         localStorage.setItem(`${base}-order`, JSON.stringify(controlWidgetOrder));
         localStorage.setItem(`${base}-layout`, JSON.stringify(coverWidgetLayout));
       });
+      const mapKey = getControlWidgetStorageMapKey(user.id);
+      if (mapKey) {
+        const layerKey = String(activeLayerId || '').trim();
+        let parsedMap = {};
+        try {
+          parsedMap = JSON.parse(localStorage.getItem(mapKey) || '{}') || {};
+        } catch {
+          parsedMap = {};
+        }
+        parsedMap[layerKey] = {
+          order: controlWidgetOrder,
+          layout: coverWidgetLayout,
+          updatedAt: new Date().toISOString(),
+        };
+        localStorage.setItem(mapKey, JSON.stringify(parsedMap));
+      }
     } catch {}
-  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases]);
+  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases, getControlWidgetStorageMapKey]);
 
   const flushControlWidgetPrefs = React.useCallback(() => {
     if (!user?.id || !activeLayerId || !controlWidgetPrefsReady) return;
@@ -12921,8 +12968,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         localStorage.setItem(`${base}-order`, JSON.stringify(controlWidgetOrder));
         localStorage.setItem(`${base}-layout`, JSON.stringify(coverWidgetLayout));
       });
+      const mapKey = getControlWidgetStorageMapKey(user.id);
+      if (mapKey) {
+        const layerKey = String(activeLayerId || '').trim();
+        let parsedMap = {};
+        try {
+          parsedMap = JSON.parse(localStorage.getItem(mapKey) || '{}') || {};
+        } catch {
+          parsedMap = {};
+        }
+        parsedMap[layerKey] = {
+          order: controlWidgetOrder,
+          layout: coverWidgetLayout,
+          updatedAt: new Date().toISOString(),
+        };
+        localStorage.setItem(mapKey, JSON.stringify(parsedMap));
+      }
     } catch {}
-  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases]);
+  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases, getControlWidgetStorageMapKey]);
 
   useEffect(() => {
     if (!controlWidgetPrefsReady) return;
