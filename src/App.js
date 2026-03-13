@@ -148,7 +148,7 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
 ]);
 const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([]);
 const WIDGET_GRID_COLUMNS = 12;
-const WIDGET_GRID_ROWS = 28;
+const WIDGET_GRID_ROWS = 40;
 const WIDGET_MIN_SIZE = 38;
 const WIDGET_MAX_SIZE = 86;
 const WIDGET_DEFAULT_SIZE = WIDGET_MIN_SIZE;
@@ -12982,35 +12982,36 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const layoutSnapshot = coverWidgetLayout || {};
         const pxToPercentX = (px) => (Number(px || 0) / Math.max(1, rect.width)) * 100;
         const pxToPercentY = (px) => (Number(px || 0) / Math.max(1, rect.height)) * 100;
-        const minGapPx = 8;
-        // Resolve collisions iteratively so a push away from one widget doesn't re-overlap another.
+        const minGapXPx = 8;
+        const minGapYPx = 2;
+        // Resolve collisions iteratively (AABB) so widgets never overlap and can stack tighter vertically.
         for (let pass = 0; pass < 10; pass += 1) {
           let collided = false;
-          activeIds.forEach((otherId) => {
-            if (String(otherId) === String(drag.widgetId)) return;
+          for (const otherId of activeIds) {
+            if (String(otherId) === String(drag.widgetId)) continue;
             const other = layoutSnapshot?.[otherId];
-            if (!other) return;
+            if (!other) continue;
             const otherSize = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(other.size || WIDGET_DEFAULT_SIZE)));
-            const minDistancePx = ((currentSize + otherSize) / 2) + minGapPx;
+            const minDxPx = ((currentSize + otherSize) / 2) + minGapXPx;
+            const minDyPx = ((currentSize + otherSize) / 2) + minGapYPx;
             const dxPx = ((nextX - Number(other.x || 50)) / 100) * rect.width;
             const dyPx = ((nextY - Number(other.y || 50)) / 100) * rect.height;
-            let distancePx = Math.sqrt((dxPx * dxPx) + (dyPx * dyPx));
-            if (!Number.isFinite(distancePx)) return;
-            if (distancePx < 0.5) {
-              nextX = clampAndSnapCenterPercent(nextX + pxToPercentX(minDistancePx), currentSize, rect.width, xStep);
-              nextY = clampAndSnapCenterPercent(nextY + pxToPercentY(minDistancePx * 0.4), currentSize, rect.height, yStep);
+            if (!Number.isFinite(dxPx) || !Number.isFinite(dyPx)) continue;
+            const overlapXPx = minDxPx - Math.abs(dxPx);
+            const overlapYPx = minDyPx - Math.abs(dyPx);
+            if (overlapXPx > 0 && overlapYPx > 0) {
+              const pushXPx = overlapXPx + 0.5;
+              const pushYPx = overlapYPx + 0.5;
+              const dirX = dxPx >= 0 ? 1 : -1;
+              const dirY = dyPx >= 0 ? 1 : -1;
+              if (pushYPx <= pushXPx) {
+                nextY = clampAndSnapCenterPercent(nextY + pxToPercentY(dirY * pushYPx), currentSize, rect.height, yStep);
+              } else {
+                nextX = clampAndSnapCenterPercent(nextX + pxToPercentX(dirX * pushXPx), currentSize, rect.width, xStep);
+              }
               collided = true;
-              return;
             }
-            if (distancePx < minDistancePx) {
-              const pushPx = minDistancePx - distancePx;
-              const ux = dxPx / distancePx;
-              const uy = dyPx / distancePx;
-              nextX = clampAndSnapCenterPercent(nextX + pxToPercentX(ux * pushPx), currentSize, rect.width, xStep);
-              nextY = clampAndSnapCenterPercent(nextY + pxToPercentY(uy * pushPx), currentSize, rect.height, yStep);
-              collided = true;
-            }
-          });
+          }
           if (!collided) break;
         }
         nextX = clampAndSnapCenterPercent(nextX, currentSize, rect.width, xStep);
