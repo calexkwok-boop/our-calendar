@@ -12833,6 +12833,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setDraggingUpcomingPopupId(null);
   };
 
+  const getControlWidgetStorageBases = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
+    const userKey = String(uid || '').trim();
+    const layerKey = String(layerId || '').trim();
+    if (!userKey) return [];
+    const scoped = layerKey ? `control-widgets-${userKey}-${layerKey}` : '';
+    const fallback = `control-widgets-${userKey}`;
+    return scoped ? [scoped, fallback] : [fallback];
+  }, [user?.id, activeLayerId]);
+
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
       setControlWidgetPrefsReady(false);
@@ -12842,9 +12851,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
     setControlWidgetPrefsReady(false);
-    const keyBase = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
+    const keyBases = getControlWidgetStorageBases(user.id, activeLayerId);
     try {
-      const raw = localStorage.getItem(`${keyBase}-order`);
+      const raw = keyBases
+        .map((base) => localStorage.getItem(`${base}-order`))
+        .find((value) => value);
       if (!raw) {
         setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
       } else {
@@ -12860,7 +12871,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
       }
 
-      const rawLayout = localStorage.getItem(`${keyBase}-layout`);
+      const rawLayout = keyBases
+        .map((base) => localStorage.getItem(`${base}-layout`))
+        .find((value) => value);
       if (rawLayout) {
         const parsedLayout = JSON.parse(rawLayout);
         const nextLayout = {};
@@ -12887,25 +12900,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setCoverWidgetLayout({});
       setControlWidgetPrefsReady(true);
     }
-  }, [user?.id, activeLayerId]);
+  }, [user?.id, activeLayerId, getControlWidgetStorageBases]);
 
   useEffect(() => {
     if (!user?.id || !activeLayerId || !controlWidgetPrefsReady) return;
-    const keyBase = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
+    const keyBases = getControlWidgetStorageBases(user.id, activeLayerId);
     try {
-      localStorage.setItem(`${keyBase}-order`, JSON.stringify(controlWidgetOrder));
-      localStorage.setItem(`${keyBase}-layout`, JSON.stringify(coverWidgetLayout));
+      keyBases.forEach((base) => {
+        localStorage.setItem(`${base}-order`, JSON.stringify(controlWidgetOrder));
+        localStorage.setItem(`${base}-layout`, JSON.stringify(coverWidgetLayout));
+      });
     } catch {}
-  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady]);
+  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases]);
 
   const flushControlWidgetPrefs = React.useCallback(() => {
     if (!user?.id || !activeLayerId || !controlWidgetPrefsReady) return;
-    const keyBase = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
+    const keyBases = getControlWidgetStorageBases(user.id, activeLayerId);
     try {
-      localStorage.setItem(`${keyBase}-order`, JSON.stringify(controlWidgetOrder));
-      localStorage.setItem(`${keyBase}-layout`, JSON.stringify(coverWidgetLayout));
+      keyBases.forEach((base) => {
+        localStorage.setItem(`${base}-order`, JSON.stringify(controlWidgetOrder));
+        localStorage.setItem(`${base}-layout`, JSON.stringify(coverWidgetLayout));
+      });
     } catch {}
-  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady]);
+  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases]);
 
   useEffect(() => {
     if (!controlWidgetPrefsReady) return;
