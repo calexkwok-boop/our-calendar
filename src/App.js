@@ -12869,7 +12869,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           if (!CONTROL_WIDGET_IDS.includes(wid)) return;
           const x = Math.max(2, Math.min(98, Number(value?.x)));
           const y = Math.max(2, Math.min(98, Number(value?.y)));
-          const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(value?.size)));
+          const rawSize = Number(value?.size);
+          const size = Number.isFinite(rawSize)
+            ? Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, rawSize))
+            : WIDGET_DEFAULT_SIZE;
           if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(size)) {
             nextLayout[wid] = { x, y, size };
           }
@@ -12914,11 +12917,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const next = {};
       activeIds.forEach((id, idx) => {
         const existing = prev?.[id];
-        if (existing && Number.isFinite(Number(existing.x)) && Number.isFinite(Number(existing.y)) && Number.isFinite(Number(existing.size))) {
+        const existingX = Number(existing?.x);
+        const existingY = Number(existing?.y);
+        const existingSizeRaw = Number(existing?.size);
+        const existingSize = Number.isFinite(existingSizeRaw)
+          ? Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, existingSizeRaw))
+          : WIDGET_DEFAULT_SIZE;
+        if (existing && Number.isFinite(existingX) && Number.isFinite(existingY)) {
           next[id] = {
-            x: Math.max(2, Math.min(98, snap(Number(existing.x), xStep))),
-            y: Math.max(2, Math.min(98, snap(Number(existing.y), yStep))),
-            size: Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(existing.size))),
+            x: Math.max(2, Math.min(98, snap(existingX, xStep))),
+            y: Math.max(2, Math.min(98, snap(existingY, yStep))),
+            size: existingSize,
           };
         } else {
           const columnsPerRow = Math.max(1, Math.min(6, WIDGET_GRID_COLUMNS));
