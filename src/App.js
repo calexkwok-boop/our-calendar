@@ -3029,6 +3029,17 @@ function App() {
     setAccountHandleInput(String(currentUser || '').trim());
     setAccountHandleMessage('');
   }, [showSharePanel, currentUser]);
+  useEffect(() => {
+    if (!coverHeaderControlsVisible) return undefined;
+    if (showControlWidgetAddPanel) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setCoverHeaderControlsVisible(false);
+      setShowControlWidgetAddPanel(false);
+    }, 5000);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [coverHeaderControlsVisible, showControlWidgetAddPanel, activeLayerId]);
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
   const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
   const activeShareRowForMe = (sharedCalendars || []).find((row) => {
@@ -13569,7 +13580,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     <div ref={widgetSurfaceRef} className="relative min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24" style={themedPageBackgroundStyle}>
       <div className="relative max-w-6xl mx-auto">
         <div ref={widgetOverlayRef} className="absolute inset-0 z-30 pointer-events-none">
-          {!showControlWidgetAddPanel && activeControlWidgets.map((widgetId) => {
+          {coverHeaderControlsVisible && !showControlWidgetAddPanel && activeControlWidgets.map((widgetId) => {
             const meta = getControlWidgetMeta(widgetId);
             const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: WIDGET_DEFAULT_SIZE };
             const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout?.size || WIDGET_DEFAULT_SIZE)));
@@ -13807,7 +13818,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                             <button
                               type="button"
                               onClick={() => handleControlWidgetClick(widgetId)}
-                              className="absolute -left-9 top-0 z-10 w-8 h-8 rounded-xl border border-transparent text-white shadow-sm flex items-center justify-center"
+                              className="absolute -left-10 top-0 z-10 w-8 h-8 rounded-xl border border-transparent text-white shadow-sm transition-all flex items-center justify-center"
                               style={themeAccentButtonStyle}
                               title={meta.label}
                             >
