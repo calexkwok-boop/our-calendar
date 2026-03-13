@@ -12982,7 +12982,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const layoutSnapshot = coverWidgetLayout || {};
         const pxToPercentX = (px) => (Number(px || 0) / Math.max(1, rect.width)) * 100;
         const pxToPercentY = (px) => (Number(px || 0) / Math.max(1, rect.height)) * 100;
-        const minGapXPx = 8;
+        const minGapXPx = 2;
         const minGapYPx = 2;
         // Resolve collisions iteratively (AABB) so widgets never overlap and can stack tighter vertically.
         for (let pass = 0; pass < 10; pass += 1) {
