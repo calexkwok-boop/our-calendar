@@ -13869,10 +13869,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
             </div>
           )}
-          <div className={`${isCoverTapToRevealMode ? 'mt-6 sm:mt-8' : 'mt-20 sm:mt-24'} flex items-center justify-between gap-2`}>
+          <div className={`${isCoverTapToRevealMode ? 'mt-6 sm:mt-8 items-start' : 'mt-20 sm:mt-24 items-center'} flex justify-between gap-2`}>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-                className="p-2 rounded-xl transition-all duration-200"
+                className={`p-2 rounded-xl transition-all duration-200 ${isCoverTapToRevealMode ? '-mt-2 sm:-mt-3' : ''}`}
                 style={undefined}
               >
                 <ChevronLeft
@@ -13880,7 +13880,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   style={undefined}
                 />
               </button>
-            <div className={`flex flex-col items-center gap-1 ${isCoverTapToRevealMode ? 'mt-8 sm:mt-10' : ''}`}>
+            <div className={`flex flex-col items-center gap-1 ${isCoverTapToRevealMode ? 'mt-14 sm:mt-16' : ''}`}>
               {calendarView !== 'month' && (
                 <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
                   {calendarView === 'week'
@@ -13923,7 +13923,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             </div>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-                className="p-2 rounded-xl transition-all duration-200"
+                className={`p-2 rounded-xl transition-all duration-200 ${isCoverTapToRevealMode ? '-mt-2 sm:-mt-3' : ''}`}
                 style={undefined}
               >
                 <ChevronRight
