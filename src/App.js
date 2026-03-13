@@ -13777,7 +13777,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </button>
               </div>
               {showControlWidgetAddPanel && (
-                <div className="mt-2 ml-auto w-full max-w-[19rem] p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600">
+                <div className="mt-2 ml-auto w-full max-w-[19rem] p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600 overflow-visible">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="text-[11px] text-gray-500 dark:text-gray-400">Add or remove widgets</div>
                     <div className="flex items-center gap-1.5">
@@ -13802,12 +13802,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       const meta = getControlWidgetMeta(widgetId);
                       const enabled = activeControlWidgets.includes(widgetId);
                       return (
-                        <div key={`toggle-${widgetId}`} className="flex items-stretch gap-1.5">
+                        <div key={`toggle-${widgetId}`} className="relative flex items-stretch gap-1.5">
                           {enabled ? (
                             <button
                               type="button"
                               onClick={() => handleControlWidgetClick(widgetId)}
-                              className="relative w-8 h-8 rounded-xl border border-transparent text-white shadow-sm flex items-center justify-center"
+                              className="absolute -left-9 top-0 z-10 w-8 h-8 rounded-xl border border-transparent text-white shadow-sm flex items-center justify-center"
                               style={themeAccentButtonStyle}
                               title={meta.label}
                             >
