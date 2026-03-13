@@ -13869,7 +13869,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
             </div>
           )}
-          <div className="mt-14 sm:mt-16 flex items-center justify-between gap-2">
+          <div className="mt-20 sm:mt-24 flex items-center justify-between gap-2">
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
                 className="p-2 rounded-xl transition-all duration-200"
@@ -13881,10 +13881,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 />
               </button>
             <div className="flex flex-col items-center gap-1">
-              <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
-                {calendarView === 'month'
-                  ? currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-                  : calendarView === 'week'
+              {calendarView !== 'month' && (
+                <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
+                  {calendarView === 'week'
                     ? (() => {
                       const days = getWeekDays(currentDate);
                       const start = days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -13892,8 +13891,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       return `${start} – ${end}`;
                     })()
                     : `Agenda · Next ${agendaRangeDays} days`
-                }
-              </h2>
+                  }
+                </h2>
+              )}
               <div
                 className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium"
                 style={undefined}
