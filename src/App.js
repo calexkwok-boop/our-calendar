@@ -3648,7 +3648,7 @@ function App() {
     .replace(/[^a-z0-9]+/g, '');
   const useLegacyEllieMilesTheme = activeLayerNameKey === 'elliemiles';
   const hasActiveCoverPhoto = Boolean(activeLayer?.header_bg_url);
-  const isCoverTapToRevealMode = hasActiveCoverPhoto && !coverHeaderControlsVisible;
+  const isCoverTapToRevealMode = !coverHeaderControlsVisible;
   const isCoverControlsPanelOpen = showSharePanel
     || showNotificationSettings
     || showListPanel
@@ -4417,12 +4417,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, []);
 
   useEffect(() => {
-    if (!hasActiveCoverPhoto || !coverHeaderControlsVisible || isCoverControlsPanelOpen) return undefined;
+    if (!coverHeaderControlsVisible || isCoverControlsPanelOpen) return undefined;
     const timer = window.setTimeout(() => {
       setCoverHeaderControlsVisible(false);
     }, 5000);
     return () => window.clearTimeout(timer);
-  }, [hasActiveCoverPhoto, coverHeaderControlsVisible, isCoverControlsPanelOpen, coverHeaderInteractionTick]);
+  }, [coverHeaderControlsVisible, isCoverControlsPanelOpen, coverHeaderInteractionTick]);
 
   const saveLayerTitleStyle = async () => {
     const lid = String(activeLayerId || '').trim();
@@ -13528,7 +13528,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           ref={layerHeaderCardRef}
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[165px] sm:min-h-[205px] lg:min-h-[285px] relative"
           onPointerDownCapture={() => {
-            if (!hasActiveCoverPhoto || !coverHeaderControlsVisible) return;
+            if (!coverHeaderControlsVisible) return;
             setCoverHeaderInteractionTick((v) => v + 1);
           }}
           style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
@@ -13551,6 +13551,33 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 className="absolute inset-0 z-10 rounded-2xl"
                 aria-label="Show cover controls"
               />
+              {canManageActiveLayer && (
+                <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 pointer-events-auto">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openLayerMediaPicker('icon');
+                    }}
+                    className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-black/40 text-white border border-white/30 hover:bg-black/55 transition-all"
+                    title="Change icon"
+                  >
+                    Icon
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openLayerMediaPicker('header');
+                    }}
+                    className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-black/40 text-white border border-white/30 hover:bg-black/55 transition-all flex items-center gap-1"
+                    title="Change cover photo"
+                  >
+                    <Camera className="w-3 h-3" />
+                    Cover
+                  </button>
+                </div>
+              )}
               <div className="absolute inset-x-4 sm:inset-x-5 bottom-4 sm:bottom-5 z-20 pointer-events-none">
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
