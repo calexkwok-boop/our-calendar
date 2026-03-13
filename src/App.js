@@ -12974,28 +12974,36 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const pxToPercentX = (px) => (Number(px || 0) / Math.max(1, rect.width)) * 100;
         const pxToPercentY = (px) => (Number(px || 0) / Math.max(1, rect.height)) * 100;
         const minGapPx = 8;
-        activeIds.forEach((otherId) => {
-          if (String(otherId) === String(drag.widgetId)) return;
-          const other = layoutSnapshot?.[otherId];
-          if (!other) return;
-          const otherSize = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(other.size || WIDGET_DEFAULT_SIZE)));
-          const minDistancePx = ((currentSize + otherSize) / 2) + minGapPx;
-          const dxPx = ((nextX - Number(other.x || 50)) / 100) * rect.width;
-          const dyPx = ((nextY - Number(other.y || 50)) / 100) * rect.height;
-          let distancePx = Math.sqrt((dxPx * dxPx) + (dyPx * dyPx));
-          if (!Number.isFinite(distancePx)) return;
-          if (distancePx < 0.5) {
-            nextX = clampAndSnapCenterPercent(nextX + pxToPercentX(minDistancePx), currentSize, rect.width, xStep);
-            distancePx = minDistancePx;
-          }
-          if (distancePx < minDistancePx) {
-            const pushPx = minDistancePx - distancePx;
-            const ux = dxPx / distancePx;
-            const uy = dyPx / distancePx;
-            nextX = clampAndSnapCenterPercent(nextX + pxToPercentX(ux * pushPx), currentSize, rect.width, xStep);
-            nextY = clampAndSnapCenterPercent(nextY + pxToPercentY(uy * pushPx), currentSize, rect.height, yStep);
-          }
-        });
+        // Resolve collisions iteratively so a push away from one widget doesn't re-overlap another.
+        for (let pass = 0; pass < 10; pass += 1) {
+          let collided = false;
+          activeIds.forEach((otherId) => {
+            if (String(otherId) === String(drag.widgetId)) return;
+            const other = layoutSnapshot?.[otherId];
+            if (!other) return;
+            const otherSize = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(other.size || WIDGET_DEFAULT_SIZE)));
+            const minDistancePx = ((currentSize + otherSize) / 2) + minGapPx;
+            const dxPx = ((nextX - Number(other.x || 50)) / 100) * rect.width;
+            const dyPx = ((nextY - Number(other.y || 50)) / 100) * rect.height;
+            let distancePx = Math.sqrt((dxPx * dxPx) + (dyPx * dyPx));
+            if (!Number.isFinite(distancePx)) return;
+            if (distancePx < 0.5) {
+              nextX = clampAndSnapCenterPercent(nextX + pxToPercentX(minDistancePx), currentSize, rect.width, xStep);
+              nextY = clampAndSnapCenterPercent(nextY + pxToPercentY(minDistancePx * 0.4), currentSize, rect.height, yStep);
+              collided = true;
+              return;
+            }
+            if (distancePx < minDistancePx) {
+              const pushPx = minDistancePx - distancePx;
+              const ux = dxPx / distancePx;
+              const uy = dyPx / distancePx;
+              nextX = clampAndSnapCenterPercent(nextX + pxToPercentX(ux * pushPx), currentSize, rect.width, xStep);
+              nextY = clampAndSnapCenterPercent(nextY + pxToPercentY(uy * pushPx), currentSize, rect.height, yStep);
+              collided = true;
+            }
+          });
+          if (!collided) break;
+        }
         nextX = clampAndSnapCenterPercent(nextX, currentSize, rect.width, xStep);
         nextY = clampAndSnapCenterPercent(nextY, currentSize, rect.height, yStep);
         setCoverWidgetLayout((prev) => ({
