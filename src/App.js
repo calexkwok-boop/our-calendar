@@ -12898,8 +12898,35 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const rawY = drag.initialY + ((dy / rect.height) * 100);
         const snappedX = snap(rawX, xStep);
         const snappedY = snap(rawY, yStep);
-        const nextX = clampCenterPercent(snappedX, currentSize, rect.width);
-        const nextY = clampCenterPercent(snappedY, currentSize, rect.height);
+        let nextX = clampCenterPercent(snappedX, currentSize, rect.width);
+        let nextY = clampCenterPercent(snappedY, currentSize, rect.height);
+        const activeIds = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
+        const layoutSnapshot = coverWidgetLayout || {};
+        const pxToPercentX = (px) => (Number(px || 0) / Math.max(1, rect.width)) * 100;
+        const pxToPercentY = (px) => (Number(px || 0) / Math.max(1, rect.height)) * 100;
+        const minGapPx = 8;
+        activeIds.forEach((otherId) => {
+          if (String(otherId) === String(drag.widgetId)) return;
+          const other = layoutSnapshot?.[otherId];
+          if (!other) return;
+          const otherSize = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(other.size || WIDGET_DEFAULT_SIZE)));
+          const minDistancePx = ((currentSize + otherSize) / 2) + minGapPx;
+          const dxPx = ((nextX - Number(other.x || 50)) / 100) * rect.width;
+          const dyPx = ((nextY - Number(other.y || 50)) / 100) * rect.height;
+          let distancePx = Math.sqrt((dxPx * dxPx) + (dyPx * dyPx));
+          if (!Number.isFinite(distancePx)) return;
+          if (distancePx < 0.5) {
+            nextX = clampCenterPercent(nextX + pxToPercentX(minDistancePx), currentSize, rect.width);
+            distancePx = minDistancePx;
+          }
+          if (distancePx < minDistancePx) {
+            const pushPx = minDistancePx - distancePx;
+            const ux = dxPx / distancePx;
+            const uy = dyPx / distancePx;
+            nextX = clampCenterPercent(nextX + pxToPercentX(ux * pushPx), currentSize, rect.width);
+            nextY = clampCenterPercent(nextY + pxToPercentY(uy * pushPx), currentSize, rect.height);
+          }
+        });
         setCoverWidgetLayout((prev) => ({
           ...(prev || {}),
           [drag.widgetId]: {
@@ -12922,7 +12949,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerUp);
     };
-  }, []);
+  }, [coverWidgetLayout, controlWidgetOrder]);
 
   if (isLoading) {
     return (
@@ -13886,10 +13913,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
             </div>
           )}
-          <div className={`${isCoverTapToRevealMode ? 'mt-2 sm:mt-3 items-start' : 'mt-20 sm:mt-24 items-center'} flex justify-between gap-2`}>
+          <div className={`${isCoverTapToRevealMode ? 'mt-2 sm:mt-3 items-start' : 'mt-12 sm:mt-14 items-start'} flex justify-between gap-2`}>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-                className={`p-2 rounded-xl transition-all duration-200 ${isCoverTapToRevealMode ? '-mt-8 sm:-mt-10' : ''}`}
+                className={`p-2 rounded-xl transition-all duration-200 ${isCoverTapToRevealMode ? '-mt-8 sm:-mt-10' : '-mt-6 sm:-mt-8'}`}
                 style={undefined}
               >
                 <ChevronLeft
@@ -13897,7 +13924,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   style={undefined}
                 />
               </button>
-            <div className={`flex flex-col items-center gap-1 ${isCoverTapToRevealMode ? 'mt-24 sm:mt-28' : ''}`}>
+            <div className={`flex flex-col items-center gap-1 ${isCoverTapToRevealMode ? 'mt-24 sm:mt-28' : 'mt-8 sm:mt-10'}`}>
               {calendarView !== 'month' && (
                 <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
                   {calendarView === 'week'
@@ -13940,7 +13967,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             </div>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-                className={`p-2 rounded-xl transition-all duration-200 ${isCoverTapToRevealMode ? '-mt-8 sm:-mt-10' : ''}`}
+                className={`p-2 rounded-xl transition-all duration-200 ${isCoverTapToRevealMode ? '-mt-8 sm:-mt-10' : '-mt-6 sm:-mt-8'}`}
                 style={undefined}
               >
                 <ChevronRight
