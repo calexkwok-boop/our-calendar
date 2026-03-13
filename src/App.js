@@ -13844,7 +13844,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (file && kind) beginLayerMediaCrop(kind, file);
       }}
     />
-    <div ref={widgetSurfaceRef} className="relative min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24" style={themedPageBackgroundStyle}>
+    <div
+      ref={widgetSurfaceRef}
+      className="relative min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24"
+      style={themedPageBackgroundStyle}
+      onPointerDownCapture={() => {
+        if (bottomNavTab !== 'home') return;
+        if (coverHeaderControlsVisible) return;
+        if (hasOpenWidgetWindow) return;
+        setCoverHeaderControlsVisible(true);
+      }}
+    >
       <div className="relative max-w-6xl mx-auto">
         <div
           ref={widgetOverlayRef}
