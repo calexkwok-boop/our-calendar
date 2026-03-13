@@ -147,6 +147,10 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'theme',
 ]);
 const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([]);
+const WIDGET_GRID_COLUMNS = 16;
+const WIDGET_GRID_ROWS = 24;
+const WIDGET_MIN_SIZE = 38;
+const WIDGET_MAX_SIZE = 86;
 
 // Source: ESPN Warriors 2025-26 schedule (remaining regular season), captured Mar 12, 2026.
 // Times are set in Pacific Time for this app's event time fields.
@@ -251,6 +255,7 @@ function App() {
   const dateTapTimeoutRef = useRef(null);
   const layerMediaInputRef = useRef(null);
   const layerHeaderCardRef = useRef(null);
+  const widgetSurfaceRef = useRef(null);
   const pendingLayerMediaKindRef = useRef('');
   const layerCropDragRef = useRef({ active: false, startX: 0, startY: 0, baseX: 0, baseY: 0 });
   const scanReminderInputRef = useRef(null);
@@ -12783,8 +12788,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             .map((id) => String(id || '').trim())
             .filter((id) => CONTROL_WIDGET_IDS.includes(id));
           const deduped = Array.from(new Set(normalized));
-          const missing = CONTROL_WIDGET_IDS.filter((id) => !deduped.includes(id));
-          setControlWidgetOrder([...deduped, ...missing]);
+          setControlWidgetOrder(deduped);
         }
       }
 
@@ -12795,9 +12799,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         Object.entries(parsedLayout || {}).forEach(([id, value]) => {
           const wid = String(id || '').trim();
           if (!CONTROL_WIDGET_IDS.includes(wid)) return;
-          const x = Math.max(8, Math.min(92, Number(value?.x)));
-          const y = Math.max(8, Math.min(92, Number(value?.y)));
-          const size = Math.max(38, Math.min(86, Number(value?.size)));
+          const x = Math.max(2, Math.min(98, Number(value?.x)));
+          const y = Math.max(2, Math.min(98, Number(value?.y)));
+          const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(value?.size)));
           if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(size)) {
             nextLayout[wid] = { x, y, size };
           }
@@ -12829,16 +12833,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const existing = prev?.[id];
         if (existing && Number.isFinite(Number(existing.x)) && Number.isFinite(Number(existing.y)) && Number.isFinite(Number(existing.size))) {
           next[id] = {
-            x: Math.max(8, Math.min(92, Number(existing.x))),
-            y: Math.max(8, Math.min(92, Number(existing.y))),
-            size: Math.max(38, Math.min(86, Number(existing.size))),
+            x: Math.max(2, Math.min(98, Number(existing.x))),
+            y: Math.max(2, Math.min(98, Number(existing.y))),
+            size: Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(existing.size))),
           };
         } else {
-          const col = idx % 5;
-          const row = Math.floor(idx / 5);
+          const col = idx % 6;
+          const row = Math.floor(idx / 6);
           next[id] = {
-            x: 14 + col * 16,
-            y: 14 + row * 14,
+            x: 10 + col * 9,
+            y: 10 + row * 9,
             size: 46,
           };
         }
@@ -12852,32 +12856,47 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const handlePointerMove = (event) => {
       const drag = coverWidgetDragRef.current;
       if (!drag) return;
-      const container = layerHeaderCardRef.current;
+      const container = widgetSurfaceRef.current || layerHeaderCardRef.current;
       if (!container) return;
       const rect = container.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
       const dx = Number(event.clientX) - drag.startX;
       const dy = Number(event.clientY) - drag.startY;
+      const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
+      const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
+      const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
+      const clampCenterPercent = (value, size, totalPx) => {
+        const halfPct = ((Number(size || 46) / 2) / Math.max(1, Number(totalPx || 1))) * 100;
+        return Math.max(halfPct, Math.min(100 - halfPct, Number(value || 0)));
+      };
       if (drag.mode === 'move') {
-        const nextX = Math.max(6, Math.min(94, drag.initialX + ((dx / rect.width) * 100)));
-        const nextY = Math.max(6, Math.min(94, drag.initialY + ((dy / rect.height) * 100)));
+        const currentSize = Math.max(
+          WIDGET_MIN_SIZE,
+          Math.min(WIDGET_MAX_SIZE, Number(drag.initialSize || 46)),
+        );
+        const rawX = drag.initialX + ((dx / rect.width) * 100);
+        const rawY = drag.initialY + ((dy / rect.height) * 100);
+        const snappedX = snap(rawX, xStep);
+        const snappedY = snap(rawY, yStep);
+        const nextX = clampCenterPercent(snappedX, currentSize, rect.width);
+        const nextY = clampCenterPercent(snappedY, currentSize, rect.height);
         setCoverWidgetLayout((prev) => ({
           ...(prev || {}),
           [drag.widgetId]: {
             ...(prev?.[drag.widgetId] || {}),
             x: nextX,
             y: nextY,
-            size: Math.max(38, Math.min(86, Number(prev?.[drag.widgetId]?.size || drag.initialSize || 46))),
+            size: currentSize,
           },
         }));
       } else if (drag.mode === 'resize') {
-        const nextSize = Math.max(38, Math.min(86, drag.initialSize + dx + (dy * 0.15)));
+        const nextSize = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, drag.initialSize + dx + (dy * 0.15)));
         setCoverWidgetLayout((prev) => ({
           ...(prev || {}),
           [drag.widgetId]: {
             ...(prev?.[drag.widgetId] || {}),
-            x: Math.max(6, Math.min(94, Number(prev?.[drag.widgetId]?.x || drag.initialX))),
-            y: Math.max(6, Math.min(94, Number(prev?.[drag.widgetId]?.y || drag.initialY))),
+            x: clampCenterPercent(Number(prev?.[drag.widgetId]?.x || drag.initialX), nextSize, rect.width),
+            y: clampCenterPercent(Number(prev?.[drag.widgetId]?.y || drag.initialY), nextSize, rect.height),
             size: nextSize,
           },
         }));
@@ -13207,6 +13226,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: showSportsImportModal, disabled: Boolean(activeSubCalendar) };
     return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, disabled: false };
   };
+  const widgetGridOverlayStyle = {
+    backgroundImage: `
+      linear-gradient(to right, ${darkMode ? 'rgba(148,163,184,0.16)' : 'rgba(51,65,85,0.10)'} 1px, transparent 1px),
+      linear-gradient(to bottom, ${darkMode ? 'rgba(148,163,184,0.16)' : 'rgba(51,65,85,0.10)'} 1px, transparent 1px)
+    `,
+    backgroundSize: `calc(100% / ${Math.max(1, WIDGET_GRID_COLUMNS - 1)}) calc(100% / ${Math.max(1, WIDGET_GRID_ROWS - 1)})`,
+    backgroundPosition: '0 0',
+    opacity: coverHeaderControlsVisible ? 1 : 0,
+    transition: 'opacity 180ms ease',
+  };
+  const hiddenModeInactiveWidgetClassName = 'bg-black/35 text-white border-white/20';
+  const visibleModeInactiveWidgetClassName = 'bg-gray-100/95 dark:bg-gray-700/95 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600';
   const chatTotalMembers = Math.max(1, Number(chatMembers.length || 0));
   const chatOnlineMemberCount = chatMembers.reduce((sum, member) => (
     member?.userId && chatPresenceByUserId[String(member.userId)] ? sum + 1 : sum
@@ -13516,8 +13547,69 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (file && kind) beginLayerMediaCrop(kind, file);
       }}
     />
-    <div className="min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24" style={themedPageBackgroundStyle}>
+    <div ref={widgetSurfaceRef} className="relative min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24" style={themedPageBackgroundStyle}>
       <div className="max-w-6xl mx-auto">
+        <div className="absolute inset-0 z-20 pointer-events-none rounded-2xl overflow-hidden">
+          <div className="absolute inset-0" style={widgetGridOverlayStyle} />
+        </div>
+        <div className="absolute inset-0 z-30 pointer-events-none">
+          {activeControlWidgets.map((widgetId) => {
+            const meta = getControlWidgetMeta(widgetId);
+            const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: 46 };
+            const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout?.size || 46)));
+            return (
+              <div
+                key={`cover-widget-global-${widgetId}`}
+                className="absolute pointer-events-auto"
+                style={{
+                  left: `${Math.max(2, Math.min(98, Number(layout?.x || 50)))}%`,
+                  top: `${Math.max(2, Math.min(98, Number(layout?.y || 18)))}%`,
+                  width: `${size}px`,
+                  height: `${size}px`,
+                  transform: 'translate(-50%, -50%)',
+                  touchAction: 'none',
+                  userSelect: 'none',
+                }}
+              >
+                <button
+                  onClick={() => handleControlWidgetClick(widgetId)}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    startCoverWidgetPointerAction(e, widgetId, 'move');
+                  }}
+                  className={`relative w-full h-full rounded-xl border transition-all ${
+                    meta.active
+                      ? 'shadow-sm border-transparent'
+                      : (isCoverTapToRevealMode ? hiddenModeInactiveWidgetClassName : visibleModeInactiveWidgetClassName)
+                  } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={meta.active ? themeAccentButtonStyle : undefined}
+                  title={meta.label}
+                  disabled={meta.disabled}
+                >
+                  <span className="flex items-center justify-center">{meta.icon}</span>
+                  {meta.badge ? (
+                    <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                      {meta.badge}
+                    </span>
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    startCoverWidgetPointerAction(e, widgetId, 'resize');
+                  }}
+                  className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white/90 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-[10px] text-gray-700 dark:text-gray-300 leading-none flex items-center justify-center"
+                  title="Resize widget"
+                >
+                  ↔
+                </button>
+              </div>
+            );
+          })}
+        </div>
         <div
           ref={layerHeaderCardRef}
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[165px] sm:min-h-[205px] lg:min-h-[285px] relative"
@@ -13591,64 +13683,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     + Add
                   </button>
                 </div>
-              </div>
-              <div className="absolute inset-0 z-30 pointer-events-none">
-                {activeControlWidgets.map((widgetId) => {
-                  const meta = getControlWidgetMeta(widgetId);
-                  const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: 46 };
-                  const size = Math.max(38, Math.min(86, Number(layout?.size || 46)));
-                  return (
-                    <div
-                      key={`cover-widget-hidden-${widgetId}`}
-                      className="absolute pointer-events-auto"
-                      style={{
-                        left: `${Math.max(6, Math.min(94, Number(layout?.x || 50)))}%`,
-                        top: `${Math.max(6, Math.min(94, Number(layout?.y || 18)))}%`,
-                        width: `${size}px`,
-                        height: `${size}px`,
-                        transform: 'translate(-50%, -50%)',
-                        touchAction: 'none',
-                        userSelect: 'none',
-                      }}
-                    >
-                      <button
-                        onClick={() => handleControlWidgetClick(widgetId)}
-                        onPointerDown={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          startCoverWidgetPointerAction(e, widgetId, 'move');
-                        }}
-                        className={`relative w-full h-full rounded-xl border transition-all ${
-                          meta.active
-                            ? 'shadow-sm border-transparent'
-                            : 'bg-black/35 text-white border-white/20'
-                        } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        style={meta.active ? themeAccentButtonStyle : undefined}
-                        title={meta.label}
-                        disabled={meta.disabled}
-                      >
-                        <span className="flex items-center justify-center">{meta.icon}</span>
-                        {meta.badge ? (
-                          <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
-                            {meta.badge}
-                          </span>
-                        ) : null}
-                      </button>
-                      <button
-                        type="button"
-                        onPointerDown={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          startCoverWidgetPointerAction(e, widgetId, 'resize');
-                        }}
-                        className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white/90 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-[10px] text-gray-700 dark:text-gray-300 leading-none flex items-center justify-center"
-                        title="Resize widget"
-                      >
-                        ↔
-                      </button>
-                    </div>
-                  );
-                })}
               </div>
             </>
           ) : (
@@ -13773,65 +13807,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               )}
             </div>
           </div>
-          <div className="absolute inset-0 z-30 pointer-events-none">
-            {activeControlWidgets.map((widgetId) => {
-              const meta = getControlWidgetMeta(widgetId);
-              const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: 46 };
-              const size = Math.max(38, Math.min(86, Number(layout?.size || 46)));
-              return (
-                <div
-                  key={`cover-widget-${widgetId}`}
-                  className="absolute pointer-events-auto"
-                  style={{
-                    left: `${Math.max(6, Math.min(94, Number(layout?.x || 50)))}%`,
-                    top: `${Math.max(6, Math.min(94, Number(layout?.y || 18)))}%`,
-                    width: `${size}px`,
-                    height: `${size}px`,
-                    transform: 'translate(-50%, -50%)',
-                    touchAction: 'none',
-                    userSelect: 'none',
-                  }}
-                >
-                  <button
-                    onClick={() => handleControlWidgetClick(widgetId)}
-                    onPointerDown={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      startCoverWidgetPointerAction(e, widgetId, 'move');
-                    }}
-                    className={`relative w-full h-full rounded-xl border transition-all ${
-                      meta.active
-                        ? 'shadow-sm border-transparent'
-                        : 'bg-gray-100/95 dark:bg-gray-700/95 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600'
-                    } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    style={meta.active ? themeAccentButtonStyle : undefined}
-                    title={meta.label}
-                    disabled={meta.disabled}
-                  >
-                    <span className="flex items-center justify-center">{meta.icon}</span>
-                    {meta.badge ? (
-                      <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
-                        {meta.badge}
-                      </span>
-                    ) : null}
-                  </button>
-                  <button
-                    type="button"
-                    onPointerDown={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      startCoverWidgetPointerAction(e, widgetId, 'resize');
-                    }}
-                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-[10px] text-gray-700 dark:text-gray-300 leading-none flex items-center justify-center"
-                    title="Resize widget"
-                  >
-                    ↔
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-
           <div className="flex items-center justify-between gap-2">
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
