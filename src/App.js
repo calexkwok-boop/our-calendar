@@ -2563,6 +2563,7 @@ function App() {
   const [controlWidgetOrder, setControlWidgetOrder] = useState([...DEFAULT_CONTROL_WIDGET_ORDER]);
   const [showControlWidgetAddPanel, setShowControlWidgetAddPanel] = useState(false);
   const [coverWidgetLayout, setCoverWidgetLayout] = useState({});
+  const [controlWidgetPrefsReady, setControlWidgetPrefsReady] = useState(false);
   const coverWidgetDragRef = useRef(null);
   const [sharedListGroups, setSharedListGroups] = useState([]);
   const [sharedListItems, setSharedListItems] = useState([]);
@@ -12796,11 +12797,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
+      setControlWidgetPrefsReady(false);
       setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
       setCoverWidgetLayout({});
       setShowControlWidgetAddPanel(false);
       return;
     }
+    setControlWidgetPrefsReady(false);
     const keyBase = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
     try {
       const raw = localStorage.getItem(`${keyBase}-order`);
@@ -12837,22 +12840,25 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       } else {
         setCoverWidgetLayout({});
       }
+      setControlWidgetPrefsReady(true);
     } catch {
       setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
       setCoverWidgetLayout({});
+      setControlWidgetPrefsReady(true);
     }
   }, [user?.id, activeLayerId]);
 
   useEffect(() => {
-    if (!user?.id || !activeLayerId) return;
+    if (!user?.id || !activeLayerId || !controlWidgetPrefsReady) return;
     const keyBase = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
     try {
       localStorage.setItem(`${keyBase}-order`, JSON.stringify(controlWidgetOrder));
       localStorage.setItem(`${keyBase}-layout`, JSON.stringify(coverWidgetLayout));
     } catch {}
-  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout]);
+  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady]);
 
   useEffect(() => {
+    if (!controlWidgetPrefsReady) return;
     const activeIds = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
     const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
     const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
@@ -12883,7 +12889,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const same = JSON.stringify(next) === JSON.stringify(prev || {});
       return same ? (prev || {}) : next;
     });
-  }, [controlWidgetOrder, activeLayerId]);
+  }, [controlWidgetOrder, activeLayerId, controlWidgetPrefsReady]);
 
   useEffect(() => {
     const handlePointerMove = (event) => {
