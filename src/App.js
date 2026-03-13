@@ -13759,9 +13759,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 )}
               </div>
                 </div>
-                <h2 className="mt-1 text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
-                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </h2>
+                {isCoverTapToRevealMode && (
+                  <h2 className="mt-1 text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
+                    {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </h2>
+                )}
               </div>
             <div className="relative shrink-0 pointer-events-auto">
               <div className="flex justify-end pointer-events-auto">
@@ -13851,7 +13853,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           </div>
           </div>
           {coverHeaderControlsVisible && (
-            <div className="absolute inset-x-4 sm:inset-x-5 bottom-16 sm:bottom-20 z-20 pointer-events-none">
+            <div className="absolute inset-x-4 sm:inset-x-5 top-4 sm:top-5 z-20 pointer-events-none">
               <div className="pointer-events-auto max-w-[85%]">
                 <h1
                   onClick={() => {
@@ -13867,7 +13869,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
             </div>
           )}
-          <div className="flex items-center justify-between gap-2">
+          <div className="mt-14 sm:mt-16 flex items-center justify-between gap-2">
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
                 className="p-2 rounded-xl transition-all duration-200"
