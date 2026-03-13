@@ -12909,17 +12909,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             size: currentSize,
           },
         }));
-      } else if (drag.mode === 'resize') {
-        const nextSize = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, drag.initialSize + dx + (dy * 0.15)));
-        setCoverWidgetLayout((prev) => ({
-          ...(prev || {}),
-          [drag.widgetId]: {
-            ...(prev?.[drag.widgetId] || {}),
-            x: clampCenterPercent(Number(prev?.[drag.widgetId]?.x || drag.initialX), nextSize, rect.width),
-            y: clampCenterPercent(Number(prev?.[drag.widgetId]?.y || drag.initialY), nextSize, rect.height),
-            size: nextSize,
-          },
-        }));
       }
     };
     const handlePointerUp = () => {
@@ -13194,6 +13183,43 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       initialX: Number(layout.x || 50),
       initialY: Number(layout.y || 50),
       initialSize: Number(layout.size || WIDGET_DEFAULT_SIZE),
+    };
+  };
+  const startCoverWidgetDragFromAddPanel = (event, widgetId) => {
+    const id = String(widgetId || '').trim();
+    if (!id || !activeControlWidgets.includes(id)) return;
+    const container = widgetOverlayRef.current || widgetSurfaceRef.current || layerHeaderCardRef.current;
+    const sourceRect = event.currentTarget?.getBoundingClientRect?.();
+    const layout = coverWidgetLayout?.[id] || { x: 50, y: 50, size: WIDGET_DEFAULT_SIZE };
+    const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout.size || WIDGET_DEFAULT_SIZE)));
+    let nextX = Number(layout.x || 50);
+    let nextY = Number(layout.y || 50);
+    if (container && sourceRect) {
+      const rect = container.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        const centerX = Number(sourceRect.left) + (Number(sourceRect.width) / 2);
+        const centerY = Number(sourceRect.top) + (Number(sourceRect.height) / 2);
+        const halfXPct = ((size / 2) / rect.width) * 100;
+        const halfYPct = ((size / 2) / rect.height) * 100;
+        nextX = Math.max(halfXPct, Math.min(100 - halfXPct, ((centerX - rect.left) / rect.width) * 100));
+        nextY = Math.max(halfYPct, Math.min(100 - halfYPct, ((centerY - rect.top) / rect.height) * 100));
+      }
+    }
+    setCoverWidgetLayout((prev) => ({
+      ...(prev || {}),
+      [id]: { ...(prev?.[id] || {}), x: nextX, y: nextY, size },
+    }));
+    setShowControlWidgetAddPanel(false);
+    setCoverHeaderControlsVisible(true);
+    bumpCoverControlsInteraction();
+    coverWidgetDragRef.current = {
+      widgetId: id,
+      mode: 'move',
+      startX: Number(event.clientX),
+      startY: Number(event.clientY),
+      initialX: nextX,
+      initialY: nextY,
+      initialSize: size,
     };
   };
   const handleControlWidgetClick = (widgetId) => {
@@ -13626,19 +13652,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     </span>
                   ) : null}
                 </button>
-                <button
-                  type="button"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    bumpCoverControlsInteraction();
-                    startCoverWidgetPointerAction(e, widgetId, 'resize');
-                  }}
-                  className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white/90 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-[10px] text-gray-700 dark:text-gray-300 leading-none flex items-center justify-center"
-                  title="Resize widget"
-                >
-                  ↔
-                </button>
               </div>
             );
           })}
@@ -13814,10 +13827,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                           {enabled ? (
                             <button
                               type="button"
-                              onClick={() => handleControlWidgetClick(widgetId)}
+                              onPointerDown={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                startCoverWidgetDragFromAddPanel(e, widgetId);
+                              }}
                               className="absolute -left-10 top-0 z-10 w-8 h-8 rounded-xl border border-transparent text-white shadow-sm transition-all flex items-center justify-center"
                               style={themeAccentButtonStyle}
-                              title={meta.label}
+                              title={`Drag ${meta.label}`}
                             >
                               <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
                               {meta.badge ? (
