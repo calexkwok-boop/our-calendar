@@ -12915,32 +12915,36 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
     setCoverWidgetLayout((prev) => {
       const next = {};
-      activeIds.forEach((id, idx) => {
-        const existing = prev?.[id];
-        const existingX = Number(existing?.x);
-        const existingY = Number(existing?.y);
-        const existingSizeRaw = Number(existing?.size);
-        const existingSize = Number.isFinite(existingSizeRaw)
-          ? Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, existingSizeRaw))
+      // Preserve any previously saved coordinates for known widgets.
+      Object.entries(prev || {}).forEach(([id, value]) => {
+        const wid = String(id || '').trim();
+        if (!CONTROL_WIDGET_IDS.includes(wid)) return;
+        const savedX = Number(value?.x);
+        const savedY = Number(value?.y);
+        const savedSizeRaw = Number(value?.size);
+        const savedSize = Number.isFinite(savedSizeRaw)
+          ? Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, savedSizeRaw))
           : WIDGET_DEFAULT_SIZE;
-        if (existing && Number.isFinite(existingX) && Number.isFinite(existingY)) {
-          next[id] = {
-            x: Math.max(2, Math.min(98, snap(existingX, xStep))),
-            y: Math.max(2, Math.min(98, snap(existingY, yStep))),
-            size: existingSize,
-          };
-        } else {
-          const columnsPerRow = Math.max(1, Math.min(6, WIDGET_GRID_COLUMNS));
-          const col = idx % columnsPerRow;
-          const row = Math.floor(idx / columnsPerRow);
-          const slotX = ((col + 1) * 100) / (columnsPerRow + 1);
-          const slotY = 10 + (row * Math.max(yStep * 3, 8));
-          next[id] = {
-            x: Math.max(2, Math.min(98, snap(slotX, xStep))),
-            y: Math.max(2, Math.min(98, snap(slotY, yStep))),
-            size: WIDGET_DEFAULT_SIZE,
-          };
-        }
+        if (!Number.isFinite(savedX) || !Number.isFinite(savedY)) return;
+        next[wid] = {
+          x: Math.max(2, Math.min(98, snap(savedX, xStep))),
+          y: Math.max(2, Math.min(98, snap(savedY, yStep))),
+          size: savedSize,
+        };
+      });
+      // Ensure active widgets always have a valid slot.
+      activeIds.forEach((id, idx) => {
+        if (next[id]) return;
+        const columnsPerRow = Math.max(1, Math.min(6, WIDGET_GRID_COLUMNS));
+        const col = idx % columnsPerRow;
+        const row = Math.floor(idx / columnsPerRow);
+        const slotX = ((col + 1) * 100) / (columnsPerRow + 1);
+        const slotY = 10 + (row * Math.max(yStep * 3, 8));
+        next[id] = {
+          x: Math.max(2, Math.min(98, snap(slotX, xStep))),
+          y: Math.max(2, Math.min(98, snap(slotY, yStep))),
+          size: WIDGET_DEFAULT_SIZE,
+        };
       });
       const same = JSON.stringify(next) === JSON.stringify(prev || {});
       return same ? (prev || {}) : next;
