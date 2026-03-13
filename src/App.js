@@ -13839,7 +13839,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               }}
             />
           )}
-          {coverHeaderControlsVisible && !showControlWidgetAddPanel && activeControlWidgets.map((widgetId) => {
+          {coverHeaderControlsVisible && !hasOpenWidgetWindow && activeControlWidgets.map((widgetId) => {
             const meta = getControlWidgetMeta(widgetId);
             const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: WIDGET_DEFAULT_SIZE };
             const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout?.size || WIDGET_DEFAULT_SIZE)));
