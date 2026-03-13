@@ -134,7 +134,7 @@ const CONTROL_WIDGET_IDS = Object.freeze([
   'import',
 ]);
 
-const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
+const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'account',
   'notifications',
   'list',
@@ -146,6 +146,7 @@ const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
   'categories',
   'theme',
 ]);
+const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([]);
 
 // Source: ESPN Warriors 2025-26 schedule (remaining regular season), captured Mar 12, 2026.
 // Times are set in Pacific Time for this app's event time fields.
@@ -13111,8 +13112,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       addControlWidget(id);
     }
   };
-  const resetControlWidgetLayout = () => {
-    setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+  const enableAllControlWidgets = () => {
+    setControlWidgetOrder([...ALL_CONTROL_WIDGET_ORDER]);
+  };
+  const disableAllControlWidgets = () => {
+    setControlWidgetOrder([]);
     setCoverWidgetLayout({});
   };
   const startCoverWidgetPointerAction = (event, widgetId, mode = 'move') => {
@@ -13723,13 +13727,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 <div className="mt-2 p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="text-[11px] text-gray-500 dark:text-gray-400">Add or remove widgets</div>
-                    <button
-                      onClick={resetControlWidgetLayout}
-                      className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
-                      title="Reset widget layout"
-                    >
-                      Reset
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={enableAllControlWidgets}
+                        className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
+                        title="Turn all widgets on"
+                      >
+                        All On
+                      </button>
+                      <button
+                        onClick={disableAllControlWidgets}
+                        className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
+                        title="Turn all widgets off"
+                      >
+                        All Off
+                      </button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     {CONTROL_WIDGET_IDS.map((widgetId) => {
