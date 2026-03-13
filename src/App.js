@@ -14155,7 +14155,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               >
                 <ChevronRight className="w-6 h-6" style={undefined} />
               </button>
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-6 sm:bottom-7 z-20 flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium">
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-16 sm:bottom-18 z-20 flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium">
                 <button
                   onClick={() => setCalendarView('month')}
                   className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
@@ -14188,7 +14188,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               >
                 <ChevronLeft className="w-6 h-6" style={undefined} />
               </button>
-              <div className="flex flex-col items-center gap-1 mt-8 sm:mt-10">
+              <div className="flex flex-col items-center gap-1 -mt-6 sm:-mt-8">
                 <div className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium" style={undefined}>
                   <button
                     onClick={() => setCalendarView('month')}
