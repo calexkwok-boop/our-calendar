@@ -13070,15 +13070,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   if (showTimePrompt && pendingEvent) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div style={{ width: 'calc(100vw - 2rem)', maxWidth: '28rem', boxSizing: 'border-box' }} className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-5">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+        <div
+          style={{ width: 'calc(100vw - 2rem)', maxWidth: '28rem', boxSizing: 'border-box', borderColor: themeAccentBorder }}
+          className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl border p-5"
+        >
+          <h2 className="text-2xl font-bold mb-4" style={themeAccentHeadingStyle}>
             What time?
           </h2>
           <p className="text-gray-600 dark:text-gray-300 mb-2">Event: <strong>{pendingEvent.title}</strong></p>
           <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
             {pendingEvent.isMultiDay ? "Multi-day events don't need a time" : 'Enter a time or skip to add without time'}
             {recurrence !== 'once' && (
-              <span className="ml-2 px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
+              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium" style={themeAccentSoftSurfaceStyle}>
                 {recurrence === 'weekly' ? '🔁 Weekly' : recurrence === 'monthly' ? '🗓️ Monthly' : '🎂 Annual'}
               </span>
             )}
@@ -13089,8 +13092,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               id="timeInput"
               placeholder="e.g. 3:00 PM or 15:00"
               defaultValue={suggestedTime || ''}
-              style={{ boxSizing: 'border-box', minWidth: 0 }}
-              className="block w-full min-w-0 max-w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 mb-4"
+              style={{ boxSizing: 'border-box', minWidth: 0, borderColor: themeAccentBorder }}
+              className="block w-full min-w-0 max-w-full px-4 py-3 border-2 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 rounded-xl focus:outline-none mb-4"
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
                   const val = e.target.value;
@@ -13128,13 +13131,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   handleTimeSubmit(null);
                 }
               }}
-              className="flex-1 px-6 py-3 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl hover:shadow-lg transition-all font-medium"
+              className="flex-1 px-6 py-3 text-white rounded-xl hover:shadow-lg transition-all font-medium"
+              style={themeAccentButtonStyle}
             >
               Add Event
             </button>
             <button
               onClick={() => handleTimeSubmit(null)}
-              className="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+              className="flex-1 px-6 py-3 rounded-xl transition-all"
+              style={themeAccentSoftButtonStyle}
             >
               Skip Time
             </button>
