@@ -317,7 +317,6 @@ function App() {
   const [pendingThemeMatchStyle, setPendingThemeMatchStyle] = useState(null);
   const [coverOpacityPreview, setCoverOpacityPreview] = useState(null);
   const [coverHeaderControlsVisible, setCoverHeaderControlsVisible] = useState(true);
-  const [coverHeaderInteractionTick, setCoverHeaderInteractionTick] = useState(0);
   const coverOpacityPreviewValueRef = useRef(null);
   const coverOpacityPreviewRafRef = useRef(null);
   const [user, setUser] = useState(null);
@@ -3648,15 +3647,6 @@ function App() {
     .replace(/[^a-z0-9]+/g, '');
   const useLegacyEllieMilesTheme = activeLayerNameKey === 'elliemiles';
   const isCoverTapToRevealMode = !coverHeaderControlsVisible;
-  const isCoverControlsPanelOpen = showSharePanel
-    || showNotificationSettings
-    || showListPanel
-    || showChatPanel
-    || showCategoryEditor
-    || showLayerMediaMenu
-    || showTitleStyleModal
-    || showAiAssistant
-    || showScanHelpModal;
   const effectiveCoverOpacity = coverOpacityPreview == null
     ? activeLayerPageTheme.coverOpacity
     : Math.max(0, Math.min(1, Number(coverOpacityPreview)));
@@ -4414,14 +4404,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (!coverHeaderControlsVisible || isCoverControlsPanelOpen) return undefined;
-    const timer = window.setTimeout(() => {
-      setCoverHeaderControlsVisible(false);
-    }, 5000);
-    return () => window.clearTimeout(timer);
-  }, [coverHeaderControlsVisible, isCoverControlsPanelOpen, coverHeaderInteractionTick]);
 
   const saveLayerTitleStyle = async () => {
     const lid = String(activeLayerId || '').trim();
@@ -13528,7 +13510,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[165px] sm:min-h-[205px] lg:min-h-[285px] relative"
           onPointerDownCapture={() => {
             if (!coverHeaderControlsVisible) return;
-            setCoverHeaderInteractionTick((v) => v + 1);
           }}
           style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
             ? {
@@ -13545,7 +13526,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 type="button"
                 onClick={() => {
                   setCoverHeaderControlsVisible(true);
-                  setCoverHeaderInteractionTick((v) => v + 1);
                 }}
                 className="absolute inset-0 z-10 rounded-2xl"
                 aria-label="Show cover controls"
@@ -13675,7 +13655,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               <button
                 type="button"
                 onClick={() => setCoverHeaderControlsVisible(false)}
-                className="absolute -top-2 -right-2 z-20 px-2 py-1 rounded-lg text-[10px] font-semibold bg-gray-900/70 text-white border border-white/25 hover:bg-gray-900 transition-all"
+                className="absolute -top-5 -right-2 z-20 px-2 py-1 rounded-lg text-[10px] font-semibold bg-gray-900/70 text-white border border-white/25 hover:bg-gray-900 transition-all"
                 title="Hide controls"
               >
                 Hide
