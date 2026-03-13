@@ -13770,7 +13770,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 <button
                   onClick={() => setShowControlWidgetAddPanel(true)}
                   onPointerDown={bumpCoverControlsInteraction}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                  className={`shrink-0 mb-0.5 px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
                     showControlWidgetAddPanel
                       ? 'border-transparent shadow-sm'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
