@@ -13099,8 +13099,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!id) return;
     setControlWidgetOrder((prev) => {
       const normalized = [...new Set(prev.filter((v) => CONTROL_WIDGET_IDS.includes(v)))];
-      const next = normalized.filter((v) => v !== id);
-      return next.length > 0 ? next : normalized;
+      return normalized.filter((v) => v !== id);
     });
   };
   const toggleControlWidget = (widgetId) => {
