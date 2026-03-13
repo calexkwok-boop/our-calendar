@@ -14196,19 +14196,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 onTouchEnd={(e) => endHeaderModulePinch(e, 'title')}
                 onTouchCancel={(e) => endHeaderModulePinch(e, 'title')}
               >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (wasRecentHeaderModuleDrag('title')) return;
-                    if (!canEditActiveLayerTitle) return;
-                    openTitleStyleModal();
-                  }}
-                  className={`text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate ${canEditActiveLayerTitle ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
-                  style={activeLayerTitleTextStyle}
-                >
-                  {calendarTitle}
-                </button>
+                <div className="-mx-3 -my-2 px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (wasRecentHeaderModuleDrag('title')) return;
+                      if (!canEditActiveLayerTitle) return;
+                      openTitleStyleModal();
+                    }}
+                    className={`text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate ${canEditActiveLayerTitle ? 'cursor-grab active:cursor-grabbing hover:opacity-80' : 'cursor-default'}`}
+                    style={activeLayerTitleTextStyle}
+                  >
+                    {calendarTitle}
+                  </button>
+                </div>
               </div>
 
               <div
