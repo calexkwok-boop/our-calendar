@@ -13569,7 +13569,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     <div ref={widgetSurfaceRef} className="relative min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24" style={themedPageBackgroundStyle}>
       <div className="relative max-w-6xl mx-auto">
         <div ref={widgetOverlayRef} className="absolute inset-0 z-30 pointer-events-none">
-          {activeControlWidgets.map((widgetId) => {
+          {!showControlWidgetAddPanel && activeControlWidgets.map((widgetId) => {
             const meta = getControlWidgetMeta(widgetId);
             const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: WIDGET_DEFAULT_SIZE };
             const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout?.size || WIDGET_DEFAULT_SIZE)));
@@ -13803,17 +13803,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       const enabled = activeControlWidgets.includes(widgetId);
                       return (
                         <div key={`toggle-${widgetId}`} className="flex items-stretch gap-1.5">
-                          <div
-                            className={`w-8 h-8 rounded-lg border flex items-center justify-center ${
-                              enabled
-                                ? 'border-transparent text-white shadow-sm'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 border-gray-200 dark:border-gray-600'
-                            }`}
-                            style={enabled ? themeAccentButtonStyle : undefined}
-                            title={enabled ? `${meta.label} widget active` : `${meta.label} widget inactive`}
-                          >
-                            <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
-                          </div>
+                          {enabled ? (
+                            <button
+                              type="button"
+                              onClick={() => handleControlWidgetClick(widgetId)}
+                              className="relative w-8 h-8 rounded-xl border border-transparent text-white shadow-sm flex items-center justify-center"
+                              style={themeAccentButtonStyle}
+                              title={meta.label}
+                            >
+                              <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
+                              {meta.badge ? (
+                                <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                                  {meta.badge}
+                                </span>
+                              ) : null}
+                            </button>
+                          ) : null}
                           <button
                             onClick={() => toggleControlWidget(widgetId)}
                             className={`h-8 flex-1 px-2 rounded-lg text-[11px] font-medium border transition-all flex items-center justify-between gap-2 ${
