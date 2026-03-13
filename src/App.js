@@ -14522,19 +14522,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             <>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-                className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-xl transition-all duration-200"
+                className="absolute left-3 sm:left-4 bottom-2 sm:bottom-3 z-20 p-2 rounded-xl transition-all duration-200"
                 style={undefined}
               >
                 <ChevronLeft className="w-6 h-6" style={undefined} />
               </button>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-                className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-xl transition-all duration-200"
+                className="absolute right-3 sm:right-4 bottom-2 sm:bottom-3 z-20 p-2 rounded-xl transition-all duration-200"
                 style={undefined}
               >
                 <ChevronRight className="w-6 h-6" style={undefined} />
               </button>
-              <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-20 flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium">
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-2 sm:bottom-3 z-20 flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium">
                 <button
                   onClick={() => setCalendarView('month')}
                   className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
@@ -14559,7 +14559,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
             </>
           ) : (
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-between gap-2 px-2 sm:px-3">
+            <div className="absolute inset-x-0 bottom-2 sm:bottom-3 flex items-center justify-between gap-2 px-2 sm:px-3">
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
                 className="p-2 rounded-xl transition-all duration-200"
