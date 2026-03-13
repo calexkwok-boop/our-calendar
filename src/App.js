@@ -13550,48 +13550,36 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 className="absolute inset-0 z-10 rounded-2xl"
                 aria-label="Show cover controls"
               />
-              {canManageActiveLayer && (
-                <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 pointer-events-auto">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openLayerMediaPicker('icon');
-                    }}
-                    className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-black/40 text-white border border-white/30 hover:bg-black/55 transition-all"
-                    title="Change icon"
-                  >
-                    Icon
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openLayerMediaPicker('header');
-                    }}
-                    className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-black/40 text-white border border-white/30 hover:bg-black/55 transition-all flex items-center gap-1"
-                    title="Change cover photo"
-                  >
-                    <Camera className="w-3 h-3" />
-                    Cover
-                  </button>
-                </div>
-              )}
               <div className="absolute inset-x-4 sm:inset-x-5 bottom-4 sm:bottom-5 z-20 pointer-events-none">
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-3 w-full">
-                      {activeLayer?.icon_url ? (
-                        <img
-                          src={activeLayer.icon_url}
-                          alt="Calendar icon"
-                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
-                        />
-                      ) : (
-                        <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
-                          <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                        </div>
-                      )}
+                      <div className="relative pointer-events-auto">
+                        {activeLayer?.icon_url ? (
+                          <img
+                            src={activeLayer.icon_url}
+                            alt="Calendar icon"
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
+                          />
+                        ) : (
+                          <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
+                            <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                          </div>
+                        )}
+                        {canManageActiveLayer && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openLayerMediaMenu();
+                            }}
+                            className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700"
+                            title="Edit cover/icon"
+                          >
+                            <Camera className="w-3 h-3 text-gray-600 dark:text-gray-300" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <h2 className="mt-1 text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
                       {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -13683,7 +13671,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 )}
               </div>
             </div>
-            <div className="shrink-0 w-full sm:w-auto">
+            <div className="relative shrink-0 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setCoverHeaderControlsVisible(false)}
+                className="absolute -top-2 -right-2 z-20 px-2 py-1 rounded-lg text-[10px] font-semibold bg-gray-900/70 text-white border border-white/25 hover:bg-gray-900 transition-all"
+                title="Hide controls"
+              >
+                Hide
+              </button>
               <div
                 className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-1.5"
                 onDragOver={(e) => {
