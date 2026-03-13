@@ -2541,6 +2541,8 @@ function App() {
   const [chatReactionPickerFor, setChatReactionPickerFor] = useState(null);
   const chatLastTapRef = useRef({ messageId: null, at: 0 });
   const lastSwPushRawRef = useRef({ at: 0, raw: '' });
+  const membershipSnapshotRef = useRef({});
+  const membershipSnapshotReadyRef = useRef(false);
   const [deletingChatMessageId, setDeletingChatMessageId] = useState(null);
   const [showCreateEventPopup, setShowCreateEventPopup] = useState(false);
   const [pollComposerStep, setPollComposerStep] = useState('menu');
@@ -8902,6 +8904,84 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, user?.email, user?.phone, currentUser, subCalendars, layers]);
 
   useEffect(() => {
+    if (!user?.id) {
+      membershipSnapshotRef.current = {};
+      membershipSnapshotReadyRef.current = false;
+      return;
+    }
+    const me = String(user.id || '').trim();
+    const myEmail = normalizeEmail(user?.email);
+    const myPhone = normalizePhoneNumber(user?.phone);
+    const shareRecipientFilter = buildShareRecipientFilter(me, myEmail, myPhone);
+    if (!shareRecipientFilter) return;
+    let canceled = false;
+    const layerNameCache = new Map();
+
+    const getLayerName = async (layerIdValue) => {
+      const layerId = String(layerIdValue || '').trim();
+      if (!layerId) return 'this calendar';
+      if (layerNameCache.has(layerId)) return layerNameCache.get(layerId);
+      const { data: layerRow } = await supabase
+        .from('calendar_layers')
+        .select('name')
+        .eq('id', layerId)
+        .maybeSingle();
+      const name = String(layerRow?.name || '').trim();
+      const label = name ? `"${name}"` : 'this calendar';
+      layerNameCache.set(layerId, label);
+      return label;
+    };
+
+    const pollMembershipChanges = async () => {
+      let data = [];
+      try {
+        const { data: rows, error } = await supabase
+          .from('shared_access')
+          .select('id,layer_id,calendar_id,shared_with_id,shared_with_email,shared_with_phone,is_banned,can_edit,banned_reason,updated_at,created_at')
+          .or(shareRecipientFilter);
+        if (error) return;
+        data = rows || [];
+      } catch {
+        return;
+      }
+      if (canceled) return;
+
+      const nextById = {};
+      (data || []).forEach((row) => {
+        const id = String(row?.id || '').trim();
+        if (id) nextById[id] = row;
+      });
+      const prevById = membershipSnapshotRef.current || {};
+
+      if (membershipSnapshotReadyRef.current) {
+        const removedIds = Object.keys(prevById).filter((id) => !nextById[id]);
+        for (const removedId of removedIds) {
+          const prevRow = prevById[removedId];
+          const layerName = await getLayerName(prevRow?.layer_id || prevRow?.calendar_id);
+          const stamp = String(prevRow?.updated_at || prevRow?.created_at || new Date().toISOString());
+          addInAppNotification({
+            key: `share_moderation:kick:${removedId}:${stamp}`,
+            type: 'moderation',
+            message: `You were removed from ${layerName}.`,
+            createdAt: stamp,
+          });
+        }
+      } else {
+        membershipSnapshotReadyRef.current = true;
+      }
+
+      membershipSnapshotRef.current = nextById;
+    };
+
+    pollMembershipChanges();
+    const timer = setInterval(pollMembershipChanges, 8000);
+    return () => {
+      canceled = true;
+      clearInterval(timer);
+    };
+  }, [user?.id, user?.email, user?.phone]);
+
+  useEffect(() => {
     if (!user?.id) return;
     const me = String(user.id);
     const myEmail = normalizeEmail(user?.email);
@@ -13172,7 +13252,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       <div className="max-w-6xl mx-auto">
         <div
           ref={layerHeaderCardRef}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[240px] sm:min-h-[300px] lg:min-h-[420px] relative"
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[150px] sm:min-h-[185px] lg:min-h-[260px] relative"
           onPointerDownCapture={() => {
             if (!hasActiveCoverPhoto || !coverHeaderControlsVisible) return;
             setCoverHeaderInteractionTick((v) => v + 1);
