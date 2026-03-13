@@ -13617,6 +13617,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             }
             : undefined}
         >
+          {showControlWidgetAddPanel && (
+            <button
+              type="button"
+              onClick={() => setShowControlWidgetAddPanel(false)}
+              className="absolute top-2 right-2 z-40 w-7 h-7 rounded-full text-sm font-semibold bg-black/45 text-white border border-white/35 hover:bg-black/60 flex items-center justify-center"
+              title="Close add widgets"
+              aria-label="Close add widgets panel"
+            >
+              ×
+            </button>
+          )}
           {isCoverTapToRevealMode ? (
             <>
               <button
@@ -13742,18 +13753,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </button>
               </div>
               {showControlWidgetAddPanel && (
-                <div className="mt-2 p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600">
+                <div className="mt-2 ml-auto w-full max-w-[19rem] p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="text-[11px] text-gray-500 dark:text-gray-400">Add or remove widgets</div>
                     <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => setShowControlWidgetAddPanel(false)}
-                        className="w-6 h-6 rounded-md text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 flex items-center justify-center"
-                        title="Close"
-                        aria-label="Close add widgets panel"
-                      >
-                        ×
-                      </button>
                       <button
                         onClick={enableAllControlWidgets}
                         className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
@@ -13787,7 +13790,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                           title={`${enabled ? 'Remove' : 'Add'} ${meta.label}`}
                         >
                           <span className="flex items-center gap-1.5">
-                            {meta.icon}
+                            {enabled ? (
+                              <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
+                            ) : (
+                              <span className="inline-block w-4 h-4" aria-hidden="true" />
+                            )}
                             <span>{meta.label}</span>
                           </span>
                           <span className="text-[10px] font-semibold">{enabled ? 'On' : 'Off'}</span>
