@@ -3647,7 +3647,6 @@ function App() {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '');
   const useLegacyEllieMilesTheme = activeLayerNameKey === 'elliemiles';
-  const hasActiveCoverPhoto = Boolean(activeLayer?.header_bg_url);
   const isCoverTapToRevealMode = !coverHeaderControlsVisible;
   const isCoverControlsPanelOpen = showSharePanel
     || showNotificationSettings
