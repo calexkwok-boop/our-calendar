@@ -146,6 +146,7 @@ const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
   'categories',
   'theme',
 ]);
+const CONTROL_ADD_BUTTON_ID = '__add__';
 
 // Source: ESPN Warriors 2025-26 schedule (remaining regular season), captured Mar 12, 2026.
 // Times are set in Pacific Time for this app's event time fields.
@@ -2555,6 +2556,7 @@ function App() {
   const [controlWidgetOrder, setControlWidgetOrder] = useState([...DEFAULT_CONTROL_WIDGET_ORDER]);
   const [controlWidgetSizes, setControlWidgetSizes] = useState({});
   const [alwaysVisibleControlWidgets, setAlwaysVisibleControlWidgets] = useState([]);
+  const [controlAddButtonIndex, setControlAddButtonIndex] = useState(0);
   const [showControlWidgetAddPanel, setShowControlWidgetAddPanel] = useState(false);
   const [draggingControlWidgetId, setDraggingControlWidgetId] = useState('');
   const [controlWidgetDropTargetId, setControlWidgetDropTargetId] = useState('');
@@ -12788,6 +12790,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
       setControlWidgetSizes({});
       setAlwaysVisibleControlWidgets([]);
+      setControlAddButtonIndex(0);
       setShowControlWidgetAddPanel(false);
       return;
     }
@@ -12836,10 +12839,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       } else {
         setAlwaysVisibleControlWidgets([]);
       }
+
+      const rawAddIndex = localStorage.getItem(`${keyBase}-add-index`);
+      const parsedAddIndex = Number(rawAddIndex);
+      if (Number.isFinite(parsedAddIndex)) {
+        setControlAddButtonIndex(Math.max(0, Math.floor(parsedAddIndex)));
+      } else {
+        setControlAddButtonIndex(0);
+      }
     } catch {
       setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
       setControlWidgetSizes({});
       setAlwaysVisibleControlWidgets([]);
+      setControlAddButtonIndex(0);
     }
   }, [user?.id, activeLayerId]);
 
@@ -12850,8 +12862,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       localStorage.setItem(`${keyBase}-order`, JSON.stringify(controlWidgetOrder));
       localStorage.setItem(`${keyBase}-sizes`, JSON.stringify(controlWidgetSizes));
       localStorage.setItem(`${keyBase}-pinned`, JSON.stringify(alwaysVisibleControlWidgets));
+      localStorage.setItem(`${keyBase}-add-index`, String(controlAddButtonIndex));
     } catch {}
-  }, [user?.id, activeLayerId, controlWidgetOrder, controlWidgetSizes, alwaysVisibleControlWidgets]);
+  }, [user?.id, activeLayerId, controlWidgetOrder, controlWidgetSizes, alwaysVisibleControlWidgets, controlAddButtonIndex]);
 
   if (isLoading) {
     return (
@@ -13047,20 +13060,31 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const widgetOrderForRender = [...widgetOrderVisible, ...widgetOrderMissing];
   const activeControlWidgets = widgetOrderForRender.filter((id) => !widgetOrderMissing.includes(id));
   const hiddenControlWidgets = widgetOrderMissing;
+  const clampedControlAddButtonIndex = Math.max(0, Math.min(activeControlWidgets.length, Number(controlAddButtonIndex) || 0));
+  const headerControlButtons = [
+    ...activeControlWidgets.slice(0, clampedControlAddButtonIndex),
+    CONTROL_ADD_BUTTON_ID,
+    ...activeControlWidgets.slice(clampedControlAddButtonIndex),
+  ];
   const pinnedControlWidgets = activeControlWidgets.filter((id) => alwaysVisibleControlWidgets.includes(id));
+  const moveHeaderControlButton = (dragId, targetId) => {
+    const fromId = String(dragId || '').trim();
+    const toId = String(targetId || '').trim();
+    if (!fromId || !toId || fromId === toId) return;
+    const current = [...headerControlButtons];
+    const from = current.indexOf(fromId);
+    const to = current.indexOf(toId);
+    if (from < 0 || to < 0) return;
+    const next = [...current];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    const nextAddIndex = next.indexOf(CONTROL_ADD_BUTTON_ID);
+    const nextWidgets = next.filter((id) => id !== CONTROL_ADD_BUTTON_ID);
+    setControlWidgetOrder(nextWidgets);
+    setControlAddButtonIndex(Math.max(0, nextAddIndex));
+  };
   const reorderControlWidgets = (dragId, targetId) => {
-    if (!dragId || !targetId || dragId === targetId) return;
-    setControlWidgetOrder((prev) => {
-      const normalized = [...new Set(prev.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
-      const from = normalized.indexOf(dragId);
-      const to = normalized.indexOf(targetId);
-      if (from < 0 || to < 0) return prev;
-      const next = [...normalized];
-      const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved);
-      const missing = CONTROL_WIDGET_IDS.filter((id) => !next.includes(id));
-      return [...next, ...missing];
-    });
+    moveHeaderControlButton(dragId, targetId);
   };
   const addControlWidget = (widgetId) => {
     const id = String(widgetId || '').trim();
@@ -13100,6 +13124,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return ['sm', 'md', 'lg'].includes(raw) ? raw : 'sm';
   };
   const getControlWidgetSpanClass = (widgetId) => {
+    if (widgetId === CONTROL_ADD_BUTTON_ID) return 'col-span-1';
     const size = getControlWidgetSize(widgetId);
     if (size === 'lg') return 'col-span-3 sm:col-span-2 lg:col-span-2';
     if (size === 'md') return 'col-span-2 sm:col-span-2 lg:col-span-1';
@@ -13109,6 +13134,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
     setControlWidgetSizes({});
     setAlwaysVisibleControlWidgets([]);
+    setControlAddButtonIndex(0);
     setDraggingControlWidgetId('');
     setControlWidgetDropTargetId('');
     setControlWidgetDropAtEnd(false);
@@ -13632,27 +13658,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
             </div>
             <div className="shrink-0 w-full sm:w-auto">
-              <div className="flex items-center justify-end gap-2 mb-2">
-                <button
-                  onClick={() => setShowControlWidgetAddPanel((prev) => !prev)}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                    showControlWidgetAddPanel
-                      ? 'border-transparent shadow-sm'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
-                  }`}
-                  style={showControlWidgetAddPanel ? themeAccentButtonStyle : undefined}
-                  title="Add widgets"
-                >
-                  + Add
-                </button>
-                <button
-                  onClick={resetControlWidgetLayout}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold border bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:shadow-sm transition-all"
-                  title="Reset widget layout"
-                >
-                  Reset
-                </button>
-              </div>
               <div
                 className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-1.5"
                 onDragOver={(e) => {
@@ -13664,19 +13669,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 onDrop={(e) => {
                   if (!draggingControlWidgetId) return;
                   e.preventDefault();
-                  setControlWidgetOrder((prev) => {
-                    const normalized = [...new Set(prev.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
-                    const without = normalized.filter((id) => id !== draggingControlWidgetId);
-                    const missing = CONTROL_WIDGET_IDS.filter((id) => !without.includes(id));
-                    return [...without, draggingControlWidgetId, ...missing.filter((id) => id !== draggingControlWidgetId)];
-                  });
+                  if (draggingControlWidgetId === CONTROL_ADD_BUTTON_ID) {
+                    setControlAddButtonIndex(activeControlWidgets.length);
+                  } else {
+                    setControlWidgetOrder((prev) => {
+                      const normalized = [...new Set(prev.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
+                      const without = normalized.filter((id) => id !== draggingControlWidgetId);
+                      return [...without, draggingControlWidgetId];
+                    });
+                  }
                   setDraggingControlWidgetId('');
                   setControlWidgetDropTargetId('');
                   setControlWidgetDropAtEnd(false);
                 }}
               >
-                {activeControlWidgets.map((widgetId) => {
-                  const meta = getControlWidgetMeta(widgetId);
+                {headerControlButtons.map((widgetId) => {
+                  const isAddButton = widgetId === CONTROL_ADD_BUTTON_ID;
+                  const meta = isAddButton ? null : getControlWidgetMeta(widgetId);
                   const isDropTarget = controlWidgetDropTargetId === widgetId && draggingControlWidgetId && draggingControlWidgetId !== widgetId;
                   return (
                     <div
@@ -13711,38 +13720,48 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       className={`relative rounded-xl border transition-all ${getControlWidgetSpanClass(widgetId)} ${isDropTarget ? 'ring-2 ring-offset-1 ring-purple-400 dark:ring-purple-500' : ''}`}
                     >
                       <button
-                        onClick={() => handleControlWidgetClick(widgetId)}
-                        disabled={meta.disabled}
+                        onClick={() => {
+                          if (isAddButton) {
+                            setShowControlWidgetAddPanel((prev) => !prev);
+                            return;
+                          }
+                          handleControlWidgetClick(widgetId);
+                        }}
+                        disabled={meta?.disabled}
                         className={`w-full min-h-[40px] px-2 py-1.5 rounded-xl transition-all duration-200 text-[11px] font-semibold border ${
-                          meta.active
-                            ? 'shadow-sm border-transparent'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent'
-                        } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        style={meta.active ? themeAccentButtonStyle : undefined}
-                        title={meta.label}
+                          isAddButton
+                            ? (showControlWidgetAddPanel ? 'border-transparent shadow-sm' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600')
+                            : meta?.active
+                              ? 'shadow-sm border-transparent'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent'
+                        } ${meta?.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        style={isAddButton ? (showControlWidgetAddPanel ? themeAccentButtonStyle : undefined) : (meta?.active ? themeAccentButtonStyle : undefined)}
+                        title={isAddButton ? 'Add widgets' : meta?.label}
                       >
                         <span className="flex items-center justify-center gap-1.5">
-                          {meta.icon}
-                          <span className="truncate">{meta.label}</span>
+                          {isAddButton ? <Plus className="w-4 h-4" /> : meta?.icon}
+                          <span className="truncate">{isAddButton ? '+ Add' : meta?.label}</span>
                         </span>
-                        {meta.badge ? (
+                        {!isAddButton && meta?.badge ? (
                           <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
                             {meta.badge}
                           </span>
                         ) : null}
                       </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeControlWidget(widgetId);
-                        }}
-                        disabled={activeControlWidgets.length <= 1}
-                        className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-[10px] text-gray-600 dark:text-gray-300 leading-none disabled:opacity-30"
-                        title="Remove widget"
-                      >
-                        ×
-                      </button>
+                      {!isAddButton && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeControlWidget(widgetId);
+                          }}
+                          disabled={activeControlWidgets.length <= 1}
+                          className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-[10px] text-gray-600 dark:text-gray-300 leading-none disabled:opacity-30"
+                          title="Remove widget"
+                        >
+                          ×
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -13758,7 +13777,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
               {showControlWidgetAddPanel && (
                 <div className="mt-2 p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600">
-                  <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Add widgets to your control dock</div>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400">Add widgets to your control dock</div>
+                    <button
+                      onClick={resetControlWidgetLayout}
+                      className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
+                      title="Reset widget layout"
+                    >
+                      Reset
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {hiddenControlWidgets.map((widgetId) => {
                       const meta = getControlWidgetMeta(widgetId);
