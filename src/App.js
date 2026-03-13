@@ -13604,12 +13604,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                         width: `${size}px`,
                         height: `${size}px`,
                         transform: 'translate(-50%, -50%)',
+                        touchAction: 'none',
+                        userSelect: 'none',
                       }}
                     >
                       <button
                         onClick={() => handleControlWidgetClick(widgetId)}
                         onPointerDown={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
                           startCoverWidgetPointerAction(e, widgetId, 'move');
                         }}
                         className={`relative w-full h-full rounded-xl border transition-all ${
@@ -13632,6 +13635,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                         type="button"
                         onPointerDown={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
                           startCoverWidgetPointerAction(e, widgetId, 'resize');
                         }}
                         className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white/90 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-[10px] text-gray-700 dark:text-gray-300 leading-none flex items-center justify-center"
@@ -13772,12 +13776,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     width: `${size}px`,
                     height: `${size}px`,
                     transform: 'translate(-50%, -50%)',
+                    touchAction: 'none',
+                    userSelect: 'none',
                   }}
                 >
                   <button
                     onClick={() => handleControlWidgetClick(widgetId)}
                     onPointerDown={(e) => {
                       e.stopPropagation();
+                      e.preventDefault();
                       startCoverWidgetPointerAction(e, widgetId, 'move');
                     }}
                     className={`relative w-full h-full rounded-xl border transition-all ${
@@ -13800,6 +13807,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     type="button"
                     onPointerDown={(e) => {
                       e.stopPropagation();
+                      e.preventDefault();
                       startCoverWidgetPointerAction(e, widgetId, 'resize');
                     }}
                     className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-[10px] text-gray-700 dark:text-gray-300 leading-none flex items-center justify-center"
