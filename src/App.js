@@ -3860,6 +3860,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       let voteSummaryByLayer = {};
       let myVotesByLayer = {};
       let votesMode = 'db';
+      const localVotes = readExploreVotesLocal(user?.id);
       if (ids.length > 0) {
         const { data: memberRows } = await supabase
           .from('shared_access')
@@ -3880,7 +3881,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           const msg = String(voteError?.message || '');
           if (/public_calendar_votes|42P01|schema cache|does not exist/i.test(msg)) {
             votesMode = 'local';
-            const localVotes = readExploreVotesLocal(user?.id);
             myVotesByLayer = localVotes;
             voteSummaryByLayer = Object.entries(localVotes).reduce((acc, [layerId, voteValue]) => {
               const lid = String(layerId || '').trim();
@@ -3906,6 +3906,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             if (String(row?.user_id || '') === String(user?.id || '')) myVotesByLayer[lid] = value;
             return acc;
           }, {});
+          // Keep user's last local vote sticky even if remote sync lags/fails.
+          Object.entries(localVotes || {}).forEach(([layerId, voteValue]) => {
+            const lid = String(layerId || '').trim();
+            const localVote = normalizeVoteValue(voteValue);
+            if (!lid || localVote === 0) return;
+            const dbVote = normalizeVoteValue(myVotesByLayer[lid] || 0);
+            if (!voteSummaryByLayer[lid]) voteSummaryByLayer[lid] = { up: 0, down: 0 };
+            if (dbVote === 1) voteSummaryByLayer[lid].up = Math.max(0, Number(voteSummaryByLayer[lid].up || 0) - 1);
+            if (dbVote === -1) voteSummaryByLayer[lid].down = Math.max(0, Number(voteSummaryByLayer[lid].down || 0) - 1);
+            if (localVote === 1) voteSummaryByLayer[lid].up = Math.max(0, Number(voteSummaryByLayer[lid].up || 0) + 1);
+            if (localVote === -1) voteSummaryByLayer[lid].down = Math.max(0, Number(voteSummaryByLayer[lid].down || 0) + 1);
+            myVotesByLayer[lid] = localVote;
+          });
         }
       }
 
@@ -3954,6 +3967,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     const nextVote = previousVote === desiredVote ? 0 : desiredVote;
     setExploreVoteBusyByLayer((prev) => ({ ...prev, [lid]: true }));
+    const localVotes = readExploreVotesLocal(user.id);
+    if (nextVote === 0) delete localVotes[lid];
+    else localVotes[lid] = nextVote;
+    writeExploreVotesLocal(user.id, localVotes);
     try {
       if (exploreVotesMode === 'db') {
         if (nextVote === 0) {
@@ -3973,32 +3990,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           if (error) throw error;
         }
       } else {
-        const localVotes = readExploreVotesLocal(user.id);
-        if (nextVote === 0) delete localVotes[lid];
-        else localVotes[lid] = nextVote;
-        writeExploreVotesLocal(user.id, localVotes);
+        // Local mode already persisted above.
       }
     } catch (error) {
       console.error('Public calendar vote failed:', error);
-      const msg = String(error?.message || '');
-      if (exploreVotesMode === 'db' && /public_calendar_votes|42P01|schema cache|does not exist/i.test(msg)) {
-        setExploreVotesMode('local');
-        const localVotes = readExploreVotesLocal(user.id);
-        if (nextVote === 0) delete localVotes[lid];
-        else localVotes[lid] = nextVote;
-        writeExploreVotesLocal(user.id, localVotes);
-      } else {
-        setPublicCalendars((prev) => prev.map((row) => {
-          if (String(row?.id || '') !== lid) return row;
-          const currentVote = normalizeVoteValue(row?.my_vote || 0);
-          return {
-            ...row,
-            my_vote: previousVote,
-            upvote_count: Math.max(0, Number(row?.upvote_count || 0) + (previousVote === 1 ? 1 : 0) - (currentVote === 1 ? 1 : 0)),
-            downvote_count: Math.max(0, Number(row?.downvote_count || 0) + (previousVote === -1 ? 1 : 0) - (currentVote === -1 ? 1 : 0)),
-          };
-        }));
-      }
+      // Keep optimistic/local state and fall back to local sync mode.
+      setExploreVotesMode('local');
     } finally {
       setExploreVoteBusyByLayer((prev) => ({ ...prev, [lid]: false }));
     }
