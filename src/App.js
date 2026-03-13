@@ -3031,7 +3031,6 @@ function App() {
   }, [showSharePanel, currentUser]);
   useEffect(() => {
     if (!coverHeaderControlsVisible) return undefined;
-    if (showControlWidgetAddPanel) return undefined;
     const timeoutId = window.setTimeout(() => {
       setCoverHeaderControlsVisible(false);
       setShowControlWidgetAddPanel(false);
@@ -13725,9 +13724,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             </>
           ) : (
             <>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="relative shrink-0">
+          <div className="absolute inset-x-4 sm:inset-x-5 bottom-4 sm:bottom-5 z-20 pointer-events-none">
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3 w-full">
+              <div className="relative shrink-0 pointer-events-auto">
                 {activeLayer?.icon_url ? (
                   <img
                     src={activeLayer.icon_url}
@@ -13749,31 +13750,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   </button>
                 )}
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 min-w-0">
-                  <h1
-                    onClick={() => {
-                      if (!canEditActiveLayerTitle) return;
-                      openTitleStyleModal();
-                    }}
-                    className={`text-xl sm:text-2xl font-bold transition-opacity truncate ${canEditActiveLayerTitle ? 'cursor-pointer hover:opacity-70' : 'cursor-default opacity-90'}`}
-                    style={activeLayerTitleTextStyle}
-                    title={canEditActiveLayerTitle ? 'Click to edit title and style' : 'Read-only calendar'}
-                  >
-                    {calendarTitle}
-                  </h1>
                 </div>
-                {!canEditActiveLayer && (
-                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 align-middle">
-                      Read only
-                    </span>
-                  </p>
-                )}
+                <h2 className="mt-1 text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
+                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </h2>
               </div>
-            </div>
-            <div className="relative shrink-0 w-full sm:w-auto">
-              <div className="flex justify-end">
+            <div className="relative shrink-0 pointer-events-auto">
+              <div className="flex justify-end pointer-events-auto">
                 <button
                   onClick={() => setShowControlWidgetAddPanel(true)}
                   className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
@@ -13788,7 +13771,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </button>
               </div>
               {showControlWidgetAddPanel && (
-                <div className="mt-2 ml-auto w-full max-w-[19rem] p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600 overflow-visible">
+                <div className="absolute right-0 bottom-full mb-2 w-[19rem] max-w-[calc(100vw-2.5rem)] p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600 overflow-visible pointer-events-auto">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="text-[11px] text-gray-500 dark:text-gray-400">Add or remove widgets</div>
                     <div className="flex items-center gap-1.5">
@@ -13854,6 +13837,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               )}
             </div>
           </div>
+          </div>
+          {coverHeaderControlsVisible && (
+            <div className="absolute inset-x-4 sm:inset-x-5 bottom-16 sm:bottom-20 z-20 pointer-events-none">
+              <div className="pointer-events-auto max-w-[85%]">
+                <h1
+                  onClick={() => {
+                    if (!canEditActiveLayerTitle) return;
+                    openTitleStyleModal();
+                  }}
+                  className={`text-xl sm:text-2xl font-bold transition-opacity truncate ${canEditActiveLayerTitle ? 'cursor-pointer hover:opacity-70' : 'cursor-default opacity-90'}`}
+                  style={activeLayerTitleTextStyle}
+                  title={canEditActiveLayerTitle ? 'Click to edit title and style' : 'Read-only calendar'}
+                >
+                  {calendarTitle}
+                </h1>
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2">
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
