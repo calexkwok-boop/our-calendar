@@ -12946,6 +12946,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const halfPct = ((Number(size || WIDGET_DEFAULT_SIZE) / 2) / Math.max(1, Number(totalPx || 1))) * 100;
         return Math.max(halfPct, Math.min(100 - halfPct, Number(value || 0)));
       };
+      const clampAndSnapCenterPercent = (value, size, totalPx, step) => {
+        const clamped = clampCenterPercent(value, size, totalPx);
+        const snapped = snap(clamped, step);
+        return clampCenterPercent(snapped, size, totalPx);
+      };
       if (drag.mode === 'move') {
         const currentSize = Math.max(
           WIDGET_MIN_SIZE,
@@ -12953,10 +12958,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         );
         const rawX = drag.initialX + ((dx / rect.width) * 100);
         const rawY = drag.initialY + ((dy / rect.height) * 100);
-        const snappedX = snap(rawX, xStep);
-        const snappedY = snap(rawY, yStep);
-        let nextX = clampCenterPercent(snappedX, currentSize, rect.width);
-        let nextY = clampCenterPercent(snappedY, currentSize, rect.height);
+        let nextX = clampAndSnapCenterPercent(rawX, currentSize, rect.width, xStep);
+        let nextY = clampAndSnapCenterPercent(rawY, currentSize, rect.height, yStep);
         const activeIds = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
         const layoutSnapshot = coverWidgetLayout || {};
         const pxToPercentX = (px) => (Number(px || 0) / Math.max(1, rect.width)) * 100;
@@ -12973,17 +12976,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           let distancePx = Math.sqrt((dxPx * dxPx) + (dyPx * dyPx));
           if (!Number.isFinite(distancePx)) return;
           if (distancePx < 0.5) {
-            nextX = clampCenterPercent(nextX + pxToPercentX(minDistancePx), currentSize, rect.width);
+            nextX = clampAndSnapCenterPercent(nextX + pxToPercentX(minDistancePx), currentSize, rect.width, xStep);
             distancePx = minDistancePx;
           }
           if (distancePx < minDistancePx) {
             const pushPx = minDistancePx - distancePx;
             const ux = dxPx / distancePx;
             const uy = dyPx / distancePx;
-            nextX = clampCenterPercent(nextX + pxToPercentX(ux * pushPx), currentSize, rect.width);
-            nextY = clampCenterPercent(nextY + pxToPercentY(uy * pushPx), currentSize, rect.height);
+            nextX = clampAndSnapCenterPercent(nextX + pxToPercentX(ux * pushPx), currentSize, rect.width, xStep);
+            nextY = clampAndSnapCenterPercent(nextY + pxToPercentY(uy * pushPx), currentSize, rect.height, yStep);
           }
         });
+        nextX = clampAndSnapCenterPercent(nextX, currentSize, rect.width, xStep);
+        nextY = clampAndSnapCenterPercent(nextY, currentSize, rect.height, yStep);
         setCoverWidgetLayout((prev) => ({
           ...(prev || {}),
           [drag.widgetId]: {
@@ -13289,12 +13294,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (container && sourceRect) {
       const rect = container.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
+        const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
+        const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
+        const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
         const centerX = Number(sourceRect.left) + (Number(sourceRect.width) / 2);
         const centerY = Number(sourceRect.top) + (Number(sourceRect.height) / 2);
         const halfXPct = ((size / 2) / rect.width) * 100;
         const halfYPct = ((size / 2) / rect.height) * 100;
-        nextX = Math.max(halfXPct, Math.min(100 - halfXPct, ((centerX - rect.left) / rect.width) * 100));
-        nextY = Math.max(halfYPct, Math.min(100 - halfYPct, ((centerY - rect.top) / rect.height) * 100));
+        const rawX = ((centerX - rect.left) / rect.width) * 100;
+        const rawY = ((centerY - rect.top) / rect.height) * 100;
+        nextX = Math.max(halfXPct, Math.min(100 - halfXPct, snap(rawX, xStep)));
+        nextY = Math.max(halfYPct, Math.min(100 - halfYPct, snap(rawY, yStep)));
       }
     }
     setCoverWidgetLayout((prev) => ({
@@ -13703,6 +13713,67 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     <div ref={widgetSurfaceRef} className="relative min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24" style={themedPageBackgroundStyle}>
       <div className="relative max-w-6xl mx-auto">
         <div
+          ref={widgetOverlayRef}
+          className="absolute inset-x-0 top-0 z-30 pointer-events-none"
+          style={{ height: 'calc(100vh - 6.75rem)' }}
+        >
+          {isCoverWidgetDragging && (
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `linear-gradient(to right, ${darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(17,24,39,0.14)'} 1px, transparent 1px), linear-gradient(to bottom, ${darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(17,24,39,0.14)'} 1px, transparent 1px)`,
+                backgroundSize: `${(100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1))).toFixed(3)}% 100%, 100% ${(100 / Math.max(1, (WIDGET_GRID_ROWS - 1))).toFixed(3)}%`,
+                backgroundPosition: '0 0, 0 0',
+              }}
+            />
+          )}
+          {coverHeaderControlsVisible && !showControlWidgetAddPanel && activeControlWidgets.map((widgetId) => {
+            const meta = getControlWidgetMeta(widgetId);
+            const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: WIDGET_DEFAULT_SIZE };
+            const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout?.size || WIDGET_DEFAULT_SIZE)));
+            return (
+              <div
+                key={`cover-widget-global-${widgetId}`}
+                className="absolute pointer-events-auto"
+                style={{
+                  left: `${Math.max(2, Math.min(98, Number(layout?.x || 50)))}%`,
+                  top: `${Math.max(2, Math.min(98, Number(layout?.y || 18)))}%`,
+                  width: `${size}px`,
+                  height: `${size}px`,
+                  transform: 'translate(-50%, -50%)',
+                  touchAction: 'none',
+                  userSelect: 'none',
+                }}
+              >
+                <button
+                  onClick={() => handleControlWidgetClick(widgetId)}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    bumpCoverControlsInteraction();
+                    startCoverWidgetPointerAction(e, widgetId, 'move');
+                  }}
+                  className={`relative w-full h-full rounded-xl border transition-all ${
+                    meta.active
+                      ? 'shadow-sm border-transparent'
+                      : (isCoverTapToRevealMode ? hiddenModeInactiveWidgetClassName : visibleModeInactiveWidgetClassName)
+                  } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={meta.active ? themeAccentButtonStyle : undefined}
+                  title={meta.label}
+                  disabled={meta.disabled}
+                >
+                  <span className="flex items-center justify-center">{meta.icon}</span>
+                  {meta.badge ? (
+                    <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                      {meta.badge}
+                    </span>
+                  ) : null}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <div
           ref={layerHeaderCardRef}
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[165px] sm:min-h-[205px] lg:min-h-[285px] relative"
           onPointerDownCapture={() => {
@@ -13718,63 +13789,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             }
             : undefined}
         >
-          <div ref={widgetOverlayRef} className="absolute inset-0 z-30 pointer-events-none">
-            {isCoverWidgetDragging && (
-              <div
-                className="absolute inset-0 rounded-2xl"
-                style={{
-                  backgroundImage: `linear-gradient(to right, ${darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(17,24,39,0.14)'} 1px, transparent 1px), linear-gradient(to bottom, ${darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(17,24,39,0.14)'} 1px, transparent 1px)`,
-                  backgroundSize: `${(100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1))).toFixed(3)}% 100%, 100% ${(100 / Math.max(1, (WIDGET_GRID_ROWS - 1))).toFixed(3)}%`,
-                  backgroundPosition: '0 0, 0 0',
-                }}
-              />
-            )}
-            {coverHeaderControlsVisible && !showControlWidgetAddPanel && activeControlWidgets.map((widgetId) => {
-              const meta = getControlWidgetMeta(widgetId);
-              const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: WIDGET_DEFAULT_SIZE };
-              const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout?.size || WIDGET_DEFAULT_SIZE)));
-              return (
-                <div
-                  key={`cover-widget-global-${widgetId}`}
-                  className="absolute pointer-events-auto"
-                  style={{
-                    left: `${Math.max(2, Math.min(98, Number(layout?.x || 50)))}%`,
-                    top: `${Math.max(2, Math.min(98, Number(layout?.y || 18)))}%`,
-                    width: `${size}px`,
-                    height: `${size}px`,
-                    transform: 'translate(-50%, -50%)',
-                    touchAction: 'none',
-                    userSelect: 'none',
-                  }}
-                >
-                  <button
-                    onClick={() => handleControlWidgetClick(widgetId)}
-                    onPointerDown={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      bumpCoverControlsInteraction();
-                      startCoverWidgetPointerAction(e, widgetId, 'move');
-                    }}
-                    className={`relative w-full h-full rounded-xl border transition-all ${
-                      meta.active
-                        ? 'shadow-sm border-transparent'
-                        : (isCoverTapToRevealMode ? hiddenModeInactiveWidgetClassName : visibleModeInactiveWidgetClassName)
-                    } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    style={meta.active ? themeAccentButtonStyle : undefined}
-                    title={meta.label}
-                    disabled={meta.disabled}
-                  >
-                    <span className="flex items-center justify-center">{meta.icon}</span>
-                    {meta.badge ? (
-                      <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
-                        {meta.badge}
-                      </span>
-                    ) : null}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
           {showControlWidgetAddPanel && (
             <button
               type="button"
