@@ -13848,10 +13848,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       ref={widgetSurfaceRef}
       className="relative min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24"
       style={themedPageBackgroundStyle}
-      onPointerDownCapture={() => {
+      onPointerDownCapture={(event) => {
         if (bottomNavTab !== 'home') return;
         if (coverHeaderControlsVisible) return;
         if (hasOpenWidgetWindow) return;
+        const interactiveTarget = event.target instanceof Element
+          ? event.target.closest('button, a, input, textarea, select, [role="button"], [data-no-global-unhide]')
+          : null;
+        if (interactiveTarget) return;
         setCoverHeaderControlsVisible(true);
       }}
     >
