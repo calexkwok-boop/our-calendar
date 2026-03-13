@@ -2564,7 +2564,6 @@ function App() {
   const [showControlWidgetAddPanel, setShowControlWidgetAddPanel] = useState(false);
   const [coverWidgetLayout, setCoverWidgetLayout] = useState({});
   const [controlWidgetPrefsReady, setControlWidgetPrefsReady] = useState(false);
-  const [isCoverWidgetDragging, setIsCoverWidgetDragging] = useState(false);
   const coverWidgetDragRef = useRef(null);
   const [sharedListGroups, setSharedListGroups] = useState([]);
   const [sharedListItems, setSharedListItems] = useState([]);
@@ -3036,17 +3035,26 @@ function App() {
     if (!coverHeaderControlsVisible) return;
     setCoverControlsInteractionTick((prev) => prev + 1);
   }, [coverHeaderControlsVisible]);
-  const hasOpenWidgetWindow = (
-    showControlWidgetAddPanel
-    || showSharePanel
-    || showListPanel
-    || showChatPanel
-    || showNotificationSettings
-    || showAiAssistant
-    || showScanHelpModal
-    || showSportsImportModal
-    || showCategoryEditor
-  );
+  const widgetCardOpenById = React.useMemo(() => ({
+    account: Boolean(showSharePanel),
+    notifications: Boolean(showNotificationSettings),
+    list: Boolean(showListPanel),
+    chat: Boolean(showChatPanel),
+    ai: Boolean(showAiAssistant),
+    scan: Boolean(showScanHelpModal),
+    import: Boolean(showSportsImportModal),
+    categories: Boolean(showCategoryEditor),
+  }), [
+    showSharePanel,
+    showNotificationSettings,
+    showListPanel,
+    showChatPanel,
+    showAiAssistant,
+    showScanHelpModal,
+    showSportsImportModal,
+    showCategoryEditor,
+  ]);
+  const hasOpenWidgetWindow = showControlWidgetAddPanel || Object.values(widgetCardOpenById).some(Boolean);
   useEffect(() => {
     if (!coverHeaderControlsVisible) return undefined;
     if (hasOpenWidgetWindow) return undefined;
@@ -3059,6 +3067,17 @@ function App() {
       window.clearTimeout(timeoutId);
     };
   }, [coverHeaderControlsVisible, activeLayerId, coverControlsInteractionTick, hasOpenWidgetWindow, bottomNavTab]);
+  useEffect(() => {
+    const handleWindowScroll = () => {
+      if (bottomNavTab !== 'home') return;
+      setShowControlWidgetAddPanel(false);
+      setCoverHeaderControlsVisible(false);
+    };
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleWindowScroll);
+    };
+  }, [bottomNavTab]);
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
   const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
   const activeShareRowForMe = (sharedCalendars || []).find((row) => {
@@ -13041,6 +13060,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (!rect.width || !rect.height) return;
       const dx = Number(event.clientX) - drag.startX;
       const dy = Number(event.clientY) - drag.startY;
+      if (!drag.moved) {
+        const travelPx = Math.sqrt((dx * dx) + (dy * dy));
+        if (travelPx < 6) return;
+        drag.moved = true;
+      }
       const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
       const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
       const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
@@ -13113,7 +13137,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
     const handlePointerUp = () => {
       coverWidgetDragRef.current = null;
-      setIsCoverWidgetDragging(false);
       flushControlWidgetPrefs();
     };
     window.addEventListener('pointermove', handlePointerMove);
@@ -13123,7 +13146,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerUp);
-      setIsCoverWidgetDragging(false);
     };
   }, [coverWidgetLayout, controlWidgetOrder, flushControlWidgetPrefs]);
 
@@ -13391,8 +13413,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       initialX: Number(layout.x || 50),
       initialY: Number(layout.y || 50),
       initialSize: Number(layout.size || WIDGET_DEFAULT_SIZE),
+      moved: false,
     };
-    setIsCoverWidgetDragging(true);
   };
   const startCoverWidgetDragFromAddPanel = (event, widgetId) => {
     const id = String(widgetId || '').trim();
@@ -13434,8 +13456,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       initialX: nextX,
       initialY: nextY,
       initialSize: size,
+      moved: false,
     };
-    setIsCoverWidgetDragging(true);
   };
   const handleControlWidgetClick = (widgetId) => {
     const id = String(widgetId || '').trim();
@@ -13487,28 +13509,28 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
   const getControlWidgetMeta = (widgetId) => {
     const id = String(widgetId || '').trim();
-    if (id === 'account') return { label: 'Account', icon: <User className="w-4 h-4" />, active: showSharePanel, disabled: false };
+    if (id === 'account') return { label: 'Account', icon: <User className="w-4 h-4" />, active: Boolean(widgetCardOpenById.account), disabled: false };
     if (id === 'notifications') return {
       label: 'Notifications',
       icon: notificationsEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />,
-      active: showNotificationSettings,
+      active: Boolean(widgetCardOpenById.notifications),
       disabled: false,
       badge: unreadInAppCount > 0 ? (unreadInAppCount > 99 ? '99+' : String(unreadInAppCount)) : '',
     };
-    if (id === 'list') return { label: 'List', icon: <Tag className="w-4 h-4" />, active: showListPanel, disabled: false };
+    if (id === 'list') return { label: 'List', icon: <Tag className="w-4 h-4" />, active: Boolean(widgetCardOpenById.list), disabled: false };
     if (id === 'chat') return {
       label: 'Chat',
       icon: <MessageSquare className="w-4 h-4" />,
-      active: showChatPanel,
+      active: Boolean(widgetCardOpenById.chat),
       disabled: false,
       badge: activeChatUnreadCount > 0 ? (activeChatUnreadCount > 99 ? '99+' : String(activeChatUnreadCount)) : '',
     };
     if (id === 'weather') return { label: 'Weather', icon: <span className="text-sm leading-none">🌤️</span>, active: showWeather, disabled: false };
-    if (id === 'categories') return { label: 'Categories', icon: <Settings className="w-4 h-4" />, active: showCategoryEditor, disabled: false };
+    if (id === 'categories') return { label: 'Categories', icon: <Settings className="w-4 h-4" />, active: Boolean(widgetCardOpenById.categories), disabled: false };
     if (id === 'theme') return { label: darkMode ? 'Light' : 'Dark', icon: darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />, active: false, disabled: false };
-    if (id === 'ai') return { label: 'AI', icon: <MessageSquare className="w-4 h-4" />, active: showAiAssistant, disabled: false };
-    if (id === 'scan') return { label: isScanningReminder ? 'Scanning' : 'Scan', icon: <Camera className="w-4 h-4" />, active: showScanHelpModal, disabled: isScanningReminder };
-    if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: showSportsImportModal, disabled: Boolean(activeSubCalendar) };
+    if (id === 'ai') return { label: 'AI', icon: <MessageSquare className="w-4 h-4" />, active: Boolean(widgetCardOpenById.ai), disabled: false };
+    if (id === 'scan') return { label: isScanningReminder ? 'Scanning' : 'Scan', icon: <Camera className="w-4 h-4" />, active: Boolean(widgetCardOpenById.scan), disabled: isScanningReminder };
+    if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: Boolean(widgetCardOpenById.import), disabled: Boolean(activeSubCalendar) };
     return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, disabled: false };
   };
   const hiddenModeInactiveWidgetClassName = 'bg-black/35 text-white border-white/20';
@@ -13829,17 +13851,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           className="absolute inset-x-0 top-0 z-30 pointer-events-none"
           style={{ height: 'calc(100vh - 6.75rem)' }}
         >
-          {isCoverWidgetDragging && (
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `linear-gradient(to right, ${darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(17,24,39,0.14)'} 1px, transparent 1px), linear-gradient(to bottom, ${darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(17,24,39,0.14)'} 1px, transparent 1px)`,
-                backgroundSize: `${(100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1))).toFixed(3)}% 100%, 100% ${(100 / Math.max(1, (WIDGET_GRID_ROWS - 1))).toFixed(3)}%`,
-                backgroundPosition: '0 0, 0 0',
-              }}
-            />
-          )}
-          {coverHeaderControlsVisible && !hasOpenWidgetWindow && activeControlWidgets.map((widgetId) => {
+          {bottomNavTab === 'home' && coverHeaderControlsVisible && !hasOpenWidgetWindow && activeControlWidgets.map((widgetId) => {
             const meta = getControlWidgetMeta(widgetId);
             const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: WIDGET_DEFAULT_SIZE };
             const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout?.size || WIDGET_DEFAULT_SIZE)));
