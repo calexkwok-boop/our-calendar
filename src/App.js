@@ -13855,11 +13855,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 )}
               </div>
                 </div>
-                {isCoverTapToRevealMode && (
-                  <h2 className="mt-1 text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
-                    {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                  </h2>
-                )}
+                <h2 className="mt-1 text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
+                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </h2>
               </div>
             <div className="relative shrink-0 pointer-events-auto">
               <div className="flex justify-end pointer-events-auto">
