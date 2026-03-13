@@ -147,7 +147,7 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'theme',
 ]);
 const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([]);
-const WIDGET_GRID_COLUMNS = 12;
+const WIDGET_GRID_COLUMNS = 10;
 const WIDGET_GRID_ROWS = 40;
 const WIDGET_MIN_SIZE = 38;
 const WIDGET_MAX_SIZE = 86;
