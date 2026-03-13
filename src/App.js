@@ -2553,8 +2553,6 @@ function App() {
   const [listPanelAttention, setListPanelAttention] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [controlWidgetOrder, setControlWidgetOrder] = useState([...DEFAULT_CONTROL_WIDGET_ORDER]);
-  const [controlWidgetSizes, setControlWidgetSizes] = useState({});
-  const [alwaysVisibleControlWidgets, setAlwaysVisibleControlWidgets] = useState([]);
   const [controlAddButtonIndex, setControlAddButtonIndex] = useState(0);
   const [showControlWidgetAddPanel, setShowControlWidgetAddPanel] = useState(false);
   const [draggingControlWidgetId, setDraggingControlWidgetId] = useState('');
@@ -12769,8 +12767,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
       setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
-      setControlWidgetSizes({});
-      setAlwaysVisibleControlWidgets([]);
       setControlAddButtonIndex(0);
       setShowControlWidgetAddPanel(false);
       return;
@@ -12794,33 +12790,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
       }
 
-      const rawSizes = localStorage.getItem(`${keyBase}-sizes`);
-      if (rawSizes) {
-        const parsedSizes = JSON.parse(rawSizes);
-        const nextSizes = {};
-        Object.entries(parsedSizes || {}).forEach(([id, size]) => {
-          const normalizedId = String(id || '').trim();
-          const normalizedSize = String(size || '').trim().toLowerCase();
-          if (!CONTROL_WIDGET_IDS.includes(normalizedId)) return;
-          if (!['sm', 'md', 'lg'].includes(normalizedSize)) return;
-          nextSizes[normalizedId] = normalizedSize;
-        });
-        setControlWidgetSizes(nextSizes);
-      } else {
-        setControlWidgetSizes({});
-      }
-
-      const rawPinned = localStorage.getItem(`${keyBase}-pinned`);
-      if (rawPinned) {
-        const parsedPinned = JSON.parse(rawPinned);
-        const nextPinned = Array.isArray(parsedPinned)
-          ? Array.from(new Set(parsedPinned.map((id) => String(id || '').trim()).filter((id) => CONTROL_WIDGET_IDS.includes(id))))
-          : [];
-        setAlwaysVisibleControlWidgets(nextPinned);
-      } else {
-        setAlwaysVisibleControlWidgets([]);
-      }
-
       const rawAddIndex = localStorage.getItem(`${keyBase}-add-index`);
       const parsedAddIndex = Number(rawAddIndex);
       if (Number.isFinite(parsedAddIndex)) {
@@ -12830,8 +12799,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
     } catch {
       setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
-      setControlWidgetSizes({});
-      setAlwaysVisibleControlWidgets([]);
       setControlAddButtonIndex(0);
     }
   }, [user?.id, activeLayerId]);
@@ -12841,11 +12808,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const keyBase = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
     try {
       localStorage.setItem(`${keyBase}-order`, JSON.stringify(controlWidgetOrder));
-      localStorage.setItem(`${keyBase}-sizes`, JSON.stringify(controlWidgetSizes));
-      localStorage.setItem(`${keyBase}-pinned`, JSON.stringify(alwaysVisibleControlWidgets));
       localStorage.setItem(`${keyBase}-add-index`, String(controlAddButtonIndex));
     } catch {}
-  }, [user?.id, activeLayerId, controlWidgetOrder, controlWidgetSizes, alwaysVisibleControlWidgets, controlAddButtonIndex]);
+  }, [user?.id, activeLayerId, controlWidgetOrder, controlAddButtonIndex]);
 
   if (isLoading) {
     return (
@@ -13047,7 +13012,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     CONTROL_ADD_BUTTON_ID,
     ...activeControlWidgets.slice(clampedControlAddButtonIndex),
   ];
-  const pinnedControlWidgets = activeControlWidgets.filter((id) => alwaysVisibleControlWidgets.includes(id));
   const moveHeaderControlButton = (dragId, targetId) => {
     const fromId = String(dragId || '').trim();
     const toId = String(targetId || '').trim();
@@ -13085,36 +13049,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return next.length > 0 ? next : normalized;
     });
   };
-  const toggleAlwaysVisibleControlWidget = (widgetId) => {
-    const id = String(widgetId || '').trim();
-    if (!id || !CONTROL_WIDGET_IDS.includes(id)) return;
-    setAlwaysVisibleControlWidgets((prev) => (
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
-    ));
-  };
-  const setControlWidgetSize = (widgetId, size) => {
-    const id = String(widgetId || '').trim();
-    const normalizedSize = String(size || '').trim().toLowerCase();
-    if (!id || !CONTROL_WIDGET_IDS.includes(id)) return;
-    if (!['sm', 'md', 'lg'].includes(normalizedSize)) return;
-    setControlWidgetSizes((prev) => ({ ...prev, [id]: normalizedSize }));
-  };
-  const getControlWidgetSize = (widgetId) => {
-    const id = String(widgetId || '').trim();
-    const raw = String(controlWidgetSizes?.[id] || 'sm').toLowerCase();
-    return ['sm', 'md', 'lg'].includes(raw) ? raw : 'sm';
-  };
   const getControlWidgetSpanClass = (widgetId) => {
-    if (widgetId === CONTROL_ADD_BUTTON_ID) return 'col-span-1';
-    const size = getControlWidgetSize(widgetId);
-    if (size === 'lg') return 'col-span-3 sm:col-span-2 lg:col-span-2';
-    if (size === 'md') return 'col-span-2 sm:col-span-2 lg:col-span-1';
     return 'col-span-1';
   };
   const resetControlWidgetLayout = () => {
     setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
-    setControlWidgetSizes({});
-    setAlwaysVisibleControlWidgets([]);
     setControlAddButtonIndex(0);
     setDraggingControlWidgetId('');
     setControlWidgetDropTargetId('');
@@ -13565,42 +13504,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                     </h2>
                   </div>
-                  <span className="shrink-0 mb-0.5 px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-black/35">
-                    Tap to show controls
-                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCoverHeaderControlsVisible(true);
+                      setShowControlWidgetAddPanel(true);
+                    }}
+                    className="shrink-0 mb-0.5 px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-black/40 border border-white/20 pointer-events-auto"
+                    title="Add widgets"
+                  >
+                    + Add
+                  </button>
                 </div>
               </div>
-              {pinnedControlWidgets.length > 0 && (
-                <div className="absolute right-3 bottom-3 z-30 flex flex-wrap justify-end gap-1.5 pointer-events-auto max-w-[78%]">
-                  {pinnedControlWidgets.map((widgetId) => {
-                    const meta = getControlWidgetMeta(widgetId);
-                    return (
-                      <button
-                        key={`pinned-${widgetId}`}
-                        onClick={() => handleControlWidgetClick(widgetId)}
-                        disabled={meta.disabled}
-                        className={`relative px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
-                          meta.active
-                            ? 'shadow-sm border-transparent'
-                            : 'bg-black/35 text-white border-white/20'
-                        } ${meta.disabled ? 'opacity-45 cursor-not-allowed' : ''}`}
-                        style={meta.active ? themeAccentButtonStyle : undefined}
-                        title={meta.label}
-                      >
-                        <span className="flex items-center gap-1">
-                          {meta.icon}
-                          <span className="truncate">{meta.label}</span>
-                        </span>
-                        {meta.badge ? (
-                          <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
-                            {meta.badge}
-                          </span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </>
           ) : (
             <>
@@ -13742,7 +13659,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       >
                         <span className="flex items-center justify-center gap-1.5">
                           {isAddButton ? <Plus className="w-4 h-4" /> : meta?.icon}
-                          <span className="truncate">{isAddButton ? '+ Add' : meta?.label}</span>
+                          {isAddButton ? <span className="truncate">+ Add</span> : null}
                         </span>
                         {!isAddButton && meta?.badge ? (
                           <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
@@ -13806,43 +13723,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     {hiddenControlWidgets.length === 0 && (
                       <span className="text-[11px] text-gray-500 dark:text-gray-400">All widgets already added.</span>
                     )}
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-1.5">
-                    <div className="text-[11px] text-gray-500 dark:text-gray-400">Customize size and always-visible widgets</div>
-                    {activeControlWidgets.map((widgetId) => {
-                      const meta = getControlWidgetMeta(widgetId);
-                      const currentSize = getControlWidgetSize(widgetId);
-                      const pinned = alwaysVisibleControlWidgets.includes(widgetId);
-                      return (
-                        <div key={`manage-${widgetId}`} className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 px-2 py-1.5">
-                          <div className="text-[11px] font-medium text-gray-700 dark:text-gray-200 truncate">{meta.label}</div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <select
-                              value={currentSize}
-                              onChange={(e) => setControlWidgetSize(widgetId, e.target.value)}
-                              className="px-1.5 py-1 rounded-md text-[10px] border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
-                              title="Widget size"
-                            >
-                              <option value="sm">S</option>
-                              <option value="md">M</option>
-                              <option value="lg">L</option>
-                            </select>
-                            <button
-                              onClick={() => toggleAlwaysVisibleControlWidget(widgetId)}
-                              className={`px-2 py-1 rounded-md text-[10px] font-semibold border transition-all ${
-                                pinned
-                                  ? 'border-transparent text-white'
-                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
-                              }`}
-                              style={pinned ? themeAccentButtonStyle : undefined}
-                              title="Always show on cover"
-                            >
-                              Always
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
                   </div>
                 </div>
               )}
