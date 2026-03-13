@@ -16525,7 +16525,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                             {event.createdBy && (
                               <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                 <User className="w-3 h-3" />
-                                {event.createdBy}
+                                {resolveHandleLikeLabel(event.createdBy, event.userId)}
                                 {event.isShared && (
                                   <span className="ml-1 px-1.5 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full text-xs">shared</span>
                                 )}
@@ -18647,7 +18647,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                       )}
                                     </button>
                                   )}
-                                  {event.createdBy && <div className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-0.5"><User className="w-2.5 h-2.5" />{event.createdBy}</div>}
+                                  {event.createdBy && <div className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-0.5"><User className="w-2.5 h-2.5" />{resolveHandleLikeLabel(event.createdBy, event.userId)}</div>}
                                   {/* Reactions */}
                                   <div className="flex flex-wrap items-center gap-1 mt-1">
                                     {Object.entries(event.reactions || {}).map(([emoji, users]) => (
