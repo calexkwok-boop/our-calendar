@@ -13783,7 +13783,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
               {showControlWidgetAddPanel && (
                 <div
-                  className="absolute right-0 bottom-full mb-2 w-[19rem] max-w-[calc(100vw-2.5rem)] p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600 overflow-visible pointer-events-auto"
+                  className="absolute right-0 top-full mt-2 w-[19rem] max-w-[calc(100vw-2.5rem)] p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600 overflow-visible pointer-events-auto"
                   onPointerDownCapture={bumpCoverControlsInteraction}
                 >
                   <div className="flex items-center justify-between gap-2 mb-1">
