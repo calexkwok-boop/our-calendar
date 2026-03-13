@@ -14245,10 +14245,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   }}
                   className={`shrink-0 px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
                     showControlWidgetAddPanel
-                      ? 'border-transparent shadow-sm'
+                      ? 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-500 shadow-sm'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
                   }`}
-                  style={showControlWidgetAddPanel ? themeAccentButtonStyle : undefined}
                   title="Add widgets"
                 >
                   + Add
