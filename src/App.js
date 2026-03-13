@@ -12895,6 +12895,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     } catch {}
   }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady]);
 
+  const flushControlWidgetPrefs = React.useCallback(() => {
+    if (!user?.id || !activeLayerId || !controlWidgetPrefsReady) return;
+    const keyBase = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
+    try {
+      localStorage.setItem(`${keyBase}-order`, JSON.stringify(controlWidgetOrder));
+      localStorage.setItem(`${keyBase}-layout`, JSON.stringify(coverWidgetLayout));
+    } catch {}
+  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady]);
+
   useEffect(() => {
     if (!controlWidgetPrefsReady) return;
     const activeIds = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
@@ -13003,6 +13012,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const handlePointerUp = () => {
       coverWidgetDragRef.current = null;
       setIsCoverWidgetDragging(false);
+      flushControlWidgetPrefs();
     };
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
@@ -13013,7 +13023,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       window.removeEventListener('pointercancel', handlePointerUp);
       setIsCoverWidgetDragging(false);
     };
-  }, [coverWidgetLayout, controlWidgetOrder]);
+  }, [coverWidgetLayout, controlWidgetOrder, flushControlWidgetPrefs]);
 
   if (isLoading) {
     return (
