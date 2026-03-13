@@ -152,6 +152,13 @@ const WIDGET_GRID_ROWS = 40;
 const WIDGET_MIN_SIZE = 38;
 const WIDGET_MAX_SIZE = 86;
 const WIDGET_DEFAULT_SIZE = WIDGET_MIN_SIZE;
+const HEADER_MODULE_IDS = Object.freeze(['icon', 'title', 'add', 'date']);
+const HEADER_MODULE_DEFAULT_LAYOUT = Object.freeze({
+  icon: { x: 9, y: 13, scale: 1 },
+  title: { x: 79, y: 10, scale: 1 },
+  date: { x: 79, y: 18, scale: 1 },
+  add: { x: 88, y: 27, scale: 1 },
+});
 
 // Source: ESPN Warriors 2025-26 schedule (remaining regular season), captured Mar 12, 2026.
 // Times are set in Pacific Time for this app's event time fields.
@@ -2565,6 +2572,10 @@ function App() {
   const [coverWidgetLayout, setCoverWidgetLayout] = useState({});
   const [controlWidgetPrefsReady, setControlWidgetPrefsReady] = useState(false);
   const coverWidgetDragRef = useRef(null);
+  const [headerModuleLayout, setHeaderModuleLayout] = useState({});
+  const [headerModulePrefsReady, setHeaderModulePrefsReady] = useState(false);
+  const headerModuleDragRef = useRef(null);
+  const headerModulePinchRef = useRef({ active: false, moduleId: '', startDistance: 0, startScale: 1 });
   const [sharedListGroups, setSharedListGroups] = useState([]);
   const [sharedListItems, setSharedListItems] = useState([]);
   const [calendarChatMessages, setCalendarChatMessages] = useState([]);
@@ -13003,6 +13014,155 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     } catch {}
   }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases, getControlWidgetStorageMapKey]);
 
+  const getHeaderModuleStorageKey = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
+    const userKey = String(uid || '').trim();
+    const layerKey = String(layerId || '').trim();
+    if (!userKey || !layerKey) return '';
+    return `header-modules-${userKey}-${layerKey}`;
+  }, [user?.id, activeLayerId]);
+
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) {
+      setHeaderModulePrefsReady(false);
+      setHeaderModuleLayout({ ...HEADER_MODULE_DEFAULT_LAYOUT });
+      return;
+    }
+    const key = getHeaderModuleStorageKey(user.id, activeLayerId);
+    setHeaderModulePrefsReady(false);
+    try {
+      const raw = key ? localStorage.getItem(key) : '';
+      const parsed = raw ? JSON.parse(raw) : {};
+      const next = { ...HEADER_MODULE_DEFAULT_LAYOUT };
+      HEADER_MODULE_IDS.forEach((id) => {
+        const src = parsed?.[id];
+        if (!src) return;
+        const x = Math.max(2, Math.min(98, Number(src?.x)));
+        const y = Math.max(2, Math.min(98, Number(src?.y)));
+        const scale = Math.max(0.7, Math.min(1.8, Number(src?.scale)));
+        if (Number.isFinite(x)) next[id].x = x;
+        if (Number.isFinite(y)) next[id].y = y;
+        if (Number.isFinite(scale)) next[id].scale = scale;
+      });
+      setHeaderModuleLayout(next);
+    } catch {
+      setHeaderModuleLayout({ ...HEADER_MODULE_DEFAULT_LAYOUT });
+    } finally {
+      setHeaderModulePrefsReady(true);
+    }
+  }, [user?.id, activeLayerId, getHeaderModuleStorageKey]);
+
+  useEffect(() => {
+    if (!user?.id || !activeLayerId || !headerModulePrefsReady) return;
+    const key = getHeaderModuleStorageKey(user.id, activeLayerId);
+    if (!key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(headerModuleLayout || {}));
+    } catch {}
+  }, [user?.id, activeLayerId, headerModulePrefsReady, headerModuleLayout, getHeaderModuleStorageKey]);
+
+  const startHeaderModulePointerDrag = (event, moduleId) => {
+    const id = String(moduleId || '').trim();
+    if (!HEADER_MODULE_IDS.includes(id)) return;
+    const layout = headerModuleLayout?.[id] || HEADER_MODULE_DEFAULT_LAYOUT[id];
+    if (!layout) return;
+    headerModuleDragRef.current = {
+      moduleId: id,
+      startX: Number(event.clientX),
+      startY: Number(event.clientY),
+      initialX: Number(layout.x || 50),
+      initialY: Number(layout.y || 50),
+    };
+  };
+
+  const startHeaderModulePinch = (event, moduleId) => {
+    const id = String(moduleId || '').trim();
+    if (!HEADER_MODULE_IDS.includes(id)) return;
+    const touches = event.touches;
+    if (!touches || touches.length < 2) return;
+    const a = touches[0];
+    const b = touches[1];
+    const dx = Number(a.clientX) - Number(b.clientX);
+    const dy = Number(a.clientY) - Number(b.clientY);
+    const distance = Math.sqrt((dx * dx) + (dy * dy));
+    if (!Number.isFinite(distance) || distance <= 0) return;
+    const layout = headerModuleLayout?.[id] || HEADER_MODULE_DEFAULT_LAYOUT[id];
+    headerModulePinchRef.current = {
+      active: true,
+      moduleId: id,
+      startDistance: distance,
+      startScale: Math.max(0.7, Math.min(1.8, Number(layout?.scale || 1))),
+    };
+  };
+
+  const moveHeaderModulePinch = (event, moduleId) => {
+    const pinch = headerModulePinchRef.current;
+    const id = String(moduleId || '').trim();
+    if (!pinch?.active || pinch.moduleId !== id) return;
+    const touches = event.touches;
+    if (!touches || touches.length < 2) return;
+    const a = touches[0];
+    const b = touches[1];
+    const dx = Number(a.clientX) - Number(b.clientX);
+    const dy = Number(a.clientY) - Number(b.clientY);
+    const distance = Math.sqrt((dx * dx) + (dy * dy));
+    if (!Number.isFinite(distance) || distance <= 0) return;
+    const ratio = distance / Math.max(1, Number(pinch.startDistance || 1));
+    const nextScale = Math.max(0.7, Math.min(1.8, Number(pinch.startScale || 1) * ratio));
+    setHeaderModuleLayout((prev) => ({
+      ...(prev || {}),
+      [id]: {
+        ...(prev?.[id] || HEADER_MODULE_DEFAULT_LAYOUT[id]),
+        scale: nextScale,
+      },
+    }));
+  };
+
+  const endHeaderModulePinch = (event, moduleId) => {
+    const pinch = headerModulePinchRef.current;
+    const id = String(moduleId || '').trim();
+    if (!pinch?.active || pinch.moduleId !== id) return;
+    if (!event.touches || event.touches.length < 2) {
+      headerModulePinchRef.current = { active: false, moduleId: '', startDistance: 0, startScale: 1 };
+    }
+  };
+
+  useEffect(() => {
+    const handlePointerMove = (event) => {
+      const drag = headerModuleDragRef.current;
+      if (!drag) return;
+      if (headerModulePinchRef.current?.active && headerModulePinchRef.current?.moduleId === drag.moduleId) return;
+      const container = layerHeaderCardRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const dx = Number(event.clientX) - Number(drag.startX);
+      const dy = Number(event.clientY) - Number(drag.startY);
+      const rawX = drag.initialX + ((dx / rect.width) * 100);
+      const rawY = drag.initialY + ((dy / rect.height) * 100);
+      const nextX = Math.max(2, Math.min(98, rawX));
+      const nextY = Math.max(2, Math.min(98, rawY));
+      setHeaderModuleLayout((prev) => ({
+        ...(prev || {}),
+        [drag.moduleId]: {
+          ...(prev?.[drag.moduleId] || HEADER_MODULE_DEFAULT_LAYOUT[drag.moduleId]),
+          x: nextX,
+          y: nextY,
+        },
+      }));
+    };
+    const handlePointerUp = () => {
+      headerModuleDragRef.current = null;
+    };
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+    };
+  }, []);
+
   useEffect(() => {
     if (!controlWidgetPrefsReady) return;
     const activeIds = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
@@ -13530,6 +13690,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: Boolean(widgetCardOpenById.import), disabled: Boolean(activeSubCalendar) };
     return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, disabled: false };
   };
+  const getHeaderModulePositionStyle = (moduleId) => {
+    const id = String(moduleId || '').trim();
+    const fallback = HEADER_MODULE_DEFAULT_LAYOUT[id] || { x: 50, y: 50, scale: 1 };
+    const value = headerModuleLayout?.[id] || fallback;
+    const x = Math.max(2, Math.min(98, Number(value?.x || fallback.x || 50)));
+    const y = Math.max(2, Math.min(98, Number(value?.y || fallback.y || 50)));
+    const scale = Math.max(0.7, Math.min(1.8, Number(value?.scale || fallback.scale || 1)));
+    return {
+      left: `${x}%`,
+      top: `${y}%`,
+      transform: `translate(-50%, -50%) scale(${scale})`,
+      transformOrigin: 'center center',
+    };
+  };
+  const onHeaderModulePointerDown = (event, moduleId) => {
+    if (!coverHeaderControlsVisible) return;
+    if (showControlWidgetAddPanel && moduleId !== 'add') return;
+    event.stopPropagation();
+    startHeaderModulePointerDrag(event, moduleId);
+  };
   const hiddenModeInactiveWidgetClassName = 'bg-black/35 text-white border-white/20';
   const visibleModeInactiveWidgetClassName = 'bg-gray-100/95 dark:bg-gray-700/95 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600';
   const chatTotalMembers = Math.max(1, Number(chatMembers.length || 0));
@@ -13935,6 +14115,182 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               ×
             </button>
           )}
+          {bottomNavTab === 'home' && (
+            <div className="absolute inset-0 z-[25] pointer-events-none">
+              <div
+                className="absolute pointer-events-auto"
+                style={getHeaderModulePositionStyle('icon')}
+                onPointerDown={(e) => onHeaderModulePointerDown(e, 'icon')}
+                onTouchStart={(e) => startHeaderModulePinch(e, 'icon')}
+                onTouchMove={(e) => moveHeaderModulePinch(e, 'icon')}
+                onTouchEnd={(e) => endHeaderModulePinch(e, 'icon')}
+                onTouchCancel={(e) => endHeaderModulePinch(e, 'icon')}
+              >
+                <div className="relative">
+                  {activeLayer?.icon_url ? (
+                    <img
+                      src={activeLayer.icon_url}
+                      alt="Calendar icon"
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
+                    />
+                  ) : (
+                    <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
+                      <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                    </div>
+                  )}
+                  {canManageActiveLayer && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openLayerMediaMenu();
+                      }}
+                      className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700"
+                      title="Edit cover/icon"
+                    >
+                      <Camera className="w-3 h-3 text-gray-600 dark:text-gray-300" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div
+                className="absolute pointer-events-auto select-none"
+                style={getHeaderModulePositionStyle('title')}
+                onPointerDown={(e) => onHeaderModulePointerDown(e, 'title')}
+                onTouchStart={(e) => startHeaderModulePinch(e, 'title')}
+                onTouchMove={(e) => moveHeaderModulePinch(e, 'title')}
+                onTouchEnd={(e) => endHeaderModulePinch(e, 'title')}
+                onTouchCancel={(e) => endHeaderModulePinch(e, 'title')}
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!canEditActiveLayerTitle) return;
+                    openTitleStyleModal();
+                  }}
+                  className={`text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate ${canEditActiveLayerTitle ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+                  style={activeLayerTitleTextStyle}
+                >
+                  {calendarTitle}
+                </button>
+              </div>
+
+              <div
+                className="absolute pointer-events-auto select-none"
+                style={getHeaderModulePositionStyle('date')}
+                onPointerDown={(e) => onHeaderModulePointerDown(e, 'date')}
+                onTouchStart={(e) => startHeaderModulePinch(e, 'date')}
+                onTouchMove={(e) => moveHeaderModulePinch(e, 'date')}
+                onTouchEnd={(e) => endHeaderModulePinch(e, 'date')}
+                onTouchCancel={(e) => endHeaderModulePinch(e, 'date')}
+              >
+                <div className="text-xs sm:text-sm font-semibold text-right" style={activeLayerTitleTextStyle}>
+                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </div>
+              </div>
+
+              <div
+                className="absolute pointer-events-auto"
+                style={getHeaderModulePositionStyle('add')}
+                onPointerDown={(e) => onHeaderModulePointerDown(e, 'add')}
+                onTouchStart={(e) => startHeaderModulePinch(e, 'add')}
+                onTouchMove={(e) => moveHeaderModulePinch(e, 'add')}
+                onTouchEnd={(e) => endHeaderModulePinch(e, 'add')}
+                onTouchCancel={(e) => endHeaderModulePinch(e, 'add')}
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowControlWidgetAddPanel(true);
+                  }}
+                  className={`shrink-0 px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
+                    showControlWidgetAddPanel
+                      ? 'border-transparent shadow-sm'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                  }`}
+                  style={showControlWidgetAddPanel ? themeAccentButtonStyle : undefined}
+                  title="Add widgets"
+                >
+                  + Add
+                </button>
+              </div>
+            </div>
+          )}
+          {showControlWidgetAddPanel && bottomNavTab === 'home' && (
+            <div
+              className="absolute right-3 sm:right-4 top-12 sm:top-14 z-[30] w-[19rem] max-w-[calc(100vw-2.5rem)] p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600 overflow-visible pointer-events-auto"
+              onPointerDownCapture={bumpCoverControlsInteraction}
+            >
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="text-[11px] text-gray-500 dark:text-gray-400">Add or remove widgets</div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={enableAllControlWidgets}
+                    className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
+                    title="Turn all widgets on"
+                  >
+                    All On
+                  </button>
+                  <button
+                    onClick={disableAllControlWidgets}
+                    className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
+                    title="Turn all widgets off"
+                  >
+                    All Off
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {CONTROL_WIDGET_IDS.map((widgetId) => {
+                  const meta = getControlWidgetMeta(widgetId);
+                  const enabled = activeControlWidgets.includes(widgetId);
+                  return (
+                    <div key={`toggle-inline-${widgetId}`} className="relative flex items-stretch gap-1.5">
+                      {enabled ? (
+                        <button
+                          type="button"
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            startCoverWidgetDragFromAddPanel(e, widgetId);
+                          }}
+                          className="absolute -left-10 top-0 z-10 w-8 h-8 rounded-xl border border-transparent text-white shadow-sm transition-all flex items-center justify-center"
+                          style={themeAccentButtonStyle}
+                          title={`Drag ${meta.label}`}
+                        >
+                          <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
+                          {meta.badge ? (
+                            <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                              {meta.badge}
+                            </span>
+                          ) : null}
+                        </button>
+                      ) : null}
+                      <button
+                        onClick={() => toggleControlWidget(widgetId)}
+                        className={`h-8 flex-1 px-2 rounded-lg text-[11px] font-medium border transition-all flex items-center justify-between gap-2 ${
+                          enabled
+                            ? 'border-transparent text-white'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600'
+                        }`}
+                        style={enabled ? themeAccentButtonStyle : undefined}
+                        title={`${enabled ? 'Remove' : 'Add'} ${meta.label}`}
+                      >
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
+                          <span className="truncate">{meta.label}</span>
+                        </span>
+                        <span className="text-[10px] font-semibold">{enabled ? 'On' : 'Off'}</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {isCoverTapToRevealMode ? (
             <>
               <button
@@ -13945,7 +14301,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 className="absolute inset-0 z-10 rounded-2xl"
                 aria-label="Show cover controls"
               />
-              <div className="absolute inset-x-4 sm:inset-x-5 top-3 sm:top-4 z-20 pointer-events-none">
+              <div className="hidden absolute inset-x-4 sm:inset-x-5 top-3 sm:top-4 z-20 pointer-events-none">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-3 w-full">
@@ -14002,7 +14358,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             </>
           ) : (
             <>
-          <div className="absolute inset-x-4 sm:inset-x-5 top-3 sm:top-4 z-20 pointer-events-none">
+          <div className="hidden absolute inset-x-4 sm:inset-x-5 top-3 sm:top-4 z-20 pointer-events-none">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-3 w-full">
