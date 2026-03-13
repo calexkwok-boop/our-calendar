@@ -13926,35 +13926,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
             </div>
           )}
-          <div className={`${isCoverTapToRevealMode ? 'mt-2 sm:mt-3 items-start' : 'mt-12 sm:mt-14 items-start'} flex justify-between gap-2`}>
+          {isCoverTapToRevealMode ? (
+            <>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-                className={`p-2 rounded-xl transition-all duration-200 ${isCoverTapToRevealMode ? '-mt-8 sm:-mt-10' : '-mt-6 sm:-mt-8'}`}
+                className="absolute left-3 sm:left-4 bottom-16 sm:bottom-18 z-20 p-2 rounded-xl transition-all duration-200"
                 style={undefined}
               >
-                <ChevronLeft
-                  className="w-6 h-6"
-                  style={undefined}
-                />
+                <ChevronLeft className="w-6 h-6" style={undefined} />
               </button>
-            <div className={`flex flex-col items-center gap-1 ${isCoverTapToRevealMode ? 'mt-24 sm:mt-28' : 'mt-8 sm:mt-10'}`}>
-              {calendarView !== 'month' && (
-                <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
-                  {calendarView === 'week'
-                    ? (() => {
-                      const days = getWeekDays(currentDate);
-                      const start = days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                      const end = days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                      return `${start} – ${end}`;
-                    })()
-                    : `Agenda · Next ${agendaRangeDays} days`
-                  }
-                </h2>
-              )}
-              <div
-                className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium"
+              <button
+                onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
+                className="absolute right-3 sm:right-4 bottom-16 sm:bottom-18 z-20 p-2 rounded-xl transition-all duration-200"
                 style={undefined}
               >
+                <ChevronRight className="w-6 h-6" style={undefined} />
+              </button>
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-6 sm:bottom-7 z-20 flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium">
                 <button
                   onClick={() => setCalendarView('month')}
                   className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
@@ -13977,18 +13965,63 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   Agenda
                 </button>
               </div>
-            </div>
+            </>
+          ) : (
+            <div className="mt-12 sm:mt-14 flex items-start justify-between gap-2">
               <button
-                onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-                className={`p-2 rounded-xl transition-all duration-200 ${isCoverTapToRevealMode ? '-mt-8 sm:-mt-10' : '-mt-6 sm:-mt-8'}`}
+                onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
+                className="p-2 rounded-xl transition-all duration-200 -mt-6 sm:-mt-8"
                 style={undefined}
               >
-                <ChevronRight
-                  className="w-6 h-6"
-                  style={undefined}
-                />
+                <ChevronLeft className="w-6 h-6" style={undefined} />
               </button>
-          </div>
+              <div className="flex flex-col items-center gap-1 mt-8 sm:mt-10">
+                {calendarView !== 'month' && (
+                  <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
+                    {calendarView === 'week'
+                      ? (() => {
+                        const days = getWeekDays(currentDate);
+                        const start = days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        const end = days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        return `${start} – ${end}`;
+                      })()
+                      : `Agenda · Next ${agendaRangeDays} days`
+                    }
+                  </h2>
+                )}
+                <div className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium" style={undefined}>
+                  <button
+                    onClick={() => setCalendarView('month')}
+                    className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                    style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
+                  >
+                    Month
+                  </button>
+                  <button
+                    onClick={() => setCalendarView('week')}
+                    className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                    style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
+                  >
+                    Week
+                  </button>
+                  <button
+                    onClick={() => setCalendarView('agenda')}
+                    className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                    style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
+                  >
+                    Agenda
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
+                className="p-2 rounded-xl transition-all duration-200 -mt-6 sm:-mt-8"
+                style={undefined}
+              >
+                <ChevronRight className="w-6 h-6" style={undefined} />
+              </button>
+            </div>
+          )}
             </>
           )}
         </div>
