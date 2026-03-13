@@ -13945,8 +13945,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 className="absolute inset-0 z-10 rounded-2xl"
                 aria-label="Show cover controls"
               />
-              <div className="absolute inset-x-4 sm:inset-x-5 bottom-4 sm:bottom-5 z-20 pointer-events-none">
-                <div className="flex items-end justify-between gap-3">
+              <div className="absolute inset-x-4 sm:inset-x-5 top-3 sm:top-4 z-20 pointer-events-none">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-3 w-full">
                       <div className="relative pointer-events-auto">
@@ -13976,29 +13976,31 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                         )}
                       </div>
                     </div>
-                    <h2 className="mt-1 text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
-                      {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                    </h2>
                   </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCoverHeaderControlsVisible(true);
-                      setShowControlWidgetAddPanel(true);
-                    }}
-                    className="shrink-0 mb-0.5 px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-black/40 border border-white/20 pointer-events-auto"
-                    title="Add widgets"
-                  >
-                    + Add
-                  </button>
+                  <div className="flex flex-col items-end gap-1 pointer-events-auto">
+                    <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate" style={activeLayerTitleTextStyle}>
+                      {calendarTitle}
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCoverHeaderControlsVisible(true);
+                        setShowControlWidgetAddPanel(true);
+                      }}
+                      className="shrink-0 px-2 py-1 rounded-lg text-[11px] font-semibold text-white bg-black/40 border border-white/20"
+                      title="Add widgets"
+                    >
+                      + Add
+                    </button>
+                  </div>
                 </div>
               </div>
             </>
           ) : (
             <>
-          <div className="absolute inset-x-4 sm:inset-x-5 bottom-4 sm:bottom-5 z-20 pointer-events-none">
-            <div className="flex items-end justify-between gap-3">
+          <div className="absolute inset-x-4 sm:inset-x-5 top-3 sm:top-4 z-20 pointer-events-none">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-3 w-full">
               <div className="relative shrink-0 pointer-events-auto">
@@ -14024,11 +14026,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 )}
               </div>
                 </div>
-                <h2 className="mt-1 text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
-                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </h2>
               </div>
-            <div className="relative shrink-0 pointer-events-auto">
+            <div className="relative shrink-0 pointer-events-auto flex flex-col items-end gap-1">
+              <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate pointer-events-none" style={activeLayerTitleTextStyle}>
+                {calendarTitle}
+              </h2>
               <div className="flex justify-end pointer-events-auto">
                 <button
                   onClick={() => setShowControlWidgetAddPanel(true)}
@@ -14119,40 +14121,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             </div>
           </div>
           </div>
-          {coverHeaderControlsVisible && (
-            <div className="absolute inset-x-4 sm:inset-x-5 top-4 sm:top-5 z-20 pointer-events-none">
-              <div className="pointer-events-auto max-w-[85%]">
-                <h1
-                  onClick={() => {
-                    if (!canEditActiveLayerTitle) return;
-                    openTitleStyleModal();
-                  }}
-                  className={`text-xl sm:text-2xl font-bold transition-opacity truncate ${canEditActiveLayerTitle ? 'cursor-pointer hover:opacity-70' : 'cursor-default opacity-90'}`}
-                  style={activeLayerTitleTextStyle}
-                  title={canEditActiveLayerTitle ? 'Click to edit title and style' : 'Read-only calendar'}
-                >
-                  {calendarTitle}
-                </h1>
-              </div>
-            </div>
-          )}
           {isCoverTapToRevealMode ? (
             <>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-                className="absolute left-3 sm:left-4 bottom-16 sm:bottom-18 z-20 p-2 rounded-xl transition-all duration-200"
+                className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-xl transition-all duration-200"
                 style={undefined}
               >
                 <ChevronLeft className="w-6 h-6" style={undefined} />
               </button>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-                className="absolute right-3 sm:right-4 bottom-16 sm:bottom-18 z-20 p-2 rounded-xl transition-all duration-200"
+                className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-xl transition-all duration-200"
                 style={undefined}
               >
                 <ChevronRight className="w-6 h-6" style={undefined} />
               </button>
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-12 sm:bottom-14 z-20 flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium">
+              <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 z-20 flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium">
                 <button
                   onClick={() => setCalendarView('month')}
                   className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
@@ -14177,15 +14162,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
             </>
           ) : (
-            <div className="mt-12 sm:mt-14 flex items-start justify-between gap-2">
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-between gap-2 px-2 sm:px-3">
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-                className="p-2 rounded-xl transition-all duration-200 -mt-6 sm:-mt-8"
+                className="p-2 rounded-xl transition-all duration-200"
                 style={undefined}
               >
                 <ChevronLeft className="w-6 h-6" style={undefined} />
               </button>
-              <div className="flex flex-col items-center gap-1 -mt-3 sm:-mt-4">
+              <div className="flex flex-col items-center gap-1">
                 <div className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium" style={undefined}>
                   <button
                     onClick={() => setCalendarView('month')}
@@ -14225,7 +14210,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-                className="p-2 rounded-xl transition-all duration-200 -mt-6 sm:-mt-8"
+                className="p-2 rounded-xl transition-all duration-200"
                 style={undefined}
               >
                 <ChevronRight className="w-6 h-6" style={undefined} />
