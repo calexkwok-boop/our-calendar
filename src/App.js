@@ -2553,9 +2553,12 @@ function App() {
   const [listPanelAttention, setListPanelAttention] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [controlWidgetOrder, setControlWidgetOrder] = useState([...DEFAULT_CONTROL_WIDGET_ORDER]);
+  const [controlWidgetSizes, setControlWidgetSizes] = useState({});
+  const [alwaysVisibleControlWidgets, setAlwaysVisibleControlWidgets] = useState([]);
   const [showControlWidgetAddPanel, setShowControlWidgetAddPanel] = useState(false);
   const [draggingControlWidgetId, setDraggingControlWidgetId] = useState('');
   const [controlWidgetDropTargetId, setControlWidgetDropTargetId] = useState('');
+  const [controlWidgetDropAtEnd, setControlWidgetDropAtEnd] = useState(false);
   const [sharedListGroups, setSharedListGroups] = useState([]);
   const [sharedListItems, setSharedListItems] = useState([]);
   const [calendarChatMessages, setCalendarChatMessages] = useState([]);
@@ -12783,39 +12786,72 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
       setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+      setControlWidgetSizes({});
+      setAlwaysVisibleControlWidgets([]);
       setShowControlWidgetAddPanel(false);
       return;
     }
-    const key = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
+    const keyBase = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
     try {
-      const raw = localStorage.getItem(key);
+      const raw = localStorage.getItem(`${keyBase}-order`);
       if (!raw) {
         setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
-        return;
+      } else {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+          setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+        } else {
+          const normalized = parsed
+            .map((id) => String(id || '').trim())
+            .filter((id) => CONTROL_WIDGET_IDS.includes(id));
+          const deduped = Array.from(new Set(normalized));
+          const missing = CONTROL_WIDGET_IDS.filter((id) => !deduped.includes(id));
+          setControlWidgetOrder([...deduped, ...missing]);
+        }
       }
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) {
-        setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
-        return;
+
+      const rawSizes = localStorage.getItem(`${keyBase}-sizes`);
+      if (rawSizes) {
+        const parsedSizes = JSON.parse(rawSizes);
+        const nextSizes = {};
+        Object.entries(parsedSizes || {}).forEach(([id, size]) => {
+          const normalizedId = String(id || '').trim();
+          const normalizedSize = String(size || '').trim().toLowerCase();
+          if (!CONTROL_WIDGET_IDS.includes(normalizedId)) return;
+          if (!['sm', 'md', 'lg'].includes(normalizedSize)) return;
+          nextSizes[normalizedId] = normalizedSize;
+        });
+        setControlWidgetSizes(nextSizes);
+      } else {
+        setControlWidgetSizes({});
       }
-      const normalized = parsed
-        .map((id) => String(id || '').trim())
-        .filter((id) => CONTROL_WIDGET_IDS.includes(id));
-      const deduped = Array.from(new Set(normalized));
-      const missing = CONTROL_WIDGET_IDS.filter((id) => !deduped.includes(id));
-      setControlWidgetOrder([...deduped, ...missing]);
+
+      const rawPinned = localStorage.getItem(`${keyBase}-pinned`);
+      if (rawPinned) {
+        const parsedPinned = JSON.parse(rawPinned);
+        const nextPinned = Array.isArray(parsedPinned)
+          ? Array.from(new Set(parsedPinned.map((id) => String(id || '').trim()).filter((id) => CONTROL_WIDGET_IDS.includes(id))))
+          : [];
+        setAlwaysVisibleControlWidgets(nextPinned);
+      } else {
+        setAlwaysVisibleControlWidgets([]);
+      }
     } catch {
       setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+      setControlWidgetSizes({});
+      setAlwaysVisibleControlWidgets([]);
     }
   }, [user?.id, activeLayerId]);
 
   useEffect(() => {
     if (!user?.id || !activeLayerId) return;
-    const key = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
+    const keyBase = `control-widgets-${String(user.id)}-${String(activeLayerId)}`;
     try {
-      localStorage.setItem(key, JSON.stringify(controlWidgetOrder));
+      localStorage.setItem(`${keyBase}-order`, JSON.stringify(controlWidgetOrder));
+      localStorage.setItem(`${keyBase}-sizes`, JSON.stringify(controlWidgetSizes));
+      localStorage.setItem(`${keyBase}-pinned`, JSON.stringify(alwaysVisibleControlWidgets));
     } catch {}
-  }, [user?.id, activeLayerId, controlWidgetOrder]);
+  }, [user?.id, activeLayerId, controlWidgetOrder, controlWidgetSizes, alwaysVisibleControlWidgets]);
 
   if (isLoading) {
     return (
@@ -13011,6 +13047,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const widgetOrderForRender = [...widgetOrderVisible, ...widgetOrderMissing];
   const activeControlWidgets = widgetOrderForRender.filter((id) => !widgetOrderMissing.includes(id));
   const hiddenControlWidgets = widgetOrderMissing;
+  const pinnedControlWidgets = activeControlWidgets.filter((id) => alwaysVisibleControlWidgets.includes(id));
   const reorderControlWidgets = (dragId, targetId) => {
     if (!dragId || !targetId || dragId === targetId) return;
     setControlWidgetOrder((prev) => {
@@ -13042,6 +13079,39 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const next = normalized.filter((v) => v !== id);
       return next.length > 0 ? next : normalized;
     });
+  };
+  const toggleAlwaysVisibleControlWidget = (widgetId) => {
+    const id = String(widgetId || '').trim();
+    if (!id || !CONTROL_WIDGET_IDS.includes(id)) return;
+    setAlwaysVisibleControlWidgets((prev) => (
+      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
+    ));
+  };
+  const setControlWidgetSize = (widgetId, size) => {
+    const id = String(widgetId || '').trim();
+    const normalizedSize = String(size || '').trim().toLowerCase();
+    if (!id || !CONTROL_WIDGET_IDS.includes(id)) return;
+    if (!['sm', 'md', 'lg'].includes(normalizedSize)) return;
+    setControlWidgetSizes((prev) => ({ ...prev, [id]: normalizedSize }));
+  };
+  const getControlWidgetSize = (widgetId) => {
+    const id = String(widgetId || '').trim();
+    const raw = String(controlWidgetSizes?.[id] || 'sm').toLowerCase();
+    return ['sm', 'md', 'lg'].includes(raw) ? raw : 'sm';
+  };
+  const getControlWidgetSpanClass = (widgetId) => {
+    const size = getControlWidgetSize(widgetId);
+    if (size === 'lg') return 'col-span-3 sm:col-span-2 lg:col-span-2';
+    if (size === 'md') return 'col-span-2 sm:col-span-2 lg:col-span-1';
+    return 'col-span-1';
+  };
+  const resetControlWidgetLayout = () => {
+    setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+    setControlWidgetSizes({});
+    setAlwaysVisibleControlWidgets([]);
+    setDraggingControlWidgetId('');
+    setControlWidgetDropTargetId('');
+    setControlWidgetDropAtEnd(false);
   };
   const handleControlWidgetClick = (widgetId) => {
     const id = String(widgetId || '').trim();
@@ -13430,7 +13500,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       <div className="max-w-6xl mx-auto">
         <div
           ref={layerHeaderCardRef}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[150px] sm:min-h-[185px] lg:min-h-[260px] relative"
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[165px] sm:min-h-[205px] lg:min-h-[285px] relative"
           onPointerDownCapture={() => {
             if (!hasActiveCoverPhoto || !coverHeaderControlsVisible) return;
             setCoverHeaderInteractionTick((v) => v + 1);
@@ -13480,6 +13550,37 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   </span>
                 </div>
               </div>
+              {pinnedControlWidgets.length > 0 && (
+                <div className="absolute right-3 bottom-3 z-30 flex flex-wrap justify-end gap-1.5 pointer-events-auto max-w-[78%]">
+                  {pinnedControlWidgets.map((widgetId) => {
+                    const meta = getControlWidgetMeta(widgetId);
+                    return (
+                      <button
+                        key={`pinned-${widgetId}`}
+                        onClick={() => handleControlWidgetClick(widgetId)}
+                        disabled={meta.disabled}
+                        className={`relative px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
+                          meta.active
+                            ? 'shadow-sm border-transparent'
+                            : 'bg-black/35 text-white border-white/20'
+                        } ${meta.disabled ? 'opacity-45 cursor-not-allowed' : ''}`}
+                        style={meta.active ? themeAccentButtonStyle : undefined}
+                        title={meta.label}
+                      >
+                        <span className="flex items-center gap-1">
+                          {meta.icon}
+                          <span className="truncate">{meta.label}</span>
+                        </span>
+                        {meta.badge ? (
+                          <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                            {meta.badge}
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -13544,8 +13645,36 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 >
                   + Add
                 </button>
+                <button
+                  onClick={resetControlWidgetLayout}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold border bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:shadow-sm transition-all"
+                  title="Reset widget layout"
+                >
+                  Reset
+                </button>
               </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-1.5">
+              <div
+                className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-1.5"
+                onDragOver={(e) => {
+                  if (!draggingControlWidgetId) return;
+                  e.preventDefault();
+                  setControlWidgetDropAtEnd(true);
+                  setControlWidgetDropTargetId('');
+                }}
+                onDrop={(e) => {
+                  if (!draggingControlWidgetId) return;
+                  e.preventDefault();
+                  setControlWidgetOrder((prev) => {
+                    const normalized = [...new Set(prev.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
+                    const without = normalized.filter((id) => id !== draggingControlWidgetId);
+                    const missing = CONTROL_WIDGET_IDS.filter((id) => !without.includes(id));
+                    return [...without, draggingControlWidgetId, ...missing.filter((id) => id !== draggingControlWidgetId)];
+                  });
+                  setDraggingControlWidgetId('');
+                  setControlWidgetDropTargetId('');
+                  setControlWidgetDropAtEnd(false);
+                }}
+              >
                 {activeControlWidgets.map((widgetId) => {
                   const meta = getControlWidgetMeta(widgetId);
                   const isDropTarget = controlWidgetDropTargetId === widgetId && draggingControlWidgetId && draggingControlWidgetId !== widgetId;
@@ -13556,24 +13685,30 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       onDragStart={() => {
                         setDraggingControlWidgetId(widgetId);
                         setControlWidgetDropTargetId('');
+                        setControlWidgetDropAtEnd(false);
                       }}
                       onDragEnd={() => {
                         setDraggingControlWidgetId('');
                         setControlWidgetDropTargetId('');
+                        setControlWidgetDropAtEnd(false);
                       }}
                       onDragOver={(e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         if (draggingControlWidgetId && draggingControlWidgetId !== widgetId) {
                           setControlWidgetDropTargetId(widgetId);
+                          setControlWidgetDropAtEnd(false);
                         }
                       }}
                       onDrop={(e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         reorderControlWidgets(draggingControlWidgetId, widgetId);
                         setDraggingControlWidgetId('');
                         setControlWidgetDropTargetId('');
+                        setControlWidgetDropAtEnd(false);
                       }}
-                      className={`relative rounded-xl border transition-all ${isDropTarget ? 'ring-2 ring-offset-1 ring-purple-400 dark:ring-purple-500' : ''}`}
+                      className={`relative rounded-xl border transition-all ${getControlWidgetSpanClass(widgetId)} ${isDropTarget ? 'ring-2 ring-offset-1 ring-purple-400 dark:ring-purple-500' : ''}`}
                     >
                       <button
                         onClick={() => handleControlWidgetClick(widgetId)}
@@ -13611,6 +13746,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     </div>
                   );
                 })}
+                <div
+                  className={`col-span-1 min-h-[40px] rounded-xl border-2 border-dashed flex items-center justify-center text-[10px] font-semibold transition-all ${
+                    draggingControlWidgetId
+                      ? (controlWidgetDropAtEnd ? 'border-purple-400 text-purple-500 dark:text-purple-300 bg-purple-50/70 dark:bg-purple-900/20' : 'border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500')
+                      : 'border-transparent text-transparent'
+                  }`}
+                >
+                  Drop at end
+                </div>
               </div>
               {showControlWidgetAddPanel && (
                 <div className="mt-2 p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600">
@@ -13632,6 +13776,43 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     {hiddenControlWidgets.length === 0 && (
                       <span className="text-[11px] text-gray-500 dark:text-gray-400">All widgets already added.</span>
                     )}
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-1.5">
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400">Customize size and always-visible widgets</div>
+                    {activeControlWidgets.map((widgetId) => {
+                      const meta = getControlWidgetMeta(widgetId);
+                      const currentSize = getControlWidgetSize(widgetId);
+                      const pinned = alwaysVisibleControlWidgets.includes(widgetId);
+                      return (
+                        <div key={`manage-${widgetId}`} className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 px-2 py-1.5">
+                          <div className="text-[11px] font-medium text-gray-700 dark:text-gray-200 truncate">{meta.label}</div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <select
+                              value={currentSize}
+                              onChange={(e) => setControlWidgetSize(widgetId, e.target.value)}
+                              className="px-1.5 py-1 rounded-md text-[10px] border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+                              title="Widget size"
+                            >
+                              <option value="sm">S</option>
+                              <option value="md">M</option>
+                              <option value="lg">L</option>
+                            </select>
+                            <button
+                              onClick={() => toggleAlwaysVisibleControlWidget(widgetId)}
+                              className={`px-2 py-1 rounded-md text-[10px] font-semibold border transition-all ${
+                                pinned
+                                  ? 'border-transparent text-white'
+                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                              }`}
+                              style={pinned ? themeAccentButtonStyle : undefined}
+                              title="Always show on cover"
+                            >
+                              Always
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
