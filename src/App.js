@@ -324,6 +324,7 @@ function App() {
   const [pendingThemeMatchStyle, setPendingThemeMatchStyle] = useState(null);
   const [coverOpacityPreview, setCoverOpacityPreview] = useState(null);
   const [coverHeaderControlsVisible, setCoverHeaderControlsVisible] = useState(true);
+  const [coverControlsInteractionTick, setCoverControlsInteractionTick] = useState(0);
   const coverOpacityPreviewValueRef = useRef(null);
   const coverOpacityPreviewRafRef = useRef(null);
   const [user, setUser] = useState(null);
@@ -3029,6 +3030,10 @@ function App() {
     setAccountHandleInput(String(currentUser || '').trim());
     setAccountHandleMessage('');
   }, [showSharePanel, currentUser]);
+  const bumpCoverControlsInteraction = React.useCallback(() => {
+    if (!coverHeaderControlsVisible) return;
+    setCoverControlsInteractionTick((prev) => prev + 1);
+  }, [coverHeaderControlsVisible]);
   useEffect(() => {
     if (!coverHeaderControlsVisible) return undefined;
     const timeoutId = window.setTimeout(() => {
@@ -3038,7 +3043,7 @@ function App() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [coverHeaderControlsVisible, showControlWidgetAddPanel, activeLayerId]);
+  }, [coverHeaderControlsVisible, showControlWidgetAddPanel, activeLayerId, coverControlsInteractionTick]);
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
   const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
   const activeShareRowForMe = (sharedCalendars || []).find((row) => {
@@ -13602,6 +13607,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   onPointerDown={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
+                    bumpCoverControlsInteraction();
                     startCoverWidgetPointerAction(e, widgetId, 'move');
                   }}
                   className={`relative w-full h-full rounded-xl border transition-all ${
@@ -13625,6 +13631,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   onPointerDown={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
+                    bumpCoverControlsInteraction();
                     startCoverWidgetPointerAction(e, widgetId, 'resize');
                   }}
                   className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white/90 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-[10px] text-gray-700 dark:text-gray-300 leading-none flex items-center justify-center"
@@ -13641,6 +13648,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[165px] sm:min-h-[205px] lg:min-h-[285px] relative"
           onPointerDownCapture={() => {
             if (!coverHeaderControlsVisible) return;
+            bumpCoverControlsInteraction();
           }}
           style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
             ? {
@@ -13759,6 +13767,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               <div className="flex justify-end pointer-events-auto">
                 <button
                   onClick={() => setShowControlWidgetAddPanel(true)}
+                  onPointerDown={bumpCoverControlsInteraction}
                   className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                     showControlWidgetAddPanel
                       ? 'border-transparent shadow-sm'
@@ -13771,7 +13780,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </button>
               </div>
               {showControlWidgetAddPanel && (
-                <div className="absolute right-0 bottom-full mb-2 w-[19rem] max-w-[calc(100vw-2.5rem)] p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600 overflow-visible pointer-events-auto">
+                <div
+                  className="absolute right-0 bottom-full mb-2 w-[19rem] max-w-[calc(100vw-2.5rem)] p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600 overflow-visible pointer-events-auto"
+                  onPointerDownCapture={bumpCoverControlsInteraction}
+                >
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="text-[11px] text-gray-500 dark:text-gray-400">Add or remove widgets</div>
                     <div className="flex items-center gap-1.5">
