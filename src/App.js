@@ -13981,6 +13981,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate" style={activeLayerTitleTextStyle}>
                       {calendarTitle}
                     </h2>
+                    <div className="text-xs sm:text-sm font-semibold text-right" style={activeLayerTitleTextStyle}>
+                      {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </div>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -14031,6 +14034,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate pointer-events-none" style={activeLayerTitleTextStyle}>
                 {calendarTitle}
               </h2>
+              <div className="text-xs sm:text-sm font-semibold text-right pointer-events-none" style={activeLayerTitleTextStyle}>
+                {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </div>
               <div className="flex justify-end pointer-events-auto">
                 <button
                   onClick={() => setShowControlWidgetAddPanel(true)}
