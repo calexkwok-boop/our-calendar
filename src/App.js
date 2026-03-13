@@ -13110,6 +13110,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const readInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 1 : 0), 0);
   const activeChatUnreadCount = Number(chatUnreadCounts[String(activeLayerId || '')] || 0);
   const activeControlWidgets = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
+  const getWidgetSlotForIndex = (index) => {
+    const safeIndex = Math.max(0, Number(index) || 0);
+    const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
+    const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
+    const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
+    const columnsPerRow = Math.max(1, Math.min(6, WIDGET_GRID_COLUMNS));
+    const col = safeIndex % columnsPerRow;
+    const row = Math.floor(safeIndex / columnsPerRow);
+    const slotX = ((col + 1) * 100) / (columnsPerRow + 1);
+    const slotY = 10 + (row * Math.max(yStep * 3, 8));
+    return {
+      x: Math.max(2, Math.min(98, snap(slotX, xStep))),
+      y: Math.max(2, Math.min(98, snap(slotY, yStep))),
+    };
+  };
   const addControlWidget = (widgetId) => {
     const id = String(widgetId || '').trim();
     if (!id || !CONTROL_WIDGET_IDS.includes(id)) return;
@@ -13117,6 +13132,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const normalized = [...new Set(prev.filter((v) => CONTROL_WIDGET_IDS.includes(v)))];
       if (normalized.includes(id)) return normalized;
       return [id, ...normalized];
+    });
+    setCoverWidgetLayout((prev) => {
+      if (prev?.[id]) return prev;
+      const index = activeControlWidgets.length;
+      const slot = getWidgetSlotForIndex(index);
+      return {
+        ...(prev || {}),
+        [id]: { ...slot, size: WIDGET_DEFAULT_SIZE },
+      };
     });
   };
   const removeControlWidget = (widgetId) => {
@@ -13778,27 +13802,35 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       const meta = getControlWidgetMeta(widgetId);
                       const enabled = activeControlWidgets.includes(widgetId);
                       return (
-                        <button
-                          key={`toggle-${widgetId}`}
-                          onClick={() => toggleControlWidget(widgetId)}
-                          className={`px-2 py-1.5 rounded-lg text-[11px] font-medium border transition-all flex items-center justify-between gap-2 ${
-                            enabled
-                              ? 'border-transparent text-white'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600'
-                          }`}
-                          style={enabled ? themeAccentButtonStyle : undefined}
-                          title={`${enabled ? 'Remove' : 'Add'} ${meta.label}`}
-                        >
-                          <span className="flex items-center gap-1.5">
-                            {enabled ? (
+                        <div key={`toggle-${widgetId}`} className="flex items-stretch gap-1.5">
+                          <div
+                            className={`w-8 h-8 rounded-lg border flex items-center justify-center ${
+                              enabled
+                                ? 'border-transparent text-white shadow-sm'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                            }`}
+                            style={enabled ? themeAccentButtonStyle : undefined}
+                            title={enabled ? `${meta.label} widget active` : `${meta.label} widget inactive`}
+                          >
+                            <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
+                          </div>
+                          <button
+                            onClick={() => toggleControlWidget(widgetId)}
+                            className={`h-8 flex-1 px-2 rounded-lg text-[11px] font-medium border transition-all flex items-center justify-between gap-2 ${
+                              enabled
+                                ? 'border-transparent text-white'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600'
+                            }`}
+                            style={enabled ? themeAccentButtonStyle : undefined}
+                            title={`${enabled ? 'Remove' : 'Add'} ${meta.label}`}
+                          >
+                            <span className="flex items-center gap-1.5 min-w-0">
                               <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
-                            ) : (
-                              <span className="inline-block w-4 h-4" aria-hidden="true" />
-                            )}
-                            <span>{meta.label}</span>
-                          </span>
-                          <span className="text-[10px] font-semibold">{enabled ? 'On' : 'Off'}</span>
-                        </button>
+                              <span className="truncate">{meta.label}</span>
+                            </span>
+                            <span className="text-[10px] font-semibold">{enabled ? 'On' : 'Off'}</span>
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
