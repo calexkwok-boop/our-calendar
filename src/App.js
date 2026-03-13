@@ -3025,9 +3025,6 @@ function App() {
   }, [showTitleStyleModal]);
   const activeLayer = layers.find(layer => layer.id === activeLayerId) || null;
   useEffect(() => {
-    setCoverHeaderControlsVisible(!activeLayer?.header_bg_url);
-  }, [activeLayerId, activeLayer?.header_bg_url]);
-  useEffect(() => {
     if (!showSharePanel) return;
     setAccountHandleInput(String(currentUser || '').trim());
     setAccountHandleMessage('');
@@ -13730,17 +13727,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
             </div>
             <div className="relative shrink-0 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => setCoverHeaderControlsVisible(false)}
-                className="absolute -top-5 -right-2 z-20 px-2 py-1 rounded-lg text-[10px] font-semibold bg-gray-900/70 text-white border border-white/25 hover:bg-gray-900 transition-all"
-                title="Hide controls"
-              >
-                Hide
-              </button>
               <div className="flex justify-end">
                 <button
-                  onClick={() => setShowControlWidgetAddPanel((prev) => !prev)}
+                  onClick={() => setShowControlWidgetAddPanel(true)}
                   className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                     showControlWidgetAddPanel
                       ? 'border-transparent shadow-sm'
@@ -13757,6 +13746,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="text-[11px] text-gray-500 dark:text-gray-400">Add or remove widgets</div>
                     <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setShowControlWidgetAddPanel(false)}
+                        className="w-6 h-6 rounded-md text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 flex items-center justify-center"
+                        title="Close"
+                        aria-label="Close add widgets panel"
+                      >
+                        ×
+                      </button>
                       <button
                         onClick={enableAllControlWidgets}
                         className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
