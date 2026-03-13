@@ -2564,6 +2564,7 @@ function App() {
   const [showControlWidgetAddPanel, setShowControlWidgetAddPanel] = useState(false);
   const [coverWidgetLayout, setCoverWidgetLayout] = useState({});
   const [controlWidgetPrefsReady, setControlWidgetPrefsReady] = useState(false);
+  const [isCoverWidgetDragging, setIsCoverWidgetDragging] = useState(false);
   const coverWidgetDragRef = useRef(null);
   const [sharedListGroups, setSharedListGroups] = useState([]);
   const [sharedListItems, setSharedListItems] = useState([]);
@@ -12996,6 +12997,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
     const handlePointerUp = () => {
       coverWidgetDragRef.current = null;
+      setIsCoverWidgetDragging(false);
     };
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
@@ -13004,6 +13006,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerUp);
+      setIsCoverWidgetDragging(false);
     };
   }, [coverWidgetLayout, controlWidgetOrder]);
 
@@ -13272,6 +13275,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       initialY: Number(layout.y || 50),
       initialSize: Number(layout.size || WIDGET_DEFAULT_SIZE),
     };
+    setIsCoverWidgetDragging(true);
   };
   const startCoverWidgetDragFromAddPanel = (event, widgetId) => {
     const id = String(widgetId || '').trim();
@@ -13309,6 +13313,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       initialY: nextY,
       initialSize: size,
     };
+    setIsCoverWidgetDragging(true);
   };
   const handleControlWidgetClick = (widgetId) => {
     const id = String(widgetId || '').trim();
@@ -13714,6 +13719,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             : undefined}
         >
           <div ref={widgetOverlayRef} className="absolute inset-0 z-30 pointer-events-none">
+            {isCoverWidgetDragging && (
+              <div
+                className="absolute inset-0 rounded-2xl"
+                style={{
+                  backgroundImage: `linear-gradient(to right, ${darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(17,24,39,0.14)'} 1px, transparent 1px), linear-gradient(to bottom, ${darkMode ? 'rgba(255,255,255,0.14)' : 'rgba(17,24,39,0.14)'} 1px, transparent 1px)`,
+                  backgroundSize: `${(100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1))).toFixed(3)}% 100%, 100% ${(100 / Math.max(1, (WIDGET_GRID_ROWS - 1))).toFixed(3)}%`,
+                  backgroundPosition: '0 0, 0 0',
+                }}
+              />
+            )}
             {coverHeaderControlsVisible && !showControlWidgetAddPanel && activeControlWidgets.map((widgetId) => {
               const meta = getControlWidgetMeta(widgetId);
               const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: WIDGET_DEFAULT_SIZE };
