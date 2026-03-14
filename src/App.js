@@ -17274,35 +17274,47 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             return acc;
           }, {});
           const gauntletShellStyle = {
-            borderColor: themeAccentBorder,
+            borderColor: darkMode ? 'rgba(96,165,250,0.24)' : 'rgba(147,197,253,0.65)',
             backgroundImage: darkMode
-              ? `linear-gradient(180deg, rgba(17,24,39,0.96) 0%, rgba(17,24,39,0.92) 100%)`
-              : `linear-gradient(180deg, #fffdf7 0%, ${themeAccentSofterBg} 100%)`,
+              ? 'linear-gradient(180deg, rgba(15,23,42,0.98) 0%, rgba(17,24,39,0.94) 100%)'
+              : 'linear-gradient(180deg, #ffffff 0%, #f8fbff 52%, #eef6ff 100%)',
             boxShadow: darkMode
               ? `0 20px 48px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.03)`
-              : `0 18px 42px rgba(15,23,42,0.09), inset 0 1px 0 rgba(255,255,255,0.85)`,
+              : '0 20px 44px rgba(37,99,235,0.08), inset 0 1px 0 rgba(255,255,255,0.92)',
           };
           const gauntletHeroStyle = {
-            borderColor: darkMode ? 'rgba(251,191,36,0.24)' : 'rgba(217,119,6,0.18)',
+            borderColor: darkMode ? 'rgba(96,165,250,0.22)' : 'rgba(147,197,253,0.55)',
             backgroundImage: darkMode
-              ? 'linear-gradient(135deg, rgba(8,47,73,0.78) 0%, rgba(17,24,39,0.92) 44%, rgba(120,53,15,0.72) 100%)'
-              : 'linear-gradient(135deg, rgba(255,251,235,0.98) 0%, rgba(236,253,245,0.98) 42%, rgba(255,237,213,0.98) 100%)',
+              ? 'linear-gradient(135deg, rgba(30,64,175,0.58) 0%, rgba(15,23,42,0.94) 44%, rgba(154,52,18,0.44) 100%)'
+              : 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(239,246,255,0.98) 46%, rgba(255,237,213,0.95) 100%)',
             boxShadow: darkMode
               ? 'inset 0 1px 0 rgba(255,255,255,0.05)'
               : 'inset 0 1px 0 rgba(255,255,255,0.9)',
           };
           const gauntletSubtleCardStyle = {
-            borderColor: themeAccentBorder,
+            borderColor: darkMode ? 'rgba(96,165,250,0.16)' : 'rgba(191,219,254,0.8)',
             backgroundImage: darkMode
-              ? 'linear-gradient(180deg, rgba(31,41,55,0.92) 0%, rgba(17,24,39,0.9) 100%)'
-              : 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.96) 100%)',
+              ? 'linear-gradient(180deg, rgba(30,41,59,0.92) 0%, rgba(15,23,42,0.92) 100%)'
+              : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(245,249,255,0.98) 100%)',
           };
           const gauntletCourtCardStyle = {
-            borderColor: darkMode ? 'rgba(16,185,129,0.28)' : 'rgba(5,150,105,0.18)',
+            borderColor: darkMode ? 'rgba(96,165,250,0.2)' : 'rgba(147,197,253,0.55)',
             backgroundImage: darkMode
-              ? 'linear-gradient(180deg, rgba(6,78,59,0.34) 0%, rgba(17,24,39,0.88) 100%)'
-              : 'linear-gradient(180deg, rgba(236,253,245,0.96) 0%, rgba(255,255,255,0.98) 100%)',
-            boxShadow: darkMode ? 'inset 0 1px 0 rgba(255,255,255,0.03)' : '0 10px 26px rgba(15,23,42,0.05)',
+              ? 'linear-gradient(180deg, rgba(30,64,175,0.18) 0%, rgba(15,23,42,0.9) 100%)'
+              : 'linear-gradient(180deg, rgba(248,251,255,0.99) 0%, rgba(255,255,255,0.99) 100%)',
+            boxShadow: darkMode ? 'inset 0 1px 0 rgba(255,255,255,0.03)' : '0 12px 30px rgba(37,99,235,0.06)',
+          };
+          const gauntletPrimaryButtonStyle = {
+            backgroundImage: darkMode
+              ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 56%, #ea580c 100%)'
+              : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 58%, #f97316 100%)',
+            boxShadow: darkMode
+              ? '0 10px 24px rgba(37,99,235,0.22)'
+              : '0 12px 24px rgba(37,99,235,0.18)',
+          };
+          const gauntletSecondaryButtonStyle = {
+            borderColor: darkMode ? 'rgba(96,165,250,0.16)' : 'rgba(191,219,254,0.85)',
+            backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.9)',
           };
           const gauntletStatPillClass = 'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]';
           const renderTeamName = (playerIds) => (playerIds || []).map((playerId) => (
@@ -17335,10 +17347,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           return (
             <div className="rounded-[1.75rem] p-4 sm:p-5 mb-6 border backdrop-blur-sm" style={gauntletShellStyle}>
               <div className="rounded-[1.4rem] border px-4 py-4 sm:px-5 sm:py-5 mb-4 overflow-hidden relative" style={gauntletHeroStyle}>
-                <div className="absolute inset-y-0 right-0 w-40 opacity-25 pointer-events-none" style={{ background: 'radial-gradient(circle at center, rgba(251,191,36,0.45), transparent 68%)' }} />
+                <div className="absolute inset-y-0 right-0 w-40 opacity-25 pointer-events-none" style={{ background: 'radial-gradient(circle at center, rgba(59,130,246,0.42), transparent 68%)' }} />
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-200">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-blue-200/70 bg-white/80 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700 dark:border-blue-400/20 dark:bg-white/10 dark:text-blue-100">
                       <span>🥒</span>
                       <span>Tournament Suite</span>
                     </div>
@@ -17366,7 +17378,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </div>
               </div>
 
-              <div className="rounded-2xl border px-3 py-2.5 mb-4 text-xs text-amber-800 dark:text-amber-200" style={{ ...gauntletSubtleCardStyle, borderColor: darkMode ? 'rgba(251,191,36,0.2)' : 'rgba(217,119,6,0.18)' }}>
+              <div className="rounded-2xl border px-3 py-2.5 mb-4 text-xs text-blue-800 dark:text-blue-100" style={{ ...gauntletSubtleCardStyle, borderColor: darkMode ? 'rgba(96,165,250,0.22)' : 'rgba(147,197,253,0.65)' }}>
                 This bracket is saved on this device for the active layer. When player counts are not divisible by 4, byes rotate automatically and do not count as wins or losses.
               </div>
 
@@ -17374,20 +17386,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 <button
                   onClick={() => { setUseManualGauntletRoster(true); setGauntletError(''); }}
                   className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all border ${useManualGauntletRoster ? 'text-white shadow-lg' : 'border-transparent text-gray-700 dark:text-gray-200 hover:bg-white/50 dark:hover:bg-white/5'}`}
-                  style={useManualGauntletRoster ? themeAccentButtonStyle : undefined}
+                  style={useManualGauntletRoster ? gauntletPrimaryButtonStyle : undefined}
                 >
                   Manual Names
                 </button>
                 <button
                   onClick={() => { setUseManualGauntletRoster(false); setGauntletError(''); }}
                   className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all border ${!useManualGauntletRoster ? 'text-white shadow-lg' : 'border-transparent text-gray-700 dark:text-gray-200 hover:bg-white/50 dark:hover:bg-white/5'}`}
-                  style={!useManualGauntletRoster ? themeAccentButtonStyle : undefined}
+                  style={!useManualGauntletRoster ? gauntletPrimaryButtonStyle : undefined}
                 >
                   Popup Signups
                 </button>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_10rem] rounded-[1.35rem] border p-3.5 sm:p-4" style={gauntletSubtleCardStyle}>
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8.5rem_10rem] rounded-[1.35rem] border p-3.5 sm:p-4" style={gauntletSubtleCardStyle}>
                 {useManualGauntletRoster ? (
                   <textarea
                     value={manualGauntletRosterInput}
@@ -17418,20 +17430,35 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     )}
                   </select>
                 )}
-                <input
-                  type="number"
-                  min="1"
-                  value={gauntletDraftRounds}
-                  onChange={(e) => setGauntletDraftRounds(e.target.value)}
-                  className="px-3 py-2.5 text-base sm:text-sm border border-gray-300/80 dark:border-gray-600 dark:bg-white/70 dark:bg-gray-800/90 dark:text-white rounded-xl shadow-sm"
-                  style={{ fontSize: '16px' }}
-                  placeholder="Games"
-                />
+                <div className="rounded-xl border border-blue-200/70 dark:border-blue-400/15 bg-white dark:bg-gray-800/90 shadow-sm overflow-hidden">
+                  <div className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">Games</div>
+                  <div className="flex items-center px-1.5 pb-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setGauntletDraftRounds((prev) => String(Math.max(1, (parseInt(String(prev || '1'), 10) || 1) - 1)))}
+                      className="h-9 w-9 rounded-lg text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-blue-500/10 dark:hover:text-blue-200 flex items-center justify-center"
+                      aria-label="Decrease games"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <div className="min-w-0 flex-1 text-center">
+                      <div className="text-lg font-semibold text-slate-800 dark:text-white leading-none">{Math.max(1, parseInt(String(gauntletDraftRounds || '1'), 10) || 1)}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setGauntletDraftRounds((prev) => String(Math.min(99, (parseInt(String(prev || '1'), 10) || 1) + 1)))}
+                      className="h-9 w-9 rounded-lg text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-blue-500/10 dark:hover:text-blue-200 flex items-center justify-center"
+                      aria-label="Increase games"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
                 <button
                   onClick={() => startGauntletTournament(selectedGauntletEventId, Boolean(tournament))}
                   disabled={useManualGauntletRoster ? !manualGauntletEligible : !selectedEntry?.eligible}
                   className="px-3 py-2.5 rounded-xl text-sm font-medium text-white shadow-lg disabled:opacity-50"
-                  style={themeAccentButtonStyle}
+                  style={gauntletPrimaryButtonStyle}
                 >
                   {tournament ? 'Restart' : 'Start Gauntlet'}
                 </button>
@@ -17498,16 +17525,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                         <button
                           onClick={() => finalizeGauntletRound(tournamentKey)}
                           className="px-3 py-2 rounded-xl text-xs font-medium text-white shadow-md"
-                          style={themeAccentButtonStyle}
+                          style={gauntletPrimaryButtonStyle}
                         >
                           Finalize Round
                         </button>
                       )}
-                      <button
-                        onClick={() => resetGauntletTournament(tournamentKey)}
-                        className="px-3 py-2 rounded-xl text-xs font-medium border text-gray-700 dark:text-gray-200"
-                        style={themeAccentSoftButtonStyle}
-                      >
+                        <button
+                          onClick={() => resetGauntletTournament(tournamentKey)}
+                          className="px-3 py-2 rounded-xl text-xs font-medium border text-gray-700 dark:text-gray-200"
+                          style={gauntletSecondaryButtonStyle}
+                        >
                         Reset
                       </button>
                     </div>
