@@ -17308,6 +17308,30 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           const renderTeamName = (playerIds) => (playerIds || []).map((playerId) => (
             participantMap[String(playerId || '')]?.displayName || 'Player'
           )).join(' + ');
+          const getTeamCardStyle = (result, teamKey) => {
+            const teamWon = result ? ((teamKey === 'A' && result.scoreA > result.scoreB) || (teamKey === 'B' && result.scoreB > result.scoreA)) : false;
+            if (!result) {
+              return {
+                borderColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)',
+                backgroundImage: darkMode
+                  ? 'linear-gradient(180deg, rgba(31,41,55,0.88) 0%, rgba(17,24,39,0.92) 100%)'
+                  : 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.98) 100%)',
+              };
+            }
+            return teamWon
+              ? {
+                borderColor: darkMode ? 'rgba(16,185,129,0.35)' : 'rgba(5,150,105,0.22)',
+                backgroundImage: darkMode
+                  ? 'linear-gradient(180deg, rgba(6,95,70,0.45) 0%, rgba(17,24,39,0.92) 100%)'
+                  : 'linear-gradient(180deg, rgba(220,252,231,0.95) 0%, rgba(255,255,255,0.98) 100%)',
+              }
+              : {
+                borderColor: darkMode ? 'rgba(148,163,184,0.22)' : 'rgba(148,163,184,0.2)',
+                backgroundImage: darkMode
+                  ? 'linear-gradient(180deg, rgba(30,41,59,0.7) 0%, rgba(17,24,39,0.92) 100%)'
+                  : 'linear-gradient(180deg, rgba(248,250,252,0.96) 0%, rgba(255,255,255,0.98) 100%)',
+              };
+          };
           return (
             <div className="rounded-[1.75rem] p-4 sm:p-5 mb-6 border backdrop-blur-sm" style={gauntletShellStyle}>
               <div className="rounded-[1.4rem] border px-4 py-4 sm:px-5 sm:py-5 mb-4 overflow-hidden relative" style={gauntletHeroStyle}>
@@ -17505,20 +17529,34 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     <div className="grid gap-3 lg:grid-cols-2">
                       {(activeRound.courts || []).map((court) => (
                         <div key={`gauntlet-court-${court.courtNumber}`} className="rounded-[1.35rem] border p-3.5" style={gauntletCourtCardStyle}>
+                          {(() => {
+                            const courtResult = getGauntletCourtResult(court);
+                            return (
+                              <>
                           <div className="flex items-center justify-between gap-3">
                             <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">Court {court.courtNumber}</div>
-                            <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.08)', color: activeLayerPageTheme.accent }}>
-                              Match
+                            <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.08)', color: courtResult ? (darkMode ? '#a7f3d0' : '#047857') : activeLayerPageTheme.accent }}>
+                              {courtResult ? 'Result Locked' : 'Match'}
                             </span>
                           </div>
                           <div className="mt-2 space-y-2">
-                            <div className="rounded-xl bg-white/90 dark:bg-gray-800/88 border border-gray-200 dark:border-gray-700 px-3 py-2.5 shadow-sm">
-                              <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Team A</div>
-                              <div className="text-sm font-medium text-gray-800 dark:text-gray-100">{renderTeamName(court.teamA)}</div>
+                            <div className="rounded-xl border px-3 py-2.5 shadow-sm" style={getTeamCardStyle(courtResult, 'A')}>
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Team A</div>
+                                {courtResult && courtResult.scoreA > courtResult.scoreB && (
+                                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-600 dark:text-emerald-300">Winner</span>
+                                )}
+                              </div>
+                              <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{renderTeamName(court.teamA)}</div>
                             </div>
-                            <div className="rounded-xl bg-white/90 dark:bg-gray-800/88 border border-gray-200 dark:border-gray-700 px-3 py-2.5 shadow-sm">
-                              <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Team B</div>
-                              <div className="text-sm font-medium text-gray-800 dark:text-gray-100">{renderTeamName(court.teamB)}</div>
+                            <div className="rounded-xl border px-3 py-2.5 shadow-sm" style={getTeamCardStyle(courtResult, 'B')}>
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Team B</div>
+                                {courtResult && courtResult.scoreB > courtResult.scoreA && (
+                                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-600 dark:text-emerald-300">Winner</span>
+                                )}
+                              </div>
+                              <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{renderTeamName(court.teamB)}</div>
                             </div>
                           </div>
                           <div className="mt-3 mx-auto grid w-full max-w-[11.5rem] grid-cols-[4rem_auto_4rem] items-center justify-center gap-2 rounded-2xl border px-2 py-2" style={gauntletSubtleCardStyle}>
@@ -17546,6 +17584,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               placeholder="0"
                             />
                           </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       ))}
                     </div>
@@ -17556,12 +17597,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       <div className="px-3 py-3 border-b border-gray-200 dark:border-gray-700 text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
                         Standings
                       </div>
+                      {tournamentStandings.length > 0 && (
+                        <div className="grid grid-cols-[4.75rem_minmax(0,1.4fr)_4.2rem_3.8rem_3.8rem_4.4rem_4.8rem] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500 border-b border-gray-200 dark:border-gray-700">
+                          <div>Place</div>
+                          <div>Player</div>
+                          <div className="text-right">Win%</div>
+                          <div className="text-right">W-L</div>
+                          <div className="text-right">Bye</div>
+                          <div className="text-right">Diff</div>
+                          <div className="text-right">Court</div>
+                        </div>
+                      )}
                       <div className="p-3 space-y-2">
                         {tournamentStandings.length === 0 ? (
                           <p className="text-xs text-gray-400 dark:text-gray-500 italic">Finalize a round to generate standings.</p>
                         ) : (
                           tournamentStandings.map((row, index) => (
-                            <div key={`standing-${row.id}`} className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] gap-3 items-center rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 px-2.5 py-2.5 shadow-sm">
+                            <div key={`standing-${row.id}`} className="grid grid-cols-[4.75rem_minmax(0,1.4fr)_4.2rem_3.8rem_3.8rem_4.4rem_4.8rem] gap-2 items-center rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 px-2.5 py-2.5 shadow-sm">
                               <div className="flex justify-start">
                                 {index === 0 ? (
                                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">🥇 1st</span>
@@ -17575,14 +17627,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               </div>
                               <div className="min-w-0">
                                 <div className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{row.name}</div>
-                                <div className="text-[11px] text-gray-500 dark:text-gray-400">
-                                  Win% {(Number(row.winPct || 0) * 100).toFixed(0)} · {row.wins}-{row.losses} · Bye {row.byes || 0} · Diff {row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
-                                </div>
+                                <div className="text-[11px] text-gray-500 dark:text-gray-400">PF {row.pointsFor} · PA {row.pointsAgainst}</div>
                               </div>
-                              <div className="text-right">
-                                <div className="text-[10px] uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">Avg Court</div>
-                                <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">{Number.isFinite(row.averageCourt) ? row.averageCourt.toFixed(1) : '-'}</div>
-                              </div>
+                              <div className="text-right text-sm font-semibold text-gray-700 dark:text-gray-200">{(Number(row.winPct || 0) * 100).toFixed(0)}</div>
+                              <div className="text-right text-sm font-semibold text-gray-700 dark:text-gray-200">{row.wins}-{row.losses}</div>
+                              <div className="text-right text-sm font-semibold text-gray-600 dark:text-gray-300">{row.byes || 0}</div>
+                              <div className={`text-right text-sm font-semibold ${row.pointDiff >= 0 ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'}`}>{row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}</div>
+                              <div className="text-right text-sm font-semibold text-gray-600 dark:text-gray-300">{Number.isFinite(row.averageCourt) ? row.averageCourt.toFixed(1) : '-'}</div>
                             </div>
                           ))
                         )}
