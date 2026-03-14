@@ -13139,7 +13139,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (!src) return;
         const x = Math.max(2, Math.min(98, snap(Number(src?.x), xStep)));
         const y = Math.max(2, Math.min(98, snap(Number(src?.y), yStep)));
-        const scale = Math.max(0.7, Math.min(1.8, Number(src?.scale)));
+        const scale = id === 'add' ? 1 : Math.max(0.7, Math.min(1.8, Number(src?.scale)));
         if (Number.isFinite(x)) next[id].x = x;
         if (Number.isFinite(y)) next[id].y = y;
         if (Number.isFinite(scale)) next[id].scale = scale;
@@ -13211,6 +13211,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const startHeaderModulePinch = (event, moduleId) => {
     const id = String(moduleId || '').trim();
     if (!HEADER_MODULE_IDS.includes(id)) return;
+    if (id === 'add') return;
     const touches = event.touches;
     if (!touches || touches.length < 2) return;
     const a = touches[0];
@@ -13856,7 +13857,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const clamped = clampHeaderModuleCenterPercent(id, snappedX, snappedY);
     const x = clamped.x;
     const y = clamped.y;
-    const scale = Math.max(0.7, Math.min(1.8, Number(value?.scale || fallback.scale || 1)));
+    const scale = id === 'add'
+      ? 1
+      : Math.max(0.7, Math.min(1.8, Number(value?.scale || fallback.scale || 1)));
     return {
       left: `${x}%`,
       top: `${y}%`,
@@ -14368,10 +14371,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 className="absolute pointer-events-auto"
                 style={getHeaderModulePositionStyle('add')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'add')}
-                onTouchStart={(e) => startHeaderModulePinch(e, 'add')}
-                onTouchMove={(e) => moveHeaderModulePinch(e, 'add')}
-                onTouchEnd={(e) => endHeaderModulePinch(e, 'add')}
-                onTouchCancel={(e) => endHeaderModulePinch(e, 'add')}
               >
                 <button
                   ref={(el) => { headerModuleNodeRefs.current.add = el; }}
@@ -14381,7 +14380,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     if (wasRecentHeaderModuleDrag('add')) return;
                     setShowControlWidgetAddPanel(true);
                   }}
-                  className={`shrink-0 min-w-[4.75rem] px-2 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap leading-none inline-flex items-center justify-center border transition-all ${
+                  className={`shrink-0 w-[3.7rem] h-6 px-1 py-0 rounded-lg text-[10px] font-semibold whitespace-nowrap leading-none inline-flex items-center justify-center border transition-all ${
                     showControlWidgetAddPanel
                       ? 'bg-white/60 dark:bg-gray-700/55 text-gray-800 dark:text-gray-100 border-white/55 dark:border-gray-500/70 shadow-sm backdrop-blur-sm'
                       : 'bg-white/40 dark:bg-gray-700/40 text-gray-700 dark:text-gray-200 border-white/45 dark:border-gray-600/70 backdrop-blur-sm'
