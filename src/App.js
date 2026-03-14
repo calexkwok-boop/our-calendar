@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
 import { getMessagingIfSupported } from "./firebase";
 import GauntletPanel from "./components/GauntletPanel";
+import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 
 // Initialize Supabase
 const supabase = createClient(
@@ -17173,107 +17174,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             return { name, paid, balance: paid - share };
           });
           return (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div>
-                  <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Expense Tracker</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Track shared costs for this calendar layer.</p>
-                </div>
-                <button onClick={() => setShowExpenseTrackerPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                  <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                </button>
-              </div>
-
-              <div className="p-3 rounded-xl border mb-3 bg-emerald-50 dark:bg-emerald-900/20" style={{ borderColor: themeAccentBorder }}>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                  <input
-                    type="text"
-                    value={newLayerExpense.payer}
-                    onChange={(e) => setNewLayerExpense((prev) => ({ ...prev, payer: e.target.value }))}
-                    onKeyPress={(e) => { if (e.key === 'Enter') addLayerExpense(); }}
-                    placeholder="Who paid?"
-                    className="px-2.5 py-1.5 text-base sm:text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                    style={{ fontSize: '16px' }}
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={newLayerExpense.amount}
-                    onChange={(e) => setNewLayerExpense((prev) => ({ ...prev, amount: e.target.value }))}
-                    onKeyPress={(e) => { if (e.key === 'Enter') addLayerExpense(); }}
-                    placeholder="Amount"
-                    className="px-2.5 py-1.5 text-base sm:text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                    style={{ fontSize: '16px' }}
-                  />
-                  <input
-                    type="text"
-                    value={newLayerExpense.description}
-                    onChange={(e) => setNewLayerExpense((prev) => ({ ...prev, description: e.target.value }))}
-                    onKeyPress={(e) => { if (e.key === 'Enter') addLayerExpense(); }}
-                    placeholder="What was it for?"
-                    className="sm:col-span-2 px-2.5 py-1.5 text-base sm:text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                    style={{ fontSize: '16px' }}
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-3 mt-3">
-                  <button onClick={addLayerExpense} className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium">
-                    Add Expense
-                  </button>
-                  <div className="text-xs text-gray-600 dark:text-gray-300">
-                    Total <span className="font-semibold">${(totalCents / 100).toFixed(2)}</span>
-                  </div>
-                </div>
-                {expenseTrackerError && <p className="mt-2 text-xs text-red-500">{expenseTrackerError}</p>}
-              </div>
-
-              <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
-                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-                  <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    Recent Expenses
-                  </div>
-                  <div className="p-3 space-y-2">
-                    {layerExpenses.length === 0 ? (
-                      <p className="text-xs text-gray-400 dark:text-gray-500 italic">No expenses yet.</p>
-                    ) : (
-                      layerExpenses.map((expense) => (
-                        <div key={expense.id} className="flex items-center gap-2 rounded-lg border border-emerald-100 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-900/10 px-2.5 py-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{expense.description}</div>
-                            <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{expense.payer}</div>
-                          </div>
-                          <div className="text-xs font-semibold text-gray-800 dark:text-gray-100">${(Number(expense.amount) || 0).toFixed(2)}</div>
-                          <button onClick={() => deleteLayerExpense(expense.id)} className="text-gray-300 hover:text-red-400 shrink-0">
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-900/40 p-3">
-                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Split Summary</div>
-                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
-                    Per person <span className="font-semibold">${(participants.length > 0 ? totalCents / 100 / participants.length : 0).toFixed(2)}</span>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {balances.length === 0 ? (
-                      <p className="text-xs text-gray-400 dark:text-gray-500 italic">Add an expense to see the split.</p>
-                    ) : (
-                      balances.map((row) => (
-                        <div key={row.name} className="flex items-center justify-between gap-3 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2.5 py-2">
-                          <span className="min-w-0 truncate text-gray-700 dark:text-gray-200">{row.name}</span>
-                          <span className={`${row.balance >= 0 ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'} font-medium`}>
-                            {row.balance >= 0 ? `Gets back $${(row.balance / 100).toFixed(2)}` : `Owes $${(Math.abs(row.balance) / 100).toFixed(2)}`}
-                          </span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ExpenseTrackerPanel
+              title="Expense Tracker"
+              subtitle="Track and split shared costs for this layer"
+              onClose={() => setShowExpenseTrackerPanel(false)}
+              expenseDraft={newLayerExpense}
+              setExpenseDraft={setNewLayerExpense}
+              addExpense={addLayerExpense}
+              totalCents={totalCents}
+              expenses={layerExpenses}
+              deleteExpense={deleteLayerExpense}
+              participants={participants}
+              balances={balances}
+              error={expenseTrackerError}
+            />
           );
         })()}
 
@@ -20501,7 +20415,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         {/* Expenses tab */}
         {subCalTab === 'expenses' && (() => {
           const expenseParticipants = getExpenseParticipants();
-          const selectedPayer = newExpenseDraft.payer || expenseParticipants[0] || '';
 
           const paidByCents = {};
           expenseParticipants.forEach(name => { paidByCents[name] = 0; });
@@ -20558,103 +20471,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
           return (
             <div className="px-4 py-4 space-y-4">
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-700">
-                <button
-                  onClick={() => toggleExpensePanel('splitter')}
-                  className="w-full flex items-center justify-between mb-2 text-left"
-                >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">💸 Expense Splitter</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.splitter ? '-' : '+'}</span>
-                </button>
-                {expensePanels.splitter ? (
-                  <>
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-2">
-                      <select
-                        value={selectedPayer}
-                        onChange={e => setNewExpenseDraft(prev => ({ ...prev, payer: e.target.value }))}
-                        className="px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                      >
-                        {expenseParticipants.length === 0 ? (
-                          <option value="">No members</option>
-                        ) : (
-                          expenseParticipants.map(name => <option key={name} value={name}>{getExpenseDisplayName(name)}</option>)
-                        )}
-                      </select>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={newExpenseDraft.amount}
-                        onChange={e => setNewExpenseDraft(prev => ({ ...prev, amount: e.target.value }))}
-                        onKeyPress={e => e.key === 'Enter' && addSubCalExpense()}
-                        placeholder="Amount"
-                        className="px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                      />
-                      <input
-                        type="text"
-                        value={newExpenseDraft.description}
-                        onChange={e => setNewExpenseDraft(prev => ({ ...prev, description: e.target.value }))}
-                        onKeyPress={e => e.key === 'Enter' && addSubCalExpense()}
-                        placeholder="What was paid?"
-                        className="sm:col-span-2 px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
-                      />
-                    </div>
-                    <button
-                      onClick={addSubCalExpense}
-                      className="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium"
-                    >
-                      Add Expense
-                    </button>
-                    {expenseError && <p className="mt-2 text-xs text-red-500">{expenseError}</p>}
-
-                    <div className="mt-3 space-y-1.5">
-                      {subCalExpenses.length === 0 && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 italic">No expenses yet</p>
-                      )}
-                      {subCalExpenses.map(item => (
-                        <div key={item.id} className="flex items-center gap-2 bg-white dark:bg-gray-700 border border-emerald-100 dark:border-emerald-800 rounded-lg px-2.5 py-1.5">
-                          <span className="text-xs text-gray-700 dark:text-gray-200 font-medium">{getExpenseDisplayName(item.payer)}</span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 flex-1 truncate">{item.description}</span>
-                          <span className="text-xs text-gray-700 dark:text-gray-200 font-semibold">${(Number(item.amount) || 0).toFixed(2)}</span>
-                          <button onClick={() => deleteSubCalExpense(item.id)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">?</button>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{subCalExpenses.length} expense{subCalExpenses.length === 1 ? '' : 's'} recorded</p>
-                )}
-              </div>
-
-              <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                <button
-                  onClick={() => toggleExpensePanel('summary')}
-                  className="w-full flex items-center justify-between mb-2 text-left"
-                >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">📊 Split Summary</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.summary ? '-' : '+'}</span>
-                </button>
-                {expensePanels.summary ? (
-                  <>
-                    <div className="space-y-1 text-xs">
-                      <div className="text-gray-700 dark:text-gray-300">Total: <span className="font-semibold">${(totalCents / 100).toFixed(2)}</span></div>
-                      <div className="text-gray-700 dark:text-gray-300">Per member ({sortedParticipants.length}): <span className="font-semibold">${(sortedParticipants.length > 0 ? totalCents / 100 / sortedParticipants.length : 0).toFixed(2)}</span></div>
-                    </div>
-                    <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
-                      {expenseBalances.map(row => (
-                        <div key={row.name} className="flex items-center justify-between text-xs">
-                          <span className="text-gray-600 dark:text-gray-300">{getExpenseDisplayName(row.name)}</span>
-                          <span className="text-gray-700 dark:text-gray-200">
-                            Paid ${(row.paid / 100).toFixed(2)} · {row.balance >= 0 ? `Gets back $${(row.balance / 100).toFixed(2)}` : `Owes $${(Math.abs(row.balance) / 100).toFixed(2)}`}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Total ${(totalCents / 100).toFixed(2)}</p>
-                )}
-              </div>
+              <ExpenseTrackerPanel
+                title="Expense Tracker"
+                subtitle={`Track and split costs for ${activeSubCalendar?.name || 'this trip'}`}
+                expenseDraft={newExpenseDraft}
+                setExpenseDraft={setNewExpenseDraft}
+                addExpense={addSubCalExpense}
+                totalCents={totalCents}
+                expenses={subCalExpenses}
+                deleteExpense={deleteSubCalExpense}
+                participants={sortedParticipants}
+                balances={expenseBalances}
+                error={expenseError}
+                payerOptions={expenseParticipants}
+                getDisplayName={getExpenseDisplayName}
+                emptyExpensesText="No expenses yet."
+                emptySummaryText="Add an expense to see the split."
+              />
 
               <div className="p-3 bg-sky-50 dark:bg-sky-900/20 rounded-xl border border-sky-200 dark:border-sky-700">
                 <button
