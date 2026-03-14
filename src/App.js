@@ -76,6 +76,7 @@ const LOCKED_DEFAULT_LAYER_TITLE_STYLE = Object.freeze({
   gradientFrom: '#e11d48',
   gradientVia: '#7c3aed',
   gradientTo: '#4f46e5',
+  titleScale: 1,
 });
 
 const LOCKED_DEFAULT_LAYER_PAGE_THEME = Object.freeze({
@@ -3585,12 +3586,14 @@ function App() {
     }
     if (!parsed || typeof parsed !== 'object') parsed = {};
     const mode = String(parsed?.mode || '').trim() === 'solid' ? 'solid' : 'gradient';
+    const titleScale = Math.max(0.75, Math.min(2.2, Number(parsed?.titleScale ?? DEFAULT_LAYER_TITLE_STYLE.titleScale)));
     return {
       mode,
       solidColor: normalizeHexColor(parsed?.solidColor, DEFAULT_LAYER_TITLE_STYLE.solidColor),
       gradientFrom: normalizeHexColor(parsed?.gradientFrom, DEFAULT_LAYER_TITLE_STYLE.gradientFrom),
       gradientVia: normalizeHexColor(parsed?.gradientVia, DEFAULT_LAYER_TITLE_STYLE.gradientVia),
       gradientTo: normalizeHexColor(parsed?.gradientTo, DEFAULT_LAYER_TITLE_STYLE.gradientTo),
+      titleScale: Number.isFinite(titleScale) ? titleScale : DEFAULT_LAYER_TITLE_STYLE.titleScale,
     };
   }
 
@@ -3630,6 +3633,12 @@ function App() {
       backgroundClip: 'text',
       WebkitTextFillColor: 'transparent',
     };
+  }
+
+  function getLayerTitleFontSizePx(style, basePx = 16) {
+    const normalized = normalizeLayerTitleStyle(style);
+    const base = Math.max(10, Number(basePx || 16));
+    return Math.max(10, Math.min(56, Math.round(base * Number(normalized.titleScale || 1))));
   }
 
   const derivePageThemeFromTitleStyle = (style) => {
@@ -3703,6 +3712,11 @@ function App() {
 
   const activeLayerTitleStyle = normalizeLayerTitleStyle(activeLayer?.title_style);
   const activeLayerTitleTextStyle = getLayerTitleDisplayStyle(activeLayerTitleStyle);
+  const activeLayerTitleNameTextStyle = {
+    ...activeLayerTitleTextStyle,
+    fontSize: `${getLayerTitleFontSizePx(activeLayerTitleStyle, 16)}px`,
+    lineHeight: 1.1,
+  };
   const activeLayerPageTheme = normalizeLayerPageTheme(activeLayer?.page_theme, activeLayerTitleStyle);
   const activeLayerNameKey = String(activeLayer?.name || '')
     .toLowerCase()
@@ -14202,10 +14216,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 className="absolute pointer-events-auto select-none"
                 style={getHeaderModulePositionStyle('title')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'title')}
-                onTouchStart={(e) => startHeaderModulePinch(e, 'title')}
-                onTouchMove={(e) => moveHeaderModulePinch(e, 'title')}
-                onTouchEnd={(e) => endHeaderModulePinch(e, 'title')}
-                onTouchCancel={(e) => endHeaderModulePinch(e, 'title')}
               >
                 <div className="-mx-8 -my-4 px-8 py-4 min-w-[10rem]">
                   <button
@@ -14217,7 +14227,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       openTitleStyleModal();
                     }}
                     className={`text-sm sm:text-base font-semibold text-right max-w-[75vw] truncate ${canEditActiveLayerTitle ? 'cursor-grab active:cursor-grabbing hover:opacity-80' : 'cursor-default'}`}
-                    style={activeLayerTitleTextStyle}
+                    style={activeLayerTitleNameTextStyle}
                   >
                     {calendarTitle}
                   </button>
@@ -14381,7 +14391,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 pointer-events-auto">
-                    <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate" style={activeLayerTitleTextStyle}>
+                    <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate" style={activeLayerTitleNameTextStyle}>
                       {calendarTitle}
                     </h2>
                     <div className="text-xs sm:text-sm font-semibold text-right" style={activeLayerTitleTextStyle}>
@@ -14434,7 +14444,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </div>
               </div>
             <div className="relative shrink-0 pointer-events-auto flex flex-col items-end gap-1">
-              <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate pointer-events-none" style={activeLayerTitleTextStyle}>
+              <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate pointer-events-none" style={activeLayerTitleNameTextStyle}>
                 {calendarTitle}
               </h2>
               <div className="text-xs sm:text-sm font-semibold text-right pointer-events-none" style={activeLayerTitleTextStyle}>
@@ -18030,8 +18040,35 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               onChange={(e) => setTitleNameDraft(e.target.value)}
               placeholder="Calendar Title"
               className="w-full bg-transparent border-0 p-0 text-2xl sm:text-3xl font-bold focus:outline-none"
-              style={getLayerTitleDisplayStyle(titleStyleDraft)}
+              style={{
+                ...getLayerTitleDisplayStyle(titleStyleDraft),
+                fontSize: `${getLayerTitleFontSizePx(titleStyleDraft, 30)}px`,
+                lineHeight: 1.1,
+              }}
             />
+            <div className="mt-3">
+              <div className="flex items-center justify-between gap-3 mb-1">
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Title Size
+                </label>
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                  {Math.round(Number(titleStyleDraft?.titleScale || 1) * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="75"
+                max="220"
+                step="1"
+                value={Math.round(Number(titleStyleDraft?.titleScale || 1) * 100)}
+                onChange={(e) => {
+                  const nextScale = Math.max(0.75, Math.min(2.2, Number(e.target.value || 100) / 100));
+                  setTitleStyleDraft(prev => ({ ...prev, titleScale: nextScale }));
+                }}
+                className="w-full"
+                style={{ accentColor: activeLayerPageTheme.accent }}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 mb-4">
