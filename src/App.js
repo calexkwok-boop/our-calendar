@@ -2576,6 +2576,7 @@ function App() {
   const [headerModuleLayout, setHeaderModuleLayout] = useState({});
   const [headerModulePrefsReady, setHeaderModulePrefsReady] = useState(false);
   const headerModuleDragRef = useRef(null);
+  const headerModuleNodeRefs = useRef({});
   const headerModulePinchRef = useRef({ active: false, moduleId: '', startDistance: 0, startScale: 1 });
   const headerModuleLastDragRef = useRef({ moduleId: '', at: 0 });
   const coverWidgetLastDragRef = useRef({ widgetId: '', at: 0 });
@@ -13079,6 +13080,27 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     } catch {}
   }, [user?.id, activeLayerId, headerModulePrefsReady, headerModuleLayout, getHeaderModuleStorageKey]);
 
+  function clampHeaderModuleCenterPercent(moduleId, x, y) {
+    const fallbackX = Math.max(2, Math.min(98, Number(x || 50)));
+    const fallbackY = Math.max(2, Math.min(98, Number(y || 50)));
+    const container = layerHeaderCardRef.current;
+    if (!container) return { x: fallbackX, y: fallbackY };
+    const rect = container.getBoundingClientRect();
+    if (!rect?.width || !rect?.height) return { x: fallbackX, y: fallbackY };
+    const node = headerModuleNodeRefs.current?.[String(moduleId || '').trim()];
+    const nodeRect = node?.getBoundingClientRect?.();
+    const halfXPct = nodeRect?.width ? ((Number(nodeRect.width || 0) / 2) / rect.width) * 100 : 2;
+    const halfYPct = nodeRect?.height ? ((Number(nodeRect.height || 0) / 2) / rect.height) * 100 : 2;
+    const minX = Math.max(1, Math.min(49, halfXPct));
+    const minY = Math.max(1, Math.min(49, halfYPct));
+    const maxX = 100 - minX;
+    const maxY = 100 - minY;
+    return {
+      x: Math.max(minX, Math.min(maxX, Number(x || 50))),
+      y: Math.max(minY, Math.min(maxY, Number(y || 50))),
+    };
+  }
+
   const startHeaderModulePointerDrag = (event, moduleId) => {
     const id = String(moduleId || '').trim();
     if (!HEADER_MODULE_IDS.includes(id)) return;
@@ -13169,8 +13191,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
       const rawX = drag.initialX + ((dx / rect.width) * 100);
       const rawY = drag.initialY + ((dy / rect.height) * 100);
-      const nextX = Math.max(2, Math.min(98, snap(rawX, xStep)));
-      const nextY = Math.max(2, Math.min(98, snap(rawY, yStep)));
+      const snappedX = snap(rawX, xStep);
+      const snappedY = snap(rawY, yStep);
+      const clamped = clampHeaderModuleCenterPercent(drag.moduleId, snappedX, snappedY);
+      const nextX = clamped.x;
+      const nextY = clamped.y;
       setHeaderModuleLayout((prev) => ({
         ...(prev || {}),
         [drag.moduleId]: {
@@ -13735,8 +13760,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
     const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
     const snap = (num, step) => Math.round(Number(num || 0) / step) * step;
-    const x = Math.max(2, Math.min(98, snap(Number(value?.x || fallback.x || 50), xStep)));
-    const y = Math.max(2, Math.min(98, snap(Number(value?.y || fallback.y || 50), yStep)));
+    const snappedX = snap(Number(value?.x || fallback.x || 50), xStep);
+    const snappedY = snap(Number(value?.y || fallback.y || 50), yStep);
+    const clamped = clampHeaderModuleCenterPercent(id, snappedX, snappedY);
+    const x = clamped.x;
+    const y = clamped.y;
     const scale = Math.max(0.7, Math.min(1.8, Number(value?.scale || fallback.scale || 1)));
     return {
       left: `${x}%`,
@@ -14176,6 +14204,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             <div className="absolute inset-0 z-[25] pointer-events-none">
               <div
                 className="absolute pointer-events-auto"
+                ref={(el) => { headerModuleNodeRefs.current.icon = el; }}
                 style={getHeaderModulePositionStyle('icon')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'icon')}
                 onTouchStart={(e) => startHeaderModulePinch(e, 'icon')}
@@ -14214,6 +14243,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
               <div
                 className="absolute pointer-events-auto select-none"
+                ref={(el) => { headerModuleNodeRefs.current.title = el; }}
                 style={getHeaderModulePositionStyle('title')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'title')}
               >
@@ -14236,6 +14266,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
               <div
                 className="absolute pointer-events-auto select-none"
+                ref={(el) => { headerModuleNodeRefs.current.date = el; }}
                 style={getHeaderModulePositionStyle('date')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'date')}
                 onTouchStart={(e) => startHeaderModulePinch(e, 'date')}
@@ -14250,6 +14281,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
               <div
                 className="absolute pointer-events-auto"
+                ref={(el) => { headerModuleNodeRefs.current.add = el; }}
                 style={getHeaderModulePositionStyle('add')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'add')}
                 onTouchStart={(e) => startHeaderModulePinch(e, 'add')}
