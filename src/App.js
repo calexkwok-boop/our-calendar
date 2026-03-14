@@ -625,7 +625,6 @@ function App() {
   const [cashAppHandles, setCashAppHandles] = useState({});
   const [cashAppHandlesNoteId, setCashAppHandlesNoteId] = useState(null);
   const [globalCashAppHandles, setGlobalCashAppHandles] = useState({});
-  const [paymentOptionPickerIdentity, setPaymentOptionPickerIdentity] = useState(null);
   const [newExpenseDraft, setNewExpenseDraft] = useState({ payer: '', description: '', amount: '' });
   const [expenseError, setExpenseError] = useState('');
   const [newNote, setNewNote] = useState('');
@@ -998,11 +997,6 @@ function App() {
     const key = normalizeIdentityKey(identity);
     const localHandles = readLocalAccountPaymentHandles('cashapp');
     return cashAppHandles[key] || globalCashAppHandles[key] || localHandles[key] || '';
-  };
-  const canEditVenmoIdentity = (identity) => {
-    const mine = normalizeIdentityKey(user?.email || currentUser);
-    if (!mine) return false;
-    return normalizeIdentityKey(identity) === mine;
   };
   const cleanVenmoHandle = (value) => String(value || '').trim().replace(/^@+/, '').replace(/\s+/g, '');
   const cleanCashAppHandle = (value) => String(value || '').trim().replace(/^\$+/, '').replace(/\s+/g, '');
@@ -2478,38 +2472,6 @@ function App() {
       return next;
     });
     return true;
-  };
-
-  const promptSetVenmoHandle = async (identity) => {
-    const key = normalizeIdentityKey(identity);
-    if (!key) return;
-    if (!canEditVenmoIdentity(identity)) {
-      setExpenseError('You can only edit your own Venmo handle.');
-      return;
-    }
-    const currentHandle = getVenmoHandleForIdentity(identity);
-    const value = window.prompt(`Set Venmo username for ${getExpenseDisplayName(identity)} (without @):`, currentHandle);
-    if (value === null) return;
-    const cleaned = cleanVenmoHandle(value);
-    const ok = await saveVenmoHandleEverywhere(identity, cleaned);
-    if (!ok) return;
-    setExpenseError('');
-  };
-
-  const promptSetCashAppHandle = async (identity) => {
-    const key = normalizeIdentityKey(identity);
-    if (!key) return;
-    if (!canEditVenmoIdentity(identity)) {
-      setExpenseError('You can only edit your own Cash App handle.');
-      return;
-    }
-    const currentHandle = getCashAppHandleForIdentity(identity);
-    const value = window.prompt(`Set Cash App cashtag for ${getExpenseDisplayName(identity)} (without $):`, currentHandle);
-    if (value === null) return;
-    const cleaned = cleanCashAppHandle(value);
-    const ok = await saveCashAppHandleEverywhere(identity, cleaned);
-    if (!ok) return;
-    setExpenseError('');
   };
 
   const saveDeletedPhotoIds = async (nextDeletedIds) => {
@@ -17358,15 +17320,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               participants={participants}
               balances={balances}
               error={expenseTrackerError}
-              paymentMembers={participants}
               settlements={settlements}
               getVenmoHandle={getVenmoHandleForIdentity}
               getCashAppHandle={getCashAppHandleForIdentity}
-              canEditPaymentIdentity={canEditVenmoIdentity}
-              paymentOptionPickerIdentity={paymentOptionPickerIdentity}
-              setPaymentOptionPickerIdentity={setPaymentOptionPickerIdentity}
-              onSetVenmoHandle={promptSetVenmoHandle}
-              onSetCashAppHandle={promptSetCashAppHandle}
               onOpenVenmoPayment={openVenmoPayment}
               onOpenCashAppPayment={openCashAppPayment}
               settlementNoteContext="this calendar layer"
@@ -20670,15 +20626,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 getDisplayName={getExpenseDisplayName}
                 emptyExpensesText="No expenses yet."
                 emptySummaryText="Add an expense to see the split."
-                paymentMembers={sortedParticipants}
                 settlements={settlements}
                 getVenmoHandle={getVenmoHandleForIdentity}
                 getCashAppHandle={getCashAppHandleForIdentity}
-                canEditPaymentIdentity={canEditVenmoIdentity}
-                paymentOptionPickerIdentity={paymentOptionPickerIdentity}
-                setPaymentOptionPickerIdentity={setPaymentOptionPickerIdentity}
-                onSetVenmoHandle={promptSetVenmoHandle}
-                onSetCashAppHandle={promptSetCashAppHandle}
                 onOpenVenmoPayment={openVenmoPayment}
                 onOpenCashAppPayment={openCashAppPayment}
                 settlementNoteContext={activeSubCalendar?.name || 'trip'}
