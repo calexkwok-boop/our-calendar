@@ -3130,6 +3130,12 @@ function App() {
     } catch {}
   }, [user?.id, activeLayerId, layerNotes, getLayerNotesStorageKey]);
   useEffect(() => {
+    setExpandedLayerNoteId(null);
+    setEditingLayerNoteId(null);
+    setNewLayerChecklistItem('');
+    setNewLayerNoteText('');
+  }, [activeLayerId]);
+  useEffect(() => {
     if (!coverHeaderControlsVisible) return undefined;
     if (hasOpenWidgetWindow) return undefined;
     if (bottomNavTab !== 'home') return undefined;
@@ -13792,6 +13798,87 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setControlWidgetOrder([]);
     setCoverWidgetLayout({});
   };
+  const addLayerNote = () => {
+    const text = String(newLayerNoteText || '').trim();
+    if (!text) return;
+    const noteId = `lnote-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const authorLabel = resolveHandleLikeLabel(
+      String(currentUser || user?.email || user?.phone || 'User'),
+      user?.id
+    );
+    setLayerNotes((prev) => ([{
+      id: noteId,
+      text,
+      checklist: [],
+      createdAt: new Date().toISOString(),
+      createdBy: authorLabel,
+    }, ...(prev || [])]));
+    setNewLayerNoteText('');
+  };
+  const deleteLayerNote = (noteId) => {
+    const id = String(noteId || '').trim();
+    if (!id) return;
+    setLayerNotes((prev) => (prev || []).filter((note) => String(note?.id || '') !== id));
+    setExpandedLayerNoteId((prev) => (String(prev || '') === id ? null : prev));
+    setEditingLayerNoteId((prev) => (String(prev || '') === id ? null : prev));
+  };
+  const updateLayerNoteText = (noteId, nextText) => {
+    const id = String(noteId || '').trim();
+    const text = String(nextText || '').trim();
+    if (!id) return;
+    if (!text) {
+      deleteLayerNote(id);
+      return;
+    }
+    setLayerNotes((prev) => (prev || []).map((note) => (
+      String(note?.id || '') === id ? { ...note, text } : note
+    )));
+    setEditingLayerNoteId(null);
+  };
+  const toggleLayerChecklistItem = (noteId, itemId) => {
+    const nId = String(noteId || '').trim();
+    const iId = String(itemId || '').trim();
+    if (!nId || !iId) return;
+    setLayerNotes((prev) => (prev || []).map((note) => {
+      if (String(note?.id || '') !== nId) return note;
+      const checklist = Array.isArray(note?.checklist) ? note.checklist : [];
+      return {
+        ...note,
+        checklist: checklist.map((item) => (
+          String(item?.id || '') === iId ? { ...item, done: !item?.done } : item
+        )),
+      };
+    }));
+  };
+  const addLayerChecklistItem = (noteId) => {
+    const nId = String(noteId || '').trim();
+    const text = String(newLayerChecklistItem || '').trim();
+    if (!nId || !text) return;
+    const newItem = {
+      id: `${nId}-item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      text,
+      done: false,
+    };
+    setLayerNotes((prev) => (prev || []).map((note) => {
+      if (String(note?.id || '') !== nId) return note;
+      const checklist = Array.isArray(note?.checklist) ? note.checklist : [];
+      return { ...note, checklist: [...checklist, newItem] };
+    }));
+    setNewLayerChecklistItem('');
+  };
+  const deleteLayerChecklistItem = (noteId, itemId) => {
+    const nId = String(noteId || '').trim();
+    const iId = String(itemId || '').trim();
+    if (!nId || !iId) return;
+    setLayerNotes((prev) => (prev || []).map((note) => {
+      if (String(note?.id || '') !== nId) return note;
+      const checklist = Array.isArray(note?.checklist) ? note.checklist : [];
+      return {
+        ...note,
+        checklist: checklist.filter((item) => String(item?.id || '') !== iId),
+      };
+    }));
+  };
   const startCoverWidgetPointerAction = (event, widgetId, mode = 'move') => {
     const id = String(widgetId || '').trim();
     if (!id || !activeControlWidgets.includes(id)) return;
@@ -13864,6 +13951,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setShowListPanel((prev) => !prev);
       return;
     }
+    if (id === 'notes') {
+      setShowNotesPanel((prev) => !prev);
+      return;
+    }
     if (id === 'chat') {
       const layerKey = String(activeLayerId || '');
       const next = !showChatPanel;
@@ -13909,6 +14000,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       badge: unreadInAppCount > 0 ? (unreadInAppCount > 99 ? '99+' : String(unreadInAppCount)) : '',
     };
     if (id === 'list') return { label: 'List', icon: <Tag className="w-4 h-4" />, active: Boolean(widgetCardOpenById.list), disabled: false };
+    if (id === 'notes') return { label: 'Notes', icon: <span className="text-sm leading-none">📝</span>, active: Boolean(widgetCardOpenById.notes), disabled: false };
     if (id === 'chat') return {
       label: 'Chat',
       icon: <MessageSquare className="w-4 h-4" />,
@@ -16368,6 +16460,119 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
             </div>
           )}
+
+        {showNotesPanel && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Reminders & Notes</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Quick notes and checklists for this calendar.</p>
+              </div>
+              <button onClick={() => setShowNotesPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl border mb-3 bg-yellow-100 dark:bg-yellow-900/20" style={{ borderColor: themeAccentBorder }}>
+              <div className="space-y-2">
+                {layerNotes.length === 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 italic">No reminders yet.</p>
+                )}
+                {layerNotes.map((note) => {
+                  const noteId = String(note?.id || '');
+                  const checklist = Array.isArray(note?.checklist) ? note.checklist : [];
+                  const doneCount = checklist.filter((item) => item?.done).length;
+                  const isExpanded = String(expandedLayerNoteId || '') === noteId;
+                  const isEditing = String(editingLayerNoteId || '') === noteId;
+                  return (
+                    <div key={noteId} className="bg-yellow-50 dark:bg-gray-700 rounded-lg border border-yellow-300 dark:border-yellow-700 overflow-hidden">
+                      <div className="flex items-center gap-2 px-2.5 py-2">
+                        <button
+                          onClick={() => setExpandedLayerNoteId((prev) => (String(prev || '') === noteId ? null : noteId))}
+                          className="text-xs text-gray-400 shrink-0 w-3"
+                        >
+                          {isExpanded ? '−' : '+'}
+                        </button>
+                        <span className="text-xs">📝</span>
+                        {isEditing ? (
+                          <input
+                            autoFocus
+                            defaultValue={String(note?.text || '')}
+                            onBlur={(e) => updateLayerNoteText(noteId, e.target.value)}
+                            onKeyPress={(e) => { if (e.key === 'Enter') updateLayerNoteText(noteId, e.currentTarget.value); }}
+                            className="flex-1 text-base sm:text-xs px-1.5 py-0.5 border border-purple-300 rounded dark:bg-gray-600 dark:text-white"
+                            style={{ fontSize: '16px' }}
+                          />
+                        ) : (
+                          <button
+                            onClick={() => setEditingLayerNoteId(noteId)}
+                            className="flex-1 text-left text-xs text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-300"
+                          >
+                            {String(note?.text || '')}
+                          </button>
+                        )}
+                        {checklist.length > 0 && (
+                          <span className="text-xs text-gray-400">{doneCount}/{checklist.length}</span>
+                        )}
+                        <button onClick={() => deleteLayerNote(noteId)} className="text-gray-300 hover:text-red-400 text-xs shrink-0">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      {isExpanded && (
+                        <div className="px-3 pb-2.5 space-y-1.5 border-t border-yellow-200 dark:border-yellow-800 pt-2">
+                          {checklist.map((item) => (
+                            <div key={String(item?.id || '')} className="flex items-center gap-2">
+                              <button
+                                onClick={() => toggleLayerChecklistItem(noteId, item.id)}
+                                className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${item?.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
+                              >
+                                {item?.done && <span className="text-xs leading-none">✓</span>}
+                              </button>
+                              <span className={`text-xs flex-1 ${item?.done ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                                {String(item?.text || '')}
+                              </span>
+                              <button onClick={() => deleteLayerChecklistItem(noteId, item.id)} className="text-gray-300 hover:text-red-400 text-xs">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          <div className="flex gap-1.5 mt-1">
+                            <input
+                              type="text"
+                              value={newLayerChecklistItem}
+                              onChange={(e) => setNewLayerChecklistItem(e.target.value)}
+                              onKeyPress={(e) => { if (e.key === 'Enter') addLayerChecklistItem(noteId); }}
+                              placeholder="Add item..."
+                              className="flex-1 px-2 py-1 text-base sm:text-xs border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg"
+                              style={{ fontSize: '16px' }}
+                            />
+                            <button onClick={() => addLayerChecklistItem(noteId)} className="px-2 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs">
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="text"
+                  value={newLayerNoteText}
+                  onChange={(e) => setNewLayerNoteText(e.target.value)}
+                  onKeyPress={(e) => { if (e.key === 'Enter') addLayerNote(); }}
+                  placeholder="Add a note..."
+                  className="flex-1 px-2.5 py-1.5 text-base sm:text-xs border border-yellow-300 dark:border-yellow-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1 focus:ring-yellow-400"
+                  style={{ fontSize: '16px' }}
+                />
+                <button onClick={addLayerNote} className="px-2.5 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-xs font-medium">
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {showCategoryEditor && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
@@ -19086,11 +19291,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             title="Open reminders and notes"
             aria-label="Open reminders and notes"
           >
-            <span className="relative block w-3.5 h-4.5 rounded-[3px] bg-yellow-300 dark:bg-yellow-200 shadow-sm">
-              <span className="absolute left-0 right-0 top-[3px] border-t border-yellow-700/40" />
-              <span className="absolute left-0 right-0 top-[6px] border-t border-yellow-700/40" />
-              <span className="absolute left-0 right-0 top-[9px] border-t border-yellow-700/40" />
-            </span>
+            <span className="text-base leading-none" aria-hidden="true">🗒️</span>
             {subCalNotes.length > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[1rem] h-[1rem] px-1 rounded-full bg-yellow-500 text-white text-[9px] leading-none font-bold flex items-center justify-center">
                 {subCalNotes.length}
