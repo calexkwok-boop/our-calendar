@@ -5606,6 +5606,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const dt = toEventDateTime(row.date, row.time);
       if (!dt) return;
       const deltaMs = Math.abs(dt.getTime() - target.getTime());
+      // Allow multiple events in the exact same slot.
+      if (deltaMs === 0) return;
       if (deltaMs > SCHEDULING_CONFLICT_WINDOW_MS) return;
       conflicts.push({
         ...row,
