@@ -13091,18 +13091,42 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, activeLayerId, headerModulePrefsReady, headerModuleLayout, getHeaderModuleStorageKey]);
 
   function clampHeaderModuleCenterPercent(moduleId, x, y) {
+    const id = String(moduleId || '').trim();
     const fallbackX = Math.max(2, Math.min(98, Number(x || 50)));
     const fallbackY = Math.max(2, Math.min(98, Number(y || 50)));
     const container = layerHeaderCardRef.current;
     if (!container) return { x: fallbackX, y: fallbackY };
     const rect = container.getBoundingClientRect();
     if (!rect?.width || !rect?.height) return { x: fallbackX, y: fallbackY };
-    const node = headerModuleNodeRefs.current?.[String(moduleId || '').trim()];
+    const node = headerModuleNodeRefs.current?.[id];
     const nodeRect = node?.getBoundingClientRect?.();
-    const halfXPct = nodeRect?.width ? ((Number(nodeRect.width || 0) / 2) / rect.width) * 100 : 2;
-    const halfYPct = nodeRect?.height ? ((Number(nodeRect.height || 0) / 2) / rect.height) * 100 : 2;
-    const minX = Math.max(1, Math.min(49, halfXPct));
-    const minY = Math.max(1, Math.min(49, halfYPct));
+    const maxWidthByModule = {
+      icon: 84,
+      add: 110,
+      date: 240,
+      title: 520,
+    };
+    const maxHeightByModule = {
+      icon: 84,
+      add: 56,
+      date: 72,
+      title: 96,
+    };
+    const measuredW = Math.max(1, Number(nodeRect?.width || 0));
+    const measuredH = Math.max(1, Number(nodeRect?.height || 0));
+    const safeW = Math.min(measuredW, Number(maxWidthByModule[id] || 240), rect.width * 0.9);
+    const safeH = Math.min(measuredH, Number(maxHeightByModule[id] || 120), rect.height * 0.9);
+    const halfXPct = (safeW / 2 / rect.width) * 100;
+    const halfYPct = (safeH / 2 / rect.height) * 100;
+    const edgeInsetByModule = {
+      icon: 3.5,
+      add: 6,
+      date: 4,
+      title: 4,
+    };
+    const baseInset = Number(edgeInsetByModule[id] || 4);
+    const minX = Math.max(baseInset, Math.min(49, halfXPct));
+    const minY = Math.max(baseInset, Math.min(49, halfYPct));
     const maxX = 100 - minX;
     const maxY = 100 - minY;
     return {
