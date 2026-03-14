@@ -52,6 +52,18 @@ const DEFAULT_CATEGORIES = {
   other: { label: 'Other', color: 'bg-gray-500', lightBg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700' }
 };
 
+const CATEGORY_GLASS = {
+  work:       { from: '#dbeafe', to: '#eff6ff', accent: 'linear-gradient(180deg,#60a5fa,#2563eb)' },
+  wife:       { from: '#ffe4e6', to: '#fff0f5', accent: 'linear-gradient(180deg,#fb7185,#e11d48)' },
+  daughter:   { from: '#fce7f3', to: '#fdf4ff', accent: 'linear-gradient(180deg,#f472b6,#db2777)' },
+  family:     { from: '#ede9fe', to: '#f5f0ff', accent: 'linear-gradient(180deg,#a78bfa,#7c3aed)' },
+  personal:   { from: '#d1fae5', to: '#ecfdf5', accent: 'linear-gradient(180deg,#34d399,#059669)' },
+  health:     { from: '#ccfbf1', to: '#f0fdfa', accent: 'linear-gradient(180deg,#2dd4bf,#0d9488)' },
+  social:     { from: '#fef3c7', to: '#fffbeb', accent: 'linear-gradient(180deg,#fbbf24,#d97706)' },
+  popup_event:{ from: '#ffe4e6', to: '#fff0f5', accent: 'linear-gradient(180deg,#fb7185,#e11d48)' },
+  other:      { from: '#f3f4f6', to: '#fafafa', accent: 'linear-gradient(180deg,#9ca3af,#6b7280)' },
+};
+
 const COLOR_OPTIONS = [
   { name: 'Blue', color: 'bg-blue-500', lightBg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
   { name: 'Rose', color: 'bg-rose-500', lightBg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
@@ -18082,6 +18094,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
                   const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
                   const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
+                  const categoryGlass = CATEGORY_GLASS[effectiveCategoryKey] || CATEGORY_GLASS.other;
                   const popupSignups = popupMeta ? (popupSignupsByEventId[String(event.id || '')] || []) : [];
                   const popupJoined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
                   const popupNoMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
@@ -18108,7 +18121,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   }
 
                   return (
-                    <div key={event.id} className={`${category.lightBg} dark:bg-gray-700 rounded-xl p-3 border-2 ${event.isVirtualAnnual ? 'border-violet-300 border-dashed dark:border-violet-600' : category.border} transition-all duration-200 hover:shadow-md relative`}>
+                    <div
+                      key={event.id}
+                      className={`relative rounded-2xl overflow-hidden border border-white/50 shadow-lg transition-all hover:-translate-y-0.5 ${event.isVirtualAnnual ? 'border-dashed' : ''}`}
+                      style={{
+                        background: `linear-gradient(130deg, ${categoryGlass.from}e0 0%, ${categoryGlass.to}f0 100%)`,
+                        backdropFilter: 'blur(16px)',
+                        borderColor: event.isVirtualAnnual ? '#c4b5fd' : 'rgba(255,255,255,0.5)',
+                      }}
+                    >
+                      <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ background: categoryGlass.accent }} />
+                      <div className="pl-4 pr-3 py-3">
                       {event.isPrivate && (
                         <div className="absolute top-2 right-2">
                           <Lock className="w-3 h-3 text-amber-600" />
@@ -18360,6 +18383,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                           </div>
                         </div>
                       )}
+                      </div>
                     </div>
                   );
                 })
