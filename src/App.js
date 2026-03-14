@@ -954,13 +954,50 @@ function App() {
 
     return formatIdentityForDisplay(raw || 'Member');
   };
+  const getAccountPaymentHandleStorageKey = (provider) => {
+    const providerKey = String(provider || '').trim().toLowerCase();
+    const userKey = String(user?.id || normalizeIdentityKey(user?.email || currentUser) || 'anon').trim();
+    if (!providerKey) return '';
+    return `calendar-account-payment-handles-${providerKey}-${userKey}`;
+  };
+  const readLocalAccountPaymentHandles = (provider) => {
+    try {
+      const storageKey = getAccountPaymentHandleStorageKey(provider);
+      if (!storageKey) return {};
+      const raw = localStorage.getItem(storageKey);
+      const parsed = raw ? JSON.parse(raw) : {};
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+      return Object.entries(parsed).reduce((acc, [identityKey, handleValue]) => {
+        const key = normalizeIdentityKey(identityKey);
+        const handle = provider === 'cashapp' ? cleanCashAppHandle(handleValue) : cleanVenmoHandle(handleValue);
+        if (key && handle) acc[key] = handle;
+        return acc;
+      }, {});
+    } catch {
+      return {};
+    }
+  };
+  const writeLocalAccountPaymentHandle = (provider, identity, handle) => {
+    try {
+      const storageKey = getAccountPaymentHandleStorageKey(provider);
+      const key = normalizeIdentityKey(identity);
+      if (!storageKey || !key) return;
+      const current = readLocalAccountPaymentHandles(provider);
+      const cleaned = provider === 'cashapp' ? cleanCashAppHandle(handle) : cleanVenmoHandle(handle);
+      if (cleaned) current[key] = cleaned;
+      else delete current[key];
+      localStorage.setItem(storageKey, JSON.stringify(current));
+    } catch {}
+  };
   const getVenmoHandleForIdentity = (identity) => {
     const key = normalizeIdentityKey(identity);
-    return venmoHandles[key] || globalVenmoHandles[key] || '';
+    const localHandles = readLocalAccountPaymentHandles('venmo');
+    return venmoHandles[key] || globalVenmoHandles[key] || localHandles[key] || '';
   };
   const getCashAppHandleForIdentity = (identity) => {
     const key = normalizeIdentityKey(identity);
-    return cashAppHandles[key] || globalCashAppHandles[key] || '';
+    const localHandles = readLocalAccountPaymentHandles('cashapp');
+    return cashAppHandles[key] || globalCashAppHandles[key] || localHandles[key] || '';
   };
   const canEditVenmoIdentity = (identity) => {
     const mine = normalizeIdentityKey(user?.email || currentUser);
@@ -2244,7 +2281,10 @@ function App() {
   const saveVenmoHandleEverywhere = async (identity, handle) => {
     if (!assertCanEditActiveLayer('edit payment handles')) return false;
     const key = normalizeIdentityKey(identity);
-    if (!key || !activeSubCalendar) return false;
+    if (!key) {
+      setExpenseError('Could not save Venmo handle: Missing identity.');
+      return false;
+    }
     const cleaned = cleanVenmoHandle(handle);
     const { data, error } = await supabase
       .from('sub_calendar_notes')
@@ -2257,12 +2297,21 @@ function App() {
 
     const rows = data || [];
     if (rows.length === 0) {
-      if (!cleaned) return true;
-      const initial = { ...globalVenmoHandles, [key]: cleaned };
-      const ok = await saveVenmoHandles(initial);
-      if (!ok) return false;
+      const initial = { ...globalVenmoHandles };
+      if (cleaned) initial[key] = cleaned;
+      else delete initial[key];
+      if (activeSubCalendar) {
+        const ok = await saveVenmoHandles(initial);
+        if (!ok) return false;
+      }
+      writeLocalAccountPaymentHandle('venmo', identity, cleaned);
       setGlobalVenmoHandles(initial);
-      setVenmoHandles(initial);
+      setVenmoHandles((prev) => {
+        const next = { ...prev };
+        if (cleaned) next[key] = cleaned;
+        else delete next[key];
+        return next;
+      });
       return true;
     }
 
@@ -2286,21 +2335,25 @@ function App() {
         setExpenseError(`Could not save Venmo handle: ${updateError.message}`);
         return false;
       }
-      if (row.sub_calendar_id === activeSubCalendar.id) {
+      if (activeSubCalendar && row.sub_calendar_id === activeSubCalendar.id) {
         foundActiveRow = true;
         setVenmoHandles(parsed);
         setVenmoHandlesNoteId(row.id);
       }
     }
 
-    if (!foundActiveRow && cleaned) {
+    if (!foundActiveRow) {
       const nextCurrent = { ...globalVenmoHandles };
-      nextCurrent[key] = cleaned;
-      const ok = await saveVenmoHandles(nextCurrent);
-      if (!ok) return false;
+      if (cleaned) nextCurrent[key] = cleaned;
+      else delete nextCurrent[key];
+      if (activeSubCalendar) {
+        const ok = await saveVenmoHandles(nextCurrent);
+        if (!ok) return false;
+      }
       setVenmoHandles(nextCurrent);
     }
 
+    writeLocalAccountPaymentHandle('venmo', identity, cleaned);
     setGlobalVenmoHandles(prev => {
       const next = { ...prev };
       if (cleaned) next[key] = cleaned;
@@ -2345,7 +2398,10 @@ function App() {
   const saveCashAppHandleEverywhere = async (identity, handle) => {
     if (!assertCanEditActiveLayer('edit payment handles')) return false;
     const key = normalizeIdentityKey(identity);
-    if (!key || !activeSubCalendar) return false;
+    if (!key) {
+      setExpenseError('Could not save Cash App handle: Missing identity.');
+      return false;
+    }
     const cleaned = cleanCashAppHandle(handle);
     const { data, error } = await supabase
       .from('sub_calendar_notes')
@@ -2358,12 +2414,21 @@ function App() {
 
     const rows = data || [];
     if (rows.length === 0) {
-      if (!cleaned) return true;
-      const initial = { ...globalCashAppHandles, [key]: cleaned };
-      const ok = await saveCashAppHandles(initial);
-      if (!ok) return false;
+      const initial = { ...globalCashAppHandles };
+      if (cleaned) initial[key] = cleaned;
+      else delete initial[key];
+      if (activeSubCalendar) {
+        const ok = await saveCashAppHandles(initial);
+        if (!ok) return false;
+      }
+      writeLocalAccountPaymentHandle('cashapp', identity, cleaned);
       setGlobalCashAppHandles(initial);
-      setCashAppHandles(initial);
+      setCashAppHandles((prev) => {
+        const next = { ...prev };
+        if (cleaned) next[key] = cleaned;
+        else delete next[key];
+        return next;
+      });
       return true;
     }
 
@@ -2387,21 +2452,25 @@ function App() {
         setExpenseError(`Could not save Cash App handle: ${updateError.message}`);
         return false;
       }
-      if (row.sub_calendar_id === activeSubCalendar.id) {
+      if (activeSubCalendar && row.sub_calendar_id === activeSubCalendar.id) {
         foundActiveRow = true;
         setCashAppHandles(parsed);
         setCashAppHandlesNoteId(row.id);
       }
     }
 
-    if (!foundActiveRow && cleaned) {
+    if (!foundActiveRow) {
       const nextCurrent = { ...globalCashAppHandles };
-      nextCurrent[key] = cleaned;
-      const ok = await saveCashAppHandles(nextCurrent);
-      if (!ok) return false;
+      if (cleaned) nextCurrent[key] = cleaned;
+      else delete nextCurrent[key];
+      if (activeSubCalendar) {
+        const ok = await saveCashAppHandles(nextCurrent);
+        if (!ok) return false;
+      }
       setCashAppHandles(nextCurrent);
     }
 
+    writeLocalAccountPaymentHandle('cashapp', identity, cleaned);
     setGlobalCashAppHandles(prev => {
       const next = { ...prev };
       if (cleaned) next[key] = cleaned;
@@ -7004,13 +7073,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const cashValue = cleanCashAppHandle(accountCashAppInput);
       const venmoOk = await saveVenmoHandleEverywhere(identity, venmoValue);
       if (!venmoOk) {
-        setAccountPaymentMessage(`Could not save Venmo handle: ${expenseError || 'Unknown error'}`);
+        setAccountPaymentMessage('Could not save Venmo handle. Try again from Account or an expense section.');
         setSavingAccountPayments(false);
         return;
       }
       const cashOk = await saveCashAppHandleEverywhere(identity, cashValue);
       if (!cashOk) {
-        setAccountPaymentMessage(`Could not save Cash App handle: ${expenseError || 'Unknown error'}`);
+        setAccountPaymentMessage('Could not save Cash App handle. Try again from Account or an expense section.');
         setSavingAccountPayments(false);
         return;
       }
