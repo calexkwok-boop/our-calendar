@@ -17419,9 +17419,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                           <p className="text-xs text-gray-400 dark:text-gray-500 italic">Finalize a round to generate standings.</p>
                         ) : (
                           tournamentStandings.map((row, index) => (
-                            <div key={`standing-${row.id}`} className="grid grid-cols-[2rem_minmax(0,1fr)_auto] gap-3 items-center rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-2">
-                              <div className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                            <div key={`standing-${row.id}`} className="grid grid-cols-[4.75rem_minmax(0,1fr)_auto] gap-3 items-center rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-2">
+                              <div className="flex justify-start">
+                                {index === 0 ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">🥇 1st</span>
+                                ) : index === 1 ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-700/70 dark:text-slate-200">🥈 2nd</span>
+                                ) : index === 2 ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-1 text-xs font-semibold text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">🥉 3rd</span>
+                                ) : (
+                                  <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">#{index + 1}</span>
+                                )}
                               </div>
                               <div className="min-w-0">
                                 <div className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{row.name}</div>
