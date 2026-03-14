@@ -13092,24 +13092,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   function clampHeaderModuleCenterPercent(moduleId, x, y) {
     const xNum = Number(x);
     const yNum = Number(y);
-    const fallbackX = Math.max(2, Math.min(98, Number.isFinite(xNum) ? xNum : 50));
-    const fallbackY = Math.max(2, Math.min(98, Number.isFinite(yNum) ? yNum : 50));
-    const container = layerHeaderCardRef.current;
-    if (!container) return { x: fallbackX, y: fallbackY };
-    const rect = container.getBoundingClientRect();
-    if (!rect?.width || !rect?.height) return { x: fallbackX, y: fallbackY };
-    // One shared draggable grid area: the cover photo box interior.
-    const coverInsetPx = rect.width >= 640 ? 20 : 16;
-    const insetPctX = Math.max(4, Math.min(16, (coverInsetPx / rect.width) * 100));
-    const insetPctY = Math.max(4, Math.min(16, (coverInsetPx / rect.height) * 100));
-    const minX = insetPctX;
-    const maxX = 100 - insetPctX;
-    const minY = insetPctY;
-    const maxY = 100 - insetPctY;
-
+    const nextX = Number.isFinite(xNum) ? xNum : 50;
+    const nextY = Number.isFinite(yNum) ? yNum : 50;
+    // Match widget grid bounds.
     return {
-      x: Math.max(minX, Math.min(Math.max(minX, maxX), Number.isFinite(xNum) ? xNum : 50)),
-      y: Math.max(minY, Math.min(Math.max(minY, maxY), Number.isFinite(yNum) ? yNum : 50)),
+      x: Math.max(2, Math.min(98, nextX)),
+      y: Math.max(2, Math.min(98, nextY)),
     };
   }
 
