@@ -129,6 +129,7 @@ const CONTROL_WIDGET_IDS = Object.freeze([
   'list',
   'notes',
   'expenses',
+  'gauntlet',
   'chat',
   'weather',
   'categories',
@@ -144,6 +145,7 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'list',
   'notes',
   'expenses',
+  'gauntlet',
   'chat',
   'ai',
   'scan',
@@ -242,6 +244,164 @@ const urlBase64ToUint8Array = (base64String) => {
 };
 
 const getLayerDarkModeStorageKey = (userId, layerId) => `darkMode:${String(userId || '').trim()}:${String(layerId || '').trim()}`;
+const GAUNTLET_PAIRING_PATTERNS = Object.freeze([
+  Object.freeze([[0, 3], [1, 2]]),
+  Object.freeze([[0, 2], [1, 3]]),
+  Object.freeze([[0, 1], [2, 3]]),
+]);
+
+const chunkIntoGauntletCourts = (participants) => {
+  const list = Array.isArray(participants) ? participants.filter(Boolean) : [];
+  const courts = [];
+  for (let index = 0; index < list.length; index += 4) {
+    const group = list.slice(index, index + 4);
+    if (group.length === 4) courts.push(group);
+  }
+  return courts;
+};
+
+const buildGauntletRoundFromGroups = (courtGroups, roundIndex = 0) => {
+  const pattern = GAUNTLET_PAIRING_PATTERNS[Math.abs(Number(roundIndex) || 0) % GAUNTLET_PAIRING_PATTERNS.length];
+  return {
+    index: Math.max(1, Number(roundIndex || 0) + 1),
+    createdAt: new Date().toISOString(),
+    finalizedAt: null,
+    courts: (courtGroups || []).map((group, idx) => ({
+      courtNumber: idx + 1,
+      playerIds: group.map((participant) => String(participant?.id || '')).filter(Boolean),
+      teamA: pattern[0].map((playerIndex) => String(group[playerIndex]?.id || '')).filter(Boolean),
+      teamB: pattern[1].map((playerIndex) => String(group[playerIndex]?.id || '')).filter(Boolean),
+      scoreA: '',
+      scoreB: '',
+    })),
+  };
+};
+
+const createGauntletTournament = ({ eventId, totalRounds, participants }) => {
+  const safeParticipants = Array.isArray(participants) ? participants.filter((participant) => String(participant?.id || '').trim()) : [];
+  const roundsTarget = Math.max(1, parseInt(String(totalRounds || ''), 10) || 1);
+  const courtGroups = chunkIntoGauntletCourts(safeParticipants);
+  return {
+    eventId: String(eventId || ''),
+    totalRounds: roundsTarget,
+    createdAt: new Date().toISOString(),
+    completedAt: null,
+    status: 'active',
+    participants: safeParticipants,
+    rounds: courtGroups.length > 0 ? [buildGauntletRoundFromGroups(courtGroups, 0)] : [],
+  };
+};
+
+const getGauntletCourtResult = (court) => {
+  const scoreA = parseInt(String(court?.scoreA ?? '').trim(), 10);
+  const scoreB = parseInt(String(court?.scoreB ?? '').trim(), 10);
+  if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB) || scoreA < 0 || scoreB < 0 || scoreA === scoreB) return null;
+  const teamA = Array.isArray(court?.teamA) ? court.teamA.map((value) => String(value || '')).filter(Boolean) : [];
+  const teamB = Array.isArray(court?.teamB) ? court.teamB.map((value) => String(value || '')).filter(Boolean) : [];
+  const teamAWon = scoreA > scoreB;
+  return {
+    winners: teamAWon ? teamA : teamB,
+    losers: teamAWon ? teamB : teamA,
+    scoreA,
+    scoreB,
+  };
+};
+
+const buildNextGauntletCourtGroups = (round, participantsById) => {
+  const results = Array.isArray(round?.courts) ? round.courts.map((court) => getGauntletCourtResult(court)) : [];
+  if (results.length === 0 || results.some((result) => !result)) return null;
+  return results.map((result, idx) => {
+    const upperLosers = idx > 0 ? results[idx - 1]?.losers || [] : [];
+    const lowerWinners = idx < results.length - 1 ? results[idx + 1]?.winners || [] : [];
+    const ids = idx === 0
+      ? [...result.winners, ...lowerWinners]
+      : idx === results.length - 1
+        ? [...upperLosers, ...result.losers]
+        : [...upperLosers, ...lowerWinners];
+    const group = ids.map((id) => participantsById[String(id || '')]).filter(Boolean);
+    return group.length === 4 ? group : null;
+  });
+};
+
+const deriveGauntletStandings = (tournament) => {
+  const participants = Array.isArray(tournament?.participants) ? tournament.participants : [];
+  const participantMap = participants.reduce((acc, participant) => {
+    const id = String(participant?.id || '').trim();
+    if (!id) return acc;
+    acc[id] = participant;
+    return acc;
+  }, {});
+  const stats = participants.reduce((acc, participant) => {
+    const id = String(participant?.id || '').trim();
+    if (!id) return acc;
+    acc[id] = {
+      id,
+      name: String(participant?.displayName || participant?.name || 'Player'),
+      wins: 0,
+      losses: 0,
+      games: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      pointDiff: 0,
+      courtTotal: 0,
+    };
+    return acc;
+  }, {});
+
+  (tournament?.rounds || []).forEach((round) => {
+    if (!round?.finalizedAt) return;
+    (round?.courts || []).forEach((court) => {
+      const result = getGauntletCourtResult(court);
+      if (!result) return;
+      const courtNumber = Math.max(1, Number(court?.courtNumber || 1));
+      (court?.teamA || []).forEach((playerId) => {
+        const row = stats[String(playerId || '')];
+        if (!row) return;
+        row.games += 1;
+        row.pointsFor += result.scoreA;
+        row.pointsAgainst += result.scoreB;
+        row.courtTotal += courtNumber;
+        if (result.scoreA > result.scoreB) row.wins += 1;
+        else row.losses += 1;
+      });
+      (court?.teamB || []).forEach((playerId) => {
+        const row = stats[String(playerId || '')];
+        if (!row) return;
+        row.games += 1;
+        row.pointsFor += result.scoreB;
+        row.pointsAgainst += result.scoreA;
+        row.courtTotal += courtNumber;
+        if (result.scoreB > result.scoreA) row.wins += 1;
+        else row.losses += 1;
+      });
+    });
+  });
+
+  return Object.values(stats)
+    .map((row) => ({
+      ...row,
+      pointDiff: row.pointsFor - row.pointsAgainst,
+      averageCourt: row.games > 0 ? row.courtTotal / row.games : Number.POSITIVE_INFINITY,
+      participant: participantMap[row.id] || null,
+    }))
+    .sort((a, b) => (
+      b.wins - a.wins
+      || b.pointDiff - a.pointDiff
+      || b.pointsFor - a.pointsFor
+      || a.averageCourt - b.averageCourt
+      || a.name.localeCompare(b.name)
+    ));
+};
+
+const normalizeStoredGauntletMap = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.entries(value).reduce((acc, [eventId, tournament]) => {
+    const id = String(eventId || '').trim();
+    if (!id || !tournament || typeof tournament !== 'object') return acc;
+    acc[id] = tournament;
+    return acc;
+  }, {});
+};
 
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -2584,6 +2744,11 @@ function App() {
   const [layerExpenses, setLayerExpenses] = useState([]);
   const [newLayerExpense, setNewLayerExpense] = useState({ payer: '', description: '', amount: '' });
   const [expenseTrackerError, setExpenseTrackerError] = useState('');
+  const [showGauntletPanel, setShowGauntletPanel] = useState(false);
+  const [selectedGauntletEventId, setSelectedGauntletEventId] = useState('');
+  const [gauntletDraftRounds, setGauntletDraftRounds] = useState('4');
+  const [layerGauntlets, setLayerGauntlets] = useState({});
+  const [gauntletError, setGauntletError] = useState('');
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [controlWidgetOrder, setControlWidgetOrder] = useState([...DEFAULT_CONTROL_WIDGET_ORDER]);
   const [showControlWidgetAddPanel, setShowControlWidgetAddPanel] = useState(false);
@@ -3073,6 +3238,7 @@ function App() {
     list: Boolean(showListPanel),
     notes: Boolean(showNotesPanel),
     expenses: Boolean(showExpenseTrackerPanel),
+    gauntlet: Boolean(showGauntletPanel),
     chat: Boolean(showChatPanel),
     ai: Boolean(showAiAssistant),
     scan: Boolean(showScanHelpModal),
@@ -3084,6 +3250,7 @@ function App() {
     showListPanel,
     showNotesPanel,
     showExpenseTrackerPanel,
+    showGauntletPanel,
     showChatPanel,
     showAiAssistant,
     showScanHelpModal,
@@ -3102,6 +3269,12 @@ function App() {
     const layerKey = String(layerId || '').trim();
     if (!userKey || !layerKey) return '';
     return `calendar-layer-expenses-${userKey}-${layerKey}`;
+  }, [user?.id, activeLayerId]);
+  const getLayerGauntletsStorageKey = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
+    const userKey = String(uid || '').trim();
+    const layerKey = String(layerId || '').trim();
+    if (!userKey || !layerKey) return '';
+    return `calendar-layer-gauntlets-${userKey}-${layerKey}`;
   }, [user?.id, activeLayerId]);
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
@@ -3178,13 +3351,61 @@ function App() {
     } catch {}
   }, [user?.id, activeLayerId, layerExpenses, getLayerExpensesStorageKey]);
   useEffect(() => {
+    if (!user?.id || !activeLayerId) {
+      setLayerGauntlets({});
+      return;
+    }
+    try {
+      const key = getLayerGauntletsStorageKey(user.id, activeLayerId);
+      const raw = key ? localStorage.getItem(key) : '';
+      setLayerGauntlets(normalizeStoredGauntletMap(raw ? JSON.parse(raw) : {}));
+    } catch {
+      setLayerGauntlets({});
+    }
+  }, [user?.id, activeLayerId, getLayerGauntletsStorageKey]);
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) return;
+    try {
+      const key = getLayerGauntletsStorageKey(user.id, activeLayerId);
+      if (!key) return;
+      localStorage.setItem(key, JSON.stringify(layerGauntlets || {}));
+    } catch {}
+  }, [user?.id, activeLayerId, layerGauntlets, getLayerGauntletsStorageKey]);
+  useEffect(() => {
     setExpandedLayerNoteId(null);
     setEditingLayerNoteId(null);
     setNewLayerChecklistItem('');
     setNewLayerNoteText('');
     setNewLayerExpense({ payer: '', description: '', amount: '' });
     setExpenseTrackerError('');
+    setSelectedGauntletEventId('');
+    setGauntletDraftRounds('4');
+    setGauntletError('');
   }, [activeLayerId]);
+  useEffect(() => {
+    const popupLookup = {};
+    Object.entries(events || {}).forEach(([dateKey, rows]) => {
+      (rows || []).forEach((row) => {
+        const eventId = String(row?.id || '').trim();
+        if (!eventId || !popupEventsByEventId[eventId]) return;
+        popupLookup[eventId] = { ...row, dateKey: String(row?.date || dateKey || '').trim() };
+      });
+    });
+    const popupOptions = Object.keys(popupEventsByEventId || {})
+      .map((eventId) => ({
+        eventId: String(eventId || ''),
+        event: popupLookup[String(eventId || '')] || null,
+        signups: popupSignupsByEventId[String(eventId || '')] || [],
+      }))
+      .filter((entry) => entry.event);
+    const validIds = new Set(popupOptions.map((entry) => String(entry.eventId || '')));
+    if (selectedGauntletEventId && validIds.has(String(selectedGauntletEventId))) return;
+    const preferred = popupOptions.find((entry) => entry.signups.length >= 4 && entry.signups.length % 4 === 0) || popupOptions[0] || null;
+    const nextId = String(preferred?.eventId || '');
+    if (nextId !== String(selectedGauntletEventId || '')) {
+      setSelectedGauntletEventId(nextId);
+    }
+  }, [events, popupEventsByEventId, popupSignupsByEventId, selectedGauntletEventId]);
   useEffect(() => {
     if (!coverHeaderControlsVisible) return undefined;
     if (hasOpenWidgetWindow) return undefined;
@@ -13791,6 +14012,38 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const readInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 1 : 0), 0);
   const activeChatUnreadCount = Number(chatUnreadCounts[String(activeLayerId || '')] || 0);
   const activeControlWidgets = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
+  const popupEventDetailsById = (() => {
+    const lookup = {};
+    Object.entries(events || {}).forEach(([dateKey, rows]) => {
+      (rows || []).forEach((row) => {
+        const eventId = String(row?.id || '').trim();
+        if (!eventId || !popupEventsByEventId[eventId]) return;
+        lookup[eventId] = { ...row, dateKey: String(row?.date || dateKey || '').trim() };
+      });
+    });
+    return lookup;
+  })();
+  const eligibleGauntletPopupEvents = Object.keys(popupEventsByEventId || {})
+    .map((eventId) => {
+      const event = popupEventDetailsById[String(eventId || '')] || null;
+      const signups = popupSignupsByEventId[String(eventId || '')] || [];
+      return {
+        eventId: String(eventId || ''),
+        event,
+        signups,
+        signupCount: signups.length,
+        eligible: signups.length >= 4 && signups.length % 4 === 0,
+      };
+    })
+    .filter((entry) => entry.event)
+    .sort((a, b) => {
+      const aDate = String(a?.event?.dateKey || '');
+      const bDate = String(b?.event?.dateKey || '');
+      if (aDate !== bDate) return aDate.localeCompare(bDate);
+      return String(a?.event?.title || '').localeCompare(String(b?.event?.title || ''));
+    });
+  const selectedGauntletTournament = layerGauntlets[String(selectedGauntletEventId || '')] || null;
+  const selectedGauntletStandings = deriveGauntletStandings(selectedGauntletTournament);
   const getWidgetSlotForIndex = (index) => {
     const safeIndex = Math.max(0, Number(index) || 0);
     const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
@@ -13887,6 +14140,115 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const id = String(expenseId || '').trim();
     if (!id) return;
     setLayerExpenses((prev) => (prev || []).filter((expense) => String(expense?.id || '') !== id));
+  };
+  const startGauntletTournament = (eventId, restart = false) => {
+    const normalizedEventId = String(eventId || selectedGauntletEventId || '').trim();
+    if (!normalizedEventId) {
+      setGauntletError('Select a popup event first.');
+      return;
+    }
+    const entry = eligibleGauntletPopupEvents.find((item) => String(item?.eventId || '') === normalizedEventId) || null;
+    const signups = entry?.signups || [];
+    if (!entry?.eligible) {
+      setGauntletError('Gauntlet play needs popup events with 4, 8, 12, or more signups in groups of 4.');
+      return;
+    }
+    const totalRounds = Math.max(1, parseInt(String(gauntletDraftRounds || '').trim(), 10) || 1);
+    const participants = signups.map((signup, idx) => ({
+      id: String(signup?.userId || `guest-${idx + 1}-${String(signup?.displayName || 'player').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`),
+      userId: String(signup?.userId || ''),
+      displayName: String(signup?.displayName || `Player ${idx + 1}`),
+      seed: idx + 1,
+    }));
+    if (!restart && layerGauntlets[normalizedEventId]) {
+      setGauntletError('A gauntlet already exists for this popup event.');
+      return;
+    }
+    setLayerGauntlets((prev) => ({
+      ...(prev || {}),
+      [normalizedEventId]: createGauntletTournament({
+        eventId: normalizedEventId,
+        totalRounds,
+        participants,
+      }),
+    }));
+    setSelectedGauntletEventId(normalizedEventId);
+    setGauntletError('');
+  };
+  const updateGauntletCourtScore = (eventId, roundIndex, courtNumber, scoreKey, value) => {
+    const normalizedEventId = String(eventId || '').trim();
+    if (!normalizedEventId || (scoreKey !== 'scoreA' && scoreKey !== 'scoreB')) return;
+    const nextValue = value === '' ? '' : String(value).replace(/[^\d]/g, '');
+    setLayerGauntlets((prev) => {
+      const tournament = prev?.[normalizedEventId];
+      if (!tournament) return prev;
+      const rounds = (tournament.rounds || []).map((round, idx) => {
+        if (idx !== roundIndex || round?.finalizedAt) return round;
+        return {
+          ...round,
+          courts: (round.courts || []).map((court) => (
+            Number(court?.courtNumber || 0) === Number(courtNumber || 0)
+              ? { ...court, [scoreKey]: nextValue }
+              : court
+          )),
+        };
+      });
+      return {
+        ...(prev || {}),
+        [normalizedEventId]: { ...tournament, rounds },
+      };
+    });
+  };
+  const finalizeGauntletRound = (eventId) => {
+    const normalizedEventId = String(eventId || '').trim();
+    const tournament = layerGauntlets[normalizedEventId];
+    if (!tournament) return;
+    const rounds = Array.isArray(tournament?.rounds) ? tournament.rounds : [];
+    const roundIndex = rounds.findIndex((round) => !round?.finalizedAt);
+    if (roundIndex < 0) {
+      setGauntletError('This gauntlet is already complete.');
+      return;
+    }
+    const round = rounds[roundIndex];
+    const hasInvalidCourt = (round?.courts || []).some((court) => !getGauntletCourtResult(court));
+    if (hasInvalidCourt) {
+      setGauntletError('Enter non-tied scores for every court before advancing.');
+      return;
+    }
+    const participantsById = (tournament?.participants || []).reduce((acc, participant) => {
+      const id = String(participant?.id || '').trim();
+      if (!id) return acc;
+      acc[id] = participant;
+      return acc;
+    }, {});
+    const nextCourtGroups = buildNextGauntletCourtGroups(round, participantsById);
+    const updatedRounds = rounds.map((item, idx) => (
+      idx === roundIndex ? { ...item, finalizedAt: new Date().toISOString() } : item
+    ));
+    const shouldComplete = (roundIndex + 1) >= Math.max(1, Number(tournament?.totalRounds || 1));
+    const nextTournament = {
+      ...tournament,
+      rounds: shouldComplete || !nextCourtGroups || nextCourtGroups.some((group) => !group)
+        ? updatedRounds
+        : [...updatedRounds, buildGauntletRoundFromGroups(nextCourtGroups, roundIndex + 1)],
+      status: shouldComplete ? 'completed' : 'active',
+      completedAt: shouldComplete ? new Date().toISOString() : null,
+    };
+    setLayerGauntlets((prev) => ({
+      ...(prev || {}),
+      [normalizedEventId]: nextTournament,
+    }));
+    setGauntletError('');
+  };
+  const resetGauntletTournament = (eventId) => {
+    const normalizedEventId = String(eventId || '').trim();
+    if (!normalizedEventId) return;
+    setLayerGauntlets((prev) => {
+      const next = { ...(prev || {}) };
+      delete next[normalizedEventId];
+      return next;
+    });
+    setGauntletError('');
   };
   const deleteLayerNote = (noteId) => {
     const id = String(noteId || '').trim();
@@ -14032,6 +14394,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setShowExpenseTrackerPanel((prev) => !prev);
       return;
     }
+    if (id === 'gauntlet') {
+      setShowGauntletPanel((prev) => !prev);
+      return;
+    }
     if (id === 'chat') {
       const layerKey = String(activeLayerId || '');
       const next = !showChatPanel;
@@ -14079,6 +14445,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (id === 'list') return { label: 'List', icon: <Tag className="w-4 h-4" />, active: Boolean(widgetCardOpenById.list), disabled: false };
     if (id === 'notes') return { label: 'Notes', icon: <span className="text-sm leading-none">📝</span>, active: Boolean(widgetCardOpenById.notes), disabled: false };
     if (id === 'expenses') return { label: 'Expenses', icon: <span className="text-sm leading-none">💸</span>, active: Boolean(widgetCardOpenById.expenses), disabled: false };
+    if (id === 'gauntlet') return { label: 'Bracket', icon: <span className="text-sm leading-none">🏓</span>, active: Boolean(widgetCardOpenById.gauntlet), disabled: false };
     if (id === 'chat') return {
       label: 'Chat',
       icon: <MessageSquare className="w-4 h-4" />,
@@ -16772,6 +17139,220 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   </div>
                 </div>
               </div>
+            </div>
+          );
+        })()}
+
+        {showGauntletPanel && (() => {
+          const selectedEntry = eligibleGauntletPopupEvents.find((entry) => String(entry?.eventId || '') === String(selectedGauntletEventId || '')) || null;
+          const selectedEvent = selectedEntry?.event || null;
+          const signups = selectedEntry?.signups || [];
+          const signupCount = signups.length;
+          const tournament = selectedGauntletTournament;
+          const rounds = tournament?.rounds || [];
+          const activeRoundIndex = rounds.findIndex((round) => !round?.finalizedAt);
+          const activeRound = activeRoundIndex >= 0 ? rounds[activeRoundIndex] : null;
+          const participantMap = (tournament?.participants || []).reduce((acc, participant) => {
+            const id = String(participant?.id || '').trim();
+            if (!id) return acc;
+            acc[id] = participant;
+            return acc;
+          }, {});
+          const renderTeamName = (playerIds) => (playerIds || []).map((playerId) => (
+            participantMap[String(playerId || '')]?.displayName || 'Player'
+          )).join(' + ');
+          return (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Pickleball Gauntlet</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Run a king-of-the-court style popup tournament from joined players.</p>
+                </div>
+                <button onClick={() => setShowGauntletPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                  <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2.5 mb-3 text-xs text-amber-800 dark:text-amber-200">
+                This bracket is saved on this device for the active layer. Use popup events with signups in groups of 4 so courts can be filled evenly.
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_7rem_9rem]">
+                <select
+                  value={selectedGauntletEventId}
+                  onChange={(e) => {
+                    setSelectedGauntletEventId(e.target.value);
+                    setGauntletError('');
+                  }}
+                  className="px-3 py-2 text-base sm:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
+                  style={{ fontSize: '16px' }}
+                >
+                  {eligibleGauntletPopupEvents.length === 0 ? (
+                    <option value="">No popup events yet</option>
+                  ) : (
+                    eligibleGauntletPopupEvents.map((entry) => (
+                      <option key={entry.eventId} value={entry.eventId}>
+                        {entry.event?.title || 'Popup event'} · {entry.signupCount} joined{entry.eligible ? '' : ' · needs groups of 4'}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <input
+                  type="number"
+                  min="1"
+                  value={gauntletDraftRounds}
+                  onChange={(e) => setGauntletDraftRounds(e.target.value)}
+                  className="px-3 py-2 text-base sm:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
+                  style={{ fontSize: '16px' }}
+                  placeholder="Games"
+                />
+                <button
+                  onClick={() => startGauntletTournament(selectedGauntletEventId, Boolean(tournament))}
+                  disabled={!selectedEntry?.eligible}
+                  className="px-3 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-emerald-500 to-teal-500 text-white disabled:opacity-50"
+                >
+                  {tournament ? 'Restart' : 'Start Gauntlet'}
+                </button>
+              </div>
+
+              {selectedEvent && (
+                <div className="mt-3 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50/70 dark:bg-rose-900/10 px-3 py-2.5">
+                  <div className="text-sm font-medium text-gray-800 dark:text-gray-100">{selectedEvent.title}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {formatDateKeyMMDDYYYY(selectedEvent.dateKey || selectedEvent.date)}{selectedEvent.time ? ` at ${formatTime(selectedEvent.time)}` : ''}{selectedEvent.location ? ` · ${selectedEvent.location}` : ''}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                    {signupCount} players joined{selectedEntry?.eligible ? ` · ${signupCount / 4} court${signupCount === 4 ? '' : 's'}` : ' · needs 4, 8, 12... players'}
+                  </div>
+                  {signups.length > 0 && (
+                    <div className="mt-1 text-[11px] text-rose-700/90 dark:text-rose-300/90">
+                      {signups.map((row) => row.displayName || 'Member').join(', ')}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {gauntletError && <p className="mt-3 text-xs text-red-500">{gauntletError}</p>}
+
+              {!tournament ? (
+                <div className="mt-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                  {eligibleGauntletPopupEvents.length === 0
+                    ? 'Create a popup event and have players join it first.'
+                    : 'Choose an eligible popup event and start the gauntlet.'}
+                </div>
+              ) : (
+                <div className="mt-4 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-900/40 px-3 py-2.5">
+                    <div className="text-xs text-gray-600 dark:text-gray-300">
+                      Round <span className="font-semibold">{Math.min((activeRoundIndex >= 0 ? activeRoundIndex + 1 : rounds.length), Number(tournament.totalRounds || 1))}</span> of <span className="font-semibold">{Number(tournament.totalRounds || 1)}</span>
+                      {' '}· {tournament.status === 'completed' ? 'Completed' : 'In progress'}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {activeRound && (
+                        <button
+                          onClick={() => finalizeGauntletRound(selectedGauntletEventId)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-500 hover:bg-indigo-600 text-white"
+                        >
+                          Finalize Round
+                        </button>
+                      )}
+                      <button
+                        onClick={() => resetGauntletTournament(selectedGauntletEventId)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {activeRound && (
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      {(activeRound.courts || []).map((court) => (
+                        <div key={`gauntlet-court-${court.courtNumber}`} className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-900/10 p-3">
+                          <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">Court {court.courtNumber}</div>
+                          <div className="mt-2 space-y-2">
+                            <div className="rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2">
+                              <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Team A</div>
+                              <div className="text-sm text-gray-800 dark:text-gray-100">{renderTeamName(court.teamA)}</div>
+                            </div>
+                            <div className="rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2">
+                              <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Team B</div>
+                              <div className="text-sm text-gray-800 dark:text-gray-100">{renderTeamName(court.teamB)}</div>
+                            </div>
+                          </div>
+                          <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              value={court.scoreA}
+                              disabled={Boolean(activeRound.finalizedAt)}
+                              onChange={(e) => updateGauntletCourtScore(selectedGauntletEventId, activeRoundIndex, court.courtNumber, 'scoreA', e.target.value)}
+                              className="px-3 py-2 text-center text-base sm:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
+                              style={{ fontSize: '16px' }}
+                            />
+                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">vs</div>
+                            <input
+                              type="number"
+                              min="0"
+                              value={court.scoreB}
+                              disabled={Boolean(activeRound.finalizedAt)}
+                              onChange={(e) => updateGauntletCourtScore(selectedGauntletEventId, activeRoundIndex, court.courtNumber, 'scoreB', e.target.value)}
+                              className="px-3 py-2 text-center text-base sm:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
+                              style={{ fontSize: '16px' }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid gap-3 xl:grid-cols-[1.2fr_1fr]">
+                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+                      <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                        Standings
+                      </div>
+                      <div className="p-3 space-y-2">
+                        {selectedGauntletStandings.length === 0 ? (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">Finalize a round to generate standings.</p>
+                        ) : (
+                          selectedGauntletStandings.map((row, index) => (
+                            <div key={`standing-${row.id}`} className="grid grid-cols-[2rem_minmax(0,1fr)_auto] gap-3 items-center rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-2">
+                              <div className="text-sm font-semibold text-gray-500 dark:text-gray-400">#{index + 1}</div>
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{row.name}</div>
+                                <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                                  {row.wins}-{row.losses} · PF {row.pointsFor} / PA {row.pointsAgainst} · Diff {row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
+                                </div>
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">Avg court {Number.isFinite(row.averageCourt) ? row.averageCourt.toFixed(1) : '-'}</div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-900/40 p-3">
+                      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Round History</div>
+                      <div className="mt-3 space-y-2">
+                        {rounds.map((round) => (
+                          <div key={`round-history-${round.index}`} className="rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2">
+                            <div className="text-xs font-medium text-gray-700 dark:text-gray-200">
+                              Round {round.index} {round.finalizedAt ? '· final' : '· current'}
+                            </div>
+                            <div className="mt-1 space-y-1">
+                              {(round.courts || []).map((court) => (
+                                <div key={`round-${round.index}-court-${court.courtNumber}`} className="text-[11px] text-gray-500 dark:text-gray-400">
+                                  Court {court.courtNumber}: {renderTeamName(court.teamA)} {court.scoreA === '' || court.scoreB === '' ? 'vs' : `${court.scoreA}-${court.scoreB}`} {renderTeamName(court.teamB)}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}
