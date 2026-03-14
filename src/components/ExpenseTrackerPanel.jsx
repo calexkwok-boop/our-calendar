@@ -263,6 +263,18 @@ function ExpenseTrackerPanel({
   payerPlaceholder = 'Name',
   amountPlaceholder = '0.00',
   descriptionPlaceholder = 'What was it for?',
+  paymentMembers = [],
+  settlements = [],
+  getVenmoHandle = null,
+  getCashAppHandle = null,
+  canEditPaymentIdentity = null,
+  paymentOptionPickerIdentity = null,
+  setPaymentOptionPickerIdentity = null,
+  onSetVenmoHandle = null,
+  onSetCashAppHandle = null,
+  onOpenVenmoPayment = null,
+  onOpenCashAppPayment = null,
+  settlementNoteContext = 'expense split',
 }) {
   const perPerson =
     participants.length > 0 ? (totalCents / 100 / participants.length).toFixed(2) : '0.00';
@@ -270,6 +282,10 @@ function ExpenseTrackerPanel({
   const handleDraftChange = (key, value) => {
     setExpenseDraft((prev) => ({ ...prev, [key]: value }));
   };
+  const showPaymentSections =
+    typeof getVenmoHandle === 'function' &&
+    typeof getCashAppHandle === 'function' &&
+    paymentMembers.length > 0;
 
   return (
     <>
@@ -412,6 +428,130 @@ function ExpenseTrackerPanel({
             )}
           </div>
         </div>
+
+        {showPaymentSections && (
+          <div style={{ padding: '16px 20px', borderTop: `1px solid ${C.border}`, background: C.bg }}>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div style={{ ...s.col, padding: 0 }}>
+                <div style={s.colTitle}>Payment handles</div>
+                {paymentMembers.map((name) => {
+                  const venmoHandle = getVenmoHandle(name);
+                  const cashHandle = getCashAppHandle(name);
+                  const canEdit = typeof canEditPaymentIdentity === 'function' ? canEditPaymentIdentity(name) : false;
+                  const pickerOpen = paymentOptionPickerIdentity === name;
+                  return (
+                    <div key={`payment-${name}`} style={{ ...s.expenseRow, alignItems: 'flex-start' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={s.expenseDesc}>{getDisplayName(name)}</div>
+                        <div style={s.expensePayer}>
+                          {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'}{' '}
+                          {' · '}
+                          {cashHandle ? `Cash App $${cashHandle}` : 'Cash App not set'}
+                        </div>
+                        {canEdit && pickerOpen && (
+                          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                            <button
+                              style={{ ...s.addBtn, padding: '6px 10px', fontSize: 12, background: '#008cff' }}
+                              onClick={async () => {
+                                if (typeof onSetVenmoHandle === 'function') await onSetVenmoHandle(name);
+                              }}
+                            >
+                              Venmo
+                            </button>
+                            <button
+                              style={{ ...s.addBtn, padding: '6px 10px', fontSize: 12, background: '#00d632' }}
+                              onClick={async () => {
+                                if (typeof onSetCashAppHandle === 'function') await onSetCashAppHandle(name);
+                              }}
+                            >
+                              Cash App
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {canEdit ? (
+                        <button
+                          style={{ ...s.addBtn, padding: '6px 10px', fontSize: 12 }}
+                          onClick={() => {
+                            if (typeof setPaymentOptionPickerIdentity === 'function') {
+                              setPaymentOptionPickerIdentity((prev) => (prev === name ? null : name));
+                            }
+                          }}
+                        >
+                          {pickerOpen ? 'Done' : venmoHandle || cashHandle ? 'Edit' : 'Add'}
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ ...s.col, padding: 0 }}>
+                <div style={s.colTitle}>Who pays whom</div>
+                {settlements.length === 0 ? (
+                  <p style={s.empty}>No transfers needed.</p>
+                ) : (
+                  settlements.map((settlement, idx) => {
+                    const venmoHandle = getVenmoHandle(settlement.to);
+                    const cashHandle = getCashAppHandle(settlement.to);
+                    const fromDisplay = getDisplayName(settlement.from);
+                    const toDisplay = getDisplayName(settlement.to);
+                    const payVerb = fromDisplay === 'You' ? 'pay' : 'pays';
+                    return (
+                      <div key={`${settlement.from}-${settlement.to}-${idx}`} style={s.balanceRow}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={s.balanceName}>
+                            {fromDisplay} {payVerb} ${(settlement.amount / 100).toFixed(2)} {toDisplay}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          <button
+                            style={{
+                              ...s.addBtn,
+                              padding: '6px 10px',
+                              fontSize: 12,
+                              background: venmoHandle ? '#008cff' : '#cbd5e1',
+                              cursor: venmoHandle ? 'pointer' : 'not-allowed',
+                            }}
+                            disabled={!venmoHandle}
+                            onClick={() => {
+                              if (typeof onOpenVenmoPayment === 'function') {
+                                onOpenVenmoPayment(
+                                  venmoHandle,
+                                  settlement.amount,
+                                  `${fromDisplay} ${payVerb} ${toDisplay} for ${settlementNoteContext}`
+                                );
+                              }
+                            }}
+                          >
+                            {venmoHandle ? 'Venmo' : 'No Venmo'}
+                          </button>
+                          <button
+                            style={{
+                              ...s.addBtn,
+                              padding: '6px 10px',
+                              fontSize: 12,
+                              background: cashHandle ? '#00d632' : '#cbd5e1',
+                              cursor: cashHandle ? 'pointer' : 'not-allowed',
+                            }}
+                            disabled={!cashHandle}
+                            onClick={() => {
+                              if (typeof onOpenCashAppPayment === 'function') {
+                                onOpenCashAppPayment(cashHandle, settlement.amount);
+                              }
+                            }}
+                          >
+                            {cashHandle ? 'Cash App' : 'No Cash App'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

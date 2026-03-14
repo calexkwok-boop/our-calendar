@@ -627,12 +627,6 @@ function App() {
   const [globalCashAppHandles, setGlobalCashAppHandles] = useState({});
   const [paymentOptionPickerIdentity, setPaymentOptionPickerIdentity] = useState(null);
   const [newExpenseDraft, setNewExpenseDraft] = useState({ payer: '', description: '', amount: '' });
-  const [expensePanels, setExpensePanels] = useState({
-    splitter: true,
-    summary: true,
-    handles: true,
-    settlements: true,
-  });
   const [expenseError, setExpenseError] = useState('');
   const [newNote, setNewNote] = useState('');
   const [expandedNote, setExpandedNote] = useState(null);
@@ -2496,10 +2490,6 @@ function App() {
     return true;
   };
 
-  const toggleExpensePanel = (panelKey) => {
-    setExpensePanels(prev => ({ ...prev, [panelKey]: !prev[panelKey] }));
-  };
-
   const addSubCalExpense = async () => {
     if (!assertCanEditActiveLayer('add itinerary expenses')) return;
     const participants = getExpenseParticipants();
@@ -2815,6 +2805,10 @@ function App() {
   const [accountHandleInput, setAccountHandleInput] = useState('');
   const [accountHandleMessage, setAccountHandleMessage] = useState('');
   const [savingAccountHandle, setSavingAccountHandle] = useState(false);
+  const [accountVenmoInput, setAccountVenmoInput] = useState('');
+  const [accountCashAppInput, setAccountCashAppInput] = useState('');
+  const [accountPaymentMessage, setAccountPaymentMessage] = useState('');
+  const [savingAccountPayments, setSavingAccountPayments] = useState(false);
   const [showListPanel, setShowListPanel] = useState(false);
   const [listPanelAttention, setListPanelAttention] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
@@ -3312,7 +3306,11 @@ function App() {
     if (!showSharePanel) return;
     setAccountHandleInput(String(currentUser || '').trim());
     setAccountHandleMessage('');
-  }, [showSharePanel, currentUser]);
+    const accountIdentity = String(user?.email || currentUser || '').trim();
+    setAccountVenmoInput(accountIdentity ? getVenmoHandleForIdentity(accountIdentity) : '');
+    setAccountCashAppInput(accountIdentity ? getCashAppHandleForIdentity(accountIdentity) : '');
+    setAccountPaymentMessage('');
+  }, [showSharePanel, currentUser, user?.email, venmoHandles, globalVenmoHandles, cashAppHandles, globalCashAppHandles]);
   const bumpCoverControlsInteraction = React.useCallback(() => {
     if (!coverHeaderControlsVisible) return;
     setCoverControlsInteractionTick((prev) => prev + 1);
@@ -6989,6 +6987,39 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setAccountHandleMessage('Handle updated locally.');
     } finally {
       setSavingAccountHandle(false);
+    }
+  };
+  const saveAccountPaymentHandles = async () => {
+    const identity = String(user?.email || currentUser || '').trim();
+    if (!identity) {
+      setAccountPaymentMessage('Could not determine your account identity.');
+      return;
+    }
+    setSavingAccountPayments(true);
+    setAccountPaymentMessage('');
+    setExpenseError('');
+    try {
+      const venmoValue = cleanVenmoHandle(accountVenmoInput);
+      const cashValue = cleanCashAppHandle(accountCashAppInput);
+      const venmoOk = await saveVenmoHandleEverywhere(identity, venmoValue);
+      if (!venmoOk) {
+        setAccountPaymentMessage(`Could not save Venmo handle: ${expenseError || 'Unknown error'}`);
+        setSavingAccountPayments(false);
+        return;
+      }
+      const cashOk = await saveCashAppHandleEverywhere(identity, cashValue);
+      if (!cashOk) {
+        setAccountPaymentMessage(`Could not save Cash App handle: ${expenseError || 'Unknown error'}`);
+        setSavingAccountPayments(false);
+        return;
+      }
+      setAccountVenmoInput(venmoValue);
+      setAccountCashAppInput(cashValue);
+      setAccountPaymentMessage('Payment handles updated.');
+    } catch (error) {
+      setAccountPaymentMessage(`Could not save payment handles: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setSavingAccountPayments(false);
     }
   };
 
@@ -15892,6 +15923,55 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </div>
               )}
             </div>
+            <div className="mb-4 p-3 rounded-xl border bg-gray-50 dark:bg-gray-800/70" style={{ borderColor: themeAccentBorder }}>
+              <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Payment Handles</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Venmo</div>
+                  <input
+                    type="text"
+                    value={accountVenmoInput}
+                    onChange={(e) => {
+                      setAccountVenmoInput(e.target.value);
+                      setAccountPaymentMessage('');
+                    }}
+                    placeholder="@username"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
+                  />
+                </div>
+                <div>
+                  <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Cash App</div>
+                  <input
+                    type="text"
+                    value={accountCashAppInput}
+                    onChange={(e) => {
+                      setAccountCashAppInput(e.target.value);
+                      setAccountPaymentMessage('');
+                    }}
+                    placeholder="$cashtag"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
+                  />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  These handles will be used in the expense tracker payment links.
+                </p>
+                <button
+                  onClick={saveAccountPaymentHandles}
+                  disabled={savingAccountPayments}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50"
+                  style={themeAccentButtonStyle}
+                >
+                  {savingAccountPayments ? 'Saving...' : 'Save Payments'}
+                </button>
+              </div>
+              {accountPaymentMessage && (
+                <div className={`mt-2 text-xs ${/updated|saved/i.test(accountPaymentMessage) ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
+                  {accountPaymentMessage}
+                </div>
+              )}
+            </div>
             <div className="mb-5">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 Enter someone's email or phone number to give them access to your calendar.
@@ -17173,6 +17253,27 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             const share = baseShare + (idx < extraPennies ? 1 : 0);
             return { name, paid, balance: paid - share };
           });
+          const creditors = balances
+            .filter((row) => row.balance > 0)
+            .map((row) => ({ ...row }))
+            .sort((a, b) => b.balance - a.balance);
+          const debtors = balances
+            .filter((row) => row.balance < 0)
+            .map((row) => ({ ...row, balance: Math.abs(row.balance) }))
+            .sort((a, b) => b.balance - a.balance);
+          const settlements = [];
+          let credIdx = 0;
+          let debtIdx = 0;
+          while (credIdx < creditors.length && debtIdx < debtors.length) {
+            const credit = creditors[credIdx];
+            const debt = debtors[debtIdx];
+            const transfer = Math.min(credit.balance, debt.balance);
+            if (transfer > 0) settlements.push({ from: debt.name, to: credit.name, amount: transfer });
+            credit.balance -= transfer;
+            debt.balance -= transfer;
+            if (credit.balance === 0) credIdx += 1;
+            if (debt.balance === 0) debtIdx += 1;
+          }
           return (
             <ExpenseTrackerPanel
               title="Expense Tracker"
@@ -17187,6 +17288,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               participants={participants}
               balances={balances}
               error={expenseTrackerError}
+              paymentMembers={participants}
+              settlements={settlements}
+              getVenmoHandle={getVenmoHandleForIdentity}
+              getCashAppHandle={getCashAppHandleForIdentity}
+              canEditPaymentIdentity={canEditVenmoIdentity}
+              paymentOptionPickerIdentity={paymentOptionPickerIdentity}
+              setPaymentOptionPickerIdentity={setPaymentOptionPickerIdentity}
+              onSetVenmoHandle={promptSetVenmoHandle}
+              onSetCashAppHandle={promptSetCashAppHandle}
+              onOpenVenmoPayment={openVenmoPayment}
+              onOpenCashAppPayment={openCashAppPayment}
+              settlementNoteContext="this calendar layer"
             />
           );
         })()}
@@ -20487,124 +20600,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 getDisplayName={getExpenseDisplayName}
                 emptyExpensesText="No expenses yet."
                 emptySummaryText="Add an expense to see the split."
+                paymentMembers={sortedParticipants}
+                settlements={settlements}
+                getVenmoHandle={getVenmoHandleForIdentity}
+                getCashAppHandle={getCashAppHandleForIdentity}
+                canEditPaymentIdentity={canEditVenmoIdentity}
+                paymentOptionPickerIdentity={paymentOptionPickerIdentity}
+                setPaymentOptionPickerIdentity={setPaymentOptionPickerIdentity}
+                onSetVenmoHandle={promptSetVenmoHandle}
+                onSetCashAppHandle={promptSetCashAppHandle}
+                onOpenVenmoPayment={openVenmoPayment}
+                onOpenCashAppPayment={openCashAppPayment}
+                settlementNoteContext={activeSubCalendar?.name || 'trip'}
               />
-
-              <div className="p-3 bg-sky-50 dark:bg-sky-900/20 rounded-xl border border-sky-200 dark:border-sky-700">
-                <button
-                  onClick={() => toggleExpensePanel('handles')}
-                  className="w-full flex items-center justify-between mb-2 text-left"
-                >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">💳 Payment Handles</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.handles ? '-' : '+'}</span>
-                </button>
-                {expensePanels.handles ? (
-                  <div className="space-y-1.5">
-                    {sortedParticipants.map(name => {
-                      const venmoHandle = getVenmoHandleForIdentity(name);
-                      const cashHandle = getCashAppHandleForIdentity(name);
-                      const canEdit = canEditVenmoIdentity(name);
-                      return (
-                        <div key={`payment-${name}`} className="text-xs bg-white dark:bg-gray-700 rounded-lg border border-sky-100 dark:border-sky-800 px-2.5 py-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-gray-700 dark:text-gray-200 font-medium min-w-0 truncate">{getExpenseDisplayName(name)}</span>
-                            {canEdit ? (
-                              <button
-                                onClick={() => setPaymentOptionPickerIdentity(prev => prev === name ? null : name)}
-                                className="px-2 py-0.5 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium shrink-0"
-                              >
-                                {paymentOptionPickerIdentity === name ? 'Done' : (venmoHandle || cashHandle ? 'Edit payment options' : 'Add payment option')}
-                              </button>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 shrink-0">Only they can edit</span>
-                            )}
-                          </div>
-                          {canEdit && paymentOptionPickerIdentity === name && (
-                            <div className="mt-1.5 flex items-center gap-1.5">
-                              <button
-                                onClick={async () => { await promptSetVenmoHandle(name); }}
-                                className="px-2 py-1 rounded-md text-white font-semibold bg-[#008CFF] hover:bg-[#0078dc]"
-                                title="Set Venmo handle"
-                              >
-                                V Venmo
-                              </button>
-                              <button
-                                onClick={async () => { await promptSetCashAppHandle(name); }}
-                                className="px-2 py-1 rounded-md text-white font-semibold bg-[#00D632] hover:bg-[#00b92b]"
-                                title="Set Cash App handle"
-                              >
-                                $ Cash App
-                              </button>
-                            </div>
-                          )}
-                          <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-300">
-                            {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'} · {cashHandle ? `Cash App $${cashHandle}` : 'Cash App not set'}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{sortedParticipants.length} member{sortedParticipants.length === 1 ? '' : 's'}</p>
-                )}
-              </div>
-
-              <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-700">
-                <button
-                  onClick={() => toggleExpensePanel('settlements')}
-                  className="w-full flex items-center justify-between mb-2 text-left"
-                >
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">🤝 Who Pays Whom</h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{expensePanels.settlements ? '-' : '+'}</span>
-                </button>
-                {expensePanels.settlements ? (
-                  settlements.length === 0 ? (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">No transfers needed.</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {settlements.map((s, idx) => {
-                        const venmoHandle = getVenmoHandleForIdentity(s.to);
-                        const cashHandle = getCashAppHandleForIdentity(s.to);
-                        const fromDisplay = getExpenseDisplayName(s.from);
-                        const toDisplay = getExpenseDisplayName(s.to);
-                        const payVerb = fromDisplay === 'You' ? 'pay' : 'pays';
-                        return (
-                          <div key={`${s.from}-${s.to}-${idx}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-gray-700 rounded-lg border border-indigo-100 dark:border-indigo-800 px-2.5 py-1.5">
-                            <div className="min-w-0">
-                              <span className="text-gray-700 dark:text-gray-200">{fromDisplay}</span>
-                              <span className="text-indigo-500 dark:text-indigo-300 font-semibold"> {payVerb} ${(s.amount / 100).toFixed(2)} </span>
-                              <span className="text-gray-700 dark:text-gray-200">{toDisplay}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <button
-                                onClick={() => openVenmoPayment(
-                                  venmoHandle,
-                                  s.amount,
-                                  `${fromDisplay} ${payVerb} ${toDisplay} for ${activeSubCalendar?.name || 'trip'}`
-                                )}
-                                disabled={!venmoHandle}
-                                className="px-2.5 py-1 rounded-md bg-sky-500 hover:bg-sky-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                                title={venmoHandle ? `Pay @${venmoHandle}` : `${toDisplay} has not set a Venmo handle yet`}
-                              >
-                                {venmoHandle ? 'Venmo' : 'No Venmo'}
-                              </button>
-                              <button
-                                onClick={() => openCashAppPayment(cashHandle, s.amount)}
-                                disabled={!cashHandle}
-                                className="px-2.5 py-1 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                                title={cashHandle ? `Pay $${cashHandle}` : `${toDisplay} has not set a Cash App handle yet`}
-                              >
-                                {cashHandle ? 'Cash App' : 'No Cash App'}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )
-                ) : (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{settlements.length} transfer{settlements.length === 1 ? '' : 's'}</p>
-                )}
-              </div>
             </div>
           );
         })()}
