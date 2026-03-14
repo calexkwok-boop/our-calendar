@@ -14502,7 +14502,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (id === 'list') return { label: 'List', icon: <Tag className="w-4 h-4" />, active: Boolean(widgetCardOpenById.list), disabled: false };
     if (id === 'notes') return { label: 'Notes', icon: <span className="text-sm leading-none">📝</span>, active: Boolean(widgetCardOpenById.notes), disabled: false };
     if (id === 'expenses') return { label: 'Expenses', icon: <span className="text-sm leading-none">💸</span>, active: Boolean(widgetCardOpenById.expenses), disabled: false };
-    if (id === 'gauntlet') return { label: 'Bracket', icon: <span className="text-sm leading-none">🏓</span>, active: Boolean(widgetCardOpenById.gauntlet), disabled: false };
+    if (id === 'gauntlet') return { label: 'Bracket', icon: <span className="text-sm leading-none">🥒</span>, active: Boolean(widgetCardOpenById.gauntlet), disabled: false };
     if (id === 'chat') return {
       label: 'Chat',
       icon: <MessageSquare className="w-4 h-4" />,
@@ -17420,7 +17420,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                         ) : (
                           tournamentStandings.map((row, index) => (
                             <div key={`standing-${row.id}`} className="grid grid-cols-[2rem_minmax(0,1fr)_auto] gap-3 items-center rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-2">
-                              <div className="text-sm font-semibold text-gray-500 dark:text-gray-400">#{index + 1}</div>
+                              <div className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                              </div>
                               <div className="min-w-0">
                                 <div className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{row.name}</div>
                                 <div className="text-[11px] text-gray-500 dark:text-gray-400">
