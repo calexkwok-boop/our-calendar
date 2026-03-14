@@ -13077,6 +13077,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       initialX: Number(layout.x || 50),
       initialY: Number(layout.y || 50),
       moved: false,
+      dragThresholdPx: id === 'title' ? 1 : 3,
     };
   };
 
@@ -13145,7 +13146,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const dy = Number(event.clientY) - Number(drag.startY);
       if (!drag.moved) {
         const travelPx = Math.sqrt((dx * dx) + (dy * dy));
-        if (travelPx < 3) return;
+        const threshold = Number(drag.dragThresholdPx || 3);
+        if (travelPx < threshold) return;
         drag.moved = true;
       }
       const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
@@ -14205,7 +14207,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 onTouchEnd={(e) => endHeaderModulePinch(e, 'title')}
                 onTouchCancel={(e) => endHeaderModulePinch(e, 'title')}
               >
-                <div className="-mx-3 -my-2 px-3 py-2">
+                <div className="-mx-8 -my-4 px-8 py-4 min-w-[10rem]">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -14214,7 +14216,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       if (!canEditActiveLayerTitle) return;
                       openTitleStyleModal();
                     }}
-                    className={`text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate ${canEditActiveLayerTitle ? 'cursor-grab active:cursor-grabbing hover:opacity-80' : 'cursor-default'}`}
+                    className={`text-sm sm:text-base font-semibold text-right max-w-[75vw] truncate ${canEditActiveLayerTitle ? 'cursor-grab active:cursor-grabbing hover:opacity-80' : 'cursor-default'}`}
                     style={activeLayerTitleTextStyle}
                   >
                     {calendarTitle}
@@ -14254,8 +14256,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   }}
                   className={`shrink-0 px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
                     showControlWidgetAddPanel
-                      ? 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-500 shadow-sm'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                      ? 'bg-white/60 dark:bg-gray-700/55 text-gray-800 dark:text-gray-100 border-white/55 dark:border-gray-500/70 shadow-sm backdrop-blur-sm'
+                      : 'bg-white/40 dark:bg-gray-700/40 text-gray-700 dark:text-gray-200 border-white/45 dark:border-gray-600/70 backdrop-blur-sm'
                   }`}
                   title="Add widgets"
                 >
