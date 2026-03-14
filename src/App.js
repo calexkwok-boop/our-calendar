@@ -898,6 +898,18 @@ function App() {
     if (!spaced) return raw;
     return spaced.replace(/\b\w/g, (c) => c.toUpperCase());
   };
+  const formatIdentityForDisplay = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return 'Member';
+    const rawEmail = normalizeEmail(raw);
+    if (rawEmail && isEmailValue(rawEmail)) {
+      const localPart = String(rawEmail.split('@')[0] || '').trim();
+      return formatHandleForDisplay(localPart || rawEmail);
+    }
+    const rawPhone = normalizePhoneNumber(raw);
+    if (rawPhone) return 'Member';
+    return formatHandleForDisplay(raw);
+  };
   const resolveHandleLikeLabel = (value, userId = '') => {
     const raw = String(value || '').trim();
     const uid = String(userId || '').trim();
@@ -911,7 +923,10 @@ function App() {
       const byEmail = String(knownHandlesByEmail?.[rawEmail] || '').trim();
       if (byEmail) return formatHandleForDisplay(byEmail);
     }
-    if (uid && String(user?.id || '').trim() === uid) return currentUser || 'You';
+    if (uid && String(user?.id || '').trim() === uid) {
+      const selfLabel = String(currentUser || '').trim();
+      return isLikelyRawIdentity(selfLabel) ? formatIdentityForDisplay(selfLabel || raw) : selfLabel || 'You';
+    }
     const myEmail = normalizeEmail(user?.email);
     const myPhone = normalizePhoneNumber(user?.phone);
     const rawPhone = normalizePhoneNumber(raw);
@@ -920,7 +935,7 @@ function App() {
       || (myPhone && rawPhone && rawPhone === myPhone)
       || raw.toLowerCase() === String(currentUser || '').trim().toLowerCase()
     )) {
-      return currentUser || 'You';
+      return formatIdentityForDisplay(currentUser || raw || 'You');
     }
     if (!isLikelyRawIdentity(raw)) return raw;
 
@@ -931,7 +946,7 @@ function App() {
       if (uid && memberUid) return memberUid === uid;
       return false;
     });
-    if (knownFromMembers?.label) return String(knownFromMembers.label).trim();
+    if (knownFromMembers?.label) return formatIdentityForDisplay(String(knownFromMembers.label).trim());
 
     const knownFromChat = (calendarChatMessages || []).find((row) => {
       const rowUid = String(row?.user_id || '').trim();
@@ -940,10 +955,9 @@ function App() {
       if (uid && rowUid) return rowUid === uid;
       return false;
     });
-    if (knownFromChat?.created_by) return String(knownFromChat.created_by).trim();
+    if (knownFromChat?.created_by) return formatIdentityForDisplay(String(knownFromChat.created_by).trim());
 
-    if (raw.includes('@')) return String(raw.split('@')[0] || raw).trim() || raw;
-    return raw || 'Member';
+    return formatIdentityForDisplay(raw || 'Member');
   };
   const getVenmoHandleForIdentity = (identity) => {
     const key = normalizeIdentityKey(identity);
@@ -7767,7 +7781,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           if (!Array.isArray(signupsMap[eventId])) signupsMap[eventId] = [];
           signupsMap[eventId].push({
             userId: String(row?.user_id || ''),
-            displayName: String(row?.display_name || ''),
+            displayName: resolveHandleLikeLabel(
+              String(row?.display_name || row?.user_id || 'Member'),
+              String(row?.user_id || '')
+            ),
             createdAt: String(row?.created_at || ''),
           });
         });
@@ -7847,7 +7864,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       layer_id: activeLayerId,
       event_id: normalizedEventId,
       user_id: user.id,
-      display_name: currentUser || user?.email || user?.phone || 'Member',
+      display_name: resolveHandleLikeLabel(
+        String(currentUser || user?.email || user?.phone || 'Member'),
+        String(user?.id || '')
+      ),
       created_at: new Date().toISOString(),
     };
     const { error } = await supabase.from('popup_event_signups').insert(payload);
