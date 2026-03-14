@@ -403,6 +403,26 @@ const normalizeStoredGauntletMap = (value) => {
   }, {});
 };
 
+const parseManualGauntletRoster = (value) => {
+  const seen = new Set();
+  return String(value || '')
+    .split(/\r?\n|,/)
+    .map((entry) => String(entry || '').trim())
+    .filter((name) => {
+      if (!name) return false;
+      const key = name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((name, idx) => ({
+      id: `manual-${idx + 1}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      userId: '',
+      displayName: name,
+      seed: idx + 1,
+    }));
+};
+
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -2748,6 +2768,8 @@ function App() {
   const [selectedGauntletEventId, setSelectedGauntletEventId] = useState('');
   const [gauntletDraftRounds, setGauntletDraftRounds] = useState('4');
   const [layerGauntlets, setLayerGauntlets] = useState({});
+  const [manualGauntletRosterInput, setManualGauntletRosterInput] = useState('Alex\nJordan\nCasey\nRiley\nTaylor\nMorgan\nAvery\nCameron');
+  const [useManualGauntletRoster, setUseManualGauntletRoster] = useState(true);
   const [gauntletError, setGauntletError] = useState('');
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [controlWidgetOrder, setControlWidgetOrder] = useState([...DEFAULT_CONTROL_WIDGET_ORDER]);
@@ -3276,6 +3298,12 @@ function App() {
     if (!userKey || !layerKey) return '';
     return `calendar-layer-gauntlets-${userKey}-${layerKey}`;
   }, [user?.id, activeLayerId]);
+  const getLayerGauntletManualRosterKey = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
+    const userKey = String(uid || '').trim();
+    const layerKey = String(layerId || '').trim();
+    if (!userKey || !layerKey) return '';
+    return `calendar-layer-gauntlet-manual-roster-${userKey}-${layerKey}`;
+  }, [user?.id, activeLayerId]);
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
       setLayerNotes([]);
@@ -3372,6 +3400,25 @@ function App() {
     } catch {}
   }, [user?.id, activeLayerId, layerGauntlets, getLayerGauntletsStorageKey]);
   useEffect(() => {
+    if (!user?.id || !activeLayerId) return;
+    try {
+      const key = getLayerGauntletManualRosterKey(user.id, activeLayerId);
+      if (!key) return;
+      const raw = localStorage.getItem(key);
+      if (typeof raw === 'string' && raw.trim()) {
+        setManualGauntletRosterInput(raw);
+      }
+    } catch {}
+  }, [user?.id, activeLayerId, getLayerGauntletManualRosterKey]);
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) return;
+    try {
+      const key = getLayerGauntletManualRosterKey(user.id, activeLayerId);
+      if (!key) return;
+      localStorage.setItem(key, String(manualGauntletRosterInput || ''));
+    } catch {}
+  }, [user?.id, activeLayerId, manualGauntletRosterInput, getLayerGauntletManualRosterKey]);
+  useEffect(() => {
     setExpandedLayerNoteId(null);
     setEditingLayerNoteId(null);
     setNewLayerChecklistItem('');
@@ -3380,6 +3427,7 @@ function App() {
     setExpenseTrackerError('');
     setSelectedGauntletEventId('');
     setGauntletDraftRounds('4');
+    setUseManualGauntletRoster(true);
     setGauntletError('');
   }, [activeLayerId]);
   useEffect(() => {
@@ -14042,8 +14090,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (aDate !== bDate) return aDate.localeCompare(bDate);
       return String(a?.event?.title || '').localeCompare(String(b?.event?.title || ''));
     });
-  const selectedGauntletTournament = layerGauntlets[String(selectedGauntletEventId || '')] || null;
-  const selectedGauntletStandings = deriveGauntletStandings(selectedGauntletTournament);
+  const manualGauntletParticipants = parseManualGauntletRoster(manualGauntletRosterInput);
+  const manualGauntletEligible = manualGauntletParticipants.length >= 4 && manualGauntletParticipants.length % 4 === 0;
   const getWidgetSlotForIndex = (index) => {
     const safeIndex = Math.max(0, Number(index) || 0);
     const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
@@ -14142,26 +14190,35 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setLayerExpenses((prev) => (prev || []).filter((expense) => String(expense?.id || '') !== id));
   };
   const startGauntletTournament = (eventId, restart = false) => {
-    const normalizedEventId = String(eventId || selectedGauntletEventId || '').trim();
+    const normalizedEventId = useManualGauntletRoster ? '__manual__' : String(eventId || selectedGauntletEventId || '').trim();
     if (!normalizedEventId) {
-      setGauntletError('Select a popup event first.');
-      return;
-    }
-    const entry = eligibleGauntletPopupEvents.find((item) => String(item?.eventId || '') === normalizedEventId) || null;
-    const signups = entry?.signups || [];
-    if (!entry?.eligible) {
-      setGauntletError('Gauntlet play needs popup events with 4, 8, 12, or more signups in groups of 4.');
+      setGauntletError(useManualGauntletRoster ? 'Enter player names first.' : 'Select a popup event first.');
       return;
     }
     const totalRounds = Math.max(1, parseInt(String(gauntletDraftRounds || '').trim(), 10) || 1);
-    const participants = signups.map((signup, idx) => ({
-      id: String(signup?.userId || `guest-${idx + 1}-${String(signup?.displayName || 'player').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`),
-      userId: String(signup?.userId || ''),
-      displayName: String(signup?.displayName || `Player ${idx + 1}`),
-      seed: idx + 1,
-    }));
+    let participants = [];
+    if (useManualGauntletRoster) {
+      if (!manualGauntletEligible) {
+        setGauntletError('Manual roster needs 4, 8, 12, or more names in groups of 4.');
+        return;
+      }
+      participants = manualGauntletParticipants;
+    } else {
+      const entry = eligibleGauntletPopupEvents.find((item) => String(item?.eventId || '') === normalizedEventId) || null;
+      const signups = entry?.signups || [];
+      if (!entry?.eligible) {
+        setGauntletError('Gauntlet play needs popup events with 4, 8, 12, or more signups in groups of 4.');
+        return;
+      }
+      participants = signups.map((signup, idx) => ({
+        id: String(signup?.userId || `guest-${idx + 1}-${String(signup?.displayName || 'player').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`),
+        userId: String(signup?.userId || ''),
+        displayName: String(signup?.displayName || `Player ${idx + 1}`),
+        seed: idx + 1,
+      }));
+    }
     if (!restart && layerGauntlets[normalizedEventId]) {
-      setGauntletError('A gauntlet already exists for this popup event.');
+      setGauntletError(`A gauntlet already exists for this ${useManualGauntletRoster ? 'manual roster' : 'popup event'}.`);
       return;
     }
     setLayerGauntlets((prev) => ({
@@ -14172,7 +14229,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         participants,
       }),
     }));
-    setSelectedGauntletEventId(normalizedEventId);
+    if (!useManualGauntletRoster) setSelectedGauntletEventId(normalizedEventId);
     setGauntletError('');
   };
   const updateGauntletCourtScore = (eventId, roundIndex, courtNumber, scoreKey, value) => {
@@ -17148,7 +17205,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           const selectedEvent = selectedEntry?.event || null;
           const signups = selectedEntry?.signups || [];
           const signupCount = signups.length;
-          const tournament = selectedGauntletTournament;
+          const tournamentKey = useManualGauntletRoster ? '__manual__' : String(selectedGauntletEventId || '');
+          const tournament = layerGauntlets[tournamentKey] || null;
+          const tournamentStandings = deriveGauntletStandings(tournament);
           const rounds = tournament?.rounds || [];
           const activeRoundIndex = rounds.findIndex((round) => !round?.finalizedAt);
           const activeRound = activeRoundIndex >= 0 ? rounds[activeRoundIndex] : null;
@@ -17177,26 +17236,52 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 This bracket is saved on this device for the active layer. Use popup events with signups in groups of 4 so courts can be filled evenly.
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_7rem_9rem]">
-                <select
-                  value={selectedGauntletEventId}
-                  onChange={(e) => {
-                    setSelectedGauntletEventId(e.target.value);
-                    setGauntletError('');
-                  }}
-                  className="px-3 py-2 text-base sm:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
-                  style={{ fontSize: '16px' }}
+              <div className="grid gap-2 sm:grid-cols-2 mb-3">
+                <button
+                  onClick={() => { setUseManualGauntletRoster(true); setGauntletError(''); }}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium border ${useManualGauntletRoster ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200'}`}
                 >
-                  {eligibleGauntletPopupEvents.length === 0 ? (
-                    <option value="">No popup events yet</option>
-                  ) : (
-                    eligibleGauntletPopupEvents.map((entry) => (
-                      <option key={entry.eventId} value={entry.eventId}>
-                        {entry.event?.title || 'Popup event'} · {entry.signupCount} joined{entry.eligible ? '' : ' · needs groups of 4'}
-                      </option>
-                    ))
-                  )}
-                </select>
+                  Manual Names
+                </button>
+                <button
+                  onClick={() => { setUseManualGauntletRoster(false); setGauntletError(''); }}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium border ${!useManualGauntletRoster ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200'}`}
+                >
+                  Popup Signups
+                </button>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_7rem_9rem]">
+                {useManualGauntletRoster ? (
+                  <textarea
+                    value={manualGauntletRosterInput}
+                    onChange={(e) => setManualGauntletRosterInput(e.target.value)}
+                    placeholder="Enter one player per line"
+                    rows={4}
+                    className="px-3 py-2 text-base sm:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg resize-none"
+                    style={{ fontSize: '16px' }}
+                  />
+                ) : (
+                  <select
+                    value={selectedGauntletEventId}
+                    onChange={(e) => {
+                      setSelectedGauntletEventId(e.target.value);
+                      setGauntletError('');
+                    }}
+                    className="px-3 py-2 text-base sm:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
+                    style={{ fontSize: '16px' }}
+                  >
+                    {eligibleGauntletPopupEvents.length === 0 ? (
+                      <option value="">No popup events yet</option>
+                    ) : (
+                      eligibleGauntletPopupEvents.map((entry) => (
+                        <option key={entry.eventId} value={entry.eventId}>
+                          {entry.event?.title || 'Popup event'} · {entry.signupCount} joined{entry.eligible ? '' : ' · needs groups of 4'}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                )}
                 <input
                   type="number"
                   min="1"
@@ -17208,14 +17293,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 />
                 <button
                   onClick={() => startGauntletTournament(selectedGauntletEventId, Boolean(tournament))}
-                  disabled={!selectedEntry?.eligible}
+                  disabled={useManualGauntletRoster ? !manualGauntletEligible : !selectedEntry?.eligible}
                   className="px-3 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-emerald-500 to-teal-500 text-white disabled:opacity-50"
                 >
                   {tournament ? 'Restart' : 'Start Gauntlet'}
                 </button>
               </div>
 
-              {selectedEvent && (
+              {useManualGauntletRoster ? (
+                <div className="mt-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-900/10 px-3 py-2.5">
+                  <div className="text-sm font-medium text-gray-800 dark:text-gray-100">Manual roster</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                    {manualGauntletParticipants.length} players entered{manualGauntletEligible ? ` · ${manualGauntletParticipants.length / 4} court${manualGauntletParticipants.length === 4 ? '' : 's'}` : ' · needs 4, 8, 12... names'}
+                  </div>
+                  {manualGauntletParticipants.length > 0 && (
+                    <div className="mt-1 text-[11px] text-emerald-700/90 dark:text-emerald-300/90">
+                      {manualGauntletParticipants.map((row) => row.displayName).join(', ')}
+                    </div>
+                  )}
+                </div>
+              ) : selectedEvent && (
                 <div className="mt-3 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50/70 dark:bg-rose-900/10 px-3 py-2.5">
                   <div className="text-sm font-medium text-gray-800 dark:text-gray-100">{selectedEvent.title}</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -17236,9 +17333,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
               {!tournament ? (
                 <div className="mt-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                  {eligibleGauntletPopupEvents.length === 0
-                    ? 'Create a popup event and have players join it first.'
-                    : 'Choose an eligible popup event and start the gauntlet.'}
+                  {useManualGauntletRoster
+                    ? 'Enter player names above and start the gauntlet.'
+                    : (eligibleGauntletPopupEvents.length === 0
+                      ? 'Create a popup event and have players join it first.'
+                      : 'Choose an eligible popup event and start the gauntlet.')}
                 </div>
               ) : (
                 <div className="mt-4 space-y-4">
@@ -17250,14 +17349,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     <div className="flex items-center gap-2">
                       {activeRound && (
                         <button
-                          onClick={() => finalizeGauntletRound(selectedGauntletEventId)}
+                          onClick={() => finalizeGauntletRound(tournamentKey)}
                           className="px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-500 hover:bg-indigo-600 text-white"
                         >
                           Finalize Round
                         </button>
                       )}
                       <button
-                        onClick={() => resetGauntletTournament(selectedGauntletEventId)}
+                        onClick={() => resetGauntletTournament(tournamentKey)}
                         className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
                       >
                         Reset
@@ -17286,7 +17385,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               min="0"
                               value={court.scoreA}
                               disabled={Boolean(activeRound.finalizedAt)}
-                              onChange={(e) => updateGauntletCourtScore(selectedGauntletEventId, activeRoundIndex, court.courtNumber, 'scoreA', e.target.value)}
+                              onChange={(e) => updateGauntletCourtScore(tournamentKey, activeRoundIndex, court.courtNumber, 'scoreA', e.target.value)}
                               className="px-3 py-2 text-center text-base sm:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
                               style={{ fontSize: '16px' }}
                             />
@@ -17296,7 +17395,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               min="0"
                               value={court.scoreB}
                               disabled={Boolean(activeRound.finalizedAt)}
-                              onChange={(e) => updateGauntletCourtScore(selectedGauntletEventId, activeRoundIndex, court.courtNumber, 'scoreB', e.target.value)}
+                              onChange={(e) => updateGauntletCourtScore(tournamentKey, activeRoundIndex, court.courtNumber, 'scoreB', e.target.value)}
                               className="px-3 py-2 text-center text-base sm:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
                               style={{ fontSize: '16px' }}
                             />
@@ -17312,10 +17411,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                         Standings
                       </div>
                       <div className="p-3 space-y-2">
-                        {selectedGauntletStandings.length === 0 ? (
+                        {tournamentStandings.length === 0 ? (
                           <p className="text-xs text-gray-400 dark:text-gray-500 italic">Finalize a round to generate standings.</p>
                         ) : (
-                          selectedGauntletStandings.map((row, index) => (
+                          tournamentStandings.map((row, index) => (
                             <div key={`standing-${row.id}`} className="grid grid-cols-[2rem_minmax(0,1fr)_auto] gap-3 items-center rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-2">
                               <div className="text-sm font-semibold text-gray-500 dark:text-gray-400">#{index + 1}</div>
                               <div className="min-w-0">
