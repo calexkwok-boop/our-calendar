@@ -250,8 +250,8 @@ const GAUNTLET_PAIRING_PATTERNS = Object.freeze([
   Object.freeze([[0, 1], [2, 3]]),
 ]);
 
-const chunkIntoGauntletCourts = (participants) => {
-  const list = Array.isArray(participants) ? participants.filter(Boolean) : [];
+const chunkIntoGauntletCourts = (participantIds, participantsById) => {
+  const list = Array.isArray(participantIds) ? participantIds.map((id) => participantsById[String(id || '')]).filter(Boolean) : [];
   const courts = [];
   for (let index = 0; index < list.length; index += 4) {
     const group = list.slice(index, index + 4);
@@ -260,12 +260,30 @@ const chunkIntoGauntletCourts = (participants) => {
   return courts;
 };
 
-const buildGauntletRoundFromGroups = (courtGroups, roundIndex = 0) => {
+const getGauntletByeIdsForOrder = (participantOrder, byeCount, byeCursor = 0) => {
+  const order = Array.isArray(participantOrder) ? participantOrder.map((id) => String(id || '')).filter(Boolean) : [];
+  const safeByeCount = Math.max(0, Math.min(order.length, Number(byeCount) || 0));
+  if (safeByeCount === 0 || order.length === 0) return [];
+  const start = ((Number(byeCursor) || 0) % order.length + order.length) % order.length;
+  const ids = [];
+  for (let offset = 0; offset < safeByeCount; offset += 1) {
+    ids.push(order[(start + offset) % order.length]);
+  }
+  return ids;
+};
+
+const buildGauntletRoundFromOrder = ({ participantOrder, participantsById, roundIndex = 0, byeCursor = 0 }) => {
+  const order = Array.isArray(participantOrder) ? participantOrder.map((id) => String(id || '')).filter(Boolean) : [];
+  const byeCount = order.length % 4;
+  const byeIds = getGauntletByeIdsForOrder(order, byeCount, byeCursor);
+  const activeIds = order.filter((id) => !byeIds.includes(id));
+  const courtGroups = chunkIntoGauntletCourts(activeIds, participantsById);
   const pattern = GAUNTLET_PAIRING_PATTERNS[Math.abs(Number(roundIndex) || 0) % GAUNTLET_PAIRING_PATTERNS.length];
   return {
     index: Math.max(1, Number(roundIndex || 0) + 1),
     createdAt: new Date().toISOString(),
     finalizedAt: null,
+    byeIds,
     courts: (courtGroups || []).map((group, idx) => ({
       courtNumber: idx + 1,
       playerIds: group.map((participant) => String(participant?.id || '')).filter(Boolean),
@@ -280,7 +298,13 @@ const buildGauntletRoundFromGroups = (courtGroups, roundIndex = 0) => {
 const createGauntletTournament = ({ eventId, totalRounds, participants }) => {
   const safeParticipants = Array.isArray(participants) ? participants.filter((participant) => String(participant?.id || '').trim()) : [];
   const roundsTarget = Math.max(1, parseInt(String(totalRounds || ''), 10) || 1);
-  const courtGroups = chunkIntoGauntletCourts(safeParticipants);
+  const participantsById = safeParticipants.reduce((acc, participant) => {
+    const id = String(participant?.id || '').trim();
+    if (!id) return acc;
+    acc[id] = participant;
+    return acc;
+  }, {});
+  const participantOrder = safeParticipants.map((participant) => String(participant?.id || '')).filter(Boolean);
   return {
     eventId: String(eventId || ''),
     totalRounds: roundsTarget,
@@ -288,7 +312,14 @@ const createGauntletTournament = ({ eventId, totalRounds, participants }) => {
     completedAt: null,
     status: 'active',
     participants: safeParticipants,
-    rounds: courtGroups.length > 0 ? [buildGauntletRoundFromGroups(courtGroups, 0)] : [],
+    participantOrder,
+    byeCursor: 0,
+    rounds: participantOrder.length > 0 ? [buildGauntletRoundFromOrder({
+      participantOrder,
+      participantsById,
+      roundIndex: 0,
+      byeCursor: 0,
+    })] : [],
   };
 };
 
@@ -307,10 +338,10 @@ const getGauntletCourtResult = (court) => {
   };
 };
 
-const buildNextGauntletCourtGroups = (round, participantsById) => {
+const buildNextGauntletParticipantOrder = (round, participantsById, previousOrder) => {
   const results = Array.isArray(round?.courts) ? round.courts.map((court) => getGauntletCourtResult(court)) : [];
   if (results.length === 0 || results.some((result) => !result)) return null;
-  return results.map((result, idx) => {
+  const nextGroups = results.map((result, idx) => {
     const upperLosers = idx > 0 ? results[idx - 1]?.losers || [] : [];
     const lowerWinners = idx < results.length - 1 ? results[idx + 1]?.winners || [] : [];
     const ids = idx === 0
@@ -321,6 +352,15 @@ const buildNextGauntletCourtGroups = (round, participantsById) => {
     const group = ids.map((id) => participantsById[String(id || '')]).filter(Boolean);
     return group.length === 4 ? group : null;
   });
+  if (nextGroups.some((group) => !group)) return null;
+  const nextActiveIds = nextGroups.flatMap((group) => group.map((participant) => String(participant?.id || '')).filter(Boolean));
+  const byeIds = Array.isArray(round?.byeIds) ? round.byeIds.map((id) => String(id || '')).filter(Boolean) : [];
+  if (byeIds.length === 0) return nextActiveIds;
+  const byeSet = new Set(byeIds);
+  const activeQueue = [...nextActiveIds];
+  return (previousOrder || []).map((id) => String(id || '')).filter(Boolean).map((id) => (
+    byeSet.has(id) ? id : activeQueue.shift()
+  )).filter(Boolean);
 };
 
 const deriveGauntletStandings = (tournament) => {
@@ -340,6 +380,7 @@ const deriveGauntletStandings = (tournament) => {
       wins: 0,
       losses: 0,
       games: 0,
+      byes: 0,
       pointsFor: 0,
       pointsAgainst: 0,
       pointDiff: 0,
@@ -350,6 +391,11 @@ const deriveGauntletStandings = (tournament) => {
 
   (tournament?.rounds || []).forEach((round) => {
     if (!round?.finalizedAt) return;
+    (round?.byeIds || []).forEach((playerId) => {
+      const row = stats[String(playerId || '')];
+      if (!row) return;
+      row.byes += 1;
+    });
     (round?.courts || []).forEach((court) => {
       const result = getGauntletCourtResult(court);
       if (!result) return;
@@ -381,11 +427,12 @@ const deriveGauntletStandings = (tournament) => {
     .map((row) => ({
       ...row,
       pointDiff: row.pointsFor - row.pointsAgainst,
+      winPct: row.games > 0 ? row.wins / row.games : 0,
       averageCourt: row.games > 0 ? row.courtTotal / row.games : Number.POSITIVE_INFINITY,
       participant: participantMap[row.id] || null,
     }))
     .sort((a, b) => (
-      b.wins - a.wins
+      b.winPct - a.winPct
       || b.pointDiff - a.pointDiff
       || b.pointsFor - a.pointsFor
       || a.averageCourt - b.averageCourt
@@ -3448,7 +3495,7 @@ function App() {
       .filter((entry) => entry.event);
     const validIds = new Set(popupOptions.map((entry) => String(entry.eventId || '')));
     if (selectedGauntletEventId && validIds.has(String(selectedGauntletEventId))) return;
-    const preferred = popupOptions.find((entry) => entry.signups.length >= 4 && entry.signups.length % 4 === 0) || popupOptions[0] || null;
+    const preferred = popupOptions.find((entry) => entry.signups.length >= 4) || popupOptions[0] || null;
     const nextId = String(preferred?.eventId || '');
     if (nextId !== String(selectedGauntletEventId || '')) {
       setSelectedGauntletEventId(nextId);
@@ -14080,7 +14127,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         event,
         signups,
         signupCount: signups.length,
-        eligible: signups.length >= 4 && signups.length % 4 === 0,
+        eligible: signups.length >= 4,
       };
     })
     .filter((entry) => entry.event)
@@ -14091,7 +14138,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return String(a?.event?.title || '').localeCompare(String(b?.event?.title || ''));
     });
   const manualGauntletParticipants = parseManualGauntletRoster(manualGauntletRosterInput);
-  const manualGauntletEligible = manualGauntletParticipants.length >= 4 && manualGauntletParticipants.length % 4 === 0;
+  const manualGauntletEligible = manualGauntletParticipants.length >= 4;
   const getWidgetSlotForIndex = (index) => {
     const safeIndex = Math.max(0, Number(index) || 0);
     const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
@@ -14199,7 +14246,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     let participants = [];
     if (useManualGauntletRoster) {
       if (!manualGauntletEligible) {
-        setGauntletError('Manual roster needs 4, 8, 12, or more names in groups of 4.');
+        setGauntletError('Manual roster needs at least 4 names.');
         return;
       }
       participants = manualGauntletParticipants;
@@ -14207,7 +14254,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const entry = eligibleGauntletPopupEvents.find((item) => String(item?.eventId || '') === normalizedEventId) || null;
       const signups = entry?.signups || [];
       if (!entry?.eligible) {
-        setGauntletError('Gauntlet play needs popup events with 4, 8, 12, or more signups in groups of 4.');
+        setGauntletError('Gauntlet play needs at least 4 joined players.');
         return;
       }
       participants = signups.map((signup, idx) => ({
@@ -14278,16 +14325,25 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       acc[id] = participant;
       return acc;
     }, {});
-    const nextCourtGroups = buildNextGauntletCourtGroups(round, participantsById);
+    const nextParticipantOrder = buildNextGauntletParticipantOrder(round, participantsById, tournament?.participantOrder || []);
     const updatedRounds = rounds.map((item, idx) => (
       idx === roundIndex ? { ...item, finalizedAt: new Date().toISOString() } : item
     ));
     const shouldComplete = (roundIndex + 1) >= Math.max(1, Number(tournament?.totalRounds || 1));
+    const nextByeCursor = Number(tournament?.byeCursor || 0) + Number((round?.byeIds || []).length || 0);
+    const nextRound = shouldComplete || !nextParticipantOrder
+      ? null
+      : buildGauntletRoundFromOrder({
+        participantOrder: nextParticipantOrder,
+        participantsById,
+        roundIndex: roundIndex + 1,
+        byeCursor: nextByeCursor,
+      });
     const nextTournament = {
       ...tournament,
-      rounds: shouldComplete || !nextCourtGroups || nextCourtGroups.some((group) => !group)
-        ? updatedRounds
-        : [...updatedRounds, buildGauntletRoundFromGroups(nextCourtGroups, roundIndex + 1)],
+      participantOrder: nextParticipantOrder || tournament?.participantOrder || [],
+      byeCursor: nextByeCursor,
+      rounds: shouldComplete || !nextRound ? updatedRounds : [...updatedRounds, nextRound],
       status: shouldComplete ? 'completed' : 'active',
       completedAt: shouldComplete ? new Date().toISOString() : null,
     };
@@ -17233,7 +17289,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
 
               <div className="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2.5 mb-3 text-xs text-amber-800 dark:text-amber-200">
-                This bracket is saved on this device for the active layer. Use popup events with signups in groups of 4 so courts can be filled evenly.
+                This bracket is saved on this device for the active layer. When player counts are not divisible by 4, byes rotate automatically and do not count as wins or losses.
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2 mb-3">
@@ -17276,7 +17332,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     ) : (
                       eligibleGauntletPopupEvents.map((entry) => (
                         <option key={entry.eventId} value={entry.eventId}>
-                          {entry.event?.title || 'Popup event'} · {entry.signupCount} joined{entry.eligible ? '' : ' · needs groups of 4'}
+                          {entry.event?.title || 'Popup event'} · {entry.signupCount} joined{entry.eligible ? '' : ' · needs 4+'}
                         </option>
                       ))
                     )}
@@ -17304,7 +17360,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 <div className="mt-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-900/10 px-3 py-2.5">
                   <div className="text-sm font-medium text-gray-800 dark:text-gray-100">Manual roster</div>
                   <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-                    {manualGauntletParticipants.length} players entered{manualGauntletEligible ? ` · ${manualGauntletParticipants.length / 4} court${manualGauntletParticipants.length === 4 ? '' : 's'}` : ' · needs 4, 8, 12... names'}
+                    {manualGauntletParticipants.length} players entered{manualGauntletEligible ? ` · ${Math.floor(manualGauntletParticipants.length / 4)} active court${Math.floor(manualGauntletParticipants.length / 4) === 1 ? '' : 's'}${manualGauntletParticipants.length % 4 ? ` + ${manualGauntletParticipants.length % 4} bye${manualGauntletParticipants.length % 4 === 1 ? '' : 's'}` : ''}` : ' · needs at least 4 names'}
                   </div>
                   {manualGauntletParticipants.length > 0 && (
                     <div className="mt-1 text-[11px] text-emerald-700/90 dark:text-emerald-300/90">
@@ -17319,7 +17375,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     {formatDateKeyMMDDYYYY(selectedEvent.dateKey || selectedEvent.date)}{selectedEvent.time ? ` at ${formatTime(selectedEvent.time)}` : ''}{selectedEvent.location ? ` · ${selectedEvent.location}` : ''}
                   </div>
                   <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                    {signupCount} players joined{selectedEntry?.eligible ? ` · ${signupCount / 4} court${signupCount === 4 ? '' : 's'}` : ' · needs 4, 8, 12... players'}
+                    {signupCount} players joined{selectedEntry?.eligible ? ` · ${Math.floor(signupCount / 4)} active court${Math.floor(signupCount / 4) === 1 ? '' : 's'}${signupCount % 4 ? ` + ${signupCount % 4} bye${signupCount % 4 === 1 ? '' : 's'}` : ''}` : ' · needs at least 4 players'}
                   </div>
                   {signups.length > 0 && (
                     <div className="mt-1 text-[11px] text-rose-700/90 dark:text-rose-300/90">
@@ -17363,6 +17419,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       </button>
                     </div>
                   </div>
+
+                  {activeRound && Array.isArray(activeRound.byeIds) && activeRound.byeIds.length > 0 && (
+                    <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/10 px-3 py-2.5">
+                      <div className="text-xs font-semibold text-amber-700 dark:text-amber-300">Bye This Round</div>
+                      <div className="mt-1 text-sm text-gray-700 dark:text-gray-200">
+                        {activeRound.byeIds.map((playerId) => participantMap[String(playerId || '')]?.displayName || 'Player').join(', ')}
+                      </div>
+                      <div className="mt-1 text-[11px] text-amber-700/90 dark:text-amber-300/90">
+                        Bye rounds are neutral and do not add a win or loss.
+                      </div>
+                    </div>
+                  )}
 
                   {activeRound && (
                     <div className="grid gap-3 lg:grid-cols-2">
@@ -17434,7 +17502,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               <div className="min-w-0">
                                 <div className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{row.name}</div>
                                 <div className="text-[11px] text-gray-500 dark:text-gray-400">
-                                  {row.wins}-{row.losses} · PF {row.pointsFor} / PA {row.pointsAgainst} · Diff {row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
+                                  Win% {(Number(row.winPct || 0) * 100).toFixed(0)} · {row.wins}-{row.losses} · Bye {row.byes || 0} · Diff {row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
                                 </div>
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">Avg court {Number.isFinite(row.averageCourt) ? row.averageCourt.toFixed(1) : '-'}</div>
@@ -17452,6 +17520,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                             <div className="text-xs font-medium text-gray-700 dark:text-gray-200">
                               Round {round.index} {round.finalizedAt ? '· final' : '· current'}
                             </div>
+                            {Array.isArray(round?.byeIds) && round.byeIds.length > 0 && (
+                              <div className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                                Bye: {round.byeIds.map((playerId) => participantMap[String(playerId || '')]?.displayName || 'Player').join(', ')}
+                              </div>
+                            )}
                             <div className="mt-1 space-y-1">
                               {(round.courts || []).map((court) => (
                                 <div key={`round-${round.index}-court-${court.courtNumber}`} className="text-[11px] text-gray-500 dark:text-gray-400">
