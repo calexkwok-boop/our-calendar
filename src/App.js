@@ -3975,8 +3975,27 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           my_vote: myVote,
         }, countsMap[layerId] || 0);
       });
+      const normalizedWithLocalOverrides = normalized.map((row) => {
+        const lid = String(row?.id || '').trim();
+        if (!lid) return row;
+        if (!Object.prototype.hasOwnProperty.call(localVotes || {}, lid)) return row;
+        const overrideVote = normalizeVoteValue(localVotes[lid]);
+        const dbVote = normalizeVoteValue(row?.my_vote || 0);
+        let up = Math.max(0, Number(row?.upvote_count || 0));
+        let down = Math.max(0, Number(row?.downvote_count || 0));
+        if (dbVote === 1) up = Math.max(0, up - 1);
+        if (dbVote === -1) down = Math.max(0, down - 1);
+        if (overrideVote === 1) up += 1;
+        if (overrideVote === -1) down += 1;
+        return {
+          ...row,
+          my_vote: overrideVote,
+          upvote_count: up,
+          downvote_count: down,
+        };
+      });
       setExploreVotesMode(votesMode);
-      setPublicCalendars(normalized);
+      setPublicCalendars(normalizedWithLocalOverrides);
       setExpandedExploreDescriptions({});
     } catch (err) {
       console.error('Error loading public calendars:', err);
