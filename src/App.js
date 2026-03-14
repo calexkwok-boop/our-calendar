@@ -13201,7 +13201,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const halfXPct = (safeW / 2 / rect.width) * 100;
     const halfYPct = (safeH / 2 / rect.height) * 100;
     // Fixed left-edge gutter so all header items start from the same visual left margin.
-    const leftGridInsetPct = rect.width >= 640 ? 7 : 9;
+    const leftGridInsetPct = rect.width >= 640 ? 3 : 4;
     const rightLimitedMaxX = Math.min(98, Math.max(2, 100 - Math.max(2, Math.min(49, halfXPct))));
     const minX = Math.max(2, 100 - rightLimitedMaxX, leftGridInsetPct + halfXPct);
     const maxX = rightLimitedMaxX;
