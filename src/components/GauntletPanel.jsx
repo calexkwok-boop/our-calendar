@@ -449,12 +449,6 @@ const scoreInput = {
   padding: '2px 0',
 };
 
-const bottomGrid = {
-  display: 'grid',
-  gridTemplateColumns: '1.25fr 1fr',
-  gap: 10,
-};
-
 const cardOuter = {
   background: T.card,
   border: `1px solid ${T.border}`,
@@ -928,7 +922,7 @@ function GauntletPanel({
                 </div>
               )}
 
-              <div style={bottomGrid}>
+              <div style={{ display: 'grid', gap: 10 }}>
                 <div style={cardOuter}>
                   <div style={cardHeaderStyle}>Standings</div>
                   {tournamentStandings.length > 0 && (
