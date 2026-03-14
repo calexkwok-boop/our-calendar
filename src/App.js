@@ -13098,35 +13098,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!container) return { x: fallbackX, y: fallbackY };
     const rect = container.getBoundingClientRect();
     if (!rect?.width || !rect?.height) return { x: fallbackX, y: fallbackY };
-    const node = headerModuleNodeRefs.current?.[id];
-    const nodeRect = node?.getBoundingClientRect?.();
-    const maxWidthByModule = {
-      icon: 84,
-      add: 110,
-      date: 240,
-      title: 520,
+    const scale = Math.max(0.7, Math.min(1.8, Number(headerModuleLayout?.[id]?.scale || 1)));
+    const baseSizeByModule = {
+      icon: { w: 52, h: 52 },
+      add: { w: 78, h: 34 },
+      date: { w: 180, h: 28 },
+      title: { w: 260, h: 36 },
     };
-    const maxHeightByModule = {
-      icon: 84,
-      add: 56,
-      date: 72,
-      title: 96,
-    };
-    const measuredW = Math.max(1, Number(nodeRect?.width || 0));
-    const measuredH = Math.max(1, Number(nodeRect?.height || 0));
-    const safeW = Math.min(measuredW, Number(maxWidthByModule[id] || 240), rect.width * 0.9);
-    const safeH = Math.min(measuredH, Number(maxHeightByModule[id] || 120), rect.height * 0.9);
+    const base = baseSizeByModule[id] || { w: 140, h: 32 };
+    const safeW = Math.min(Math.max(1, base.w * scale), rect.width * 0.9);
+    const safeH = Math.min(Math.max(1, base.h * scale), rect.height * 0.9);
     const halfXPct = (safeW / 2 / rect.width) * 100;
     const halfYPct = (safeH / 2 / rect.height) * 100;
     const edgeInsetByModule = {
-      icon: 3.5,
-      add: 6,
-      date: 4,
-      title: 4,
+      icon: 5,
+      add: 8,
+      date: 5,
+      title: 5,
     };
     const baseInset = Number(edgeInsetByModule[id] || 4);
-    const minX = Math.max(baseInset, Math.min(49, halfXPct));
-    const minY = Math.max(baseInset, Math.min(49, halfYPct));
+    let minX = Math.max(baseInset, Math.min(48, halfXPct));
+    let minY = Math.max(baseInset, Math.min(48, halfYPct));
+    if (!Number.isFinite(minX) || minX >= 50) minX = baseInset;
+    if (!Number.isFinite(minY) || minY >= 50) minY = baseInset;
     const maxX = 100 - minX;
     const maxY = 100 - minY;
     return {
@@ -14139,7 +14133,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     />
     <div
       ref={widgetSurfaceRef}
-      className="relative min-h-screen p-2 sm:p-3 pt-7 sm:pt-10 pb-24"
+      className="relative min-h-screen overflow-x-hidden overscroll-x-none p-2 sm:p-3 pt-7 sm:pt-10 pb-24"
       style={themedPageBackgroundStyle}
       onPointerDownCapture={(event) => {
         if (bottomNavTab !== 'home') return;
