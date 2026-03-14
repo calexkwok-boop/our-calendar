@@ -329,6 +329,8 @@ function App() {
   const [showTitleStyleModal, setShowTitleStyleModal] = useState(false);
   const [titleNameDraft, setTitleNameDraft] = useState('');
   const [titleStyleDraft, setTitleStyleDraft] = useState(createDefaultLayerTitleStyle());
+  const titleSizeAutoSaveTimeoutRef = useRef(null);
+  const titleSizeAutoSaveSigRef = useRef('');
   const [showThemeMatchPrompt, setShowThemeMatchPrompt] = useState(false);
   const [pendingThemeMatchStyle, setPendingThemeMatchStyle] = useState(null);
   const [coverOpacityPreview, setCoverOpacityPreview] = useState(null);
@@ -4389,9 +4391,47 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const openTitleStyleModal = () => {
     if (!canEditActiveLayerTitle || !activeLayerId) return;
     setTitleNameDraft(String(calendarTitle || activeLayer?.name || '').trim());
-    setTitleStyleDraft(normalizeLayerTitleStyle(activeLayer?.title_style));
+    const normalized = normalizeLayerTitleStyle(activeLayer?.title_style);
+    setTitleStyleDraft(normalized);
+    titleSizeAutoSaveSigRef.current = `${String(activeLayerId)}:${Number(normalized.titleScale || 1).toFixed(3)}:${Number(normalized.monthYearScale || 1).toFixed(3)}`;
+    if (titleSizeAutoSaveTimeoutRef.current) {
+      clearTimeout(titleSizeAutoSaveTimeoutRef.current);
+      titleSizeAutoSaveTimeoutRef.current = null;
+    }
     setShowTitleStyleModal(true);
   };
+
+  const autoSaveTitleScaleSettings = React.useCallback(async (nextTitleScaleRaw, nextMonthYearScaleRaw) => {
+    const lid = String(activeLayerId || '').trim();
+    if (!lid || !user?.id || !canEditActiveLayerTitle) return;
+    const nextTitleScale = Math.max(0.75, Math.min(2.2, Number(nextTitleScaleRaw || 1)));
+    const nextMonthYearScale = Math.max(0.75, Math.min(2.2, Number(nextMonthYearScaleRaw || 1)));
+    const nextSig = `${lid}:${nextTitleScale.toFixed(3)}:${nextMonthYearScale.toFixed(3)}`;
+    if (nextSig === titleSizeAutoSaveSigRef.current) return;
+
+    const baseStyle = normalizeLayerTitleStyle(activeLayer?.title_style);
+    const normalizedStyle = normalizeLayerTitleStyle({
+      ...baseStyle,
+      titleScale: nextTitleScale,
+      monthYearScale: nextMonthYearScale,
+    });
+    titleSizeAutoSaveSigRef.current = nextSig;
+    writeStoredLayerTitleStyle(lid, normalizedStyle);
+    mergeLayerIntoState({ id: lid, title_style: normalizedStyle });
+
+    try {
+      const { error } = await supabase
+        .from('calendar_layers')
+        .update({ title_style: normalizedStyle })
+        .eq('id', lid)
+        .eq('owner_id', user.id);
+      if (error && !/column .*title_style|schema cache|42P01|does not exist/i.test(String(error?.message || ''))) {
+        console.error('Auto-save title scale failed:', error);
+      }
+    } catch (error) {
+      console.error('Auto-save title scale failed:', error);
+    }
+  }, [activeLayerId, user?.id, canEditActiveLayerTitle, activeLayer?.title_style]);
 
   const saveLayerPageTheme = async (themeInput, titleStyleInput = null) => {
     const lid = String(activeLayerId || '').trim();
@@ -4487,6 +4527,38 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!showTitleStyleModal || !canEditActiveLayerTitle || !activeLayerId || !user?.id) return;
+    const nextTitleScale = Math.max(0.75, Math.min(2.2, Number(titleStyleDraft?.titleScale || 1)));
+    const nextMonthYearScale = Math.max(0.75, Math.min(2.2, Number(titleStyleDraft?.monthYearScale || 1)));
+    const lid = String(activeLayerId || '').trim();
+    const nextSig = `${lid}:${nextTitleScale.toFixed(3)}:${nextMonthYearScale.toFixed(3)}`;
+    if (nextSig === titleSizeAutoSaveSigRef.current) return;
+
+    if (titleSizeAutoSaveTimeoutRef.current) {
+      clearTimeout(titleSizeAutoSaveTimeoutRef.current);
+      titleSizeAutoSaveTimeoutRef.current = null;
+    }
+    titleSizeAutoSaveTimeoutRef.current = setTimeout(() => {
+      void autoSaveTitleScaleSettings(nextTitleScale, nextMonthYearScale);
+    }, 250);
+
+    return () => {
+      if (titleSizeAutoSaveTimeoutRef.current) {
+        clearTimeout(titleSizeAutoSaveTimeoutRef.current);
+        titleSizeAutoSaveTimeoutRef.current = null;
+      }
+    };
+  }, [
+    showTitleStyleModal,
+    canEditActiveLayerTitle,
+    activeLayerId,
+    user?.id,
+    titleStyleDraft?.titleScale,
+    titleStyleDraft?.monthYearScale,
+    autoSaveTitleScaleSettings,
+  ]);
 
   const saveLayerTitleStyle = async () => {
     const lid = String(activeLayerId || '').trim();
