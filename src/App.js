@@ -13701,27 +13701,47 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const yNum = Number(y);
     const nextX = Number.isFinite(xNum) ? xNum : 50;
     const nextY = Number.isFinite(yNum) ? yNum : 50;
+
     const container = layerHeaderCardRef.current;
     if (!container) {
-      return { x: Math.max(2, Math.min(98, nextX)), y: Math.max(2, Math.min(98, nextY)) };
+      return {
+        x: Math.max(2, Math.min(98, nextX)),
+        y: Math.max(2, Math.min(98, nextY)),
+      };
     }
+
     const rect = container.getBoundingClientRect();
     if (!rect?.width || !rect?.height) {
-      return { x: Math.max(2, Math.min(98, nextX)), y: Math.max(2, Math.min(98, nextY)) };
+      return {
+        x: Math.max(2, Math.min(98, nextX)),
+        y: Math.max(2, Math.min(98, nextY)),
+      };
     }
+
     const node = headerModuleNodeRefs.current?.[id];
     const nodeRect = node?.getBoundingClientRect?.();
-    const safeW = Math.min(Math.max(1, Number(nodeRect?.width || 0)), rect.width * 0.92);
-    const safeH = Math.min(Math.max(1, Number(nodeRect?.height || 0)), rect.height * 0.92);
+    const MIN_NODE_SIZE = 8;
+    const nodeW = Number(nodeRect?.width || 0);
+    const nodeH = Number(nodeRect?.height || 0);
+
+    if (nodeW < MIN_NODE_SIZE || nodeH < MIN_NODE_SIZE) {
+      return {
+        x: Math.max(2, Math.min(98, nextX)),
+        y: Math.max(2, Math.min(98, nextY)),
+      };
+    }
+
+    const safeW = Math.min(nodeW, rect.width * 0.92);
+    const safeH = Math.min(nodeH, rect.height * 0.92);
     const halfXPct = (safeW / 2 / rect.width) * 100;
     const halfYPct = (safeH / 2 / rect.height) * 100;
-    // Fixed left-edge gutter so all header items start from the same visual left margin.
     const leftGridInsetPct = rect.width >= 640 ? 2 : 3;
     const rightLimitedMaxX = Math.min(98, Math.max(2, 100 - Math.max(2, Math.min(49, halfXPct))));
-    const minX = Math.max(2, 100 - rightLimitedMaxX, leftGridInsetPct + halfXPct);
+    const minX = Math.max(2, leftGridInsetPct + halfXPct);
     const maxX = rightLimitedMaxX;
     const minY = Math.max(2, Math.min(49, halfYPct));
     const maxY = Math.min(98, Math.max(minY, 100 - halfYPct));
+
     return {
       x: Math.max(minX, Math.min(maxX, nextX)),
       y: Math.max(minY, Math.min(maxY, nextY)),
@@ -13801,29 +13821,31 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const handlePointerMove = (event) => {
       const drag = headerModuleDragRef.current;
       if (!drag) return;
-      if (headerModulePinchRef.current?.active && headerModulePinchRef.current?.moduleId === drag.moduleId) return;
+      if (
+        headerModulePinchRef.current?.active &&
+        headerModulePinchRef.current?.moduleId === drag.moduleId
+      ) return;
+
       const container = layerHeaderCardRef.current;
       if (!container) return;
       const rect = container.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
+
       const dx = Number(event.clientX) - Number(drag.startX);
       const dy = Number(event.clientY) - Number(drag.startY);
+
       if (!drag.moved) {
         const travelPx = Math.sqrt((dx * dx) + (dy * dy));
         const threshold = Number(drag.dragThresholdPx || 3);
         if (travelPx < threshold) return;
         drag.moved = true;
       }
-      const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
-      const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
-      const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
+
       const rawX = drag.initialX + ((dx / rect.width) * 100);
       const rawY = drag.initialY + ((dy / rect.height) * 100);
-      const snappedX = snap(rawX, xStep);
-      const snappedY = snap(rawY, yStep);
-      const clamped = clampHeaderModuleCenterPercent(drag.moduleId, snappedX, snappedY);
-      const nextX = clamped.x;
-      const nextY = clamped.y;
+      const nextX = Math.max(2, Math.min(98, rawX));
+      const nextY = Math.max(2, Math.min(98, rawY));
+
       setHeaderModuleLayout((prev) => ({
         ...(prev || {}),
         [drag.moduleId]: {
@@ -13836,7 +13858,30 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const handlePointerUp = () => {
       const drag = headerModuleDragRef.current;
       if (drag?.moved) {
-        headerModuleLastDragRef.current = { moduleId: String(drag.moduleId || ''), at: Date.now() };
+        headerModuleLastDragRef.current = {
+          moduleId: String(drag.moduleId || ''),
+          at: Date.now(),
+        };
+
+        const xStep = 100 / Math.max(1, WIDGET_GRID_COLUMNS - 1);
+        const yStep = 100 / Math.max(1, WIDGET_GRID_ROWS - 1);
+        const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
+
+        setHeaderModuleLayout((prev) => {
+          const id = drag.moduleId;
+          const current = prev?.[id] || HEADER_MODULE_DEFAULT_LAYOUT[id];
+          const snappedX = snap(Number(current?.x || 50), xStep);
+          const snappedY = snap(Number(current?.y || 50), yStep);
+          const clamped = clampHeaderModuleCenterPercent(id, snappedX, snappedY);
+          return {
+            ...(prev || {}),
+            [id]: {
+              ...current,
+              x: clamped.x,
+              y: clamped.y,
+            },
+          };
+        });
       }
       headerModuleDragRef.current = null;
     };
@@ -14663,14 +14708,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const id = String(moduleId || '').trim();
     const fallback = HEADER_MODULE_DEFAULT_LAYOUT[id] || { x: 50, y: 50, scale: 1 };
     const value = headerModuleLayout?.[id] || fallback;
-    const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
-    const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
-    const snap = (num, step) => Math.round(Number(num || 0) / step) * step;
-    const snappedX = snap(Number(value?.x ?? fallback.x ?? 50), xStep);
-    const snappedY = snap(Number(value?.y ?? fallback.y ?? 50), yStep);
-    const clamped = clampHeaderModuleCenterPercent(id, snappedX, snappedY);
-    const x = clamped.x;
-    const y = clamped.y;
+    const x = Math.max(2, Math.min(98, Number(value?.x ?? fallback.x ?? 50)));
+    const y = Math.max(2, Math.min(98, Number(value?.y ?? fallback.y ?? 50)));
     const scale = id === 'add'
       ? 1
       : Math.max(0.7, Math.min(1.8, Number(value?.scale || fallback.scale || 1)));
