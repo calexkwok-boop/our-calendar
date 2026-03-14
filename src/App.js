@@ -127,6 +127,7 @@ const CONTROL_WIDGET_IDS = Object.freeze([
   'account',
   'notifications',
   'list',
+  'notes',
   'chat',
   'weather',
   'categories',
@@ -140,6 +141,7 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'account',
   'notifications',
   'list',
+  'notes',
   'chat',
   'ai',
   'scan',
@@ -2570,6 +2572,12 @@ function App() {
   const [savingAccountHandle, setSavingAccountHandle] = useState(false);
   const [showListPanel, setShowListPanel] = useState(false);
   const [listPanelAttention, setListPanelAttention] = useState(false);
+  const [showNotesPanel, setShowNotesPanel] = useState(false);
+  const [layerNotes, setLayerNotes] = useState([]);
+  const [newLayerNoteText, setNewLayerNoteText] = useState('');
+  const [expandedLayerNoteId, setExpandedLayerNoteId] = useState(null);
+  const [editingLayerNoteId, setEditingLayerNoteId] = useState(null);
+  const [newLayerChecklistItem, setNewLayerChecklistItem] = useState('');
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [controlWidgetOrder, setControlWidgetOrder] = useState([...DEFAULT_CONTROL_WIDGET_ORDER]);
   const [showControlWidgetAddPanel, setShowControlWidgetAddPanel] = useState(false);
@@ -3057,6 +3065,7 @@ function App() {
     account: Boolean(showSharePanel),
     notifications: Boolean(showNotificationSettings),
     list: Boolean(showListPanel),
+    notes: Boolean(showNotesPanel),
     chat: Boolean(showChatPanel),
     ai: Boolean(showAiAssistant),
     scan: Boolean(showScanHelpModal),
@@ -3066,6 +3075,7 @@ function App() {
     showSharePanel,
     showNotificationSettings,
     showListPanel,
+    showNotesPanel,
     showChatPanel,
     showAiAssistant,
     showScanHelpModal,
@@ -3073,6 +3083,52 @@ function App() {
     showCategoryEditor,
   ]);
   const hasOpenWidgetWindow = showControlWidgetAddPanel || Object.values(widgetCardOpenById).some(Boolean);
+  const getLayerNotesStorageKey = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
+    const userKey = String(uid || '').trim();
+    const layerKey = String(layerId || '').trim();
+    if (!userKey || !layerKey) return '';
+    return `calendar-layer-notes-${userKey}-${layerKey}`;
+  }, [user?.id, activeLayerId]);
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) {
+      setLayerNotes([]);
+      return;
+    }
+    try {
+      const key = getLayerNotesStorageKey(user.id, activeLayerId);
+      const raw = key ? localStorage.getItem(key) : '';
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) {
+        setLayerNotes([]);
+        return;
+      }
+      const normalized = parsed.map((note, idx) => {
+        const noteId = String(note?.id || `lnote-${Date.now()}-${idx}`);
+        const text = String(note?.text || '').trim();
+        const createdAt = String(note?.createdAt || new Date().toISOString());
+        const createdBy = String(note?.createdBy || currentUser || user?.email || user?.phone || 'User');
+        const checklist = Array.isArray(note?.checklist)
+          ? note.checklist.map((item, itemIdx) => ({
+            id: String(item?.id || `${noteId}-item-${itemIdx}`),
+            text: String(item?.text || '').trim(),
+            done: Boolean(item?.done),
+          })).filter((item) => item.text)
+          : [];
+        return { id: noteId, text, checklist, createdAt, createdBy };
+      }).filter((note) => note.text);
+      setLayerNotes(normalized);
+    } catch {
+      setLayerNotes([]);
+    }
+  }, [user?.id, user?.email, user?.phone, currentUser, activeLayerId, getLayerNotesStorageKey]);
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) return;
+    try {
+      const key = getLayerNotesStorageKey(user.id, activeLayerId);
+      if (!key) return;
+      localStorage.setItem(key, JSON.stringify(layerNotes || []));
+    } catch {}
+  }, [user?.id, activeLayerId, layerNotes, getLayerNotesStorageKey]);
   useEffect(() => {
     if (!coverHeaderControlsVisible) return undefined;
     if (hasOpenWidgetWindow) return undefined;
