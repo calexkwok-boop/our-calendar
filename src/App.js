@@ -13107,7 +13107,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       title: { w: 220, h: 38 },
     };
     const base = baseSizeByModule[id] || { w: 140, h: 32 };
-    const safeW = Math.min(Math.max(1, base.w * scale), rect.width * 0.9);
+    const effectiveScaleX = id === 'icon' ? scale : 1;
+    const safeW = Math.min(Math.max(1, base.w * effectiveScaleX), rect.width * 0.9);
     const safeH = Math.min(Math.max(1, base.h * scale), rect.height * 0.9);
     const halfXPct = (safeW / 2 / rect.width) * 100;
     const halfYPct = (safeH / 2 / rect.height) * 100;
@@ -13118,12 +13119,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       title: 8,
     };
     const baseInset = Number(edgeInsetByModule[id] || 4);
-    const unifiedHorizontalGutterPct = 8;
-    let minX = Math.max(baseInset, Math.min(48, halfXPct), unifiedHorizontalGutterPct);
+    const horizontalRangeByModule = {
+      icon: { min: 8, max: 92 },
+      title: { min: 8, max: 92 },
+      date: { min: 8, max: 92 },
+      add: { min: 12, max: 88 },
+    };
+    const range = horizontalRangeByModule[id] || { min: 8, max: 92 };
+    let minX = Math.max(baseInset, Math.min(48, halfXPct), Number(range.min || 8));
     let minY = Math.max(baseInset, Math.min(48, halfYPct));
     if (!Number.isFinite(minX) || minX >= 50) minX = baseInset;
     if (!Number.isFinite(minY) || minY >= 50) minY = baseInset;
-    const maxX = 100 - minX;
+    const maxX = Math.max(minX, Math.min(100 - minX, Number(range.max || 92)));
     const maxY = 100 - minY;
     return {
       x: Math.max(minX, Math.min(maxX, Number.isFinite(xNum) ? xNum : 50)),
