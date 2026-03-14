@@ -77,6 +77,7 @@ const LOCKED_DEFAULT_LAYER_TITLE_STYLE = Object.freeze({
   gradientVia: '#7c3aed',
   gradientTo: '#4f46e5',
   titleScale: 1,
+  monthYearScale: 1,
 });
 
 const LOCKED_DEFAULT_LAYER_PAGE_THEME = Object.freeze({
@@ -3588,6 +3589,7 @@ function App() {
     if (!parsed || typeof parsed !== 'object') parsed = {};
     const mode = String(parsed?.mode || '').trim() === 'solid' ? 'solid' : 'gradient';
     const titleScale = Math.max(0.75, Math.min(2.2, Number(parsed?.titleScale ?? DEFAULT_LAYER_TITLE_STYLE.titleScale)));
+    const monthYearScale = Math.max(0.75, Math.min(2.2, Number(parsed?.monthYearScale ?? DEFAULT_LAYER_TITLE_STYLE.monthYearScale)));
     return {
       mode,
       solidColor: normalizeHexColor(parsed?.solidColor, DEFAULT_LAYER_TITLE_STYLE.solidColor),
@@ -3595,6 +3597,7 @@ function App() {
       gradientVia: normalizeHexColor(parsed?.gradientVia, DEFAULT_LAYER_TITLE_STYLE.gradientVia),
       gradientTo: normalizeHexColor(parsed?.gradientTo, DEFAULT_LAYER_TITLE_STYLE.gradientTo),
       titleScale: Number.isFinite(titleScale) ? titleScale : DEFAULT_LAYER_TITLE_STYLE.titleScale,
+      monthYearScale: Number.isFinite(monthYearScale) ? monthYearScale : DEFAULT_LAYER_TITLE_STYLE.monthYearScale,
     };
   }
 
@@ -3636,10 +3639,12 @@ function App() {
     };
   }
 
-  function getLayerTitleFontSizePx(style, basePx = 16) {
+  function getLayerTitleFontSizePx(style, basePx = 16, scaleKey = 'titleScale') {
     const normalized = normalizeLayerTitleStyle(style);
     const base = Math.max(10, Number(basePx || 16));
-    return Math.max(10, Math.min(56, Math.round(base * Number(normalized.titleScale || 1))));
+    const rawScale = Number(normalized?.[scaleKey] || 1);
+    const clampedScale = Math.max(0.75, Math.min(2.2, rawScale));
+    return Math.max(10, Math.min(56, Math.round(base * clampedScale)));
   }
 
   const derivePageThemeFromTitleStyle = (style) => {
@@ -3716,6 +3721,11 @@ function App() {
   const activeLayerTitleNameTextStyle = {
     ...activeLayerTitleTextStyle,
     fontSize: `${getLayerTitleFontSizePx(activeLayerTitleStyle, 16)}px`,
+    lineHeight: 1.1,
+  };
+  const activeLayerMonthYearTextStyle = {
+    ...activeLayerTitleTextStyle,
+    fontSize: `${getLayerTitleFontSizePx(activeLayerTitleStyle, 13, 'monthYearScale')}px`,
     lineHeight: 1.1,
   };
   const activeLayerPageTheme = normalizeLayerPageTheme(activeLayer?.page_theme, activeLayerTitleStyle);
@@ -14269,12 +14279,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 ref={(el) => { headerModuleNodeRefs.current.date = el; }}
                 style={getHeaderModulePositionStyle('date')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'date')}
-                onTouchStart={(e) => startHeaderModulePinch(e, 'date')}
-                onTouchMove={(e) => moveHeaderModulePinch(e, 'date')}
-                onTouchEnd={(e) => endHeaderModulePinch(e, 'date')}
-                onTouchCancel={(e) => endHeaderModulePinch(e, 'date')}
               >
-                <div className="text-xs sm:text-sm font-semibold text-right" style={activeLayerTitleTextStyle}>
+                <div className="text-xs sm:text-sm font-semibold text-right" style={activeLayerMonthYearTextStyle}>
                   {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </div>
               </div>
@@ -14426,7 +14432,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate" style={activeLayerTitleNameTextStyle}>
                       {calendarTitle}
                     </h2>
-                    <div className="text-xs sm:text-sm font-semibold text-right" style={activeLayerTitleTextStyle}>
+                    <div className="text-xs sm:text-sm font-semibold text-right" style={activeLayerMonthYearTextStyle}>
                       {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                     </div>
                     <button
@@ -14479,7 +14485,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate pointer-events-none" style={activeLayerTitleNameTextStyle}>
                 {calendarTitle}
               </h2>
-              <div className="text-xs sm:text-sm font-semibold text-right pointer-events-none" style={activeLayerTitleTextStyle}>
+              <div className="text-xs sm:text-sm font-semibold text-right pointer-events-none" style={activeLayerMonthYearTextStyle}>
                 {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </div>
               <div className="flex justify-end pointer-events-auto">
@@ -18100,6 +18106,49 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 className="w-full"
                 style={{ accentColor: activeLayerPageTheme.accent }}
               />
+              <div
+                className="mt-2 font-semibold truncate"
+                style={{
+                  ...getLayerTitleDisplayStyle(titleStyleDraft),
+                  fontSize: `${getLayerTitleFontSizePx(titleStyleDraft, 16)}px`,
+                  lineHeight: 1.1,
+                }}
+              >
+                {titleNameDraft || calendarTitle || activeLayer?.name || 'Calendar Title'}
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-center justify-between gap-3 mb-1">
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Month/Year Size
+                </label>
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                  {Math.round(Number(titleStyleDraft?.monthYearScale || 1) * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="75"
+                max="220"
+                step="1"
+                value={Math.round(Number(titleStyleDraft?.monthYearScale || 1) * 100)}
+                onChange={(e) => {
+                  const nextScale = Math.max(0.75, Math.min(2.2, Number(e.target.value || 100) / 100));
+                  setTitleStyleDraft(prev => ({ ...prev, monthYearScale: nextScale }));
+                }}
+                className="w-full"
+                style={{ accentColor: activeLayerPageTheme.accent }}
+              />
+              <div
+                className="mt-2 font-semibold"
+                style={{
+                  ...getLayerTitleDisplayStyle(titleStyleDraft),
+                  fontSize: `${getLayerTitleFontSizePx(titleStyleDraft, 13, 'monthYearScale')}px`,
+                  lineHeight: 1.1,
+                }}
+              >
+                {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </div>
             </div>
           </div>
 
