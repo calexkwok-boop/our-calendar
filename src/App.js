@@ -13876,7 +13876,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return Boolean(last?.widgetId === id && (Date.now() - Number(last?.at || 0)) < 320);
   };
   const onHeaderModulePointerDown = (event, moduleId) => {
-    if (!coverHeaderControlsVisible) return;
+    if (bottomNavTab !== 'home') return;
     if (showControlWidgetAddPanel && moduleId !== 'add') return;
     event.stopPropagation();
     event.preventDefault();
