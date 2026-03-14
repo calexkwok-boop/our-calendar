@@ -13035,11 +13035,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const raw = key ? localStorage.getItem(key) : '';
       const parsed = raw ? JSON.parse(raw) : {};
       const next = { ...HEADER_MODULE_DEFAULT_LAYOUT };
+      const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
+      const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
+      const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
       HEADER_MODULE_IDS.forEach((id) => {
         const src = parsed?.[id];
         if (!src) return;
-        const x = Math.max(2, Math.min(98, Number(src?.x)));
-        const y = Math.max(2, Math.min(98, Number(src?.y)));
+        const x = Math.max(2, Math.min(98, snap(Number(src?.x), xStep)));
+        const y = Math.max(2, Math.min(98, snap(Number(src?.y), yStep)));
         const scale = Math.max(0.7, Math.min(1.8, Number(src?.scale)));
         if (Number.isFinite(x)) next[id].x = x;
         if (Number.isFinite(y)) next[id].y = y;
@@ -13145,10 +13148,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (travelPx < 3) return;
         drag.moved = true;
       }
+      const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
+      const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
+      const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
       const rawX = drag.initialX + ((dx / rect.width) * 100);
       const rawY = drag.initialY + ((dy / rect.height) * 100);
-      const nextX = Math.max(2, Math.min(98, rawX));
-      const nextY = Math.max(2, Math.min(98, rawY));
+      const nextX = Math.max(2, Math.min(98, snap(rawX, xStep)));
+      const nextY = Math.max(2, Math.min(98, snap(rawY, yStep)));
       setHeaderModuleLayout((prev) => ({
         ...(prev || {}),
         [drag.moduleId]: {
@@ -13710,8 +13716,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const id = String(moduleId || '').trim();
     const fallback = HEADER_MODULE_DEFAULT_LAYOUT[id] || { x: 50, y: 50, scale: 1 };
     const value = headerModuleLayout?.[id] || fallback;
-    const x = Math.max(2, Math.min(98, Number(value?.x || fallback.x || 50)));
-    const y = Math.max(2, Math.min(98, Number(value?.y || fallback.y || 50)));
+    const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
+    const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
+    const snap = (num, step) => Math.round(Number(num || 0) / step) * step;
+    const x = Math.max(2, Math.min(98, snap(Number(value?.x || fallback.x || 50), xStep)));
+    const y = Math.max(2, Math.min(98, snap(Number(value?.y || fallback.y || 50), yStep)));
     const scale = Math.max(0.7, Math.min(1.8, Number(value?.scale || fallback.scale || 1)));
     return {
       left: `${x}%`,
