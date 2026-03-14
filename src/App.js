@@ -13162,14 +13162,32 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, activeLayerId, headerModulePrefsReady, headerModuleLayout, getHeaderModuleStorageKey]);
 
   function clampHeaderModuleCenterPercent(moduleId, x, y) {
+    const id = String(moduleId || '').trim();
     const xNum = Number(x);
     const yNum = Number(y);
     const nextX = Number.isFinite(xNum) ? xNum : 50;
     const nextY = Number.isFinite(yNum) ? yNum : 50;
-    // Match widget grid bounds.
+    const container = layerHeaderCardRef.current;
+    if (!container) {
+      return { x: Math.max(2, Math.min(98, nextX)), y: Math.max(2, Math.min(98, nextY)) };
+    }
+    const rect = container.getBoundingClientRect();
+    if (!rect?.width || !rect?.height) {
+      return { x: Math.max(2, Math.min(98, nextX)), y: Math.max(2, Math.min(98, nextY)) };
+    }
+    const node = headerModuleNodeRefs.current?.[id];
+    const nodeRect = node?.getBoundingClientRect?.();
+    const safeW = Math.min(Math.max(1, Number(nodeRect?.width || 0)), rect.width * 0.92);
+    const safeH = Math.min(Math.max(1, Number(nodeRect?.height || 0)), rect.height * 0.92);
+    const halfXPct = (safeW / 2 / rect.width) * 100;
+    const halfYPct = (safeH / 2 / rect.height) * 100;
+    const minX = Math.max(2, Math.min(49, halfXPct));
+    const maxX = Math.min(98, Math.max(minX, 100 - halfXPct));
+    const minY = Math.max(2, Math.min(49, halfYPct));
+    const maxY = Math.min(98, Math.max(minY, 100 - halfYPct));
     return {
-      x: Math.max(2, Math.min(98, nextX)),
-      y: Math.max(2, Math.min(98, nextY)),
+      x: Math.max(minX, Math.min(maxX, nextX)),
+      y: Math.max(minY, Math.min(maxY, nextY)),
     };
   }
 
@@ -14276,7 +14294,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             <div className="absolute inset-0 z-[25] pointer-events-none">
               <div
                 className="absolute pointer-events-auto"
-                ref={(el) => { headerModuleNodeRefs.current.icon = el; }}
                 style={getHeaderModulePositionStyle('icon')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'icon')}
                 onTouchStart={(e) => startHeaderModulePinch(e, 'icon')}
@@ -14284,7 +14301,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 onTouchEnd={(e) => endHeaderModulePinch(e, 'icon')}
                 onTouchCancel={(e) => endHeaderModulePinch(e, 'icon')}
               >
-                <div className="relative">
+                <div className="relative" ref={(el) => { headerModuleNodeRefs.current.icon = el; }}>
                   {activeLayer?.icon_url ? (
                     <img
                       src={activeLayer.icon_url}
@@ -14315,12 +14332,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
               <div
                 className="absolute pointer-events-auto select-none"
-                ref={(el) => { headerModuleNodeRefs.current.title = el; }}
                 style={getHeaderModulePositionStyle('title')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'title')}
               >
                 <div className="-mx-8 -my-4 px-8 py-4 min-w-[10rem]">
                   <button
+                    ref={(el) => { headerModuleNodeRefs.current.title = el; }}
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -14338,18 +14355,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
               <div
                 className="absolute pointer-events-auto select-none"
-                ref={(el) => { headerModuleNodeRefs.current.date = el; }}
                 style={getHeaderModulePositionStyle('date')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'date')}
               >
-                <div className="text-xs sm:text-sm font-semibold text-right" style={activeLayerMonthYearTextStyle}>
+                <div className="text-xs sm:text-sm font-semibold text-right" style={activeLayerMonthYearTextStyle} ref={(el) => { headerModuleNodeRefs.current.date = el; }}>
                   {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </div>
               </div>
 
               <div
                 className="absolute pointer-events-auto"
-                ref={(el) => { headerModuleNodeRefs.current.add = el; }}
                 style={getHeaderModulePositionStyle('add')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'add')}
                 onTouchStart={(e) => startHeaderModulePinch(e, 'add')}
@@ -14358,6 +14373,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 onTouchCancel={(e) => endHeaderModulePinch(e, 'add')}
               >
                 <button
+                  ref={(el) => { headerModuleNodeRefs.current.add = el; }}
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
