@@ -218,7 +218,7 @@ const writeExploreVotesLocal = (userId, votesByLayer) => {
   const next = Object.entries(votesByLayer || {}).reduce((acc, [layerId, voteValue]) => {
     const lid = String(layerId || '').trim();
     const normalized = normalizeVoteValue(voteValue);
-    if (!lid || normalized === 0) return acc;
+    if (!lid) return acc;
     acc[lid] = normalized;
     return acc;
   }, {});
@@ -3948,7 +3948,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           Object.entries(localVotes || {}).forEach(([layerId, voteValue]) => {
             const lid = String(layerId || '').trim();
             const localVote = normalizeVoteValue(voteValue);
-            if (!lid || localVote === 0) return;
+            if (!lid) return;
             const dbVote = normalizeVoteValue(myVotesByLayer[lid] || 0);
             if (!voteSummaryByLayer[lid]) voteSummaryByLayer[lid] = { up: 0, down: 0 };
             if (dbVote === 1) voteSummaryByLayer[lid].up = Math.max(0, Number(voteSummaryByLayer[lid].up || 0) - 1);
@@ -4006,8 +4006,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const nextVote = previousVote === desiredVote ? 0 : desiredVote;
     setExploreVoteBusyByLayer((prev) => ({ ...prev, [lid]: true }));
     const localVotes = readExploreVotesLocal(user.id);
-    if (nextVote === 0) delete localVotes[lid];
-    else localVotes[lid] = nextVote;
+    localVotes[lid] = nextVote;
     writeExploreVotesLocal(user.id, localVotes);
     try {
       if (exploreVotesMode === 'db') {
@@ -13092,8 +13091,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   function clampHeaderModuleCenterPercent(moduleId, x, y) {
     const id = String(moduleId || '').trim();
-    const fallbackX = Math.max(2, Math.min(98, Number(x || 50)));
-    const fallbackY = Math.max(2, Math.min(98, Number(y || 50)));
+    const xNum = Number(x);
+    const yNum = Number(y);
+    const fallbackX = Math.max(2, Math.min(98, Number.isFinite(xNum) ? xNum : 50));
+    const fallbackY = Math.max(2, Math.min(98, Number.isFinite(yNum) ? yNum : 50));
     const container = layerHeaderCardRef.current;
     if (!container) return { x: fallbackX, y: fallbackY };
     const rect = container.getBoundingClientRect();
@@ -13101,9 +13102,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const scale = Math.max(0.7, Math.min(1.8, Number(headerModuleLayout?.[id]?.scale || 1)));
     const baseSizeByModule = {
       icon: { w: 52, h: 52 },
-      add: { w: 78, h: 34 },
-      date: { w: 180, h: 28 },
-      title: { w: 260, h: 36 },
+      add: { w: 92, h: 36 },
+      date: { w: 220, h: 30 },
+      title: { w: 220, h: 38 },
     };
     const base = baseSizeByModule[id] || { w: 140, h: 32 };
     const safeW = Math.min(Math.max(1, base.w * scale), rect.width * 0.9);
@@ -13111,21 +13112,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const halfXPct = (safeW / 2 / rect.width) * 100;
     const halfYPct = (safeH / 2 / rect.height) * 100;
     const edgeInsetByModule = {
-      icon: 5,
-      add: 8,
-      date: 5,
-      title: 5,
+      icon: 6,
+      add: 10,
+      date: 8,
+      title: 8,
     };
     const baseInset = Number(edgeInsetByModule[id] || 4);
-    let minX = Math.max(baseInset, Math.min(48, halfXPct));
+    const unifiedHorizontalGutterPct = 8;
+    let minX = Math.max(baseInset, Math.min(48, halfXPct), unifiedHorizontalGutterPct);
     let minY = Math.max(baseInset, Math.min(48, halfYPct));
     if (!Number.isFinite(minX) || minX >= 50) minX = baseInset;
     if (!Number.isFinite(minY) || minY >= 50) minY = baseInset;
     const maxX = 100 - minX;
     const maxY = 100 - minY;
     return {
-      x: Math.max(minX, Math.min(maxX, Number(x || 50))),
-      y: Math.max(minY, Math.min(maxY, Number(y || 50))),
+      x: Math.max(minX, Math.min(maxX, Number.isFinite(xNum) ? xNum : 50)),
+      y: Math.max(minY, Math.min(maxY, Number.isFinite(yNum) ? yNum : 50)),
     };
   }
 
@@ -13788,8 +13790,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
     const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
     const snap = (num, step) => Math.round(Number(num || 0) / step) * step;
-    const snappedX = snap(Number(value?.x || fallback.x || 50), xStep);
-    const snappedY = snap(Number(value?.y || fallback.y || 50), yStep);
+    const snappedX = snap(Number(value?.x ?? fallback.x ?? 50), xStep);
+    const snappedY = snap(Number(value?.y ?? fallback.y ?? 50), yStep);
     const clamped = clampHeaderModuleCenterPercent(id, snappedX, snappedY);
     const x = clamped.x;
     const y = clamped.y;
