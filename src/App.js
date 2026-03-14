@@ -13090,7 +13090,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, activeLayerId, headerModulePrefsReady, headerModuleLayout, getHeaderModuleStorageKey]);
 
   function clampHeaderModuleCenterPercent(moduleId, x, y) {
-    const id = String(moduleId || '').trim();
     const xNum = Number(x);
     const yNum = Number(y);
     const fallbackX = Math.max(2, Math.min(98, Number.isFinite(xNum) ? xNum : 50));
@@ -13099,42 +13098,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!container) return { x: fallbackX, y: fallbackY };
     const rect = container.getBoundingClientRect();
     if (!rect?.width || !rect?.height) return { x: fallbackX, y: fallbackY };
-    const scale = Math.max(0.7, Math.min(1.8, Number(headerModuleLayout?.[id]?.scale || 1)));
-    const baseSizeByModule = {
-      icon: { w: 52, h: 52 },
-      add: { w: 92, h: 36 },
-      date: { w: 220, h: 30 },
-      title: { w: 220, h: 38 },
-    };
-    const base = baseSizeByModule[id] || { w: 140, h: 32 };
-    const effectiveScaleX = id === 'icon' ? scale : 1;
-    const safeW = Math.min(Math.max(1, base.w * effectiveScaleX), rect.width * 0.9);
-    const safeH = Math.min(Math.max(1, base.h * scale), rect.height * 0.9);
-    const halfXPct = (safeW / 2 / rect.width) * 100;
-    const halfYPct = (safeH / 2 / rect.height) * 100;
-    const edgeInsetByModule = {
-      icon: 6,
-      add: 10,
-      date: 8,
-      title: 8,
-    };
-    const baseInset = Number(edgeInsetByModule[id] || 4);
-    const horizontalRangeByModule = {
-      icon: { min: 8, max: 92 },
-      title: { min: 8, max: 92 },
-      date: { min: 8, max: 92 },
-      add: { min: 12, max: 88 },
-    };
-    const range = horizontalRangeByModule[id] || { min: 8, max: 92 };
-    let minX = Math.max(baseInset, Math.min(48, halfXPct), Number(range.min || 8));
-    let minY = Math.max(baseInset, Math.min(48, halfYPct));
-    if (!Number.isFinite(minX) || minX >= 50) minX = baseInset;
-    if (!Number.isFinite(minY) || minY >= 50) minY = baseInset;
-    const maxX = Math.max(minX, Math.min(100 - minX, Number(range.max || 92)));
-    const maxY = 100 - minY;
+    // One shared draggable grid area: the cover photo box interior.
+    const coverInsetPx = rect.width >= 640 ? 20 : 16;
+    const insetPctX = Math.max(4, Math.min(16, (coverInsetPx / rect.width) * 100));
+    const insetPctY = Math.max(4, Math.min(16, (coverInsetPx / rect.height) * 100));
+    const minX = insetPctX;
+    const maxX = 100 - insetPctX;
+    const minY = insetPctY;
+    const maxY = 100 - insetPctY;
+
     return {
-      x: Math.max(minX, Math.min(maxX, Number.isFinite(xNum) ? xNum : 50)),
-      y: Math.max(minY, Math.min(maxY, Number.isFinite(yNum) ? yNum : 50)),
+      x: Math.max(minX, Math.min(Math.max(minX, maxX), Number.isFinite(xNum) ? xNum : 50)),
+      y: Math.max(minY, Math.min(Math.max(minY, maxY), Number.isFinite(yNum) ? yNum : 50)),
     };
   }
 
