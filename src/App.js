@@ -17379,25 +17379,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               <div className="text-sm text-gray-800 dark:text-gray-100">{renderTeamName(court.teamB)}</div>
                             </div>
                           </div>
-                          <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                          <div className="mt-3 mx-auto grid w-full max-w-[11.5rem] grid-cols-[4rem_auto_4rem] items-center justify-center gap-2">
                             <input
-                              type="number"
-                              min="0"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={court.scoreA}
                               disabled={Boolean(activeRound.finalizedAt)}
                               onChange={(e) => updateGauntletCourtScore(tournamentKey, activeRoundIndex, court.courtNumber, 'scoreA', e.target.value)}
-                              className="px-3 py-2 text-center text-base sm:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
+                              className="w-16 px-2 py-2 text-center text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
                               style={{ fontSize: '16px' }}
+                              placeholder="0"
                             />
                             <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">vs</div>
                             <input
-                              type="number"
-                              min="0"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={court.scoreB}
                               disabled={Boolean(activeRound.finalizedAt)}
                               onChange={(e) => updateGauntletCourtScore(tournamentKey, activeRoundIndex, court.courtNumber, 'scoreB', e.target.value)}
-                              className="px-3 py-2 text-center text-base sm:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
+                              className="w-16 px-2 py-2 text-center text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
                               style={{ fontSize: '16px' }}
+                              placeholder="0"
                             />
                           </div>
                         </div>
