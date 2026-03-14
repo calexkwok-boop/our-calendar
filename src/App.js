@@ -128,6 +128,7 @@ const CONTROL_WIDGET_IDS = Object.freeze([
   'notifications',
   'list',
   'notes',
+  'expenses',
   'chat',
   'weather',
   'categories',
@@ -142,6 +143,7 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'notifications',
   'list',
   'notes',
+  'expenses',
   'chat',
   'ai',
   'scan',
@@ -2578,6 +2580,10 @@ function App() {
   const [expandedLayerNoteId, setExpandedLayerNoteId] = useState(null);
   const [editingLayerNoteId, setEditingLayerNoteId] = useState(null);
   const [newLayerChecklistItem, setNewLayerChecklistItem] = useState('');
+  const [showExpenseTrackerPanel, setShowExpenseTrackerPanel] = useState(false);
+  const [layerExpenses, setLayerExpenses] = useState([]);
+  const [newLayerExpense, setNewLayerExpense] = useState({ payer: '', description: '', amount: '' });
+  const [expenseTrackerError, setExpenseTrackerError] = useState('');
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [controlWidgetOrder, setControlWidgetOrder] = useState([...DEFAULT_CONTROL_WIDGET_ORDER]);
   const [showControlWidgetAddPanel, setShowControlWidgetAddPanel] = useState(false);
@@ -3066,6 +3072,7 @@ function App() {
     notifications: Boolean(showNotificationSettings),
     list: Boolean(showListPanel),
     notes: Boolean(showNotesPanel),
+    expenses: Boolean(showExpenseTrackerPanel),
     chat: Boolean(showChatPanel),
     ai: Boolean(showAiAssistant),
     scan: Boolean(showScanHelpModal),
@@ -3076,6 +3083,7 @@ function App() {
     showNotificationSettings,
     showListPanel,
     showNotesPanel,
+    showExpenseTrackerPanel,
     showChatPanel,
     showAiAssistant,
     showScanHelpModal,
@@ -3088,6 +3096,12 @@ function App() {
     const layerKey = String(layerId || '').trim();
     if (!userKey || !layerKey) return '';
     return `calendar-layer-notes-${userKey}-${layerKey}`;
+  }, [user?.id, activeLayerId]);
+  const getLayerExpensesStorageKey = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
+    const userKey = String(uid || '').trim();
+    const layerKey = String(layerId || '').trim();
+    if (!userKey || !layerKey) return '';
+    return `calendar-layer-expenses-${userKey}-${layerKey}`;
   }, [user?.id, activeLayerId]);
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
@@ -3130,10 +3144,46 @@ function App() {
     } catch {}
   }, [user?.id, activeLayerId, layerNotes, getLayerNotesStorageKey]);
   useEffect(() => {
+    if (!user?.id || !activeLayerId) {
+      setLayerExpenses([]);
+      return;
+    }
+    try {
+      const key = getLayerExpensesStorageKey(user.id, activeLayerId);
+      const raw = key ? localStorage.getItem(key) : '';
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) {
+        setLayerExpenses([]);
+        return;
+      }
+      const normalized = parsed.map((expense, idx) => {
+        const expenseId = String(expense?.id || `lexp-${Date.now()}-${idx}`);
+        const payer = String(expense?.payer || '').trim();
+        const description = String(expense?.description || '').trim();
+        const createdAt = String(expense?.createdAt || new Date().toISOString());
+        const amount = Math.round((Number(expense?.amount) || 0) * 100) / 100;
+        return { id: expenseId, payer, description, amount, createdAt };
+      }).filter((expense) => expense.payer && expense.description && Number.isFinite(expense.amount) && expense.amount > 0);
+      setLayerExpenses(normalized);
+    } catch {
+      setLayerExpenses([]);
+    }
+  }, [user?.id, activeLayerId, getLayerExpensesStorageKey]);
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) return;
+    try {
+      const key = getLayerExpensesStorageKey(user.id, activeLayerId);
+      if (!key) return;
+      localStorage.setItem(key, JSON.stringify(layerExpenses || []));
+    } catch {}
+  }, [user?.id, activeLayerId, layerExpenses, getLayerExpensesStorageKey]);
+  useEffect(() => {
     setExpandedLayerNoteId(null);
     setEditingLayerNoteId(null);
     setNewLayerChecklistItem('');
     setNewLayerNoteText('');
+    setNewLayerExpense({ payer: '', description: '', amount: '' });
+    setExpenseTrackerError('');
   }, [activeLayerId]);
   useEffect(() => {
     if (!coverHeaderControlsVisible) return undefined;
@@ -13815,6 +13865,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }, ...(prev || [])]));
     setNewLayerNoteText('');
   };
+  const addLayerExpense = () => {
+    const payer = String(newLayerExpense?.payer || '').trim();
+    const description = String(newLayerExpense?.description || '').trim();
+    const amount = Math.round((Number.parseFloat(newLayerExpense?.amount) || 0) * 100) / 100;
+    if (!payer || !description || !Number.isFinite(amount) || amount <= 0) {
+      setExpenseTrackerError('Enter payer, description, and a valid amount.');
+      return;
+    }
+    setLayerExpenses((prev) => ([{
+      id: `lexp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      payer,
+      description,
+      amount,
+      createdAt: new Date().toISOString(),
+    }, ...(prev || [])]));
+    setNewLayerExpense({ payer, description: '', amount: '' });
+    setExpenseTrackerError('');
+  };
+  const deleteLayerExpense = (expenseId) => {
+    const id = String(expenseId || '').trim();
+    if (!id) return;
+    setLayerExpenses((prev) => (prev || []).filter((expense) => String(expense?.id || '') !== id));
+  };
   const deleteLayerNote = (noteId) => {
     const id = String(noteId || '').trim();
     if (!id) return;
@@ -13955,6 +14028,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setShowNotesPanel((prev) => !prev);
       return;
     }
+    if (id === 'expenses') {
+      setShowExpenseTrackerPanel((prev) => !prev);
+      return;
+    }
     if (id === 'chat') {
       const layerKey = String(activeLayerId || '');
       const next = !showChatPanel;
@@ -14001,6 +14078,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
     if (id === 'list') return { label: 'List', icon: <Tag className="w-4 h-4" />, active: Boolean(widgetCardOpenById.list), disabled: false };
     if (id === 'notes') return { label: 'Notes', icon: <span className="text-sm leading-none">📝</span>, active: Boolean(widgetCardOpenById.notes), disabled: false };
+    if (id === 'expenses') return { label: 'Expenses', icon: <span className="text-sm leading-none">💸</span>, active: Boolean(widgetCardOpenById.expenses), disabled: false };
     if (id === 'chat') return {
       label: 'Chat',
       icon: <MessageSquare className="w-4 h-4" />,
@@ -16573,6 +16651,130 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             </div>
           </div>
         )}
+
+        {showExpenseTrackerPanel && (() => {
+          const paidByCents = {};
+          layerExpenses.forEach((expense) => {
+            const payer = String(expense?.payer || '').trim();
+            const cents = Math.round((Number(expense?.amount) || 0) * 100);
+            if (!payer || !Number.isFinite(cents) || cents <= 0) return;
+            if (typeof paidByCents[payer] !== 'number') paidByCents[payer] = 0;
+            paidByCents[payer] += cents;
+          });
+          const participants = Object.keys(paidByCents).sort((a, b) => a.localeCompare(b));
+          const totalCents = Object.values(paidByCents).reduce((sum, cents) => sum + cents, 0);
+          const memberCount = participants.length || 1;
+          const baseShare = Math.floor(totalCents / memberCount);
+          const extraPennies = totalCents - (baseShare * memberCount);
+          const balances = participants.map((name, idx) => {
+            const paid = paidByCents[name] || 0;
+            const share = baseShare + (idx < extraPennies ? 1 : 0);
+            return { name, paid, balance: paid - share };
+          });
+          return (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Expense Tracker</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Track shared costs for this calendar layer.</p>
+                </div>
+                <button onClick={() => setShowExpenseTrackerPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                  <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                </button>
+              </div>
+
+              <div className="p-3 rounded-xl border mb-3 bg-emerald-50 dark:bg-emerald-900/20" style={{ borderColor: themeAccentBorder }}>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  <input
+                    type="text"
+                    value={newLayerExpense.payer}
+                    onChange={(e) => setNewLayerExpense((prev) => ({ ...prev, payer: e.target.value }))}
+                    onKeyPress={(e) => { if (e.key === 'Enter') addLayerExpense(); }}
+                    placeholder="Who paid?"
+                    className="px-2.5 py-1.5 text-base sm:text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                    style={{ fontSize: '16px' }}
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={newLayerExpense.amount}
+                    onChange={(e) => setNewLayerExpense((prev) => ({ ...prev, amount: e.target.value }))}
+                    onKeyPress={(e) => { if (e.key === 'Enter') addLayerExpense(); }}
+                    placeholder="Amount"
+                    className="px-2.5 py-1.5 text-base sm:text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                    style={{ fontSize: '16px' }}
+                  />
+                  <input
+                    type="text"
+                    value={newLayerExpense.description}
+                    onChange={(e) => setNewLayerExpense((prev) => ({ ...prev, description: e.target.value }))}
+                    onKeyPress={(e) => { if (e.key === 'Enter') addLayerExpense(); }}
+                    placeholder="What was it for?"
+                    className="sm:col-span-2 px-2.5 py-1.5 text-base sm:text-xs border border-emerald-300 dark:border-emerald-700 dark:bg-gray-700 dark:text-white rounded-lg"
+                    style={{ fontSize: '16px' }}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 mt-3">
+                  <button onClick={addLayerExpense} className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium">
+                    Add Expense
+                  </button>
+                  <div className="text-xs text-gray-600 dark:text-gray-300">
+                    Total <span className="font-semibold">${(totalCents / 100).toFixed(2)}</span>
+                  </div>
+                </div>
+                {expenseTrackerError && <p className="mt-2 text-xs text-red-500">{expenseTrackerError}</p>}
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    Recent Expenses
+                  </div>
+                  <div className="p-3 space-y-2">
+                    {layerExpenses.length === 0 ? (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 italic">No expenses yet.</p>
+                    ) : (
+                      layerExpenses.map((expense) => (
+                        <div key={expense.id} className="flex items-center gap-2 rounded-lg border border-emerald-100 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-900/10 px-2.5 py-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{expense.description}</div>
+                            <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{expense.payer}</div>
+                          </div>
+                          <div className="text-xs font-semibold text-gray-800 dark:text-gray-100">${(Number(expense.amount) || 0).toFixed(2)}</div>
+                          <button onClick={() => deleteLayerExpense(expense.id)} className="text-gray-300 hover:text-red-400 shrink-0">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-900/40 p-3">
+                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Split Summary</div>
+                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                    Per person <span className="font-semibold">${(participants.length > 0 ? totalCents / 100 / participants.length : 0).toFixed(2)}</span>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {balances.length === 0 ? (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 italic">Add an expense to see the split.</p>
+                    ) : (
+                      balances.map((row) => (
+                        <div key={row.name} className="flex items-center justify-between gap-3 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2.5 py-2">
+                          <span className="min-w-0 truncate text-gray-700 dark:text-gray-200">{row.name}</span>
+                          <span className={`${row.balance >= 0 ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'} font-medium`}>
+                            {row.balance >= 0 ? `Gets back $${(row.balance / 100).toFixed(2)}` : `Owes $${(Math.abs(row.balance) / 100).toFixed(2)}`}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {showCategoryEditor && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
