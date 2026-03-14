@@ -241,6 +241,65 @@ const s = {
     color: C.red,
     marginTop: 8,
   },
+  paymentSection: {
+    padding: '16px 20px',
+    borderTop: `1px solid ${C.border}`,
+    background: C.bg,
+  },
+  sectionCard: {
+    background: C.surface,
+    border: `1px solid ${C.borderLight}`,
+    borderRadius: 14,
+    padding: '14px 14px 10px',
+  },
+  sectionHint: {
+    fontSize: 12,
+    color: C.textSub,
+    marginTop: -2,
+    marginBottom: 10,
+    lineHeight: 1.5,
+  },
+  handleMeta: {
+    fontSize: 11,
+    color: C.textSub,
+    marginTop: 2,
+    lineHeight: 1.5,
+  },
+  actionChip: {
+    padding: '6px 10px',
+    borderRadius: 999,
+    border: `1px solid ${C.border}`,
+    background: C.surface,
+    fontFamily: FONT_SANS,
+    fontSize: 11.5,
+    fontWeight: 600,
+    color: C.textMid,
+    cursor: 'pointer',
+  },
+  settlementRow: {
+    padding: '10px 11px',
+    background: C.surface,
+    border: `1px solid ${C.borderLight}`,
+    borderRadius: 10,
+    marginBottom: 7,
+  },
+  settlementHeadline: {
+    fontSize: 13,
+    fontWeight: 500,
+    color: C.text,
+    lineHeight: 1.5,
+  },
+  settlementHandle: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: C.greenDeep,
+  },
+  settlementNote: {
+    fontSize: 11,
+    color: C.textSub,
+    marginTop: 4,
+    lineHeight: 1.45,
+  },
 };
 
 function ExpenseTrackerPanel({
@@ -282,10 +341,19 @@ function ExpenseTrackerPanel({
   const handleDraftChange = (key, value) => {
     setExpenseDraft((prev) => ({ ...prev, [key]: value }));
   };
+
   const showPaymentSections =
     typeof getVenmoHandle === 'function' &&
     typeof getCashAppHandle === 'function' &&
     paymentMembers.length > 0;
+
+  const getPreferredPayLabel = (identity) => {
+    const venmoHandle = typeof getVenmoHandle === 'function' ? getVenmoHandle(identity) : '';
+    const cashHandle = typeof getCashAppHandle === 'function' ? getCashAppHandle(identity) : '';
+    if (venmoHandle) return `@${venmoHandle}`;
+    if (cashHandle) return `$${cashHandle}`;
+    return getDisplayName(identity);
+  };
 
   return (
     <>
@@ -371,10 +439,7 @@ function ExpenseTrackerPanel({
               Add expense
             </button>
             <div style={s.totalChip}>
-              Total{' '}
-              <strong style={{ color: C.text, fontWeight: 600 }}>
-                ${(totalCents / 100).toFixed(2)}
-              </strong>
+              Total <strong style={{ color: C.text, fontWeight: 600 }}>${(totalCents / 100).toFixed(2)}</strong>
             </div>
           </div>
 
@@ -394,11 +459,7 @@ function ExpenseTrackerPanel({
                     <div style={s.expensePayer}>{getDisplayName(expense.payer)}</div>
                   </div>
                   <div style={s.expenseAmt}>${(Number(expense.amount) || 0).toFixed(2)}</div>
-                  <button
-                    style={s.deleteBtn}
-                    onClick={() => deleteExpense(expense.id)}
-                    aria-label="Delete"
-                  >
+                  <button style={s.deleteBtn} onClick={() => deleteExpense(expense.id)} aria-label="Delete">
                     <X style={{ width: 13, height: 13 }} />
                   </button>
                 </div>
@@ -430,10 +491,13 @@ function ExpenseTrackerPanel({
         </div>
 
         {showPaymentSections && (
-          <div style={{ padding: '16px 20px', borderTop: `1px solid ${C.border}`, background: C.bg }}>
+          <div style={s.paymentSection}>
             <div style={{ display: 'grid', gap: 12 }}>
-              <div style={{ ...s.col, padding: 0 }}>
+              <div style={s.sectionCard}>
                 <div style={s.colTitle}>Payment handles</div>
+                <div style={s.sectionHint}>
+                  Save payment handles once so transfers from the expense tracker can open directly.
+                </div>
                 {paymentMembers.map((name) => {
                   const venmoHandle = getVenmoHandle(name);
                   const cashHandle = getCashAppHandle(name);
@@ -443,9 +507,8 @@ function ExpenseTrackerPanel({
                     <div key={`payment-${name}`} style={{ ...s.expenseRow, alignItems: 'flex-start' }}>
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={s.expenseDesc}>{getDisplayName(name)}</div>
-                        <div style={s.expensePayer}>
-                          {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'}{' '}
-                          {' · '}
+                        <div style={s.handleMeta}>
+                          {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'} {' · '}
                           {cashHandle ? `Cash App $${cashHandle}` : 'Cash App not set'}
                         </div>
                         {canEdit && pickerOpen && (
@@ -471,7 +534,7 @@ function ExpenseTrackerPanel({
                       </div>
                       {canEdit ? (
                         <button
-                          style={{ ...s.addBtn, padding: '6px 10px', fontSize: 12 }}
+                          style={s.actionChip}
                           onClick={() => {
                             if (typeof setPaymentOptionPickerIdentity === 'function') {
                               setPaymentOptionPickerIdentity((prev) => (prev === name ? null : name));
@@ -486,8 +549,11 @@ function ExpenseTrackerPanel({
                 })}
               </div>
 
-              <div style={{ ...s.col, padding: 0 }}>
+              <div style={s.sectionCard}>
                 <div style={s.colTitle}>Who pays whom</div>
+                <div style={s.sectionHint}>
+                  Transfer suggestions use saved Venmo or Cash App handles when available.
+                </div>
                 {settlements.length === 0 ? (
                   <p style={s.empty}>No transfers needed.</p>
                 ) : (
@@ -496,15 +562,28 @@ function ExpenseTrackerPanel({
                     const cashHandle = getCashAppHandle(settlement.to);
                     const fromDisplay = getDisplayName(settlement.from);
                     const toDisplay = getDisplayName(settlement.to);
+                    const payLabel = getPreferredPayLabel(settlement.to);
                     const payVerb = fromDisplay === 'You' ? 'pay' : 'pays';
+                    const hasPaymentHandle = Boolean(venmoHandle || cashHandle);
                     return (
-                      <div key={`${settlement.from}-${settlement.to}-${idx}`} style={s.balanceRow}>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={s.balanceName}>
-                            {fromDisplay} {payVerb} ${(settlement.amount / 100).toFixed(2)} {toDisplay}
+                      <div key={`${settlement.from}-${settlement.to}-${idx}`} style={s.settlementRow}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={s.settlementHeadline}>
+                            {fromDisplay} {payVerb} ${(settlement.amount / 100).toFixed(2)}{' '}
+                            <span style={hasPaymentHandle ? s.settlementHandle : undefined}>{payLabel}</span>
                           </div>
+                          {hasPaymentHandle ? (
+                            <div style={s.settlementNote}>
+                              {venmoHandle ? `Venmo @${venmoHandle}` : 'Venmo not set'} {' · '}
+                              {cashHandle ? `Cash App $${cashHandle}` : 'Cash App not set'}
+                            </div>
+                          ) : (
+                            <div style={s.settlementNote}>
+                              {toDisplay} has not added a Venmo or Cash App handle yet. They can add payment handles in Account.
+                            </div>
+                          )}
                         </div>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: 8 }}>
                           <button
                             style={{
                               ...s.addBtn,
@@ -519,7 +598,7 @@ function ExpenseTrackerPanel({
                                 onOpenVenmoPayment(
                                   venmoHandle,
                                   settlement.amount,
-                                  `${fromDisplay} ${payVerb} ${toDisplay} for ${settlementNoteContext}`
+                                  `${fromDisplay} ${payVerb} ${payLabel} for ${settlementNoteContext}`
                                 );
                               }
                             }}

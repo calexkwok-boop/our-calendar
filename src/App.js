@@ -3307,8 +3307,9 @@ function App() {
     setAccountHandleInput(String(currentUser || '').trim());
     setAccountHandleMessage('');
     const accountIdentity = String(user?.email || currentUser || '').trim();
-    setAccountVenmoInput(accountIdentity ? getVenmoHandleForIdentity(accountIdentity) : '');
-    setAccountCashAppInput(accountIdentity ? getCashAppHandleForIdentity(accountIdentity) : '');
+    const accountKey = normalizeIdentityKey(accountIdentity);
+    setAccountVenmoInput(accountKey ? (venmoHandles[accountKey] || globalVenmoHandles[accountKey] || '') : '');
+    setAccountCashAppInput(accountKey ? (cashAppHandles[accountKey] || globalCashAppHandles[accountKey] || '') : '');
     setAccountPaymentMessage('');
   }, [showSharePanel, currentUser, user?.email, venmoHandles, globalVenmoHandles, cashAppHandles, globalCashAppHandles]);
   const bumpCoverControlsInteraction = React.useCallback(() => {
