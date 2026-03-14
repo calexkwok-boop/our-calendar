@@ -14364,7 +14364,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     if (wasRecentHeaderModuleDrag('add')) return;
                     setShowControlWidgetAddPanel(true);
                   }}
-                  className={`shrink-0 px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
+                  className={`shrink-0 min-w-[4.75rem] px-2 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap leading-none inline-flex items-center justify-center border transition-all ${
                     showControlWidgetAddPanel
                       ? 'bg-white/60 dark:bg-gray-700/55 text-gray-800 dark:text-gray-100 border-white/55 dark:border-gray-500/70 shadow-sm backdrop-blur-sm'
                       : 'bg-white/40 dark:bg-gray-700/40 text-gray-700 dark:text-gray-200 border-white/45 dark:border-gray-600/70 backdrop-blur-sm'
