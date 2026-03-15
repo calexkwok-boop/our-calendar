@@ -2836,6 +2836,7 @@ function App() {
   const [headerModuleLayout, setHeaderModuleLayout] = useState({});
   const [headerModulePrefsReady, setHeaderModulePrefsReady] = useState(false);
   const headerModuleDragRef = useRef(null);
+  const headerModuleLayoutRef = useRef({});
   const headerModuleNodeRefs = useRef({});
   const headerModulePinchRef = useRef({ active: false, moduleId: '', startDistance: 0, startScale: 1 });
   const headerModuleLastDragRef = useRef({ moduleId: '', at: 0 });
@@ -13681,6 +13682,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!userKey || !layerKey) return '';
     return `header-modules-${userKey}-${layerKey}`;
   }, [user?.id, activeLayerId]);
+  const persistHeaderModuleLayout = React.useCallback((layout, uid = user?.id, layerId = activeLayerId) => {
+    const key = getHeaderModuleStorageKey(uid, layerId);
+    if (!key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(layout || {}));
+    } catch {}
+  }, [user?.id, activeLayerId, getHeaderModuleStorageKey]);
 
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
@@ -13717,12 +13725,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     if (!user?.id || !activeLayerId || !headerModulePrefsReady) return;
-    const key = getHeaderModuleStorageKey(user.id, activeLayerId);
-    if (!key) return;
-    try {
-      localStorage.setItem(key, JSON.stringify(headerModuleLayout || {}));
-    } catch {}
-  }, [user?.id, activeLayerId, headerModulePrefsReady, headerModuleLayout, getHeaderModuleStorageKey]);
+    persistHeaderModuleLayout(headerModuleLayout, user.id, activeLayerId);
+  }, [user?.id, activeLayerId, headerModulePrefsReady, headerModuleLayout, persistHeaderModuleLayout]);
+  useEffect(() => {
+    headerModuleLayoutRef.current = headerModuleLayout || {};
+  }, [headerModuleLayout]);
+  useEffect(() => {
+    const handleUnload = () => {
+      if (!headerModulePrefsReady || !user?.id || !activeLayerId) return;
+      persistHeaderModuleLayout(headerModuleLayoutRef.current, user.id, activeLayerId);
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [user?.id, activeLayerId, headerModulePrefsReady, persistHeaderModuleLayout]);
 
   function clampHeaderModuleCenterPercent(moduleId, x, y) {
     const id = String(moduleId || '').trim();
