@@ -15487,7 +15487,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   onPointerDown={(e) => onHeaderModulePointerDown(e, 'title')}
                 >
                   <div
-                    className="-mx-8 -my-4 px-8 py-4 min-w-[10rem]"
+                    className="-mx-3 -my-2 px-3 py-2"
                     ref={(el) => { headerModuleNodeRefs.current.title = el; }}
                   >
                     <button
