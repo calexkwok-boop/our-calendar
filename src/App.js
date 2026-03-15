@@ -1108,17 +1108,6 @@ function App() {
     const dropAddress = geo?.formattedAddress || destination;
     setLocationActionTarget('');
     if (service === 'uber') {
-      const appParams = new URLSearchParams({
-        action: 'setPickup',
-        'pickup': 'my_location',
-        'dropoff[formatted_address]': dropAddress,
-        'dropoff[nickname]': 'Destination',
-      });
-      if (dropLat && dropLng) {
-        appParams.set('dropoff[latitude]', dropLat);
-        appParams.set('dropoff[longitude]', dropLng);
-      }
-      const appLink = `uber://?${appParams.toString()}`;
       const webParams = new URLSearchParams({
         action: 'setPickup',
         pickup: 'my_location',
@@ -1130,63 +1119,21 @@ function App() {
         webParams.set('dropoff[longitude]', dropLng);
       }
       const primary = `https://m.uber.com/ul/?${webParams.toString()}`;
-      let handedOff = false;
-      let timer = null;
-      const cleanup = () => {
-        window.removeEventListener('blur', onHidden);
-        document.removeEventListener('visibilitychange', onVisibilityChange);
-        if (timer) clearTimeout(timer);
-      };
-      const onHidden = () => {
-        handedOff = true;
-        cleanup();
-      };
-      const onVisibilityChange = () => {
-        if (document.visibilityState === 'hidden') onHidden();
-      };
-      window.addEventListener('blur', onHidden);
-      document.addEventListener('visibilitychange', onVisibilityChange);
-      window.location.href = appLink;
-      timer = setTimeout(() => {
-        cleanup();
-        if (!handedOff && document.visibilityState === 'visible') window.location.href = primary;
-      }, 1600);
+      window.location.href = primary;
       return;
     }
     if (service === 'lyft') {
-      // Inference: Lyft app URI supports ridetype with destination fields.
-      const appParams = new URLSearchParams({
+      const webParams = new URLSearchParams({
         id: 'lyft',
         pickup: 'my_location',
         'destination[address]': dropAddress,
       });
       if (dropLat && dropLng) {
-        appParams.set('destination[latitude]', dropLat);
-        appParams.set('destination[longitude]', dropLng);
+        webParams.set('destination[latitude]', dropLat);
+        webParams.set('destination[longitude]', dropLng);
       }
-      const appLink = `lyft://ridetype?${appParams.toString()}`;
-      const primary = `https://ride.lyft.com/?${appParams.toString()}`;
-      let handedOff = false;
-      let timer = null;
-      const cleanup = () => {
-        window.removeEventListener('blur', onHidden);
-        document.removeEventListener('visibilitychange', onVisibilityChange);
-        if (timer) clearTimeout(timer);
-      };
-      const onHidden = () => {
-        handedOff = true;
-        cleanup();
-      };
-      const onVisibilityChange = () => {
-        if (document.visibilityState === 'hidden') onHidden();
-      };
-      window.addEventListener('blur', onHidden);
-      document.addEventListener('visibilitychange', onVisibilityChange);
-      window.location.href = appLink;
-      timer = setTimeout(() => {
-        cleanup();
-        if (!handedOff && document.visibilityState === 'visible') window.location.href = primary;
-      }, 1600);
+      const primary = `https://ride.lyft.com/ridetype?${webParams.toString()}`;
+      window.location.href = primary;
       return;
     }
     const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
@@ -17520,13 +17467,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </button>
             </div>
             {todayEvents.length === 0 ? (
-              <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No events today.</div>
-            ) : (
-              <div className="space-y-1.5 max-h-24 sm:max-h-28 overflow-y-auto pr-1">
-                {todayEvents.slice(0, 4).map(event => {
-                  const category = categories[event.category || 'other'] || categories.other;
-                  return (
-                    <div key={`${event.id}-${event.date}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600">
+                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No events today.</div>
+                  ) : (
+                    <div className="space-y-1.5 max-h-24 sm:max-h-28 overflow-y-auto pr-1">
+                      {todayEvents.slice(0, 4).map(event => {
+                        const category = categories[event.category || 'other'] || categories.other;
+                        return (
+                    <div key={`${event.id}-${event.date}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white/75 dark:bg-gray-900/55 border border-gray-200/70 dark:border-gray-700/70">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${category.color}`} />
                         <span className="text-xs sm:text-sm text-gray-800 dark:text-gray-100 truncate">{event.title}</span>
@@ -18443,7 +18390,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               {group.label}
                             </h4>
                             {group.items.length === 0 ? (
-                              <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/40 rounded-xl px-3 py-2">
+                              <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/45 rounded-xl px-3 py-2">
                                 No {group.key} calendars yet.
                               </div>
                             ) : (
@@ -18511,7 +18458,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                         className={`relative z-10 w-full text-left p-3 rounded-xl border transition-all ${
                                           isActiveLayer
                                             ? 'shadow-sm'
-                                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                                            : 'border-gray-200 dark:border-gray-700 bg-white/85 dark:bg-gray-900/55'
                                         }`}
                                         style={{
                                           transform: `translateX(${layerRowOffset}px)`,
@@ -18661,7 +18608,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                             onTouchMove={handleTripSwipeMove}
                             onTouchEnd={handleTripSwipeEnd}
                             onTouchCancel={handleTripSwipeEnd}
-                            className="relative z-10 flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20"
+                            className="relative z-10 flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/45 dark:to-emerald-950/35"
                             style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                           >
                             <div className="min-w-0">
@@ -18787,7 +18734,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                             onTouchMove={handleTripSwipeMove}
                             onTouchEnd={handleTripSwipeEnd}
                             onTouchCancel={handleTripSwipeEnd}
-                            className="relative z-10 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/40"
+                            className="relative z-10 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/45"
                             style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                           >
                             <div className="min-w-0">
@@ -18830,7 +18777,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   value={exploreSearch}
                   onChange={(e) => setExploreSearch(e.target.value)}
                   placeholder="Search by name, tag, or description"
-                  className="w-full px-3 py-2 mb-3 border-2 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                  className="w-full px-3 py-2 mb-3 border-2 bg-white/80 dark:bg-gray-900/60 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
                   style={{ borderColor: themeAccentBorder }}
                 />
                 <div className="mb-3 flex items-center justify-between gap-2">
@@ -18840,7 +18787,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   <select
                     value={exploreSortBy}
                     onChange={(e) => setExploreSortBy(String(e.target.value || 'popular'))}
-                    className="px-2.5 py-1.5 text-xs border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                      className="px-2.5 py-1.5 text-xs border rounded-lg bg-gray-100 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200"
                     style={{ borderColor: themeAccentBorder }}
                   >
                     <option value="popular">Most Popular</option>
@@ -18885,7 +18832,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       return (
                         <div
                           key={`explore-${layerId}`}
-                          className={`rounded-xl border p-3 shadow-sm ${isJoined ? '' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}
+                          className={`rounded-xl border p-3 shadow-sm ${isJoined ? '' : 'bg-white/85 dark:bg-gray-900/55 border-gray-200 dark:border-gray-700'}`}
                           style={isJoined ? { borderColor: rowAccentBorder, backgroundColor: rowSoftBg } : undefined}
                         >
                           <div className="min-w-0">
@@ -18923,7 +18870,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                   {tags.slice(0, 6).map((tag) => (
                                     <span
                                       key={`${layerId}-${tag}`}
-                                      className="shrink-0 text-[10px] px-2 py-0.5 rounded-full border text-gray-700 dark:text-gray-200 bg-white/80 dark:bg-gray-800 border-gray-200 dark:border-gray-600"
+                                      className="shrink-0 text-[10px] px-2 py-0.5 rounded-full border text-gray-700 dark:text-gray-200 bg-white/80 dark:bg-gray-900/60 border-gray-200 dark:border-gray-700"
                                     >
                                       #{tag}
                                     </span>
@@ -18939,7 +18886,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                   className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all ${
                                     myVote === 1
                                       ? 'text-white border-transparent'
-                                      : 'bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-700'
+                                      : 'bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800'
                                   } disabled:opacity-60`}
                                   style={myVote === 1 ? themeAccentButtonStyle : undefined}
                                   title="Upvote calendar"
@@ -18953,7 +18900,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                   className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all ${
                                     myVote === -1
                                       ? 'bg-rose-600 text-white border-rose-600'
-                                      : 'bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-700'
+                                      : 'bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800'
                                   } disabled:opacity-60`}
                                   title="Downvote calendar"
                                 >
@@ -18972,7 +18919,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                       if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layerId);
                                       setBottomNavTab('home');
                                     }}
-                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-700"
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
                                   >
                                     Open
                                   </button>
@@ -18980,7 +18927,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               {!isOwner && isJoined && (
                                 <button
                                   onClick={() => leavePublicCalendarById(layerId)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-700"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
                                 >
                                   Leave
                                 </button>
@@ -18988,7 +18935,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               {!isOwner && !isJoined && (
                                   <button
                                     onClick={() => joinPublicCalendar(row)}
-                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-700"
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
                                   >
                                     Join
                                   </button>
@@ -18997,13 +18944,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                 <>
                                    <button
                                      onClick={() => openPublishLayerModal(row)}
-                                     className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-white dark:hover:bg-gray-700"
+                                     className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
                                    >
                                      Edit
                                    </button>
                                   <button
                                     onClick={() => publishLayerCalendar(layerId, false)}
-                                    className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                    className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-900/60 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800"
                                   >
                                     Unpublish
                                   </button>
@@ -19011,7 +18958,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               )}
                               <button
                                 onClick={() => openCalendarReportModal(row)}
-                                className="px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+                                className="px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-gray-900/60 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                               >
                                 Report
                               </button>
