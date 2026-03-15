@@ -8,8 +8,8 @@ import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 
 // Initialize Supabase
 const supabase = createClient(
-'https://qyifsblebdnlcyurrgbt.supabase.co',
-'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5aWZzYmxlYmRubGN5dXJyZ2J0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NTA1NTcsImV4cCI6MjA4NzAyNjU1N30.S_DUVQCwkBWrbSWoujQipb_5jz1d5UCsU_gSwWAGzTk'
+process.env.REACT_APP_SUPABASE_URL,
+process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
 // Supabase storage wrapper
@@ -556,14 +556,15 @@ function App() {
   const seenExpenseIdsRef = useRef(new Set());
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
-  const [showConflictPrompt, setShowConflictPrompt] = useState(false);
-  const [conflictPromptData, setConflictPromptData] = useState({
+  const [showAppPrompt, setShowAppPrompt] = useState(false);
+  const [appPromptData, setAppPromptData] = useState({
     heading: 'Scheduling Conflict',
     title: '',
     lines: [],
     confirmLabel: 'Save Anyway',
     cancelLabel: 'Change Time',
     showCancel: true,
+    tone: 'warning',
   });
   const [recurringDeletePrompt, setRecurringDeletePrompt] = useState(null);
   const [isPopupEventDraft, setIsPopupEventDraft] = useState(false);
@@ -625,7 +626,7 @@ function App() {
   const [draggingActiveCalendarId, setDraggingActiveCalendarId] = useState(null);
   const [draggingUpcomingTripId, setDraggingUpcomingTripId] = useState(null);
   const [draggingUpcomingPopupId, setDraggingUpcomingPopupId] = useState(null);
-  const conflictPromptResolverRef = useRef(null);
+  const appPromptResolverRef = useRef(null);
 
   // Sub-calendar state
   const [subCalendars, setSubCalendars] = useState([]);
@@ -1567,7 +1568,7 @@ function App() {
 
   const deleteSubCalendar = async (id) => {
     if (!assertCanEditActiveLayer('delete itineraries')) return;
-    if (!window.confirm('Delete this sub-calendar and all its events?')) return;
+    if (!await showAppConfirm('Delete this sub-calendar and all its events?', { confirmLabel: 'Delete', cancelLabel: 'Keep Trip' })) return;
     await supabase.from('sub_calendar_events').delete().eq('sub_calendar_id', id);
     await supabase.from('sub_calendar_members').delete().eq('sub_calendar_id', id);
     await supabase.from('sub_calendars').delete().eq('id', id).eq('layer_id', activeLayerId);
@@ -1949,7 +1950,7 @@ function App() {
   };
 
   const deleteTripPhoto = async (photo) => {
-    if (!window.confirm('Delete this photo?')) return;
+    if (!await showAppConfirm('Delete this photo?', { confirmLabel: 'Delete', cancelLabel: 'Keep Photo' })) return;
     await removeTripPhotoRecord(photo);
   };
 
@@ -2001,9 +2002,15 @@ function App() {
     clearPhotoReactionHold();
     photoDeleteHoldTimerRef.current = setTimeout(() => {
       photoHoldSuppressRef.current = { id: photo.id, until: Date.now() + 500 };
-      if (window.confirm('Save this photo to your device?')) {
-        saveSinglePhotoToDevice(photo);
-      }
+      void showAppConfirm('Save this photo to your device?', {
+        heading: 'Save Photo',
+        confirmLabel: 'Save',
+        cancelLabel: 'Cancel',
+        tone: 'default',
+      }).then((confirmed) => {
+        if (confirmed) return saveSinglePhotoToDevice(photo);
+        return null;
+      });
       clearPhotoReactionHold();
     }, 550);
   };
@@ -2094,7 +2101,7 @@ function App() {
   const deleteSelectedPhotos = async () => {
     const selected = tripPhotos.filter(p => selectedPhotoIds.includes(p.id));
     if (selected.length === 0) return;
-    if (!window.confirm(`Delete ${selected.length} selected photo${selected.length === 1 ? '' : 's'}?`)) return;
+    if (!await showAppConfirm(`Delete ${selected.length} selected photo${selected.length === 1 ? '' : 's'}?`, { confirmLabel: 'Delete', cancelLabel: 'Keep Photos' })) return;
     let deletedCount = 0;
     for (const photo of selected) {
       const ok = await removeTripPhotoRecord(photo);
@@ -5348,7 +5355,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       alert('You must keep at least one calendar.');
       return;
     }
-    if (!window.confirm(`Delete "${layer.name || 'this calendar'}" only?\n\nThis removes events, lists, shares, and trips linked to this specific calendar layer.`)) return;
+    if (!await showAppConfirm(`Delete "${layer.name || 'this calendar'}" only?`, {
+      heading: 'Delete Calendar',
+      lines: ['This removes events, lists, shares, and trips linked to this specific calendar layer.'],
+      confirmLabel: 'Delete Calendar',
+      cancelLabel: 'Keep Calendar',
+    })) return;
 
     try {
       const { data: subCalRows } = await supabase
@@ -5468,7 +5480,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return false;
     }
     if (!isAuto) {
-      const confirmed = window.confirm('Merge this shared calendar into your selected calendar? Existing items are preserved and duplicates are skipped.');
+      const confirmed = await showAppConfirm('Merge this shared calendar into your selected calendar?', {
+        heading: 'Merge Calendar',
+        lines: ['Existing items are preserved and duplicates are skipped.'],
+        confirmLabel: 'Merge',
+        cancelLabel: 'Cancel',
+        tone: 'default',
+      });
       if (!confirmed) return false;
     }
 
@@ -5948,28 +5966,59 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       minute: '2-digit',
     });
   };
-  const openConflictPrompt = ({ heading, title, lines, confirmLabel, cancelLabel, showCancel = true }) => new Promise((resolve) => {
-    conflictPromptResolverRef.current = resolve;
-    setConflictPromptData({
+  const openAppPrompt = ({ heading, title, lines, confirmLabel, cancelLabel, showCancel = true, tone = 'warning' }) => new Promise((resolve) => {
+    appPromptResolverRef.current = resolve;
+    setAppPromptData({
       heading: String(heading || 'Scheduling Conflict'),
       title: String(title || 'Scheduling conflict'),
       lines: Array.isArray(lines) ? lines : [],
       confirmLabel: String(confirmLabel || 'Save Anyway'),
       cancelLabel: String(cancelLabel || 'Change Time'),
       showCancel: showCancel !== false,
+      tone: String(tone || 'warning'),
     });
-    setShowConflictPrompt(true);
+    setShowAppPrompt(true);
   });
-  const closeConflictPrompt = (accepted) => {
-    setShowConflictPrompt(false);
-    const resolver = conflictPromptResolverRef.current;
-    conflictPromptResolverRef.current = null;
+  const openConflictPrompt = ({ heading, title, lines, confirmLabel, cancelLabel, showCancel = true }) => openAppPrompt({
+    heading,
+    title,
+    lines,
+    confirmLabel,
+    cancelLabel,
+    showCancel,
+    tone: 'warning',
+  });
+  const showAppAlert = (message, options = {}) => openAppPrompt({
+    heading: String(options?.heading || 'Notice'),
+    title: String(message || ''),
+    lines: Array.isArray(options?.lines) ? options.lines : [],
+    confirmLabel: String(options?.confirmLabel || 'OK'),
+    cancelLabel: String(options?.cancelLabel || 'Cancel'),
+    showCancel: false,
+    tone: String(options?.tone || 'default'),
+  });
+  const showAppConfirm = (message, options = {}) => openAppPrompt({
+    heading: String(options?.heading || 'Confirm Action'),
+    title: String(message || ''),
+    lines: Array.isArray(options?.lines) ? options.lines : [],
+    confirmLabel: String(options?.confirmLabel || 'Confirm'),
+    cancelLabel: String(options?.cancelLabel || 'Cancel'),
+    showCancel: options?.showCancel !== false,
+    tone: String(options?.tone || 'warning'),
+  });
+  const closeAppPrompt = (accepted) => {
+    setShowAppPrompt(false);
+    const resolver = appPromptResolverRef.current;
+    appPromptResolverRef.current = null;
     if (typeof resolver === 'function') resolver(Boolean(accepted));
   };
+  const alert = (message, options = {}) => {
+    void showAppAlert(message, options);
+  };
   useEffect(() => () => {
-    if (typeof conflictPromptResolverRef.current === 'function') {
-      conflictPromptResolverRef.current(false);
-      conflictPromptResolverRef.current = null;
+    if (typeof appPromptResolverRef.current === 'function') {
+      appPromptResolverRef.current(false);
+      appPromptResolverRef.current = null;
     }
   }, []);
   const findSchedulingConflicts = async ({ dateKey, time, ignoreEventId = null }) => {
@@ -6525,13 +6574,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       console.error('Error saving events:', error);
     }
   };
+  useEffect(() => {
+    const handleUnload = () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveEvents(events, { immediate: true });
+      }
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [events]);
 
   const leaveSharedLayerCalendar = async (layerId) => {
     const normalizedLayerId = String(layerId || '');
     if (!normalizedLayerId || !user?.id) return;
     const layer = layers.find(item => String(item.id) === normalizedLayerId);
     if (!layer || String(layer.owner_id) === String(user.id)) return;
-    if (!window.confirm(`Leave "${layer.name || 'this calendar'}"?`)) return;
+    if (!await showAppConfirm(`Leave "${layer.name || 'this calendar'}"?`, { heading: 'Leave Calendar', confirmLabel: 'Leave', cancelLabel: 'Stay' })) return;
 
     try {
       const myEmail = normalizeEmail(user?.email);
@@ -7428,7 +7487,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const deleteSharedList = async (listId) => {
     if (!assertCanEditActiveLayer('delete shared lists')) return;
     if (!listId || !primaryListOwnerId || !activeLayerId) return;
-    if (!window.confirm('Delete this list and all its items?')) return;
+    if (!await showAppConfirm('Delete this list and all its items?', { confirmLabel: 'Delete', cancelLabel: 'Keep List' })) return;
 
     const { error: itemDeleteError } = await supabase
       .from('shared_lists')
@@ -8394,7 +8453,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const raw = String(messageRow?.message || '');
     const popupInvite = parsePopupInviteMessage(raw);
     const popupEventId = popupInvite ? String(popupInvite?.eventId || '') : '';
-    if (!window.confirm('Delete this message?')) return;
+    if (!await showAppConfirm('Delete this message?', { confirmLabel: 'Delete', cancelLabel: 'Keep Message' })) return;
     setDeletingChatMessageId(messageId);
     if (popupEventId) {
       const deletedPopup = await deleteEventsByIds([popupEventId], { silent: true });
@@ -14730,31 +14789,31 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   return (
     <>
     <style>{shakeStyle}</style>
-    {showConflictPrompt && (
+    {showAppPrompt && (
       <div className="fixed inset-0 z-[95] bg-black/45 flex items-center justify-center p-4">
         <div className="w-full max-w-md rounded-2xl border border-purple-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-2xl">
-          <h3 className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-            {conflictPromptData.heading || 'Scheduling Conflict'}
+          <h3 className={`text-lg font-semibold bg-clip-text text-transparent ${appPromptData.tone === 'warning' ? 'bg-gradient-to-r from-purple-600 to-indigo-600' : 'bg-gradient-to-r from-slate-700 to-slate-500 dark:from-slate-100 dark:to-slate-300'}`}>
+            {appPromptData.heading || 'Scheduling Conflict'}
           </h3>
-          <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">{conflictPromptData.title}</p>
-          <div className="mt-3 rounded-xl bg-purple-50 dark:bg-gray-700/70 border border-purple-100 dark:border-gray-600 p-3 space-y-1.5">
-            {(conflictPromptData.lines || []).map((line, idx) => (
+          <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">{appPromptData.title}</p>
+          <div className={`mt-3 rounded-xl border p-3 space-y-1.5 ${appPromptData.tone === 'warning' ? 'bg-purple-50 dark:bg-gray-700/70 border-purple-100 dark:border-gray-600' : 'bg-slate-50 dark:bg-gray-700/70 border-slate-200 dark:border-gray-600'}`}>
+            {(appPromptData.lines || []).map((line, idx) => (
               <div key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-200">{line}</div>
             ))}
           </div>
-          <div className={`mt-4 grid grid-cols-1 ${conflictPromptData.showCancel !== false ? 'sm:grid-cols-2' : ''} gap-2`}>
+          <div className={`mt-4 grid grid-cols-1 ${appPromptData.showCancel !== false ? 'sm:grid-cols-2' : ''} gap-2`}>
             <button
-              onClick={() => closeConflictPrompt(true)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-sm font-semibold hover:shadow-lg transition-all"
+              onClick={() => closeAppPrompt(true)}
+              className={`px-4 py-2 rounded-xl text-white text-sm font-semibold hover:shadow-lg transition-all ${appPromptData.tone === 'warning' ? 'bg-gradient-to-br from-purple-500 to-indigo-500' : 'bg-gradient-to-br from-slate-700 to-slate-500 dark:from-slate-500 dark:to-slate-400'}`}
             >
-              {conflictPromptData.confirmLabel || 'Save Anyway'}
+              {appPromptData.confirmLabel || 'Save Anyway'}
             </button>
-            {conflictPromptData.showCancel !== false && (
+            {appPromptData.showCancel !== false && (
               <button
-                onClick={() => closeConflictPrompt(false)}
+                onClick={() => closeAppPrompt(false)}
                 className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
               >
-                {conflictPromptData.cancelLabel || 'Change Time'}
+                {appPromptData.cancelLabel || 'Change Time'}
               </button>
             )}
           </div>
@@ -15234,7 +15293,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           )}
           {showControlWidgetAddPanel && bottomNavTab === 'home' && (
             <div
-              className="absolute right-3 sm:right-4 top-12 sm:top-14 z-[30] w-[19rem] max-w-[calc(100vw-2.5rem)] p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600 overflow-visible pointer-events-auto"
+              className="absolute right-3 sm:right-4 top-12 sm:top-14 z-[85] w-[19rem] max-w-[calc(100vw-2.5rem)] p-2 rounded-xl border bg-white/95 dark:bg-gray-800/95 border-gray-200 dark:border-gray-600 overflow-visible pointer-events-auto shadow-2xl"
               onPointerDownCapture={bumpCoverControlsInteraction}
             >
               <div className="flex items-center justify-between gap-2 mb-1">
@@ -15446,7 +15505,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </div>
               {showControlWidgetAddPanel && (
                 <div
-                  className="absolute right-0 top-full mt-2 w-[19rem] max-w-[calc(100vw-2.5rem)] p-2 rounded-xl border bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-600 overflow-visible pointer-events-auto"
+                  className="absolute right-0 top-full mt-2 z-[85] w-[19rem] max-w-[calc(100vw-2.5rem)] p-2 rounded-xl border bg-white/95 dark:bg-gray-800/95 border-gray-200 dark:border-gray-600 overflow-visible pointer-events-auto shadow-2xl"
                   onPointerDownCapture={bumpCoverControlsInteraction}
                 >
                   <div className="flex items-center justify-between gap-2 mb-1">
