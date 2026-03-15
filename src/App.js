@@ -19476,31 +19476,35 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               }}
             />
             <div className="mt-3">
-              <label className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white/70 dark:bg-gray-900/40">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Title Visibility
+              <button
+                type="button"
+                aria-pressed={titleStyleDraft?.showTitle !== false}
+                onClick={() => setTitleStyleDraft(prev => ({ ...prev, showTitle: prev?.showTitle === false }))}
+                className={`w-full text-left px-3 py-3 rounded-xl border transition-all ${
+                  titleStyleDraft?.showTitle === false
+                    ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/80 text-gray-500 dark:text-gray-300'
+                    : 'text-white shadow-sm'
+                }`}
+                style={titleStyleDraft?.showTitle === false ? undefined : themeAccentButtonStyle}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wide opacity-90">
+                      Title Visibility
+                    </div>
+                    <div className={`text-xs mt-0.5 ${titleStyleDraft?.showTitle === false ? 'text-gray-500 dark:text-gray-400' : 'text-white/85'}`}>
+                      Hide the calendar title and keep only the month and year visible.
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
-                    Hide the calendar title and keep only the month and year visible.
-                  </div>
+                  <span className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${
+                    titleStyleDraft?.showTitle === false
+                      ? 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                      : 'bg-white/20 text-white'
+                  }`}>
+                    {titleStyleDraft?.showTitle === false ? 'Off' : 'On'}
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={titleStyleDraft?.showTitle !== false}
-                  onClick={() => setTitleStyleDraft(prev => ({ ...prev, showTitle: prev?.showTitle === false }))}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-                    titleStyleDraft?.showTitle === false ? 'bg-gray-300 dark:bg-gray-700' : 'bg-emerald-500'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                      titleStyleDraft?.showTitle === false ? 'translate-x-1' : 'translate-x-6'
-                    }`}
-                  />
-                </button>
-              </label>
+              </button>
             </div>
             <div className="mt-3">
               <div className="flex items-center justify-between gap-3 mb-1">
