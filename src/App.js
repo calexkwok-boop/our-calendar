@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
 import { getMessagingIfSupported } from "./firebase";
@@ -182,6 +183,57 @@ const HEADER_MODULE_DEFAULT_LAYOUT = Object.freeze({
   date: { x: 79, y: 18, scale: 1 },
   add: { x: 88, y: 27, scale: 1 },
 });
+const createDefaultHeaderModuleLayout = () => ({
+  icon: { ...HEADER_MODULE_DEFAULT_LAYOUT.icon },
+  title: { ...HEADER_MODULE_DEFAULT_LAYOUT.title },
+  date: { ...HEADER_MODULE_DEFAULT_LAYOUT.date },
+  add: { ...HEADER_MODULE_DEFAULT_LAYOUT.add },
+});
+const normalizeHeaderModuleLayoutMap = (raw) => {
+  let parsed = raw;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      parsed = {};
+    }
+  }
+  if (!parsed || typeof parsed !== 'object') parsed = {};
+  const next = createDefaultHeaderModuleLayout();
+  const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
+  const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
+  const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
+  HEADER_MODULE_IDS.forEach((id) => {
+    const src = parsed?.[id];
+    if (!src || typeof src !== 'object') return;
+    const x = Math.max(2, Math.min(98, snap(Number(src?.x), xStep)));
+    const y = Math.max(2, Math.min(98, snap(Number(src?.y), yStep)));
+    const scale = id === 'add' ? 1 : Math.max(0.7, Math.min(1.8, Number(src?.scale)));
+    if (Number.isFinite(x)) next[id].x = x;
+    if (Number.isFinite(y)) next[id].y = y;
+    if (Number.isFinite(scale)) next[id].scale = scale;
+  });
+  return next;
+};
+const readHeaderModuleLayoutFromPageTheme = (raw) => {
+  let parsed = raw;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      parsed = {};
+    }
+  }
+  if (!parsed || typeof parsed !== 'object') parsed = {};
+  return normalizeHeaderModuleLayoutMap(
+    parsed?.headerModuleLayout || {
+      icon: parsed?.iconOffset ? { ...parsed.iconOffset, scale: parsed?.iconScale } : undefined,
+      title: parsed?.titleOffset ? { ...parsed.titleOffset, scale: parsed?.titleScale } : undefined,
+      date: parsed?.dateOffset ? { ...parsed.dateOffset, scale: parsed?.dateScale } : undefined,
+      add: parsed?.addOffset ? { ...parsed.addOffset, scale: 1 } : undefined,
+    }
+  );
+};
 
 // Source: ESPN Warriors 2025-26 schedule (remaining regular season), captured Mar 12, 2026.
 // Times are set in Pacific Time for this app's event time fields.
@@ -2837,6 +2889,8 @@ function App() {
   const [headerModulePrefsReady, setHeaderModulePrefsReady] = useState(false);
   const headerModuleDragRef = useRef(null);
   const headerModuleLayoutRef = useRef({});
+  const headerModuleRemoteSaveTimeoutRef = useRef(null);
+  const saveLayerPageThemeRef = useRef(null);
   const headerModuleNodeRefs = useRef({});
   const headerModulePinchRef = useRef({ active: false, moduleId: '', startDistance: 0, startScale: 1 });
   const headerModuleLastDragRef = useRef({ moduleId: '', at: 0 });
@@ -4128,6 +4182,7 @@ function App() {
     const fallbackRequireApproval = typeof fallback?.publicMemberPostsRequireApproval === 'boolean'
       ? fallback.publicMemberPostsRequireApproval
       : DEFAULT_LAYER_PAGE_THEME.publicMemberPostsRequireApproval;
+    const headerModuleLayout = readHeaderModuleLayoutFromPageTheme(parsed);
     return {
       matchTitle: parsed?.matchTitle === true,
       accent: normalizeHexColor(parsed?.accent, fallback.accent),
@@ -4140,6 +4195,23 @@ function App() {
         : parsed?.publicMemberPostsRequireApproval === true
           ? true
           : fallbackRequireApproval,
+      headerModuleLayout,
+      iconOffset: {
+        x: headerModuleLayout.icon.x,
+        y: headerModuleLayout.icon.y,
+      },
+      titleOffset: {
+        x: headerModuleLayout.title.x,
+        y: headerModuleLayout.title.y,
+      },
+      dateOffset: {
+        x: headerModuleLayout.date.x,
+        y: headerModuleLayout.date.y,
+      },
+      addOffset: {
+        x: headerModuleLayout.add.x,
+        y: headerModuleLayout.add.y,
+      },
     };
   }
 
@@ -4946,6 +5018,42 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     mergeLayerIntoState({ ...(updatedLayer || { id: lid }), page_theme: normalizedTheme, title_style: normalizedTitleStyle });
     return true;
   };
+  saveLayerPageThemeRef.current = saveLayerPageTheme;
+
+  useEffect(() => {
+    if (!headerModulePrefsReady || !user?.id || !activeLayerId || !canManageActiveLayer) return undefined;
+    const normalizedLayout = normalizeHeaderModuleLayoutMap(headerModuleLayout);
+    const nextSig = JSON.stringify(normalizedLayout);
+    const savedSig = JSON.stringify(readHeaderModuleLayoutFromPageTheme(activeLayer?.page_theme));
+    if (nextSig === savedSig) return undefined;
+    if (headerModuleRemoteSaveTimeoutRef.current) {
+      window.clearTimeout(headerModuleRemoteSaveTimeoutRef.current);
+    }
+    headerModuleRemoteSaveTimeoutRef.current = window.setTimeout(() => {
+      saveLayerPageThemeRef.current?.(
+        {
+          ...activeLayerPageTheme,
+          headerModuleLayout: normalizedLayout,
+        },
+        activeLayerTitleStyle,
+      );
+    }, 220);
+    return () => {
+      if (headerModuleRemoteSaveTimeoutRef.current) {
+        window.clearTimeout(headerModuleRemoteSaveTimeoutRef.current);
+        headerModuleRemoteSaveTimeoutRef.current = null;
+      }
+    };
+  }, [
+    headerModulePrefsReady,
+    user?.id,
+    activeLayerId,
+    canManageActiveLayer,
+    headerModuleLayout,
+    activeLayer?.page_theme,
+    activeLayerPageTheme,
+    activeLayerTitleStyle,
+  ]);
 
   const setPublicMemberPostApproval = async (requireApproval) => {
     if (!canManageActiveLayer || !activeLayerId || !activeLayer?.is_public) return;
@@ -13693,35 +13801,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
       setHeaderModulePrefsReady(false);
-      setHeaderModuleLayout({ ...HEADER_MODULE_DEFAULT_LAYOUT });
+      setHeaderModuleLayout(createDefaultHeaderModuleLayout());
       return;
     }
     const key = getHeaderModuleStorageKey(user.id, activeLayerId);
     setHeaderModulePrefsReady(false);
     try {
+      const themeLayout = readHeaderModuleLayoutFromPageTheme(activeLayer?.page_theme);
       const raw = key ? localStorage.getItem(key) : '';
-      const parsed = raw ? JSON.parse(raw) : {};
-      const next = { ...HEADER_MODULE_DEFAULT_LAYOUT };
-      const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
-      const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
-      const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
-      HEADER_MODULE_IDS.forEach((id) => {
-        const src = parsed?.[id];
-        if (!src) return;
-        const x = Math.max(2, Math.min(98, snap(Number(src?.x), xStep)));
-        const y = Math.max(2, Math.min(98, snap(Number(src?.y), yStep)));
-        const scale = id === 'add' ? 1 : Math.max(0.7, Math.min(1.8, Number(src?.scale)));
-        if (Number.isFinite(x)) next[id].x = x;
-        if (Number.isFinite(y)) next[id].y = y;
-        if (Number.isFinite(scale)) next[id].scale = scale;
-      });
+      const parsed = raw ? JSON.parse(raw) : null;
+      const next = normalizeHeaderModuleLayoutMap(parsed || themeLayout);
       setHeaderModuleLayout(next);
     } catch {
-      setHeaderModuleLayout({ ...HEADER_MODULE_DEFAULT_LAYOUT });
+      setHeaderModuleLayout(readHeaderModuleLayoutFromPageTheme(activeLayer?.page_theme));
     } finally {
       setHeaderModulePrefsReady(true);
     }
-  }, [user?.id, activeLayerId, getHeaderModuleStorageKey]);
+  }, [user?.id, activeLayerId, activeLayer?.page_theme, getHeaderModuleStorageKey]);
 
   useEffect(() => {
     if (!user?.id || !activeLayerId || !headerModulePrefsReady) return;
@@ -14800,10 +14896,106 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const completedSharedListItems = sharedListItems.filter(item => item.done);
   const totalSharedListItems = sharedListItems.length;
   const completedSharedListCount = completedSharedListItems.length;
+  const controlWidgetAddPanelPortal = showControlWidgetAddPanel && bottomNavTab === 'home' && typeof document !== 'undefined'
+    ? createPortal(
+      <div
+        className="fixed inset-0 z-[999] bg-black/45 flex items-end sm:items-center justify-center p-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setShowControlWidgetAddPanel(false);
+        }}
+      >
+        <div
+          className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-gray-600 bg-white/95 dark:bg-gray-800/95 shadow-2xl p-3 sm:p-4"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDownCapture={bumpCoverControlsInteraction}
+        >
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add or remove widgets</div>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400">Portal-mounted so it stays above the cover stack.</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowControlWidgetAddPanel(false)}
+              className="w-8 h-8 rounded-full text-base font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center"
+              title="Close add widgets"
+              aria-label="Close add widgets panel"
+            >
+              ×
+            </button>
+          </div>
+          <div className="flex items-center justify-end gap-1.5 mb-3">
+            <button
+              onClick={enableAllControlWidgets}
+              className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
+              title="Turn all widgets on"
+            >
+              All On
+            </button>
+            <button
+              onClick={disableAllControlWidgets}
+              className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
+              title="Turn all widgets off"
+            >
+              All Off
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {CONTROL_WIDGET_IDS.map((widgetId) => {
+              const meta = getControlWidgetMeta(widgetId);
+              const enabled = activeControlWidgets.includes(widgetId);
+              return (
+                <div key={`toggle-portal-${widgetId}`} className="relative flex items-stretch gap-1.5">
+                  {enabled ? (
+                    <button
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        startCoverWidgetDragFromAddPanel(e, widgetId);
+                      }}
+                      className="absolute -left-2 top-0 z-10 w-8 h-8 rounded-xl border border-transparent text-white shadow-sm transition-all flex items-center justify-center"
+                      style={themeAccentButtonStyle}
+                      title={`Drag ${meta.label}`}
+                    >
+                      <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
+                      {meta.badge ? (
+                        <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                          {meta.badge}
+                        </span>
+                      ) : null}
+                    </button>
+                  ) : null}
+                  <button
+                    onClick={() => toggleControlWidget(widgetId)}
+                    className={`h-8 flex-1 px-2 ${enabled ? 'pl-8' : ''} rounded-lg text-[11px] font-medium border transition-all flex items-center justify-between gap-2 ${
+                      enabled
+                        ? 'border-transparent text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600'
+                    }`}
+                    style={enabled ? themeAccentButtonStyle : undefined}
+                    title={`${enabled ? 'Remove' : 'Add'} ${meta.label}`}
+                  >
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
+                      <span className="truncate">{meta.label}</span>
+                    </span>
+                    <span className="text-[10px] font-semibold">{enabled ? 'On' : 'Off'}</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+    : null;
 
   return (
     <>
     <style>{shakeStyle}</style>
+    {controlWidgetAddPanelPortal}
     {showAppPrompt && (
       <div className="fixed inset-0 z-[95] bg-black/45 flex items-center justify-center p-4">
         <div className="w-full max-w-md rounded-2xl border border-purple-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-2xl">
@@ -15180,17 +15372,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             }
             : undefined}
         >
-          {showControlWidgetAddPanel && (
-            <button
-              type="button"
-              onClick={() => setShowControlWidgetAddPanel(false)}
-              className="absolute top-2 right-2 z-40 w-7 h-7 rounded-full text-sm font-semibold bg-black/45 text-white border border-white/35 hover:bg-black/60 flex items-center justify-center"
-              title="Close add widgets"
-              aria-label="Close add widgets panel"
-            >
-              ×
-            </button>
-          )}
           {bottomNavTab === 'home' && (
             <div className="absolute inset-0 z-[25] pointer-events-none">
               <div
@@ -15303,78 +15484,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 >
                   + Add
                 </button>
-              </div>
-            </div>
-          )}
-          {showControlWidgetAddPanel && bottomNavTab === 'home' && (
-            <div
-              className="absolute right-3 sm:right-4 top-12 sm:top-14 z-[85] w-[19rem] max-w-[calc(100vw-2.5rem)] p-2 rounded-xl border bg-white/95 dark:bg-gray-800/95 border-gray-200 dark:border-gray-600 overflow-visible pointer-events-auto shadow-2xl"
-              onPointerDownCapture={bumpCoverControlsInteraction}
-            >
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <div className="text-[11px] text-gray-500 dark:text-gray-400">Add or remove widgets</div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={enableAllControlWidgets}
-                    className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
-                    title="Turn all widgets on"
-                  >
-                    All On
-                  </button>
-                  <button
-                    onClick={disableAllControlWidgets}
-                    className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
-                    title="Turn all widgets off"
-                  >
-                    All Off
-                  </button>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                {CONTROL_WIDGET_IDS.map((widgetId) => {
-                  const meta = getControlWidgetMeta(widgetId);
-                  const enabled = activeControlWidgets.includes(widgetId);
-                  return (
-                    <div key={`toggle-inline-${widgetId}`} className="relative flex items-stretch gap-1.5">
-                      {enabled ? (
-                        <button
-                          type="button"
-                          onPointerDown={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            startCoverWidgetDragFromAddPanel(e, widgetId);
-                          }}
-                          className="absolute -left-10 top-0 z-10 w-8 h-8 rounded-xl border border-transparent text-white shadow-sm transition-all flex items-center justify-center"
-                          style={themeAccentButtonStyle}
-                          title={`Drag ${meta.label}`}
-                        >
-                          <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
-                          {meta.badge ? (
-                            <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
-                              {meta.badge}
-                            </span>
-                          ) : null}
-                        </button>
-                      ) : null}
-                      <button
-                        onClick={() => toggleControlWidget(widgetId)}
-                        className={`h-8 flex-1 px-2 rounded-lg text-[11px] font-medium border transition-all flex items-center justify-between gap-2 ${
-                          enabled
-                            ? 'border-transparent text-white'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600'
-                        }`}
-                        style={enabled ? themeAccentButtonStyle : undefined}
-                        title={`${enabled ? 'Remove' : 'Add'} ${meta.label}`}
-                      >
-                        <span className="flex items-center gap-1.5 min-w-0">
-                          <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
-                          <span className="truncate">{meta.label}</span>
-                        </span>
-                        <span className="text-[10px] font-semibold">{enabled ? 'On' : 'Off'}</span>
-                      </button>
-                    </div>
-                  );
-                })}
               </div>
             </div>
           )}
@@ -15518,78 +15627,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   + Add
                 </button>
               </div>
-              {showControlWidgetAddPanel && (
-                <div
-                  className="absolute right-0 top-full mt-2 z-[85] w-[19rem] max-w-[calc(100vw-2.5rem)] p-2 rounded-xl border bg-white/95 dark:bg-gray-800/95 border-gray-200 dark:border-gray-600 overflow-visible pointer-events-auto shadow-2xl"
-                  onPointerDownCapture={bumpCoverControlsInteraction}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="text-[11px] text-gray-500 dark:text-gray-400">Add or remove widgets</div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={enableAllControlWidgets}
-                        className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
-                        title="Turn all widgets on"
-                      >
-                        All On
-                      </button>
-                      <button
-                        onClick={disableAllControlWidgets}
-                        className="px-2 py-1 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600"
-                        title="Turn all widgets off"
-                      >
-                        All Off
-                      </button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    {CONTROL_WIDGET_IDS.map((widgetId) => {
-                      const meta = getControlWidgetMeta(widgetId);
-                      const enabled = activeControlWidgets.includes(widgetId);
-                      return (
-                        <div key={`toggle-${widgetId}`} className="relative flex items-stretch gap-1.5">
-                          {enabled ? (
-                            <button
-                              type="button"
-                              onPointerDown={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                startCoverWidgetDragFromAddPanel(e, widgetId);
-                              }}
-                              className="absolute -left-10 top-0 z-10 w-8 h-8 rounded-xl border border-transparent text-white shadow-sm transition-all flex items-center justify-center"
-                              style={themeAccentButtonStyle}
-                              title={`Drag ${meta.label}`}
-                            >
-                              <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
-                              {meta.badge ? (
-                                <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
-                                  {meta.badge}
-                                </span>
-                              ) : null}
-                            </button>
-                          ) : null}
-                          <button
-                            onClick={() => toggleControlWidget(widgetId)}
-                            className={`h-8 flex-1 px-2 rounded-lg text-[11px] font-medium border transition-all flex items-center justify-between gap-2 ${
-                              enabled
-                                ? 'border-transparent text-white'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600'
-                            }`}
-                            style={enabled ? themeAccentButtonStyle : undefined}
-                            title={`${enabled ? 'Remove' : 'Add'} ${meta.label}`}
-                          >
-                            <span className="flex items-center gap-1.5 min-w-0">
-                              <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
-                              <span className="truncate">{meta.label}</span>
-                            </span>
-                            <span className="text-[10px] font-semibold">{enabled ? 'On' : 'Off'}</span>
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
           </div>
@@ -17569,7 +17606,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         )}
 
         {bottomNavTab === 'home' && (
-          <div className="glass-panel rounded-2xl p-3 sm:p-4 mb-4">
+          <div className="glass-panel rounded-2xl border border-white/50 dark:border-gray-700/70 p-3 sm:p-4 mb-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base sm:text-lg font-semibold" style={themeAccentHeadingStyle}>Today At A Glance</h3>
                 <button
@@ -17591,7 +17628,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       {todayEvents.slice(0, 4).map(event => {
                         const category = categories[event.category || 'other'] || categories.other;
                         return (
-                    <div key={`${event.id}-${event.date}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white/75 dark:bg-gray-900/55 border border-gray-200/70 dark:border-gray-700/70">
+                    <div key={`${event.id}-${event.date}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white/80 dark:bg-gray-800/65 border border-gray-200/70 dark:border-gray-700/70">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${category.color}`} />
                         <span className="text-xs sm:text-sm text-gray-800 dark:text-gray-100 truncate">{event.title}</span>
@@ -18487,7 +18524,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           )}
 
           {bottomNavTab !== 'home' && (
-          <div className="glass-panel rounded-2xl p-4 sm:p-6">
+          <div className="glass-panel rounded-2xl border border-white/50 dark:border-gray-700/70 p-4 sm:p-6">
 
             {bottomNavTab === 'active' && (
               <>
@@ -18836,7 +18873,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
                       const isDeleteRevealed = rowOffset < 0;
                       return (
-                        <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-gray-200 dark:ring-gray-700">
+                          <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-gray-200 dark:ring-gray-700">
                           {canDelete && (
                             <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
                               <button
@@ -18852,7 +18889,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                             onTouchMove={handleTripSwipeMove}
                             onTouchEnd={handleTripSwipeEnd}
                             onTouchCancel={handleTripSwipeEnd}
-                            className="relative z-10 flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/45"
+                            className="relative z-10 flex items-center justify-between p-3 bg-white/85 dark:bg-gray-800/65"
                             style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                           >
                             <div className="min-w-0">
@@ -18950,7 +18987,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       return (
                         <div
                           key={`explore-${layerId}`}
-                          className={`rounded-xl border p-3 shadow-sm ${isJoined ? '' : 'bg-white/85 dark:bg-gray-900/55 border-gray-200 dark:border-gray-700'}`}
+                          className={`rounded-xl border p-3 shadow-sm ${isJoined ? '' : 'bg-white/85 dark:bg-gray-800/65 border-gray-200 dark:border-gray-700'}`}
                           style={isJoined ? { borderColor: rowAccentBorder, backgroundColor: rowSoftBg } : undefined}
                         >
                           <div className="min-w-0">
@@ -19004,7 +19041,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                   className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all ${
                                     myVote === 1
                                       ? 'text-white border-transparent'
-                                      : 'bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800'
+                                      : 'bg-white/80 dark:bg-gray-800/70 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800'
                                   } disabled:opacity-60`}
                                   style={myVote === 1 ? themeAccentButtonStyle : undefined}
                                   title="Upvote calendar"
@@ -19018,7 +19055,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                   className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all ${
                                     myVote === -1
                                       ? 'bg-rose-600 text-white border-rose-600'
-                                      : 'bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800'
+                                      : 'bg-white/80 dark:bg-gray-800/70 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800'
                                   } disabled:opacity-60`}
                                   title="Downvote calendar"
                                 >
@@ -19037,7 +19074,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                       if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layerId);
                                       setBottomNavTab('home');
                                     }}
-                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-800/70 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
                                   >
                                     Open
                                   </button>
@@ -19045,7 +19082,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               {!isOwner && isJoined && (
                                 <button
                                   onClick={() => leavePublicCalendarById(layerId)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-800/70 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
                                 >
                                   Leave
                                 </button>
@@ -19053,7 +19090,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               {!isOwner && !isJoined && (
                                   <button
                                     onClick={() => joinPublicCalendar(row)}
-                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-800/70 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
                                   >
                                     Join
                                   </button>
@@ -19062,13 +19099,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                 <>
                                    <button
                                      onClick={() => openPublishLayerModal(row)}
-                                     className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-900/60 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
+                                     className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all bg-white/80 dark:bg-gray-800/70 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
                                    >
                                      Edit
                                    </button>
                                   <button
                                     onClick={() => publishLayerCalendar(layerId, false)}
-                                    className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-900/60 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800"
+                                     className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-gray-800/70 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                                   >
                                     Unpublish
                                   </button>
@@ -19076,7 +19113,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               )}
                               <button
                                 onClick={() => openCalendarReportModal(row)}
-                                className="px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-gray-900/60 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                className="px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-gray-800/70 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 Report
                               </button>
