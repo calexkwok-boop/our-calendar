@@ -13888,6 +13888,46 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
   }
 
+  useEffect(() => {
+    if (!headerModulePrefsReady) return undefined;
+    let frameId = window.requestAnimationFrame(() => {
+      setHeaderModuleLayout((prev) => {
+        const currentLayout = prev && typeof prev === 'object' ? prev : createDefaultHeaderModuleLayout();
+        let changed = false;
+        const next = { ...currentLayout };
+        HEADER_MODULE_IDS.forEach((id) => {
+          const current = currentLayout?.[id] || HEADER_MODULE_DEFAULT_LAYOUT[id];
+          const clamped = clampHeaderModuleCenterPercent(id, current?.x, current?.y);
+          const nextScale = id === 'add' ? 1 : Math.max(0.7, Math.min(1.8, Number(current?.scale || 1)));
+          if (
+            Math.abs(Number(current?.x || 0) - clamped.x) > 0.01
+            || Math.abs(Number(current?.y || 0) - clamped.y) > 0.01
+            || Math.abs(Number(current?.scale || 1) - nextScale) > 0.01
+          ) {
+            changed = true;
+            next[id] = {
+              ...current,
+              x: clamped.x,
+              y: clamped.y,
+              scale: nextScale,
+            };
+          }
+        });
+        return changed ? next : prev;
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [
+    headerModulePrefsReady,
+    bottomNavTab,
+    calendarTitle,
+    activeLayerTitleVisible,
+    activeLayerTitleStyle,
+    currentDate,
+  ]);
+
   const startHeaderModulePointerDrag = (event, moduleId) => {
     const id = String(moduleId || '').trim();
     if (!HEADER_MODULE_IDS.includes(id)) return;
