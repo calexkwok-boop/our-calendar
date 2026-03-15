@@ -15452,16 +15452,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </div>
               </div>
 
-              <div
-                className="absolute pointer-events-auto select-none"
-                style={getHeaderModulePositionStyle('title')}
-                onPointerDown={(e) => onHeaderModulePointerDown(e, 'title')}
-              >
+              {activeLayerTitleVisible && (
                 <div
-                  className="-mx-8 -my-4 px-8 py-4 min-w-[10rem]"
-                  ref={(el) => { headerModuleNodeRefs.current.title = el; }}
+                  className="absolute pointer-events-auto select-none"
+                  style={getHeaderModulePositionStyle('title')}
+                  onPointerDown={(e) => onHeaderModulePointerDown(e, 'title')}
                 >
-                  {activeLayerTitleVisible ? (
+                  <div
+                    className="-mx-8 -my-4 px-8 py-4 min-w-[10rem]"
+                    ref={(el) => { headerModuleNodeRefs.current.title = el; }}
+                  >
                     <button
                       type="button"
                       onClick={(e) => {
@@ -15475,21 +15475,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     >
                       {calendarTitle}
                     </button>
-                  ) : canEditActiveLayerTitle ? (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (wasRecentHeaderModuleDrag('title')) return;
-                        openTitleStyleModal();
-                      }}
-                      className="text-[11px] sm:text-xs font-semibold text-right uppercase tracking-wide text-gray-500 dark:text-gray-300 bg-white/35 dark:bg-gray-900/35 border border-white/35 dark:border-gray-700/70 rounded-full px-2 py-1 backdrop-blur-sm"
-                      >
-                        Title Hidden
-                      </button>
-                  ) : null}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div
                 className="absolute pointer-events-auto select-none"
@@ -15584,17 +15572,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate" style={activeLayerTitleNameTextStyle}>
                         {calendarTitle}
                       </h2>
-                    ) : canEditActiveLayerTitle ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openTitleStyleModal();
-                        }}
-                        className="text-[11px] font-semibold uppercase tracking-wide text-right text-gray-600 dark:text-gray-300 bg-white/35 dark:bg-gray-900/35 border border-white/35 dark:border-gray-700/70 rounded-full px-2 py-1 backdrop-blur-sm"
-                      >
-                        Title Hidden
-                      </button>
                     ) : null}
                     <div className="text-xs sm:text-sm font-semibold text-right" style={activeLayerMonthYearTextStyle}>
                       {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -15650,14 +15627,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate pointer-events-none" style={activeLayerTitleNameTextStyle}>
                   {calendarTitle}
                 </h2>
-              ) : canEditActiveLayerTitle ? (
-                <button
-                  type="button"
-                  onClick={() => openTitleStyleModal()}
-                  className="text-[11px] font-semibold uppercase tracking-wide text-right text-gray-600 dark:text-gray-300 bg-white/35 dark:bg-gray-900/35 border border-white/35 dark:border-gray-700/70 rounded-full px-2 py-1 backdrop-blur-sm"
-                >
-                  Title Hidden
-                </button>
               ) : null}
               <div className="text-xs sm:text-sm font-semibold text-right pointer-events-none" style={activeLayerMonthYearTextStyle}>
                 {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
