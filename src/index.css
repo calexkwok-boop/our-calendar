@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  font-family: 'DM Sans', sans-serif;
+}
+
+h3,
+.font-bold,
+.font-semibold {
+  font-family: 'Syne', sans-serif;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 20px rgba(80, 40, 160, 0.08);
+}
+
 .agenda-search-input,
 .agenda-search-input:focus,
 .agenda-search-input:active {

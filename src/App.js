@@ -4250,6 +4250,7 @@ function App() {
   const themeAccentButtonStyle = {
     backgroundColor: activeLayerPageTheme.accent,
     color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : '#ffffff',
+    boxShadow: `0 4px 14px ${hexToRgba(activeLayerPageTheme.accent, 0.35)}`,
   };
   const themeAccentTextStyle = { color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent };
   const themeAccentSoftButtonStyle = {
@@ -4279,6 +4280,11 @@ function App() {
     backgroundImage: themeAccentGradient,
     color: '#ffffff',
     boxShadow: `0 10px 24px ${mixHexColors(activeLayerPageTheme.accent, '#000000', 0.72)}22`,
+  };
+  const bottomNavActiveTabStyle = {
+    backgroundImage: themeAccentGradient,
+    color: '#ffffff',
+    boxShadow: '0 2px 10px rgba(124,58,237,.4)',
   };
   const themeTodaySurfaceStyle = {
     backgroundImage: `linear-gradient(135deg, ${themeAccentSofterBg} 0%, ${themeAccentSoftBg} 100%)`,
@@ -14076,7 +14082,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   if (showAuth) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full">
+        <div className="glass-panel rounded-2xl p-8 max-w-md w-full">
           <div className="flex items-center gap-3 mb-8">
             <div className="p-2 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
               <Calendar className="w-7 h-7 text-white" />
@@ -14119,7 +14125,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div
           style={{ width: 'calc(100vw - 2rem)', maxWidth: '28rem', boxSizing: 'border-box', borderColor: themeAccentBorder }}
-          className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl border p-5"
+          className="w-full glass-panel rounded-2xl border p-5"
         >
           <h2 className="text-2xl font-bold mb-4" style={themeAccentHeadingStyle}>
             What time?
@@ -14210,7 +14216,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   if (showUserSetup) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full">
+        <div className="glass-panel rounded-2xl p-8 max-w-md w-full">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
             Welcome to Your Calendar!
           </h2>
@@ -14910,7 +14916,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     )}
     {showFirstImportPrompt && (
       <div className="fixed inset-0 z-[90] bg-black/40 flex items-center justify-center p-4">
-        <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+        <div className="w-full max-w-lg glass-panel rounded-2xl p-6">
           <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             {importPromptStep === 'apple' ? 'Import Apple Calendar' : 'Import Calendar'}
           </h3>
@@ -15134,7 +15140,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         </div>
         <div
           ref={layerHeaderCardRef}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[165px] sm:min-h-[205px] lg:min-h-[285px] relative"
+          className="glass-panel rounded-2xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[165px] sm:min-h-[205px] lg:min-h-[285px] relative"
           onPointerDownCapture={() => {
             if (!coverHeaderControlsVisible) return;
             bumpCoverControlsInteraction();
@@ -15623,7 +15629,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
         {/* Notification Settings Panel */}
         {showNotificationSettings && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
+          <div className="glass-panel rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-green-600 dark:text-green-400">Notification Settings</h3>
               <button onClick={() => setShowNotificationSettings(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
@@ -15881,7 +15887,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         )}
 
         {showAiAssistant && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
+          <div className="glass-panel rounded-2xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>AI Assistant</h3>
@@ -15944,7 +15950,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         )}
 
         {showSharePanel && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
+          <div className="glass-panel rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold" style={themeAccentHeadingStyle}>
                 Account & Sharing
@@ -16371,7 +16377,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         )}
 
         {showChatPanel && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
+          <div className="glass-panel rounded-2xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
             <div className="flex items-center justify-between mb-3">
               <div>
                 <div className="flex items-center gap-2">
@@ -16953,7 +16959,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         {showListPanel && (
           <div
             ref={listPanelRef}
-            className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border dark:border-gray-700 transition-all ${
+            className={`glass-panel rounded-2xl p-4 sm:p-5 mb-6 border dark:border-gray-700 transition-all ${
               listPanelAttention ? 'ring-2' : ''
             }`}
             style={listPanelAttention ? { borderColor: themeAccentBorder, boxShadow: `0 0 0 2px ${themeAccentBorder}` } : { borderColor: themeAccentBorder }}
@@ -17205,7 +17211,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           )}
 
         {showNotesPanel && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
+          <div className="glass-panel rounded-2xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
                 <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Reminders & Notes</h3>
@@ -17415,7 +17421,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         )}
 
         {showCategoryEditor && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
+          <div className="glass-panel rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold" style={themeAccentHeadingStyle}>Manage Categories</h3>
               <button onClick={() => setShowCategoryEditor(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
@@ -17497,7 +17503,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         )}
 
         {bottomNavTab === 'home' && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-3 sm:p-4 mb-4">
+          <div className="glass-panel rounded-2xl p-3 sm:p-4 mb-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base sm:text-lg font-semibold" style={themeAccentHeadingStyle}>Today At A Glance</h3>
                 <button
@@ -17675,7 +17681,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             {calendarView !== 'agenda' && (
             <div className="grid grid-cols-7 gap-1 sm:gap-1.5 mb-1.5">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="text-center text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-200 py-1">{day}</div>
+                <div
+                  key={day}
+                  className="text-center text-xs sm:text-sm font-semibold py-1"
+                  style={{ color: activeLayerPageTheme.accent, opacity: 0.5 }}
+                >
+                  {day}
+                </div>
               ))}
             </div>
             )}
@@ -18409,7 +18421,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           )}
 
           {bottomNavTab !== 'home' && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6">
+          <div className="glass-panel rounded-2xl p-4 sm:p-6">
 
             {bottomNavTab === 'active' && (
               <>
@@ -19045,14 +19057,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     {!activeSubCalendar && (
       <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-white/95 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
+          <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
             <button
               onClick={() => {
                 setBottomNavTab('home');
                 setShowDateDetailModal(false);
               }}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'home' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-              style={bottomNavTab === 'home' ? themeAccentButtonStyle : undefined}
+              style={bottomNavTab === 'home' ? bottomNavActiveTabStyle : undefined}
             >
               Home
             </button>
@@ -19062,7 +19074,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 setShowDateDetailModal(false);
               }}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'active' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-              style={bottomNavTab === 'active' ? themeAccentButtonStyle : undefined}
+              style={bottomNavTab === 'active' ? bottomNavActiveTabStyle : undefined}
             >
               Active
             </button>
@@ -19072,7 +19084,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 setShowDateDetailModal(false);
               }}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'archived' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-              style={bottomNavTab === 'archived' ? themeAccentButtonStyle : undefined}
+              style={bottomNavTab === 'archived' ? bottomNavActiveTabStyle : undefined}
             >
               Archived
             </button>
@@ -19082,7 +19094,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 setShowDateDetailModal(false);
               }}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'explore' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-              style={bottomNavTab === 'explore' ? themeAccentButtonStyle : undefined}
+              style={bottomNavTab === 'explore' ? bottomNavActiveTabStyle : undefined}
             >
               Explore
             </button>

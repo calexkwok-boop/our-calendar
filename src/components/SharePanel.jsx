@@ -18,7 +18,7 @@ export default function SharePanel({
   if (!showSharePanel) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
+    <div className="glass-panel rounded-2xl p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-semibold text-purple-600 dark:text-purple-400">Share Calendar</h3>
         <button onClick={() => { setShowSharePanel(false); setShareMessage(''); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
@@ -96,4 +96,3 @@ export default function SharePanel({
     </div>
   );
 }
-

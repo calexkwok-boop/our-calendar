@@ -28,7 +28,7 @@ export default function SharedListPanel({
   if (!showListPanel) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-5 mb-6 border border-purple-100 dark:border-gray-700">
+    <div className="glass-panel rounded-2xl p-4 sm:p-5 mb-6 border border-purple-100 dark:border-gray-700">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <h3 className="text-lg sm:text-xl font-semibold text-purple-600 dark:text-purple-400">Shared Lists</h3>
@@ -164,4 +164,3 @@ export default function SharedListPanel({
     </div>
   );
 }
-
