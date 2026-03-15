@@ -177,6 +177,21 @@ const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
   'weather',
   'categories',
 ]);
+const WIDGET_SPAWN_SLOTS = Object.freeze({
+  account: { x: 10, y: 80 },
+  notifications: { x: 20, y: 80 },
+  chat: { x: 30, y: 80 },
+  list: { x: 40, y: 80 },
+  notes: { x: 50, y: 80 },
+  expenses: { x: 60, y: 80 },
+  gauntlet: { x: 70, y: 80 },
+  ai: { x: 80, y: 80 },
+  scan: { x: 90, y: 80 },
+  weather: { x: 15, y: 65 },
+  categories: { x: 35, y: 65 },
+  theme: { x: 55, y: 65 },
+  import: { x: 75, y: 65 },
+});
 const WIDGET_GRID_COLUMNS = 10;
 const WIDGET_GRID_ROWS = 40;
 const WIDGET_MIN_SIZE = 38;
@@ -14109,11 +14124,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       // Ensure active widgets always have a valid slot.
       activeIds.forEach((id, idx) => {
         if (next[id]) return;
+        const spawnSlot = WIDGET_SPAWN_SLOTS[id] || null;
         const columnsPerRow = Math.max(1, Math.min(6, WIDGET_GRID_COLUMNS));
         const col = idx % columnsPerRow;
         const row = Math.floor(idx / columnsPerRow);
-        const slotX = ((col + 1) * 100) / (columnsPerRow + 1);
-        const slotY = 10 + (row * Math.max(yStep * 3, 8));
+        const slotX = spawnSlot?.x ?? (((col + 1) * 100) / (columnsPerRow + 1));
+        const slotY = spawnSlot?.y ?? (10 + (row * Math.max(yStep * 3, 8)));
         next[id] = {
           x: Math.max(2, Math.min(98, snap(slotX, xStep))),
           y: Math.max(2, Math.min(98, snap(slotY, yStep))),
@@ -14144,9 +14160,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
       const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
       const clampCenterPercent = (value, size, totalPx) => {
-        const widgetRadius = Number(size || WIDGET_DEFAULT_SIZE) / 2;
-        const paddingPx = 8;
-        const halfPct = ((widgetRadius + paddingPx) / Math.max(1, Number(totalPx || 1))) * 100;
+        const halfPct = ((Number(size || WIDGET_DEFAULT_SIZE) / 2) / Math.max(1, Number(totalPx || 1))) * 100;
         return Math.max(halfPct, Math.min(100 - halfPct, Number(value || 0)));
       };
       const clampAndSnapCenterPercent = (value, size, totalPx, step) => {
@@ -14457,11 +14471,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     });
   const manualGauntletParticipants = parseManualGauntletRoster(manualGauntletRosterInput);
   const manualGauntletEligible = manualGauntletParticipants.length >= 4;
-  const getWidgetSlotForIndex = (index) => {
+  const getWidgetSlotForIndex = (index, widgetId = '') => {
     const safeIndex = Math.max(0, Number(index) || 0);
     const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
     const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
     const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
+    const spawnSlot = WIDGET_SPAWN_SLOTS[String(widgetId || '').trim()] || null;
+    if (spawnSlot) {
+      return {
+        x: Math.max(2, Math.min(98, snap(spawnSlot.x, xStep))),
+        y: Math.max(2, Math.min(98, snap(spawnSlot.y, yStep))),
+      };
+    }
     const columnsPerRow = Math.max(1, Math.min(6, WIDGET_GRID_COLUMNS));
     const col = safeIndex % columnsPerRow;
     const row = Math.floor(safeIndex / columnsPerRow);
@@ -14483,7 +14504,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setCoverWidgetLayout((prev) => {
       if (prev?.[id]) return prev;
       const index = activeControlWidgets.length;
-      const slot = getWidgetSlotForIndex(index);
+      const slot = getWidgetSlotForIndex(index, id);
       return {
         ...(prev || {}),
         [id]: { ...slot, size: WIDGET_DEFAULT_SIZE },
