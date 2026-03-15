@@ -520,6 +520,7 @@ function App() {
   const smartLeaveGeoCacheRef = useRef(new Map());
   const smartLeaveTravelCacheRef = useRef(new Map());
   const smartLeavePositionRef = useRef({ at: 0, lat: null, lng: null });
+  const publicCalendarNextVoteRef = useRef(0);
   const [currentUser, setCurrentUser] = useState('');
   const [showUserSetup, setShowUserSetup] = useState(false);
   const [selectedDates, setSelectedDates] = useState([]);
@@ -4502,12 +4503,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const desiredVote = normalizeVoteValue(voteValue);
     if (!lid || !user?.id) return;
 
-    let previousVote = 0;
+    publicCalendarNextVoteRef.current = 0;
     setPublicCalendars((prev) => prev.map((row) => {
       if (String(row?.id || '') !== lid) return row;
       const currentVote = normalizeVoteValue(row?.my_vote || 0);
-      previousVote = currentVote;
       const nextVote = currentVote === desiredVote ? 0 : desiredVote;
+      publicCalendarNextVoteRef.current = nextVote;
       return {
         ...row,
         my_vote: nextVote,
@@ -4516,7 +4517,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       };
     }));
 
-    const nextVote = previousVote === desiredVote ? 0 : desiredVote;
+    const nextVote = publicCalendarNextVoteRef.current;
     setExploreVoteBusyByLayer((prev) => ({ ...prev, [lid]: true }));
     const localVotes = readExploreVotesLocal(user.id);
     localVotes[lid] = nextVote;
