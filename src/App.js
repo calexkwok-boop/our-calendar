@@ -17362,6 +17362,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               title="Expense Tracker"
               subtitle="Track and split shared costs for this layer"
               onClose={() => setShowExpenseTrackerPanel(false)}
+              darkMode={darkMode}
               expenseDraft={newLayerExpense}
               setExpenseDraft={setNewLayerExpense}
               addExpense={addLayerExpense}
@@ -18095,6 +18096,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
                   const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
                   const categoryGlass = CATEGORY_GLASS[effectiveCategoryKey] || CATEGORY_GLASS.other;
+                  const eventCardStyle = darkMode
+                    ? {
+                      background: `linear-gradient(135deg, ${hexToRgba(mixHexColors(categoryGlass.from, '#111827', 0.86), 0.96)} 0%, ${hexToRgba(mixHexColors(categoryGlass.to, '#111827', 0.9), 0.98)} 100%)`,
+                      backdropFilter: 'blur(18px)',
+                      borderColor: event.isVirtualAnnual ? '#7c3aed' : hexToRgba(mixHexColors(categoryGlass.from, '#94a3b8', 0.55), 0.42),
+                      boxShadow: `0 14px 34px ${hexToRgba('#020617', 0.34)}`,
+                    }
+                    : {
+                      background: `linear-gradient(130deg, ${categoryGlass.from}e0 0%, ${categoryGlass.to}f0 100%)`,
+                      backdropFilter: 'blur(16px)',
+                      borderColor: event.isVirtualAnnual ? '#c4b5fd' : 'rgba(255,255,255,0.5)',
+                    };
+                  const eventCardTitleStyle = { color: darkMode ? '#f8fafc' : '#111827' };
+                  const eventCardBodyStyle = { color: darkMode ? '#cbd5e1' : '#4b5563' };
+                  const eventCardMetaStyle = { color: darkMode ? '#94a3b8' : '#6b7280' };
+                  const eventCardIconTone = darkMode ? '#fcd34d' : '#d97706';
                   const popupSignups = popupMeta ? (popupSignupsByEventId[String(event.id || '')] || []) : [];
                   const popupJoined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
                   const popupNoMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
@@ -18124,17 +18141,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     <div
                       key={event.id}
                       className={`relative rounded-2xl overflow-hidden border border-white/50 shadow-lg transition-all hover:-translate-y-0.5 ${event.isVirtualAnnual ? 'border-dashed' : ''}`}
-                      style={{
-                        background: `linear-gradient(130deg, ${categoryGlass.from}e0 0%, ${categoryGlass.to}f0 100%)`,
-                        backdropFilter: 'blur(16px)',
-                        borderColor: event.isVirtualAnnual ? '#c4b5fd' : 'rgba(255,255,255,0.5)',
-                      }}
+                      style={eventCardStyle}
                     >
                       <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ background: categoryGlass.accent }} />
                       <div className="pl-4 pr-3 py-3">
                       {event.isPrivate && (
                         <div className="absolute top-2 right-2">
-                          <Lock className="w-3 h-3 text-amber-600" />
+                          <Lock className="w-3 h-3" style={{ color: eventCardIconTone }} />
                         </div>
                       )}
                       {editingEvent === event.id ? (
@@ -18258,13 +18271,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                                 </span>
                               )}
                               {event.time && (
-                                <div className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-200">
+                                <div className="flex items-center gap-1 text-sm font-medium" style={eventCardBodyStyle}>
                                   <Clock className="w-3 h-3" />
                                   {formatTime(event.time)}
                                 </div>
                               )}
                             </div>
-                            <div className="font-medium mb-1 text-gray-900 dark:text-white">{event.title}</div>
+                            <div className="font-medium mb-1" style={eventCardTitleStyle}>{event.title}</div>
                             {event.location && (
                               <button
                                 type="button"
@@ -18275,12 +18288,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                               </button>
                             )}
                             {event.description && (
-                              <div className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap mb-1">
+                              <div className="text-sm whitespace-pre-wrap mb-1" style={eventCardBodyStyle}>
                                 {event.description}
                               </div>
                             )}
                             {event.createdBy && (
-                              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                              <div className="flex items-center gap-1 text-xs" style={eventCardMetaStyle}>
                                 <User className="w-3 h-3" />
                                 {resolveHandleLikeLabel(event.createdBy, event.userId)}
                                 {event.isShared && (
@@ -20676,6 +20689,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               <ExpenseTrackerPanel
                 title="Expense Tracker"
                 subtitle={`Track and split costs for ${activeSubCalendar?.name || 'this trip'}`}
+                darkMode={darkMode}
                 expenseDraft={newExpenseDraft}
                 setExpenseDraft={setNewExpenseDraft}
                 addExpense={addSubCalExpense}

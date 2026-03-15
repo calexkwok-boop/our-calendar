@@ -5,7 +5,7 @@ const FONT_INJECT = `
   @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Lora:wght@400;500&display=swap');
 `;
 
-const C = {
+const LIGHT = {
   bg: '#fafaf8',
   surface: '#ffffff',
   border: '#e5e2da',
@@ -23,10 +23,28 @@ const C = {
   inputBorder: '#e0ddd6',
 };
 
+const DARK = {
+  bg: '#111827',
+  surface: '#18212f',
+  border: '#2a3648',
+  borderLight: '#334155',
+  text: '#f3f4f6',
+  textMid: '#d1d5db',
+  textSub: '#9ca3af',
+  textHint: '#94a3b8',
+  green: '#34d399',
+  greenDeep: '#6ee7b7',
+  greenLight: '#11261f',
+  greenText: '#a7f3d0',
+  amber: '#f59e0b',
+  red: '#f87171',
+  inputBorder: '#334155',
+};
+
 const FONT_SANS = "'Instrument Sans', sans-serif";
 const FONT_SERIF = "'Lora', Georgia, serif";
 
-const s = {
+const createStyles = (C) => ({
   shell: {
     background: C.bg,
     border: `1px solid ${C.border}`,
@@ -283,7 +301,7 @@ const s = {
     marginTop: 4,
     lineHeight: 1.45,
   },
-};
+});
 
 function ExpenseTrackerPanel({
   title = 'Expense Tracker',
@@ -311,7 +329,10 @@ function ExpenseTrackerPanel({
   onOpenVenmoPayment = null,
   onOpenCashAppPayment = null,
   settlementNoteContext = 'expense split',
+  darkMode = false,
 }) {
+  const palette = darkMode ? DARK : LIGHT;
+  const s = createStyles(palette);
   const perPerson =
     participants.length > 0 ? (totalCents / 100 / participants.length).toFixed(2) : '0.00';
 
@@ -416,7 +437,7 @@ function ExpenseTrackerPanel({
               Add expense
             </button>
             <div style={s.totalChip}>
-              Total <strong style={{ color: C.text, fontWeight: 600 }}>${(totalCents / 100).toFixed(2)}</strong>
+              Total <strong style={{ color: palette.text, fontWeight: 600 }}>${(totalCents / 100).toFixed(2)}</strong>
             </div>
           </div>
 
@@ -509,7 +530,8 @@ function ExpenseTrackerPanel({
                             ...s.addBtn,
                             padding: '6px 10px',
                             fontSize: 12,
-                            background: venmoHandle ? '#008cff' : '#cbd5e1',
+                            background: venmoHandle ? '#008cff' : (darkMode ? '#334155' : '#cbd5e1'),
+                            color: venmoHandle ? '#ffffff' : (darkMode ? '#94a3b8' : '#64748b'),
                             cursor: venmoHandle ? 'pointer' : 'not-allowed',
                           }}
                           disabled={!venmoHandle}
@@ -530,7 +552,8 @@ function ExpenseTrackerPanel({
                             ...s.addBtn,
                             padding: '6px 10px',
                             fontSize: 12,
-                            background: cashHandle ? '#00d632' : '#cbd5e1',
+                            background: cashHandle ? '#00d632' : (darkMode ? '#334155' : '#cbd5e1'),
+                            color: cashHandle ? '#06240f' : (darkMode ? '#94a3b8' : '#64748b'),
                             cursor: cashHandle ? 'pointer' : 'not-allowed',
                           }}
                           disabled={!cashHandle}
