@@ -14062,7 +14062,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-[#0f0a1e] dark:via-[#120d24] dark:to-[#0d1525] flex items-center justify-center">
         <div className="text-gray-600 dark:text-gray-300">Loading calendar...</div>
       </div>
     );
@@ -14081,7 +14081,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   if (showAuth) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-[#0f0a1e] dark:via-[#120d24] dark:to-[#0d1525] flex items-center justify-center p-4">
         <div className="glass-panel rounded-2xl p-8 max-w-md w-full">
           <div className="flex items-center gap-3 mb-8">
             <div className="p-2 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
@@ -14215,7 +14215,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   if (showUserSetup) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-[#0f0a1e] dark:via-[#120d24] dark:to-[#0d1525] flex items-center justify-center p-4">
         <div className="glass-panel rounded-2xl p-8 max-w-md w-full">
           <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
             Welcome to Your Calendar!

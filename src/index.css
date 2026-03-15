@@ -6,6 +6,14 @@ body {
   font-family: 'DM Sans', sans-serif;
 }
 
+button {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
 h3,
 .font-bold,
 .font-semibold {
