@@ -13896,10 +13896,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const safeH = Math.min(nodeH, rect.height * 0.92);
     const halfXPct = (safeW / 2 / rect.width) * 100;
     const halfYPct = (safeH / 2 / rect.height) * 100;
-    const leftGridInsetPct = rect.width >= 640 ? 2 : 3;
-    const rightLimitedMaxX = Math.min(98, Math.max(2, 100 - Math.max(2, Math.min(49, halfXPct))));
-    const minX = Math.max(2, leftGridInsetPct + halfXPct);
-    const maxX = rightLimitedMaxX;
+    const horizontalInsetPct = rect.width >= 640 ? 2 : 3;
+    const minX = Math.max(2, horizontalInsetPct + halfXPct);
+    const maxX = Math.min(98, Math.max(minX, 100 - horizontalInsetPct - halfXPct));
     const minY = Math.max(2, Math.min(49, halfYPct));
     const maxY = Math.min(98, Math.max(minY, 100 - halfYPct));
 
