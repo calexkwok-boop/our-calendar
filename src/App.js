@@ -15457,10 +15457,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 style={getHeaderModulePositionStyle('title')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'title')}
               >
-                <div className="-mx-8 -my-4 px-8 py-4 min-w-[10rem]">
+                <div
+                  className="-mx-8 -my-4 px-8 py-4 min-w-[10rem]"
+                  ref={(el) => { headerModuleNodeRefs.current.title = el; }}
+                >
                   {activeLayerTitleVisible ? (
                     <button
-                      ref={(el) => { headerModuleNodeRefs.current.title = el; }}
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -15475,7 +15477,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     </button>
                   ) : canEditActiveLayerTitle ? (
                     <button
-                      ref={(el) => { headerModuleNodeRefs.current.title = el; }}
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -15483,12 +15484,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                         openTitleStyleModal();
                       }}
                       className="text-[11px] sm:text-xs font-semibold text-right uppercase tracking-wide text-gray-500 dark:text-gray-300 bg-white/35 dark:bg-gray-900/35 border border-white/35 dark:border-gray-700/70 rounded-full px-2 py-1 backdrop-blur-sm"
-                    >
-                      Title Hidden
-                    </button>
-                  ) : (
-                    <div ref={(el) => { headerModuleNodeRefs.current.title = el; }} className="w-0 h-0 overflow-hidden" />
-                  )}
+                      >
+                        Title Hidden
+                      </button>
+                  ) : null}
                 </div>
               </div>
 
