@@ -6,6 +6,7 @@ import { getToken, onMessage } from "firebase/messaging";
 import { getMessagingIfSupported } from "./firebase";
 import GauntletPanel from "./components/GauntletPanel";
 import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
+import RoundRobinPanel from "./components/RoundRobinPanel";
 
 // Initialize Supabase
 const supabase = createClient(
@@ -146,6 +147,7 @@ const CONTROL_WIDGET_IDS = Object.freeze([
   'notes',
   'expenses',
   'gauntlet',
+  'roundrobin',
   'chat',
   'weather',
   'categories',
@@ -162,6 +164,7 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'notes',
   'expenses',
   'gauntlet',
+  'roundrobin',
   'chat',
   'ai',
   'scan',
@@ -185,6 +188,7 @@ const WIDGET_SPAWN_SLOTS = Object.freeze({
   notes: { x: 50, y: 80 },
   expenses: { x: 60, y: 80 },
   gauntlet: { x: 70, y: 80 },
+  roundrobin: { x: 78, y: 80 },
   ai: { x: 80, y: 80 },
   scan: { x: 90, y: 80 },
   weather: { x: 15, y: 65 },
@@ -2900,6 +2904,14 @@ function App() {
   const [manualGauntletRosterInput, setManualGauntletRosterInput] = useState('Alex\nJordan\nCasey\nRiley\nTaylor\nMorgan\nAvery\nCameron');
   const [useManualGauntletRoster, setUseManualGauntletRoster] = useState(true);
   const [gauntletError, setGauntletError] = useState('');
+  const [showRoundRobinPanel, setShowRoundRobinPanel] = useState(false);
+  const [selectedRoundRobinEventId, setSelectedRoundRobinEventId] = useState('');
+  const [layerRoundRobins, setLayerRoundRobins] = useState({});
+  const [manualRoundRobinRosterInput, setManualRoundRobinRosterInput] = useState(
+    'Alex\nJordan\nCasey\nRiley\nTaylor\nMorgan'
+    );
+  const [useManualRoundRobinRoster, setUseManualRoundRobinRoster] = useState(true);
+  const [roundRobinError, setRoundRobinError] = useState('');
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [controlWidgetOrder, setControlWidgetOrder] = useState([...DEFAULT_CONTROL_WIDGET_ORDER]);
   const [showControlWidgetAddPanel, setShowControlWidgetAddPanel] = useState(false);
@@ -3398,6 +3410,7 @@ function App() {
     notes: Boolean(showNotesPanel),
     expenses: Boolean(showExpenseTrackerPanel),
     gauntlet: Boolean(showGauntletPanel),
+    roundrobin: Boolean(showRoundRobinPanel),
     chat: Boolean(showChatPanel),
     ai: Boolean(showAiAssistant),
     scan: Boolean(showScanHelpModal),
@@ -3410,6 +3423,7 @@ function App() {
     showNotesPanel,
     showExpenseTrackerPanel,
     showGauntletPanel,
+    showRoundRobinPanel,
     showChatPanel,
     showAiAssistant,
     showScanHelpModal,
@@ -3435,12 +3449,19 @@ function App() {
     if (!userKey || !layerKey) return '';
     return `calendar-layer-gauntlets-${userKey}-${layerKey}`;
   }, [user?.id, activeLayerId]);
+  
   const getLayerGauntletManualRosterKey = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
     const userKey = String(uid || '').trim();
     const layerKey = String(layerId || '').trim();
     if (!userKey || !layerKey) return '';
     return `calendar-layer-gauntlet-manual-roster-${userKey}-${layerKey}`;
   }, [user?.id, activeLayerId]);
+  const getLayerRoundRobinsStorageKey = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
+  const userKey = String(uid || '').trim();
+  const layerKey = String(layerId || '').trim();
+  if (!userKey || !layerKey) return '';
+  return `calendar-layer-roundrobins-${userKey}-${layerKey}`;
+}, [user?.id, activeLayerId]);
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
       setLayerNotes([]);
@@ -3536,6 +3557,24 @@ function App() {
       localStorage.setItem(key, JSON.stringify(layerGauntlets || {}));
     } catch {}
   }, [user?.id, activeLayerId, layerGauntlets, getLayerGauntletsStorageKey]);
+  useEffect(() => {
+  if (!user?.id || !activeLayerId) { setLayerRoundRobins({}); return; }
+  try {
+    const key = getLayerRoundRobinsStorageKey(user.id, activeLayerId);
+    const raw = key ? localStorage.getItem(key) : '';
+    const parsed = raw ? JSON.parse(raw) : {};
+    setLayerRoundRobins(parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {});
+  } catch { setLayerRoundRobins({}); }
+}, [user?.id, activeLayerId, getLayerRoundRobinsStorageKey]);
+
+useEffect(() => {
+  if (!user?.id || !activeLayerId) return;
+  try {
+    const key = getLayerRoundRobinsStorageKey(user.id, activeLayerId);
+    if (!key) return;
+    localStorage.setItem(key, JSON.stringify(layerRoundRobins || {}));
+  } catch {}
+}, [user?.id, activeLayerId, layerRoundRobins, getLayerRoundRobinsStorageKey]);
   useEffect(() => {
     if (!user?.id || !activeLayerId) return;
     try {
@@ -14468,6 +14507,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (aDate !== bDate) return aDate.localeCompare(bDate);
       return String(a?.event?.title || '').localeCompare(String(b?.event?.title || ''));
     });
+    const eligibleRoundRobinEvents = Object.keys(popupEventsByEventId || {})
+  .map((eventId) => {
+    const event = popupEventDetailsById[String(eventId || '')] || null;
+    const signups = popupSignupsByEventId[String(eventId || '')] || [];
+    return { eventId: String(eventId || ''), event, signups, signupCount: signups.length };
+  })
+  .filter((entry) => entry.event && entry.signupCount >= 3)
+  .sort((a, b) => {
+    const aDate = String(a?.event?.dateKey || '');
+    const bDate = String(b?.event?.dateKey || '');
+    return aDate.localeCompare(bDate);
+  });
   const manualGauntletParticipants = parseManualGauntletRoster(manualGauntletRosterInput);
   const manualGauntletEligible = manualGauntletParticipants.length >= 4;
   const getWidgetSlotForIndex = (index, widgetId = '') => {
@@ -14492,6 +14543,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       y: Math.max(2, Math.min(98, snap(slotY, yStep))),
     };
   };
+  const parseManualRoundRobinRoster = (value) => {
+  const seen = new Set();
+  return String(value || '')
+    .split(/\r?\n|,/)
+    .map((entry) => String(entry || '').trim())
+    .filter((name) => {
+      if (!name) return false;
+      const key = name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((name, idx) => ({
+      id: `rr-manual-${idx + 1}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      userId: '',
+      displayName: name,
+    }));
+};
   const addControlWidget = (widgetId) => {
     const id = String(widgetId || '').trim();
     if (!id || !CONTROL_WIDGET_IDS.includes(id)) return;
@@ -14701,6 +14770,116 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     });
     setGauntletError('');
   };
+  const startRoundRobinTournament = (eventId, restart = false) => {
+  const normalizedEventId = useManualRoundRobinRoster ? '__manual__' : String(eventId || selectedRoundRobinEventId || '').trim();
+  if (!normalizedEventId) {
+    setRoundRobinError(useManualRoundRobinRoster ? 'Enter player names first.' : 'Select a popup event first.');
+    return;
+  }
+  let participants = [];
+  if (useManualRoundRobinRoster) {
+    participants = parseManualRoundRobinRoster(manualRoundRobinRosterInput);
+    if (participants.length < 3) { setRoundRobinError('Need at least 3 players.'); return; }
+  } else {
+    const entry = eligibleRoundRobinEvents.find((item) => String(item?.eventId || '') === normalizedEventId) || null;
+    if (!entry || entry.signupCount < 3) { setRoundRobinError('Need at least 3 signed-up players.'); return; }
+    participants = (entry.signups || []).map((signup, idx) => ({
+      id: String(signup?.userId || `guest-${idx + 1}`),
+      userId: String(signup?.userId || ''),
+      displayName: String(signup?.displayName || `Player ${idx + 1}`),
+    }));
+  }
+  if (!restart && layerRoundRobins[normalizedEventId]) {
+    setRoundRobinError('A round robin already exists. Reset it first.');
+    return;
+  }
+  // createRoundRobinTournament is defined inside RoundRobinPanel but we can recreate the logic here:
+  const safe = participants.filter((p) => String(p?.id || '').trim());
+  const pairs = [];
+  for (let i = 0; i < safe.length; i++) {
+    for (let j = i + 1; j < safe.length; j++) {
+      pairs.push({
+        id: `rr-${safe[i].id}-${safe[j].id}`,
+        playerAId: safe[i].id,
+        playerBId: safe[j].id,
+        scoreA: '',
+        scoreB: '',
+        completed: false,
+      });
+    }
+  }
+  const tournament = {
+    eventId: normalizedEventId,
+    createdAt: new Date().toISOString(),
+    completedAt: null,
+    status: 'active',
+    participants: safe,
+    matches: pairs,
+  };
+  setLayerRoundRobins((prev) => ({ ...(prev || {}), [normalizedEventId]: tournament }));
+  if (!useManualRoundRobinRoster) setSelectedRoundRobinEventId(normalizedEventId);
+  setRoundRobinError('');
+};
+
+const resetRoundRobinTournament = (eventId) => {
+  const normalizedEventId = String(eventId || '').trim();
+  if (!normalizedEventId) return;
+  setLayerRoundRobins((prev) => {
+    const next = { ...(prev || {}) };
+    delete next[normalizedEventId];
+    return next;
+  });
+  setRoundRobinError('');
+};
+
+const updateRoundRobinMatchScore = (eventId, matchId, scoreKey, value) => {
+  const normalizedEventId = String(eventId || '').trim();
+  if (!normalizedEventId || (scoreKey !== 'scoreA' && scoreKey !== 'scoreB')) return;
+  const nextValue = value === '' ? '' : String(value).replace(/[^\d]/g, '');
+  setLayerRoundRobins((prev) => {
+    const tournament = prev?.[normalizedEventId];
+    if (!tournament) return prev;
+    return {
+      ...(prev || {}),
+      [normalizedEventId]: {
+        ...tournament,
+        matches: (tournament.matches || []).map((m) =>
+          m.id === matchId ? { ...m, [scoreKey]: nextValue } : m
+        ),
+      },
+    };
+  });
+};
+
+const finalizeRoundRobinMatch = (eventId, matchId) => {
+  const normalizedEventId = String(eventId || '').trim();
+  setLayerRoundRobins((prev) => {
+    const tournament = prev?.[normalizedEventId];
+    if (!tournament) return prev;
+    const match = (tournament.matches || []).find((m) => m.id === matchId);
+    if (!match) return prev;
+    const a = parseInt(String(match.scoreA || ''), 10);
+    const b = parseInt(String(match.scoreB || ''), 10);
+    if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0 || a === b) {
+      setRoundRobinError('Enter valid non-tied scores before confirming.');
+      return prev;
+    }
+    setRoundRobinError('');
+    const updatedMatches = (tournament.matches || []).map((m) =>
+      m.id === matchId ? { ...m, completed: true } : m
+    );
+    const allDone = updatedMatches.every((m) => m.completed);
+    return {
+      ...(prev || {}),
+      [normalizedEventId]: {
+        ...tournament,
+        matches: updatedMatches,
+        status: allDone ? 'completed' : 'active',
+        completedAt: allDone ? new Date().toISOString() : null,
+      },
+    };
+  });
+};
   const deleteLayerNote = (noteId) => {
     const id = String(noteId || '').trim();
     if (!id) return;
@@ -14849,6 +15028,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setShowGauntletPanel((prev) => !prev);
       return;
     }
+    if (id === 'roundrobin') {
+      setShowRoundRobinPanel((prev) => !prev);
+      return;
+    }
     if (id === 'chat') {
       const layerKey = String(activeLayerId || '');
       const next = !showChatPanel;
@@ -14910,6 +15093,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (id === 'ai') return { label: 'AI', icon: <MessageSquare className="w-4 h-4" />, active: Boolean(widgetCardOpenById.ai), disabled: false };
     if (id === 'scan') return { label: isScanningReminder ? 'Scanning' : 'Scan', icon: <Camera className="w-4 h-4" />, active: Boolean(widgetCardOpenById.scan), disabled: isScanningReminder };
     if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: Boolean(widgetCardOpenById.import), disabled: Boolean(activeSubCalendar) };
+    if (id === 'roundrobin') return {
+  label: 'Round Robin',
+  icon: <span className="text-sm leading-none">🏓</span>,
+  active: Boolean(widgetCardOpenById.roundrobin),
+  disabled: false,
+};
+return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, disabled: false };
     return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, disabled: false };
   };
   const getHeaderModulePositionStyle = (moduleId) => {
@@ -17568,7 +17758,30 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             updateGauntletCourtScore={updateGauntletCourtScore}
             useManualGauntletRoster={useManualGauntletRoster}
           />
-        )}
+        )} {showRoundRobinPanel && (
+  <RoundRobinPanel
+    activeLayerPageTheme={activeLayerPageTheme}
+    darkMode={darkMode}
+    eligibleRoundRobinEvents={eligibleRoundRobinEvents}
+    layerRoundRobins={layerRoundRobins}
+    manualRoundRobinRosterInput={manualRoundRobinRosterInput}
+    useManualRoundRobinRoster={useManualRoundRobinRoster}
+    selectedRoundRobinEventId={selectedRoundRobinEventId}
+    roundRobinError={roundRobinError}
+    setSelectedRoundRobinEventId={setSelectedRoundRobinEventId}
+    setManualRoundRobinRosterInput={setManualRoundRobinRosterInput}
+    setUseManualRoundRobinRoster={setUseManualRoundRobinRoster}
+    setRoundRobinError={setRoundRobinError}
+    setShowRoundRobinPanel={setShowRoundRobinPanel}
+    startRoundRobinTournament={startRoundRobinTournament}
+    resetRoundRobinTournament={resetRoundRobinTournament}
+    updateRoundRobinMatchScore={updateRoundRobinMatchScore}
+    finalizeRoundRobinMatch={finalizeRoundRobinMatch}
+    formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
+    formatTime={formatTime}
+    resolveHandleLikeLabel={resolveHandleLikeLabel}
+  />
+)}
 
         {showCategoryEditor && (
           <div className="glass-panel rounded-2xl p-6 mb-6">
