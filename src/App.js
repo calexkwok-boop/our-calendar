@@ -14770,7 +14770,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     });
     setGauntletError('');
   };
-  const startRoundRobinTournament = (eventId, restart = false) => {
+  const startRoundRobinTournament = (eventId, restart = false, teamsOf = 2) => {
   const normalizedEventId = useManualRoundRobinRoster ? '__manual__' : String(eventId || selectedRoundRobinEventId || '').trim();
   if (!normalizedEventId) {
     setRoundRobinError(useManualRoundRobinRoster ? 'Enter player names first.' : 'Select a popup event first.');
@@ -14795,26 +14795,45 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }
   // createRoundRobinTournament is defined inside RoundRobinPanel but we can recreate the logic here:
   const safe = participants.filter((p) => String(p?.id || '').trim());
-  const pairs = [];
-  for (let i = 0; i < safe.length; i++) {
-    for (let j = i + 1; j < safe.length; j++) {
-      pairs.push({
-        id: `rr-${safe[i].id}-${safe[j].id}`,
-        playerAId: safe[i].id,
-        playerBId: safe[j].id,
-        scoreA: '',
-        scoreB: '',
-        completed: false,
-      });
+
+  // Build rounds using circle method
+  const teams = [];
+  if (teamsOf === 1) {
+    safe.forEach((p, i) => teams.push({ id: `team-${i}`, members: [p] }));
+  } else {
+    for (let i = 0; i + 1 < safe.length; i += 2) {
+      teams.push({ id: `team-${i}`, members: [safe[i], safe[i + 1]] });
+    }
+    if (safe.length % 2 !== 0) {
+      teams.push({ id: `team-solo`, members: [safe[safe.length - 1]] });
     }
   }
+  const slots = teams.length % 2 === 0 ? [...teams] : [...teams, { id: 'bye', members: [], isBye: true }];
+  const slotCount = slots.length;
+  const rounds = [];
+  const fixed = slots[0];
+  const rotating = slots.slice(1);
+  for (let r = 0; r < slotCount - 1; r++) {
+    const current = [fixed, ...rotating];
+    const matches = [];
+    for (let i = 0; i < slotCount / 2; i++) {
+      const teamA = current[i];
+      const teamB = current[slotCount - 1 - i];
+      if (teamA.isBye || teamB.isBye) continue;
+      matches.push({ id: `rr-r${r}-m${i}`, round: r, teamA, teamB, scoreA: '', scoreB: '', completed: false });
+    }
+    if (matches.length > 0) rounds.push({ index: r, matches, finalizedAt: null });
+    rotating.unshift(rotating.pop());
+  }
+
   const tournament = {
     eventId: normalizedEventId,
     createdAt: new Date().toISOString(),
     completedAt: null,
     status: 'active',
+    teamsOf,
     participants: safe,
-    matches: pairs,
+    rounds,
   };
   setLayerRoundRobins((prev) => ({ ...(prev || {}), [normalizedEventId]: tournament }));
   if (!useManualRoundRobinRoster) setSelectedRoundRobinEventId(normalizedEventId);
@@ -14832,7 +14851,7 @@ const resetRoundRobinTournament = (eventId) => {
   setRoundRobinError('');
 };
 
-const updateRoundRobinMatchScore = (eventId, matchId, scoreKey, value) => {
+const updateRoundRobinMatchScore = (eventId, roundIndex, matchId, scoreKey, value) => {
   const normalizedEventId = String(eventId || '').trim();
   if (!normalizedEventId || (scoreKey !== 'scoreA' && scoreKey !== 'scoreB')) return;
   const nextValue = value === '' ? '' : String(value).replace(/[^\d]/g, '');
@@ -14843,20 +14862,28 @@ const updateRoundRobinMatchScore = (eventId, matchId, scoreKey, value) => {
       ...(prev || {}),
       [normalizedEventId]: {
         ...tournament,
-        matches: (tournament.matches || []).map((m) =>
-          m.id === matchId ? { ...m, [scoreKey]: nextValue } : m
+        rounds: (tournament.rounds || []).map((r) =>
+          r.index !== roundIndex ? r : {
+            ...r,
+            matches: r.matches.map((m) =>
+              m.id !== matchId ? m : { ...m, [scoreKey]: nextValue }
+            ),
+          }
         ),
       },
     };
   });
 };
 
-const finalizeRoundRobinMatch = (eventId, matchId) => {
+const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
   const normalizedEventId = String(eventId || '').trim();
   setLayerRoundRobins((prev) => {
     const tournament = prev?.[normalizedEventId];
     if (!tournament) return prev;
-    const match = (tournament.matches || []).find((m) => m.id === matchId);
+    let match = null;
+    (tournament.rounds || []).forEach((r) => {
+      if (r.index === roundIndex) match = (r.matches || []).find((m) => m.id === matchId);
+    });
     if (!match) return prev;
     const a = parseInt(String(match.scoreA || ''), 10);
     const b = parseInt(String(match.scoreB || ''), 10);
@@ -14865,15 +14892,20 @@ const finalizeRoundRobinMatch = (eventId, matchId) => {
       return prev;
     }
     setRoundRobinError('');
-    const updatedMatches = (tournament.matches || []).map((m) =>
-      m.id === matchId ? { ...m, completed: true } : m
+    const updatedRounds = (tournament.rounds || []).map((r) =>
+      r.index !== roundIndex ? r : {
+        ...r,
+        matches: r.matches.map((m) =>
+          m.id !== matchId ? m : { ...m, completed: true }
+        ),
+      }
     );
-    const allDone = updatedMatches.every((m) => m.completed);
+    const allDone = updatedRounds.every((r) => r.matches.every((m) => m.completed));
     return {
       ...(prev || {}),
       [normalizedEventId]: {
         ...tournament,
-        matches: updatedMatches,
+        rounds: updatedRounds,
         status: allDone ? 'completed' : 'active',
         completedAt: allDone ? new Date().toISOString() : null,
       },
