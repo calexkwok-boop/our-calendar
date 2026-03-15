@@ -14138,7 +14138,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const yStep = 100 / Math.max(1, (WIDGET_GRID_ROWS - 1));
       const snap = (value, step) => Math.round(Number(value || 0) / step) * step;
       const clampCenterPercent = (value, size, totalPx) => {
-        const halfPct = ((Number(size || WIDGET_DEFAULT_SIZE) / 2) / Math.max(1, Number(totalPx || 1))) * 100;
+        const widgetRadius = Number(size || WIDGET_DEFAULT_SIZE) / 2;
+        const paddingPx = 8;
+        const halfPct = ((widgetRadius + paddingPx) / Math.max(1, Number(totalPx || 1))) * 100;
         return Math.max(halfPct, Math.min(100 - halfPct, Number(value || 0)));
       };
       const clampAndSnapCenterPercent = (value, size, totalPx, step) => {
