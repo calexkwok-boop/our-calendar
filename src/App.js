@@ -90,6 +90,7 @@ const LOCKED_DEFAULT_LAYER_TITLE_STYLE = Object.freeze({
   gradientFrom: '#e11d48',
   gradientVia: '#7c3aed',
   gradientTo: '#4f46e5',
+  showTitle: true,
   titleScale: 1,
   monthYearScale: 1,
 });
@@ -4024,6 +4025,7 @@ function App() {
     }
     if (!parsed || typeof parsed !== 'object') parsed = {};
     const mode = String(parsed?.mode || '').trim() === 'solid' ? 'solid' : 'gradient';
+    const showTitle = parsed?.showTitle !== false;
     const titleScale = Math.max(0.75, Math.min(2.2, Number(parsed?.titleScale ?? DEFAULT_LAYER_TITLE_STYLE.titleScale)));
     const monthYearScale = Math.max(0.75, Math.min(2.2, Number(parsed?.monthYearScale ?? DEFAULT_LAYER_TITLE_STYLE.monthYearScale)));
     return {
@@ -4032,6 +4034,7 @@ function App() {
       gradientFrom: normalizeHexColor(parsed?.gradientFrom, DEFAULT_LAYER_TITLE_STYLE.gradientFrom),
       gradientVia: normalizeHexColor(parsed?.gradientVia, DEFAULT_LAYER_TITLE_STYLE.gradientVia),
       gradientTo: normalizeHexColor(parsed?.gradientTo, DEFAULT_LAYER_TITLE_STYLE.gradientTo),
+      showTitle,
       titleScale: Number.isFinite(titleScale) ? titleScale : DEFAULT_LAYER_TITLE_STYLE.titleScale,
       monthYearScale: Number.isFinite(monthYearScale) ? monthYearScale : DEFAULT_LAYER_TITLE_STYLE.monthYearScale,
     };
@@ -4159,6 +4162,7 @@ function App() {
     fontSize: `${getLayerTitleFontSizePx(activeLayerTitleStyle, 16)}px`,
     lineHeight: 1.1,
   };
+  const activeLayerTitleVisible = activeLayerTitleStyle.showTitle !== false;
   const activeLayerMonthYearTextStyle = {
     ...activeLayerTitleTextStyle,
     fontSize: `${getLayerTitleFontSizePx(activeLayerTitleStyle, 13, 'monthYearScale')}px`,
@@ -15159,20 +15163,37 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'title')}
               >
                 <div className="-mx-8 -my-4 px-8 py-4 min-w-[10rem]">
-                  <button
-                    ref={(el) => { headerModuleNodeRefs.current.title = el; }}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (wasRecentHeaderModuleDrag('title')) return;
-                      if (!canEditActiveLayerTitle) return;
-                      openTitleStyleModal();
-                    }}
-                    className={`text-sm sm:text-base font-semibold text-right max-w-[75vw] truncate ${canEditActiveLayerTitle ? 'cursor-grab active:cursor-grabbing hover:opacity-80' : 'cursor-default'}`}
-                    style={activeLayerTitleNameTextStyle}
-                  >
-                    {calendarTitle}
-                  </button>
+                  {activeLayerTitleVisible ? (
+                    <button
+                      ref={(el) => { headerModuleNodeRefs.current.title = el; }}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (wasRecentHeaderModuleDrag('title')) return;
+                        if (!canEditActiveLayerTitle) return;
+                        openTitleStyleModal();
+                      }}
+                      className={`text-sm sm:text-base font-semibold text-right max-w-[75vw] truncate ${canEditActiveLayerTitle ? 'cursor-grab active:cursor-grabbing hover:opacity-80' : 'cursor-default'}`}
+                      style={activeLayerTitleNameTextStyle}
+                    >
+                      {calendarTitle}
+                    </button>
+                  ) : canEditActiveLayerTitle ? (
+                    <button
+                      ref={(el) => { headerModuleNodeRefs.current.title = el; }}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (wasRecentHeaderModuleDrag('title')) return;
+                        openTitleStyleModal();
+                      }}
+                      className="text-[11px] sm:text-xs font-semibold text-right uppercase tracking-wide text-gray-500 dark:text-gray-300 bg-white/35 dark:bg-gray-900/35 border border-white/35 dark:border-gray-700/70 rounded-full px-2 py-1 backdrop-blur-sm"
+                    >
+                      Title Hidden
+                    </button>
+                  ) : (
+                    <div ref={(el) => { headerModuleNodeRefs.current.title = el; }} className="w-0 h-0 overflow-hidden" />
+                  )}
                 </div>
               </div>
 
@@ -15326,9 +15347,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 pointer-events-auto">
-                    <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate" style={activeLayerTitleNameTextStyle}>
-                      {calendarTitle}
-                    </h2>
+                    {activeLayerTitleVisible ? (
+                      <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate" style={activeLayerTitleNameTextStyle}>
+                        {calendarTitle}
+                      </h2>
+                    ) : canEditActiveLayerTitle ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openTitleStyleModal();
+                        }}
+                        className="text-[11px] font-semibold uppercase tracking-wide text-right text-gray-600 dark:text-gray-300 bg-white/35 dark:bg-gray-900/35 border border-white/35 dark:border-gray-700/70 rounded-full px-2 py-1 backdrop-blur-sm"
+                      >
+                        Title Hidden
+                      </button>
+                    ) : null}
                     <div className="text-xs sm:text-sm font-semibold text-right" style={activeLayerMonthYearTextStyle}>
                       {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                     </div>
@@ -15379,9 +15413,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 </div>
               </div>
             <div className="relative shrink-0 pointer-events-auto flex flex-col items-end gap-1">
-              <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate pointer-events-none" style={activeLayerTitleNameTextStyle}>
-                {calendarTitle}
-              </h2>
+              {activeLayerTitleVisible ? (
+                <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate pointer-events-none" style={activeLayerTitleNameTextStyle}>
+                  {calendarTitle}
+                </h2>
+              ) : canEditActiveLayerTitle ? (
+                <button
+                  type="button"
+                  onClick={() => openTitleStyleModal()}
+                  className="text-[11px] font-semibold uppercase tracking-wide text-right text-gray-600 dark:text-gray-300 bg-white/35 dark:bg-gray-900/35 border border-white/35 dark:border-gray-700/70 rounded-full px-2 py-1 backdrop-blur-sm"
+                >
+                  Title Hidden
+                </button>
+              ) : null}
               <div className="text-xs sm:text-sm font-semibold text-right pointer-events-none" style={activeLayerMonthYearTextStyle}>
                 {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </div>
@@ -19271,6 +19315,33 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               }}
             />
             <div className="mt-3">
+              <label className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white/70 dark:bg-gray-900/40">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Title Visibility
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+                    Hide the calendar title and keep only the month and year visible.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={titleStyleDraft?.showTitle !== false}
+                  onClick={() => setTitleStyleDraft(prev => ({ ...prev, showTitle: prev?.showTitle === false }))}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                    titleStyleDraft?.showTitle === false ? 'bg-gray-300 dark:bg-gray-700' : 'bg-emerald-500'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                      titleStyleDraft?.showTitle === false ? 'translate-x-1' : 'translate-x-6'
+                    }`}
+                  />
+                </button>
+              </label>
+            </div>
+            <div className="mt-3">
               <div className="flex items-center justify-between gap-3 mb-1">
                 <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Title Size
@@ -19300,7 +19371,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   lineHeight: 1.1,
                 }}
               >
-                {titleNameDraft || calendarTitle || activeLayer?.name || 'Calendar Title'}
+                {titleStyleDraft?.showTitle === false ? 'Title hidden' : (titleNameDraft || calendarTitle || activeLayer?.name || 'Calendar Title')}
               </div>
             </div>
             <div className="mt-3">
