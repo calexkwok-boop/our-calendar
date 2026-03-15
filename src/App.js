@@ -15496,9 +15496,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 style={getHeaderModulePositionStyle('date')}
                 onPointerDown={(e) => onHeaderModulePointerDown(e, 'date')}
               >
-                <div className="text-xs sm:text-sm font-semibold text-right" style={activeLayerMonthYearTextStyle} ref={(el) => { headerModuleNodeRefs.current.date = el; }}>
+                <button
+                  ref={(el) => { headerModuleNodeRefs.current.date = el; }}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (wasRecentHeaderModuleDrag('date')) return;
+                    if (!canEditActiveLayerTitle) return;
+                    openTitleStyleModal();
+                  }}
+                  className={canEditActiveLayerTitle ? 'cursor-grab active:cursor-grabbing hover:opacity-80' : 'cursor-default'}
+                  style={activeLayerMonthYearTextStyle}
+                >
                   {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </div>
+                </button>
               </div>
 
               <div
