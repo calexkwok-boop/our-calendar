@@ -170,7 +170,13 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'categories',
   'theme',
 ]);
-const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([]);
+const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
+  'account',
+  'notifications',
+  'theme',
+  'weather',
+  'categories',
+]);
 const WIDGET_GRID_COLUMNS = 10;
 const WIDGET_GRID_ROWS = 40;
 const WIDGET_MIN_SIZE = 38;
