@@ -13970,7 +13970,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       x: Math.max(minX, Math.min(maxX, nextX)),
       y: Math.max(minY, Math.min(maxY, nextY)),
     };
-  }
 
   useEffect(() => {
     if (!headerModulePrefsReady) return undefined;
@@ -14275,7 +14274,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             }
           }
           if (!collided) break;
-        }
+          
         nextX = clampAndSnapCenterPercent(nextX, currentSize, rect.width, xStep);
         nextY = clampAndSnapCenterPercent(nextY, currentSize, rect.height, yStep);
         setCoverWidgetLayout((prev) => ({
@@ -21859,7 +21858,7 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
       )}
     </div>
   );
-}
+}} 
 
 const shakeStyle = `
 @keyframes wiggle {
