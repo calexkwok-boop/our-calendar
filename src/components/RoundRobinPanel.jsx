@@ -211,7 +211,7 @@ export default function RoundRobinPanel({
             </div>
             <textarea rows={teamsOf === 2 ? 8 : 6} value={manualRoundRobinRosterInput}
               onChange={(e) => { setManualRoundRobinRosterInput(e.target.value); setRoundRobinError(''); }}
-              placeholder={teamsOf === 2 ? 'Alex\nJordan\nCasey\nRiley\nTaylor\nMorgan' : 'Alex\nJordan\nCasey\nRiley'}
+              placeholder={teamsOf === 2 ? 'Alex\nPearl\nJustin\nNgan\nMatt\nHelen' : 'Alex\nPearl\nJustin\nNgan\nMatt\nHelen'}
               className="w-full bg-transparent text-sm dark:text-white resize-none focus:outline-none font-mono"
               style={{ fontSize: '16px', lineHeight: 1.7 }} />
           </div>
