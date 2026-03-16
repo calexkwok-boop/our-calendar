@@ -14324,7 +14324,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     });
     setAuthBusy(false);
     if (error) setAuthError(error.message);
-  };
+  }
 
   if (showAuth) {
     return (
