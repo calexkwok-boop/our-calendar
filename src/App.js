@@ -17840,31 +17840,41 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   />
 )}
 {selectedPopupEventPanelId && (
-  <PopupEventPanel
-    activeLayerPageTheme={activeLayerPageTheme}
-    darkMode={darkMode}
-    supabase={supabase}
-    user={user}
-    calendarId={activeLayerId}
-    displayName={currentUser || user?.email || 'Player'}
-    initialEventId={selectedPopupEventPanelId}
-    onClose={() => setSelectedPopupEventPanelId(null)}
-    formatTime={formatTime}
-    formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
-    resolveHandleLikeLabel={resolveHandleLikeLabel}
-    onLaunchRoundRobin={(ev, mems) => {
-      setManualRoundRobinRosterInput(mems.map((m) => m.display_name).join('\n'));
-      setUseManualRoundRobinRoster(true);
-      setShowRoundRobinPanel(true);
-      setSelectedPopupEventPanelId(null);
-    }}
-    onLaunchGauntlet={(ev, mems) => {
-      setManualGauntletRosterInput(mems.map((m) => m.display_name).join('\n'));
-      setUseManualGauntletRoster(true);
-      setShowGauntletPanel(true);
-      setSelectedPopupEventPanelId(null);
-    }}
-  />
+  <div
+    className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+    onClick={() => setSelectedPopupEventPanelId(null)}
+  >
+    <div
+      className="w-full max-w-lg max-h-[90vh] overflow-y-auto"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <PopupEventPanel
+        activeLayerPageTheme={activeLayerPageTheme}
+        darkMode={darkMode}
+        supabase={supabase}
+        user={user}
+        calendarId={activeLayerId}
+        displayName={currentUser || user?.email || 'Player'}
+        initialEventId={selectedPopupEventPanelId}
+        onClose={() => setSelectedPopupEventPanelId(null)}
+        formatTime={formatTime}
+        formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
+        resolveHandleLikeLabel={resolveHandleLikeLabel}
+        onLaunchRoundRobin={(ev, mems) => {
+          setManualRoundRobinRosterInput(mems.map((m) => m.display_name).join('\n'));
+          setUseManualRoundRobinRoster(true);
+          setShowRoundRobinPanel(true);
+          setSelectedPopupEventPanelId(null);
+        }}
+        onLaunchGauntlet={(ev, mems) => {
+          setManualGauntletRosterInput(mems.map((m) => m.display_name).join('\n'));
+          setUseManualGauntletRoster(true);
+          setShowGauntletPanel(true);
+          setSelectedPopupEventPanelId(null);
+        }}
+      />
+    </div>
+  </div>
 )}
 
         {showCategoryEditor && (
