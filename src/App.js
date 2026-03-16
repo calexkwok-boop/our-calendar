@@ -2901,14 +2901,14 @@ function App() {
   const [selectedGauntletEventId, setSelectedGauntletEventId] = useState('');
   const [gauntletDraftRounds, setGauntletDraftRounds] = useState('4');
   const [layerGauntlets, setLayerGauntlets] = useState({});
-  const [manualGauntletRosterInput, setManualGauntletRosterInput] = useState('Alex\nJordan\nCasey\nRiley\nTaylor\nMorgan\nAvery\nCameron');
+  const [manualGauntletRosterInput, setManualGauntletRosterInput] = useState('Alex\nPearl\nJustin\nNgan\nMatt\nHelen');
   const [useManualGauntletRoster, setUseManualGauntletRoster] = useState(true);
   const [gauntletError, setGauntletError] = useState('');
   const [showRoundRobinPanel, setShowRoundRobinPanel] = useState(false);
   const [selectedRoundRobinEventId, setSelectedRoundRobinEventId] = useState('');
   const [layerRoundRobins, setLayerRoundRobins] = useState({});
   const [manualRoundRobinRosterInput, setManualRoundRobinRosterInput] = useState(
-    'Alex\nJordan\nCasey\nRiley\nTaylor\nMorgan'
+    'Alex\nPearl\nJustin\nNgan\nMatt\nHelen'
     );
   const [useManualRoundRobinRoster, setUseManualRoundRobinRoster] = useState(true);
   const [roundRobinError, setRoundRobinError] = useState('');
