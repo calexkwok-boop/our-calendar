@@ -1,558 +1,1000 @@
-import React, { useState, useMemo } from 'react';
-import { X, Trophy, RotateCcw, CheckCircle, ChevronDown, ChevronUp, Users } from 'lucide-react';
+import React from 'react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+const T = {
+  bg: '#0d0f14',
+  surface: '#13161e',
+  card: '#181c27',
+  border: 'rgba(255,255,255,0.07)',
+  borderGlow: 'rgba(255,214,0,0.22)',
+  gold: '#ffd600',
+  goldText: '#ffe566',
+  accent: '#4fffb0',
+  red: '#ff4d6d',
+  muted: 'rgba(255,255,255,0.35)',
+  text: 'rgba(255,255,255,0.92)',
+  sub: 'rgba(255,255,255,0.55)',
+};
 
-const buildRoundRobinRounds = (participants, teamsOf = 2) => {
-  const list = [...(Array.isArray(participants) ? participants : [])];
-  if (list.length < teamsOf * 2) return [];
-  const teams = [];
-  if (teamsOf === 1) {
-    list.forEach((p, i) => teams.push({ id: `team-${i}`, members: [p] }));
-  } else {
-    for (let i = 0; i + 1 < list.length; i += 2)
-      teams.push({ id: `team-${i}`, members: [list[i], list[i + 1]] });
-    if (list.length % 2 !== 0)
-      teams.push({ id: `team-solo`, members: [list[list.length - 1]] });
+const shell = {
+  background: `linear-gradient(180deg, ${T.bg} 0%, ${T.surface} 100%)`,
+  border: `1px solid ${T.borderGlow}`,
+  borderRadius: 20,
+  overflow: 'hidden',
+  color: T.text,
+  boxShadow: '0 22px 48px rgba(0,0,0,0.32)',
+  fontFamily: '"DM Sans", sans-serif',
+};
+
+const heroStyle = {
+  padding: '20px 22px 18px',
+  borderBottom: `1px solid ${T.border}`,
+  position: 'relative',
+  overflow: 'hidden',
+};
+
+const heroBg = {
+  position: 'absolute',
+  inset: 0,
+  pointerEvents: 'none',
+  background: `
+    radial-gradient(ellipse 60% 80% at 90% 50%, rgba(255,214,0,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 30% 60% at 10% 0%, rgba(79,255,176,0.04) 0%, transparent 60%)
+  `,
+};
+
+const badge = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  background: 'rgba(255,214,0,0.10)',
+  border: '1px solid rgba(255,214,0,0.25)',
+  borderRadius: 999,
+  padding: '4px 11px',
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: '0.18em',
+  color: T.goldText,
+  textTransform: 'uppercase',
+  marginBottom: 10,
+  fontFamily: '"Syne", sans-serif',
+};
+
+const liveDot = {
+  width: 6,
+  height: 6,
+  borderRadius: '50%',
+  background: T.gold,
+  animation: 'g-pulse 2s infinite',
+};
+
+const heroTitle = {
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 26,
+  fontWeight: 800,
+  letterSpacing: '-0.02em',
+  color: '#fff',
+  lineHeight: 1,
+};
+
+const heroSub = {
+  fontSize: 13,
+  color: T.sub,
+  marginTop: 6,
+  lineHeight: 1.5,
+  maxWidth: 420,
+};
+
+const pillBase = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 5,
+  border: `1px solid ${T.border}`,
+  borderRadius: 999,
+  padding: '4px 10px',
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: '0.14em',
+  color: T.sub,
+  textTransform: 'uppercase',
+  fontFamily: '"Syne", sans-serif',
+};
+
+const pillLive = {
+  ...pillBase,
+  border: '1px solid rgba(79,255,176,0.30)',
+  color: T.accent,
+};
+
+const closeBtn = {
+  position: 'absolute',
+  top: 18,
+  right: 18,
+  width: 30,
+  height: 30,
+  borderRadius: 8,
+  background: 'rgba(255,255,255,0.06)',
+  border: `1px solid ${T.border}`,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  color: T.sub,
+};
+
+const infoBar = {
+  margin: '14px 14px 0',
+  background: 'rgba(255,214,0,0.05)',
+  border: '1px solid rgba(255,214,0,0.13)',
+  borderRadius: 10,
+  padding: '9px 13px',
+  fontSize: 11.5,
+  color: 'rgba(255,230,100,0.75)',
+  lineHeight: 1.5,
+};
+
+const segRow = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: 4,
+  background: 'rgba(255,255,255,0.04)',
+  border: `1px solid ${T.border}`,
+  borderRadius: 12,
+  padding: 4,
+  marginBottom: 12,
+};
+
+const segBtnBase = {
+  fontFamily: '"Syne", sans-serif',
+  padding: '9px 12px',
+  borderRadius: 9,
+  fontSize: 12,
+  fontWeight: 700,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  cursor: 'pointer',
+  border: 'none',
+  transition: 'all 0.18s',
+  background: 'transparent',
+  color: T.sub,
+};
+
+const segBtnActive = {
+  ...segBtnBase,
+  background: T.gold,
+  color: '#0d0f14',
+};
+
+const formGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0,1fr) 80px 120px',
+  gap: 8,
+  alignItems: 'start',
+};
+
+const fieldLabel = {
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 9.5,
+  fontWeight: 700,
+  letterSpacing: '0.18em',
+  textTransform: 'uppercase',
+  color: T.muted,
+  marginBottom: 5,
+  display: 'block',
+};
+
+const inputBase = {
+  width: '100%',
+  background: T.card,
+  border: `1px solid ${T.border}`,
+  borderRadius: 10,
+  color: T.text,
+  fontFamily: '"DM Sans", sans-serif',
+  fontSize: 13.5,
+  padding: '10px 12px',
+  outline: 'none',
+};
+
+const stepper = {
+  background: T.card,
+  border: `1px solid ${T.border}`,
+  borderRadius: 10,
+  overflow: 'hidden',
+};
+
+const stepperTop = {
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: '0.18em',
+  textTransform: 'uppercase',
+  color: T.muted,
+  padding: '7px 10px 0',
+};
+
+const stepBtnStyle = {
+  width: 36,
+  height: 36,
+  border: 'none',
+  background: 'transparent',
+  color: T.sub,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const stepVal = {
+  flex: 1,
+  textAlign: 'center',
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 20,
+  fontWeight: 800,
+  color: '#fff',
+};
+
+const startBtnStyle = {
+  width: '100%',
+  padding: '11px 16px',
+  background: T.gold,
+  border: 'none',
+  borderRadius: 10,
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 12,
+  fontWeight: 800,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  color: '#0d0f14',
+  cursor: 'pointer',
+};
+
+const rosterCard = {
+  marginTop: 12,
+  background: T.card,
+  border: `1px solid ${T.border}`,
+  borderRadius: 12,
+  padding: '12px 14px',
+};
+
+const rosterHeader = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 10,
+};
+
+const rosterTitleStyle = {
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 12,
+  fontWeight: 700,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  color: T.text,
+};
+
+const rosterCountBadge = {
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 10,
+  fontWeight: 800,
+  letterSpacing: '0.14em',
+  textTransform: 'uppercase',
+  color: T.gold,
+  border: '1px solid rgba(255,214,0,0.25)',
+  borderRadius: 999,
+  padding: '3px 9px',
+};
+
+const roundBar = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 10,
+  background: T.card,
+  border: `1px solid ${T.border}`,
+  borderRadius: 12,
+  padding: '11px 14px',
+  marginBottom: 12,
+};
+
+const roundLabel = {
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase',
+  color: T.sub,
+};
+
+const actionPrimary = {
+  fontFamily: '"Syne", sans-serif',
+  padding: '7px 13px',
+  borderRadius: 8,
+  background: T.gold,
+  border: 'none',
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  color: '#0d0f14',
+  cursor: 'pointer',
+};
+
+const actionSecondary = {
+  fontFamily: '"Syne", sans-serif',
+  padding: '7px 13px',
+  borderRadius: 8,
+  background: 'transparent',
+  border: `1px solid ${T.border}`,
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  color: T.sub,
+  cursor: 'pointer',
+};
+
+const byeCardStyle = {
+  background: 'rgba(255,77,109,0.07)',
+  border: '1px solid rgba(255,77,109,0.2)',
+  borderRadius: 12,
+  padding: '11px 14px',
+  marginBottom: 12,
+};
+
+const courtsGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+  gap: 10,
+  marginBottom: 14,
+};
+
+const courtCard = {
+  background: T.card,
+  border: `1px solid ${T.border}`,
+  borderRadius: 14,
+  padding: 14,
+};
+
+const courtHeader = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginBottom: 11,
+};
+
+const courtNameStyle = {
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 13,
+  fontWeight: 800,
+  letterSpacing: '0.04em',
+  color: '#fff',
+};
+
+const courtStatusBase = {
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: '0.18em',
+  textTransform: 'uppercase',
+  border: `1px solid ${T.border}`,
+  borderRadius: 999,
+  padding: '3px 9px',
+  color: T.sub,
+};
+
+const courtStatusLocked = {
+  ...courtStatusBase,
+  border: '1px solid rgba(79,255,176,0.30)',
+  color: T.accent,
+};
+
+const teamSlotBase = {
+  borderRadius: 9,
+  padding: '9px 11px',
+  marginBottom: 6,
+  border: `1px solid ${T.border}`,
+  background: 'rgba(255,255,255,0.03)',
+};
+
+const teamSlotWinner = {
+  ...teamSlotBase,
+  border: '1px solid rgba(79,255,176,0.35)',
+  background: 'rgba(79,255,176,0.06)',
+};
+
+const teamSlotLoser = {
+  ...teamSlotBase,
+  opacity: 0.55,
+};
+
+const teamTag = {
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: '0.14em',
+  textTransform: 'uppercase',
+  color: T.muted,
+  marginBottom: 2,
+};
+
+const teamNameText = {
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 13,
+  fontWeight: 700,
+  color: T.text,
+};
+
+const scoreRow = {
+  display: 'grid',
+  gridTemplateColumns: '60px 1fr 60px',
+  gap: 8,
+  alignItems: 'center',
+  marginTop: 10,
+  background: 'rgba(255,255,255,0.03)',
+  border: `1px solid ${T.border}`,
+  borderRadius: 9,
+  padding: '6px 8px',
+};
+
+const scoreInput = {
+  width: '100%',
+  background: 'transparent',
+  border: 'none',
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 16,
+  fontWeight: 800,
+  textAlign: 'center',
+  color: '#fff',
+  outline: 'none',
+  padding: '2px 0',
+};
+
+const cardOuter = {
+  background: T.card,
+  border: `1px solid ${T.border}`,
+  borderRadius: 14,
+  overflow: 'hidden',
+};
+
+const cardHeaderStyle = {
+  padding: '11px 14px',
+  borderBottom: `1px solid ${T.border}`,
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 10,
+  fontWeight: 800,
+  letterSpacing: '0.18em',
+  textTransform: 'uppercase',
+  color: T.muted,
+};
+
+const standingsCols = {
+  display: 'grid',
+  gridTemplateColumns: '50px 1fr 44px 44px 36px 44px',
+  gap: 6,
+  padding: '7px 12px',
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: '0.16em',
+  textTransform: 'uppercase',
+  color: T.muted,
+  borderBottom: `1px solid ${T.border}`,
+};
+
+const standingRowStyle = {
+  display: 'grid',
+  gridTemplateColumns: '50px 1fr 44px 44px 36px 44px',
+  gap: 6,
+  padding: '9px 12px',
+  alignItems: 'center',
+  borderBottom: `1px solid ${T.border}`,
+};
+
+const emptyState = {
+  padding: '32px 20px',
+  textAlign: 'center',
+  border: '1px dashed rgba(255,255,255,0.10)',
+  borderRadius: 12,
+  color: T.muted,
+  fontSize: 13,
+  lineHeight: 1.6,
+  marginTop: 12,
+};
+
+const historyCard = {
+  background: 'rgba(255,255,255,0.03)',
+  border: `1px solid ${T.border}`,
+  borderRadius: 12,
+  padding: '10px 12px',
+};
+
+const FONT_STYLE = `
+  @keyframes g-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+`;
+
+function RankBadge({ index }) {
+  const medals = [
+    { emoji: '🥇', color: T.gold },
+    { emoji: '🥈', color: '#c0c8d8' },
+    { emoji: '🥉', color: '#c47a3a' },
+  ];
+
+  if (index < 3) {
+    return (
+      <span style={{ fontFamily: '"Syne", sans-serif', fontSize: 14, fontWeight: 800, color: medals[index].color }}>
+        {medals[index].emoji}
+      </span>
+    );
   }
-  const n = teams.length;
-  if (n < 2) return [];
-  const slots = n % 2 === 0 ? [...teams] : [...teams, { id: 'bye', members: [], isBye: true }];
-  const slotCount = slots.length;
-  const rounds = [];
-  const fixed = slots[0];
-  const rotating = slots.slice(1);
-  for (let r = 0; r < slotCount - 1; r++) {
-    const current = [fixed, ...rotating];
-    const matches = [];
-    for (let i = 0; i < slotCount / 2; i++) {
-      const teamA = current[i];
-      const teamB = current[slotCount - 1 - i];
-      if (teamA.isBye || teamB.isBye) continue;
-      matches.push({ id: `rr-r${r}-m${i}`, round: r, teamA, teamB, scoreA: '', scoreB: '', completed: false });
-    }
-    if (matches.length > 0) rounds.push({ index: r, matches });
-    rotating.unshift(rotating.pop());
-  }
-  return rounds;
-};
-
-const deriveStandings = (participants, rounds) => {
-  const stats = {};
-  (Array.isArray(participants) ? participants : []).forEach((p) => {
-    stats[p.id] = { id: p.id, displayName: String(p.displayName || p.name || 'Player'), wins: 0, losses: 0, pointsFor: 0, pointsAgainst: 0, played: 0 };
-  });
-  (Array.isArray(rounds) ? rounds : []).forEach((round) => {
-    (round.matches || []).filter((m) => m.completed).forEach((m) => {
-      const a = parseInt(String(m.scoreA || ''), 10);
-      const b = parseInt(String(m.scoreB || ''), 10);
-      if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0 || a === b) return;
-      const aWon = a > b;
-      [...(m.teamA?.members || [])].forEach((p) => {
-        if (!stats[p.id]) return;
-        stats[p.id].pointsFor += a; stats[p.id].pointsAgainst += b; stats[p.id].played++;
-        if (aWon) stats[p.id].wins++; else stats[p.id].losses++;
-      });
-      [...(m.teamB?.members || [])].forEach((p) => {
-        if (!stats[p.id]) return;
-        stats[p.id].pointsFor += b; stats[p.id].pointsAgainst += a; stats[p.id].played++;
-        if (!aWon) stats[p.id].wins++; else stats[p.id].losses++;
-      });
-    });
-  });
-  return Object.values(stats).sort((a, b) => {
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    const diff = (b.pointsFor - b.pointsAgainst) - (a.pointsFor - a.pointsAgainst);
-    return diff !== 0 ? diff : b.pointsFor - a.pointsFor;
-  });
-};
-
-const initials = (name) => {
-  const parts = String(name || '?').trim().split(/\s+/);
-  return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : String(name || '?')[0].toUpperCase();
-};
-
-const getNames = (team, fn) => {
-  if (!team || team.isBye) return ['Bye'];
-  return (team.members || []).map((p) =>
-    typeof fn === 'function' ? fn(p.displayName || p.name || 'Player', p.userId || '') : String(p.displayName || p.name || 'Player')
-  );
-};
-
-// Pickleball court SVG as a tiny decorative element
-const CourtDot = ({ accent }) => (
-  <svg width="18" height="12" viewBox="0 0 18 12" fill="none" style={{ opacity: 0.7 }}>
-    <rect x="1" y="1" width="16" height="10" rx="1" stroke={accent} strokeWidth="1"/>
-    <line x1="9" y1="1" x2="9" y2="11" stroke={accent} strokeWidth="0.8"/>
-    <line x1="1" y1="6" x2="17" y2="6" stroke={accent} strokeWidth="0.8"/>
-    <line x1="3" y1="1" x2="3" y2="11" stroke={accent} strokeWidth="0.5" strokeDasharray="1.5 1"/>
-    <line x1="15" y1="1" x2="15" y2="11" stroke={accent} strokeWidth="0.5" strokeDasharray="1.5 1"/>
-  </svg>
-);
-
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
-
-export default function RoundRobinPanel({
-  activeLayerPageTheme, darkMode,
-  eligibleRoundRobinEvents, layerRoundRobins,
-  manualRoundRobinRosterInput, useManualRoundRobinRoster, selectedRoundRobinEventId,
-  roundRobinError,
-  setSelectedRoundRobinEventId, setManualRoundRobinRosterInput,
-  setUseManualRoundRobinRoster, setRoundRobinError, setShowRoundRobinPanel,
-  startRoundRobinTournament, resetRoundRobinTournament,
-  updateRoundRobinMatchScore, finalizeRoundRobinMatch,
-  formatDateKeyMMDDYYYY, formatTime, resolveHandleLikeLabel,
-}) {
-  const [activeTab, setActiveTab] = useState('schedule');
-  const [teamsOf, setTeamsOf] = useState(2);
-  const [expandedRounds, setExpandedRounds] = useState({});
-
-  const accent = activeLayerPageTheme?.accent || '#16a34a';
-  const isLight = (hex) => {
-    const h = (hex || '#000').replace('#', '');
-    return (0.2126 * parseInt(h.slice(0,2),16) + 0.7152 * parseInt(h.slice(2,4),16) + 0.0722 * parseInt(h.slice(4,6),16)) / 255 > 0.72;
-  };
-  const btnFg = isLight(accent) ? '#111827' : '#fff';
-  const btnStyle = { backgroundColor: accent, color: btnFg };
-  const softBg = darkMode ? `${accent}18` : `${accent}0d`;
-  const cardBg = darkMode ? 'rgba(255,255,255,0.05)' : '#fff';
-  const border = `${accent}30`;
-
-  const tid = useManualRoundRobinRoster ? '__manual__' : String(selectedRoundRobinEventId || '');
-  const tournament = tid ? layerRoundRobins?.[tid] : null;
-  const standings = useMemo(() => tournament ? deriveStandings(tournament.participants, tournament.rounds) : [], [tournament]);
-  const allMatches = useMemo(() => (tournament?.rounds || []).flatMap((r) => r.matches || []), [tournament]);
-  const doneCount = allMatches.filter((m) => m.completed).length;
-  const totalCount = allMatches.length;
-  const allDone = totalCount > 0 && doneCount === totalCount;
-  const firstIncomplete = (tournament?.rounds || []).find((r) => r.matches.some((m) => !m.completed));
-  const isExpanded = (round) => expandedRounds[round.index] === undefined ? firstIncomplete?.index === round.index : expandedRounds[round.index];
-  const toggleRound = (idx) => setExpandedRounds((p) => ({ ...p, [idx]: p[idx] === undefined ? false : !p[idx] }));
-
-  // ── SETUP SCREEN ──────────────────────────────────────────────────────────
-  if (!tournament) return (
-    <div className="rounded-2xl mb-6 overflow-hidden glass-panel" style={{ border: `1.5px solid ${border}` }}>
-
-      {/* Court-stripe header */}
-      <div className="relative px-5 pt-5 pb-4 overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}08 100%)` }}>
-        {/* Decorative court lines */}
-        <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', opacity: 0.12 }}>
-          <svg width="80" height="52" viewBox="0 0 80 52" fill="none">
-            <rect x="1" y="1" width="78" height="50" rx="3" stroke={accent} strokeWidth="2"/>
-            <line x1="40" y1="1" x2="40" y2="51" stroke={accent} strokeWidth="1.5"/>
-            <line x1="1" y1="26" x2="79" y2="26" stroke={accent} strokeWidth="1.5"/>
-            <line x1="14" y1="1" x2="14" y2="51" stroke={accent} strokeWidth="1"/>
-            <line x1="66" y1="1" x2="66" y2="51" stroke={accent} strokeWidth="1"/>
-          </svg>
-        </div>
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <span style={{ fontSize: 22 }}>🥒</span>
-              <h3 className="text-xl font-black tracking-tight text-gray-900 dark:text-gray-50">Round Robin</h3>
-            </div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Every team plays every other team · most wins wins</p>
-          </div>
-          <button onClick={() => setShowRoundRobinPanel(false)} className="p-1.5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
-            <X className="w-4 h-4 text-gray-400" />
-          </button>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-4">
-        {/* Format cards */}
-        <div>
-          <div className="text-[10px] font-black uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500 mb-2">Game Format</div>
-          <div className="grid grid-cols-2 gap-2.5">
-            {[
-              { v: 2, emoji: '👥', label: 'Doubles', sub: '2 vs 2', hint: 'Most popular' },
-              { v: 1, emoji: '🏃', label: 'Singles', sub: '1 vs 1', hint: 'Head to head' },
-            ].map(({ v, emoji, label, sub, hint }) => {
-              const sel = teamsOf === v;
-              return (
-                <button key={v} onClick={() => setTeamsOf(v)}
-                  className="relative rounded-2xl p-3.5 text-left transition-all active:scale-[0.97] overflow-hidden"
-                  style={sel
-                    ? { ...btnStyle, boxShadow: `0 6px 20px ${accent}40` }
-                    : { background: cardBg, border: `1.5px solid ${border}` }}>
-                  {sel && <div style={{ position: 'absolute', top: -20, right: -20, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.12)' }} />}
-                  <div style={{ fontSize: 22, marginBottom: 6 }}>{emoji}</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: sel ? btnFg : 'var(--color-text-primary)', letterSpacing: '-0.02em' }}>{label}</div>
-                  <div style={{ fontSize: 11, color: sel ? (isLight(accent) ? '#33333388' : 'rgba(255,255,255,0.7)') : 'var(--color-text-secondary)', marginTop: 1 }}>{sub}</div>
-                  {sel && <div style={{ marginTop: 6, display: 'inline-block', fontSize: 9, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '1px 7px', borderRadius: 999, background: 'rgba(255,255,255,0.25)', color: btnFg }}>{hint}</div>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Roster source */}
-        <div>
-          <div className="text-[10px] font-black uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500 mb-2">Roster Source</div>
-          <div className="flex rounded-2xl overflow-hidden p-0.5" style={{ background: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)' }}>
-            {[{ v: true, label: '✏️  Manual' }, { v: false, label: '📋  From Event' }].map(({ v, label }) => (
-              <button key={String(v)} onClick={() => { setUseManualRoundRobinRoster(v); setRoundRobinError(''); }}
-                className="flex-1 py-2 text-xs font-bold rounded-xl transition-all"
-                style={useManualRoundRobinRoster === v
-                  ? { background: cardBg, color: accent, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }
-                  : { background: 'transparent', color: 'var(--color-text-secondary)' }}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Manual roster */}
-        {useManualRoundRobinRoster && (
-          <div className="rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${border}` }}>
-            <div className="px-4 pt-3 pb-2" style={{ background: cardBg }}>
-              <div className="text-[10px] font-black uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500 mb-2">
-                {teamsOf === 2 ? 'Players — pairs of lines become teams' : 'Players — one per line'}
-              </div>
-              <textarea rows={teamsOf === 2 ? 8 : 5} value={manualRoundRobinRosterInput}
-                onChange={(e) => { setManualRoundRobinRosterInput(e.target.value); setRoundRobinError(''); }}
-                placeholder={teamsOf === 2 ? 'Alex\nJordan\nCasey\nRiley\nTaylor\nMorgan' : 'Alex\nJordan\nCasey\nRiley'}
-                className="w-full bg-transparent text-sm dark:text-white resize-none focus:outline-none"
-                style={{ fontSize: '16px', lineHeight: 1.8, fontFamily: 'ui-monospace, monospace' }} />
-            </div>
-            {/* Live team preview */}
-            {teamsOf === 2 && (() => {
-              const names = manualRoundRobinRosterInput.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-              const teams = [];
-              for (let i = 0; i + 1 < names.length; i += 2) teams.push([names[i], names[i+1]]);
-              if (teams.length === 0) return null;
-              return (
-                <div className="px-4 py-2.5 border-t" style={{ borderColor: border, background: softBg }}>
-                  <div className="text-[10px] font-black uppercase tracking-[0.1em] mb-2" style={{ color: accent }}>
-                    {teams.length} team{teams.length !== 1 ? 's' : ''} · {teams.length * (teams.length - 1) / 2} match{teams.length * (teams.length - 1) / 2 !== 1 ? 'es' : ''}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {teams.map((team, i) => (
-                      <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold"
-                        style={{ background: `${accent}20`, color: accent, border: `1px solid ${accent}30` }}>
-                        <span style={{ opacity: 0.7 }}>{initials(team[0])}</span>
-                        <span style={{ opacity: 0.4 }}>+</span>
-                        <span style={{ opacity: 0.7 }}>{initials(team[1])}</span>
-                        <span className="font-medium" style={{ opacity: 0.8 }}>{team[0]} & {team[1]}</span>
-                      </span>
-                    ))}
-                    {names.length % 2 !== 0 && (
-                      <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
-                        ⚠️ {names[names.length - 1]} needs a partner
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
-        {/* Event picker */}
-        {!useManualRoundRobinRoster && (
-          <div className="space-y-2">
-            {(eligibleRoundRobinEvents || []).length === 0 ? (
-              <div className="rounded-2xl border px-4 py-8 text-center" style={{ borderColor: border, background: softBg }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>🏓</div>
-                <div className="text-sm font-bold text-gray-500 dark:text-gray-400">No eligible events yet</div>
-                <div className="text-xs text-gray-400 mt-1">Need at least {teamsOf * 2} players signed up</div>
-              </div>
-            ) : (
-              (eligibleRoundRobinEvents || []).map((entry) => {
-                const sel = String(entry.eventId) === String(selectedRoundRobinEventId);
-                return (
-                  <button key={entry.eventId} onClick={() => { setSelectedRoundRobinEventId(entry.eventId); setRoundRobinError(''); }}
-                    className="w-full text-left rounded-2xl px-4 py-3 transition-all active:scale-[0.98]"
-                    style={sel ? { ...btnStyle, boxShadow: `0 4px 16px ${accent}35` } : { background: cardBg, border: `1.5px solid ${border}` }}>
-                    <div className="font-bold text-sm truncate" style={{ color: sel ? btnFg : 'var(--color-text-primary)' }}>{entry.event?.title || 'Event'}</div>
-                    <div className="text-[11px] mt-0.5" style={{ color: sel ? (isLight(accent) ? '#33333388' : 'rgba(255,255,255,0.7)') : 'var(--color-text-secondary)' }}>
-                      {formatDateKeyMMDDYYYY?.(entry.event?.date || '') || entry.event?.date || ''}
-                      {entry.event?.time ? ` · ${formatTime?.(entry.event.time) || entry.event.time}` : ''}
-                      {` · ${entry.signupCount} players`}
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        )}
-
-        {roundRobinError && (
-          <div className="px-3 py-2 rounded-xl text-xs font-semibold bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50">
-            {roundRobinError}
-          </div>
-        )}
-
-        <button onClick={() => startRoundRobinTournament(tid, false, teamsOf)}
-          className="w-full py-3.5 rounded-2xl text-sm font-black tracking-wide transition-all active:scale-[0.98]"
-          style={{ ...btnStyle, boxShadow: `0 6px 20px ${accent}40`, letterSpacing: '0.04em' }}>
-          🎾 Generate Schedule
-        </button>
-      </div>
-    </div>
-  );
-
-  // ── ACTIVE TOURNAMENT ──────────────────────────────────────────────────────
-  const teamCount = Math.floor(tournament.participants.length / (tournament.teamsOf || 2));
-  const roundCount = (tournament.rounds || []).length;
-  const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
   return (
-    <div className="rounded-2xl mb-6 overflow-hidden glass-panel" style={{ border: `1.5px solid ${border}` }}>
+    <span style={{ fontFamily: '"Syne", sans-serif', fontSize: 12, fontWeight: 700, color: T.muted }}>
+      #{index + 1}
+    </span>
+  );
+}
 
-      {/* Header */}
-      <div className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)` }}>
-        {/* Court decoration */}
-        <div style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', opacity: 0.15 }}>
-          <svg width="100" height="65" viewBox="0 0 100 65" fill="none">
-            <rect x="1" y="1" width="98" height="63" rx="3" stroke="white" strokeWidth="2.5"/>
-            <line x1="50" y1="1" x2="50" y2="64" stroke="white" strokeWidth="2"/>
-            <line x1="1" y1="32" x2="99" y2="32" stroke="white" strokeWidth="2"/>
-            <line x1="18" y1="1" x2="18" y2="64" stroke="white" strokeWidth="1.5"/>
-            <line x1="82" y1="1" x2="82" y2="64" stroke="white" strokeWidth="1.5"/>
-          </svg>
-        </div>
-
-        <div className="px-5 pt-4 pb-3 flex items-start justify-between relative">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span style={{ fontSize: 20 }}>🥒</span>
-              <span className="text-lg font-black text-white tracking-tight">Round Robin</span>
-              <span className="px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wide bg-white/25 text-white">
-                {tournament.teamsOf === 2 ? 'DOUBLES' : 'SINGLES'}
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-white/75 text-[11px] font-semibold">
-              <span>{teamCount} teams</span>
-              <span style={{ opacity: 0.5 }}>·</span>
-              <span>{roundCount} rounds</span>
-              <span style={{ opacity: 0.5 }}>·</span>
-              <span>{doneCount}/{totalCount} played</span>
-            </div>
-          </div>
-          <button onClick={() => setShowRoundRobinPanel(false)} className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 transition-colors">
-            <X className="w-4 h-4 text-white" />
-          </button>
-        </div>
-
-        {/* Progress bar */}
-        <div className="px-5 pb-4">
-          <div className="h-2 rounded-full overflow-hidden bg-white/20">
-            <div className="h-full rounded-full transition-all duration-700 bg-white" style={{ width: `${pct}%` }} />
-          </div>
-          <div className="flex items-center justify-between mt-1.5">
-            <span className="text-[10px] font-bold text-white/60">{pct}% complete</span>
-            {allDone && <span className="text-[10px] font-black text-white flex items-center gap-1"><CheckCircle className="w-3 h-3" /> FINISHED</span>}
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b" style={{ borderColor: border, background: softBg }}>
-        {[{ id: 'schedule', label: '📅 Schedule' }, { id: 'standings', label: '🏆 Standings' }].map(({ id, label }) => (
-          <button key={id} onClick={() => setActiveTab(id)}
-            className="flex-1 py-3 text-xs font-black transition-all relative"
-            style={{ color: activeTab === id ? accent : 'var(--color-text-secondary)' }}>
-            {label}
-            {activeTab === id && <div className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full" style={{ background: accent }} />}
-          </button>
-        ))}
-      </div>
-
-      {/* Schedule */}
-      {activeTab === 'schedule' && (
-        <div className="p-3 space-y-2 max-h-[65vh] overflow-y-auto">
-          {(tournament.rounds || []).map((round) => {
-            const roundDone = round.matches.every((m) => m.completed);
-            const doneInRound = round.matches.filter((m) => m.completed).length;
-            const isCurrent = firstIncomplete?.index === round.index;
-            const expanded = isExpanded(round);
-
-            return (
-              <div key={round.index} className="rounded-2xl overflow-hidden transition-all"
-                style={{ border: `1.5px solid ${isCurrent ? accent + '66' : border}`, background: isCurrent ? softBg : (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.01)') }}>
-
-                <button onClick={() => toggleRound(round.index)} className="w-full flex items-center gap-3 px-4 py-3 text-left">
-                  {/* Round badge */}
-                  <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: roundDone ? `${accent}22` : isCurrent ? accent : (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') }}>
-                    {roundDone
-                      ? <CheckCircle style={{ width: 16, height: 16, color: accent }} />
-                      : <span style={{ fontSize: 13, fontWeight: 900, color: isCurrent ? btnFg : '#9ca3af' }}>{round.index + 1}</span>}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-black text-gray-800 dark:text-gray-100">Round {round.index + 1}</span>
-                      {isCurrent && !roundDone && (
-                        <span className="px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wider uppercase"
-                          style={{ background: accent, color: btnFg }}>Now Playing</span>
-                      )}
-                      {roundDone && (
-                        <span className="px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wider uppercase"
-                          style={{ background: `${accent}18`, color: accent }}>Done</span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 font-medium">
-                      {doneInRound}/{round.matches.length} matches · {round.matches.length} court{round.matches.length !== 1 ? 's' : ''}
-                    </div>
-                  </div>
-                  <CourtDot accent={isCurrent ? accent : '#9ca3af'} />
-                  {expanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
-                </button>
-
-                {/* Match cards */}
-                {expanded && (
-                  <div className="px-3 pb-3 space-y-2 border-t pt-3" style={{ borderColor: border }}>
-                    {round.matches.map((match, mi) => {
-                      const namesA = getNames(match.teamA, resolveHandleLikeLabel);
-                      const namesB = getNames(match.teamB, resolveHandleLikeLabel);
-                      const aWon = match.completed && parseInt(match.scoreA) > parseInt(match.scoreB);
-                      const bWon = match.completed && parseInt(match.scoreB) > parseInt(match.scoreA);
-
-                      return (
-                        <div key={match.id} className="rounded-xl overflow-hidden transition-all"
-                          style={{ border: `1.5px solid ${match.completed ? accent + '44' : border}`, background: match.completed ? (darkMode ? `${accent}18` : `${accent}08`) : cardBg }}>
-
-                          {/* Court label */}
-                          <div className="flex items-center justify-between px-3 pt-2 pb-1">
-                            <div className="flex items-center gap-1.5">
-                              <CourtDot accent={match.completed ? accent : '#9ca3af'} />
-                              <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: match.completed ? accent : '#9ca3af' }}>
-                                Court {mi + 1}
-                              </span>
-                            </div>
-                            <button onClick={() => { if (!match.completed) finalizeRoundRobinMatch(tid, round.index, match.id); }}
-                              disabled={match.completed}
-                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black transition-all disabled:cursor-default"
-                              style={match.completed
-                                ? { background: `${accent}20`, color: accent }
-                                : { background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: 'var(--color-text-secondary)' }}>
-                              {match.completed ? <><CheckCircle className="w-3 h-3" /> Confirmed</> : <>Confirm</>}
-                            </button>
-                          </div>
-
-                          {/* Teams + scores */}
-                          <div className="px-3 pb-3 flex items-center gap-2">
-                            {/* Team A */}
-                            <div className="flex-1 min-w-0">
-                              {namesA.map((name, i) => (
-                                <div key={i} className="text-xs font-bold truncate flex items-center gap-1"
-                                  style={{ color: aWon ? accent : 'var(--color-text-primary)' }}>
-                                  {aWon && i === 0 && <Trophy className="w-3 h-3 shrink-0" />}
-                                  {name}
-                                </div>
-                              ))}
-                            </div>
-
-                            {/* Score inputs */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <input type="number" min="0" max="99" value={match.scoreA}
-                                onChange={(e) => updateRoundRobinMatchScore(tid, round.index, match.id, 'scoreA', e.target.value)}
-                                disabled={match.completed}
-                                className="w-12 h-10 text-center font-black text-base rounded-xl border bg-white dark:bg-gray-800 dark:text-white disabled:opacity-50 disabled:cursor-default focus:outline-none focus:ring-2"
-                                style={{ borderColor: aWon ? accent : border, color: aWon ? accent : 'inherit', fontSize: '18px', fontVariantNumeric: 'tabular-nums',
-                                  boxShadow: aWon ? `0 0 0 2px ${accent}33` : 'none' }} />
-                              <span className="text-gray-300 dark:text-gray-600 font-black text-sm">—</span>
-                              <input type="number" min="0" max="99" value={match.scoreB}
-                                onChange={(e) => updateRoundRobinMatchScore(tid, round.index, match.id, 'scoreB', e.target.value)}
-                                disabled={match.completed}
-                                className="w-12 h-10 text-center font-black text-base rounded-xl border bg-white dark:bg-gray-800 dark:text-white disabled:opacity-50 disabled:cursor-default focus:outline-none focus:ring-2"
-                                style={{ borderColor: bWon ? accent : border, color: bWon ? accent : 'inherit', fontSize: '18px', fontVariantNumeric: 'tabular-nums',
-                                  boxShadow: bWon ? `0 0 0 2px ${accent}33` : 'none' }} />
-                            </div>
-
-                            {/* Team B */}
-                            <div className="flex-1 min-w-0 text-right">
-                              {namesB.map((name, i) => (
-                                <div key={i} className="text-xs font-bold truncate flex items-center justify-end gap-1"
-                                  style={{ color: bWon ? accent : 'var(--color-text-primary)' }}>
-                                  {name}
-                                  {bWon && i === 0 && <Trophy className="w-3 h-3 shrink-0" />}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Standings */}
-      {activeTab === 'standings' && (
-        <div className="p-3 space-y-2">
-          {standings.length === 0 ? (
-            <div className="py-10 text-center">
-              <div style={{ fontSize: 36, marginBottom: 8 }}>🥒</div>
-              <div className="text-sm font-bold text-gray-400">Play some matches to see standings</div>
-            </div>
-          ) : (
-            standings.map((row, idx) => {
-              const isWinner = allDone && idx === 0 && row.wins > 0;
-              const diff = row.pointsFor - row.pointsAgainst;
-              return (
-                <div key={row.id} className="flex items-center gap-3 px-3 py-3 rounded-2xl transition-all"
-                  style={{
-                    border: `1.5px solid ${isWinner ? accent + '55' : border}`,
-                    background: isWinner ? `linear-gradient(135deg, ${accent}18, ${accent}08)` : (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.01)'),
-                  }}>
-                  {/* Rank */}
-                  <div style={{ width: 30, height: 30, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: isWinner ? accent : (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') }}>
-                    {isWinner
-                      ? <span style={{ fontSize: 14 }}>🏆</span>
-                      : <span style={{ fontSize: 12, fontWeight: 900, color: '#9ca3af' }}>{idx + 1}</span>}
-                  </div>
-                  {/* Avatar */}
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 900, background: isWinner ? `${accent}25` : (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
-                    color: isWinner ? accent : '#9ca3af', border: `1.5px solid ${isWinner ? accent + '44' : 'transparent'}` }}>
-                    {initials(row.displayName)}
-                  </div>
-                  {/* Name */}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-black truncate" style={{ color: isWinner ? accent : 'var(--color-text-primary)' }}>{row.displayName}</div>
-                    <div className="text-[10px] font-semibold text-gray-400">{row.played} played</div>
-                  </div>
-                  {/* Stats */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="text-center">
-                      <div className="text-sm font-black text-emerald-500">{row.wins}</div>
-                      <div className="text-[9px] font-bold text-gray-400 uppercase">W</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm font-black text-rose-400">{row.losses}</div>
-                      <div className="text-[9px] font-bold text-gray-400 uppercase">L</div>
-                    </div>
-                    <div className="text-center min-w-[32px]">
-                      <div className={`text-sm font-black ${diff > 0 ? 'text-emerald-500' : diff < 0 ? 'text-rose-400' : 'text-gray-400'}`}>{diff > 0 ? '+' : ''}{diff}</div>
-                      <div className="text-[9px] font-bold text-gray-400 uppercase">+/-</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="px-4 py-3 flex items-center justify-between border-t" style={{ borderColor: border, background: softBg }}>
-        <button onClick={() => resetRoundRobinTournament(tid)}
-          className="flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-red-500 transition-colors">
-          <RotateCcw className="w-3.5 h-3.5" /> New Tournament
-        </button>
-        {roundRobinError && <span className="text-[11px] font-semibold text-red-500">{roundRobinError}</span>}
-      </div>
+function StatVal({ value, positive, negative, muted }) {
+  const color = positive ? T.accent : negative ? T.red : muted ? T.sub : T.text;
+  return (
+    <div style={{ textAlign: 'right', fontFamily: '"Syne", sans-serif', fontSize: 12, fontWeight: 700, color }}>
+      {value}
     </div>
   );
 }
+
+function GauntletPanel({
+  deriveGauntletStandings,
+  eligibleGauntletPopupEvents,
+  finalizeGauntletRound,
+  formatDateKeyMMDDYYYY,
+  formatTime,
+  gauntletDraftRounds,
+  gauntletError,
+  getGauntletCourtResult,
+  layerGauntlets,
+  manualGauntletEligible,
+  manualGauntletParticipants,
+  manualGauntletRosterInput,
+  resetGauntletTournament,
+  selectedGauntletEventId,
+  setGauntletDraftRounds,
+  setGauntletError,
+  setManualGauntletRosterInput,
+  setSelectedGauntletEventId,
+  setShowGauntletPanel,
+  setUseManualGauntletRoster,
+  startGauntletTournament,
+  updateGauntletCourtScore,
+  useManualGauntletRoster,
+}) {
+  const selectedEntry =
+    eligibleGauntletPopupEvents.find(
+      (entry) => String(entry?.eventId || '') === String(selectedGauntletEventId || '')
+    ) || null;
+  const selectedEvent = selectedEntry?.event || null;
+  const signups = selectedEntry?.signups || [];
+  const signupCount = signups.length;
+  const tournamentKey = useManualGauntletRoster ? '__manual__' : String(selectedGauntletEventId || '');
+  const tournament = layerGauntlets[tournamentKey] || null;
+  const tournamentStandings = deriveGauntletStandings(tournament);
+  const rounds = tournament?.rounds || [];
+  const activeRoundIndex = rounds.findIndex((round) => !round?.finalizedAt);
+  const activeRound = activeRoundIndex >= 0 ? rounds[activeRoundIndex] : null;
+
+  const participantMap = (tournament?.participants || []).reduce((acc, participant) => {
+    const id = String(participant?.id || '').trim();
+    if (!id) return acc;
+    acc[id] = participant;
+    return acc;
+  }, {});
+
+  const roundNum = Math.min(
+    activeRoundIndex >= 0 ? activeRoundIndex + 1 : rounds.length,
+    Number(tournament?.totalRounds || 1)
+  );
+  const totalRounds = Number(tournament?.totalRounds || 1);
+  const roundsVal = Math.max(1, parseInt(String(gauntletDraftRounds || '1'), 10) || 1);
+
+  const renderTeamName = (playerIds) =>
+    (playerIds || [])
+      .map((id) => participantMap[String(id || '')]?.displayName || 'Player')
+      .join(' + ');
+
+  const getTeamSlotStyle = (result, teamKey) => {
+    if (!result) return teamSlotBase;
+    const won = teamKey === 'A' ? result.scoreA > result.scoreB : result.scoreB > result.scoreA;
+    return won ? teamSlotWinner : teamSlotLoser;
+  };
+
+  return (
+    <>
+      <style>{FONT_STYLE}</style>
+      <div style={shell}>
+        <div style={heroStyle}>
+          <div style={heroBg} />
+          <div style={badge}>
+            <span style={liveDot} />
+            Tournament Suite
+          </div>
+          <h3 style={heroTitle}>
+            Pickleball <span style={{ color: T.gold }}>Gauntlet</span>
+          </h3>
+          <p style={heroSub}>
+            King-of-the-court bracket with rotating byes, court movement, and live standings.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 12 }}>
+            {tournament && (
+              <>
+                <span style={pillBase}>
+                  Round <strong style={{ color: '#fff' }}>{roundNum}/{totalRounds}</strong>
+                </span>
+                <span style={pillBase}>
+                  Players <strong style={{ color: '#fff' }}>{tournament?.participants?.length || 0}</strong>
+                </span>
+                <span
+                  style={
+                    tournament?.status === 'completed'
+                      ? { ...pillLive, border: '1px solid rgba(255,214,0,0.35)', color: T.goldText }
+                      : pillLive
+                  }
+                >
+                  {tournament?.status === 'completed' ? 'Final' : 'Live'}
+                </span>
+              </>
+            )}
+          </div>
+          <button onClick={() => setShowGauntletPanel(false)} style={closeBtn} aria-label="Close">
+            <X style={{ width: 14, height: 14 }} />
+          </button>
+        </div>
+
+        <div style={infoBar}>
+          Bracket is saved on-device for the active layer. When player count is not divisible by 4,
+          byes rotate automatically and do not count as wins or losses.
+        </div>
+
+        <div style={{ padding: 14 }}>
+          <div style={segRow}>
+            <button
+              style={useManualGauntletRoster ? segBtnActive : segBtnBase}
+              onClick={() => {
+                setUseManualGauntletRoster(true);
+                setGauntletError('');
+              }}
+            >
+              Manual Names
+            </button>
+            <button
+              style={!useManualGauntletRoster ? segBtnActive : segBtnBase}
+              onClick={() => {
+                setUseManualGauntletRoster(false);
+                setGauntletError('');
+              }}
+            >
+              Popup Signups
+            </button>
+          </div>
+
+          <div style={formGrid}>
+            <div>
+              <label style={fieldLabel}>
+                {useManualGauntletRoster ? 'Player Names' : 'Popup Event'}
+              </label>
+              {useManualGauntletRoster ? (
+                <textarea
+                  value={manualGauntletRosterInput}
+                  onChange={(e) => setManualGauntletRosterInput(e.target.value)}
+                  placeholder="Enter one player per line"
+                  rows={4}
+                  style={{ ...inputBase, resize: 'none', minHeight: 104 }}
+                />
+              ) : (
+                <select
+                  value={selectedGauntletEventId}
+                  onChange={(e) => {
+                    setSelectedGauntletEventId(e.target.value);
+                    setGauntletError('');
+                  }}
+                  style={{ ...inputBase, minHeight: 44 }}
+                >
+                  {eligibleGauntletPopupEvents.length === 0 ? (
+                    <option value="">No popup events yet</option>
+                  ) : (
+                    eligibleGauntletPopupEvents.map((entry) => (
+                      <option key={entry.eventId} value={entry.eventId}>
+                        {entry.event?.title || 'Popup event'} - {entry.signupCount} joined
+                        {entry.eligible ? '' : ' - needs 4+'}
+                      </option>
+                    ))
+                  )}
+                </select>
+              )}
+            </div>
+
+            <div style={stepper}>
+              <div style={stepperTop}>Games</div>
+              <div style={{ display: 'flex', alignItems: 'center', padding: '2px 4px 6px' }}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setGauntletDraftRounds((prev) =>
+                      String(Math.max(1, (parseInt(String(prev || '1'), 10) || 1) - 1))
+                    )
+                  }
+                  style={stepBtnStyle}
+                  aria-label="Decrease games"
+                >
+                  <ChevronLeft style={{ width: 16, height: 16 }} />
+                </button>
+                <div style={stepVal}>{roundsVal}</div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setGauntletDraftRounds((prev) =>
+                      String(Math.min(99, (parseInt(String(prev || '1'), 10) || 1) + 1))
+                    )
+                  }
+                  style={stepBtnStyle}
+                  aria-label="Increase games"
+                >
+                  <ChevronRight style={{ width: 16, height: 16 }} />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label style={fieldLabel}>Action</label>
+              <button
+                onClick={() => startGauntletTournament(selectedGauntletEventId, Boolean(tournament))}
+                disabled={useManualGauntletRoster ? !manualGauntletEligible : !selectedEntry?.eligible}
+                style={{
+                  ...startBtnStyle,
+                  opacity: useManualGauntletRoster ? (manualGauntletEligible ? 1 : 0.45) : (selectedEntry?.eligible ? 1 : 0.45),
+                  cursor: useManualGauntletRoster ? (manualGauntletEligible ? 'pointer' : 'not-allowed') : (selectedEntry?.eligible ? 'pointer' : 'not-allowed'),
+                }}
+              >
+                {tournament ? 'Restart' : 'Start'}
+              </button>
+            </div>
+          </div>
+
+          {useManualGauntletRoster ? (
+            <div style={rosterCard}>
+              <div style={rosterHeader}>
+                <div style={rosterTitleStyle}>Manual Roster</div>
+                <span style={rosterCountBadge}>{manualGauntletParticipants.length} entered</span>
+              </div>
+              <div style={{ fontSize: 12, color: T.sub, marginTop: 6 }}>
+                {manualGauntletParticipants.length} players entered
+                {manualGauntletEligible
+                  ? ` - ${Math.floor(manualGauntletParticipants.length / 4)} active court${Math.floor(manualGauntletParticipants.length / 4) === 1 ? '' : 's'}${manualGauntletParticipants.length % 4 ? ` + ${manualGauntletParticipants.length % 4} bye${manualGauntletParticipants.length % 4 === 1 ? '' : 's'}` : ''}`
+                  : ' - needs at least 4 names'}
+              </div>
+              {manualGauntletParticipants.length > 0 && (
+                <div style={{ fontSize: 11, color: T.muted, marginTop: 8, lineHeight: 1.6 }}>
+                  {manualGauntletParticipants.map((row) => row.displayName).join(', ')}
+                </div>
+              )}
+            </div>
+          ) : selectedEvent ? (
+            <div style={rosterCard}>
+              <div style={rosterHeader}>
+                <div style={rosterTitleStyle}>{selectedEvent.title}</div>
+                <span style={rosterCountBadge}>{signupCount} joined</span>
+              </div>
+              <div style={{ fontSize: 12, color: T.sub, marginTop: 6 }}>
+                {formatDateKeyMMDDYYYY(selectedEvent.dateKey || selectedEvent.date)}
+                {selectedEvent.time ? ` at ${formatTime(selectedEvent.time)}` : ''}
+                {selectedEvent.location ? ` - ${selectedEvent.location}` : ''}
+              </div>
+              <div style={{ fontSize: 12, color: T.sub, marginTop: 6 }}>
+                {signupCount} players joined
+                {selectedEntry?.eligible
+                  ? ` - ${Math.floor(signupCount / 4)} active court${Math.floor(signupCount / 4) === 1 ? '' : 's'}${signupCount % 4 ? ` + ${signupCount % 4} bye${signupCount % 4 === 1 ? '' : 's'}` : ''}`
+                  : ' - needs at least 4 players'}
+              </div>
+              {signups.length > 0 && (
+                <div style={{ fontSize: 11, color: T.muted, marginTop: 8, lineHeight: 1.6 }}>
+                  {signups.map((row) => row.displayName || 'Member').join(', ')}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {gauntletError && <p style={{ marginTop: 12, fontSize: 12, color: T.red }}>{gauntletError}</p>}
+
+          {!tournament ? (
+            <div style={emptyState}>
+              {useManualGauntletRoster
+                ? 'Enter player names above and start the gauntlet.'
+                : eligibleGauntletPopupEvents.length === 0
+                  ? 'Create a popup event and have players join it first.'
+                  : 'Choose an eligible popup event and start the gauntlet.'}
+            </div>
+          ) : (
+            <div style={{ marginTop: 14 }}>
+              <div style={roundBar}>
+                <div style={roundLabel}>
+                  Round {roundNum} of {totalRounds} - {tournament.status === 'completed' ? 'Completed' : 'In Progress'}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {activeRound && (
+                    <button onClick={() => finalizeGauntletRound(tournamentKey)} style={actionPrimary}>
+                      Finalize Round
+                    </button>
+                  )}
+                  <button onClick={() => resetGauntletTournament(tournamentKey)} style={actionSecondary}>
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              {activeRound && Array.isArray(activeRound.byeIds) && activeRound.byeIds.length > 0 && (
+                <div style={byeCardStyle}>
+                  <div style={{ ...roundLabel, color: '#ff96aa', marginBottom: 4 }}>Bye This Round</div>
+                  <div style={{ fontSize: 13, color: T.text }}>
+                    {activeRound.byeIds.map((playerId) => participantMap[String(playerId || '')]?.displayName || 'Player').join(', ')}
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 11, color: 'rgba(255,150,170,0.8)' }}>
+                    Bye rounds are neutral and do not add a win or loss.
+                  </div>
+                </div>
+              )}
+
+              {activeRound && (
+                <div style={courtsGrid}>
+                  {(activeRound.courts || []).map((court) => {
+                    const result = getGauntletCourtResult(court);
+                    return (
+                      <div key={`gauntlet-court-${court.courtNumber}`} style={courtCard}>
+                        <div style={courtHeader}>
+                          <div style={courtNameStyle}>Court {court.courtNumber}</div>
+                          <span style={result ? courtStatusLocked : courtStatusBase}>
+                            {result ? 'Result Locked' : 'Match'}
+                          </span>
+                        </div>
+
+                        <div style={getTeamSlotStyle(result, 'A')}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={teamTag}>Team A</div>
+                            {result && result.scoreA > result.scoreB && (
+                              <span style={{ ...teamTag, color: T.accent, marginBottom: 0 }}>Winner</span>
+                            )}
+                          </div>
+                          <div style={teamNameText}>{renderTeamName(court.teamA)}</div>
+                        </div>
+
+                        <div style={getTeamSlotStyle(result, 'B')}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={teamTag}>Team B</div>
+                            {result && result.scoreB > result.scoreA && (
+                              <span style={{ ...teamTag, color: T.accent, marginBottom: 0 }}>Winner</span>
+                            )}
+                          </div>
+                          <div style={teamNameText}>{renderTeamName(court.teamB)}</div>
+                        </div>
+
+                        <div style={scoreRow}>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={court.scoreA}
+                            disabled={Boolean(activeRound.finalizedAt)}
+                            onChange={(e) =>
+                              updateGauntletCourtScore(
+                                tournamentKey,
+                                activeRoundIndex,
+                                court.courtNumber,
+                                'scoreA',
+                                e.target.value
+                              )
+                            }
+                            style={scoreInput}
+                            placeholder="0"
+                          />
+                          <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', color: T.muted, textTransform: 'uppercase' }}>
+                            vs
+                          </div>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={court.scoreB}
+                            disabled={Boolean(activeRound.finalizedAt)}
+                            onChange={(e) =>
+                              updateGauntletCourtScore(
+                                tournamentKey,
+                                activeRoundIndex,
+                                court.courtNumber,
+                                'scoreB',
+                                e.target.value
+                              )
+                            }
+                            style={scoreInput}
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gap: 10 }}>
+                <div style={cardOuter}>
+                  <div style={cardHeaderStyle}>Standings</div>
+                  {tournamentStandings.length > 0 && (
+                    <div style={standingsCols}>
+                      <div>Place</div>
+                      <div>Player</div>
+                      <div style={{ textAlign: 'right' }}>Win%</div>
+                      <div style={{ textAlign: 'right' }}>W-L</div>
+                      <div style={{ textAlign: 'right' }}>Bye</div>
+                      <div style={{ textAlign: 'right' }}>Diff</div>
+                    </div>
+                  )}
+                  {tournamentStandings.length === 0 ? (
+                    <div style={emptyState}>Finalize a round to generate standings.</div>
+                  ) : (
+                    tournamentStandings.map((row, index) => (
+                      <div key={`standing-${row.id}`} style={standingRowStyle}>
+                        <div>
+                          <RankBadge index={index} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {row.name}
+                          </div>
+                          <div style={{ fontSize: 10.5, color: T.muted }}>
+                            PF {row.pointsFor} - PA {row.pointsAgainst}
+                          </div>
+                        </div>
+                        <StatVal value={(Number(row.winPct || 0) * 100).toFixed(0)} />
+                        <StatVal value={`${row.wins}-${row.losses}`} />
+                        <StatVal value={row.byes || 0} muted />
+                        <StatVal
+                          value={row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
+                          positive={row.pointDiff > 0}
+                          negative={row.pointDiff < 0}
+                        />
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div style={cardOuter}>
+                  <div style={cardHeaderStyle}>Round History</div>
+                  <div style={{ padding: 10, display: 'grid', gap: 8 }}>
+                    {rounds.map((round) => (
+                      <div key={`round-history-${round.index}`} style={historyCard}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: T.text, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                          Round {round.index} {round.finalizedAt ? '- final' : '- current'}
+                        </div>
+                        {Array.isArray(round?.byeIds) && round.byeIds.length > 0 && (
+                          <div style={{ marginTop: 4, fontSize: 11, color: '#ff96aa' }}>
+                            Bye: {round.byeIds.map((playerId) => participantMap[String(playerId || '')]?.displayName || 'Player').join(', ')}
+                          </div>
+                        )}
+                        <div style={{ marginTop: 5, display: 'grid', gap: 4 }}>
+                          {(round.courts || []).map((court) => (
+                            <div key={`round-${round.index}-court-${court.courtNumber}`} style={{ fontSize: 11, color: T.sub }}>
+                              Court {court.courtNumber}: {renderTeamName(court.teamA)} {court.scoreA === '' || court.scoreB === '' ? 'vs' : `${court.scoreA}-${court.scoreB}`} {renderTeamName(court.teamB)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default GauntletPanel;
