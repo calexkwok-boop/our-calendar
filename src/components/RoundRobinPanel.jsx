@@ -219,50 +219,110 @@ export default function RoundRobinPanel({
         </div>
 
         {/* Manual roster */}
-        {useManualRoundRobinRoster && (
-          <div className="rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${border}` }}>
-            <div className="px-4 pt-3 pb-2" style={{ background: cardBg }}>
-              <div className="text-[10px] font-black uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500 mb-2">
-                {teamsOf === 2 ? 'Players — pairs of lines become teams' : 'Players — one per line'}
-              </div>
-              <textarea rows={teamsOf === 2 ? 8 : 5} value={manualRoundRobinRosterInput}
-                onChange={(e) => { setManualRoundRobinRosterInput(e.target.value); setRoundRobinError(''); }}
-                placeholder={teamsOf === 2 ? 'Alex\nJordan\nCasey\nRiley\nTaylor\nMorgan' : 'Alex\nJordan\nCasey\nRiley'}
-                className="w-full bg-transparent text-sm dark:text-white resize-none focus:outline-none"
-                style={{ fontSize: '16px', lineHeight: 1.8, fontFamily: 'ui-monospace, monospace' }} />
-            </div>
-            {/* Live team preview */}
-            {teamsOf === 2 && (() => {
-              const names = manualRoundRobinRosterInput.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-              const teams = [];
-              for (let i = 0; i + 1 < names.length; i += 2) teams.push([names[i], names[i+1]]);
-              if (teams.length === 0) return null;
-              return (
-                <div className="px-4 py-2.5 border-t" style={{ borderColor: border, background: softBg }}>
-                  <div className="text-[10px] font-black uppercase tracking-[0.1em] mb-2" style={{ color: accent }}>
-                    {teams.length} team{teams.length !== 1 ? 's' : ''} · {teams.length * (teams.length - 1) / 2} match{teams.length * (teams.length - 1) / 2 !== 1 ? 'es' : ''}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {teams.map((team, i) => (
-                      <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold"
-                        style={{ background: `${accent}20`, color: accent, border: `1px solid ${accent}30` }}>
-                        <span style={{ opacity: 0.7 }}>{initials(team[0])}</span>
-                        <span style={{ opacity: 0.4 }}>+</span>
-                        <span style={{ opacity: 0.7 }}>{initials(team[1])}</span>
-                        <span className="font-medium" style={{ opacity: 0.8 }}>{team[0]} & {team[1]}</span>
-                      </span>
-                    ))}
-                    {names.length % 2 !== 0 && (
-                      <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
-                        ⚠️ {names[names.length - 1]} needs a partner
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
+{useManualRoundRobinRoster && (
+  <div className="rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${border}` }}>
+    <div className="px-4 pt-4 pb-3" style={{ background: cardBg }}>
+      <div className="flex items-center gap-2 mb-3">
+        <div style={{ width: 28, height: 28, borderRadius: 8, background: `${accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
+          {teamsOf === 2 ? '👥' : '🏃'}
+        </div>
+        <div>
+          <div className="text-xs font-black tracking-tight text-gray-800 dark:text-gray-100">
+            {teamsOf === 2 ? 'Enter players in pairs' : 'Enter players'}
           </div>
-        )}
+          <div className="text-[10px] font-semibold text-gray-400">
+            {teamsOf === 2 ? 'Each pair of lines = one team' : 'One name per line'}
+          </div>
+        </div>
+      </div>
+
+      {/* Individual name inputs */}
+      <div className="space-y-1.5">
+        {(() => {
+          const lines = manualRoundRobinRosterInput.split('\n');
+          const rows = Math.max(teamsOf === 2 ? 6 : 4, lines.length + 1);
+          return Array.from({ length: rows }).map((_, i) => {
+            const val = lines[i] || '';
+            const isTeamStart = teamsOf === 2 && i % 2 === 0;
+            const teamNum = teamsOf === 2 ? Math.floor(i / 2) + 1 : null;
+            const isFirstOfPair = teamsOf === 2 && i % 2 === 0;
+            const isSecondOfPair = teamsOf === 2 && i % 2 === 1;
+            return (
+              <div key={i} className="flex items-center gap-2">
+                {/* Team / player badge */}
+                <div style={{ width: 24, height: 24, borderRadius: 7, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: val ? `${accent}22` : (darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'),
+                  fontSize: 10, fontWeight: 900, color: val ? accent : '#9ca3af' }}>
+                  {teamsOf === 2
+                    ? (isFirstOfPair ? `${teamNum}A` : `${teamNum}B`)
+                    : `${i + 1}`}
+                </div>
+                <input
+                  type="text"
+                  value={val}
+                  onChange={(e) => {
+                    const newLines = [...lines];
+                    newLines[i] = e.target.value;
+                    // trim trailing empty lines but keep at least rows count
+                    while (newLines.length > 1 && newLines[newLines.length - 1] === '') newLines.pop();
+                    setManualRoundRobinRosterInput(newLines.join('\n'));
+                    setRoundRobinError('');
+                  }}
+                  placeholder={teamsOf === 2
+                    ? (isFirstOfPair ? `Player ${i + 1} name` : `Player ${i + 1} name`)
+                    : `Player ${i + 1} name`}
+                  className="flex-1 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    fontSize: '16px',
+                    background: val ? (darkMode ? `${accent}18` : `${accent}0c`) : (darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                    border: `1.5px solid ${val ? accent + '44' : border}`,
+                    color: 'var(--color-text-primary)',
+                    boxShadow: val ? `0 0 0 0px ${accent}22` : 'none',
+                  }}
+                />
+                {/* Connector line between pairs */}
+                {teamsOf === 2 && isSecondOfPair && i < rows - 1 && (
+                  <div style={{ position: 'absolute', left: 28, width: 2, height: 6, background: `${accent}30`, marginTop: 28 }} />
+                )}
+              </div>
+            );
+          });
+        })()}
+      </div>
+    </div>
+
+    {/* Live team preview */}
+    {teamsOf === 2 && (() => {
+      const names = manualRoundRobinRosterInput.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      const teams = [];
+      for (let i = 0; i + 1 < names.length; i += 2) teams.push([names[i], names[i+1]]);
+      if (teams.length === 0) return null;
+      return (
+        <div className="px-4 py-3 border-t" style={{ borderColor: border, background: softBg }}>
+          <div className="text-[10px] font-black uppercase tracking-[0.1em] mb-2" style={{ color: accent }}>
+            {teams.length} team{teams.length !== 1 ? 's' : ''} · {teams.length * (teams.length - 1) / 2} match{teams.length * (teams.length - 1) / 2 !== 1 ? 'es' : ''}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {teams.map((team, i) => (
+              <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold"
+                style={{ background: `${accent}18`, color: accent, border: `1.5px solid ${accent}30` }}>
+                <span style={{ fontWeight: 900, fontSize: 10 }}>{initials(team[0])}</span>
+                <span style={{ opacity: 0.4 }}>+</span>
+                <span style={{ fontWeight: 900, fontSize: 10 }}>{initials(team[1])}</span>
+                <span className="opacity-80">{team[0]} & {team[1]}</span>
+              </span>
+            ))}
+            {names.length % 2 !== 0 && (
+              <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">
+                ⚠️ {names[names.length - 1]} needs a partner
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    })()}
+  </div>
+)}
 
         {/* Event picker */}
         {!useManualRoundRobinRoster && (
