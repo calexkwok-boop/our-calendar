@@ -17765,7 +17765,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               >
                 <div className="w-3 h-3 rounded-full shrink-0" style={{ background: rowTheme.accent }} />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">{layer.title || 'Untitled'}</div>
+                  <div className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">{layer.name || 'Untitled'}</div>
                   {layer.is_public && <div className="text-[10px] text-gray-400">Public</div>}
                 </div>
                 {isActive && <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: rowTheme.accent }} />}
