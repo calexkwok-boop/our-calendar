@@ -590,16 +590,34 @@ export default function PopupEventPanel({
     if (!id || !supabase) return;
     setLoading(true);
     try {
-      const [{ data: ev }, { data: mems }] = await Promise.all([
+      const [{ data: ev }, { data: mems }, { data: signups, error: signupsErr }] = await Promise.all([
         supabase.from('popup_event_details').select('*').eq('id', id).single(),
         supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at'),
+        supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
       ]);
+      console.log('loadEvent', { ev, mems, signups, signupsErr });
       if (ev) setEvent(ev);
       else if (eventMetaFallback) setEvent(eventMetaFallback);
-      if (mems) setMembers(mems);
+      // Merge popup_event_members + popup_event_signups, dedupe by user_id
+      const memberList = [...(mems || [])];
+      const memberUserIds = new Set(memberList.map(m => String(m.user_id || '')));
+      (signups || []).forEach(s => {
+        const uid = String(s.user_id || '');
+        if (!uid || memberUserIds.has(uid)) return;
+        memberUserIds.add(uid);
+        memberList.push({
+          id: `signup-${s.user_id}`,
+          event_id: id,
+          user_id: s.user_id,
+          display_name: s.display_name || 'Player',
+          role: 'player',
+          joined_at: s.created_at,
+        });
+      });
+      setMembers(memberList);
     } catch {}
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, eventMetaFallback]);
 
   useEffect(() => { if (initialEventId) loadEvent(initialEventId); }, [initialEventId, loadEvent]);
 
@@ -607,6 +625,7 @@ export default function PopupEventPanel({
     if (!event?.id || !supabase) return;
     const channel = supabase.channel(`popup-members-${event.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id))
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, [event?.id, supabase, loadEvent]);
