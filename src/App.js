@@ -15144,7 +15144,14 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: Boolean(widgetCardOpenById.import), disabled: Boolean(activeSubCalendar) };
     if (id === 'roundrobin') return {
   label: 'Round Robin',
-  icon: <span className="text-sm leading-none">🏓</span>,
+  icon: <span className="text-sm leading-none"><button 
+  type="button" 
+  className="flex items-center text-sm sm:text-base font-semibold max-w-[75vw] truncate cursor-default" 
+  style={{ color: 'rgb(0, 220, 21)', fontSize: '12px', lineHeight: '1.1' }}
+>
+  <PickleballIcon /> 
+  <span>Fresno Pickleball</span>
+</button></span>,
   active: Boolean(widgetCardOpenById.roundrobin),
   disabled: false,
 };
