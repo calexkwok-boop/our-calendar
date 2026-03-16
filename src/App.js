@@ -9,24 +9,6 @@ import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
 import PopupEventPanel from "./components/PopupEventPanel";
 
-const PickleballIcon = ({ size = 18, color = "rgb(0, 220, 21)" }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill={color} // The ball is now a solid 'Glyph'
-    style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}
-  >
-    {/* Solid Ball with Holes (Holes use the background color for visibility) */}
-    <circle cx="12" cy="12" r="10" />
-    
-    {/* Clean, Visible Perforations (Holes 1, 2, and 3) */}
-    <circle cx="9" cy="9.5" r="1.5" fill="white" />
-    <circle cx="15" cy="9.5" r="1.5" fill="white" />
-    <circle cx="12" cy="15.5" r="1.5" fill="white" />
-  </svg>
-);
-
 // Initialize Supabase
 const supabase = createClient(
 process.env.REACT_APP_SUPABASE_URL,
@@ -15146,7 +15128,7 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     if (id === 'list') return { label: 'List', icon: <Tag className="w-4 h-4" />, active: Boolean(widgetCardOpenById.list), disabled: false };
     if (id === 'notes') return { label: 'Notes', icon: <span className="text-sm leading-none">📝</span>, active: Boolean(widgetCardOpenById.notes), disabled: false };
     if (id === 'expenses') return { label: 'Expenses', icon: <span className="text-sm leading-none">💸</span>, active: Boolean(widgetCardOpenById.expenses), disabled: false };
-    if (id === 'gauntlet') return { label: 'Bracket', icon: <span className="text-sm leading-none">🥒</span>, active: Boolean(widgetCardOpenById.gauntlet), disabled: false };
+    if (id === 'gauntlet') return { label: 'Pickleball Bracket', icon: <span className="text-sm leading-none">🏆</span>, active: Boolean(widgetCardOpenById.gauntlet), disabled: false };
     if (id === 'chat') return {
       label: 'Chat',
       icon: <MessageSquare className="w-4 h-4" />,
@@ -15162,7 +15144,7 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: Boolean(widgetCardOpenById.import), disabled: Boolean(activeSubCalendar) };
     if (id === 'roundrobin') return {
   label: 'Pickleball Round Robin',
-  icon: <PickleballIcon />,
+  icon: <span className="text-sm leading-none">🥇</span>,
   active: Boolean(widgetCardOpenById.roundrobin),
   disabled: false,
 };
