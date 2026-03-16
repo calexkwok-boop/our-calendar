@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
@@ -1219,7 +1219,7 @@ function App() {
     const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
     window.open(googleUrl, '_blank', 'noopener,noreferrer');
   };
-}
+
   // -- Sub-calendar functions ----------------------------------------------
 
   const loadSubCalendars = async () => {
@@ -1291,7 +1291,7 @@ function App() {
           memberRows = memberTrips || [];
         }
       }
-      
+
       const mergedRows = Array.from(new Map([...(directRows || []), ...legacyRows, ...memberRows].map(sc => [String(sc.id), sc])).values());
       const layerScopedRows = mergedRows.filter(sc => String(sc?.layer_id || '') === requestedLayerId);
 
@@ -2898,7 +2898,6 @@ function App() {
   const [layerExpenses, setLayerExpenses] = useState([]);
   const [newLayerExpense, setNewLayerExpense] = useState({ payer: '', description: '', amount: '' });
   const [expenseTrackerError, setExpenseTrackerError] = useState('');
-  const [selectedPopupEventPanelId, setSelectedPopupEventPanelId] = useState(null);
   const [showGauntletPanel, setShowGauntletPanel] = useState(false);
   const [selectedGauntletEventId, setSelectedGauntletEventId] = useState('');
   const [gauntletDraftRounds, setGauntletDraftRounds] = useState('4');
@@ -2909,6 +2908,7 @@ function App() {
   const [showRoundRobinPanel, setShowRoundRobinPanel] = useState(false);
   const [selectedRoundRobinEventId, setSelectedRoundRobinEventId] = useState('');
   const [layerRoundRobins, setLayerRoundRobins] = useState({});
+  const [selectedPopupEventPanelId, setSelectedPopupEventPanelId] = useState(null);
   const [manualRoundRobinRosterInput, setManualRoundRobinRosterInput] = useState(
     'Alex\nPearl\nJustin\nNgan\nMatt\nHelen\nGilbert\nElizabeth'
     );
@@ -13115,30 +13115,30 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         created_by_name: currentUser || user?.email || user?.phone || 'Member',
         created_at: new Date().toISOString(),
       })));
-    
-     for (const eventId of createdEventIds) {
-    const eventDate = pendingEvent.datesToAdd.find((_, i) => createdEventIds[i] === eventId);
-    const dateKey = eventDate ? getDateKey(eventDate) : '';
-    supabase.from('popup_event_details').insert({
-      id: eventId,
-      calendar_id: activeLayerId,
-      created_by: user.id,
-      title: pendingEvent.title,
-      date: dateKey,
-      time: pendingEvent.isMultiDay ? null : (time || null),
-      max_players: maxPeople,
-      is_public: !isPrivate,
-      status: 'open',
-    }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
 
-    supabase.from('popup_event_members').insert({
-      event_id: eventId,
-      user_id: user.id,
-      display_name: currentUser || user?.email || 'Host',
-      role: 'host',
-    }).then(() => {});
-  }
-}
+      for (const eventId of createdEventIds) {
+        const eventDate = pendingEvent.datesToAdd.find((_, i) => createdEventIds[i] === eventId);
+        const dateKey = eventDate ? getDateKey(eventDate) : '';
+        supabase.from('popup_event_details').insert({
+          id: eventId,
+          calendar_id: activeLayerId,
+          created_by: user.id,
+          title: pendingEvent.title,
+          date: dateKey,
+          time: pendingEvent.isMultiDay ? null : (time || null),
+          max_players: maxPeople,
+          is_public: !isPrivate,
+          status: 'open',
+        }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
+
+        supabase.from('popup_event_members').insert({
+          event_id: eventId,
+          user_id: user.id,
+          display_name: currentUser || user?.email || 'Host',
+          role: 'host',
+        }).then(() => {});
+      }
+    }
     setSelectedDates([]);
     setRecurrence('once');
     setSuggestedTime('');
@@ -13970,6 +13970,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       x: Math.max(minX, Math.min(maxX, nextX)),
       y: Math.max(minY, Math.min(maxY, nextY)),
     };
+  }
 
   useEffect(() => {
     if (!headerModulePrefsReady) return undefined;
@@ -14274,7 +14275,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             }
           }
           if (!collided) break;
-          
+        }
         nextX = clampAndSnapCenterPercent(nextX, currentSize, rect.width, xStep);
         nextY = clampAndSnapCenterPercent(nextY, currentSize, rect.height, yStep);
         setCoverWidgetLayout((prev) => ({
@@ -14323,7 +14324,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     });
     setAuthBusy(false);
     if (error) setAuthError(error.message);
-  }
+  };
 
   if (showAuth) {
     return (
@@ -17848,7 +17849,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     displayName={currentUser || user?.email || 'Player'}
     initialEventId={selectedPopupEventPanelId}
     onClose={() => setSelectedPopupEventPanelId(null)}
-    onEventCreated={(ev) => console.log('popup created', ev)}
     formatTime={formatTime}
     formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
     resolveHandleLikeLabel={resolveHandleLikeLabel}
@@ -17864,7 +17864,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       setShowGauntletPanel(true);
       setSelectedPopupEventPanelId(null);
     }}
- /> )}
+  />
+)}
+
         {showCategoryEditor && (
           <div className="glass-panel rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -18599,13 +18601,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       key={event.id}
                       className={`relative rounded-2xl overflow-hidden border border-white/50 shadow-lg transition-all hover:-translate-y-0.5 ${event.isVirtualAnnual ? 'border-dashed' : ''}`}
                       style={eventCardStyle}
-                       onClick={() => {
-      if (effectiveCategoryKey === 'popup_event') {
-        setSelectedPopupEventPanelId(String(event.id || ''));
-      }
-    }}
+                      onClick={() => {
+                        if (effectiveCategoryKey === 'popup_event') {
+                          setSelectedPopupEventPanelId(String(event.id || ''));
+                        }
+                      }}
                     >
-                      
                       <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ background: categoryGlass.accent }} />
                       <div className="pl-4 pr-3 py-3">
                       {event.isPrivate && (
@@ -21763,6 +21764,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       `}</style>
     </>
   );
+}
 
 function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
   const [input, setInput] = React.useState(value || '');
@@ -21858,7 +21860,7 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
       )}
     </div>
   );
-}} 
+}
 
 const shakeStyle = `
 @keyframes wiggle {
@@ -21875,3 +21877,4 @@ const shakeStyle = `
 `;
 
 export default App;
+
