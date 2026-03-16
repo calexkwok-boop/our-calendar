@@ -7,6 +7,7 @@ import { getMessagingIfSupported } from "./firebase";
 import GauntletPanel from "./components/GauntletPanel";
 import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
+import PopupEventPanel from "./components/PopupEventPanel";
 
 // Initialize Supabase
 const supabase = createClient(
@@ -2897,6 +2898,7 @@ function App() {
   const [layerExpenses, setLayerExpenses] = useState([]);
   const [newLayerExpense, setNewLayerExpense] = useState({ payer: '', description: '', amount: '' });
   const [expenseTrackerError, setExpenseTrackerError] = useState('');
+  const [selectedPopupEventPanelId, setSelectedPopupEventPanelId] = useState(null);
   const [showGauntletPanel, setShowGauntletPanel] = useState(false);
   const [selectedGauntletEventId, setSelectedGauntletEventId] = useState('');
   const [gauntletDraftRounds, setGauntletDraftRounds] = useState('4');
@@ -13114,6 +13116,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         created_at: new Date().toISOString(),
       })));
     }
+     for (const eventId of createdEventIds) {
+    const eventDate = pendingEvent.datesToAdd.find((_, i) => createdEventIds[i] === eventId);
+    const dateKey = eventDate ? getDateKey(eventDate) : '';
+    supabase.from('popup_event_details').insert({
+      id: eventId,
+      calendar_id: activeLayerId,
+      created_by: user.id,
+      title: pendingEvent.title,
+      date: dateKey,
+      time: pendingEvent.isMultiDay ? null : (time || null),
+      max_players: maxPeople,
+      is_public: !isPrivate,
+      status: 'open',
+    }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
+
+    supabase.from('popup_event_members').insert({
+      event_id: eventId,
+      user_id: user.id,
+      display_name: currentUser || user?.email || 'Host',
+      role: 'host',
+    }).then(() => {});
+  }
+}
     setSelectedDates([]);
     setRecurrence('once');
     setSuggestedTime('');
@@ -17814,7 +17839,34 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     resolveHandleLikeLabel={resolveHandleLikeLabel}
   />
 )}
-
+{selectedPopupEventPanelId && (
+  <PopupEventPanel
+    activeLayerPageTheme={activeLayerPageTheme}
+    darkMode={darkMode}
+    supabase={supabase}
+    user={user}
+    calendarId={activeLayerId}
+    displayName={currentUser || user?.email || 'Player'}
+    initialEventId={selectedPopupEventPanelId}
+    onClose={() => setSelectedPopupEventPanelId(null)}
+    onEventCreated={(ev) => console.log('popup created', ev)}
+    formatTime={formatTime}
+    formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
+    resolveHandleLikeLabel={resolveHandleLikeLabel}
+    onLaunchRoundRobin={(ev, mems) => {
+      setManualRoundRobinRosterInput(mems.map((m) => m.display_name).join('\n'));
+      setUseManualRoundRobinRoster(true);
+      setShowRoundRobinPanel(true);
+      setSelectedPopupEventPanelId(null);
+    }}
+    onLaunchGauntlet={(ev, mems) => {
+      setManualGauntletRosterInput(mems.map((m) => m.display_name).join('\n'));
+      setUseManualGauntletRoster(true);
+      setShowGauntletPanel(true);
+      setSelectedPopupEventPanelId(null);
+    }}
+  />
+)}
         {showCategoryEditor && (
           <div className="glass-panel rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -18549,7 +18601,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       key={event.id}
                       className={`relative rounded-2xl overflow-hidden border border-white/50 shadow-lg transition-all hover:-translate-y-0.5 ${event.isVirtualAnnual ? 'border-dashed' : ''}`}
                       style={eventCardStyle}
+                       onClick={() => {
+      if (effectiveCategoryKey === 'popup_event') {
+        setSelectedPopupEventPanelId(String(event.id || ''));
+      }
+    }}
                     >
+                      
                       <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ background: categoryGlass.accent }} />
                       <div className="pl-4 pr-3 py-3">
                       {event.isPrivate && (
@@ -21707,7 +21765,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       `}</style>
     </>
   );
-}
 
 function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
   const [input, setInput] = React.useState(value || '');
