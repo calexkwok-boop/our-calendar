@@ -9,22 +9,21 @@ import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
 import PopupEventPanel from "./components/PopupEventPanel";
 
-const PickleballIcon = ({ size = 16, color = "rgb(0, 220, 21)" }) => (
+const PickleballIcon = ({ size = 18, color = "rgb(0, 220, 21)" }) => (
   <svg 
     width={size} 
     height={size} 
     viewBox="0 0 24 24" 
-    fill="none" 
-    stroke={color} 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round"
+    fill={color} // The ball is now a solid 'Glyph'
     style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}
   >
-    <path d="M5 10c0-3.5 2.5-6 6-6s6 2.5 6 6c0 3-2 5.5-5 6l-1 4h-2l-1-4c-3-.5-5-3-5-6z" />
-    <circle cx="18" cy="18" r="3" />
-    <circle cx="17.5" cy="17.5" r="0.4" fill={color} />
-    <circle cx="18.5" cy="18.5" r="0.4" fill={color} />
+    {/* Solid Ball with Holes (Holes use the background color for visibility) */}
+    <circle cx="12" cy="12" r="10" />
+    
+    {/* Clean, Visible Perforations (Holes 1, 2, and 3) */}
+    <circle cx="9" cy="9.5" r="1.5" fill="white" />
+    <circle cx="15" cy="9.5" r="1.5" fill="white" />
+    <circle cx="12" cy="15.5" r="1.5" fill="white" />
   </svg>
 );
 
