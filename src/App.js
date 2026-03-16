@@ -18602,7 +18602,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       className={`relative rounded-2xl overflow-hidden border border-white/50 shadow-lg transition-all hover:-translate-y-0.5 ${event.isVirtualAnnual ? 'border-dashed' : ''}`}
                       style={eventCardStyle}
                       onClick={() => {
+                        console.log('card clicked', event.id, event.category, effectiveCategoryKey, popupMeta);
                         if (effectiveCategoryKey === 'popup_event' || event.category === 'popup_event') {
+                          console.log('opening popup panel for', event.id);
                           setSelectedPopupEventPanelId(String(event.id || ''));
                         }
                       }}
