@@ -15745,7 +15745,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         if (!canEditActiveLayerTitle) return;
                         openTitleStyleModal();
                       }}
-                      className={`text-sm sm:text-base font-semibold text-right max-w-[75vw] truncate ${canEditActiveLayerTitle ? 'cursor-grab active:cursor-grabbing hover:opacity-80' : 'cursor-default'}`}
+                      className={`text-sm sm:text-base font-semibold text-left max-w-[75vw] truncate ${canEditActiveLayerTitle ? 'cursor-grab active:cursor-grabbing hover:opacity-80' : 'cursor-default'}`}
                       style={activeLayerTitleNameTextStyle}
                     >
                       {calendarTitle}
@@ -15899,11 +15899,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             <div className="relative shrink-0 pointer-events-auto flex flex-col items-end gap-1">
               {activeLayerTitleVisible ? (
-                <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate pointer-events-none" style={activeLayerTitleNameTextStyle}>
+                <h2 className="text-sm sm:text-base font-semibold text-left max-w-[65vw] truncate pointer-events-none" style={activeLayerTitleNameTextStyle}>
                   {calendarTitle}
                 </h2>
               ) : null}
-              <div className="text-xs sm:text-sm font-semibold text-right pointer-events-none" style={activeLayerMonthYearTextStyle}>
+              <div className="text-xs sm:text-sm font-semibold text-left pointer-events-none" style={activeLayerMonthYearTextStyle}>
                 {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </div>
               <div className="flex justify-end pointer-events-auto">
