@@ -1291,7 +1291,7 @@ function App() {
           memberRows = memberTrips || [];
         }
       }
-      }
+      
       const mergedRows = Array.from(new Map([...(directRows || []), ...legacyRows, ...memberRows].map(sc => [String(sc.id), sc])).values());
       const layerScopedRows = mergedRows.filter(sc => String(sc?.layer_id || '') === requestedLayerId);
 
