@@ -9,6 +9,25 @@ import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
 import PopupEventPanel from "./components/PopupEventPanel";
 
+const PickleballIcon = ({ size = 16, color = "rgb(0, 220, 21)" }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke={color} 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}
+  >
+    <path d="M5 10c0-3.5 2.5-6 6-6s6 2.5 6 6c0 3-2 5.5-5 6l-1 4h-2l-1-4c-3-.5-5-3-5-6z" />
+    <circle cx="18" cy="18" r="3" />
+    <circle cx="17.5" cy="17.5" r="0.4" fill={color} />
+    <circle cx="18.5" cy="18.5" r="0.4" fill={color} />
+  </svg>
+);
+
 // Initialize Supabase
 const supabase = createClient(
 process.env.REACT_APP_SUPABASE_URL,
@@ -15143,15 +15162,8 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     if (id === 'scan') return { label: isScanningReminder ? 'Scanning' : 'Scan', icon: <Camera className="w-4 h-4" />, active: Boolean(widgetCardOpenById.scan), disabled: isScanningReminder };
     if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: Boolean(widgetCardOpenById.import), disabled: Boolean(activeSubCalendar) };
     if (id === 'roundrobin') return {
-  label: 'Round Robin',
-  icon: <span className="text-sm leading-none"><button 
-  type="button" 
-  className="flex items-center text-sm sm:text-base font-semibold max-w-[75vw] truncate cursor-default" 
-  style={{ color: 'rgb(0, 220, 21)', fontSize: '12px', lineHeight: '1.1' }}
->
-  <PickleballIcon /> 
-  <span>Fresno Pickleball</span>
-</button></span>,
+  label: 'Pickleball Round Robin',
+  icon: <PickleballIcon />,
   active: Boolean(widgetCardOpenById.roundrobin),
   disabled: false,
 };
