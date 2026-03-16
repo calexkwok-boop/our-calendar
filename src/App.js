@@ -17856,6 +17856,22 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         calendarId={activeLayerId}
         displayName={currentUser || user?.email || 'Player'}
         initialEventId={selectedPopupEventPanelId}
+        eventMetaFallback={(() => {
+          const meta = popupEventsByEventId[selectedPopupEventPanelId];
+          const evObj = Object.values(events || {}).flat().find(e => String(e.id) === selectedPopupEventPanelId);
+          if (!meta || !evObj) return null;
+          return {
+            id: selectedPopupEventPanelId,
+            calendar_id: activeLayerId,
+            created_by: meta.createdByUserId,
+            title: evObj.title,
+            date: evObj.date,
+            time: evObj.time,
+            max_players: meta.maxPeople,
+            is_public: true,
+            status: 'open',
+          };
+        })()}
         onClose={() => setSelectedPopupEventPanelId(null)}
         formatTime={formatTime}
         formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}

@@ -559,6 +559,7 @@ export default function PopupEventPanel({
   activeLayerPageTheme, darkMode,
   supabase, user, calendarId, displayName,
   initialEventId,
+  eventMetaFallback,
   onClose, onEventCreated,
   formatTime, formatDateKeyMMDDYYYY, resolveHandleLikeLabel,
   onLaunchRoundRobin, onLaunchGauntlet,
@@ -594,6 +595,7 @@ export default function PopupEventPanel({
         supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at'),
       ]);
       if (ev) setEvent(ev);
+      else if (eventMetaFallback) setEvent(eventMetaFallback);
       if (mems) setMembers(mems);
     } catch {}
     setLoading(false);
