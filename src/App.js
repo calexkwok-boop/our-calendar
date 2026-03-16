@@ -2906,6 +2906,7 @@ function App() {
   const [selectedRoundRobinEventId, setSelectedRoundRobinEventId] = useState('');
   const [layerRoundRobins, setLayerRoundRobins] = useState({});
   const [selectedPopupEventPanelId, setSelectedPopupEventPanelId] = useState(null);
+  const [showCalendarSwitcher, setShowCalendarSwitcher] = useState(false);
   const [manualRoundRobinRosterInput, setManualRoundRobinRosterInput] = useState(
     'Alex\nPearl\nJustin\nNgan\nMatt\nHelen\nGilbert\nElizabeth'
     );
@@ -10577,7 +10578,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         setBottomNavTab('home');
         setShowNotificationSettings(false);
       } else {
-        setBottomNavTab('active');
+        setBottomNavTab('events');
         setShowNotificationSettings(false);
       }
 
@@ -15128,7 +15129,7 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     if (id === 'list') return { label: 'List', icon: <Tag className="w-4 h-4" />, active: Boolean(widgetCardOpenById.list), disabled: false };
     if (id === 'notes') return { label: 'Notes', icon: <span className="text-sm leading-none">📝</span>, active: Boolean(widgetCardOpenById.notes), disabled: false };
     if (id === 'expenses') return { label: 'Expenses', icon: <span className="text-sm leading-none">💸</span>, active: Boolean(widgetCardOpenById.expenses), disabled: false };
-    if (id === 'gauntlet') return { label: 'Pickleball Bracket', icon: <span className="text-sm leading-none">🏆</span>, active: Boolean(widgetCardOpenById.gauntlet), disabled: false };
+    if (id === 'gauntlet') return { label: 'Bracket', icon: <span className="text-sm leading-none">🥒</span>, active: Boolean(widgetCardOpenById.gauntlet), disabled: false };
     if (id === 'chat') return {
       label: 'Chat',
       icon: <MessageSquare className="w-4 h-4" />,
@@ -15139,12 +15140,12 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     if (id === 'weather') return { label: 'Weather', icon: <span className="text-sm leading-none">🌤️</span>, active: showWeather, disabled: false };
     if (id === 'categories') return { label: 'Categories', icon: <Settings className="w-4 h-4" />, active: Boolean(widgetCardOpenById.categories), disabled: false };
     if (id === 'theme') return { label: darkMode ? 'Light' : 'Dark', icon: darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />, active: false, disabled: false };
-    if (id === 'ai') return { label: 'AI', icon: <span className="w-4 h-4 flex items-center justify-center text-[14px]">🤖</span>, active: Boolean(widgetCardOpenById.ai), disabled: false };
+    if (id === 'ai') return { label: 'AI', icon: <MessageSquare className="w-4 h-4" />, active: Boolean(widgetCardOpenById.ai), disabled: false };
     if (id === 'scan') return { label: isScanningReminder ? 'Scanning' : 'Scan', icon: <Camera className="w-4 h-4" />, active: Boolean(widgetCardOpenById.scan), disabled: isScanningReminder };
     if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: Boolean(widgetCardOpenById.import), disabled: Boolean(activeSubCalendar) };
     if (id === 'roundrobin') return {
-  label: 'Pickleball Round Robin',
-  icon: <span className="text-sm leading-none">🥇</span>,
+  label: 'Round Robin',
+  icon: <span className="text-sm leading-none">🏓</span>,
   active: Boolean(widgetCardOpenById.roundrobin),
   disabled: false,
 };
@@ -15639,9 +15640,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowSharePanel((prev) => !prev);
+                      setShowCalendarSwitcher((prev) => !prev);
                     }}
-                    title="Account & sharing"
+                    title="Calendars & account"
                   >
                     {activeLayer?.icon_url ? (
                       <img
@@ -17731,6 +17732,72 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     resolveHandleLikeLabel={resolveHandleLikeLabel}
   />
 )}
+{showCalendarSwitcher && (
+  <div
+    className="fixed inset-0 z-50 bg-black/50 flex items-start justify-start p-4 pt-16 sm:pt-20"
+    onClick={() => setShowCalendarSwitcher(false)}
+  >
+    <div
+      className="w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden"
+      style={{ background: darkMode ? '#1f2937' : '#fff' }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Calendar switcher section */}
+      <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Your Calendars</h3>
+          <button
+            onClick={() => { setShowCalendarSwitcher(false); setShowAddLayerModal?.(true); }}
+            className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+            style={themeAccentButtonStyle}
+          >+ New</button>
+        </div>
+        <div className="space-y-1 max-h-48 overflow-y-auto">
+          {uniqueVisibleLayers.map(layer => {
+            const isActive = String(layer.id) === String(activeLayerId);
+            const rowTheme = normalizeLayerPageTheme(layer?.page_theme, layer?.title_style);
+            return (
+              <button
+                key={layer.id}
+                onClick={() => { setActiveLayerId(layer.id); setShowCalendarSwitcher(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
+                style={isActive ? { background: `${rowTheme.accent}18`, border: `1.5px solid ${rowTheme.accent}40` } : { border: '1.5px solid transparent' }}
+              >
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: rowTheme.accent }} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">{layer.title || 'Untitled'}</div>
+                  {layer.is_public && <div className="text-[10px] text-gray-400">Public</div>}
+                </div>
+                {isActive && <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: rowTheme.accent }} />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Account section */}
+      <div className="p-4">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Account</h3>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 flex items-center justify-center text-white font-bold text-sm shrink-0">
+            {String(currentUser || user?.email || '?')[0].toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{currentUser || 'No username set'}</div>
+            <div className="text-xs text-gray-400 truncate">{user?.email || user?.phone || ''}</div>
+          </div>
+        </div>
+        <button
+          onClick={() => { setShowCalendarSwitcher(false); setShowSharePanel(true); }}
+          className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+        >
+          ⚙️ Account settings & sharing
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 {selectedPopupEventPanelId && (
   <div
     className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
@@ -18795,387 +18862,58 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           {bottomNavTab !== 'home' && (
           <div className="glass-panel rounded-2xl border border-white/50 dark:border-gray-700/70 p-4 sm:p-6">
 
-            {bottomNavTab === 'active' && (
+            {bottomNavTab === 'events' && (
               <>
-                <div className="mb-4">
-                  <h3 className="text-lg sm:text-xl font-semibold mb-3" style={themeAccentHeadingStyle}>Calendars</h3>
-                  {layers.length === 0 ? (
-                    <div className="text-sm text-gray-500 dark:text-gray-400">No calendars found.</div>
-                  ) : (
-                    <div className="space-y-4">
-                      {[
-                        { key: 'private', label: 'Private Calendars', items: orderedPrivateLayerCalendars },
-                        { key: 'public', label: 'Public Calendars', items: orderedPublicLayerCalendars },
-                      ].map((group) => {
-                        const groupIds = group.items.map((layer) => String(layer?.id || ''));
-                        return (
-                          <div key={group.key}>
-                            <h4 className="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">
-                              {group.label}
-                            </h4>
-                            {group.items.length === 0 ? (
-                              <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/45 rounded-xl px-3 py-2">
-                                No {group.key} calendars yet.
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                {group.items.map(layer => {
-                                  const isActiveLayer = String(layer.id) === String(activeLayerId);
-                                  const isOwnedLayer = String(layer?.owner_id) === String(user?.id);
-                                  const isPublicLayer = Boolean(layer?.is_public);
-                                  const rowTheme = normalizeLayerPageTheme(layer?.page_theme, layer?.title_style);
-                                  const rowAccentBorder = mixHexColors(rowTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.35 : 0.62);
-                                  const rowSoftBg = mixHexColors(rowTheme.accent, darkMode ? '#111827' : '#ffffff', darkMode ? 0.72 : 0.84);
-                                  const canDeleteLayer = isOwnedLayer && layers.length > 1;
-                                  const canLeaveLayer = !isOwnedLayer;
-                                  const canSwipeLayerAction = canDeleteLayer || canLeaveLayer;
-                                  const layerRowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
-                                  const isLayerActionRevealed = layerRowOffset < 0;
-                                  return (
-                                    <div
-                                      key={layer.id}
-                                      className="relative rounded-xl overflow-hidden"
-                                      onDragOver={(e) => e.preventDefault()}
-                                      onDrop={(e) => {
-                                        e.preventDefault();
-                                        handleDropActiveCalendar(String(layer.id), groupIds);
-                                      }}
-                                    >
-                                      {canSwipeLayerAction && (
-                                        <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${
-                                          isLayerActionRevealed
-                                            ? (canDeleteLayer ? 'bg-red-500' : 'bg-amber-500')
-                                            : 'bg-transparent'
-                                        }`}>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              if (canDeleteLayer) deleteLayerCalendar(layer.id);
-                                              else if (canLeaveLayer) leaveSharedLayerCalendar(layer.id);
-                                            }}
-                                            className={`w-full h-full text-sm font-semibold transition-opacity ${isLayerActionRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
-                                          >
-                                            {canDeleteLayer ? 'Delete' : 'Leave'}
-                                          </button>
-                                        </div>
-                                      )}
-                                      <button
-                                        draggable
-                                        onDragStart={(e) => {
-                                          try {
-                                            e.dataTransfer.setData('text/plain', String(layer.id));
-                                            e.dataTransfer.effectAllowed = 'move';
-                                          } catch {}
-                                          setDraggingActiveCalendarId(String(layer.id));
-                                        }}
-                                        onDragEnd={() => setDraggingActiveCalendarId(null)}
-                                        onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canSwipeLayerAction)}
-                                        onTouchMove={handleLayerSwipeMove}
-                                        onTouchEnd={handleLayerSwipeEnd}
-                                        onTouchCancel={handleLayerSwipeEnd}
-                                        onClick={() => {
-                                          setActiveLayerId(layer.id);
-                                          if (user?.id) localStorage.setItem(`active-layer-${user.id}`, layer.id);
-                                          setBottomNavTab('home');
-                                          setShowDateDetailModal(false);
-                                        }}
-                                        className={`relative z-10 w-full text-left p-3 rounded-xl border transition-all ${
-                                          isActiveLayer
-                                            ? 'shadow-sm'
-                                            : 'border-gray-200 dark:border-gray-700 bg-white/85 dark:bg-gray-900/55'
-                                        }`}
-                                        style={{
-                                          transform: `translateX(${layerRowOffset}px)`,
-                                          transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease',
-                                          ...(isActiveLayer
-                                            ? { borderColor: rowAccentBorder, backgroundColor: rowSoftBg }
-                                            : {}),
-                                        }}
-                                      >
-                                        <div className="flex items-center justify-between gap-2">
-                                          <div className="min-w-0">
-                                            <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{layer.name || 'Calendar'}</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                              {isOwnedLayer
-                                                ? 'Owned by you'
-                                                : `Shared by ${sharedOwnerLabels[String(layer?.owner_id || '')] || fallbackOwnerLabel(layer?.owner_id)}`}
-                                            </div>
-                                            {isOwnedLayer && (
-                                              <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                                                {isPublicLayer ? 'Public in Explore' : 'Private calendar'}
-                                              </div>
-                                            )}
-                                          </div>
-                                          <div className="flex items-center gap-2 shrink-0">
-                                            <span
-                                              onClick={(e) => e.stopPropagation()}
-                                              title="Drag to reorder"
-                                              className="inline-flex select-none cursor-grab active:cursor-grabbing items-center justify-center px-1 py-0.5 rounded text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                                            >
-                                              ⋮⋮
-                                            </span>
-                                            {isActiveLayer && (
-                                              <span
-                                                className="text-[10px] font-semibold px-2 py-1 rounded-full"
-                                                style={{
-                                                  backgroundColor: rowTheme.accent,
-                                                  color: isLightHexColor(rowTheme.accent) ? '#111111' : '#ffffff',
-                                                }}
-                                              >
-                                                Active
-                                              </span>
-                                            )}
-                                            {isOwnedLayer && (
-                                              <button
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  openPublishLayerModal(layer);
-                                                }}
-                                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
-                                                  isPublicLayer
-                                                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
-                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                                }`}
-                                                title={isPublicLayer ? 'Edit public settings' : 'Publish to Explore'}
-                                              >
-                                                {isPublicLayer ? 'Edit Public' : 'Publish'}
-                                              </button>
-                                            )}
-                                            {canDeleteLayer && (
-                                              <button
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  deleteLayerCalendar(layer.id);
-                                                }}
-                                                className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 text-xs font-medium"
-                                                title="Delete calendar"
-                                              >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                                Delete
-                                              </button>
-                                            )}
-                                            {canLeaveLayer && (
-                                              <button
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  leaveSharedLayerCalendar(layer.id);
-                                                }}
-                                                className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-xs font-medium"
-                                                title="Leave shared calendar"
-                                              >
-                                                Leave
-                                              </button>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Pop-up Events</h3>
                   <button
-                    onClick={() => setShowLayerModal(true)}
-                    className="mt-3 w-full px-3 py-2 rounded-lg text-white text-sm font-semibold hover:shadow-lg transition-all"
+                    onClick={() => { setIsPopupEventDraft(true); setBottomNavTab('home'); setShowAddEventModal(true); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
                     style={themeAccentButtonStyle}
                   >
-                    + New Calendar
+                    <Plus className="w-3.5 h-3.5" /> New Event
                   </button>
                 </div>
-
-                <div>
-                  <h4 className="text-xs uppercase tracking-wide font-semibold text-green-600 dark:text-green-400 mb-2">Upcoming Itineraries</h4>
-                  {orderedUpcomingTrips.length === 0 ? (
-                    <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming itineraries yet.</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {orderedUpcomingTrips.map(sc => {
-                      const canDelete = sc.owner_id === user?.id;
-                      const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
-                      const isDeleteRevealed = rowOffset < 0;
-                      return (
-                        <div
-                          key={sc.id}
-                          className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-green-200 dark:ring-green-700"
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            handleDropUpcomingTrip(String(sc.id));
-                          }}
-                        >
-                          {canDelete && (
-                            <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
-                              <button
-                                onClick={() => deleteSubCalendar(sc.id)}
-                                className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
-                          <div
-                            draggable
-                            onDragStart={(e) => {
-                              try {
-                                e.dataTransfer.setData('text/plain', String(sc.id));
-                                e.dataTransfer.effectAllowed = 'move';
-                              } catch {}
-                              setDraggingUpcomingTripId(String(sc.id));
-                            }}
-                            onDragEnd={() => setDraggingUpcomingTripId(null)}
-                            onTouchStart={(e) => handleTripSwipeStart(e, sc.id, canDelete)}
-                            onTouchMove={handleTripSwipeMove}
-                            onTouchEnd={handleTripSwipeEnd}
-                            onTouchCancel={handleTripSwipeEnd}
-                            className="relative z-10 flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/45 dark:to-emerald-950/35"
-                            style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
-                          >
-                            <div className="min-w-0">
-                              <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
-                              </div>
-                            </div>
-                            <div className="ml-3 flex items-center gap-2 shrink-0">
-                              <span
-                                title="Drag to reorder"
-                                className="inline-flex select-none cursor-grab active:cursor-grabbing items-center justify-center px-1 py-0.5 rounded text-green-500/80 dark:text-green-300/80 hover:text-green-700 dark:hover:text-green-200"
-                              >
-                                ⋮⋮
-                              </span>
-                              <button
-                                onClick={() => openSubCalendar(sc)}
-                                className="px-3 py-1.5 text-xs rounded-lg bg-green-500 hover:bg-green-600 text-white"
-                              >
-                                Open
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                      })}
-                    </div>
-                  )}
-                </div>
-                <div className="mt-5">
-                  <h4 className="text-xs uppercase tracking-wide font-semibold text-rose-600 dark:text-rose-400 mb-2">Upcoming Pop-up Events</h4>
-                  {orderedUpcomingPopupEvents.length === 0 ? (
-                    <div className="text-sm text-gray-500 dark:text-gray-400">No upcoming pop-up events yet.</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {orderedUpcomingPopupEvents.slice(0, 8).map((event) => {
-                        const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
-                        const signups = popupSignupsByEventId[String(event.id || '')] || [];
-                        const joinedCount = signups.length;
-                        const noMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
-                        const maxLabel = noMax ? 'No max' : `${Number(popupMeta?.maxPeople || 0)} max`;
-                        return (
-                          <div
-                            key={`upcoming-popup-${event.id}`}
-                            className="rounded-xl p-3 ring-1 ring-inset ring-rose-200 dark:ring-rose-700 bg-rose-50/70 dark:bg-rose-900/20"
-                            draggable
-                            onDragStart={(e) => {
-                              try {
-                                e.dataTransfer.setData('text/plain', String(event.id || ''));
-                                e.dataTransfer.effectAllowed = 'move';
-                              } catch {}
-                              setDraggingUpcomingPopupId(String(event.id || ''));
-                            }}
-                            onDragEnd={() => setDraggingUpcomingPopupId(null)}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              handleDropUpcomingPopup(String(event.id || ''));
-                            }}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">📌 {event.title}</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
-                                  {formatDateKeyMMDDYYYY(event.date || event.dateKey)}{event.time ? ` at ${formatTime(event.time)}` : ''}
-                                </div>
-                                {event.location && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">📍 {event.location}</div>
-                                )}
-                                <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                                  {joinedCount} joined · {maxLabel}
-                                </div>
-                              </div>
-                              <div className="shrink-0 ml-2 flex items-center gap-2">
-                                <span
-                                  title="Drag to reorder"
-                                  className="inline-flex select-none cursor-grab active:cursor-grabbing items-center justify-center px-1 py-0.5 rounded text-rose-500/80 dark:text-rose-300/80 hover:text-rose-700 dark:hover:text-rose-200"
-                                >
-                                  ⋮⋮
-                                </span>
-                                <button
-                                  onClick={() => focusOnPopupEventDate(event.id, event.date || event.dateKey)}
-                                  className="px-3 py-1.5 text-xs rounded-lg bg-rose-500 hover:bg-rose-600 text-white"
-                                >
-                                  Open
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {bottomNavTab === 'archived' && (
-              <>
-                <h3 className="text-lg sm:text-xl font-semibold mb-3" style={themeAccentHeadingStyle}>Archived Trips</h3>
-                {archivedTrips.length === 0 ? (
-                  <div className="text-sm text-gray-500 dark:text-gray-400">No archived trips yet.</div>
+                {upcomingPopupEvents.length === 0 ? (
+                  <div className="text-center py-10">
+                    <div className="text-4xl mb-3">🎾</div>
+                    <div className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">No upcoming pop-up events</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500">Tap "New Event" to create one</div>
+                  </div>
                 ) : (
                   <div className="space-y-2">
-                    {archivedTrips.map(sc => {
-                      const canDelete = sc.owner_id === user?.id;
-                      const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
-                      const isDeleteRevealed = rowOffset < 0;
+                    {upcomingPopupEvents.map(event => {
+                      const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                      const signups = popupSignupsByEventId[String(event.id || '')] || [];
+                      const maxPeople = popupMeta ? Number(popupMeta.maxPeople || 0) : 0;
+                      const spotsLeft = maxPeople - signups.length;
+                      const isFull = maxPeople > 0 && spotsLeft <= 0;
+                      const joined = signups.some(s => String(s.userId || '') === String(user?.id || ''));
                       return (
-                          <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-gray-200 dark:ring-gray-700">
-                          {canDelete && (
-                            <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
-                              <button
-                                onClick={() => deleteSubCalendar(sc.id)}
-                                className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
-                          <div
-                            onTouchStart={(e) => handleTripSwipeStart(e, sc.id, canDelete)}
-                            onTouchMove={handleTripSwipeMove}
-                            onTouchEnd={handleTripSwipeEnd}
-                            onTouchCancel={handleTripSwipeEnd}
-                            className="relative z-10 flex items-center justify-between p-3 bg-white/85 dark:bg-gray-800/65"
-                            style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
-                          >
+                        <button
+                          key={event.id}
+                          onClick={() => setSelectedPopupEventPanelId(String(event.id || ''))}
+                          className="w-full text-left rounded-2xl p-3 sm:p-4 border transition-all hover:-translate-y-0.5 hover:shadow-md"
+                          style={{ background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', borderColor: `${activeLayerPageTheme.accent}30` }}
+                        >
+                          <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <div className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">{sc.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {formatTripDate(getSubCalStartRaw(sc))} - {formatTripDate(getSubCalEndRaw(sc), true)}
+                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{event.title}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {formatDateKeyMMDDYYYY ? formatDateKeyMMDDYYYY(event.date || event.dateKey) : (event.date || event.dateKey)}
+                                {event.time ? ` · ${formatTime ? formatTime(event.time) : event.time}` : ''}
                               </div>
                             </div>
-                             <button
-                               onClick={() => openSubCalendar(sc)}
-                               className="ml-3 px-3 py-1.5 text-xs rounded-lg text-white hover:shadow-lg transition-all"
-                               style={themeAccentButtonStyle}
-                             >
-                               Open
-                             </button>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${joined ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : isFull ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}`}>
+                                {joined ? '✓ Joined' : isFull ? 'Full' : 'Open'}
+                              </span>
+                              {maxPeople > 0 && (
+                                <span className="text-[10px] text-gray-400 dark:text-gray-500">{signups.length}/{maxPeople} players</span>
+                              )}
+                            </div>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -19183,7 +18921,107 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </>
             )}
 
-            {bottomNavTab === 'explore' && (
+            {bottomNavTab === 'trips' && (
+              <>
+                <h3 className="text-lg sm:text-xl font-semibold mb-4" style={themeAccentHeadingStyle}>Trips</h3>
+
+                {/* Active Trips */}
+                {activeTrips.length > 0 && (
+                  <div className="mb-5">
+                    <h4 className="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">🟢 Active Now</h4>
+                    <div className="space-y-2">
+                      {activeTrips.map(sc => {
+                        const canDelete = sc.owner_id === user?.id;
+                        const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
+                        const isDeleteRevealed = rowOffset < 0;
+                        return (
+                          <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-gray-200 dark:ring-gray-700">
+                          {canDelete && (
+                            <div className="absolute right-0 top-0 bottom-0 w-[88px] flex items-center justify-center bg-red-500">
+                              <button onClick={() => handleDeleteSubCalendar(sc.id)} className="text-white text-xs font-semibold px-3 py-2">Delete</button>
+                            </div>
+                          )}
+                          <div
+                            className="relative bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                            style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 0.2s' }}
+                            onPointerDown={(e) => startTripSwipeDrag(e, sc.id)}
+                            onPointerMove={moveTripSwipeDrag}
+                            onPointerUp={endTripSwipeDrag}
+                            onPointerCancel={endTripSwipeDrag}
+                            onClick={() => { setActiveSubCalendar(sc); setBottomNavTab('home'); }}
+                          >
+                            <div className="min-w-0">
+                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} – {getSubCalEndRaw(sc)}</div>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                          </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Upcoming Trips */}
+                {upcomingTrips.length > 0 && (
+                  <div className="mb-5">
+                    <h4 className="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">📅 Upcoming</h4>
+                    <div className="space-y-2">
+                      {upcomingTrips.map(sc => {
+                        const canDelete = sc.owner_id === user?.id;
+                        const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
+                        return (
+                          <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-gray-200 dark:ring-gray-700">
+                          {canDelete && (
+                            <div className="absolute right-0 top-0 bottom-0 w-[88px] flex items-center justify-center bg-red-500">
+                              <button onClick={() => handleDeleteSubCalendar(sc.id)} className="text-white text-xs font-semibold px-3 py-2">Delete</button>
+                            </div>
+                          )}
+                          <div
+                            className="relative bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                            style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 0.2s' }}
+                            onPointerDown={(e) => startTripSwipeDrag(e, sc.id)}
+                            onPointerMove={moveTripSwipeDrag}
+                            onPointerUp={endTripSwipeDrag}
+                            onPointerCancel={endTripSwipeDrag}
+                            onClick={() => { setActiveSubCalendar(sc); setBottomNavTab('home'); }}
+                          >
+                            <div className="min-w-0">
+                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} – {getSubCalEndRaw(sc)}</div>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                          </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Archived Trips */}
+                <div>
+                  {(activeTrips.length > 0 || upcomingTrips.length > 0) && (
+                    <h4 className="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">🗂 Past</h4>
+                  )}
+                  {archivedTrips.length === 0 && activeTrips.length === 0 && upcomingTrips.length === 0 ? (
+                    <div className="text-center py-10">
+                      <div className="text-4xl mb-3">🧳</div>
+                      <div className="text-sm font-semibold text-gray-500 dark:text-gray-400">No trips yet</div>
+                    </div>
+                  ) : archivedTrips.length === 0 ? (
+                    <div className="text-xs text-gray-400 dark:text-gray-500">No past trips.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {bottomNavTab === 'explore' && (            {bottomNavTab === 'explore' && (
               <>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Explore Calendars</h3>
@@ -19470,40 +19308,28 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
           <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
             <button
-              onClick={() => {
-                setBottomNavTab('home');
-                setShowDateDetailModal(false);
-              }}
+              onClick={() => { setBottomNavTab('home'); setShowDateDetailModal(false); }}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'home' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
               style={bottomNavTab === 'home' ? bottomNavActiveTabStyle : undefined}
             >
               Home
             </button>
             <button
-              onClick={() => {
-                setBottomNavTab('active');
-                setShowDateDetailModal(false);
-              }}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'active' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-              style={bottomNavTab === 'active' ? bottomNavActiveTabStyle : undefined}
+              onClick={() => { setBottomNavTab('events'); setShowDateDetailModal(false); }}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'events' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              style={bottomNavTab === 'events' ? bottomNavActiveTabStyle : undefined}
             >
-              Active
+              Events
             </button>
             <button
-              onClick={() => {
-                setBottomNavTab('archived');
-                setShowDateDetailModal(false);
-              }}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'archived' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-              style={bottomNavTab === 'archived' ? bottomNavActiveTabStyle : undefined}
+              onClick={() => { setBottomNavTab('trips'); setShowDateDetailModal(false); }}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'trips' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              style={bottomNavTab === 'trips' ? bottomNavActiveTabStyle : undefined}
             >
-              Archived
+              Trips
             </button>
             <button
-              onClick={() => {
-                setBottomNavTab('explore');
-                setShowDateDetailModal(false);
-              }}
+              onClick={() => { setBottomNavTab('explore'); setShowDateDetailModal(false); }}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'explore' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
               style={bottomNavTab === 'explore' ? bottomNavActiveTabStyle : undefined}
             >
