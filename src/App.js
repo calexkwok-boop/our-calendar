@@ -15611,58 +15611,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       <div className="relative max-w-6xl mx-auto">
         <div
           ref={widgetOverlayRef}
-          className="absolute inset-x-0 top-0 z-30 pointer-events-none"
-          style={{ height: 'calc(100vh - 6.75rem)' }}
-        >
-          {bottomNavTab === 'home' && coverHeaderControlsVisible && !hasOpenWidgetWindow && activeControlWidgets.map((widgetId) => {
-            const meta = getControlWidgetMeta(widgetId);
-            const layout = coverWidgetLayout?.[widgetId] || { x: 50, y: 18, size: WIDGET_DEFAULT_SIZE };
-            const size = Math.max(WIDGET_MIN_SIZE, Math.min(WIDGET_MAX_SIZE, Number(layout?.size || WIDGET_DEFAULT_SIZE)));
-            return (
-              <div
-                key={`cover-widget-global-${widgetId}`}
-                className="absolute pointer-events-auto"
-                style={{
-                  left: `${Math.max(2, Math.min(98, Number(layout?.x || 50)))}%`,
-                  top: `${Math.max(2, Math.min(98, Number(layout?.y || 18)))}%`,
-                  width: `${size}px`,
-                  height: `${size}px`,
-                  transform: 'translate(-50%, -50%)',
-                  touchAction: 'none',
-                  userSelect: 'none',
-                }}
-              >
-                <button
-                  onClick={() => {
-                    if (wasRecentCoverWidgetDrag(widgetId)) return;
-                    handleControlWidgetClick(widgetId);
-                  }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    bumpCoverControlsInteraction();
-                    startCoverWidgetPointerAction(e, widgetId, 'move');
-                  }}
-                  className={`relative w-full h-full rounded-xl border transition-all ${
-                    meta.active
-                      ? 'shadow-sm border-transparent'
-                      : (isCoverTapToRevealMode ? hiddenModeInactiveWidgetClassName : visibleModeInactiveWidgetClassName)
-                  } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  style={meta.active ? themeAccentButtonStyle : undefined}
-                  title={meta.label}
-                  disabled={meta.disabled}
-                >
-                  <span className="flex items-center justify-center">{meta.icon}</span>
-                  {meta.badge ? (
-                    <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
-                      {meta.badge}
-                    </span>
-                  ) : null}
-                </button>
-              </div>
-            );
-          })}
-        </div>
+          className="hidden"
+        />
         <div
           ref={layerHeaderCardRef}
           className="glass-panel rounded-2xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[165px] sm:min-h-[205px] lg:min-h-[285px] relative"
@@ -15737,23 +15687,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   style={activeLayerMonthYearTextStyle}
                 >
                   {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </button>
-              </div>
-
-              {/* + Add widgets button — bottom right */}
-              <div className="absolute bottom-3 right-3 pointer-events-auto">
-                <button
-                  ref={(el) => { headerModuleNodeRefs.current.add = el; }}
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setShowControlWidgetAddPanel(true); }}
-                  className={`shrink-0 w-[3.7rem] h-6 px-1 py-0 rounded-lg text-[10px] font-semibold whitespace-nowrap leading-none inline-flex items-center justify-center border transition-all ${
-                    showControlWidgetAddPanel
-                      ? 'bg-white/60 dark:bg-gray-700/55 text-gray-800 dark:text-gray-100 border-white/55 dark:border-gray-500/70 shadow-sm backdrop-blur-sm'
-                      : 'bg-white/40 dark:bg-gray-700/40 text-gray-700 dark:text-gray-200 border-white/45 dark:border-gray-600/70 backdrop-blur-sm'
-                  }`}
-                  title="Add widgets"
-                >
-                  + Add
                 </button>
               </div>
 
@@ -19496,6 +19429,47 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {!activeSubCalendar && (
       <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <div className="max-w-6xl mx-auto">
+
+          {/* Widget toolbar — shown on home tab */}
+          {bottomNavTab === 'home' && activeControlWidgets.length > 0 && (
+            <div className="flex items-center gap-1.5 mb-1.5 px-1 overflow-x-auto">
+              {activeControlWidgets.map((widgetId) => {
+                const meta = getControlWidgetMeta(widgetId);
+                return (
+                  <button
+                    key={`toolbar-${widgetId}`}
+                    onClick={() => handleControlWidgetClick(widgetId)}
+                    disabled={meta.disabled}
+                    title={meta.label}
+                    className={`relative shrink-0 flex flex-col items-center justify-center gap-0.5 w-12 h-12 rounded-xl border text-xs font-medium transition-all ${
+                      meta.active
+                        ? 'border-transparent text-white shadow-sm'
+                        : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 backdrop-blur-sm'
+                    } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    style={meta.active ? themeAccentButtonStyle : undefined}
+                  >
+                    <span className="flex items-center justify-center">{meta.icon}</span>
+                    <span className="text-[9px] leading-none truncate max-w-[44px]">{meta.label}</span>
+                    {meta.badge ? (
+                      <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                        {meta.badge}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+              {/* + Add button at end of toolbar */}
+              <button
+                onClick={() => setShowControlWidgetAddPanel(true)}
+                className="shrink-0 flex flex-col items-center justify-center gap-0.5 w-12 h-12 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-gray-400 dark:hover:border-gray-400 transition-all"
+                title="Add widgets"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="text-[9px] leading-none">Add</span>
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
             <button
               onClick={() => {
