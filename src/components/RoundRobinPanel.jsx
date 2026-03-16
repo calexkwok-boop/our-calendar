@@ -83,12 +83,19 @@ const getNames = (team, fn) => {
 
 // Pickleball court SVG as a tiny decorative element
 const CourtDot = ({ accent }) => (
-  <svg width="18" height="12" viewBox="0 0 18 12" fill="none" style={{ opacity: 0.7 }}>
-    <rect x="1" y="1" width="16" height="10" rx="1" stroke={accent} strokeWidth="1"/>
-    <line x1="9" y1="1" x2="9" y2="11" stroke={accent} strokeWidth="0.8"/>
-    <line x1="1" y1="6" x2="17" y2="6" stroke={accent} strokeWidth="0.8"/>
-    <line x1="3" y1="1" x2="3" y2="11" stroke={accent} strokeWidth="0.5" strokeDasharray="1.5 1"/>
-    <line x1="15" y1="1" x2="15" y2="11" stroke={accent} strokeWidth="0.5" strokeDasharray="1.5 1"/>
+  <svg width="22" height="14" viewBox="0 0 22 14" fill="none" style={{ opacity: 0.85 }}>
+    {/* Court outline */}
+    <rect x="0.75" y="0.75" width="20.5" height="12.5" rx="1" stroke={accent} strokeWidth="1"/>
+    {/* Kitchen zones (NVZ) — shaded */}
+    <rect x="0.75" y="0.75" width="6.5" height="12.5" fill={accent} fillOpacity="0.18"/>
+    <rect x="14.75" y="0.75" width="6.5" height="12.5" fill={accent} fillOpacity="0.18"/>
+    {/* Kitchen lines */}
+    <line x1="7.25" y1="0.75" x2="7.25" y2="13.25" stroke={accent} strokeWidth="0.9"/>
+    <line x1="14.75" y1="0.75" x2="14.75" y2="13.25" stroke={accent} strokeWidth="0.9"/>
+    {/* Net (center) */}
+    <line x1="11" y1="0.75" x2="11" y2="13.25" stroke={accent} strokeWidth="1.4"/>
+    {/* Center line on each side */}
+    <line x1="7.25" y1="7" x2="14.75" y2="7" stroke={accent} strokeWidth="0.7"/>
   </svg>
 );
 
@@ -141,13 +148,15 @@ export default function RoundRobinPanel({
       <div className="relative px-5 pt-5 pb-4 overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}08 100%)` }}>
         {/* Decorative court lines */}
         <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', opacity: 0.12 }}>
-          <svg width="80" height="52" viewBox="0 0 80 52" fill="none">
-            <rect x="1" y="1" width="78" height="50" rx="3" stroke={accent} strokeWidth="2"/>
-            <line x1="40" y1="1" x2="40" y2="51" stroke={accent} strokeWidth="1.5"/>
-            <line x1="1" y1="26" x2="79" y2="26" stroke={accent} strokeWidth="1.5"/>
-            <line x1="14" y1="1" x2="14" y2="51" stroke={accent} strokeWidth="1"/>
-            <line x1="66" y1="1" x2="66" y2="51" stroke={accent} strokeWidth="1"/>
-          </svg>
+         <svg width="80" height="52" viewBox="0 0 80 52" fill="none">
+  <rect x="1" y="1" width="78" height="50" rx="3" stroke={accent} strokeWidth="2"/>
+  <rect x="1" y="1" width="23" height="50" fill={accent} fillOpacity="0.2"/>
+  <rect x="56" y="1" width="23" height="50" fill={accent} fillOpacity="0.2"/>
+  <line x1="24" y1="1" x2="24" y2="51" stroke={accent} strokeWidth="1.5"/>
+  <line x1="56" y1="1" x2="56" y2="51" stroke={accent} strokeWidth="1.5"/>
+  <line x1="40" y1="1" x2="40" y2="51" stroke={accent} strokeWidth="2"/>
+  <line x1="24" y1="26" x2="56" y2="26" stroke={accent} strokeWidth="1"/>
+</svg>
         </div>
         <div className="flex items-start justify-between">
           <div>
@@ -311,13 +320,20 @@ export default function RoundRobinPanel({
       <div className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)` }}>
         {/* Court decoration */}
         <div style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', opacity: 0.15 }}>
-          <svg width="100" height="65" viewBox="0 0 100 65" fill="none">
-            <rect x="1" y="1" width="98" height="63" rx="3" stroke="white" strokeWidth="2.5"/>
-            <line x1="50" y1="1" x2="50" y2="64" stroke="white" strokeWidth="2"/>
-            <line x1="1" y1="32" x2="99" y2="32" stroke="white" strokeWidth="2"/>
-            <line x1="18" y1="1" x2="18" y2="64" stroke="white" strokeWidth="1.5"/>
-            <line x1="82" y1="1" x2="82" y2="64" stroke="white" strokeWidth="1.5"/>
-          </svg>
+         <svg width="100" height="65" viewBox="0 0 100 65" fill="none">
+  {/* Court outline */}
+  <rect x="1" y="1" width="98" height="63" rx="3" stroke="white" strokeWidth="2"/>
+  {/* Kitchen zones shaded */}
+  <rect x="1" y="1" width="29" height="63" fill="white" fillOpacity="0.12"/>
+  <rect x="70" y="1" width="29" height="63" fill="white" fillOpacity="0.12"/>
+  {/* Kitchen lines */}
+  <line x1="30" y1="1" x2="30" y2="64" stroke="white" strokeWidth="1.5"/>
+  <line x1="70" y1="1" x2="70" y2="64" stroke="white" strokeWidth="1.5"/>
+  {/* Net */}
+  <line x1="50" y1="1" x2="50" y2="64" stroke="white" strokeWidth="2.5"/>
+  {/* Center line between kitchen and net */}
+  <line x1="30" y1="32" x2="70" y2="32" stroke="white" strokeWidth="1.2"/>
+</svg>
         </div>
 
         <div className="px-5 pt-4 pb-3 flex items-start justify-between relative">
