@@ -164,7 +164,7 @@ export default function RoundRobinPanel({
               <span style={{ fontSize: 22 }}>🥒</span>
               <h3 className="text-xl font-black tracking-tight text-gray-900 dark:text-gray-50">Round Robin</h3>
             </div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Every team plays every other team · most wins wins</p>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">You and your partner vs. everyone else</p>
           </div>
          <button
   onClick={(e) => { e.stopPropagation(); setShowRoundRobinPanel(false); }}
