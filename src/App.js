@@ -18867,7 +18867,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Pop-up Events</h3>
                   <button
-                    onClick={() => { setIsPopupEventDraft(true); setBottomNavTab('home'); setShowAddEventModal(true); }}
+                    onClick={() => { 
+                      setIsPopupEventDraft(true); 
+                      setBottomNavTab('home');
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
                     style={themeAccentButtonStyle}
                   >
@@ -19014,7 +19017,34 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <div className="text-xs text-gray-400 dark:text-gray-500">No past trips.</div>
                   ) : (
                     <div className="space-y-2">
-                      
+                      {archivedTrips.map(sc => {
+                        const canDelete = sc.owner_id === user?.id;
+                        const rowOffset = tripSwipeDrag.id === sc.id ? tripSwipeDrag.offset : (swipedTripId === sc.id ? -88 : 0);
+                        return (
+                          <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-gray-200 dark:ring-gray-700">
+                          {canDelete && (
+                            <div className="absolute right-0 top-0 bottom-0 w-[88px] flex items-center justify-center bg-red-500">
+                              <button onClick={() => handleDeleteSubCalendar(sc.id)} className="text-white text-xs font-semibold px-3 py-2">Delete</button>
+                            </div>
+                          )}
+                          <div
+                            className="relative bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                            style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 0.2s' }}
+                            onPointerDown={(e) => startTripSwipeDrag(e, sc.id)}
+                            onPointerMove={moveTripSwipeDrag}
+                            onPointerUp={endTripSwipeDrag}
+                            onPointerCancel={endTripSwipeDrag}
+                            onClick={() => { setActiveSubCalendar(sc); setBottomNavTab('home'); }}
+                          >
+                            <div className="min-w-0">
+                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} – {getSubCalEndRaw(sc)}</div>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                          </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -19234,7 +19264,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </>
             )}
           </div>
-          )}
         </div>
       </div>
     </div>
