@@ -142,7 +142,6 @@ const CALENDAR_REPORT_REASONS = [
 ];
 
 const CONTROL_WIDGET_IDS = Object.freeze([
-  'account',
   'notifications',
   'list',
   'notes',
@@ -159,7 +158,6 @@ const CONTROL_WIDGET_IDS = Object.freeze([
 ]);
 
 const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
-  'account',
   'notifications',
   'list',
   'notes',
@@ -175,7 +173,6 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'theme',
 ]);
 const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
-  'account',
   'notifications',
   'theme',
   'weather',
@@ -15061,10 +15058,6 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
   };
   const handleControlWidgetClick = (widgetId) => {
     const id = String(widgetId || '').trim();
-    if (id === 'account') {
-      setShowSharePanel((prev) => !prev);
-      return;
-    }
     if (id === 'notifications') {
       setShowNotificationSettings((prev) => !prev);
       return;
@@ -15125,7 +15118,6 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
   };
   const getControlWidgetMeta = (widgetId) => {
     const id = String(widgetId || '').trim();
-    if (id === 'account') return { label: 'Account', icon: <User className="w-4 h-4" />, active: Boolean(widgetCardOpenById.account), disabled: false };
     if (id === 'notifications') return {
       label: 'Notifications',
       icon: notificationsEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />,
@@ -15689,35 +15681,34 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         >
           {bottomNavTab === 'home' && (
             <div className="absolute inset-0 z-[25] pointer-events-none">
-              <div
-                className="absolute pointer-events-auto"
-                style={getHeaderModulePositionStyle('icon')}
-                onPointerDown={(e) => onHeaderModulePointerDown(e, 'icon')}
-                onTouchStart={(e) => startHeaderModulePinch(e, 'icon')}
-                onTouchMove={(e) => moveHeaderModulePinch(e, 'icon')}
-                onTouchEnd={(e) => endHeaderModulePinch(e, 'icon')}
-                onTouchCancel={(e) => endHeaderModulePinch(e, 'icon')}
-              >
+
+              {/* Icon — top left, opens account */}
+              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 pointer-events-auto">
                 <div className="relative" ref={(el) => { headerModuleNodeRefs.current.icon = el; }}>
-                  {activeLayer?.icon_url ? (
-                    <img
-                      src={activeLayer.icon_url}
-                      alt="Calendar icon"
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
-                    />
-                  ) : (
-                    <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
-                      <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowSharePanel((prev) => !prev);
+                    }}
+                    title="Account & sharing"
+                  >
+                    {activeLayer?.icon_url ? (
+                      <img
+                        src={activeLayer.icon_url}
+                        alt="Calendar icon"
+                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
+                      />
+                    ) : (
+                      <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
+                        <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                      </div>
+                    )}
+                  </button>
                   {canManageActiveLayer && (
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (wasRecentHeaderModuleDrag('icon')) return;
-                        openLayerMediaMenu();
-                      }}
+                      onClick={(e) => { e.stopPropagation(); openLayerMediaMenu(); }}
                       className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700"
                       title="Edit cover/icon"
                     >
@@ -15727,67 +15718,34 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
               </div>
 
-              {activeLayerTitleVisible && (
-                <div
-                  className="absolute pointer-events-auto select-none"
-                  style={getHeaderModulePositionStyle('title')}
-                  onPointerDown={(e) => onHeaderModulePointerDown(e, 'title')}
-                >
-                  <div
-                    className="-mx-1 -my-1 px-1 py-1"
-                    ref={(el) => { headerModuleNodeRefs.current.title = el; }}
+              {/* Title + date — top right */}
+              <div className="absolute top-3 right-3 sm:top-4 sm:right-4 pointer-events-auto flex flex-col items-end gap-0.5">
+                {activeLayerTitleVisible && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); if (canEditActiveLayerTitle) openTitleStyleModal(); }}
+                    className={`text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate ${canEditActiveLayerTitle ? 'hover:opacity-80' : 'cursor-default'}`}
+                    style={activeLayerTitleNameTextStyle}
                   >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (wasRecentHeaderModuleDrag('title')) return;
-                        if (!canEditActiveLayerTitle) return;
-                        openTitleStyleModal();
-                      }}
-                      className={`text-sm sm:text-base font-semibold text-left max-w-[75vw] truncate ${canEditActiveLayerTitle ? 'cursor-grab active:cursor-grabbing hover:opacity-80' : 'cursor-default'}`}
-                      style={activeLayerTitleNameTextStyle}
-                    >
-                      {calendarTitle}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div
-                className="absolute pointer-events-auto select-none"
-                style={getHeaderModulePositionStyle('date')}
-                onPointerDown={(e) => onHeaderModulePointerDown(e, 'date')}
-              >
+                    {calendarTitle}
+                  </button>
+                )}
                 <button
-                  ref={(el) => { headerModuleNodeRefs.current.date = el; }}
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (wasRecentHeaderModuleDrag('date')) return;
-                    if (!canEditActiveLayerTitle) return;
-                    openTitleStyleModal();
-                  }}
-                  className={canEditActiveLayerTitle ? 'cursor-grab active:cursor-grabbing hover:opacity-80' : 'cursor-default'}
+                  onClick={(e) => { e.stopPropagation(); if (canEditActiveLayerTitle) openTitleStyleModal(); }}
+                  className={canEditActiveLayerTitle ? 'hover:opacity-80' : 'cursor-default'}
                   style={activeLayerMonthYearTextStyle}
                 >
                   {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </button>
               </div>
 
-              <div
-                className="absolute pointer-events-auto"
-                style={getHeaderModulePositionStyle('add')}
-                onPointerDown={(e) => onHeaderModulePointerDown(e, 'add')}
-              >
+              {/* + Add widgets button — bottom right */}
+              <div className="absolute bottom-3 right-3 pointer-events-auto">
                 <button
                   ref={(el) => { headerModuleNodeRefs.current.add = el; }}
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (wasRecentHeaderModuleDrag('add')) return;
-                    setShowControlWidgetAddPanel(true);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); setShowControlWidgetAddPanel(true); }}
                   className={`shrink-0 w-[3.7rem] h-6 px-1 py-0 rounded-lg text-[10px] font-semibold whitespace-nowrap leading-none inline-flex items-center justify-center border transition-all ${
                     showControlWidgetAddPanel
                       ? 'bg-white/60 dark:bg-gray-700/55 text-gray-800 dark:text-gray-100 border-white/55 dark:border-gray-500/70 shadow-sm backdrop-blur-sm'
@@ -15798,6 +15756,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   + Add
                 </button>
               </div>
+
             </div>
           )}
           {isCoverTapToRevealMode ? (
@@ -15899,11 +15858,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             <div className="relative shrink-0 pointer-events-auto flex flex-col items-end gap-1">
               {activeLayerTitleVisible ? (
-                <h2 className="text-sm sm:text-base font-semibold text-left max-w-[65vw] truncate pointer-events-none" style={activeLayerTitleNameTextStyle}>
+                <h2 className="text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate pointer-events-none" style={activeLayerTitleNameTextStyle}>
                   {calendarTitle}
                 </h2>
               ) : null}
-              <div className="text-xs sm:text-sm font-semibold text-left pointer-events-none" style={activeLayerMonthYearTextStyle}>
+              <div className="text-xs sm:text-sm font-semibold text-right pointer-events-none" style={activeLayerMonthYearTextStyle}>
                 {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </div>
               <div className="flex justify-end pointer-events-auto">
