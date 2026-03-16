@@ -1219,7 +1219,7 @@ function App() {
     const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
     window.open(googleUrl, '_blank', 'noopener,noreferrer');
   };
-
+}
   // -- Sub-calendar functions ----------------------------------------------
 
   const loadSubCalendars = async () => {
@@ -21876,5 +21876,3 @@ const shakeStyle = `
 `;
 
 export default App;
-
-}
