@@ -161,7 +161,7 @@ export default function RoundRobinPanel({
   onClick={(e) => { e.stopPropagation(); setShowRoundRobinPanel(false); }}
   style={{ position: 'absolute', top: 18, right: 16, zIndex: 10, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, padding: 6, cursor: 'pointer' }}
 >
-  <X className="w-4 h-4 text-white" />
+  <X className="w-4 h-4 text-gray-800 dark:text-gray-100" />
 </button>
         </div>
       </div>
