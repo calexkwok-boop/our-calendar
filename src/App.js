@@ -19021,7 +19021,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </>
             )}
 
-            {bottomNavTab === 'explore' && (            {bottomNavTab === 'explore' && (
+            {bottomNavTab === 'explore' && (
               <>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Explore Calendars</h3>
