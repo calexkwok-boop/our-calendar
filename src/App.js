@@ -13115,7 +13115,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         created_by_name: currentUser || user?.email || user?.phone || 'Member',
         created_at: new Date().toISOString(),
       })));
-    }
+    
      for (const eventId of createdEventIds) {
     const eventDate = pendingEvent.datesToAdd.find((_, i) => createdEventIds[i] === eventId);
     const dateKey = eventDate ? getDateKey(eventDate) : '';
@@ -17865,8 +17865,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       setShowGauntletPanel(true);
       setSelectedPopupEventPanelId(null);
     }}
-  />
-)}
+ /> )}
         {showCategoryEditor && (
           <div className="glass-panel rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -21878,4 +21877,4 @@ const shakeStyle = `
 
 export default App;
 
-
+}
