@@ -19431,7 +19431,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         <div className="max-w-6xl mx-auto">
 
           {/* Widget toolbar — shown on home tab */}
-          {bottomNavTab === 'home' && activeControlWidgets.length > 0 && (
+          {bottomNavTab === 'home' && (
             <div className="flex items-center gap-1.5 mb-1.5 px-1 overflow-x-auto">
               {activeControlWidgets.map((widgetId) => {
                 const meta = getControlWidgetMeta(widgetId);
@@ -19441,7 +19441,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     onClick={() => handleControlWidgetClick(widgetId)}
                     disabled={meta.disabled}
                     title={meta.label}
-                    className={`relative shrink-0 flex flex-col items-center justify-center gap-0.5 w-12 h-12 rounded-xl border text-xs font-medium transition-all ${
+                    className={`relative shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border transition-all ${
                       meta.active
                         ? 'border-transparent text-white shadow-sm'
                         : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 backdrop-blur-sm'
@@ -19449,7 +19449,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     style={meta.active ? themeAccentButtonStyle : undefined}
                   >
                     <span className="flex items-center justify-center">{meta.icon}</span>
-                    <span className="text-[9px] leading-none truncate max-w-[44px]">{meta.label}</span>
                     {meta.badge ? (
                       <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
                         {meta.badge}
@@ -19458,14 +19457,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </button>
                 );
               })}
-              {/* + Add button at end of toolbar */}
+              {/* + Add button — always visible */}
               <button
                 onClick={() => setShowControlWidgetAddPanel(true)}
-                className="shrink-0 flex flex-col items-center justify-center gap-0.5 w-12 h-12 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-gray-400 dark:hover:border-gray-400 transition-all"
+                className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-gray-400 dark:hover:border-gray-400 transition-all"
                 title="Add widgets"
               >
                 <Plus className="w-4 h-4" />
-                <span className="text-[9px] leading-none">Add</span>
               </button>
             </div>
           )}
