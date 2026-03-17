@@ -8039,19 +8039,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
 
-    const eventIds = (popupEventsRows || []).map((row) => String(row?.event_id || '')).filter(Boolean);
-    const eventsMap = {};
-    (popupEventsRows || []).forEach((row) => {
-      const eventId = String(row?.event_id || '');
-      if (!eventId) return;
-      eventsMap[eventId] = {
-        eventId,
-        maxPeople: Math.max(1, Number(row?.max_people || 1)),
-        createdByUserId: String(row?.created_by_user_id || ''),
-        createdByName: String(row?.created_by_name || ''),
-        createdAt: String(row?.created_at || ''),
-      };
-    });
+    const eventIds = (popupEventsRows || [])
+  .map((row) => String(row?.id || ''))
+  .filter(Boolean);
+
+const eventsMap = {};
+(popupEventsRows || []).forEach((row) => {
+  const eventId = String(row?.id || '');
+  if (!eventId) return;
+
+  eventsMap[eventId] = {
+    eventId,
+    maxPeople: Math.max(1, Number(row?.max_people || 1)),
+    createdByUserId: String(row?.created_by_user_id || ''),
+    createdByName: String(row?.created_by_name || ''),
+    createdAt: String(row?.created_at || ''),
+  };
+});
 
     let signupsMap = {};
     if (eventIds.length > 0) {
