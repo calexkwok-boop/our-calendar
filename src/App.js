@@ -9002,86 +9002,177 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
   };
 
-// 1. AUTH & INITIAL CALENDAR SELECTION (Runs once on mount)
   useEffect(() => {
-    const bootstrap = async () => {
+    const loadData = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) {
-          setIsLoading(false);
-          setShowAuth(true);
+        const userId = session?.user?.id;
+        const userEmail = session?.user?.email;
+        const userPhone = session?.user?.phone;
+        if (!userId) return;
+        const shareRecipientFilter = buildShareRecipientFilter(userId, userEmail, userPhone);
+        let loadedLayers = await loadLayersForUser(userId, userEmail, userPhone);
+        if (!loadedLayers || loadedLayers.length === 0) {
+          // Retry once; loadLayersForUser already contains bootstrap logic.
+          loadedLayers = await loadLayersForUser(userId, userEmail, userPhone);
+        }
+
+        if (!loadedLayers || loadedLayers.length === 0) {
+          setLayers([]);
+          setActiveLayerId(null);
+          setEvents({});
+          setSharedCalendars([]);
+          setMyShares([]);
+          setSharedListGroups([]);
+          setSharedListItems([]);
           return;
         }
+        const persistedLayerId = localStorage.getItem(`active-layer-${userId}`);
+        const selectedLayerId = (
+          activeLayerId && loadedLayers.some(layer => String(layer.id) === String(activeLayerId))
+            ? activeLayerId
+            : (persistedLayerId && loadedLayers.some(layer => String(layer.id) === String(persistedLayerId))
+              ? persistedLayerId
+              : loadedLayers[0].id)
+        );
+        if (selectedLayerId !== activeLayerId) setActiveLayerId(selectedLayerId);
+        localStorage.setItem(`active-layer-${userId}`, selectedLayerId);
 
-        // Set user immediately
-        const userObj = session.user;
-        setUser(userObj);
-        setCurrentUser(getAuthIdentityLabel(userObj));
-        setShowAuth(false);
+        // Load all events visible in this layer (owner + collaborators).
+        const { data: layerEventsData, error: layerEventsError } = await supabase
+          .from('events')
+          .select('*')
+          .eq('layer_id', selectedLayerId);
 
-        // Load just the calendar IDs to pick one
-        const layers = await loadLayersForUser(userObj.id, userObj.email, userObj.phone);
-        if (layers && layers.length > 0) {
-          setLayers(layers);
-          const lastId = localStorage.getItem(`active-layer-${userObj.id}`);
-          const startId = (lastId && layers.some(l => String(l.id) === lastId)) ? lastId : layers[0].id;
-          setActiveLayerId(startId);
+        // Load calendars shared WITH me (by email/id)
+        let sharedWithMeQuery = supabase
+          .from('shared_access')
+          .select('*')
+          .eq('layer_id', selectedLayerId);
+        if (shareRecipientFilter) sharedWithMeQuery = sharedWithMeQuery.or(shareRecipientFilter);
+        const { data: sharedWithMeRaw } = await sharedWithMeQuery;
+        const sharedWithMe = (sharedWithMeRaw || [])
+          .filter((s) => String(s?.owner_id || '') !== String(userId))
+          .filter((s) => !s?.is_banned);
+
+        // Update shared_with_id if not yet set (first time they log in)
+        if (sharedWithMe && sharedWithMe.length > 0) {
+          for (const share of sharedWithMe) {
+            if (!share.shared_with_id) {
+              await supabase
+                .from('shared_access')
+                .update({ shared_with_id: userId })
+                .eq('id', share.id);
+            }
+          }
+          setSharedCalendars(sharedWithMe);
+          await resolveSharedOwnerLabels(sharedWithMe, selectedLayerId);
+        } else {
+          setSharedCalendars([]);
+          setSharedOwnerLabels({});
         }
-      } catch (err) {
-        console.error("Boot error:", err);
+
+        if (layerEventsError) {
+          console.error('Error loading events:', layerEventsError);
+        } else if (layerEventsData) {
+          const eventsObj = {};
+          layerEventsData.forEach(event => {
+            if (!eventsObj[event.date]) eventsObj[event.date] = [];
+            eventsObj[event.date].push(mapSupabaseEventRow(event, userId));
+          });
+          setEvents(eventsObj);
+          if (typeof window !== 'undefined') window.events = eventsObj;
+        }
+
+        // Load people I've shared with
+        let { data: mySharesData, error: mySharesError } = await supabase
+          .from('shared_access')
+          .select('*')
+          .eq('layer_id', selectedLayerId);
+        if (mySharesError) {
+          const fallback = await supabase
+            .from('shared_access')
+            .select('*')
+            .eq('owner_id', userId)
+            .eq('layer_id', selectedLayerId);
+          mySharesData = fallback.data || [];
+        }
+        setMyShares(mySharesData || []);
+
+        const activeLayerRow = loadedLayers.find(layer => String(layer.id) === String(selectedLayerId));
+        await loadCategoriesForLayer(selectedLayerId, userId, activeLayerRow?.owner_id || userId);
+        setCalendarTitle(activeLayerRow?.name || 'Our Calendar');
+
+        await loadAccountHandleForUser(session?.user || { id: userId, email: userEmail, phone: userPhone });
+
+        // Load sub-calendars now that we know user is authenticated
+        await loadSubCalendars();
+      } catch (error) {
+        console.log('Error loading data:', error);
       } finally {
-        // UNLOCK the screen after the check is done
         setIsLoading(false);
       }
     };
 
-    bootstrap();
+    loadData();
+
+    // Listen for changes to OTHER users' events (shared calendars)
+    // We use a separate loadSharedEvents function that only fetches shared data
+    // and merges it with local state — never triggers a save
+    const loadSharedEvents = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        if (!userId || !activeLayerId) return;
+
+        const { data: layerEventsData, error: layerEventsError } = await supabase
+          .from('events')
+          .select('*')
+          .eq('layer_id', activeLayerId);
+        if (layerEventsError) {
+          console.error('Error refreshing layer events:', layerEventsError);
+          return;
+        }
+
+        const eventsObj = {};
+        (layerEventsData || []).forEach(event => {
+          if (!eventsObj[event.date]) eventsObj[event.date] = [];
+          eventsObj[event.date].push(mapSupabaseEventRow(event, userId));
+        });
+        setEvents(eventsObj);
+        if (typeof window !== 'undefined') window.events = eventsObj;
+      } catch (err) {
+        console.error('Error refreshing shared events:', err);
+      }
+    };
+
+    const sharedSubscription = supabase
+      .channel('shared-events')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        loadSharedEvents();
+      })
+      .subscribe();
+
+    return () => sharedSubscription.unsubscribe();
+  }, [activeLayerId, layerRefreshToken]);
+
+  // Check auth session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setShowAuth(!session?.user);
+      if (session?.user) setCurrentUser(getAuthIdentityLabel(session.user));
+      setIsLoading(false);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        setUser(null);
-        setShowAuth(true);
-      } else {
-        setUser(session.user);
-        setShowAuth(false);
-      }
-      setIsLoading(false);
+      setUser(session?.user ?? null);
+      setShowAuth(!session?.user);
+      if (session?.user) setCurrentUser(getAuthIdentityLabel(session.user));
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  // 2. DATA LOADER (Runs when switching calendars)
-  useEffect(() => {
-    // Only run if we have a user and a calendar selected
-    if (!user?.id || !activeLayerId) return;
-
-    const fetchCalendarData = async () => {
-      const lid = activeLayerId;
-      const uid = user.id;
-
-      // A. Load Events (Use .then so we don't block on errors)
-      supabase.from('events').select('*').eq('layer_id', lid)
-        .then(({ data }) => {
-          if (data) {
-            const eventsObj = {};
-            data.forEach(e => {
-              if (!eventsObj[e.date]) eventsObj[e.date] = [];
-              eventsObj[e.date].push(mapSupabaseEventRow(e, uid));
-            });
-            setEvents(eventsObj);
-          }
-        }).catch(e => console.error("Event load failed", e));
-
-      // B. Secondary background tasks (NO 'await' here)
-      // This prevents your 400 error from freezing the app
-      loadAccountHandleForUser(user).catch(() => {});
-      loadSubCalendars().catch(() => {});
-      loadPopupEventData().catch(() => {});
-    };
-
-    fetchCalendarData();
-  }, [activeLayerId, user?.id, layerRefreshToken]);
 
   useEffect(() => {
     if (!primaryListOwnerId) return;
@@ -14241,12 +14332,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
   }, [coverWidgetLayout, controlWidgetOrder, flushControlWidgetPrefs]);
 
- // We remove the "return" so the app ALWAYS shows the UI. 
-  // We only show a small overlay if we truly don't have a user yet.
-  if (isLoading && !user) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Connecting to session...</div>
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-[#0f0a1e] dark:via-[#120d24] dark:to-[#0d1525] flex items-center justify-center">
+        <div className="text-gray-600 dark:text-gray-300">Loading calendar...</div>
       </div>
     );
   }
