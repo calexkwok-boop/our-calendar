@@ -8025,64 +8025,58 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
 
-    const { data: popupEventsRows, error: popupEventsErr } = await supabase
-      .from('popup_events')
-      .select('event_id,max_people,created_by_user_id,created_by_name,created_at')
-      .eq('layer_id', activeLayerId);
+    try {
+      // 1. Fetch main popup events
+      const { data: popupEventsRows, error: popupEventsErr } = await supabase
+        .from('popup_events')
+        .select('event_id,max_people,created_by_user_id,created_by_name,created_at')
+        .eq('layer_id', activeLayerId);
 
-    if (popupEventsErr) {
-      if (popupEventsErr.code === '42P01') {
-        setPopupFeatureAvailable(false);
-      }
-      setPopupEventsByEventId({});
-      setPopupSignupsByEventId({});
-      return;
-    }
+      if (popupEventsErr) throw popupEventsErr;
 
-    const eventIds = (popupEventsRows || []).map((row) => String(row?.event_id || '')).filter(Boolean);
-    const eventsMap = {};
-    (popupEventsRows || []).forEach((row) => {
-      const eventId = String(row?.event_id || '');
-      if (!eventId) return;
-      eventsMap[eventId] = {
-        eventId,
-        maxPeople: Math.max(1, Number(row?.max_people || 1)),
-        createdByUserId: String(row?.created_by_user_id || ''),
-        createdByName: String(row?.created_by_name || ''),
-        createdAt: String(row?.created_at || ''),
-      };
-    });
+      const eventIds = (popupEventsRows || []).map((row) => String(row?.event_id || '')).filter(Boolean);
+      const eventsMap = {};
+      (popupEventsRows || []).forEach((row) => {
+        eventsMap[row.event_id] = {
+          eventId: row.event_id,
+          maxPeople: Math.max(1, Number(row?.max_people || 1)),
+          createdByUserId: row.created_by_user_id,
+          createdByName: row.created_by_name,
+          createdAt: row.created_at,
+        };
+      });
 
-    let signupsMap = {};
-    if (eventIds.length > 0) {
-      const { data: signupRows, error: signupErr } = await supabase
-        .from('popup_event_signups')
-        .select('event_id,user_id,display_name,created_at')
-        .eq('layer_id', activeLayerId)
-        .in('event_id', eventIds)
-        .order('created_at', { ascending: true });
+      // 2. Fetch Signups (Using "created_at" instead of "joined_at" to avoid 400 error)
+      let signupsMap = {};
+      if (eventIds.length > 0) {
+        // NOTE: We try popup_event_signups first as per your App.js code
+        const { data: signupRows, error: signupErr } = await supabase
+          .from('popup_event_signups') 
+          .select('event_id,user_id,display_name,created_at')
+          .eq('layer_id', activeLayerId)
+          .in('event_id', eventIds)
+          .order('created_at', { ascending: true }); // We use created_at because joined_at doesn't exist
 
-      if (!signupErr) {
-        signupsMap = {};
-        (signupRows || []).forEach((row) => {
-          const eventId = String(row?.event_id || '');
-          if (!eventId) return;
-          if (!Array.isArray(signupsMap[eventId])) signupsMap[eventId] = [];
-          signupsMap[eventId].push({
-            userId: String(row?.user_id || ''),
-            displayName: resolveHandleLikeLabel(
-              String(row?.display_name || row?.user_id || 'Member'),
-              String(row?.user_id || '')
-            ),
-            createdAt: String(row?.created_at || ''),
+        if (!signupErr && signupRows) {
+          signupRows.forEach((row) => {
+            if (!signupsMap[row.event_id]) signupsMap[row.event_id] = [];
+            signupsMap[row.event_id].push({
+              userId: row.user_id,
+              displayName: row.display_name,
+              createdAt: row.created_at,
+            });
           });
-        });
+        }
       }
-    }
 
-    setPopupFeatureAvailable(true);
-    setPopupEventsByEventId(eventsMap);
-    setPopupSignupsByEventId(signupsMap);
+      setPopupFeatureAvailable(true);
+      setPopupEventsByEventId(eventsMap);
+      setPopupSignupsByEventId(signupsMap);
+
+    } catch (err) {
+      console.warn("Popup system partially unavailable (check DB tables):", err.message);
+      // We don't "throw" here, so the main loader can continue to the next task
+    }
   };
 
   const createPopupEventRows = async (rows) => {
