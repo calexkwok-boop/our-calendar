@@ -1679,6 +1679,33 @@ function App() {
     swipingTripIdRef.current = null;
   };
 
+  const startTripSwipeDrag = (e, tripId) => {
+    const canDelete = subCalendars.find(sc => sc.id === tripId)?.owner_id === user?.id;
+    if (!canDelete) return;
+    const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+    tripSwipeStartXRef.current = clientX;
+    swipingTripIdRef.current = tripId;
+    if (swipedTripId && swipedTripId !== tripId) setSwipedTripId(null);
+  };
+
+  const moveTripSwipeDrag = (e) => {
+    const tripId = swipingTripIdRef.current;
+    if (!tripId) return;
+    const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? tripSwipeStartXRef.current;
+    const deltaX = clientX - tripSwipeStartXRef.current;
+    const clamped = Math.max(-88, Math.min(0, deltaX));
+    setTripSwipeDrag({ id: tripId, offset: clamped });
+  };
+
+  const endTripSwipeDrag = () => {
+    const tripId = swipingTripIdRef.current;
+    if (!tripId) return;
+    const open = tripSwipeDrag.id === tripId && tripSwipeDrag.offset <= -44;
+    setSwipedTripId(open ? tripId : null);
+    setTripSwipeDrag({ id: null, offset: 0 });
+    swipingTripIdRef.current = null;
+  };
+
   const openSubCalendar = async (sc) => {
     setActiveSubCalendar(sc);
     setSubCalWeather({});
