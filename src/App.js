@@ -1913,18 +1913,6 @@ function App() {
       setTripPhotos(filtered);
     } catch (e) { console.error(e); }
   };
-  
-useEffect(() => {
-  // If the app is still loading after 7 seconds, force it to stop.
-  // This prevents users from being stuck on a white screen if a query hangs.
-  const timer = setTimeout(() => {
-    if (isLoading) {
-      console.warn("Loading took too long, forcing UI to render.");
-      setIsLoading(false);
-    }
-  }, 7000);
-  return () => clearTimeout(timer);
-}, [isLoading]);
 
   useEffect(() => {
     if (!deletedPhotoIds || deletedPhotoIds.length === 0) return;
@@ -9016,14 +9004,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     const loadData = async () => {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    
-    if (!userId) {
-      setIsLoading(false); // Force stop loading if no user
-      return;
-    }
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        const userEmail = session?.user?.email;
+        const userPhone = session?.user?.phone;
+        if (!userId) return;
         const shareRecipientFilter = buildShareRecipientFilter(userId, userEmail, userPhone);
         let loadedLayers = await loadLayersForUser(userId, userEmail, userPhone);
         if (!loadedLayers || loadedLayers.length === 0) {
@@ -9170,34 +9156,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return () => sharedSubscription.unsubscribe();
   }, [activeLayerId, layerRefreshToken]);
 
-useEffect(() => {
-  // Check session immediately
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      setUser(session.user);
-      setCurrentUser(getAuthIdentityLabel(session.user));
-      setShowAuth(false);
-      // We don't set isLoading(false) here yet, because loadData will handle it
-    } else {
-      setUser(null);
-      setShowAuth(true);
-      setIsLoading(false); // Stop loading because we need to show Login screen
-    }
-  }).catch(() => setIsLoading(false)); // Error safety
+  // Check auth session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setShowAuth(!session?.user);
+      if (session?.user) setCurrentUser(getAuthIdentityLabel(session.user));
+      setIsLoading(false);
+    });
 
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    setUser(session?.user ?? null);
-    if (session?.user) {
-      setCurrentUser(getAuthIdentityLabel(session.user));
-      setShowAuth(false);
-    } else {
-      setShowAuth(true);
-      setIsLoading(false); 
-    }
-  });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setShowAuth(!session?.user);
+      if (session?.user) setCurrentUser(getAuthIdentityLabel(session.user));
+    });
 
-  return () => subscription.unsubscribe();
-}, []);
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!primaryListOwnerId) return;
@@ -21758,4 +21733,3 @@ const shakeStyle = `
 `;
 
 export default App;
-
