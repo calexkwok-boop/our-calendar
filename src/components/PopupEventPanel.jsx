@@ -591,7 +591,7 @@ export default function PopupEventPanel({
     setLoading(true);
     try {
       const [{ data: ev }, { data: mems }, { data: signups, error: signupsErr }] = await Promise.all([
-        supabase.from('popup_events').select('*').eq('id', id).single(),
+        supabase.from('popup_events').select('*').eq('event_id', id).single(),
         supabase.from('popup_event_signups').select('*').eq('event_id', id).order('joined_at'),
         supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
       ]);
@@ -636,10 +636,10 @@ export default function PopupEventPanel({
     try { await supabase.from('popup_event_signups').insert({ event_id: event.id, user_id: user.id, display_name: displayName || user.email || 'Player', role: 'player' }); await loadEvent(event.id); } catch {}
     setJoining(false);
   };
-  const handleLeave = async () => { if (!myMember || isHost) return; await supabase.from('popup_event_signups').delete().eq('id', myMember.id); await loadEvent(event.id); };
-  const handleKick = async (member) => { if (!isHostOrCohost) return; await supabase.from('popup_event_signups').delete().eq('id', member.id); await loadEvent(event.id); };
-  const handlePromote = async (member) => { if (!isHost) return; await supabase.from('popup_event_signups').update({ role: 'cohost' }).eq('id', member.id); await loadEvent(event.id); };
-  const handleDemote = async (member) => { if (!isHost) return; await supabase.from('popup_event_signups').update({ role: 'player' }).eq('id', member.id); await loadEvent(event.id); };
+  const handleLeave = async () => { if (!myMember || isHost) return; await supabase.from('popup_event_signups').delete().eq('event_id', myMember.id); await loadEvent(event.id); };
+  const handleKick = async (member) => { if (!isHostOrCohost) return; await supabase.from('popup_event_signups').delete().eq('event_id', member.id); await loadEvent(event.id); };
+  const handlePromote = async (member) => { if (!isHost) return; await supabase.from('popup_event_signups').update({ role: 'cohost' }).eq('event_id', member.id); await loadEvent(event.id); };
+  const handleDemote = async (member) => { if (!isHost) return; await supabase.from('popup_event_signups').update({ role: 'player' }).eq('event_id', member.id); await loadEvent(event.id); };
   const handleCopyLink = () => { navigator.clipboard.writeText(`${window.location.origin}?popup=${event.id}`).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   const panelStyle = { borderRadius: 24, overflow: 'hidden', marginBottom: 24, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(17,24,39,0.95)' : '#fff', boxShadow: `0 8px 40px ${accent}18` };
