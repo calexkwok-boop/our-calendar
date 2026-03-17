@@ -931,16 +931,16 @@ function App() {
     const normalizedEmail = normalizeEmail(email);
     const normalizedPhone = normalizePhoneNumber(phone);
     if (uid) clauses.push(`shared_with_id.eq.${uid}`);
-    if (normalizedEmail) clauses.push(`shared_with_email.eq.${normalizedEmail}`);
-    if (normalizedPhone) clauses.push(`shared_with_phone.eq.${normalizedPhone}`);
+    if (normalizedEmail) clauses.push(`shared_with_email.eq."${normalizedEmail}"`);
+    if (normalizedPhone) clauses.push(`shared_with_phone.eq."${normalizedPhone}"`);
     return clauses.join(',');
   };
   const buildMemberRecipientFilter = (email, phone) => {
     const clauses = [];
     const normalizedEmail = normalizeEmail(email);
     const normalizedPhone = normalizePhoneNumber(phone);
-    if (normalizedEmail) clauses.push(`email.eq.${normalizedEmail}`);
-    if (normalizedPhone) clauses.push(`phone.eq.${normalizedPhone}`);
+    if (normalizedEmail) clauses.push(`email.eq."${normalizedEmail}"`);
+    if (normalizedPhone) clauses.push(`phone.eq."${normalizedPhone}"`);
     return clauses.join(',');
   };
   const getExpenseParticipants = () => {
