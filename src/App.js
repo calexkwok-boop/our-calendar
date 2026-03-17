@@ -9002,114 +9002,86 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
   };
 
-// CONSOLIDATED INITIALIZATION logic
+// 1. AUTH & INITIAL CALENDAR SELECTION (Runs once on mount)
   useEffect(() => {
-    let isMounted = true;
-
-    const startApp = async () => {
+    const bootstrap = async () => {
       try {
-        // 1. Get the session safely
         const { data: { session } } = await supabase.auth.getSession();
-        
         if (!session?.user) {
-          if (isMounted) {
-            setUser(null);
-            setShowAuth(true);
-            setIsLoading(false); // Stop loading to show login
-          }
+          setIsLoading(false);
+          setShowAuth(true);
           return;
         }
 
-        const userId = session.user.id;
-        if (isMounted) {
-          setUser(session.user);
-          setCurrentUser(getAuthIdentityLabel(session.user));
-          setShowAuth(false);
+        // Set user immediately
+        const userObj = session.user;
+        setUser(userObj);
+        setCurrentUser(getAuthIdentityLabel(userObj));
+        setShowAuth(false);
+
+        // Load just the calendar IDs to pick one
+        const layers = await loadLayersForUser(userObj.id, userObj.email, userObj.phone);
+        if (layers && layers.length > 0) {
+          setLayers(layers);
+          const lastId = localStorage.getItem(`active-layer-${userObj.id}`);
+          const startId = (lastId && layers.some(l => String(l.id) === lastId)) ? lastId : layers[0].id;
+          setActiveLayerId(startId);
         }
-
-        // 2. Load Calendars (Layers) - we must have these
-        const loadedLayers = await loadLayersForUser(userId, session.user.email, session.user.phone);
-        if (isMounted) setLayers(loadedLayers || []);
-
-        if (!loadedLayers || loadedLayers.length === 0) {
-          if (isMounted) setIsLoading(false);
-          return;
-        }
-
-        // 3. Pick the Layer ID
-        const persistedId = localStorage.getItem(`active-layer-${userId}`);
-        const selectedId = (activeLayerId && loadedLayers.some(l => String(l.id) === String(activeLayerId)))
-          ? activeLayerId : (persistedId && loadedLayers.some(l => String(l.id) === String(persistedId)))
-          ? persistedId : loadedLayers[0].id;
-
-        if (isMounted && selectedId !== activeLayerId) {
-          setActiveLayerId(selectedId);
-        }
-
-        // 4. Load the core events - wrap in try/catch so 400 errors don't stop the app
-        try {
-          const { data: eventsData } = await supabase.from('events').select('*').eq('layer_id', selectedId);
-          if (eventsData && isMounted) {
-            const eventsObj = {};
-            eventsData.forEach(event => {
-              if (!eventsObj[event.date]) eventsObj[event.date] = [];
-              eventsObj[event.date].push(mapSupabaseEventRow(event, userId));
-            });
-            setEvents(eventsObj);
-          }
-        } catch (e) {
-          console.error("Non-critical: Events failed to load", e);
-        }
-
-        // 5. Load everything else WITHOUT 'await'
-        // This is the "Separate Bubble" - if these fail (like your 400 error), 
-        // the code below (setIsLoading) still runs!
-        loadAccountHandleForUser(session.user).catch(() => {});
-        loadSubCalendars().catch(() => {});
-        loadPopupEventData().catch(() => {});
-
-      } catch (criticalError) {
-        console.error('Critical Auth/Layer load failure:', criticalError);
+      } catch (err) {
+        console.error("Boot error:", err);
       } finally {
-        // THIS IS THE FIX: This line is now GUARANTEED to run
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    startApp();
-
-    // Listen for login/logout
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session && isMounted) {
-        setUser(null);
-        setShowAuth(true);
+        // UNLOCK the screen after the check is done
         setIsLoading(false);
       }
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
     };
-  }, [activeLayerId, layerRefreshToken]);
 
-  // Check auth session
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setShowAuth(!session?.user);
-      if (session?.user) setCurrentUser(getAuthIdentityLabel(session.user));
-      setIsLoading(false);
-    });
+    bootstrap();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setShowAuth(!session?.user);
-      if (session?.user) setCurrentUser(getAuthIdentityLabel(session.user));
+      if (!session) {
+        setUser(null);
+        setShowAuth(true);
+      } else {
+        setUser(session.user);
+        setShowAuth(false);
+      }
+      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // 2. DATA LOADER (Runs when switching calendars)
+  useEffect(() => {
+    // Only run if we have a user and a calendar selected
+    if (!user?.id || !activeLayerId) return;
+
+    const fetchCalendarData = async () => {
+      const lid = activeLayerId;
+      const uid = user.id;
+
+      // A. Load Events (Use .then so we don't block on errors)
+      supabase.from('events').select('*').eq('layer_id', lid)
+        .then(({ data }) => {
+          if (data) {
+            const eventsObj = {};
+            data.forEach(e => {
+              if (!eventsObj[e.date]) eventsObj[e.date] = [];
+              eventsObj[e.date].push(mapSupabaseEventRow(e, uid));
+            });
+            setEvents(eventsObj);
+          }
+        }).catch(e => console.error("Event load failed", e));
+
+      // B. Secondary background tasks (NO 'await' here)
+      // This prevents your 400 error from freezing the app
+      loadAccountHandleForUser(user).catch(() => {});
+      loadSubCalendars().catch(() => {});
+      loadPopupEventData().catch(() => {});
+    };
+
+    fetchCalendarData();
+  }, [activeLayerId, user?.id, layerRefreshToken]);
 
   useEffect(() => {
     if (!primaryListOwnerId) return;
@@ -14269,10 +14241,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
   }, [coverWidgetLayout, controlWidgetOrder, flushControlWidgetPrefs]);
 
-  if (isLoading) {
+ // We remove the "return" so the app ALWAYS shows the UI. 
+  // We only show a small overlay if we truly don't have a user yet.
+  if (isLoading && !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-indigo-100 dark:from-[#0f0a1e] dark:via-[#120d24] dark:to-[#0d1525] flex items-center justify-center">
-        <div className="text-gray-600 dark:text-gray-300">Loading calendar...</div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-500">Connecting to session...</div>
       </div>
     );
   }
