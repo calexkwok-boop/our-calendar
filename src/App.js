@@ -8025,58 +8025,64 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
 
-    try {
-      // 1. Fetch main popup events
-      const { data: popupEventsRows, error: popupEventsErr } = await supabase
-        .from('popup_events')
-        .select('event_id,max_people,created_by_user_id,created_by_name,created_at')
-        .eq('layer_id', activeLayerId);
+    const { data: popupEventsRows, error: popupEventsErr } = await supabase
+      .from('popup_events')
+      .select('event_id,max_people,created_by_user_id,created_by_name,created_at')
+      .eq('layer_id', activeLayerId);
 
-      if (popupEventsErr) throw popupEventsErr;
-
-      const eventIds = (popupEventsRows || []).map((row) => String(row?.event_id || '')).filter(Boolean);
-      const eventsMap = {};
-      (popupEventsRows || []).forEach((row) => {
-        eventsMap[row.event_id] = {
-          eventId: row.event_id,
-          maxPeople: Math.max(1, Number(row?.max_people || 1)),
-          createdByUserId: row.created_by_user_id,
-          createdByName: row.created_by_name,
-          createdAt: row.created_at,
-        };
-      });
-
-      // 2. Fetch Signups (Using "created_at" instead of "joined_at" to avoid 400 error)
-      let signupsMap = {};
-      if (eventIds.length > 0) {
-        // NOTE: We try popup_event_signups first as per your App.js code
-        const { data: signupRows, error: signupErr } = await supabase
-          .from('popup_event_signups') 
-          .select('event_id,user_id,display_name,created_at')
-          .eq('layer_id', activeLayerId)
-          .in('event_id', eventIds)
-          .order('created_at', { ascending: true }); // We use created_at because joined_at doesn't exist
-
-        if (!signupErr && signupRows) {
-          signupRows.forEach((row) => {
-            if (!signupsMap[row.event_id]) signupsMap[row.event_id] = [];
-            signupsMap[row.event_id].push({
-              userId: row.user_id,
-              displayName: row.display_name,
-              createdAt: row.created_at,
-            });
-          });
-        }
+    if (popupEventsErr) {
+      if (popupEventsErr.code === '42P01') {
+        setPopupFeatureAvailable(false);
       }
-
-      setPopupFeatureAvailable(true);
-      setPopupEventsByEventId(eventsMap);
-      setPopupSignupsByEventId(signupsMap);
-
-    } catch (err) {
-      console.warn("Popup system partially unavailable (check DB tables):", err.message);
-      // We don't "throw" here, so the main loader can continue to the next task
+      setPopupEventsByEventId({});
+      setPopupSignupsByEventId({});
+      return;
     }
+
+    const eventIds = (popupEventsRows || []).map((row) => String(row?.event_id || '')).filter(Boolean);
+    const eventsMap = {};
+    (popupEventsRows || []).forEach((row) => {
+      const eventId = String(row?.event_id || '');
+      if (!eventId) return;
+      eventsMap[eventId] = {
+        eventId,
+        maxPeople: Math.max(1, Number(row?.max_people || 1)),
+        createdByUserId: String(row?.created_by_user_id || ''),
+        createdByName: String(row?.created_by_name || ''),
+        createdAt: String(row?.created_at || ''),
+      };
+    });
+
+    let signupsMap = {};
+    if (eventIds.length > 0) {
+      const { data: signupRows, error: signupErr } = await supabase
+        .from('popup_event_signups')
+        .select('event_id,user_id,display_name,created_at')
+        .eq('layer_id', activeLayerId)
+        .in('event_id', eventIds)
+        .order('created_at', { ascending: true });
+
+      if (!signupErr) {
+        signupsMap = {};
+        (signupRows || []).forEach((row) => {
+          const eventId = String(row?.event_id || '');
+          if (!eventId) return;
+          if (!Array.isArray(signupsMap[eventId])) signupsMap[eventId] = [];
+          signupsMap[eventId].push({
+            userId: String(row?.user_id || ''),
+            displayName: resolveHandleLikeLabel(
+              String(row?.display_name || row?.user_id || 'Member'),
+              String(row?.user_id || '')
+            ),
+            createdAt: String(row?.created_at || ''),
+          });
+        });
+      }
+    }
+
+    setPopupFeatureAvailable(true);
+    setPopupEventsByEventId(eventsMap);
+    setPopupSignupsByEventId(signupsMap);
   };
 
   const createPopupEventRows = async (rows) => {
@@ -8996,111 +9002,97 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
   };
 
-// 1. AUTH INITIALIZATION: Checks who is logged in
+// CONSOLIDATED INITIALIZATION logic
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        setCurrentUser(getAuthIdentityLabel(session.user));
-        setShowAuth(false);
-      } else {
-        setUser(null);
-        setShowAuth(true);
-        setIsLoading(false); // Stop loading if no user is found
-      }
-    });
+    let isMounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setShowAuth(!session?.user);
-      if (session?.user) {
-        setCurrentUser(getAuthIdentityLabel(session.user));
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
- // 2. DATA INITIALIZATION: Loads Calendars, Events, and Sharing
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const loadEverything = async () => {
-      const userId = user.id;
-      const userEmail = user.email || '';
-      const userPhone = user.phone || '';
-
+    const startApp = async () => {
       try {
-        // 1. Load Layers (Calendars)
-        // We wrap this in its own try/catch so a layer error doesn't stop the app
-        try {
-          let loadedLayers = await loadLayersForUser(userId, userEmail, userPhone);
-          if (loadedLayers && loadedLayers.length > 0) {
-            setLayers(loadedLayers);
-            
-            const persistedLayerId = localStorage.getItem(`active-layer-${userId}`);
-            const selectedLayerId = (
-              activeLayerId && loadedLayers.some(l => String(l.id) === String(activeLayerId))
-                ? activeLayerId
-                : (persistedLayerId && loadedLayers.some(l => String(l.id) === String(persistedLayerId))
-                  ? persistedLayerId
-                  : loadedLayers[0].id)
-            );
-
-            if (selectedLayerId !== activeLayerId) {
-              setActiveLayerId(selectedLayerId);
-            }
-            localStorage.setItem(`active-layer-${userId}`, selectedLayerId);
-
-            // 2. Fetch Events for the selected layer
-            const { data: layerEventsData } = await supabase
-              .from('events')
-              .select('*')
-              .eq('layer_id', selectedLayerId);
-
-            if (layerEventsData) {
-              const eventsObj = {};
-              layerEventsData.forEach(event => {
-                if (!eventsObj[event.date]) eventsObj[event.date] = [];
-                eventsObj[event.date].push(mapSupabaseEventRow(event, userId));
-              });
-              setEvents(eventsObj);
-            }
+        // 1. Get the session safely
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session?.user) {
+          if (isMounted) {
+            setUser(null);
+            setShowAuth(true);
+            setIsLoading(false); // Stop loading to show login
           }
-        } catch (layerErr) {
-          console.error("Layer Load Error:", layerErr);
+          return;
         }
 
-        // 3. Load Handles & Sub-calendars (The parts currently causing your 400 error)
-        // We move these into "Fire and Forget" mode so if they fail, the app still opens
-        Promise.all([
-          loadAccountHandleForUser(user).catch(e => console.error("Handle load failed", e)),
-          loadSubCalendars().catch(e => console.error("SubCal load failed", e)),
-          loadPopupEventData().catch(e => console.error("Popup data load failed", e))
-        ]);
+        const userId = session.user.id;
+        if (isMounted) {
+          setUser(session.user);
+          setCurrentUser(getAuthIdentityLabel(session.user));
+          setShowAuth(false);
+        }
 
-      } catch (error) {
-        console.error('General Load Error:', error);
+        // 2. Load Calendars (Layers) - we must have these
+        const loadedLayers = await loadLayersForUser(userId, session.user.email, session.user.phone);
+        if (isMounted) setLayers(loadedLayers || []);
+
+        if (!loadedLayers || loadedLayers.length === 0) {
+          if (isMounted) setIsLoading(false);
+          return;
+        }
+
+        // 3. Pick the Layer ID
+        const persistedId = localStorage.getItem(`active-layer-${userId}`);
+        const selectedId = (activeLayerId && loadedLayers.some(l => String(l.id) === String(activeLayerId)))
+          ? activeLayerId : (persistedId && loadedLayers.some(l => String(l.id) === String(persistedId)))
+          ? persistedId : loadedLayers[0].id;
+
+        if (isMounted && selectedId !== activeLayerId) {
+          setActiveLayerId(selectedId);
+        }
+
+        // 4. Load the core events - wrap in try/catch so 400 errors don't stop the app
+        try {
+          const { data: eventsData } = await supabase.from('events').select('*').eq('layer_id', selectedId);
+          if (eventsData && isMounted) {
+            const eventsObj = {};
+            eventsData.forEach(event => {
+              if (!eventsObj[event.date]) eventsObj[event.date] = [];
+              eventsObj[event.date].push(mapSupabaseEventRow(event, userId));
+            });
+            setEvents(eventsObj);
+          }
+        } catch (e) {
+          console.error("Non-critical: Events failed to load", e);
+        }
+
+        // 5. Load everything else WITHOUT 'await'
+        // This is the "Separate Bubble" - if these fail (like your 400 error), 
+        // the code below (setIsLoading) still runs!
+        loadAccountHandleForUser(session.user).catch(() => {});
+        loadSubCalendars().catch(() => {});
+        loadPopupEventData().catch(() => {});
+
+      } catch (criticalError) {
+        console.error('Critical Auth/Layer load failure:', criticalError);
       } finally {
-        // This line runs no matter what, even if the 400 error happens!
-        setIsLoading(false);
+        // THIS IS THE FIX: This line is now GUARANTEED to run
+        if (isMounted) setIsLoading(false);
       }
     };
 
-    loadEverything();
+    startApp();
 
-    // Realtime logic
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
-        // You can add a targeted refresh here if needed
-      })
-      .subscribe();
+    // Listen for login/logout
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session && isMounted) {
+        setUser(null);
+        setShowAuth(true);
+        setIsLoading(false);
+      }
+    });
 
-    return () => { channel.unsubscribe(); };
-  }, [user?.id, activeLayerId, layerRefreshToken]);
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [activeLayerId, layerRefreshToken]);
+
   // Check auth session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
