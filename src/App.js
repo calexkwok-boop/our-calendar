@@ -18924,7 +18924,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </>
             )}
 
-            {bottomNavTab === 'trips' && (
+            {bottomNavTab === 'trips' && (() => {
+              try {
+                return (
               <>
                 <h3 className="text-lg sm:text-xl font-semibold mb-4" style={themeAccentHeadingStyle}>Trips</h3>
 
@@ -19049,7 +19051,18 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   )}
                 </div>
               </>
-            )}
+                );
+              } catch (error) {
+                console.error('Trips rendering error:', error);
+                return (
+                  <div className="text-center py-10">
+                    <div className="text-4xl mb-3">⚠️</div>
+                    <div className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">Error loading trips</div>
+                    <div className="text-xs text-gray-500">{String(error.message || error)}</div>
+                  </div>
+                );
+              }
+            })()}
 
             {bottomNavTab === 'explore' && (
               <>
