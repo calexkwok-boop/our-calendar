@@ -19264,7 +19264,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </>
             )}
           </div>
-        </div>
+          )}
+
       </div>
     </div>
 
