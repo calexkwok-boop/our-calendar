@@ -112,7 +112,7 @@ const CreateEventForm = ({ accent, darkMode, btnStyle, border, softBg, supabase,
     if (!form.date) { setError('Date is required.'); return; }
     setSaving(true); setError('');
     try {
-      const { data, error: err } = await supabase.from('popup_event_details').insert({
+      const { data, error: err } = await supabase.from('popup_events').insert({
         calendar_id: calendarId, created_by: user.id, title: form.title.trim(),
         date: form.date, time: form.time || null, location: form.location || null,
         location_lat: form.location_lat, location_lng: form.location_lng,
@@ -591,14 +591,14 @@ export default function PopupEventPanel({
     setLoading(true);
     try {
       const [{ data: ev }, { data: mems }, { data: signups, error: signupsErr }] = await Promise.all([
-        supabase.from('popup_event_details').select('*').eq('id', id).single(),
+        supabase.from('popup_events').select('*').eq('id', id).single(),
         supabase.from('popup_event_signups').select('*').eq('event_id', id).order('joined_at'),
         supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
       ]);
       console.log('loadEvent', { ev, mems, signups, signupsErr });
       if (ev) setEvent(ev);
       else if (eventMetaFallback) setEvent(eventMetaFallback);
-      // Merge popup_event_members + popup_event_signups, dedupe by user_id
+      // Merge popup_event_signups + popup_event_signups, dedupe by user_id
       const memberList = [...(mems || [])];
       const memberUserIds = new Set(memberList.map(m => String(m.user_id || '')));
       (signups || []).forEach(s => {
@@ -624,7 +624,7 @@ export default function PopupEventPanel({
   useEffect(() => {
     if (!event?.id || !supabase) return;
     const channel = supabase.channel(`popup-members-${event.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id))
       .subscribe();
     return () => supabase.removeChannel(channel);
