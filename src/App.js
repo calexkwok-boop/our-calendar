@@ -9002,39 +9002,92 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
   };
 
-useEffect(() => {
-    let isMounted = true;
-
-    const loadData = async () => {
+// BLOCK 1: Initialization (Finds the user and the calendar, then stops the loading screen)
+  useEffect(() => {
+    const initializeApp = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const userId = session?.user?.id;
-        const userEmail = session?.user?.email;
-        const userPhone = session?.user?.phone;
-
-        // FIX 1: If no user, stop loading immediately so the login screen can show
-        if (!userId) {
-          if (isMounted) setIsLoading(false);
-          return;
-        }
-
-        const shareRecipientFilter = buildShareRecipientFilter(userId, userEmail, userPhone);
-        let loadedLayers = await loadLayersForUser(userId, userEmail, userPhone);
         
-        if (!loadedLayers || loadedLayers.length === 0) {
-          loadedLayers = await loadLayersForUser(userId, userEmail, userPhone);
-        }
-
-        // FIX 2: If layers fail to load, still stop the loading screen
-        if (!loadedLayers || loadedLayers.length === 0) {
-          if (isMounted) {
-            setLayers([]);
-            setActiveLayerId(null);
-            setIsLoading(false);
-          }
+        if (!session?.user) {
+          setUser(null);
+          setShowAuth(true);
+          setIsLoading(false);
           return;
         }
 
+        const userId = session.user.id;
+        setUser(session.user);
+        setCurrentUser(getAuthIdentityLabel(session.user));
+        setShowAuth(false);
+
+        // Just get the layers first to decide what to show
+        let loadedLayers = await loadLayersForUser(userId, session.user.email, session.user.phone);
+        if (!loadedLayers || loadedLayers.length === 0) {
+           setIsLoading(false);
+           return;
+        }
+
+        const persistedLayerId = localStorage.getItem(`active-layer-${userId}`);
+        const selectedLayerId = (
+          activeLayerId && loadedLayers.some(layer => String(layer.id) === String(activeLayerId))
+            ? activeLayerId
+            : (persistedLayerId && loadedLayers.some(layer => String(layer.id) === String(persistedLayerId))
+              ? persistedLayerId
+              : loadedLayers[0].id)
+        );
+
+        setActiveLayerId(selectedLayerId);
+        localStorage.setItem(`active-layer-${userId}`, selectedLayerId);
+        await loadAccountHandleForUser(session.user);
+        
+      } catch (error) {
+        console.error("Initialization error:", error);
+      } finally {
+        // This is the most important line: stop the loading screen no matter what
+        setIsLoading(false);
+      }
+    };
+
+    initializeApp();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        setUser(null);
+        setShowAuth(true);
+        setIsLoading(false);
+      } else {
+        setUser(session.user);
+        setShowAuth(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []); // [] means run once on startup
+
+  // BLOCK 2: Data Loader (Runs whenever you switch calendars)
+  useEffect(() => {
+    if (!activeLayerId || !user?.id) return;
+
+    const fetchAllData = async () => {
+      try {
+        const userId = user.id;
+        
+        // 1. Fetch Events
+        const { data: eventsData } = await supabase
+          .from('events')
+          .select('*')
+          .eq('layer_id', activeLayerId);
+
+        if (eventsData) {
+          const eventsObj = {};
+          eventsData.forEach(event => {
+            if (!eventsObj[event.date]) eventsObj[event.date] = [];
+            eventsObj[event.date].push(mapSupabaseEventRow(event, userId));
+          });
+          setEvents(eventsObj);
+        }
+
+        
         const persistedLayerId = localStorage.getItem(`active-layer-${userId}`);
         const selectedLayerId = (
           activeLayerId && loadedLayers.some(layer => String(layer.id) === String(activeLayerId))
