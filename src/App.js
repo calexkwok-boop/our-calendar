@@ -885,6 +885,7 @@ function App() {
   const getActiveCalendarsSortLocalKey = (userId) => `active-calendars-order-${String(userId || '').trim()}`;
   const getUpcomingTripsSortLocalKey = (userId, layerId) => `upcoming-trips-order-${String(userId || '').trim()}-${String(layerId || '').trim()}`;
   const getUpcomingPopupsSortLocalKey = (userId, layerId) => `upcoming-popups-order-${String(userId || '').trim()}-${String(layerId || '').trim()}`;
+  const getUpcomingEventsVisibleCalendarsLocalKey = (userId) => `upcoming-events-visible-calendars-${String(userId || '').trim()}`;
   const readLocalSortOrder = (key) => {
     try {
       const raw = localStorage.getItem(String(key || ''));
@@ -13894,8 +13895,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const ids = visibleLayerCalendars.map((layer) => String(layer?.id || '')).filter(Boolean);
     setEventsTabVisibleLayerIds((prev) => {
-      const prevSet = new Set((prev || []).map(String));
-      const next = ids.filter((id) => prevSet.size === 0 || prevSet.has(id));
+      const next = normalizeSortOrder(ids, prev);
       return next.length > 0 ? next : ids;
     });
   }, [visibleLayerCalendars]);
@@ -13904,14 +13904,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setActiveCalendarSortOrder([]);
       setUpcomingTripSortOrder([]);
       setUpcomingPopupSortOrder([]);
+      setEventsTabVisibleLayerIds([]);
       return;
     }
     const activeCalendarsKey = getActiveCalendarsSortLocalKey(user.id);
     setActiveCalendarSortOrder(readLocalSortOrder(activeCalendarsKey));
     const tripsKey = getUpcomingTripsSortLocalKey(user.id, 'all');
     const popupsKey = getUpcomingPopupsSortLocalKey(user.id, 'all');
+    const upcomingEventsVisibleCalendarsKey = getUpcomingEventsVisibleCalendarsLocalKey(user.id);
     setUpcomingTripSortOrder(readLocalSortOrder(tripsKey));
     setUpcomingPopupSortOrder(readLocalSortOrder(popupsKey));
+    setEventsTabVisibleLayerIds(readLocalSortOrder(upcomingEventsVisibleCalendarsKey));
   }, [user?.id]);
 
   useEffect(() => {
@@ -13928,6 +13931,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!user?.id) return;
     writeLocalSortOrder(getUpcomingPopupsSortLocalKey(user.id, 'all'), upcomingPopupSortOrder);
   }, [user?.id, upcomingPopupSortOrder]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    writeLocalSortOrder(getUpcomingEventsVisibleCalendarsLocalKey(user.id), eventsTabVisibleLayerIds);
+  }, [user?.id, eventsTabVisibleLayerIds]);
 
   useEffect(() => {
     const ids = visibleLayerCalendars.map((layer) => String(layer?.id || ''));
