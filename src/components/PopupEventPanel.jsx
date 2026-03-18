@@ -581,6 +581,9 @@ export default function PopupEventPanel({
   const [loading, setLoading] = useState(Boolean(initialEventId));
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [manualPlayerName, setManualPlayerName] = useState('');
+  const [manualAddBusy, setManualAddBusy] = useState(false);
+  const [manualAddError, setManualAddError] = useState('');
   const eventMetaFallbackRef = useRef(eventMetaFallback);
 
   useEffect(() => {
@@ -654,6 +657,39 @@ export default function PopupEventPanel({
   const handleKick = async (member) => { if (!isHostOrCohost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', member.id); await loadEvent(event.id); };
   const handlePromote = async (member) => { if (!isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').update({ role: 'cohost' }).eq('id', member.id); await loadEvent(event.id); };
   const handleDemote = async (member) => { if (!isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').update({ role: 'player' }).eq('id', member.id); await loadEvent(event.id); };
+  const handleAddManualPlayer = async () => {
+    const nextName = String(manualPlayerName || '').trim();
+    if (!isHost || !isUuid(event?.id)) return;
+    if (!nextName) {
+      setManualAddError('Enter a player name.');
+      return;
+    }
+    if (isFull) {
+      setManualAddError('This event is already full.');
+      return;
+    }
+    const alreadyExists = members.some((member) => String(member?.display_name || '').trim().toLowerCase() === nextName.toLowerCase());
+    if (alreadyExists) {
+      setManualAddError('That player is already on the roster.');
+      return;
+    }
+    setManualAddBusy(true);
+    setManualAddError('');
+    try {
+      const { error } = await supabase.from('popup_event_members').insert({
+        event_id: event.id,
+        user_id: null,
+        display_name: nextName,
+        role: 'player',
+      });
+      if (error) throw error;
+      setManualPlayerName('');
+      await loadEvent(event.id);
+    } catch (err) {
+      setManualAddError(err?.message || 'Could not add player.');
+    }
+    setManualAddBusy(false);
+  };
   const handleCopyLink = () => { navigator.clipboard.writeText(`${window.location.origin}?popup=${event.id}`).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   const panelStyle = { borderRadius: 24, overflow: 'hidden', marginBottom: 24, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(17,24,39,0.95)' : '#fff', boxShadow: `0 8px 40px ${accent}18` };
@@ -825,6 +861,31 @@ export default function PopupEventPanel({
             </div>
             <div style={{ fontSize: 10, fontWeight: 700, color: isFull ? '#f59e0b' : 'var(--color-text-secondary)' }}>{isFull ? 'Full' : `${event.max_players - memberCount} spots left`}</div>
           </div>
+          {isHost && !isLegacyInvalidEvent && (
+            <div style={{ padding: '0 16px 12px' }}>
+              <div style={{ padding: '12px 14px', borderRadius: 14, background: softBg, border: `1px solid ${border}` }}>
+                <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: accent, marginBottom: 8 }}>Add Player</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    value={manualPlayerName}
+                    onChange={(e) => { setManualPlayerName(e.target.value); if (manualAddError) setManualAddError(''); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddManualPlayer(); } }}
+                    placeholder="Player name"
+                    style={{ flex: 1, minWidth: 0, padding: '10px 12px', borderRadius: 12, fontSize: 14, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', color: 'var(--color-text-primary)', outline: 'none' }}
+                  />
+                  <button
+                    onClick={handleAddManualPlayer}
+                    disabled={manualAddBusy || isFull}
+                    style={{ ...btnStyle, padding: '0 14px', borderRadius: 12, fontSize: 12, fontWeight: 800, opacity: manualAddBusy || isFull ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    {manualAddBusy ? <Loader style={{ width: 14, height: 14 }} /> : <Plus style={{ width: 14, height: 14 }} />}
+                    {manualAddBusy ? 'Adding...' : 'Add'}
+                  </button>
+                </div>
+                {manualAddError && <div style={{ marginTop: 8, fontSize: 12, color: '#ef4444' }}>{manualAddError}</div>}
+              </div>
+            </div>
+          )}
           {members.map((m) => (
             <RosterRow key={m.id || m.user_id} member={m} isMe={m.user_id === user?.id}
               isHost={isHostOrCohost} accent={accent} darkMode={darkMode}
