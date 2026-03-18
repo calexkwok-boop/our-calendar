@@ -19700,7 +19700,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             onPointerMove={moveTripSwipeDrag}
                             onPointerUp={endTripSwipeDrag}
                             onPointerCancel={endTripSwipeDrag}
-                            onClick={() => { if (sc?.layer_id && String(sc.layer_id) !== String(activeLayerId || '')) setActiveLayerId(sc.layer_id); setActiveSubCalendar(sc); setBottomNavTab('home'); }}
+                            onClick={() => { if (sc?.layer_id && String(sc.layer_id) !== String(activeLayerId || '')) setActiveLayerId(sc.layer_id); openSubCalendar(sc); setBottomNavTab('home'); }}
                           >
                             <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
@@ -19737,7 +19737,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             onPointerMove={moveTripSwipeDrag}
                             onPointerUp={endTripSwipeDrag}
                             onPointerCancel={endTripSwipeDrag}
-                            onClick={() => { if (sc?.layer_id && String(sc.layer_id) !== String(activeLayerId || '')) setActiveLayerId(sc.layer_id); setActiveSubCalendar(sc); setBottomNavTab('home'); }}
+                            onClick={() => { if (sc?.layer_id && String(sc.layer_id) !== String(activeLayerId || '')) setActiveLayerId(sc.layer_id); openSubCalendar(sc); setBottomNavTab('home'); }}
                           >
                             <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
@@ -19783,7 +19783,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             onPointerMove={moveTripSwipeDrag}
                             onPointerUp={endTripSwipeDrag}
                             onPointerCancel={endTripSwipeDrag}
-                            onClick={() => { if (sc?.layer_id && String(sc.layer_id) !== String(activeLayerId || '')) setActiveLayerId(sc.layer_id); setActiveSubCalendar(sc); setBottomNavTab('home'); }}
+                            onClick={() => { if (sc?.layer_id && String(sc.layer_id) !== String(activeLayerId || '')) setActiveLayerId(sc.layer_id); openSubCalendar(sc); setBottomNavTab('home'); }}
                           >
                             <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
