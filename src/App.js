@@ -697,6 +697,7 @@ function App() {
   const [eventsTabHideRecurring, setEventsTabHideRecurring] = useState(false);
   const [eventsTabVisibleLayerIds, setEventsTabVisibleLayerIds] = useState([]);
   const [showEventsTabCalendarFilter, setShowEventsTabCalendarFilter] = useState(false);
+  const eventsTabVisibleLayerIdsHydratedRef = useRef(false);
   const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
@@ -13895,14 +13896,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const ids = visibleLayerCalendars.map((layer) => String(layer?.id || '')).filter(Boolean);
     setEventsTabVisibleLayerIds((prev) => {
+      if (!eventsTabVisibleLayerIdsHydratedRef.current && user?.id) return prev;
       const prevList = Array.from(new Set((prev || []).map((id) => String(id || '')).filter(Boolean)));
       if (prevList.length === 0) return ids;
       const next = prevList.filter((id) => ids.includes(id));
       return next.length > 0 ? next : ids;
     });
-  }, [visibleLayerCalendars]);
+  }, [visibleLayerCalendars, user?.id]);
   useEffect(() => {
     if (!user?.id) {
+      eventsTabVisibleLayerIdsHydratedRef.current = false;
       setActiveCalendarSortOrder([]);
       setUpcomingTripSortOrder([]);
       setUpcomingPopupSortOrder([]);
@@ -13917,6 +13920,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setUpcomingTripSortOrder(readLocalSortOrder(tripsKey));
     setUpcomingPopupSortOrder(readLocalSortOrder(popupsKey));
     setEventsTabVisibleLayerIds(readLocalSortOrder(upcomingEventsVisibleCalendarsKey));
+    eventsTabVisibleLayerIdsHydratedRef.current = true;
   }, [user?.id]);
 
   useEffect(() => {
@@ -13935,7 +13939,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, upcomingPopupSortOrder]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !eventsTabVisibleLayerIdsHydratedRef.current) return;
     writeLocalSortOrder(getUpcomingEventsVisibleCalendarsLocalKey(user.id), eventsTabVisibleLayerIds);
   }, [user?.id, eventsTabVisibleLayerIds]);
 
