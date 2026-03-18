@@ -698,6 +698,7 @@ function App() {
   const [eventsTabVisibleLayerIds, setEventsTabVisibleLayerIds] = useState([]);
   const [showEventsTabCalendarFilter, setShowEventsTabCalendarFilter] = useState(false);
   const eventsTabVisibleLayerIdsHydratedRef = useRef(false);
+  const eventsTabVisibleLayerIdsStorageLoadedRef = useRef(false);
   const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
@@ -891,6 +892,17 @@ function App() {
     try {
       const raw = localStorage.getItem(String(key || ''));
       const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((id) => String(id || '')).filter(Boolean);
+    } catch {
+      return [];
+    }
+  };
+  const readLocalSortOrderOrNull = (key) => {
+    try {
+      const raw = localStorage.getItem(String(key || ''));
+      if (raw === null) return null;
+      const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
       return parsed.map((id) => String(id || '')).filter(Boolean);
     } catch {
@@ -13896,16 +13908,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const ids = visibleLayerCalendars.map((layer) => String(layer?.id || '')).filter(Boolean);
     setEventsTabVisibleLayerIds((prev) => {
-      if (!eventsTabVisibleLayerIdsHydratedRef.current && user?.id) return prev;
+      if (!eventsTabVisibleLayerIdsStorageLoadedRef.current && user?.id) return prev;
       const prevList = Array.from(new Set((prev || []).map((id) => String(id || '')).filter(Boolean)));
-      if (prevList.length === 0) return ids;
+      if (prevList.length === 0) return eventsTabVisibleLayerIdsHydratedRef.current ? [] : ids;
       const next = prevList.filter((id) => ids.includes(id));
-      return next.length > 0 ? next : ids;
+      return next.length > 0 ? next : (eventsTabVisibleLayerIdsHydratedRef.current ? [] : ids);
     });
   }, [visibleLayerCalendars, user?.id]);
   useEffect(() => {
     if (!user?.id) {
       eventsTabVisibleLayerIdsHydratedRef.current = false;
+      eventsTabVisibleLayerIdsStorageLoadedRef.current = false;
       setActiveCalendarSortOrder([]);
       setUpcomingTripSortOrder([]);
       setUpcomingPopupSortOrder([]);
@@ -13917,10 +13930,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const tripsKey = getUpcomingTripsSortLocalKey(user.id, 'all');
     const popupsKey = getUpcomingPopupsSortLocalKey(user.id, 'all');
     const upcomingEventsVisibleCalendarsKey = getUpcomingEventsVisibleCalendarsLocalKey(user.id);
+    const savedVisibleLayerIds = readLocalSortOrderOrNull(upcomingEventsVisibleCalendarsKey);
     setUpcomingTripSortOrder(readLocalSortOrder(tripsKey));
     setUpcomingPopupSortOrder(readLocalSortOrder(popupsKey));
-    setEventsTabVisibleLayerIds(readLocalSortOrder(upcomingEventsVisibleCalendarsKey));
-    eventsTabVisibleLayerIdsHydratedRef.current = true;
+    setEventsTabVisibleLayerIds(savedVisibleLayerIds ?? []);
+    eventsTabVisibleLayerIdsHydratedRef.current = Array.isArray(savedVisibleLayerIds);
+    eventsTabVisibleLayerIdsStorageLoadedRef.current = true;
   }, [user?.id]);
 
   useEffect(() => {
