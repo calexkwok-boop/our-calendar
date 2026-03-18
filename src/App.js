@@ -696,6 +696,7 @@ function App() {
   const [userTabEvents, setUserTabEvents] = useState([]);
   const [eventsTabHideRecurring, setEventsTabHideRecurring] = useState(false);
   const [eventsTabVisibleLayerIds, setEventsTabVisibleLayerIds] = useState([]);
+  const [showEventsTabCalendarFilter, setShowEventsTabCalendarFilter] = useState(false);
   const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
@@ -19222,45 +19223,55 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <Plus className="w-3.5 h-3.5" /> New Event
                   </button>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 mb-4">
+                <div className="flex flex-wrap items-center gap-2 mb-4 relative">
                   <button
                     onClick={() => setEventsTabHideRecurring((prev) => !prev)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${eventsTabHideRecurring ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:border-gray-100' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}
                   >
                     {eventsTabHideRecurring ? 'Show recurring' : 'Hide recurring'}
                   </button>
-                  <div className="w-full flex flex-wrap items-center gap-2">
-                    <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white dark:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600">
-                      <input
-                        type="checkbox"
-                        checked={visibleLayerCalendars.length > 0 && eventsTabVisibleLayerIds.length === visibleLayerCalendars.length}
-                        onChange={(e) => setEventsTabVisibleLayerIds(e.target.checked ? visibleLayerCalendars.map((layer) => String(layer.id || '')) : [])}
-                        className="rounded border-gray-300 dark:border-gray-500"
-                      />
-                      All calendars
-                    </label>
-                    {visibleLayerCalendars.map((layer) => {
-                      const layerId = String(layer.id || '');
-                      const enabled = eventsTabVisibleLayerIds.includes(layerId);
-                      return (
-                        <label key={layerId} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white dark:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600">
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowEventsTabCalendarFilter((prev) => !prev)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-medium border transition-all bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600"
+                    >
+                      Calendars
+                    </button>
+                    {showEventsTabCalendarFilter && (
+                      <div className="absolute left-0 top-full mt-2 z-20 min-w-[220px] max-w-[280px] rounded-2xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl p-2 space-y-1">
+                        <label className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
                           <input
                             type="checkbox"
-                            checked={enabled}
-                            onChange={(e) => {
-                              setEventsTabVisibleLayerIds((prev) => {
-                                const current = Array.isArray(prev) ? prev.map(String) : [];
-                                return e.target.checked
-                                  ? [...current, layerId]
-                                  : current.filter((id) => id !== layerId);
-                              });
-                            }}
+                            checked={visibleLayerCalendars.length > 0 && eventsTabVisibleLayerIds.length === visibleLayerCalendars.length}
+                            onChange={(e) => setEventsTabVisibleLayerIds(e.target.checked ? visibleLayerCalendars.map((layer) => String(layer.id || '')) : [])}
                             className="rounded border-gray-300 dark:border-gray-500"
                           />
-                          {layer.name || 'Untitled'}
+                          All calendars
                         </label>
-                      );
-                    })}
+                        {visibleLayerCalendars.map((layer) => {
+                          const layerId = String(layer.id || '');
+                          const enabled = eventsTabVisibleLayerIds.includes(layerId);
+                          return (
+                            <label key={layerId} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                              <input
+                                type="checkbox"
+                                checked={enabled}
+                                onChange={(e) => {
+                                  setEventsTabVisibleLayerIds((prev) => {
+                                    const current = Array.isArray(prev) ? prev.map(String) : [];
+                                    return e.target.checked
+                                      ? [...current, layerId]
+                                      : current.filter((id) => id !== layerId);
+                                  });
+                                }}
+                                className="rounded border-gray-300 dark:border-gray-500"
+                              />
+                              <span className="truncate">{layer.name || 'Untitled'}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
                 {filteredUpcomingUserTabEvents.length === 0 ? (
