@@ -157,7 +157,7 @@ export default function RoundRobinPanel({
             </div>
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Every team plays every other team · most wins wins</p>
           </div>
-          <button onClick={() => setShowRoundRobinPanel(false)} className="p-1.5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRoundRobinPanel(false); }} className="p-1.5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
             <X className="w-4 h-4 text-gray-400" />
           </button>
         </div>
@@ -334,7 +334,7 @@ export default function RoundRobinPanel({
               <span>{doneCount}/{totalCount} played</span>
             </div>
           </div>
-          <button onClick={() => setShowRoundRobinPanel(false)} className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 transition-colors">
+          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRoundRobinPanel(false); }} className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 transition-colors">
             <X className="w-4 h-4 text-white" />
           </button>
         </div>
