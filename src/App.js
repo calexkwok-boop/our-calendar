@@ -20111,7 +20111,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
           {/* Widget toolbar — shown on home tab */}
           {bottomNavTab === 'home' && (
-            <div className="flex items-center gap-1.5 mb-1.5 px-1 overflow-x-auto">
+            <div className="flex items-center gap-1.5 mb-1.5 px-1 pt-1 pr-2 overflow-x-auto overflow-y-visible">
               {activeControlWidgets.map((widgetId) => {
                 const meta = getControlWidgetMeta(widgetId);
                 return (
