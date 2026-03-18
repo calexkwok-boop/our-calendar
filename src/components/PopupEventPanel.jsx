@@ -853,7 +853,7 @@ export default function PopupEventPanel({
 
       {/* ── ROSTER TAB ── */}
       {screen === 'roster' && (
-        <div>
+        <div style={{ paddingBottom: 112 }}>
           <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent }}>{memberCount} / {event.max_players} players</div>
             <div style={{ flex: 1, height: 4, borderRadius: 999, background: border, margin: '0 12px', overflow: 'hidden' }}>
