@@ -3,6 +3,7 @@ import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
+import { v4 as uuidv4 } from 'uuid';
 import { getMessagingIfSupported } from "./firebase";
 import GauntletPanel from "./components/GauntletPanel";
 import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
@@ -37,6 +38,8 @@ const storage = {
     return { key, value, shared: true };
   }
 };
+
+const generateUuid = () => uuidv4();
 
 if (typeof window !== 'undefined') {
   window.storage = storage;
@@ -8039,23 +8042,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
 
-    const eventIds = (popupEventsRows || [])
-  .map((row) => String(row?.id || ''))
-  .filter(Boolean);
-
-const eventsMap = {};
-(popupEventsRows || []).forEach((row) => {
-  const eventId = String(row?.id || '');
-  if (!eventId) return;
-
-  eventsMap[eventId] = {
-    eventId,
-    maxPeople: Math.max(1, Number(row?.max_people || 1)),
-    createdByUserId: String(row?.created_by_user_id || ''),
-    createdByName: String(row?.created_by_name || ''),
-    createdAt: String(row?.created_at || ''),
-  };
-});
+    const eventIds = (popupEventsRows || []).map((row) => String(row?.event_id || '')).filter(Boolean);
+    const eventsMap = {};
+    (popupEventsRows || []).forEach((row) => {
+      const eventId = String(row?.event_id || '');
+      if (!eventId) return;
+      eventsMap[eventId] = {
+        eventId,
+        maxPeople: Math.max(1, Number(row?.max_people || 1)),
+        createdByUserId: String(row?.created_by_user_id || ''),
+        createdByName: String(row?.created_by_name || ''),
+        createdAt: String(row?.created_at || ''),
+      };
+    });
 
     let signupsMap = {};
     if (eventIds.length > 0) {
@@ -8481,7 +8480,7 @@ const eventsMap = {};
       return;
     }
       const eventRow = {
-        id: `${Date.now()}-${Math.random()}`,
+        id: generateUuid(),
         date: dateKey,
         title,
         time,
@@ -13104,7 +13103,9 @@ const eventsMap = {};
     const createdEventIds = [];
     pendingEvent.datesToAdd.forEach(date => {
       const dateKey = getDateKey(date);
+      const eventId = pendingEvent.isPopupEvent ? generateUuid() : `${Date.now()}-${Math.random()}`;
       const newEvent = {
+        id: eventId,
         title: pendingEvent.title,
         time: pendingEvent.isMultiDay ? null : (time || null),
         date: dateKey,
@@ -13159,6 +13160,7 @@ const eventsMap = {};
         }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
 
         supabase.from('popup_event_members').insert({
+          event_id: eventId,
           user_id: user.id,
           display_name: currentUser || user?.email || 'Host',
           role: 'host',
