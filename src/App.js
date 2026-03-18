@@ -697,8 +697,7 @@ function App() {
   const [eventsTabHideRecurring, setEventsTabHideRecurring] = useState(false);
   const [eventsTabVisibleLayerIds, setEventsTabVisibleLayerIds] = useState([]);
   const [showEventsTabCalendarFilter, setShowEventsTabCalendarFilter] = useState(false);
-  const eventsTabVisibleLayerIdsHydratedRef = useRef(false);
-  const eventsTabVisibleLayerIdsStorageLoadedRef = useRef(false);
+  const [eventsTabVisibleLayerIdsInitialized, setEventsTabVisibleLayerIdsInitialized] = useState(false);
   const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
@@ -13909,37 +13908,36 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return String(a?.name || '').localeCompare(String(b?.name || ''));
   });
   useEffect(() => {
-    const ids = visibleLayerCalendars.map((layer) => String(layer?.id || '')).filter(Boolean);
-    setEventsTabVisibleLayerIds((prev) => {
-      if (!eventsTabVisibleLayerIdsStorageLoadedRef.current && user?.id) return prev;
-      const prevList = Array.from(new Set((prev || []).map((id) => String(id || '')).filter(Boolean)));
-      if (prevList.length === 0) return eventsTabVisibleLayerIdsHydratedRef.current ? [] : ids;
-      const next = prevList.filter((id) => ids.includes(id));
-      return next.length > 0 ? next : (eventsTabVisibleLayerIdsHydratedRef.current ? [] : ids);
-    });
-  }, [visibleLayerCalendars, user?.id]);
-  useEffect(() => {
     if (!user?.id) {
-      eventsTabVisibleLayerIdsHydratedRef.current = false;
-      eventsTabVisibleLayerIdsStorageLoadedRef.current = false;
       setActiveCalendarSortOrder([]);
       setUpcomingTripSortOrder([]);
       setUpcomingPopupSortOrder([]);
       setEventsTabVisibleLayerIds([]);
+      setEventsTabVisibleLayerIdsInitialized(false);
       return;
     }
     const activeCalendarsKey = getActiveCalendarsSortLocalKey(user.id);
     setActiveCalendarSortOrder(readLocalSortOrder(activeCalendarsKey));
     const tripsKey = getUpcomingTripsSortLocalKey(user.id, 'all');
     const popupsKey = getUpcomingPopupsSortLocalKey(user.id, 'all');
-    const upcomingEventsVisibleCalendarsKey = getUpcomingEventsVisibleCalendarsLocalKey(user.id);
-    const savedVisibleLayerIds = readLocalSortOrderOrNull(upcomingEventsVisibleCalendarsKey);
     setUpcomingTripSortOrder(readLocalSortOrder(tripsKey));
     setUpcomingPopupSortOrder(readLocalSortOrder(popupsKey));
-    setEventsTabVisibleLayerIds(savedVisibleLayerIds ?? []);
-    eventsTabVisibleLayerIdsHydratedRef.current = Array.isArray(savedVisibleLayerIds);
-    eventsTabVisibleLayerIdsStorageLoadedRef.current = true;
   }, [user?.id]);
+  useEffect(() => {
+    if (!user?.id) return;
+    const ids = visibleLayerCalendars.map((layer) => String(layer?.id || '')).filter(Boolean);
+    if (!eventsTabVisibleLayerIdsInitialized) {
+      const savedVisibleLayerIds = readLocalSortOrderOrNull(getUpcomingEventsVisibleCalendarsLocalKey(user.id));
+      if (savedVisibleLayerIds === null) {
+        setEventsTabVisibleLayerIds(ids);
+      } else {
+        setEventsTabVisibleLayerIds(savedVisibleLayerIds.filter((id) => ids.includes(id)));
+      }
+      setEventsTabVisibleLayerIdsInitialized(true);
+      return;
+    }
+    setEventsTabVisibleLayerIds((prev) => Array.from(new Set((prev || []).map(String).filter((id) => ids.includes(id)))));
+  }, [user?.id, visibleLayerCalendars, eventsTabVisibleLayerIdsInitialized]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -19326,6 +19324,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             onChange={(e) => {
                               const nextIds = e.target.checked ? visibleLayerCalendars.map((layer) => String(layer.id || '')) : [];
                               setEventsTabVisibleLayerIds(nextIds);
+                              setEventsTabVisibleLayerIdsInitialized(true);
                               if (user?.id) persistUpcomingEventsVisibleCalendars(user.id, nextIds);
                             }}
                             className="rounded border-gray-300 dark:border-gray-500"
@@ -19346,6 +19345,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                     const nextIds = e.target.checked
                                       ? [...current, layerId]
                                       : current.filter((id) => id !== layerId);
+                                    setEventsTabVisibleLayerIdsInitialized(true);
                                     if (user?.id) persistUpcomingEventsVisibleCalendars(user.id, nextIds);
                                     return nextIds;
                                   });
