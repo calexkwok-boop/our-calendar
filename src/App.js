@@ -13895,7 +13895,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const ids = visibleLayerCalendars.map((layer) => String(layer?.id || '')).filter(Boolean);
     setEventsTabVisibleLayerIds((prev) => {
-      const next = normalizeSortOrder(ids, prev);
+      const prevList = Array.from(new Set((prev || []).map((id) => String(id || '')).filter(Boolean)));
+      if (prevList.length === 0) return ids;
+      const next = prevList.filter((id) => ids.includes(id));
       return next.length > 0 ? next : ids;
     });
   }, [visibleLayerCalendars]);
