@@ -13104,9 +13104,7 @@ const eventsMap = {};
     const createdEventIds = [];
     pendingEvent.datesToAdd.forEach(date => {
       const dateKey = getDateKey(date);
-      const eventId = `${Date.now()}-${Math.random()}`;
       const newEvent = {
-        id: eventId,
         title: pendingEvent.title,
         time: pendingEvent.isMultiDay ? null : (time || null),
         date: dateKey,
@@ -13161,7 +13159,6 @@ const eventsMap = {};
         }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
 
         supabase.from('popup_event_members').insert({
-          event_id: eventId,
           user_id: user.id,
           display_name: currentUser || user?.email || 'Host',
           role: 'host',
