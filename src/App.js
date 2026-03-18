@@ -2004,8 +2004,8 @@ function App() {
     const photoDateKeys = Array.from(new Set(
       (loadedPhotos || []).map((photo) => String(photo?.date || '').trim()).filter(Boolean)
     )).sort();
-    const firstDateKey = itineraryDateKeys.find((dateKey) => dateKey >= sc.start_date && dateKey <= sc.end_date)
-      || photoDateKeys.find((dateKey) => dateKey >= sc.start_date && dateKey <= sc.end_date)
+    const firstDateKey = itineraryDateKeys[0]
+      || photoDateKeys[0]
       || sc.start_date;
     setSubCalSelectedDate(new Date(`${firstDateKey}T00:00:00`));
   };
@@ -3100,7 +3100,22 @@ function App() {
       dates.push(new Date(cur));
       cur.setDate(cur.getDate() + 1);
     }
-    return dates;
+    if (activeSubCalendar?.id !== sc?.id) return dates;
+    const extraDateKeys = Array.from(new Set([
+      ...Object.keys(subCalendarEvents || {}).filter(Boolean),
+      ...(tripPhotos || []).map((photo) => String(photo?.date || '').trim()).filter(Boolean),
+    ])).sort();
+    const seen = new Set(dates.map((date) => getDateKey(date)));
+    extraDateKeys.forEach((dateKey) => {
+      if (seen.has(dateKey)) return;
+      const match = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return;
+      const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      if (Number.isNaN(date.getTime())) return;
+      dates.push(date);
+      seen.add(dateKey);
+    });
+    return dates.sort((a, b) => a - b);
   };
 
   // Hours to show in timeline
