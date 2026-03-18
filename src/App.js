@@ -13926,6 +13926,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     if (!user?.id) return;
     const ids = visibleLayerCalendars.map((layer) => String(layer?.id || '')).filter(Boolean);
+    if (ids.length === 0) return;
     if (!eventsTabVisibleLayerIdsInitialized) {
       const savedVisibleLayerIds = readLocalSortOrderOrNull(getUpcomingEventsVisibleCalendarsLocalKey(user.id));
       if (savedVisibleLayerIds === null) {
