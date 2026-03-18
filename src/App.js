@@ -15875,13 +15875,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         e.preventDefault();
                         startCoverWidgetDragFromAddPanel(e, widgetId);
                       }}
-                      className="absolute -left-2 top-0 z-10 w-8 h-8 rounded-xl border border-transparent text-white shadow-sm transition-all flex items-center justify-center"
+                      className="absolute -left-2 top-0 z-10 w-8 h-8 rounded-xl border border-transparent text-white shadow-sm transition-all flex items-center justify-center overflow-visible"
                       style={themeAccentButtonStyle}
                       title={`Drag ${meta.label}`}
                     >
                       <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
                       {meta.badge ? (
-                        <span className="absolute -top-1.5 -right-1.5 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
+                        <span className="absolute -top-1 -right-1 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
                           {meta.badge}
                         </span>
                       ) : null}
@@ -20120,7 +20120,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     onClick={() => handleControlWidgetClick(widgetId)}
                     disabled={meta.disabled}
                     title={meta.label}
-                    className={`relative shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border transition-all ${
+                    className={`relative shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border transition-all overflow-visible ${
                       meta.active
                         ? 'border-transparent text-white shadow-sm'
                         : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 backdrop-blur-sm'
@@ -20129,7 +20129,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   >
                     <span className="flex items-center justify-center">{meta.icon}</span>
                     {meta.badge ? (
-                      <span className="absolute -top-1.5 -right-1.5 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
                         {meta.badge}
                       </span>
                     ) : null}
