@@ -2941,6 +2941,7 @@ function App() {
   };
 
   const fetchSubCalWeather = async (geoResult) => {
+    if (!assertCanEditSubCalendar('change trip weather')) return;
     if (!activeSubCalendar) return;
     setSubCalWeatherLoading(true);
     setSubCalWeatherSuggestions([]);
@@ -2975,7 +2976,7 @@ function App() {
   };
 
   const addChecklistItem = async (noteId, itemText) => {
-    if (!assertCanEditActiveLayer('edit itinerary checklists')) return;
+    if (!assertCanEditSubCalendar('edit itinerary checklists')) return;
     if (!itemText.trim()) return;
     const note = subCalNotes.find(n => n.id === noteId);
     const checklist = [...(note.checklist || []), { id: Date.now(), text: itemText.trim(), done: false }];
@@ -2985,7 +2986,7 @@ function App() {
   };
 
   const toggleChecklistItem = async (noteId, itemId) => {
-    if (!assertCanEditActiveLayer('edit itinerary checklists')) return;
+    if (!assertCanEditSubCalendar('edit itinerary checklists')) return;
     const note = subCalNotes.find(n => n.id === noteId);
     const checklist = note.checklist.map(item => item.id === itemId ? { ...item, done: !item.done } : item);
     await supabase.from('sub_calendar_notes').update({ checklist: JSON.stringify(checklist) }).eq('id', noteId);
@@ -2993,7 +2994,7 @@ function App() {
   };
 
   const deleteChecklistItem = async (noteId, itemId) => {
-    if (!assertCanEditActiveLayer('edit itinerary checklists')) return;
+    if (!assertCanEditSubCalendar('edit itinerary checklists')) return;
     const note = subCalNotes.find(n => n.id === noteId);
     const checklist = note.checklist.filter(item => item.id !== itemId);
     await supabase.from('sub_calendar_notes').update({ checklist: JSON.stringify(checklist) }).eq('id', noteId);
@@ -3001,7 +3002,7 @@ function App() {
   };
 
   const addSubCalEvent = async (date, title, time, endTime, location = null) => {
-    if (!assertCanEditActiveLayer('add itinerary events')) return;
+    if (!assertCanEditSubCalendar('add itinerary events')) return;
     if (!title?.trim() || !activeSubCalendar) { console.log('addSubCalEvent bail: no title or no activeSubCalendar', {title, activeSubCalendar}); return; }
     if (!user?.id) { console.log('addSubCalEvent bail: no user'); return; }
     const id = `sce_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -3042,7 +3043,7 @@ function App() {
   };
 
   const updateSubCalEvent = async (eventId, updates) => {
-    if (!assertCanEditActiveLayer('edit itinerary events')) return;
+    if (!assertCanEditSubCalendar('edit itinerary events')) return;
     const dbUpdates = {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.time !== undefined) dbUpdates.time = updates.time;
@@ -3074,7 +3075,7 @@ function App() {
   };
 
   const deleteSubCalEvent = async (eventId, dateKey) => {
-    if (!assertCanEditActiveLayer('delete itinerary events')) return;
+    if (!assertCanEditSubCalendar('delete itinerary events')) return;
     const { data, error } = await supabase
       .from('sub_calendar_events')
       .delete()
@@ -4080,6 +4081,45 @@ useEffect(() => {
       return false;
     }
     alert(`Read-only access: you can chat and join events, but you cannot ${actionLabel}.`);
+    return false;
+  };
+  const getShareRowForLayerId = (layerId) => {
+    const normalizedLayerId = String(layerId || '').trim();
+    if (!normalizedLayerId) return null;
+    return (sharedCalendars || []).find((row) => {
+      const rowLayerId = String(row?.layer_id || row?.calendar_id || '').trim();
+      if (rowLayerId !== normalizedLayerId) return false;
+      return isShareRowForCurrentAccount(row);
+    }) || null;
+  };
+  const canEditLayerById = (layerId) => {
+    const normalizedLayerId = String(layerId || '').trim();
+    if (!normalizedLayerId) return false;
+    const layer = (layers || []).find((row) => String(row?.id || '').trim() === normalizedLayerId) || null;
+    const shareRow = getShareRowForLayerId(normalizedLayerId);
+    if (shareRow?.is_banned) return false;
+    const isOwner = String(layer?.owner_id || '') === String(user?.id || '');
+    const shareRole = String(shareRow?.role || '').trim().toLowerCase();
+    const canModerate = isOwner || shareRole === 'admin' || shareRole === 'moderator';
+    return Boolean(canModerate || !shareRow || shareRow?.can_edit !== false);
+  };
+  const assertCanEditSubCalendar = (actionLabel = 'make changes to this itinerary') => {
+    const targetLayerId = String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || '').trim();
+    if (!targetLayerId) {
+      alert(`Could not ${actionLabel}: missing trip calendar.`);
+      return false;
+    }
+    if (canEditLayerById(targetLayerId)) return true;
+    const shareRow = getShareRowForLayerId(targetLayerId);
+    if (shareRow?.is_banned) {
+      alert('Access removed: you have been banned from editing this calendar.');
+      return false;
+    }
+    if (shareRow?.can_edit === false) {
+      alert('Posting is currently muted for this calendar. Ask an admin or moderator to unmute you.');
+      return false;
+    }
+    alert(`Read-only access: you can view this itinerary, but you cannot ${actionLabel}.`);
     return false;
   };
   const selectedSportsScheduleTemplate = SPORTS_SCHEDULE_TEMPLATES.find((row) => row.id === sportsImportTemplateId) || SPORTS_SCHEDULE_TEMPLATES[0] || null;
