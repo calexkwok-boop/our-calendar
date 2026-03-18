@@ -140,7 +140,7 @@ export default function RoundRobinPanel({
       {/* Court-stripe header */}
       <div className="relative px-5 pt-5 pb-4 overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}08 100%)` }}>
         {/* Decorative court lines */}
-        <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', opacity: 0.12 }}>
+        <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', opacity: 0.12, pointerEvents: 'none' }}>
           <svg width="80" height="52" viewBox="0 0 80 52" fill="none">
             <rect x="1" y="1" width="78" height="50" rx="3" stroke={accent} strokeWidth="2"/>
             <line x1="40" y1="1" x2="40" y2="51" stroke={accent} strokeWidth="1.5"/>
@@ -157,7 +157,7 @@ export default function RoundRobinPanel({
             </div>
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Every team plays every other team · most wins wins</p>
           </div>
-          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRoundRobinPanel(false); }} className="p-1.5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRoundRobinPanel(false); }} className="relative z-10 p-1.5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
             <X className="w-4 h-4 text-gray-400" />
           </button>
         </div>
@@ -307,7 +307,7 @@ export default function RoundRobinPanel({
       {/* Header */}
       <div className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)` }}>
         {/* Court decoration */}
-        <div style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', opacity: 0.15 }}>
+        <div style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', opacity: 0.15, pointerEvents: 'none' }}>
           <svg width="100" height="65" viewBox="0 0 100 65" fill="none">
             <rect x="1" y="1" width="98" height="63" rx="3" stroke="white" strokeWidth="2.5"/>
             <line x1="50" y1="1" x2="50" y2="64" stroke="white" strokeWidth="2"/>
@@ -334,7 +334,7 @@ export default function RoundRobinPanel({
               <span>{doneCount}/{totalCount} played</span>
             </div>
           </div>
-          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRoundRobinPanel(false); }} className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 transition-colors">
+          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRoundRobinPanel(false); }} className="relative z-10 p-1.5 rounded-xl bg-white/15 hover:bg-white/25 transition-colors">
             <X className="w-4 h-4 text-white" />
           </button>
         </div>
