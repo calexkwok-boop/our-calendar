@@ -3019,8 +3019,16 @@ function App() {
       reactions: null,
       location: location || null,
     };
-    const { error } = await supabase.from('sub_calendar_events').insert(newEvent);
-    if (error) { console.error('Error adding sub_calendar_event:', error); return; }
+    const { data, error } = await supabase
+      .from('sub_calendar_events')
+      .insert(newEvent)
+      .select('id')
+      .maybeSingle();
+    if (error || !data?.id) {
+      console.error('Error adding sub_calendar_event:', error);
+      alert(`Could not save trip event: ${error?.message || 'No row was inserted.'}`);
+      return;
+    }
     const dateKey = getDateKey(date);
     setSubCalendarEvents(prev => ({
       ...prev,
@@ -3043,7 +3051,17 @@ function App() {
     if (updates.location !== undefined) dbUpdates.location = updates.location;
     if (updates.category !== undefined) dbUpdates.category = updates.category;
     if (updates.reactions !== undefined) dbUpdates.reactions = JSON.stringify(updates.reactions);
-    await supabase.from('sub_calendar_events').update(dbUpdates).eq('id', eventId);
+    const { data, error } = await supabase
+      .from('sub_calendar_events')
+      .update(dbUpdates)
+      .eq('id', eventId)
+      .select('id')
+      .maybeSingle();
+    if (error || !data?.id) {
+      console.error('Error updating sub_calendar_event:', error);
+      alert(`Could not save trip event changes: ${error?.message || 'No row was updated.'}`);
+      return;
+    }
     setSubCalendarEvents(prev => {
       const updated = { ...prev };
       Object.keys(updated).forEach(dateKey => {
