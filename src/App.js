@@ -738,6 +738,10 @@ function App() {
   const [tripSwipeDrag, setTripSwipeDrag] = useState({ id: null, offset: 0 });
   const tripSwipeStartXRef = useRef(0);
   const swipingTripIdRef = useRef(null);
+  const [swipedEventKey, setSwipedEventKey] = useState(null);
+  const [eventSwipeDrag, setEventSwipeDrag] = useState({ id: null, offset: 0 });
+  const eventSwipeStartXRef = useRef(0);
+  const swipingEventKeyRef = useRef(null);
   const [swipedLayerId, setSwipedLayerId] = useState(null);
   const [layerSwipeDrag, setLayerSwipeDrag] = useState({ id: null, offset: 0 });
   const layerSwipeStartXRef = useRef(0);
@@ -1777,6 +1781,34 @@ function App() {
     setSwipedTripId(open ? tripId : null);
     setTripSwipeDrag({ id: null, offset: 0 });
     swipingTripIdRef.current = null;
+  };
+
+  const handleEventSwipeStart = (e, eventKey, canSwipeAction) => {
+    if (!canSwipeAction) return;
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    eventSwipeStartXRef.current = touch.clientX;
+    swipingEventKeyRef.current = eventKey;
+    if (swipedEventKey && swipedEventKey !== eventKey) setSwipedEventKey(null);
+  };
+
+  const handleEventSwipeMove = (e) => {
+    const eventKey = swipingEventKeyRef.current;
+    if (!eventKey) return;
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - eventSwipeStartXRef.current;
+    const clamped = Math.max(-88, Math.min(0, deltaX));
+    setEventSwipeDrag({ id: eventKey, offset: clamped });
+  };
+
+  const handleEventSwipeEnd = () => {
+    const eventKey = swipingEventKeyRef.current;
+    if (!eventKey) return;
+    const open = eventSwipeDrag.id === eventKey && eventSwipeDrag.offset <= -44;
+    setSwipedEventKey(open ? eventKey : null);
+    setEventSwipeDrag({ id: null, offset: 0 });
+    swipingEventKeyRef.current = null;
   };
 
   const openSubCalendar = async (sc) => {
@@ -13365,6 +13397,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const handleDeleteEvent = async (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false, skipOnce = false) => {
+    setSwipedEventKey(null);
+    setEventSwipeDrag({ id: null, offset: 0 });
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
@@ -17905,20 +17939,42 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           {uniqueVisibleLayers.map(layer => {
             const isActive = String(layer.id) === String(activeLayerId);
             const rowTheme = normalizeLayerPageTheme(layer?.page_theme, layer?.title_style);
+            const canDeleteLayer = String(layer?.owner_id || '') === String(user?.id || '') && (layers || []).length > 1;
+            const rowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
+            const isDeleteRevealed = rowOffset < 0;
             return (
-              <button
-                key={layer.id}
-                onClick={() => { setActiveLayerId(layer.id); setShowCalendarSwitcher(false); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
-                style={isActive ? { background: `${rowTheme.accent}18`, border: `1.5px solid ${rowTheme.accent}40` } : { border: '1.5px solid transparent' }}
-              >
-                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: rowTheme.accent }} />
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">{layer.name || 'Untitled'}</div>
-                  {layer.is_public && <div className="text-[10px] text-gray-400">Public</div>}
-                </div>
-                {isActive && <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: rowTheme.accent }} />}
-              </button>
+              <div key={layer.id} className="relative rounded-xl overflow-hidden">
+                {canDeleteLayer && (
+                  <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
+                    <button
+                      onClick={() => deleteLayerCalendar(layer.id)}
+                      className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+                <button
+                  onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canDeleteLayer)}
+                  onTouchMove={handleLayerSwipeMove}
+                  onTouchEnd={handleLayerSwipeEnd}
+                  onTouchCancel={handleLayerSwipeEnd}
+                  onClick={() => { setActiveLayerId(layer.id); setShowCalendarSwitcher(false); }}
+                  className="relative z-10 w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
+                  style={{
+                    ...(isActive ? { background: `${rowTheme.accent}18`, border: `1.5px solid ${rowTheme.accent}40` } : { border: '1.5px solid transparent' }),
+                    transform: `translateX(${rowOffset}px)`,
+                    transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease',
+                  }}
+                >
+                  <div className="w-3 h-3 rounded-full shrink-0" style={{ background: rowTheme.accent }} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">{layer.name || 'Untitled'}</div>
+                    {layer.is_public && <div className="text-[10px] text-gray-400">Public</div>}
+                  </div>
+                  {isActive && <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: rowTheme.accent }} />}
+                </button>
+              </div>
             );
           })}
         </div>
@@ -18714,6 +18770,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   const popupNoMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
                   const popupFull = popupMeta ? (!popupNoMax && popupSignups.length >= Number(popupMeta.maxPeople || 1)) : false;
                   const canDeleteThisEvent = canDeleteEventInActiveLayer(event);
+                  const eventSwipeKey = `${String(event.date || selectedDateKey || '')}:${String(event.id || '')}`;
+                  const rowOffset = eventSwipeDrag.id === eventSwipeKey ? eventSwipeDrag.offset : (swipedEventKey === eventSwipeKey ? -88 : 0);
+                  const isDeleteRevealed = rowOffset < 0;
 
                   if (event.isHoliday) {
                     return (
@@ -18735,18 +18794,37 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   }
 
                   return (
-                    <div
-                      key={event.id}
-                      className={`relative rounded-2xl overflow-hidden border border-white/50 shadow-lg transition-all hover:-translate-y-0.5 ${event.isVirtualAnnual ? 'border-dashed' : ''}`}
-                      style={eventCardStyle}
-                      onClick={() => {
-                        console.log('card clicked', event.id, event.category, effectiveCategoryKey, popupMeta);
-                        if (effectiveCategoryKey === 'popup_event' || event.category === 'popup_event') {
-                          console.log('opening popup panel for', event.id);
-                          setSelectedPopupEventPanelId(String(event.id || ''));
-                        }
-                      }}
-                    >
+                    <div key={event.id} className={`relative rounded-2xl overflow-hidden ${event.isVirtualAnnual ? 'border-dashed' : ''}`}>
+                      {canDeleteThisEvent && (
+                        <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
+                          <button
+                            onClick={() => {
+                              const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
+                              if (isRepeating) {
+                                openRecurringDeletePrompt({ dateKey: selectedDateKey, event });
+                              } else {
+                                handleDeleteEvent(selectedDateKey, event.id, false, false, false);
+                              }
+                            }}
+                            className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                      <div
+                        className={`relative z-10 rounded-2xl overflow-hidden border border-white/50 shadow-lg transition-all hover:-translate-y-0.5 ${event.isVirtualAnnual ? 'border-dashed' : ''}`}
+                        style={{ ...eventCardStyle, transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease' }}
+                        onTouchStart={(e) => handleEventSwipeStart(e, eventSwipeKey, canDeleteThisEvent)}
+                        onTouchMove={handleEventSwipeMove}
+                        onTouchEnd={handleEventSwipeEnd}
+                        onTouchCancel={handleEventSwipeEnd}
+                        onClick={() => {
+                          if (effectiveCategoryKey === 'popup_event' || event.category === 'popup_event') {
+                            setSelectedPopupEventPanelId(String(event.id || ''));
+                          }
+                        }}
+                      >
                       <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ background: categoryGlass.accent }} />
                       <div className="pl-4 pr-3 py-3">
                       {event.isPrivate && (
@@ -19000,6 +19078,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           </div>
                         </div>
                       )}
+                      </div>
                       </div>
                     </div>
                   );
