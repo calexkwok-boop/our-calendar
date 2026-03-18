@@ -1937,11 +1937,13 @@ function App() {
     await loadSubCalendarMembers(sc.id);
     const noteState = await loadSubCalNotes(sc.id);
     const loadedPhotos = await loadTripPhotos(sc.id, noteState?.deletedPhotoIds || []);
-    const contentDateKeys = Array.from(new Set([
-      ...Object.keys(loadedEvents || {}).filter(Boolean),
-      ...(loadedPhotos || []).map((photo) => String(photo?.date || '').trim()).filter(Boolean),
-    ])).sort();
-    const firstDateKey = contentDateKeys.find((dateKey) => dateKey >= sc.start_date && dateKey <= sc.end_date) || sc.start_date;
+    const itineraryDateKeys = Object.keys(loadedEvents || {}).filter(Boolean).sort();
+    const photoDateKeys = Array.from(new Set(
+      (loadedPhotos || []).map((photo) => String(photo?.date || '').trim()).filter(Boolean)
+    )).sort();
+    const firstDateKey = itineraryDateKeys.find((dateKey) => dateKey >= sc.start_date && dateKey <= sc.end_date)
+      || photoDateKeys.find((dateKey) => dateKey >= sc.start_date && dateKey <= sc.end_date)
+      || sc.start_date;
     setSubCalSelectedDate(new Date(`${firstDateKey}T00:00:00`));
   };
 
