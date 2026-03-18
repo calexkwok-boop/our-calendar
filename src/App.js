@@ -1811,6 +1811,33 @@ function App() {
     swipingEventKeyRef.current = null;
   };
 
+  const startEventSwipeDrag = (e, eventKey, canSwipeAction) => {
+    if (!canSwipeAction) return;
+    const clientX = e.clientX ?? e.touches?.[0]?.clientX;
+    if (typeof clientX !== 'number') return;
+    eventSwipeStartXRef.current = clientX;
+    swipingEventKeyRef.current = eventKey;
+    if (swipedEventKey && swipedEventKey !== eventKey) setSwipedEventKey(null);
+  };
+
+  const moveEventSwipeDrag = (e) => {
+    const eventKey = swipingEventKeyRef.current;
+    if (!eventKey) return;
+    const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? eventSwipeStartXRef.current;
+    const deltaX = clientX - eventSwipeStartXRef.current;
+    const clamped = Math.max(-88, Math.min(0, deltaX));
+    setEventSwipeDrag({ id: eventKey, offset: clamped });
+  };
+
+  const endEventSwipeDrag = () => {
+    const eventKey = swipingEventKeyRef.current;
+    if (!eventKey) return;
+    const open = eventSwipeDrag.id === eventKey && eventSwipeDrag.offset <= -44;
+    setSwipedEventKey(open ? eventKey : null);
+    setEventSwipeDrag({ id: null, offset: 0 });
+    swipingEventKeyRef.current = null;
+  };
+
   const openSubCalendar = async (sc) => {
     setActiveSubCalendar(sc);
     setSubCalWeather({});
@@ -18814,11 +18841,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       )}
                       <div
                         className={`relative z-10 rounded-2xl overflow-hidden border border-white/50 shadow-lg transition-all hover:-translate-y-0.5 ${event.isVirtualAnnual ? 'border-dashed' : ''}`}
-                        style={{ ...eventCardStyle, transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease' }}
+                        style={{ ...eventCardStyle, transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease', touchAction: 'pan-y' }}
                         onTouchStart={(e) => handleEventSwipeStart(e, eventSwipeKey, canDeleteThisEvent)}
                         onTouchMove={handleEventSwipeMove}
                         onTouchEnd={handleEventSwipeEnd}
                         onTouchCancel={handleEventSwipeEnd}
+                        onPointerDown={(e) => startEventSwipeDrag(e, eventSwipeKey, canDeleteThisEvent)}
+                        onPointerMove={moveEventSwipeDrag}
+                        onPointerUp={endEventSwipeDrag}
+                        onPointerCancel={endEventSwipeDrag}
                         onClick={() => {
                           if (effectiveCategoryKey === 'popup_event' || event.category === 'popup_event') {
                             setSelectedPopupEventPanelId(String(event.id || ''));
