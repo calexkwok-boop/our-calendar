@@ -19155,35 +19155,65 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       const spotsLeft = maxPeople - signups.length;
                       const isFull = maxPeople > 0 && spotsLeft <= 0;
                       const joined = signups.some(s => String(s.userId || '') === String(user?.id || ''));
+                      const canDeleteThisEvent = canDeleteEventInActiveLayer(event);
+                      const eventSwipeKey = `popup-tab:${String(event.date || event.dateKey || '')}:${String(event.id || '')}`;
+                      const rowOffset = eventSwipeDrag.id === eventSwipeKey ? eventSwipeDrag.offset : (swipedEventKey === eventSwipeKey ? -88 : 0);
+                      const isDeleteRevealed = rowOffset < 0;
                       return (
-                        <button
-                          key={event.id}
-                          onClick={() => {
-                            const popupLayerId = String(popupMeta?.layerId || event?.layerId || '').trim();
-                            if (popupLayerId && popupLayerId !== String(activeLayerId || '')) setActiveLayerId(popupLayerId);
-                            setSelectedPopupEventPanelId(String(event.id || ''));
-                          }}
-                          className="w-full text-left rounded-2xl p-3 sm:p-4 border transition-all hover:-translate-y-0.5 hover:shadow-md"
-                          style={{ background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', borderColor: `${activeLayerPageTheme.accent}30` }}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{event.title}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                {formatDateKeyMMDDYYYY ? formatDateKeyMMDDYYYY(event.date || event.dateKey) : (event.date || event.dateKey)}
-                                {event.time ? ` · ${formatTime ? formatTime(event.time) : event.time}` : ''}
+                        <div key={event.id} className="relative rounded-2xl overflow-hidden">
+                          {canDeleteThisEvent && (
+                            <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
+                              <button
+                                onClick={() => {
+                                  const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
+                                  if (isRepeating) {
+                                    openRecurringDeletePrompt({ dateKey: event.date || event.dateKey, event });
+                                  } else {
+                                    handleDeleteEvent(event.date || event.dateKey, event.id, false, false, false);
+                                  }
+                                }}
+                                className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                          <button
+                            onTouchStart={(e) => handleEventSwipeStart(e, eventSwipeKey, canDeleteThisEvent)}
+                            onTouchMove={handleEventSwipeMove}
+                            onTouchEnd={handleEventSwipeEnd}
+                            onTouchCancel={handleEventSwipeEnd}
+                            onPointerDown={(e) => startEventSwipeDrag(e, eventSwipeKey, canDeleteThisEvent)}
+                            onPointerMove={moveEventSwipeDrag}
+                            onPointerUp={endEventSwipeDrag}
+                            onPointerCancel={endEventSwipeDrag}
+                            onClick={() => {
+                              const popupLayerId = String(popupMeta?.layerId || event?.layerId || '').trim();
+                              if (popupLayerId && popupLayerId !== String(activeLayerId || '')) setActiveLayerId(popupLayerId);
+                              setSelectedPopupEventPanelId(String(event.id || ''));
+                            }}
+                            className="relative z-10 w-full text-left rounded-2xl p-3 sm:p-4 border transition-all hover:-translate-y-0.5 hover:shadow-md"
+                            style={{ background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', borderColor: `${activeLayerPageTheme.accent}30`, transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease', touchAction: 'pan-y' }}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{event.title}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                  {formatDateKeyMMDDYYYY ? formatDateKeyMMDDYYYY(event.date || event.dateKey) : (event.date || event.dateKey)}
+                                  {event.time ? ` · ${formatTime ? formatTime(event.time) : event.time}` : ''}
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${joined ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : isFull ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}`}>
+                                  {joined ? '✓ Joined' : isFull ? 'Full' : 'Open'}
+                                </span>
+                                {maxPeople > 0 && (
+                                  <span className="text-[10px] text-gray-400 dark:text-gray-500">{signups.length}/{maxPeople} players</span>
+                                )}
                               </div>
                             </div>
-                            <div className="flex flex-col items-end gap-1 shrink-0">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${joined ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : isFull ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}`}>
-                                {joined ? '✓ Joined' : isFull ? 'Full' : 'Open'}
-                              </span>
-                              {maxPeople > 0 && (
-                                <span className="text-[10px] text-gray-400 dark:text-gray-500">{signups.length}/{maxPeople} players</span>
-                              )}
-                            </div>
-                          </div>
-                        </button>
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
