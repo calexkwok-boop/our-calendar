@@ -6753,6 +6753,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         .map(normalizeHolidayTitle)
         .filter(Boolean)
     );
+    const holidayDedupKey = holiday ? `holiday:${dateKey}` : null;
     const seenHolidayTitles = new Set();
     const dedupedDirectEvents = [];
     (directEvents || []).forEach((event) => {
@@ -6762,8 +6763,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         || isHolidayLikeTitle(normalizedTitle)
       );
       if (isHolidayLike) {
-        if (seenHolidayTitles.has(normalizedTitle)) return;
-        seenHolidayTitles.add(normalizedTitle);
+        const dedupKey = holidayDedupKey || normalizedTitle;
+        if (seenHolidayTitles.has(dedupKey)) return;
+        seenHolidayTitles.add(dedupKey);
       }
       dedupedDirectEvents.push(event);
     });
@@ -6804,7 +6806,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         || isHolidayLikeTitle(normalizedTitle)
       );
       if (isHolidayLike) {
-        const holidayKey = `${dateKey}|${normalizedTitle}`;
+        const holidayKey = holidayDedupKey || `${dateKey}|${normalizedTitle}`;
         if (seenHolidayKeys.has(holidayKey)) return;
         seenHolidayKeys.add(holidayKey);
       }
