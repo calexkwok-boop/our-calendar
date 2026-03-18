@@ -13821,19 +13821,47 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     })
     .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
   const upcomingPopupEvents = [...(userTabPopupEvents || [])];
-  const upcomingUserTabEvents = [...(userTabEvents || [])]
-    .filter((event) => {
-      const eventTs = toDateOnlyTs(event?.date || event?.dateKey || '');
-      return eventTs !== null && eventTs >= todayTs;
-    })
-    .sort((a, b) => {
-      const aTs = toDateOnlyTs(a?.date || a?.dateKey || '') || 0;
-      const bTs = toDateOnlyTs(b?.date || b?.dateKey || '') || 0;
-      if (aTs !== bTs) return aTs - bTs;
-      if (!a?.time) return 1;
-      if (!b?.time) return -1;
-      return String(a.time).localeCompare(String(b.time));
-    });
+  const upcomingUserTabEvents = (() => {
+    const isAllDayLike = (event) => {
+      const time = String(event?.time || '').trim();
+      return !time || time === '00:00' || time === '00:00:00';
+    };
+    const seenHolidayKeys = new Set();
+    return [...(userTabEvents || [])]
+      .filter((event) => {
+        const dateKey = String(event?.date || event?.dateKey || '').trim();
+        const eventTs = toDateOnlyTs(dateKey);
+        if (eventTs === null || eventTs < todayTs) return false;
+        const holiday = getHolidayForDate(dateKey);
+        const normalizedTitle = normalizeHolidayLikeTitle(event?.title);
+        const holidayNames = new Set(
+          [holiday?.localName, holiday?.name]
+            .map(normalizeHolidayLikeTitle)
+            .filter(Boolean)
+        );
+        const categoryKey = String(event?.category || '').trim().toLowerCase();
+        const isHolidayLike = isAllDayLike(event) && (
+          Boolean(event?.isHoliday)
+          || categoryKey === 'holiday'
+          || (normalizedTitle && holidayNames.has(normalizedTitle))
+          || (normalizedTitle && isLikelyHolidayTitle(normalizedTitle))
+        );
+        if (isHolidayLike) {
+          const holidayKey = `holiday:${dateKey}`;
+          if (seenHolidayKeys.has(holidayKey)) return false;
+          seenHolidayKeys.add(holidayKey);
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const aTs = toDateOnlyTs(a?.date || a?.dateKey || '') || 0;
+        const bTs = toDateOnlyTs(b?.date || b?.dateKey || '') || 0;
+        if (aTs !== bTs) return aTs - bTs;
+        if (!a?.time) return 1;
+        if (!b?.time) return -1;
+        return String(a.time).localeCompare(String(b.time));
+      });
+  })();
   const filteredUpcomingUserTabEvents = upcomingUserTabEvents.filter((event) => {
     const layerId = String(event?.layerId || event?.layer_id || '').trim();
     if ((eventsTabVisibleLayerIds || []).length > 0 && !eventsTabVisibleLayerIds.includes(layerId)) return false;
