@@ -1487,7 +1487,7 @@ function App() {
         .from('sub_calendar_events')
         .select('*')
         .eq('sub_calendar_id', subCalId);
-      if (error) { console.error('Error loading sub_calendar_events:', error); return; }
+      if (error) { console.error('Error loading sub_calendar_events:', error); return {}; }
       const grouped = {};
       (data || []).forEach(e => {
         if (!grouped[e.date]) grouped[e.date] = [];
@@ -1506,7 +1506,9 @@ function App() {
         });
       });
       setSubCalendarEvents(grouped);
+      return grouped;
     } catch (e) { console.error(e); }
+    return {};
   };
 
   const loadSubCalendarMembers = async (subCalId) => {
@@ -1931,12 +1933,16 @@ function App() {
     await loadGlobalVenmoHandles();
     await loadGlobalCashAppHandles();
     await syncSubCalendarMembersFromLayer(sc);
-    await loadSubCalendarEvents(sc.id);
+    const loadedEvents = await loadSubCalendarEvents(sc.id);
     await loadSubCalendarMembers(sc.id);
-    await loadSubCalNotes(sc.id);
-    await loadTripPhotos(sc.id);
-    const firstDate = new Date(sc.start_date + 'T00:00:00');
-    setSubCalSelectedDate(firstDate);
+    const noteState = await loadSubCalNotes(sc.id);
+    const loadedPhotos = await loadTripPhotos(sc.id, noteState?.deletedPhotoIds || []);
+    const contentDateKeys = Array.from(new Set([
+      ...Object.keys(loadedEvents || {}).filter(Boolean),
+      ...(loadedPhotos || []).map((photo) => String(photo?.date || '').trim()).filter(Boolean),
+    ])).sort();
+    const firstDateKey = contentDateKeys.find((dateKey) => dateKey >= sc.start_date && dateKey <= sc.end_date) || sc.start_date;
+    setSubCalSelectedDate(new Date(`${firstDateKey}T00:00:00`));
   };
 
   const inviteToSubCalendar = async (recipientOverride) => {
@@ -2088,30 +2094,38 @@ function App() {
       setCashAppHandles({ ...globalCashAppHandles, ...loadedCashAppHandles });
       setCashAppHandlesNoteId(loadedCashAppHandlesNoteId);
       const localDeleted = readLocalDeletedPhotoIds(subCalId);
-      setDeletedPhotoIds(Array.from(new Set([...(loadedDeletedPhotoIds || []).map(id => String(id)), ...localDeleted])));
+      const mergedDeletedPhotoIds = Array.from(new Set([...(loadedDeletedPhotoIds || []).map(id => String(id)), ...localDeleted]));
+      setDeletedPhotoIds(mergedDeletedPhotoIds);
       setDeletedPhotosNoteId(loadedDeletedPhotosNoteId);
+      return {
+        deletedPhotoIds: mergedDeletedPhotoIds,
+      };
     } catch (e) { console.error(e); }
+    return {
+      deletedPhotoIds: [],
+    };
   };
 
-  const loadTripPhotos = async (subCalId) => {
+  const loadTripPhotos = async (subCalId, deletedIdsOverride = null) => {
     try {
       const { data, error } = await supabase
         .from('trip_photos')
         .select('*')
         .eq('sub_calendar_id', subCalId)
         .order('created_at', { ascending: true });
-      if (error) { console.error('Error loading photos:', error); return; }
-      const deletedSet = new Set((deletedPhotoIds || []).map(id => String(id)));
+      if (error) { console.error('Error loading photos:', error); return []; }
+      const deletedSet = new Set(((deletedIdsOverride ?? deletedPhotoIds) || []).map(id => String(id)));
       const filtered = (data || []).filter(p => !deletedSet.has(String(p.id)));
       setTripPhotos(filtered);
+      return filtered;
     } catch (e) { console.error(e); }
+    return [];
   };
 
   useEffect(() => {
-    if (!deletedPhotoIds || deletedPhotoIds.length === 0) return;
-    const deletedSet = new Set((deletedPhotoIds || []).map(id => String(id)));
-    setTripPhotos(prev => prev.filter(p => !deletedSet.has(String(p.id))));
-  }, [deletedPhotoIds]);
+    if (!activeSubCalendar?.id) return;
+    loadTripPhotos(activeSubCalendar.id, deletedPhotoIds);
+  }, [activeSubCalendar?.id, deletedPhotoIds]);
 
   const uploadTripPhoto = async (file, caption, eventId, date) => {
     if (!file) return false;
