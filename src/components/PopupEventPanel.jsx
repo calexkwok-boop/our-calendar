@@ -540,11 +540,11 @@ const GameModeLauncher = ({ event, members, accent, darkMode, border, softBg, bt
           </button>
 
           <button onClick={() => onLaunchGauntlet?.(event, members)}
-            style={{ padding: '14px 16px', borderRadius: 16, fontSize: 14, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, border: `2px solid ${accent}`, background: 'transparent', color: accent }}>
+            style={{ ...btnStyle, padding: '14px 16px', borderRadius: 16, fontSize: 14, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: `0 6px 20px ${accent}40` }}>
             <span style={{ fontSize: 24 }}>⚔️</span>
             <div style={{ textAlign: 'left' }}>
               <div>Gauntlet</div>
-              <div style={{ fontSize: 11, opacity: 0.7, fontWeight: 600 }}>Bracket elimination style</div>
+              <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 600 }}>Bracket elimination style</div>
             </div>
             <ChevronRight style={{ width: 16, height: 16, marginLeft: 'auto' }} />
           </button>
