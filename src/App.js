@@ -15881,7 +15881,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     >
                       <span className="inline-flex w-4 h-4 items-center justify-center">{meta.icon}</span>
                       {meta.badge ? (
-                        <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                        <span className="absolute -top-1.5 -right-1.5 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
                           {meta.badge}
                         </span>
                       ) : null}
@@ -20129,7 +20129,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   >
                     <span className="flex items-center justify-center">{meta.icon}</span>
                     {meta.badge ? (
-                      <span className="absolute -top-1 -right-1 min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-bold flex items-center justify-center">
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
                         {meta.badge}
                       </span>
                     ) : null}
