@@ -107,6 +107,8 @@ const CreateEventForm = ({ accent, darkMode, btnStyle, border, softBg, supabase,
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const locationRef = useRef(null);
+  const primaryText = darkMode ? '#f8fafc' : 'var(--color-text-primary)';
+  const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
   usePlacesAutocomplete(locationRef, ({ location, lat, lng }) => setForm((p) => ({ ...p, location, location_lat: lat, location_lng: lng })));
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -188,6 +190,7 @@ const CreateEventForm = ({ accent, darkMode, btnStyle, border, softBg, supabase,
 const RosterRow = ({ member, isMe, isHost, accent, darkMode, onKick, onPromote, onDemote }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const RoleIcon = ROLE_ICONS[member.role];
+  const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}` }}>
       <Avatar name={member.display_name} size={34} accent={accent} role={member.role} darkMode={darkMode} />
@@ -228,6 +231,8 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
   const [sending, setSending] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const primaryText = darkMode ? '#f8fafc' : 'var(--color-text-primary)';
+  const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
 
   const memberRole = members.find((m) => m.user_id === user?.id)?.role || 'player';
 
