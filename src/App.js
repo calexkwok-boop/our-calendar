@@ -40,6 +40,8 @@ const storage = {
 };
 
 const generateUuid = () => uuidv4();
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const isUuid = (value) => UUID_RE.test(String(value || '').trim());
 
 if (typeof window !== 'undefined') {
   window.storage = storage;
@@ -8042,11 +8044,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
 
-    const eventIds = (popupEventsRows || []).map((row) => String(row?.event_id || '')).filter(Boolean);
+    const eventIds = (popupEventsRows || [])
+      .map((row) => String(row?.event_id || '').trim())
+      .filter((eventId) => isUuid(eventId));
     const eventsMap = {};
     (popupEventsRows || []).forEach((row) => {
-      const eventId = String(row?.event_id || '');
-      if (!eventId) return;
+      const eventId = String(row?.event_id || '').trim();
+      if (!isUuid(eventId)) return;
       eventsMap[eventId] = {
         eventId,
         maxPeople: Math.max(1, Number(row?.max_people || 1)),
@@ -8134,6 +8138,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const normalizedEventId = String(eventId || '').trim();
     const popup = popupEventsByEventId[normalizedEventId] || null;
     if (!normalizedEventId || !activeLayerId || !user?.id) return;
+    if (!isUuid(normalizedEventId)) {
+      alert('This pop-up event uses an old invalid ID and can no longer be joined. Recreate it to use the popup panel.');
+      return;
+    }
     if (!popupFeatureAvailable) {
       alert('Popup events need DB setup first.');
       return;
@@ -8180,6 +8188,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const leavePopupEvent = async (eventId) => {
     const normalizedEventId = String(eventId || '').trim();
     if (!normalizedEventId || !activeLayerId || !user?.id) return;
+    if (!isUuid(normalizedEventId)) {
+      alert('This pop-up event uses an old invalid ID and can no longer be managed. Recreate it to use the popup panel.');
+      return;
+    }
     const { error } = await supabase
       .from('popup_event_signups')
       .delete()

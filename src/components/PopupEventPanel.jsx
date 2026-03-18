@@ -6,6 +6,9 @@ import {
   Navigation, Radio, Gamepad2, MessageCircle, Map,
 } from 'lucide-react';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const isUuid = (value) => UUID_RE.test(String(value || '').trim());
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -589,6 +592,12 @@ export default function PopupEventPanel({
   const loadEvent = useCallback(async (id) => {
     if (!id || !supabase) return;
     setLoading(true);
+    if (!isUuid(id)) {
+      if (eventMetaFallback) setEvent(eventMetaFallback);
+      setMembers([]);
+      setLoading(false);
+      return;
+    }
     try {
       const [{ data: ev }, { data: mems }, { data: signups, error: signupsErr }] = await Promise.all([
         supabase.from('popup_event_details').select('*').eq('id', id).single(),
@@ -622,7 +631,7 @@ export default function PopupEventPanel({
   useEffect(() => { if (initialEventId) loadEvent(initialEventId); }, [initialEventId, loadEvent]);
 
   useEffect(() => {
-    if (!event?.id || !supabase) return;
+    if (!event?.id || !supabase || !isUuid(event.id)) return;
     const channel = supabase.channel(`popup-members-${event.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `event_id=eq.${event.id}` }, () => loadEvent(event.id))
@@ -632,14 +641,15 @@ export default function PopupEventPanel({
 
   const handleJoin = async () => {
     if (!event || isMember || isFull) return;
+    if (!isUuid(event.id)) return;
     setJoining(true);
     try { await supabase.from('popup_event_members').insert({ event_id: event.id, user_id: user.id, display_name: displayName || user.email || 'Player', role: 'player' }); await loadEvent(event.id); } catch {}
     setJoining(false);
   };
-  const handleLeave = async () => { if (!myMember || isHost) return; await supabase.from('popup_event_members').delete().eq('id', myMember.id); await loadEvent(event.id); };
-  const handleKick = async (member) => { if (!isHostOrCohost) return; await supabase.from('popup_event_members').delete().eq('id', member.id); await loadEvent(event.id); };
-  const handlePromote = async (member) => { if (!isHost) return; await supabase.from('popup_event_members').update({ role: 'cohost' }).eq('id', member.id); await loadEvent(event.id); };
-  const handleDemote = async (member) => { if (!isHost) return; await supabase.from('popup_event_members').update({ role: 'player' }).eq('id', member.id); await loadEvent(event.id); };
+  const handleLeave = async () => { if (!myMember || isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', myMember.id); await loadEvent(event.id); };
+  const handleKick = async (member) => { if (!isHostOrCohost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', member.id); await loadEvent(event.id); };
+  const handlePromote = async (member) => { if (!isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').update({ role: 'cohost' }).eq('id', member.id); await loadEvent(event.id); };
+  const handleDemote = async (member) => { if (!isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').update({ role: 'player' }).eq('id', member.id); await loadEvent(event.id); };
   const handleCopyLink = () => { navigator.clipboard.writeText(`${window.location.origin}?popup=${event.id}`).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   const panelStyle = { borderRadius: 24, overflow: 'hidden', marginBottom: 24, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(17,24,39,0.95)' : '#fff', boxShadow: `0 8px 40px ${accent}18` };
@@ -682,6 +692,7 @@ export default function PopupEventPanel({
 
   const memberCount = members.length;
   const hostMember = members.find((m) => m.role === 'host');
+  const isLegacyInvalidEvent = !isUuid(event.id);
 
   // ── TABS ───────────────────────────────────────────────────────────────────
   const tabs = [
@@ -739,6 +750,14 @@ export default function PopupEventPanel({
       {/* ── INFO TAB ── */}
       {screen === 'detail' && (
         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {isLegacyInvalidEvent && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 14, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
+              <AlertCircle style={{ width: 16, height: 16, color: '#d97706', flexShrink: 0, marginTop: 1 }} />
+              <div style={{ fontSize: 13, lineHeight: 1.5, color: '#b45309' }}>
+                This is a legacy pop-up event with an invalid ID. It can be viewed, but it cannot be joined or managed. Recreate it to use the pop-up panel.
+              </div>
+            </div>
+          )}
           {event.location && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 14, background: softBg, border: `1px solid ${border}` }}>
               <MapPin style={{ width: 16, height: 16, color: accent, flexShrink: 0, marginTop: 1 }} />
@@ -760,19 +779,19 @@ export default function PopupEventPanel({
               <span style={{ fontSize: 12, fontWeight: 700, color: '#d97706' }}>Hosted by {hostMember.display_name}</span>
             </div>
           )}
-          {!isMember && event.status === 'open' && !isFull && (
+          {!isLegacyInvalidEvent && !isMember && event.status === 'open' && !isFull && (
             <button onClick={handleJoin} disabled={joining} style={{ ...btnStyle, padding: 13, borderRadius: 14, fontSize: 14, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: `0 6px 20px ${accent}40`, opacity: joining ? 0.7 : 1 }}>
               {joining ? <Loader style={{ width: 16, height: 16 }} /> : <Plus style={{ width: 16, height: 16 }} />}
               {joining ? 'Joining...' : 'Join Event'}
             </button>
           )}
           {isFull && !isMember && <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', fontSize: 13, fontWeight: 700, color: '#d97706', textAlign: 'center' }}>🏓 Event is full</div>}
-          {isMember && !isHost && (
+          {isMember && !isHost && !isLegacyInvalidEvent && (
             <button onClick={handleLeave} style={{ padding: 11, borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: 'pointer', border: '1.5px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.07)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               <UserMinus style={{ width: 14, height: 14 }} /> Leave Event
             </button>
           )}
-          {isHost && (
+          {isHost && !isLegacyInvalidEvent && (
             <div style={{ borderRadius: 14, border: `1.5px solid ${border}`, overflow: 'hidden' }}>
               <div style={{ padding: '10px 14px', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent, background: softBg, borderBottom: `1px solid ${border}` }}>Host Controls</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: border }}>
