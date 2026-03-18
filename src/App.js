@@ -19410,6 +19410,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 ) : (
                   <div className="space-y-2">
                     {filteredUpcomingUserTabEvents.map(event => {
+                      const upcomingEventRowKey = `${String(event.id || '')}:${String(event.date || event.dateKey || '')}`;
                       const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
                       const signups = popupSignupsByEventId[String(event.id || '')] || [];
                       const maxPeople = popupMeta ? Number(popupMeta.maxPeople || 0) : 0;
@@ -19421,7 +19422,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       const rowOffset = eventSwipeDrag.id === eventSwipeKey ? eventSwipeDrag.offset : (swipedEventKey === eventSwipeKey ? -88 : 0);
                       const isDeleteRevealed = rowOffset < 0;
                       return (
-                        <div key={event.id} className="relative rounded-2xl overflow-hidden">
+                        <div key={upcomingEventRowKey} className="relative rounded-2xl overflow-hidden">
                           {canDeleteThisEvent && (
                             <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
                               <button
