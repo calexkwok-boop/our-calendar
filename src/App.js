@@ -1511,6 +1511,69 @@ function App() {
     return {};
   };
 
+  const getDuplicateSubCalendarIds = async (subCal) => {
+    try {
+      const subCalId = String(subCal?.id || '').trim();
+      const layerId = String(subCal?.layer_id || '').trim();
+      const name = String(subCal?.name || '').trim();
+      const startDate = String(subCal?.start_date || '').trim();
+      const endDate = String(subCal?.end_date || '').trim();
+      if (!subCalId || !name || !startDate || !endDate) return [subCalId].filter(Boolean);
+      let query = supabase
+        .from('sub_calendars')
+        .select('id')
+        .eq('name', name)
+        .eq('start_date', startDate)
+        .eq('end_date', endDate);
+      query = layerId ? query.eq('layer_id', layerId) : query.is('layer_id', null);
+      const { data, error } = await query;
+      if (error) {
+        console.error('Error loading duplicate sub-calendars:', error);
+        return [subCalId];
+      }
+      const ids = Array.from(new Set((data || []).map((row) => String(row?.id || '').trim()).filter(Boolean)));
+      return ids.length > 0 ? ids : [subCalId];
+    } catch (e) {
+      console.error(e);
+      return [String(subCal?.id || '').trim()].filter(Boolean);
+    }
+  };
+
+  const loadMergedSubCalendarEvents = async (subCal) => {
+    const subCalIds = await getDuplicateSubCalendarIds(subCal);
+    const merged = {};
+    for (const subCalId of subCalIds) {
+      const grouped = await loadSubCalendarEvents(subCalId);
+      Object.entries(grouped || {}).forEach(([dateKey, rows]) => {
+        if (!merged[dateKey]) merged[dateKey] = [];
+        merged[dateKey].push(...(rows || []));
+      });
+    }
+    Object.keys(merged).forEach((dateKey) => {
+      merged[dateKey] = merged[dateKey]
+        .filter((row, index, arr) => arr.findIndex((candidate) => String(candidate?.id) === String(row?.id)) === index)
+        .sort((a, b) => {
+          if (!a.time) return 1;
+          if (!b.time) return -1;
+          return String(a.time).localeCompare(String(b.time));
+        });
+    });
+    setSubCalendarEvents(merged);
+    return merged;
+  };
+
+  const loadMergedTripPhotos = async (subCal, deletedIdsOverride = null) => {
+    const subCalIds = await getDuplicateSubCalendarIds(subCal);
+    const merged = [];
+    for (const subCalId of subCalIds) {
+      const rows = await loadTripPhotos(subCalId, deletedIdsOverride);
+      merged.push(...(rows || []));
+    }
+    const deduped = merged.filter((row, index, arr) => arr.findIndex((candidate) => String(candidate?.id) === String(row?.id)) === index);
+    setTripPhotos(deduped);
+    return deduped;
+  };
+
   const loadSubCalendarMembers = async (subCalId) => {
     try {
       const myEmail = normalizeEmail(user?.email);
@@ -1933,10 +1996,10 @@ function App() {
     await loadGlobalVenmoHandles();
     await loadGlobalCashAppHandles();
     await syncSubCalendarMembersFromLayer(sc);
-    const loadedEvents = await loadSubCalendarEvents(sc.id);
+    const loadedEvents = await loadMergedSubCalendarEvents(sc);
     await loadSubCalendarMembers(sc.id);
     const noteState = await loadSubCalNotes(sc.id);
-    const loadedPhotos = await loadTripPhotos(sc.id, noteState?.deletedPhotoIds || []);
+    const loadedPhotos = await loadMergedTripPhotos(sc, noteState?.deletedPhotoIds || []);
     const itineraryDateKeys = Object.keys(loadedEvents || {}).filter(Boolean).sort();
     const photoDateKeys = Array.from(new Set(
       (loadedPhotos || []).map((photo) => String(photo?.date || '').trim()).filter(Boolean)
@@ -2126,7 +2189,7 @@ function App() {
 
   useEffect(() => {
     if (!activeSubCalendar?.id) return;
-    loadTripPhotos(activeSubCalendar.id, deletedPhotoIds);
+    loadMergedTripPhotos(activeSubCalendar, deletedPhotoIds);
   }, [activeSubCalendar?.id, deletedPhotoIds]);
 
   const uploadTripPhoto = async (file, caption, eventId, date) => {
