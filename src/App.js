@@ -8497,26 +8497,52 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     let signupsMap = {};
     if (eventIds.length > 0) {
-      const { data: signupRows, error: signupErr } = await supabase
-        .from('popup_event_signups')
-        .select('event_id,user_id,display_name,created_at')
-        .in('layer_id', visibleLayerIds)
-        .in('event_id', eventIds)
-        .order('created_at', { ascending: true });
+      const [
+        { data: signupRows, error: signupErr },
+        { data: memberRows, error: memberErr },
+      ] = await Promise.all([
+        supabase
+          .from('popup_event_signups')
+          .select('event_id,user_id,display_name,created_at')
+          .in('layer_id', visibleLayerIds)
+          .in('event_id', eventIds)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('popup_event_members')
+          .select('event_id,user_id,display_name,role,joined_at')
+          .in('event_id', eventIds)
+          .order('joined_at', { ascending: true }),
+      ]);
 
-      if (!signupErr) {
-        signupsMap = {};
-        (signupRows || []).forEach((row) => {
-          const eventId = String(row?.event_id || '');
+      if (!signupErr || !memberErr) {
+        const mergedMap = new Map();
+        const pushEntry = (row, createdAtField = 'created_at') => {
+          const eventId = String(row?.event_id || '').trim();
           if (!eventId) return;
-          if (!Array.isArray(signupsMap[eventId])) signupsMap[eventId] = [];
-          signupsMap[eventId].push({
-            userId: String(row?.user_id || ''),
-            displayName: resolveHandleLikeLabel(
-              String(row?.display_name || row?.user_id || 'Member'),
-              String(row?.user_id || '')
-            ),
-            createdAt: String(row?.created_at || ''),
+          const userId = String(row?.user_id || '').trim();
+          const displayName = resolveHandleLikeLabel(
+            String(row?.display_name || row?.user_id || 'Member'),
+            userId
+          );
+          const dedupeKey = `${eventId}|${userId}|${displayName.trim().toLowerCase()}`;
+          if (!mergedMap.has(dedupeKey)) {
+            mergedMap.set(dedupeKey, {
+              eventId,
+              userId,
+              displayName,
+              createdAt: String(row?.[createdAtField] || ''),
+            });
+          }
+        };
+        (signupRows || []).forEach((row) => pushEntry(row, 'created_at'));
+        (memberRows || []).forEach((row) => pushEntry(row, 'joined_at'));
+        signupsMap = {};
+        Array.from(mergedMap.values()).forEach((row) => {
+          if (!Array.isArray(signupsMap[row.eventId])) signupsMap[row.eventId] = [];
+          signupsMap[row.eventId].push({
+            userId: row.userId,
+            displayName: row.displayName,
+            createdAt: row.createdAt,
           });
         });
       }
