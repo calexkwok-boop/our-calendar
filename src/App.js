@@ -1431,21 +1431,59 @@ function App() {
 
   const loadUserTabTrips = async () => {
     const visibleLayerIds = Array.from(new Set((layers || []).map((layer) => String(layer?.id || '').trim()).filter(Boolean)));
-    if (visibleLayerIds.length === 0) {
+    const myEmail = normalizeEmail(user?.email);
+    const myPhone = normalizePhoneNumber(user?.phone);
+    const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
+    if (visibleLayerIds.length === 0 && !memberRecipientFilter) {
       setUserTabTrips([]);
       return [];
     }
     try {
-      const { data, error } = await supabase
-        .from('sub_calendars')
-        .select('*')
-        .in('layer_id', visibleLayerIds);
-      if (error) {
-        console.error('Error loading user tab trips:', error);
-        setUserTabTrips([]);
-        return [];
+      let directRows = [];
+      if (visibleLayerIds.length > 0) {
+        const { data, error } = await supabase
+          .from('sub_calendars')
+          .select('*')
+          .in('layer_id', visibleLayerIds);
+        if (error) {
+          console.error('Error loading user tab trips:', error);
+          setUserTabTrips([]);
+          return [];
+        }
+        directRows = data || [];
       }
-      const deduped = Array.from(new Map((data || []).map((row) => [String(row?.id || ''), row])).values());
+      let memberRows = [];
+      if (memberRecipientFilter) {
+        const { data: memberLinks, error: memberErr } = await supabase
+          .from('sub_calendar_members')
+          .select('sub_calendar_id,status')
+          .or(memberRecipientFilter);
+        if (memberErr) {
+          console.error('Error loading trip memberships for user tab:', memberErr);
+          setUserTabTrips([]);
+          return [];
+        }
+        const memberTripIds = Array.from(new Set((memberLinks || [])
+          .filter((row) => {
+            const status = String(row?.status || '').toLowerCase();
+            return !status || status === 'accepted';
+          })
+          .map((row) => String(row?.sub_calendar_id || '').trim())
+          .filter(Boolean)));
+        if (memberTripIds.length > 0) {
+          const { data: trips, error: tripsErr } = await supabase
+            .from('sub_calendars')
+            .select('*')
+            .in('id', memberTripIds);
+          if (tripsErr) {
+            console.error('Error loading accepted trip invite rows for user tab:', tripsErr);
+            setUserTabTrips([]);
+            return [];
+          }
+          memberRows = trips || [];
+        }
+      }
+      const deduped = Array.from(new Map([...(directRows || []), ...(memberRows || [])].map((row) => [String(row?.id || ''), row])).values());
       setUserTabTrips(deduped);
       return deduped;
     } catch (error) {
