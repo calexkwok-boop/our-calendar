@@ -19683,9 +19683,21 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                 <div className="flex flex-wrap items-center gap-1 mt-1">
                                   {popupMeta && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">Pop-up</span>}
                                   {(event.isAnnual || (event.recurrence && event.recurrence !== 'once')) && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">Recurring</span>}
-                                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                                    {(visibleLayerCalendars.find((layer) => String(layer?.id || '') === String(event?.layerId || event?.layer_id || ''))?.name) || 'Calendar'}
-                                  </span>
+                                  {(() => {
+                                    const eventLayer = visibleLayerCalendars.find((layer) => String(layer?.id || '') === String(event?.layerId || event?.layer_id || '')) || null;
+                                    const eventLayerTheme = normalizeLayerPageTheme(eventLayer?.page_theme, eventLayer?.title_style);
+                                    const chipBg = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.82 : 0.86);
+                                    const chipBorder = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.56 : 0.66);
+                                    const chipText = isLightHexColor(eventLayerTheme.accent) ? '#111111' : eventLayerTheme.accent;
+                                    return (
+                                      <span
+                                        className="text-[10px] font-medium px-2 py-0.5 rounded-full border"
+                                        style={{ backgroundColor: chipBg, borderColor: chipBorder, color: chipText }}
+                                      >
+                                        {eventLayer?.name || 'Calendar'}
+                                      </span>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                               <div className="flex flex-col items-end gap-1 shrink-0">
