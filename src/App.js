@@ -915,6 +915,9 @@ function App() {
       localStorage.setItem(String(key || ''), JSON.stringify(normalized));
     } catch {}
   };
+  const persistUpcomingEventsVisibleCalendars = (userId, ids) => {
+    writeLocalSortOrder(getUpcomingEventsVisibleCalendarsLocalKey(userId), ids);
+  };
   const normalizeSortOrder = (ids, order) => {
     const idList = Array.from(new Set((ids || []).map((id) => String(id || '')).filter(Boolean)));
     const orderList = Array.from(new Set((order || []).map((id) => String(id || '')).filter(Boolean)));
@@ -13954,11 +13957,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, upcomingPopupSortOrder]);
 
   useEffect(() => {
-    if (!user?.id || !eventsTabVisibleLayerIdsHydratedRef.current) return;
-    writeLocalSortOrder(getUpcomingEventsVisibleCalendarsLocalKey(user.id), eventsTabVisibleLayerIds);
-  }, [user?.id, eventsTabVisibleLayerIds]);
-
-  useEffect(() => {
     const ids = visibleLayerCalendars.map((layer) => String(layer?.id || ''));
     setActiveCalendarSortOrder((prev) => normalizeSortOrder(ids, prev));
   }, [visibleLayerCalendars]);
@@ -19325,7 +19323,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           <input
                             type="checkbox"
                             checked={visibleLayerCalendars.length > 0 && eventsTabVisibleLayerIds.length === visibleLayerCalendars.length}
-                            onChange={(e) => setEventsTabVisibleLayerIds(e.target.checked ? visibleLayerCalendars.map((layer) => String(layer.id || '')) : [])}
+                            onChange={(e) => {
+                              const nextIds = e.target.checked ? visibleLayerCalendars.map((layer) => String(layer.id || '')) : [];
+                              setEventsTabVisibleLayerIds(nextIds);
+                              if (user?.id) persistUpcomingEventsVisibleCalendars(user.id, nextIds);
+                            }}
                             className="rounded border-gray-300 dark:border-gray-500"
                           />
                           All calendars
@@ -19341,9 +19343,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                 onChange={(e) => {
                                   setEventsTabVisibleLayerIds((prev) => {
                                     const current = Array.isArray(prev) ? prev.map(String) : [];
-                                    return e.target.checked
+                                    const nextIds = e.target.checked
                                       ? [...current, layerId]
                                       : current.filter((id) => id !== layerId);
+                                    if (user?.id) persistUpcomingEventsVisibleCalendars(user.id, nextIds);
+                                    return nextIds;
                                   });
                                 }}
                                 className="rounded border-gray-300 dark:border-gray-500"
