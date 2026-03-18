@@ -693,6 +693,9 @@ function App() {
   const [popupSignupsByEventId, setPopupSignupsByEventId] = useState({});
   const [userTabPopupEvents, setUserTabPopupEvents] = useState([]);
   const [userTabTrips, setUserTabTrips] = useState([]);
+  const [userTabEvents, setUserTabEvents] = useState([]);
+  const [eventsTabHideRecurring, setEventsTabHideRecurring] = useState(false);
+  const [eventsTabLayerFilter, setEventsTabLayerFilter] = useState('all');
   const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
@@ -1416,6 +1419,32 @@ function App() {
     } catch (error) {
       console.error('Error loading user tab trips:', error);
       setUserTabTrips([]);
+      return [];
+    }
+  };
+
+  const loadUserTabEvents = async () => {
+    const visibleLayerIds = Array.from(new Set((layers || []).map((layer) => String(layer?.id || '').trim()).filter(Boolean)));
+    if (visibleLayerIds.length === 0 || !user?.id) {
+      setUserTabEvents([]);
+      return [];
+    }
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .in('layer_id', visibleLayerIds);
+      if (error) {
+        console.error('Error loading user tab events:', error);
+        setUserTabEvents([]);
+        return [];
+      }
+      const mapped = (data || []).map((row) => mapSupabaseEventRow(row, user.id));
+      setUserTabEvents(mapped);
+      return mapped;
+    } catch (error) {
+      console.error('Error loading user tab events:', error);
+      setUserTabEvents([]);
       return [];
     }
   };
@@ -9488,7 +9517,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     loadUserTabTrips();
-  }, [layers, layerRefreshToken]);
+    loadUserTabEvents();
+  }, [layers, layerRefreshToken, user?.id]);
 
   useEffect(() => {
     if (!activeLayerId || !user?.id) return;
@@ -13788,6 +13818,25 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     })
     .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
   const upcomingPopupEvents = [...(userTabPopupEvents || [])];
+  const upcomingUserTabEvents = [...(userTabEvents || [])]
+    .filter((event) => {
+      const eventTs = toDateOnlyTs(event?.date || event?.dateKey || '');
+      return eventTs !== null && eventTs >= todayTs;
+    })
+    .sort((a, b) => {
+      const aTs = toDateOnlyTs(a?.date || a?.dateKey || '') || 0;
+      const bTs = toDateOnlyTs(b?.date || b?.dateKey || '') || 0;
+      if (aTs !== bTs) return aTs - bTs;
+      if (!a?.time) return 1;
+      if (!b?.time) return -1;
+      return String(a.time).localeCompare(String(b.time));
+    });
+  const filteredUpcomingUserTabEvents = upcomingUserTabEvents.filter((event) => {
+    const layerId = String(event?.layerId || event?.layer_id || '').trim();
+    if (eventsTabLayerFilter !== 'all' && layerId !== String(eventsTabLayerFilter || '').trim()) return false;
+    if (eventsTabHideRecurring && (event?.isAnnual || (event?.recurrence && event.recurrence !== 'once'))) return false;
+    return true;
+  });
   const activeTrips = [...tabTrips]
     .filter(sc => {
       const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
@@ -19153,7 +19202,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             {bottomNavTab === 'events' && (
               <>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Pop-up Events</h3>
+                  <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Upcoming Events</h3>
                   <button
                     onClick={() => { 
                       setIsPopupEventDraft(true); 
@@ -19165,15 +19214,33 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <Plus className="w-3.5 h-3.5" /> New Event
                   </button>
                 </div>
-                {upcomingPopupEvents.length === 0 ? (
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <button
+                    onClick={() => setEventsTabHideRecurring((prev) => !prev)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${eventsTabHideRecurring ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:border-gray-100' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}
+                  >
+                    {eventsTabHideRecurring ? 'Show recurring' : 'Hide recurring'}
+                  </button>
+                  <select
+                    value={eventsTabLayerFilter}
+                    onChange={(e) => setEventsTabLayerFilter(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-medium border bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600"
+                  >
+                    <option value="all">All calendars</option>
+                    {visibleLayerCalendars.map((layer) => (
+                      <option key={layer.id} value={String(layer.id)}>{layer.name || 'Untitled'}</option>
+                    ))}
+                  </select>
+                </div>
+                {filteredUpcomingUserTabEvents.length === 0 ? (
                   <div className="text-center py-10">
                     <div className="text-4xl mb-3">🎾</div>
-                    <div className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">No upcoming pop-up events</div>
-                    <div className="text-xs text-gray-400 dark:text-gray-500">Tap "New Event" to create one</div>
+                    <div className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">No upcoming events</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500">Adjust filters or tap "New Event" to create one</div>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {upcomingPopupEvents.map(event => {
+                    {filteredUpcomingUserTabEvents.map(event => {
                       const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
                       const signups = popupSignupsByEventId[String(event.id || '')] || [];
                       const maxPeople = popupMeta ? Number(popupMeta.maxPeople || 0) : 0;
@@ -19215,7 +19282,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             onClick={() => {
                               const popupLayerId = String(popupMeta?.layerId || event?.layerId || '').trim();
                               if (popupLayerId && popupLayerId !== String(activeLayerId || '')) setActiveLayerId(popupLayerId);
-                              setSelectedPopupEventPanelId(String(event.id || ''));
+                              if (popupMeta) {
+                                setSelectedPopupEventPanelId(String(event.id || ''));
+                              } else {
+                                openAgendaItem(event);
+                              }
                             }}
                             className="relative z-10 w-full text-left rounded-2xl p-3 sm:p-4 border transition-all hover:-translate-y-0.5 hover:shadow-md"
                             style={{ background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', borderColor: `${activeLayerPageTheme.accent}30`, transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease', touchAction: 'pan-y' }}
@@ -19227,14 +19298,25 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                   {formatDateKeyMMDDYYYY ? formatDateKeyMMDDYYYY(event.date || event.dateKey) : (event.date || event.dateKey)}
                                   {event.time ? ` · ${formatTime ? formatTime(event.time) : event.time}` : ''}
                                 </div>
+                                <div className="flex flex-wrap items-center gap-1 mt-1">
+                                  {popupMeta && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">Pop-up</span>}
+                                  {(event.isAnnual || (event.recurrence && event.recurrence !== 'once')) && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">Recurring</span>}
+                                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                                    {(visibleLayerCalendars.find((layer) => String(layer?.id || '') === String(event?.layerId || event?.layer_id || ''))?.name) || 'Calendar'}
+                                  </span>
+                                </div>
                               </div>
                               <div className="flex flex-col items-end gap-1 shrink-0">
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${joined ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : isFull ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}`}>
-                                  {joined ? '✓ Joined' : isFull ? 'Full' : 'Open'}
-                                </span>
-                                {maxPeople > 0 && (
-                                  <span className="text-[10px] text-gray-400 dark:text-gray-500">{signups.length}/{maxPeople} players</span>
-                                )}
+                                {popupMeta ? (
+                                  <>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${joined ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : isFull ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}`}>
+                                      {joined ? '✓ Joined' : isFull ? 'Full' : 'Open'}
+                                    </span>
+                                    {maxPeople > 0 && (
+                                      <span className="text-[10px] text-gray-400 dark:text-gray-500">{signups.length}/{maxPeople} players</span>
+                                    )}
+                                  </>
+                                ) : null}
                               </div>
                             </div>
                           </button>
