@@ -8,16 +8,6 @@ import {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
-const generateUuid = () => {
-  try {
-    if (typeof globalThis !== 'undefined' && globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  } catch {}
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : ((r & 0x3) | 0x8);
-    return v.toString(16);
-  });
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -688,7 +678,7 @@ export default function PopupEventPanel({
     try {
       const { error } = await supabase.from('popup_event_members').insert({
         event_id: event.id,
-        user_id: generateUuid(),
+        user_id: user.id,
         display_name: nextName,
         role: 'player',
       });
@@ -873,7 +863,7 @@ export default function PopupEventPanel({
           </div>
           {members.map((m) => (
             <React.Fragment key={m.id || m.user_id}>
-              <RosterRow member={m} isMe={m.user_id === user?.id}
+              <RosterRow member={m} isMe={m.id === myMember?.id}
                 isHost={isHostOrCohost} accent={accent} darkMode={darkMode}
                 onKick={handleKick} onPromote={handlePromote} onDemote={handleDemote} />
               {isHost && !isLegacyInvalidEvent && m.role === 'host' && (
