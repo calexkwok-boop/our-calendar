@@ -3862,8 +3862,23 @@ useEffect(() => {
   };
   const canDeleteEventInActiveLayer = (event) => {
     if (!event) return false;
-    if (!activeLayer?.is_public) return canEditActiveLayer;
-    if (canModerateActiveLayer) return true;
+    const eventLayerId = String(event?.layerId || event?.layer_id || activeLayerId || '').trim();
+    const eventLayer = (layers || []).find((layer) => String(layer?.id || '') === eventLayerId) || null;
+    const eventLayerOwnerId = String(eventLayer?.owner_id || '').trim();
+    const isEventLayerOwner = eventLayerOwnerId && eventLayerOwnerId === String(user?.id || '');
+    if (isEventLayerOwner) return true;
+    const shareRowForEventLayer = (sharedCalendars || []).find((row) => {
+      const layerId = String(row?.layer_id || row?.calendar_id || '');
+      if (layerId !== eventLayerId) return false;
+      const byId = String(row?.shared_with_id || '') === String(user?.id || '');
+      const byEmail = normalizeEmail(row?.shared_with_email) && normalizeEmail(row?.shared_with_email) === normalizeEmail(user?.email);
+      const byPhone = normalizePhoneNumber(row?.shared_with_phone) && normalizePhoneNumber(row?.shared_with_phone) === normalizePhoneNumber(user?.phone);
+      return byId || byEmail || byPhone;
+    }) || null;
+    const shareRole = String(shareRowForEventLayer?.role || '').trim().toLowerCase() || 'member';
+    const canModerateEventLayer = shareRole === 'admin' || shareRole === 'moderator';
+    if (!eventLayer?.is_public) return Boolean(isEventLayerOwner || canModerateEventLayer || !shareRowForEventLayer || shareRowForEventLayer?.can_edit !== false);
+    if (canModerateEventLayer) return true;
     return isEventOwnedByCurrentUser(event);
   };
   const isShareRowForCurrentAccount = (share) => {
@@ -4589,6 +4604,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const mapSupabaseEventRow = (event, currentUserId) => ({
     id: event.id,
+    layerId: event.layer_id || null,
     title: event.title,
     time: event.time,
     date: event.date,
@@ -13396,14 +13412,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const deleteEventsByIds = async (eventIds, options = {}) => {
     const silent = Boolean(options?.silent);
+    const targetLayerId = String(options?.layerId || activeLayerId || '').trim();
     const ids = Array.from(new Set((eventIds || []).map(id => String(id)).filter(Boolean)));
-    if (!activeLayerId || ids.length === 0) return true;
+    if (!targetLayerId || ids.length === 0) return true;
     const { data, error } = await supabase
       .from('events')
       .delete()
       .select('id')
       .in('id', ids)
-      .eq('layer_id', activeLayerId);
+      .eq('layer_id', targetLayerId);
     if (error) {
       console.error('Error deleting events:', error);
       if (!silent) alert(`Could not delete event(s): ${error.message}`);
@@ -13416,8 +13433,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return false;
     }
     try {
-      await supabase.from('popup_event_signups').delete().eq('layer_id', activeLayerId).in('event_id', ids);
-      await supabase.from('popup_events').delete().eq('layer_id', activeLayerId).in('event_id', ids);
+      await supabase.from('popup_event_signups').delete().eq('layer_id', targetLayerId).in('event_id', ids);
+      await supabase.from('popup_events').delete().eq('layer_id', targetLayerId).in('event_id', ids);
       await loadPopupEventData();
     } catch {}
     return true;
@@ -13435,6 +13452,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     const actualDateKey = Object.keys(events).find(k => events[k]?.some(e => e.id === eventId)) || dateKey;
     const eventToDelete = events[actualDateKey]?.find(e => e.id === eventId);
+    const targetLayerId = String(eventToDelete?.layerId || eventToDelete?.layer_id || activeLayerId || '').trim();
     if (!canDeleteEventInActiveLayer(eventToDelete)) {
       alert('In public calendars, members can only delete events they created.');
       return;
@@ -13461,7 +13479,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           .from('events')
           .update({ exceptions: JSON.stringify(updatedExceptions) })
           .eq('id', eventId)
-          .eq('layer_id', activeLayerId);
+          .eq('layer_id', targetLayerId);
         if (error) {
           console.error('Error updating recurrence exceptions:', error);
           alert(`Could not update recurring event: ${error.message}`);
@@ -13475,7 +13493,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }));
       } else {
         // Delete the whole recurring event
-        const ok = await deleteEventsByIds([eventId]);
+        const ok = await deleteEventsByIds([eventId], { layerId: targetLayerId });
         if (!ok) return;
         const updatedEvents = { ...events, [originalDateKey]: (events[originalDateKey] || []).filter(e => e.id !== eventId) };
         if (updatedEvents[originalDateKey].length === 0) delete updatedEvents[originalDateKey];
@@ -13492,13 +13510,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         updatedEvents[key] = updatedEvents[key].filter(e => e.multiDayId !== eventToDelete.multiDayId);
         if (updatedEvents[key].length === 0) delete updatedEvents[key];
       });
-      const ok = await deleteEventsByIds(idsToDelete);
+      const ok = await deleteEventsByIds(idsToDelete, { layerId: targetLayerId });
       if (!ok) return;
       setEvents(updatedEvents);
     } else {
       const updatedEvents = { ...events, [actualDateKey]: (events[actualDateKey] || []).filter(e => e.id !== eventId) };
       if (updatedEvents[actualDateKey].length === 0) delete updatedEvents[actualDateKey];
-      const ok = await deleteEventsByIds([eventId]);
+      const ok = await deleteEventsByIds([eventId], { layerId: targetLayerId });
       if (!ok) return;
       setEvents(updatedEvents);
     }
