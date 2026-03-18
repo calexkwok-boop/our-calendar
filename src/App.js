@@ -13838,12 +13838,52 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
   const upcomingPopupEvents = [...(userTabPopupEvents || [])];
   const upcomingUserTabEvents = (() => {
+    const horizonDays = 365;
     const isAllDayLike = (event) => {
       const time = String(event?.time || '').trim();
       return !time || time === '00:00' || time === '00:00:00';
     };
     const seenHolidayKeys = new Set();
-    return [...(userTabEvents || [])]
+    const seenEventKeys = new Set();
+    const upcomingCandidates = [];
+    const addUpcomingEvent = (event) => {
+      const dateKey = String(event?.date || event?.dateKey || '').trim();
+      const eventId = String(event?.id || '').trim();
+      if (!dateKey || !eventId) return;
+      const dedupeKey = `${eventId}:${dateKey}`;
+      if (seenEventKeys.has(dedupeKey)) return;
+      seenEventKeys.add(dedupeKey);
+      upcomingCandidates.push({ ...event, date: dateKey });
+    };
+    (userTabEvents || []).forEach((event) => {
+      const baseDateKey = String(event?.date || event?.dateKey || '').trim();
+      const baseTs = toDateOnlyTs(baseDateKey);
+      if (baseTs !== null && baseTs >= todayTs) addUpcomingEvent(event);
+      const recurrence = String(event?.recurrence || (event?.isAnnual ? 'annual' : 'once')).trim().toLowerCase();
+      if (recurrence === 'once' || !baseDateKey || baseTs === null) return;
+      const exceptions = Array.isArray(event?.exceptions) ? event.exceptions.map((value) => String(value || '').trim()) : [];
+      for (let offset = 0; offset <= horizonDays; offset += 1) {
+        const candidate = new Date();
+        candidate.setHours(0, 0, 0, 0);
+        candidate.setDate(candidate.getDate() + offset);
+        const candidateKey = getDateKey(candidate);
+        if (candidateKey === baseDateKey || exceptions.includes(candidateKey)) continue;
+        if (recurrence === 'annual' || event?.isAnnual) {
+          if (Number(event?.annualMonth || 0) === candidate.getMonth() + 1 && Number(event?.annualDay || 0) === candidate.getDate()) {
+            addUpcomingEvent({ ...event, date: candidateKey, isVirtualAnnual: true });
+          }
+          continue;
+        }
+        const baseDate = new Date(`${baseDateKey}T00:00:00`);
+        if (Number.isNaN(baseDate.getTime()) || candidate <= baseDate) continue;
+        if (recurrence === 'weekly' && baseDate.getDay() === candidate.getDay()) {
+          addUpcomingEvent({ ...event, date: candidateKey, isVirtualRecurrence: true });
+        } else if (recurrence === 'monthly' && baseDate.getDate() === candidate.getDate()) {
+          addUpcomingEvent({ ...event, date: candidateKey, isVirtualRecurrence: true });
+        }
+      }
+    });
+    return upcomingCandidates
       .filter((event) => {
         const dateKey = String(event?.date || event?.dateKey || '').trim();
         const eventTs = toDateOnlyTs(dateKey);
