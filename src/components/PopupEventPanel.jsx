@@ -192,12 +192,12 @@ const RosterRow = ({ member, isMe, isHost, accent, darkMode, onKick, onPromote, 
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}` }}>
       <Avatar name={member.display_name} size={34} accent={accent} role={member.role} darkMode={darkMode} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {member.display_name}{isMe && <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', fontWeight: 500, marginLeft: 4 }}>(you)</span>}
+        <div style={{ fontSize: 13, fontWeight: 700, color: darkMode ? '#f8fafc' : 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {member.display_name}{isMe && <span style={{ fontSize: 10, color: darkMode ? '#cbd5e1' : 'var(--color-text-secondary)', fontWeight: 500, marginLeft: 4 }}>(you)</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
           {RoleIcon && <RoleIcon style={{ width: 10, height: 10, color: member.role === 'host' ? '#f59e0b' : '#8b5cf6' }} />}
-          <span style={{ fontSize: 10, fontWeight: 700, color: member.role === 'host' ? '#f59e0b' : member.role === 'cohost' ? '#8b5cf6' : 'var(--color-text-secondary)' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: member.role === 'host' ? '#f59e0b' : member.role === 'cohost' ? '#a78bfa' : (darkMode ? '#cbd5e1' : 'var(--color-text-secondary)') }}>
             {member.role === 'host' ? 'Host' : member.role === 'cohost' ? 'Co-host' : 'Player'}
           </span>
         </div>
