@@ -695,7 +695,7 @@ function App() {
   const [userTabTrips, setUserTabTrips] = useState([]);
   const [userTabEvents, setUserTabEvents] = useState([]);
   const [eventsTabHideRecurring, setEventsTabHideRecurring] = useState(false);
-  const [eventsTabLayerFilter, setEventsTabLayerFilter] = useState('all');
+  const [eventsTabVisibleLayerIds, setEventsTabVisibleLayerIds] = useState([]);
   const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
@@ -13833,7 +13833,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     });
   const filteredUpcomingUserTabEvents = upcomingUserTabEvents.filter((event) => {
     const layerId = String(event?.layerId || event?.layer_id || '').trim();
-    if (eventsTabLayerFilter !== 'all' && layerId !== String(eventsTabLayerFilter || '').trim()) return false;
+    if ((eventsTabVisibleLayerIds || []).length > 0 && !eventsTabVisibleLayerIds.includes(layerId)) return false;
     if (eventsTabHideRecurring && (event?.isAnnual || (event?.recurrence && event.recurrence !== 'once'))) return false;
     return true;
   });
@@ -13860,6 +13860,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (aOwned !== bOwned) return aOwned - bOwned;
     return String(a?.name || '').localeCompare(String(b?.name || ''));
   });
+  useEffect(() => {
+    const ids = visibleLayerCalendars.map((layer) => String(layer?.id || '')).filter(Boolean);
+    setEventsTabVisibleLayerIds((prev) => {
+      const prevSet = new Set((prev || []).map(String));
+      const next = ids.filter((id) => prevSet.size === 0 || prevSet.has(id));
+      return next.length > 0 ? next : ids;
+    });
+  }, [visibleLayerCalendars]);
   useEffect(() => {
     if (!user?.id) {
       setActiveCalendarSortOrder([]);
@@ -19221,16 +19229,26 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   >
                     {eventsTabHideRecurring ? 'Show recurring' : 'Hide recurring'}
                   </button>
-                  <select
-                    value={eventsTabLayerFilter}
-                    onChange={(e) => setEventsTabLayerFilter(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-medium border bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600"
-                  >
-                    <option value="all">All calendars</option>
-                    {visibleLayerCalendars.map((layer) => (
-                      <option key={layer.id} value={String(layer.id)}>{layer.name || 'Untitled'}</option>
-                    ))}
-                  </select>
+                  {visibleLayerCalendars.map((layer) => {
+                    const layerId = String(layer.id || '');
+                    const enabled = eventsTabVisibleLayerIds.includes(layerId);
+                    return (
+                      <button
+                        key={layerId}
+                        onClick={() => {
+                          setEventsTabVisibleLayerIds((prev) => {
+                            const current = Array.isArray(prev) ? prev.map(String) : [];
+                            return current.includes(layerId)
+                              ? current.filter((id) => id !== layerId)
+                              : [...current, layerId];
+                          });
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${enabled ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:border-gray-100' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}
+                      >
+                        {layer.name || 'Untitled'}
+                      </button>
+                    );
+                  })}
                 </div>
                 {filteredUpcomingUserTabEvents.length === 0 ? (
                   <div className="text-center py-10">
