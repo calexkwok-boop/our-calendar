@@ -2007,6 +2007,7 @@ function App() {
     setSubCalWeather({});
     setSubCalWeatherSuggestions([]);
     setSubCalWeatherExpanded(false);
+    setSubCalendarEvents({});
     if (sc.weather_location && sc.weather_lat && sc.weather_lon) {
       setSubCalWeatherLocation(sc.weather_location);
       setSubCalWeatherInput(sc.weather_location);
