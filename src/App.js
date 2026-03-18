@@ -887,6 +887,7 @@ function App() {
   const getUpcomingTripsSortLocalKey = (userId, layerId) => `upcoming-trips-order-${String(userId || '').trim()}-${String(layerId || '').trim()}`;
   const getUpcomingPopupsSortLocalKey = (userId, layerId) => `upcoming-popups-order-${String(userId || '').trim()}-${String(layerId || '').trim()}`;
   const getUpcomingEventsVisibleCalendarsLocalKey = (userId) => `upcoming-events-visible-calendars-${String(userId || '').trim()}`;
+  const getUpcomingEventsHideRecurringLocalKey = (userId) => `upcoming-events-hide-recurring-${String(userId || '').trim()}`;
   const readLocalSortOrder = (key) => {
     try {
       const raw = localStorage.getItem(String(key || ''));
@@ -916,6 +917,20 @@ function App() {
   };
   const persistUpcomingEventsVisibleCalendars = (userId, ids) => {
     writeLocalSortOrder(getUpcomingEventsVisibleCalendarsLocalKey(userId), ids);
+  };
+  const readLocalBoolean = (key, fallback = false) => {
+    try {
+      const raw = localStorage.getItem(String(key || ''));
+      if (raw === null) return fallback;
+      return raw === 'true';
+    } catch {
+      return fallback;
+    }
+  };
+  const writeLocalBoolean = (key, value) => {
+    try {
+      localStorage.setItem(String(key || ''), value ? 'true' : 'false');
+    } catch {}
   };
   const normalizeSortOrder = (ids, order) => {
     const idList = Array.from(new Set((ids || []).map((id) => String(id || '')).filter(Boolean)));
@@ -13962,7 +13977,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const popupsKey = getUpcomingPopupsSortLocalKey(user.id, 'all');
     setUpcomingTripSortOrder(readLocalSortOrder(tripsKey));
     setUpcomingPopupSortOrder(readLocalSortOrder(popupsKey));
+    setEventsTabHideRecurring(readLocalBoolean(getUpcomingEventsHideRecurringLocalKey(user.id), false));
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    writeLocalBoolean(getUpcomingEventsHideRecurringLocalKey(user.id), eventsTabHideRecurring);
+  }, [user?.id, eventsTabHideRecurring]);
   useEffect(() => {
     if (!user?.id) return;
     const ids = visibleLayerCalendars.map((layer) => String(layer?.id || '')).filter(Boolean);
