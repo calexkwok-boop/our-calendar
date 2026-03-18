@@ -691,6 +691,8 @@ function App() {
   const [popupEventMaxPeopleDraft, setPopupEventMaxPeopleDraft] = useState('10');
   const [popupEventsByEventId, setPopupEventsByEventId] = useState({});
   const [popupSignupsByEventId, setPopupSignupsByEventId] = useState({});
+  const [userTabPopupEvents, setUserTabPopupEvents] = useState([]);
+  const [userTabTrips, setUserTabTrips] = useState([]);
   const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
   const [calendarTitle, setCalendarTitle] = useState('Our Calendar');
@@ -1386,6 +1388,32 @@ function App() {
       return dedupedRows;
     } catch (e) { console.error(e); }
     return [];
+  };
+
+  const loadUserTabTrips = async () => {
+    const visibleLayerIds = Array.from(new Set((layers || []).map((layer) => String(layer?.id || '').trim()).filter(Boolean)));
+    if (visibleLayerIds.length === 0) {
+      setUserTabTrips([]);
+      return [];
+    }
+    try {
+      const { data, error } = await supabase
+        .from('sub_calendars')
+        .select('*')
+        .in('layer_id', visibleLayerIds);
+      if (error) {
+        console.error('Error loading user tab trips:', error);
+        setUserTabTrips([]);
+        return [];
+      }
+      const deduped = Array.from(new Map((data || []).map((row) => [String(row?.id || ''), row])).values());
+      setUserTabTrips(deduped);
+      return deduped;
+    } catch (error) {
+      console.error('Error loading user tab trips:', error);
+      setUserTabTrips([]);
+      return [];
+    }
   };
 
   const loadSubCalendarEvents = async (subCalId) => {
@@ -8098,16 +8126,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const loadPopupEventData = async () => {
-    if (!activeLayerId) {
+    const visibleLayerIds = Array.from(new Set((layers || []).map((layer) => String(layer?.id || '').trim()).filter(Boolean)));
+    if (visibleLayerIds.length === 0) {
       setPopupEventsByEventId({});
       setPopupSignupsByEventId({});
+      setUserTabPopupEvents([]);
       return;
     }
 
     const { data: popupEventsRows, error: popupEventsErr } = await supabase
       .from('popup_events')
-      .select('event_id,max_people,created_by_user_id,created_by_name,created_at')
-      .eq('layer_id', activeLayerId);
+      .select('layer_id,event_id,max_people,created_by_user_id,created_by_name,created_at')
+      .in('layer_id', visibleLayerIds);
 
     if (popupEventsErr) {
       if (popupEventsErr.code === '42P01') {
@@ -8115,6 +8145,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
       setPopupEventsByEventId({});
       setPopupSignupsByEventId({});
+      setUserTabPopupEvents([]);
       return;
     }
 
@@ -8127,6 +8158,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (!isUuid(eventId)) return;
       eventsMap[eventId] = {
         eventId,
+        layerId: String(row?.layer_id || '').trim(),
         maxPeople: Math.max(1, Number(row?.max_people || 1)),
         createdByUserId: String(row?.created_by_user_id || ''),
         createdByName: String(row?.created_by_name || ''),
@@ -8139,7 +8171,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const { data: signupRows, error: signupErr } = await supabase
         .from('popup_event_signups')
         .select('event_id,user_id,display_name,created_at')
-        .eq('layer_id', activeLayerId)
+        .in('layer_id', visibleLayerIds)
         .in('event_id', eventIds)
         .order('created_at', { ascending: true });
 
@@ -8161,9 +8193,42 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
     }
 
+    let popupEventCards = [];
+    if (eventIds.length > 0) {
+      const { data: eventRows, error: eventRowsErr } = await supabase
+        .from('events')
+        .select('id,title,date,time,location,layer_id')
+        .in('id', eventIds);
+      if (!eventRowsErr) {
+        popupEventCards = (eventRows || [])
+          .map((row) => ({
+            id: String(row?.id || ''),
+            title: String(row?.title || 'Untitled Event'),
+            date: String(row?.date || ''),
+            dateKey: String(row?.date || ''),
+            time: row?.time || null,
+            location: row?.location || null,
+            layerId: String(row?.layer_id || ''),
+          }))
+          .filter((row) => row.id && row.date)
+          .sort((a, b) => {
+            const aTs = toDateOnlyTs(a?.date || a?.dateKey || '') || 0;
+            const bTs = toDateOnlyTs(b?.date || b?.dateKey || '') || 0;
+            if (aTs !== bTs) return aTs - bTs;
+            if (!a?.time) return 1;
+            if (!b?.time) return -1;
+            return String(a.time).localeCompare(String(b.time));
+          });
+      }
+    }
+
     setPopupFeatureAvailable(true);
     setPopupEventsByEventId(eventsMap);
     setPopupSignupsByEventId(signupsMap);
+    setUserTabPopupEvents(popupEventCards.filter((event) => {
+      const eventTs = toDateOnlyTs(event?.date || event?.dateKey || '');
+      return eventTs !== null && eventTs >= todayTs;
+    }));
   };
 
   const createPopupEventRows = async (rows) => {
@@ -8211,7 +8276,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const joinPopupEvent = async (eventId, fallbackMeta = null) => {
     const normalizedEventId = String(eventId || '').trim();
     const popup = popupEventsByEventId[normalizedEventId] || null;
-    if (!normalizedEventId || !activeLayerId || !user?.id) return;
+    const targetLayerId = String(popup?.layerId || fallbackMeta?.layerId || activeLayerId || '').trim();
+    if (!normalizedEventId || !targetLayerId || !user?.id) return;
     if (!isUuid(normalizedEventId)) {
       alert('This pop-up event uses an old invalid ID and can no longer be joined. Recreate it to use the popup panel.');
       return;
@@ -8235,7 +8301,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
     const payload = {
-      layer_id: activeLayerId,
+      layer_id: targetLayerId,
       event_id: normalizedEventId,
       user_id: user.id,
       display_name: resolveHandleLikeLabel(
@@ -8261,7 +8327,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const leavePopupEvent = async (eventId) => {
     const normalizedEventId = String(eventId || '').trim();
-    if (!normalizedEventId || !activeLayerId || !user?.id) return;
+    const popup = popupEventsByEventId[normalizedEventId] || null;
+    const targetLayerId = String(popup?.layerId || activeLayerId || '').trim();
+    if (!normalizedEventId || !targetLayerId || !user?.id) return;
     if (!isUuid(normalizedEventId)) {
       alert('This pop-up event uses an old invalid ID and can no longer be managed. Recreate it to use the popup panel.');
       return;
@@ -8269,7 +8337,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const { error } = await supabase
       .from('popup_event_signups')
       .delete()
-      .eq('layer_id', activeLayerId)
+      .eq('layer_id', targetLayerId)
       .eq('event_id', normalizedEventId)
       .eq('user_id', user.id);
     if (error) {
@@ -9337,10 +9405,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!activeLayerId) {
       setPopupEventsByEventId({});
       setPopupSignupsByEventId({});
+      setUserTabPopupEvents([]);
       return;
     }
     loadPopupEventData();
-  }, [activeLayerId, layerRefreshToken]);
+  }, [activeLayerId, layers, layerRefreshToken]);
+
+  useEffect(() => {
+    loadUserTabTrips();
+  }, [layers, layerRefreshToken]);
 
   useEffect(() => {
     if (!activeLayerId || !user?.id) return;
@@ -13621,45 +13694,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   };
-  const upcomingTrips = [...subCalendars]
+  const tabTrips = Array.isArray(userTabTrips) ? userTabTrips : [];
+  const upcomingTrips = [...tabTrips]
     .filter(sc => {
       const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
       return startTs !== null && startTs > todayTs;
     })
     .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
-  const upcomingPopupEvents = (() => {
-    const seen = new Set();
-    return Object.entries(events || {})
-      .flatMap(([dateKey, dateEvents]) => (dateEvents || []).map((event) => ({
-        ...event,
-        dateKey: String(event?.date || dateKey || ''),
-      })))
-      .filter((event) => {
-        const eventId = String(event?.id || '');
-        if (!eventId || seen.has(eventId)) return false;
-        if (!popupEventsByEventId[eventId]) return false;
-        const eventTs = toDateOnlyTs(event?.date || event?.dateKey || '');
-        if (eventTs === null || eventTs < todayTs) return false;
-        seen.add(eventId);
-        return true;
-      })
-      .sort((a, b) => {
-        const aTs = toDateOnlyTs(a?.date || a?.dateKey || '') || 0;
-        const bTs = toDateOnlyTs(b?.date || b?.dateKey || '') || 0;
-        if (aTs !== bTs) return aTs - bTs;
-        if (!a?.time) return 1;
-        if (!b?.time) return -1;
-        return String(a.time).localeCompare(String(b.time));
-      });
-  })();
-  const activeTrips = [...subCalendars]
+  const upcomingPopupEvents = [...(userTabPopupEvents || [])];
+  const activeTrips = [...tabTrips]
     .filter(sc => {
       const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
       const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
       return startTs !== null && endTs !== null && todayTs >= startTs && todayTs <= endTs;
     })
     .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
-  const archivedTrips = [...subCalendars]
+  const archivedTrips = [...tabTrips]
     .filter(sc => {
       const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
       return endTs !== null && endTs < todayTs;
@@ -13684,16 +13734,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     const activeCalendarsKey = getActiveCalendarsSortLocalKey(user.id);
     setActiveCalendarSortOrder(readLocalSortOrder(activeCalendarsKey));
-    if (!activeLayerId) {
-      setUpcomingTripSortOrder([]);
-      setUpcomingPopupSortOrder([]);
-      return;
-    }
-    const tripsKey = getUpcomingTripsSortLocalKey(user.id, activeLayerId);
-    const popupsKey = getUpcomingPopupsSortLocalKey(user.id, activeLayerId);
+    const tripsKey = getUpcomingTripsSortLocalKey(user.id, 'all');
+    const popupsKey = getUpcomingPopupsSortLocalKey(user.id, 'all');
     setUpcomingTripSortOrder(readLocalSortOrder(tripsKey));
     setUpcomingPopupSortOrder(readLocalSortOrder(popupsKey));
-  }, [user?.id, activeLayerId]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -13701,14 +13746,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, activeCalendarSortOrder]);
 
   useEffect(() => {
-    if (!user?.id || !activeLayerId) return;
-    writeLocalSortOrder(getUpcomingTripsSortLocalKey(user.id, activeLayerId), upcomingTripSortOrder);
-  }, [user?.id, activeLayerId, upcomingTripSortOrder]);
+    if (!user?.id) return;
+    writeLocalSortOrder(getUpcomingTripsSortLocalKey(user.id, 'all'), upcomingTripSortOrder);
+  }, [user?.id, upcomingTripSortOrder]);
 
   useEffect(() => {
-    if (!user?.id || !activeLayerId) return;
-    writeLocalSortOrder(getUpcomingPopupsSortLocalKey(user.id, activeLayerId), upcomingPopupSortOrder);
-  }, [user?.id, activeLayerId, upcomingPopupSortOrder]);
+    if (!user?.id) return;
+    writeLocalSortOrder(getUpcomingPopupsSortLocalKey(user.id, 'all'), upcomingPopupSortOrder);
+  }, [user?.id, upcomingPopupSortOrder]);
 
   useEffect(() => {
     const ids = visibleLayerCalendars.map((layer) => String(layer?.id || ''));
@@ -17924,11 +17969,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         initialEventId={selectedPopupEventPanelId}
         eventMetaFallback={(() => {
           const meta = popupEventsByEventId[selectedPopupEventPanelId];
-          const evObj = Object.values(events || {}).flat().find(e => String(e.id) === selectedPopupEventPanelId);
+          const evObj = (userTabPopupEvents || []).find(e => String(e.id) === selectedPopupEventPanelId)
+            || Object.values(events || {}).flat().find(e => String(e.id) === selectedPopupEventPanelId);
           if (!meta || !evObj) return null;
           return {
             id: selectedPopupEventPanelId,
-            calendar_id: activeLayerId,
+            calendar_id: meta.layerId || activeLayerId,
             created_by: meta.createdByUserId,
             title: evObj.title,
             date: evObj.date,
@@ -19002,7 +19048,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       return (
                         <button
                           key={event.id}
-                          onClick={() => setSelectedPopupEventPanelId(String(event.id || ''))}
+                          onClick={() => {
+                            const popupLayerId = String(popupMeta?.layerId || event?.layerId || '').trim();
+                            if (popupLayerId && popupLayerId !== String(activeLayerId || '')) setActiveLayerId(popupLayerId);
+                            setSelectedPopupEventPanelId(String(event.id || ''));
+                          }}
                           className="w-full text-left rounded-2xl p-3 sm:p-4 border transition-all hover:-translate-y-0.5 hover:shadow-md"
                           style={{ background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', borderColor: `${activeLayerPageTheme.accent}30` }}
                         >
@@ -19060,7 +19110,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             onPointerMove={moveTripSwipeDrag}
                             onPointerUp={endTripSwipeDrag}
                             onPointerCancel={endTripSwipeDrag}
-                            onClick={() => { setActiveSubCalendar(sc); setBottomNavTab('home'); }}
+                            onClick={() => { if (sc?.layer_id && String(sc.layer_id) !== String(activeLayerId || '')) setActiveLayerId(sc.layer_id); setActiveSubCalendar(sc); setBottomNavTab('home'); }}
                           >
                             <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
@@ -19097,7 +19147,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             onPointerMove={moveTripSwipeDrag}
                             onPointerUp={endTripSwipeDrag}
                             onPointerCancel={endTripSwipeDrag}
-                            onClick={() => { setActiveSubCalendar(sc); setBottomNavTab('home'); }}
+                            onClick={() => { if (sc?.layer_id && String(sc.layer_id) !== String(activeLayerId || '')) setActiveLayerId(sc.layer_id); setActiveSubCalendar(sc); setBottomNavTab('home'); }}
                           >
                             <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
@@ -19143,7 +19193,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             onPointerMove={moveTripSwipeDrag}
                             onPointerUp={endTripSwipeDrag}
                             onPointerCancel={endTripSwipeDrag}
-                            onClick={() => { setActiveSubCalendar(sc); setBottomNavTab('home'); }}
+                            onClick={() => { if (sc?.layer_id && String(sc.layer_id) !== String(activeLayerId || '')) setActiveLayerId(sc.layer_id); setActiveSubCalendar(sc); setBottomNavTab('home'); }}
                           >
                             <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
