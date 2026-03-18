@@ -13440,7 +13440,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return true;
   };
 
-  const handleDeleteEvent = async (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false, skipOnce = false) => {
+  const handleDeleteEvent = async (dateKey, eventId, isVirtualAnnual = false, isVirtualRecurrence = false, skipOnce = false, sourceEvent = null) => {
     setSwipedEventKey(null);
     setEventSwipeDrag({ id: null, offset: 0 });
     if (saveTimeoutRef.current) {
@@ -13451,7 +13451,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     saveRequestIdRef.current += 1;
 
     const actualDateKey = Object.keys(events).find(k => events[k]?.some(e => e.id === eventId)) || dateKey;
-    const eventToDelete = events[actualDateKey]?.find(e => e.id === eventId);
+    const eventToDelete = events[actualDateKey]?.find(e => e.id === eventId)
+      || sourceEvent
+      || (userTabPopupEvents || []).find((e) => String(e?.id || '') === String(eventId || ''))
+      || null;
     const targetLayerId = String(eventToDelete?.layerId || eventToDelete?.layer_id || activeLayerId || '').trim();
     if (!canDeleteEventInActiveLayer(eventToDelete)) {
       alert('In public calendars, members can only delete events they created.');
@@ -13460,13 +13463,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     if (isVirtualAnnual || isVirtualRecurrence) {
       // Find the original event
-      let originalDateKey = null;
-      let originalEvent = null;
-      Object.entries(events).forEach(([key, evts]) => {
-        const found = evts.find(e => e.id === eventId);
-        if (found) { originalDateKey = key; originalEvent = found; }
-      });
-      if (!originalDateKey || !originalEvent) return;
+        let originalDateKey = null;
+        let originalEvent = null;
+        Object.entries(events).forEach(([key, evts]) => {
+          const found = evts.find(e => e.id === eventId);
+          if (found) { originalDateKey = key; originalEvent = found; }
+        });
+        if (!originalEvent && sourceEvent) {
+          originalDateKey = String(sourceEvent?.date || sourceEvent?.dateKey || dateKey || '');
+          originalEvent = sourceEvent;
+        }
+        if (!originalDateKey || !originalEvent) return;
       if (!canDeleteEventInActiveLayer(originalEvent)) {
         alert('In public calendars, members can only delete events they created.');
         return;
@@ -19187,7 +19194,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                   if (isRepeating) {
                                     openRecurringDeletePrompt({ dateKey: event.date || event.dateKey, event });
                                   } else {
-                                    handleDeleteEvent(event.date || event.dateKey, event.id, false, false, false);
+                                    handleDeleteEvent(event.date || event.dateKey, event.id, false, false, false, event);
                                   }
                                 }}
                                 className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
