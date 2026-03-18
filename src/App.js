@@ -18332,7 +18332,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Your Calendars</h3>
           <button
-            onClick={() => { setShowCalendarSwitcher(false); setShowAddLayerModal?.(true); }}
+            onClick={() => { setShowCalendarSwitcher(false); setShowLayerModal(true); }}
             className="text-xs font-semibold px-2.5 py-1 rounded-lg"
             style={themeAccentButtonStyle}
           >+ New</button>
