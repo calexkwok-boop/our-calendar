@@ -581,6 +581,11 @@ export default function PopupEventPanel({
   const [loading, setLoading] = useState(Boolean(initialEventId));
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
+  const eventMetaFallbackRef = useRef(eventMetaFallback);
+
+  useEffect(() => {
+    eventMetaFallbackRef.current = eventMetaFallback;
+  }, [eventMetaFallback]);
 
   const myMember = members.find((m) => m.user_id === user?.id);
   const isHost = myMember?.role === 'host';
@@ -593,7 +598,7 @@ export default function PopupEventPanel({
     if (!id || !supabase) return;
     setLoading(true);
     if (!isUuid(id)) {
-      if (eventMetaFallback) setEvent(eventMetaFallback);
+      if (eventMetaFallbackRef.current) setEvent(eventMetaFallbackRef.current);
       setMembers([]);
       setLoading(false);
       return;
@@ -604,9 +609,8 @@ export default function PopupEventPanel({
         supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at'),
         supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
       ]);
-      console.log('loadEvent', { ev, mems, signups, signupsErr });
       if (ev) setEvent(ev);
-      else if (eventMetaFallback) setEvent(eventMetaFallback);
+      else if (eventMetaFallbackRef.current) setEvent(eventMetaFallbackRef.current);
       // Merge popup_event_members + popup_event_signups, dedupe by user_id
       const memberList = [...(mems || [])];
       const memberUserIds = new Set(memberList.map(m => String(m.user_id || '')));
@@ -626,7 +630,7 @@ export default function PopupEventPanel({
       setMembers(memberList);
     } catch {}
     setLoading(false);
-  }, [supabase, eventMetaFallback]);
+  }, [supabase]);
 
   useEffect(() => { if (initialEventId) loadEvent(initialEventId); }, [initialEventId, loadEvent]);
 
