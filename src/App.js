@@ -19229,26 +19229,39 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   >
                     {eventsTabHideRecurring ? 'Show recurring' : 'Hide recurring'}
                   </button>
-                  {visibleLayerCalendars.map((layer) => {
-                    const layerId = String(layer.id || '');
-                    const enabled = eventsTabVisibleLayerIds.includes(layerId);
-                    return (
-                      <button
-                        key={layerId}
-                        onClick={() => {
-                          setEventsTabVisibleLayerIds((prev) => {
-                            const current = Array.isArray(prev) ? prev.map(String) : [];
-                            return current.includes(layerId)
-                              ? current.filter((id) => id !== layerId)
-                              : [...current, layerId];
-                          });
-                        }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${enabled ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:border-gray-100' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}
-                      >
-                        {layer.name || 'Untitled'}
-                      </button>
-                    );
-                  })}
+                  <div className="w-full flex flex-wrap items-center gap-2">
+                    <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white dark:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={visibleLayerCalendars.length > 0 && eventsTabVisibleLayerIds.length === visibleLayerCalendars.length}
+                        onChange={(e) => setEventsTabVisibleLayerIds(e.target.checked ? visibleLayerCalendars.map((layer) => String(layer.id || '')) : [])}
+                        className="rounded border-gray-300 dark:border-gray-500"
+                      />
+                      All calendars
+                    </label>
+                    {visibleLayerCalendars.map((layer) => {
+                      const layerId = String(layer.id || '');
+                      const enabled = eventsTabVisibleLayerIds.includes(layerId);
+                      return (
+                        <label key={layerId} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white dark:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600">
+                          <input
+                            type="checkbox"
+                            checked={enabled}
+                            onChange={(e) => {
+                              setEventsTabVisibleLayerIds((prev) => {
+                                const current = Array.isArray(prev) ? prev.map(String) : [];
+                                return e.target.checked
+                                  ? [...current, layerId]
+                                  : current.filter((id) => id !== layerId);
+                              });
+                            }}
+                            className="rounded border-gray-300 dark:border-gray-500"
+                          />
+                          {layer.name || 'Untitled'}
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
                 {filteredUpcomingUserTabEvents.length === 0 ? (
                   <div className="text-center py-10">
