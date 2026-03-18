@@ -130,9 +130,9 @@ const CreateEventForm = ({ accent, darkMode, btnStyle, border, softBg, supabase,
   };
 
   const F = ({ children }) => (
-    <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-text-secondary)', marginBottom: 6 }}>{children}</div>
+    <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: secondaryText, marginBottom: 6 }}>{children}</div>
   );
-  const inp = { width: '100%', padding: '10px 12px', borderRadius: 12, fontSize: 16, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', color: 'var(--color-text-primary)', outline: 'none', boxSizing: 'border-box' };
+  const inp = { width: '100%', padding: '10px 12px', borderRadius: 12, fontSize: 16, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', color: primaryText, outline: 'none', boxSizing: 'border-box' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
@@ -159,10 +159,10 @@ const CreateEventForm = ({ accent, darkMode, btnStyle, border, softBg, supabase,
             const sel = form.is_public === v;
             return (
               <button key={String(v)} onClick={() => set('is_public', v)} style={{ flex: 1, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: sel ? accent : 'transparent', transition: 'all 0.2s' }}>
-                <Icon style={{ width: 14, height: 14, color: sel ? (darkMode ? '#111' : '#fff') : 'var(--color-text-secondary)', flexShrink: 0 }} />
+                <Icon style={{ width: 14, height: 14, color: sel ? (darkMode ? '#111' : '#fff') : secondaryText, flexShrink: 0 }} />
                 <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: sel ? (darkMode ? '#111' : '#fff') : 'var(--color-text-primary)' }}>{label}</div>
-                  <div style={{ fontSize: 10, color: sel ? 'rgba(255,255,255,0.7)' : 'var(--color-text-secondary)' }}>{sub}</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: sel ? (darkMode ? '#111' : '#fff') : primaryText }}>{label}</div>
+                  <div style={{ fontSize: 10, color: sel ? 'rgba(255,255,255,0.7)' : secondaryText }}>{sub}</div>
                 </div>
               </button>
             );
@@ -204,11 +204,11 @@ const RosterRow = ({ member, isMe, isHost, accent, darkMode, onKick, onPromote, 
       </div>
       {isHost && !isMe && member.role !== 'host' && (
         <div style={{ position: 'relative' }}>
-          <button onClick={() => setMenuOpen(!menuOpen)} style={{ padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: 'var(--color-text-secondary)' }}>•••</button>
+          <button onClick={() => setMenuOpen(!menuOpen)} style={{ padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: secondaryText }}>•••</button>
           {menuOpen && (
             <div style={{ position: 'absolute', right: 0, top: '110%', zIndex: 50, minWidth: 150, borderRadius: 12, background: darkMode ? '#1f2937' : '#fff', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', overflow: 'hidden' }}>
               {member.role === 'player' && <button onClick={() => { onPromote(member); setMenuOpen(false); }} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color: '#8b5cf6', fontSize: 12, fontWeight: 700, textAlign: 'left' }}><Shield style={{ width: 13, height: 13 }} />Make co-host</button>}
-              {member.role === 'cohost' && <button onClick={() => { onDemote(member); setMenuOpen(false); }} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 700, textAlign: 'left' }}><UserMinus style={{ width: 13, height: 13 }} />Remove co-host</button>}
+              {member.role === 'cohost' && <button onClick={() => { onDemote(member); setMenuOpen(false); }} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color: secondaryText, fontSize: 12, fontWeight: 700, textAlign: 'left' }}><UserMinus style={{ width: 13, height: 13 }} />Remove co-host</button>}
               <button onClick={() => { onKick(member); setMenuOpen(false); }} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color: '#ef4444', fontSize: 12, fontWeight: 700, textAlign: 'left' }}><UserMinus style={{ width: 13, height: 13 }} />Kick player</button>
             </div>
           )}
@@ -284,8 +284,8 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
         {messages.length === 0 && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: 0.5 }}>
             <MessageCircle style={{ width: 32, height: 32, color: accent }} />
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-secondary)' }}>No messages yet</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Be the first to say something 👋</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: secondaryText }}>No messages yet</div>
+            <div style={{ fontSize: 11, color: secondaryText }}>Be the first to say something 👋</div>
           </div>
         )}
         {grouped.map((msg) => {
@@ -305,11 +305,11 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
                 )}
                 <div style={{ padding: '8px 12px', borderRadius: me ? '18px 18px 4px 18px' : '18px 18px 18px 4px', fontSize: 13, lineHeight: 1.5, fontWeight: 500,
                   background: me ? accent : (darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'),
-                  color: me ? (darkMode ? '#111' : '#fff') : 'var(--color-text-primary)',
+                  color: me ? (darkMode ? '#111' : '#fff') : primaryText,
                   wordBreak: 'break-word' }}>
                   {msg.content}
                 </div>
-                <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 3, opacity: 0.6 }}>{formatMsgTime(msg.created_at)}</div>
+                <div style={{ fontSize: 10, color: secondaryText, marginTop: 3, opacity: 0.75 }}>{formatMsgTime(msg.created_at)}</div>
               </div>
             </div>
           );
@@ -321,11 +321,11 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
       <div style={{ padding: '10px 12px', borderTop: `1px solid ${border}`, display: 'flex', gap: 8, alignItems: 'flex-end', background: softBg }}>
         <textarea ref={inputRef} value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={handleKeyDown}
           placeholder="Say something..." rows={1}
-          style={{ flex: 1, padding: '10px 12px', borderRadius: 16, fontSize: 14, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.08)' : '#fff', color: 'var(--color-text-primary)', outline: 'none', resize: 'none', lineHeight: 1.4, maxHeight: 80, overflowY: 'auto' }} />
+          style={{ flex: 1, padding: '10px 12px', borderRadius: 16, fontSize: 14, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.08)' : '#fff', color: primaryText, outline: 'none', resize: 'none', lineHeight: 1.4, maxHeight: 80, overflowY: 'auto' }} />
         <button onClick={sendMessage} disabled={!draft.trim() || sending}
           style={{ width: 40, height: 40, borderRadius: 12, border: 'none', cursor: draft.trim() ? 'pointer' : 'default', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: draft.trim() ? accent : (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'), transition: 'all 0.2s' }}>
-          <Send style={{ width: 16, height: 16, color: draft.trim() ? (darkMode ? '#111' : '#fff') : 'var(--color-text-secondary)' }} />
+          <Send style={{ width: 16, height: 16, color: draft.trim() ? (darkMode ? '#111' : '#fff') : secondaryText }} />
         </button>
       </div>
     </div>
@@ -570,6 +570,8 @@ export default function PopupEventPanel({
   const accent = activeLayerPageTheme?.accent || '#16a34a';
   const isLight = (hex) => { const h = (hex || '#000').replace('#', ''); return (0.2126 * parseInt(h.slice(0,2),16) + 0.7152 * parseInt(h.slice(2,4),16) + 0.0722 * parseInt(h.slice(4,6),16)) / 255 > 0.72; };
   const btnFg = isLight(accent) ? '#111827' : '#fff';
+  const primaryText = darkMode ? '#f8fafc' : 'var(--color-text-primary)';
+  const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
   const btnStyle = { backgroundColor: accent, color: btnFg, border: 'none', cursor: 'pointer' };
   const softBg = darkMode ? `${accent}18` : `${accent}0d`;
   const cardBg = darkMode ? 'rgba(255,255,255,0.05)' : '#fff';
@@ -698,7 +700,7 @@ export default function PopupEventPanel({
   if (loading) return (
     <div style={{ ...panelStyle, padding: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
       <Loader style={{ width: 20, height: 20, color: accent }} />
-      <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>Loading event...</span>
+      <span style={{ fontSize: 14, color: secondaryText }}>Loading event...</span>
     </div>
   );
 
@@ -780,7 +782,7 @@ export default function PopupEventPanel({
         {tabs.map(({ id, label, emoji }) => (
           <button key={id} onClick={() => setScreen(id)}
             style={{ flex: 1, minWidth: 56, padding: '11px 6px', fontSize: 11, fontWeight: 900, cursor: 'pointer', border: 'none',
-              background: 'transparent', color: screen === id ? accent : 'var(--color-text-secondary)',
+              background: 'transparent', color: screen === id ? accent : secondaryText,
               borderBottom: screen === id ? `2px solid ${accent}` : '2px solid transparent', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
             {emoji} {label}
           </button>
@@ -803,14 +805,14 @@ export default function PopupEventPanel({
               <MapPin style={{ width: 16, height: 16, color: accent, flexShrink: 0, marginTop: 1 }} />
               <div>
                 <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: accent, marginBottom: 2 }}>Location</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>{event.location}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: primaryText }}>{event.location}</div>
               </div>
             </div>
           )}
           {event.description && (
             <div style={{ padding: '12px 14px', borderRadius: 14, background: softBg, border: `1px solid ${border}` }}>
               <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: accent, marginBottom: 4 }}>About</div>
-              <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{event.description}</div>
+              <div style={{ fontSize: 13, color: secondaryText, lineHeight: 1.6 }}>{event.description}</div>
             </div>
           )}
           {hostMember && (
@@ -841,7 +843,7 @@ export default function PopupEventPanel({
                   { label: 'Start Round Robin', icon: Gamepad2,               action: () => setScreen('game'),                   color: accent },
                   { label: 'Open Chat',         icon: MessageCircle,          action: () => setScreen('chat') },
                 ].map(({ label, icon: Icon, action, color }) => (
-                  <button key={label} onClick={action} style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', color: color || 'var(--color-text-primary)', fontSize: 12, fontWeight: 700 }}>
+                  <button key={label} onClick={action} style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', color: color || primaryText, fontSize: 12, fontWeight: 700 }}>
                     <Icon style={{ width: 13, height: 13, flexShrink: 0 }} />{label}
                   </button>
                 ))}
@@ -859,7 +861,7 @@ export default function PopupEventPanel({
             <div style={{ flex: 1, height: 4, borderRadius: 999, background: border, margin: '0 12px', overflow: 'hidden' }}>
               <div style={{ height: '100%', borderRadius: 999, background: accent, width: `${Math.min(100, (memberCount / (event.max_players || 1)) * 100)}%`, transition: 'width 0.4s' }} />
             </div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: isFull ? '#f59e0b' : 'var(--color-text-secondary)' }}>{isFull ? 'Full' : `${event.max_players - memberCount} spots left`}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: isFull ? '#f59e0b' : secondaryText }}>{isFull ? 'Full' : `${event.max_players - memberCount} spots left`}</div>
           </div>
           {members.map((m) => (
             <React.Fragment key={m.id || m.user_id}>
@@ -883,7 +885,7 @@ export default function PopupEventPanel({
                         onChange={(e) => { setManualPlayerName(e.target.value); if (manualAddError) setManualAddError(''); }}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddManualPlayer(); } }}
                         placeholder="Player name"
-                        style={{ flex: 1, minWidth: 0, padding: '8px 12px', borderRadius: 999, fontSize: 13, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', color: 'var(--color-text-primary)', outline: 'none' }}
+                        style={{ flex: 1, minWidth: 0, padding: '8px 12px', borderRadius: 999, fontSize: 13, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', color: primaryText, outline: 'none' }}
                       />
                     </div>
                     {manualAddError && <div style={{ fontSize: 12, color: '#ef4444' }}>{manualAddError}</div>}
@@ -892,7 +894,7 @@ export default function PopupEventPanel({
               )}
             </React.Fragment>
           ))}
-          {members.length === 0 && <div style={{ padding: '32px 20px', textAlign: 'center' }}><div style={{ fontSize: 32, marginBottom: 8 }}>🎾</div><div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-secondary)' }}>No players yet</div></div>}
+          {members.length === 0 && <div style={{ padding: '32px 20px', textAlign: 'center' }}><div style={{ fontSize: 32, marginBottom: 8 }}>🎾</div><div style={{ fontSize: 14, fontWeight: 700, color: secondaryText }}>No players yet</div></div>}
         </div>
       )}
 
