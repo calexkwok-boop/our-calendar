@@ -42,6 +42,46 @@ const storage = {
 const generateUuid = () => uuidv4();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
+const getUserProfilePhotoUrl = (authUser) => {
+  const metadata = authUser?.user_metadata || {};
+  const candidates = [
+    metadata?.avatar_url,
+    metadata?.picture,
+    metadata?.photo_url,
+    metadata?.photoURL,
+    authUser?.avatar_url,
+    authUser?.picture,
+  ];
+  for (const candidate of candidates) {
+    const url = String(candidate || '').trim();
+    if (url) return url;
+  }
+  return '';
+};
+const UserProfileAvatar = ({
+  photoUrl,
+  label,
+  sizeClass = 'w-10 h-10',
+  roundedClass = 'rounded-xl',
+  borderClass = 'border border-purple-200 dark:border-gray-600',
+  textClass = 'text-sm',
+}) => {
+  const initial = String(label || '?').trim().charAt(0).toUpperCase() || '?';
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt="Profile"
+        className={`${sizeClass} ${roundedClass} object-cover ${borderClass}`}
+      />
+    );
+  }
+  return (
+    <div className={`${sizeClass} ${roundedClass} bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 flex items-center justify-center text-white font-bold ${textClass} shrink-0`}>
+      {initial}
+    </div>
+  );
+};
 
 if (typeof window !== 'undefined') {
   window.storage = storage;
@@ -4415,6 +4455,8 @@ useEffect(() => {
     color: darkMode ? '#f3f4f6' : '#111827',
     borderColor: themeAccentBorder,
   };
+  const currentUserProfilePhotoUrl = getUserProfilePhotoUrl(user);
+  const currentUserProfileLabel = currentUser || user?.email || user?.phone || 'User';
 
   const normalizeLayerRow = (row) => ({
     ...row,
@@ -4960,6 +5002,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (!publicUrl) {
         alert('Upload succeeded but no public URL was returned.');
         return false;
+      }
+
+      if (mediaKind === 'icon') {
+        const nextMetadata = {
+          ...(user?.user_metadata || {}),
+          avatar_url: publicUrl,
+        };
+        const { data: authData, error: authError } = await supabase.auth.updateUser({ data: nextMetadata });
+        if (authError) {
+          alert(`Could not save profile photo: ${authError.message || 'Unknown error'}`);
+          return false;
+        }
+        const nextUser = authData?.user || { ...user, user_metadata: nextMetadata };
+        setUser(nextUser);
+        setShowLayerMediaMenu(false);
+        return true;
       }
 
       const field = mediaKind === 'icon' ? 'icon_url' : 'header_bg_url';
@@ -5514,6 +5572,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const mediaKind = String(kind || '').trim();
     if (!user?.id || !activeLayerId || !canManageActiveLayer) return;
     if (mediaKind !== 'icon' && mediaKind !== 'header') return;
+    if (mediaKind === 'icon') {
+      const nextMetadata = { ...(user?.user_metadata || {}) };
+      delete nextMetadata.avatar_url;
+      delete nextMetadata.picture;
+      delete nextMetadata.photo_url;
+      delete nextMetadata.photoURL;
+      const { data: authData, error } = await supabase.auth.updateUser({ data: nextMetadata });
+      if (error) {
+        alert(`Could not remove profile photo: ${error.message || 'Unknown error'}`);
+        return;
+      }
+      const nextUser = authData?.user || { ...user, user_metadata: nextMetadata };
+      setUser(nextUser);
+      setShowLayerMediaMenu(false);
+      return;
+    }
     const field = mediaKind === 'icon' ? 'icon_url' : 'header_bg_url';
     const primary = await supabase
       .from('calendar_layers')
@@ -15686,24 +15760,20 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     }}
                     title="Calendars & account"
                   >
-                    {activeLayer?.icon_url ? (
-                      <img
-                        src={activeLayer.icon_url}
-                        alt="Calendar icon"
-                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
-                      />
-                    ) : (
-                      <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
-                        <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                      </div>
-                    )}
+                    <UserProfileAvatar
+                      photoUrl={currentUserProfilePhotoUrl}
+                      label={currentUserProfileLabel}
+                      sizeClass="w-9 h-9 sm:w-10 sm:h-10"
+                      roundedClass="rounded-xl"
+                      textClass="text-base sm:text-lg"
+                    />
                   </button>
                   {canManageActiveLayer && (
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); openLayerMediaMenu(); }}
                       className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700"
-                      title="Edit cover/icon"
+                      title="Edit cover/profile photo"
                     >
                       <Camera className="w-3 h-3 text-gray-600 dark:text-gray-300" />
                     </button>
@@ -15750,17 +15820,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <div className="min-w-0">
                     <div className="flex items-center gap-3 w-full">
                       <div className="relative pointer-events-auto">
-                        {activeLayer?.icon_url ? (
-                          <img
-                            src={activeLayer.icon_url}
-                            alt="Calendar icon"
-                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
-                          />
-                        ) : (
-                          <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
-                            <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                          </div>
-                        )}
+                        <UserProfileAvatar
+                          photoUrl={currentUserProfilePhotoUrl}
+                          label={currentUserProfileLabel}
+                          sizeClass="w-9 h-9 sm:w-10 sm:h-10"
+                          roundedClass="rounded-xl"
+                          textClass="text-base sm:text-lg"
+                        />
                         {canManageActiveLayer && (
                           <button
                             type="button"
@@ -15769,7 +15835,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               openLayerMediaMenu();
                             }}
                             className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700"
-                            title="Edit cover/icon"
+                            title="Edit cover/profile photo"
                           >
                             <Camera className="w-3 h-3 text-gray-600 dark:text-gray-300" />
                           </button>
@@ -15809,22 +15875,18 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <div className="min-w-0">
                 <div className="flex items-center gap-3 w-full">
               <div className="relative shrink-0 pointer-events-auto">
-                {activeLayer?.icon_url ? (
-                  <img
-                    src={activeLayer.icon_url}
-                    alt="Calendar icon"
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-200 dark:border-gray-600"
-                  />
-                ) : (
-                  <div className="p-1.5 bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 rounded-xl">
-                    <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                  </div>
-                )}
+                <UserProfileAvatar
+                  photoUrl={currentUserProfilePhotoUrl}
+                  label={currentUserProfileLabel}
+                  sizeClass="w-9 h-9 sm:w-10 sm:h-10"
+                  roundedClass="rounded-xl"
+                  textClass="text-base sm:text-lg"
+                />
                 {canManageActiveLayer && (
                   <button
                     onClick={openLayerMediaMenu}
                     className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700"
-                    title="Edit cover/icon"
+                    title="Edit cover/profile photo"
                   >
                     <Camera className="w-3 h-3 text-gray-600 dark:text-gray-300" />
                   </button>
@@ -17821,9 +17883,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       <div className="p-4">
         <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Account</h3>
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-400 via-purple-400 to-indigo-400 flex items-center justify-center text-white font-bold text-sm shrink-0">
-            {String(currentUser || user?.email || '?')[0].toUpperCase()}
-          </div>
+          <UserProfileAvatar
+            photoUrl={currentUserProfilePhotoUrl}
+            label={currentUserProfileLabel}
+            sizeClass="w-10 h-10"
+            roundedClass="rounded-full"
+          />
           <div className="min-w-0">
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{currentUser || 'No username set'}</div>
             <div className="text-xs text-gray-400 truncate">{user?.email || user?.phone || ''}</div>
@@ -19430,7 +19495,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-bold" style={themeAccentHeadingStyle}>
-              {layerMediaCropKind === 'icon' ? 'Crop Icon' : 'Crop Cover Photo'}
+              {layerMediaCropKind === 'icon' ? 'Crop Profile Photo' : 'Crop Cover Photo'}
             </h3>
             <button onClick={closeLayerMediaCropModal} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <X className="w-5 h-5 text-gray-500" />
@@ -19581,7 +19646,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               disabled={uploadingLayerMedia}
               className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border ${uploadingLayerMedia ? 'bg-gray-200 text-gray-500 cursor-not-allowed border-gray-200' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}
             >
-              Change Icon
+              Change Profile Photo
             </button>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -19594,7 +19659,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 onClick={() => removeLayerMedia('icon')}
                 className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
               >
-                Remove Icon
+                Remove Profile Photo
               </button>
             </div>
             <div className="text-[11px] text-gray-500 dark:text-gray-400 px-1">
