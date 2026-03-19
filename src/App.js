@@ -17881,11 +17881,37 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
             <div className="mb-4 p-3 rounded-xl border bg-gray-100 dark:bg-gray-700/70" style={{ borderColor: themeAccentBorder }}>
               <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Signed in as</div>
-                  <div className="text-sm font-semibold truncate text-gray-800 dark:text-gray-100">{currentUser || user?.email || user?.phone || 'User'}</div>
-                  {currentUser && (
-                    <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{user?.email || user?.phone || ''}</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={accountHandleInput}
+                      onChange={(e) => {
+                        setAccountHandleInput(e.target.value);
+                        setAccountHandleMessage('');
+                      }}
+                      placeholder="Set your handle"
+                      maxLength={40}
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          saveAccountHandle();
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={saveAccountHandle}
+                      disabled={savingAccountHandle || !String(accountHandleInput || '').trim()}
+                      className="px-3 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50 shrink-0"
+                      style={themeAccentButtonStyle}
+                    >
+                      {savingAccountHandle ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                  {(user?.email || user?.phone) && (
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-2">{user?.email || user?.phone || ''}</div>
                   )}
                 </div>
                 <button
@@ -17894,36 +17920,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   style={themeAccentButtonStyle}
                 >
                   Logout
-                </button>
-              </div>
-            </div>
-            <div className="mb-4 p-3 rounded-xl border bg-gray-50 dark:bg-gray-800/70" style={{ borderColor: themeAccentBorder }}>
-              <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Your Handle</div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={accountHandleInput}
-                  onChange={(e) => {
-                    setAccountHandleInput(e.target.value);
-                    setAccountHandleMessage('');
-                  }}
-                  placeholder="Set your handle"
-                  maxLength={40}
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      saveAccountHandle();
-                    }
-                  }}
-                />
-                <button
-                  onClick={saveAccountHandle}
-                  disabled={savingAccountHandle || !String(accountHandleInput || '').trim()}
-                  className="px-3 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50"
-                  style={themeAccentButtonStyle}
-                >
-                  {savingAccountHandle ? 'Saving...' : 'Save'}
                 </button>
               </div>
               {accountHandleMessage && (
