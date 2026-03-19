@@ -19496,7 +19496,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Today&apos;s rhythm</h3>
                   <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Morning, afternoon, and evening at a glance.</div>
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">{todayEvents.length} plan{todayEvents.length === 1 ? '' : 's'}</div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{todayEvents.length} plan{todayEvents.length === 1 ? '' : 's'}</div>
+                  <button
+                    onClick={() => {
+                      setPreferCalendarHome(true);
+                      setShowHomeCalendarOverview(true);
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:shadow-md"
+                    style={themeAccentEllieChipButtonStyle}
+                  >
+                    Show calendar view
+                  </button>
+                </div>
               </div>
               <div className="space-y-3">
                 {homeDaySections.map((section, index) => (
