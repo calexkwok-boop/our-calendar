@@ -4309,9 +4309,8 @@ function App() {
     setSkipExpensePaymentHandlePrompt(false);
   }, [hasSavedAccountPaymentHandle]);
   const bumpCoverControlsInteraction = React.useCallback(() => {
-    if (!coverHeaderControlsVisible) return;
     setCoverControlsInteractionTick((prev) => prev + 1);
-  }, [coverHeaderControlsVisible]);
+  }, []);
   const closeHomeWidgetWindows = React.useCallback(() => {
     setShowControlWidgetAddPanel(false);
     setShowNotificationSettings(false);
@@ -17275,8 +17274,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       style={themedPageBackgroundStyle}
       onPointerDownCapture={(event) => {
         if (bottomNavTab !== 'home') return;
+        if (hasOpenWidgetWindow) {
+          bumpCoverControlsInteraction();
+          return;
+        }
         if (coverHeaderControlsVisible) return;
-        if (hasOpenWidgetWindow) return;
         const interactiveTarget = event.target instanceof Element
           ? event.target.closest('button, a, input, textarea, select, [role="button"], [data-no-global-unhide]')
           : null;
