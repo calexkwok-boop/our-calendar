@@ -1007,6 +1007,7 @@ function App() {
   const [subCalInviteEmail, setSubCalInviteEmail] = useState('');
   const [subCalMembers, setSubCalMembers] = useState([]);
   const [subCalMembersCollapsed, setSubCalMembersCollapsed] = useState(true);
+  const [canEditActiveSubCalendar, setCanEditActiveSubCalendar] = useState(false);
   const [showSubCalLocationSheet, setShowSubCalLocationSheet] = useState(false);
   const [subCalEditingEvent, setSubCalEditingEvent] = useState(null);
   const [subCalSelectedDate, setSubCalSelectedDate] = useState(null);
@@ -1956,6 +1957,44 @@ function App() {
     } catch (e) { console.error(e); }
   };
 
+  const loadSubCalendarEditAccess = async (subCal) => {
+    const targetLayerId = String(subCal?.layer_id || subCal?.calendar_id || '').trim();
+    if (canEditLayerById(targetLayerId) || String(subCal?.owner_id || '') === String(user?.id || '')) {
+      setCanEditActiveSubCalendar(true);
+      return true;
+    }
+    const myEmail = normalizeEmail(user?.email);
+    const myPhone = normalizePhoneNumber(user?.phone);
+    const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
+    if (!memberRecipientFilter || !subCal?.id) {
+      setCanEditActiveSubCalendar(false);
+      return false;
+    }
+    try {
+      const { data: memberRows, error } = await supabase
+        .from('sub_calendar_members')
+        .select('status')
+        .eq('sub_calendar_id', subCal.id)
+        .or(memberRecipientFilter)
+        .limit(20);
+      if (error) {
+        console.error('Trip edit access lookup failed:', error);
+        setCanEditActiveSubCalendar(false);
+        return false;
+      }
+      const canEdit = (memberRows || []).some((row) => {
+        const status = String(row?.status || '').toLowerCase();
+        return !status || status === 'accepted';
+      });
+      setCanEditActiveSubCalendar(canEdit);
+      return canEdit;
+    } catch (error) {
+      console.error('Trip edit access exception:', error);
+      setCanEditActiveSubCalendar(false);
+      return false;
+    }
+  };
+
   const syncSubCalendarMembersFromLayer = async (subCal) => {
     try {
       const subCalId = String(subCal?.id || '').trim();
@@ -2248,6 +2287,7 @@ function App() {
 
   const openSubCalendar = async (sc) => {
     setActiveSubCalendar(sc);
+    setCanEditActiveSubCalendar(false);
     setSubCalWeather({});
     setSubCalWeatherSuggestions([]);
     setSubCalWeatherExpanded(false);
@@ -2280,6 +2320,7 @@ function App() {
     setDeletedPhotosNoteId(null);
     await loadGlobalVenmoHandles();
     await loadGlobalCashAppHandles();
+    await loadSubCalendarEditAccess(sc);
     await syncSubCalendarMembersFromLayer(sc);
     const loadedEvents = await loadMergedSubCalendarEvents(sc);
     await loadSubCalendarMembers(sc.id);
@@ -4606,11 +4647,11 @@ useEffect(() => {
   };
   const assertCanEditSubCalendar = (actionLabel = 'make changes to this itinerary') => {
     const targetLayerId = String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || '').trim();
-    if (!targetLayerId) {
+    if (!targetLayerId && !activeSubCalendar?.id) {
       alert(`Could not ${actionLabel}: missing trip calendar.`);
       return false;
     }
-    if (canEditLayerById(targetLayerId)) return true;
+    if (canEditLayerById(targetLayerId) || canEditActiveSubCalendar) return true;
     const shareRow = getShareRowForLayerId(targetLayerId);
     if (shareRow?.is_banned) {
       alert('Access removed: you have been banned from editing this calendar.');
