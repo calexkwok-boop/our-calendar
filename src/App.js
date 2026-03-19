@@ -908,6 +908,13 @@ function App() {
   const [eventsTabHideRecurring, setEventsTabHideRecurring] = useState(false);
   const [eventsTabVisibleLayerIds, setEventsTabVisibleLayerIds] = useState([]);
   const [showEventsTabCalendarFilter, setShowEventsTabCalendarFilter] = useState(false);
+  const [showHomeAddEventModal, setShowHomeAddEventModal] = useState(false);
+  const [homeAddEventForm, setHomeAddEventForm] = useState(() => ({
+    title: '',
+    date: getDateKey(new Date()),
+    time: '',
+    location: '',
+  }));
   const [eventsTabVisibleLayerIdsInitialized, setEventsTabVisibleLayerIdsInitialized] = useState(false);
   const [popupFeatureAvailable, setPopupFeatureAvailable] = useState(true);
   const [layerRefreshToken, setLayerRefreshToken] = useState(0);
@@ -7731,6 +7738,80 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       console.error('Error saving events:', error);
     }
   };
+
+  const resetHomeAddEventForm = React.useCallback(() => {
+    setHomeAddEventForm({
+      title: '',
+      date: getDateKey(new Date()),
+      time: '',
+      location: '',
+    });
+  }, []);
+
+  const openHomeAddEventModal = React.useCallback(() => {
+    if (!assertCanEditActiveLayer('add events to this calendar')) return;
+    resetHomeAddEventForm();
+    setShowHomeAddEventModal(true);
+  }, [resetHomeAddEventForm]);
+
+  const handleSubmitHomeAddEvent = React.useCallback(async () => {
+    if (!assertCanEditActiveLayer('add events to this calendar')) return;
+    const title = String(homeAddEventForm.title || '').trim();
+    const dateKey = String(homeAddEventForm.date || '').trim();
+    const time = String(homeAddEventForm.time || '').trim();
+    const location = String(homeAddEventForm.location || '').trim();
+    if (!title || !dateKey || !time || !location) {
+      alert('Choose a date, time, location, and what you’re doing.');
+      return;
+    }
+
+    const [year, month, day] = dateKey.split('-').map((part) => Number(part));
+    const nextSelectedDate = new Date(year, (month || 1) - 1, day || 1);
+    const eventId = generateUuid();
+    const newEvent = {
+      id: eventId,
+      title,
+      time,
+      date: dateKey,
+      category: 'other',
+      description: null,
+      isPrivate: false,
+      isUrgent: false,
+      isAnnual: false,
+      recurrence: 'once',
+      annualMonth: null,
+      annualDay: null,
+      createdBy: currentUser,
+      createdAt: new Date().toISOString(),
+      isMultiDay: false,
+      multiDayId: null,
+      userId: user?.id || null,
+      moderationStatus: defaultModerationStatusForNewEvent,
+      location,
+    };
+
+    const nextEvents = { ...(events || {}) };
+    const dayEvents = Array.isArray(nextEvents[dateKey]) ? [...nextEvents[dateKey]] : [];
+    dayEvents.push(newEvent);
+    nextEvents[dateKey] = dayEvents.sort((a, b) => {
+      if (!a.time) return 1;
+      if (!b.time) return -1;
+      return String(a.time).localeCompare(String(b.time));
+    });
+
+    await saveEvents(nextEvents, { immediate: true });
+    setSelectedDate(nextSelectedDate);
+    setSelectedDates([]);
+    setShowHomeAddEventModal(false);
+    resetHomeAddEventForm();
+  }, [
+    homeAddEventForm,
+    currentUser,
+    user?.id,
+    defaultModerationStatusForNewEvent,
+    events,
+    resetHomeAddEventForm,
+  ]);
   useEffect(() => {
     const handleUnload = () => {
       if (saveTimeoutRef.current) {
@@ -13287,6 +13368,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setQuickEntry('');
   };
 
+
   const unfoldIcsLines = (text) => {
     const normalized = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     const rawLines = normalized.split('\n');
@@ -15823,6 +15905,113 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 setQuickEntry(pendingEvent.title);
               }}
               className="flex-1 px-6 py-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-200 dark:hover:bg-red-800 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showHomeAddEventModal) {
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div
+          style={{ width: 'calc(100vw - 2rem)', maxWidth: '30rem', boxSizing: 'border-box', borderColor: themeAccentBorder }}
+          className="w-full glass-panel rounded-[28px] border p-5 sm:p-6"
+        >
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <div>
+              <div className="text-xs uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400 mb-2">Plan ahead</div>
+              <h2 className="text-2xl font-semibold leading-tight" style={themeAccentHeadingStyle}>
+                Add Event
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Pick the date, time, place, and what you&apos;re doing.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowHomeAddEventModal(false);
+                resetHomeAddEventForm();
+              }}
+              className="w-10 h-10 rounded-full border border-white/10 bg-white/5 dark:bg-white/[0.04] text-gray-500 dark:text-gray-300 flex items-center justify-center"
+              aria-label="Close add event"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-2">
+                What you&apos;re doing
+              </label>
+              <input
+                autoFocus
+                type="text"
+                value={homeAddEventForm.title}
+                onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, title: e.target.value }))}
+                placeholder="Dinner, workout, birthday, meeting..."
+                className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/[0.04] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-2">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  min={getDateKey(new Date())}
+                  value={homeAddEventForm.date}
+                  onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, date: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/[0.04] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-2">
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={homeAddEventForm.time}
+                  onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, time: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/[0.04] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-2">
+                Location
+              </label>
+              <PlacesAutocomplete
+                value={homeAddEventForm.location}
+                onSelect={(val) => setHomeAddEventForm((prev) => ({ ...prev, location: val || '' }))}
+                placeholder="Search for a place"
+                className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/[0.04] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-5">
+            <button
+              onClick={handleSubmitHomeAddEvent}
+              className="flex-1 px-4 py-3 rounded-2xl text-white font-medium transition-all hover:shadow-lg"
+              style={themeAccentButtonStyle}
+            >
+              Save event
+            </button>
+            <button
+              onClick={() => {
+                setShowHomeAddEventModal(false);
+                resetHomeAddEventForm();
+              }}
+              className="px-4 py-3 rounded-2xl transition-all"
+              style={themeAccentSoftButtonStyle}
             >
               Cancel
             </button>
@@ -19484,12 +19673,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   {
                     label: 'Add event',
                     icon: <Calendar className="w-3.5 h-3.5" />,
-                    action: () => {
-                      setIsPopupEventDraft(false);
-                      setSelectedDate(new Date());
-                      setSelectedDates([]);
-                      setShowDateDetailModal(true);
-                    },
+                    action: () => openHomeAddEventModal(),
                   },
                   {
                     label: 'Start trip',
