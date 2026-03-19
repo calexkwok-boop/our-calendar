@@ -21925,7 +21925,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
     {/* -- Sub-Calendar Full View -- */}
     {activeSubCalendar && (
-      <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden" style={activeTripBackgroundStyle}>
+      <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden isolate" style={activeTripBackgroundStyle}>
 
         {/* Cleaner mobile trip header */}
         <div
@@ -22223,7 +22223,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         </div>
 
         <div
-          className="flex-1 overflow-y-auto"
+          className="relative z-0 flex-1 overflow-y-auto"
           style={{
             WebkitOverflowScrolling: 'touch',
             overscrollBehaviorY: 'contain',
