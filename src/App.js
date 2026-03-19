@@ -1040,6 +1040,7 @@ function App() {
   const [selectedPhotoIds, setSelectedPhotoIds] = useState([]);
   const [photoEventId, setPhotoEventId] = useState(null);
   const [photoDate, setPhotoDate] = useState(null);
+  const [tripPhotoUploadTarget, setTripPhotoUploadTarget] = useState('gallery');
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [locationActionTarget, setLocationActionTarget] = useState('');
   const photoInputRef = useRef(null);
@@ -2563,16 +2564,16 @@ function App() {
   }, [activeSubCalendar?.id, deletedPhotoIds]);
 
   const uploadTripPhoto = async (file, caption, eventId, date) => {
-    if (!file) return false;
+    if (!file) return null;
     if (!activeSubCalendar) {
       setPhotoUploadError(true);
       setPhotoUploadMessage('No active trip selected.');
-      return false;
+      return null;
     }
     if (!user) {
       setPhotoUploadError(true);
       setPhotoUploadMessage('Please sign in again, then retry uploading.');
-      return false;
+      return null;
     }
     setUploadingPhoto(true);
     setPhotoUploadError(false);
@@ -2603,14 +2604,14 @@ function App() {
         } else {
           setPhotoUploadMessage(`Upload failed: ${uploadError?.message || 'Unknown upload error'}`);
         }
-        return false;
+        return null;
       }
 
       const { data: urlData } = supabase.storage.from(selectedBucket).getPublicUrl(filename);
       if (!urlData?.publicUrl) {
         setPhotoUploadError(true);
         setPhotoUploadMessage('Upload succeeded but no public URL was generated.');
-        return false;
+        return null;
       }
       const photo = {
         id: `ph_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
@@ -2628,17 +2629,17 @@ function App() {
         console.error('DB error:', dbError);
         setPhotoUploadError(true);
         setPhotoUploadMessage(`Saved file but failed to add photo record: ${dbError.message}`);
-        return false;
+        return null;
       }
       setTripPhotos(prev => [...prev, photo]);
       setPhotoUploadError(false);
       setPhotoUploadMessage('');
-      return true;
+      return photo;
     } catch (e) {
       console.error(e);
       setPhotoUploadError(true);
       setPhotoUploadMessage(`Upload failed: ${e.message || 'Unknown error'}`);
-      return false;
+      return null;
     } finally {
       setUploadingPhoto(false);
     }
@@ -2861,20 +2862,30 @@ function App() {
     setPhotoUploadError(false);
     setPhotoUploadMessage('');
     let successCount = 0;
+    let firstUploadedPhoto = null;
     for (const file of files) {
-      const ok = await uploadTripPhoto(
+      const uploadedPhoto = await uploadTripPhoto(
         file,
         null,
         photoEventId,
         photoDate || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null)
       );
-      if (ok) successCount += 1;
+      if (uploadedPhoto) {
+        successCount += 1;
+        if (!firstUploadedPhoto) firstUploadedPhoto = uploadedPhoto;
+      }
     }
     if (successCount > 1) {
       setPhotoUploadError(false);
       setPhotoUploadMessage(`Uploaded ${successCount} photos.`);
     }
+    if (tripPhotoUploadTarget === 'background' && firstUploadedPhoto) {
+      await saveTripCoverPhoto(firstUploadedPhoto);
+      setPhotoUploadMessage('Trip background photo updated.');
+    }
     setPhotoEventId(null);
+    setPhotoDate(null);
+    setTripPhotoUploadTarget('gallery');
     if (clearInput) clearInput();
   };
   const saveTripCoverPhoto = async (photo) => {
@@ -14443,6 +14454,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return new Date(ts).toLocaleDateString('en-US', withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
   };
   const activeTripCoverPhoto = tripCoverPhoto?.url ? tripCoverPhoto : null;
+  const activeTripBackgroundStyle = activeTripCoverPhoto?.url
+    ? {
+        backgroundImage: `${darkMode ? 'linear-gradient(rgba(3,7,18,0.76), rgba(3,7,18,0.88))' : 'linear-gradient(rgba(255,255,255,0.68), rgba(248,250,252,0.9))'}, url(${activeTripCoverPhoto.url})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+    : undefined;
   const canEditCurrentTrip = Boolean(
     activeSubCalendar
     && canEditLayerById(String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || '').trim())
@@ -21722,10 +21740,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
     {/* -- Sub-Calendar Full View -- */}
     {activeSubCalendar && (
-      <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden">
+      <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden" style={activeTripBackgroundStyle}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 shadow-md" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
+        <div className="flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-gray-800/85 backdrop-blur-md shadow-md" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <button onClick={() => { setActiveSubCalendar(null); clearTripQueryParam(); }} className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium text-sm">
             <ChevronLeft className="w-4 h-4" /> Back
           </button>
@@ -21750,6 +21768,29 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {canEditCurrentTrip && (
+              <button
+                onClick={() => {
+                  setPhotoEventId(null);
+                  setPhotoDate(null);
+                  setTripPhotoUploadTarget('background');
+                  photoInputRef.current?.click();
+                }}
+                className="relative p-1.5 rounded-lg bg-gray-100/90 dark:bg-gray-700/90 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                title={activeTripCoverPhoto?.url ? 'Change trip background photo' : 'Add trip background photo'}
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+            )}
+            {canEditCurrentTrip && activeTripCoverPhoto?.url && (
+              <button
+                onClick={() => { clearTripCoverPhoto(); }}
+                className="relative p-1.5 rounded-lg bg-gray-100/90 dark:bg-gray-700/90 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                title="Clear trip background photo"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={() => setShowSubCalLocationSheet(true)}
               className="relative p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
@@ -21798,65 +21839,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         >
 
         {/* Weather location — collapsed pill or expanding input */}
-        <div className="px-4 pt-3 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-          <div className="relative overflow-hidden rounded-3xl h-44 bg-gradient-to-br from-purple-200 via-pink-100 to-indigo-100 dark:from-gray-700 dark:via-gray-800 dark:to-gray-900">
-            {activeTripCoverPhoto?.url ? (
-              <>
-                <img
-                  src={activeTripCoverPhoto.url}
-                  alt={`${activeSubCalendar.name} cover`}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
-              </>
-            ) : null}
-            <div className="absolute inset-x-0 bottom-0 p-4">
-              <div className={`text-lg font-bold ${activeTripCoverPhoto?.url ? 'text-white' : 'text-gray-800 dark:text-white'}`}>
-                {activeSubCalendar.name}
-              </div>
-              <div className={`text-xs mt-1 ${activeTripCoverPhoto?.url ? 'text-white/85' : 'text-gray-500 dark:text-gray-300'}`}>
-                {activeTripCoverPhoto?.url ? 'Trip cover photo' : 'Add a cover photo for this trip'}
-              </div>
-            </div>
-          </div>
-          {canEditCurrentTrip && (
-            <div className="flex items-center gap-2 overflow-x-auto py-3">
-              {tripPhotos.slice(0, 6).map((photo) => {
-                const isSelected = String(tripCoverPhoto?.id || '') === String(photo?.id || '');
-                return (
-                  <button
-                    key={`trip-cover-${photo.id}`}
-                    onClick={() => saveTripCoverPhoto(photo)}
-                    className={`relative shrink-0 w-16 h-16 rounded-2xl overflow-hidden border-2 ${isSelected ? 'border-purple-500' : 'border-transparent'}`}
-                    title="Set as cover photo"
-                  >
-                    <img src={photo.url} alt={photo.caption || 'Trip photo'} className="w-full h-full object-cover" />
-                    {isSelected && (
-                      <span className="absolute inset-x-1 bottom-1 px-1 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-semibold">
-                        Cover
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => photoInputRef.current?.click()}
-                className="shrink-0 px-3 py-2 rounded-2xl border border-dashed border-purple-300 dark:border-purple-700 text-xs font-semibold text-purple-700 dark:text-purple-300"
-              >
-                + Photo
-              </button>
-              {tripCoverPhoto?.url && (
-                <button
-                  onClick={clearTripCoverPhoto}
-                  className="shrink-0 px-3 py-2 rounded-2xl bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200"
-                >
-                  Clear Cover
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
         <div className="relative px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2" ref={weatherAutocompleteRef}>
           {subCalWeatherLocation && !subCalWeatherExpanded ? (
             // Collapsed pill
