@@ -21171,7 +21171,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <div
                 className="font-bold text-gray-800 dark:text-white cursor-pointer hover:text-purple-600 dark:hover:text-purple-400"
                 onClick={() => setEditingSubCalTitle(true)}
-              >{`${activeSubCalendar.name} \u2708\uFE0F`}</div>
+              >{activeSubCalendar.name}</div>
             )}
             <div className="text-xs text-gray-500 dark:text-gray-400">
               {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
