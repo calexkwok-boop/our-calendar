@@ -19420,6 +19420,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {bottomNavTab === 'home' && !preferCalendarHome && (
           <div className="space-y-4 mb-4">
+            <div className="flex justify-center">
+              <button
+                onClick={() => {
+                  setPreferCalendarHome(true);
+                  setShowHomeCalendarOverview(true);
+                }}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                style={themeAccentEllieChipButtonStyle}
+              >
+                Show calendar view
+              </button>
+            </div>
+
             <div
               className="glass-panel rounded-[28px] border border-white/50 dark:border-white/10 p-4 sm:p-5"
               style={{
@@ -19511,19 +19524,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Today&apos;s rhythm</h3>
                   <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Morning, afternoon, and evening at a glance.</div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{todayEvents.length} plan{todayEvents.length === 1 ? '' : 's'}</div>
-                  <button
-                    onClick={() => {
-                      setPreferCalendarHome(true);
-                      setShowHomeCalendarOverview(true);
-                    }}
-                    className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:shadow-md"
-                    style={themeAccentEllieChipButtonStyle}
-                  >
-                    Show calendar view
-                  </button>
-                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">{todayEvents.length} plan{todayEvents.length === 1 ? '' : 's'}</div>
               </div>
               <div className="space-y-3">
                 {homeDaySections.map((section, index) => (
