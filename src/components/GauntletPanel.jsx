@@ -613,6 +613,15 @@ function GauntletPanel({
       <div style={shell}>
         <div style={heroStyle}>
           <div style={heroBg} />
+          <div style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
+            <svg width="100" height="65" viewBox="0 0 100 65" fill="none">
+              <rect x="1" y="1" width="98" height="63" rx="3" stroke="white" strokeWidth="2.5"/>
+              <line x1="50" y1="1" x2="50" y2="64" stroke="white" strokeWidth="2"/>
+              <line x1="1" y1="32" x2="99" y2="32" stroke="white" strokeWidth="2"/>
+              <line x1="18" y1="1" x2="18" y2="64" stroke="white" strokeWidth="1.5"/>
+              <line x1="82" y1="1" x2="82" y2="64" stroke="white" strokeWidth="1.5"/>
+            </svg>
+          </div>
           <div style={badge}>
             <span style={liveDot} />
             Tournament Suite

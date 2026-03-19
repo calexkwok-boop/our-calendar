@@ -146,7 +146,7 @@ export default function RoundRobinPanel({
       {/* Court-stripe header */}
       <div className="relative px-5 pt-5 pb-4 overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}08 100%)` }}>
         {/* Decorative court lines */}
-        <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', opacity: 0.12, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', opacity: 0.18, pointerEvents: 'none' }}>
           <svg width="80" height="52" viewBox="0 0 80 52" fill="none">
             <rect x="1" y="1" width="78" height="50" rx="3" stroke={accent} strokeWidth="2"/>
             <line x1="40" y1="1" x2="40" y2="51" stroke={accent} strokeWidth="1.5"/>
@@ -313,7 +313,7 @@ export default function RoundRobinPanel({
       {/* Header */}
       <div className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)` }}>
         {/* Court decoration */}
-        <div style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', opacity: 0.15, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
           <svg width="100" height="65" viewBox="0 0 100 65" fill="none">
             <rect x="1" y="1" width="98" height="63" rx="3" stroke="white" strokeWidth="2.5"/>
             <line x1="50" y1="1" x2="50" y2="64" stroke="white" strokeWidth="2"/>
