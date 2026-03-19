@@ -146,15 +146,13 @@ export default function RoundRobinPanel({
       {/* Court-stripe header */}
       <div className="relative px-5 pt-5 pb-4 overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}08 100%)` }}>
         {/* Decorative court lines */}
-        <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', opacity: 0.2, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', opacity: 0.12, pointerEvents: 'none' }}>
           <svg width="80" height="52" viewBox="0 0 80 52" fill="none">
             <rect x="1" y="1" width="78" height="50" rx="3" stroke={accent} strokeWidth="2"/>
             <line x1="40" y1="1" x2="40" y2="51" stroke={accent} strokeWidth="1.5"/>
             <line x1="1" y1="26" x2="79" y2="26" stroke={accent} strokeWidth="1.5"/>
-            <line x1="20" y1="13" x2="20" y2="39" stroke={accent} strokeWidth="1.2"/>
-            <line x1="60" y1="13" x2="60" y2="39" stroke={accent} strokeWidth="1.2"/>
-            <line x1="20" y1="13" x2="60" y2="13" stroke={accent} strokeWidth="1.2"/>
-            <line x1="20" y1="39" x2="60" y2="39" stroke={accent} strokeWidth="1.2"/>
+            <line x1="14" y1="1" x2="14" y2="51" stroke={accent} strokeWidth="1"/>
+            <line x1="66" y1="1" x2="66" y2="51" stroke={accent} strokeWidth="1"/>
           </svg>
         </div>
         <div className="flex items-start justify-between">
@@ -315,15 +313,13 @@ export default function RoundRobinPanel({
       {/* Header */}
       <div className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)` }}>
         {/* Court decoration */}
-        <div style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', opacity: 0.24, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', right: -10, top: '50%', transform: 'translateY(-50%)', opacity: 0.15, pointerEvents: 'none' }}>
           <svg width="100" height="65" viewBox="0 0 100 65" fill="none">
             <rect x="1" y="1" width="98" height="63" rx="3" stroke="white" strokeWidth="2.5"/>
             <line x1="50" y1="1" x2="50" y2="64" stroke="white" strokeWidth="2"/>
             <line x1="1" y1="32" x2="99" y2="32" stroke="white" strokeWidth="2"/>
-            <line x1="25" y1="16" x2="25" y2="48" stroke="white" strokeWidth="1.8"/>
-            <line x1="75" y1="16" x2="75" y2="48" stroke="white" strokeWidth="1.8"/>
-            <line x1="25" y1="16" x2="75" y2="16" stroke="white" strokeWidth="1.8"/>
-            <line x1="25" y1="48" x2="75" y2="48" stroke="white" strokeWidth="1.8"/>
+            <line x1="18" y1="1" x2="18" y2="64" stroke="white" strokeWidth="1.5"/>
+            <line x1="82" y1="1" x2="82" y2="64" stroke="white" strokeWidth="1.5"/>
           </svg>
         </div>
 
