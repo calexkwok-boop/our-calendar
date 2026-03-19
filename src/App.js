@@ -19676,18 +19676,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
             {preferCalendarHome && (
               <div className="mb-4 space-y-3">
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => {
-                      setPreferCalendarHome(false);
-                      setShowHomeCalendarOverview(false);
-                    }}
-                    className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-                    style={themeAccentEllieChipButtonStyle}
-                  >
-                    Show today&apos;s overview
-                  </button>
-                </div>
                 <div className="glass-panel rounded-2xl border border-white/50 dark:border-gray-700/70 p-3 sm:p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-base sm:text-lg font-semibold" style={themeAccentHeadingStyle}>Today At A Glance</h3>
