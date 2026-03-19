@@ -8358,6 +8358,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setCurrentUser('');
     setShowAuth(true);
   };
 
@@ -10351,14 +10352,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setShowAuth(!session?.user);
-      if (session?.user) setCurrentUser(getAuthIdentityLabel(session.user));
+      if (session?.user) {
+        void loadAccountHandleForUser(session.user);
+      } else {
+        setCurrentUser('');
+      }
       setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setShowAuth(!session?.user);
-      if (session?.user) setCurrentUser(getAuthIdentityLabel(session.user));
+      if (session?.user) {
+        void loadAccountHandleForUser(session.user);
+      } else {
+        setCurrentUser('');
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -17928,7 +17937,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="px-3 py-2 rounded-xl text-[11px] font-semibold shrink-0 transition-all"
+                  className="self-center px-3 py-2 rounded-xl text-[11px] font-semibold shrink-0 transition-all"
                   style={themeAccentSoftButtonStyle}
                 >
                   Logout
