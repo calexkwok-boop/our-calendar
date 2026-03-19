@@ -613,7 +613,7 @@ function GauntletPanel({
       <div style={shell}>
         <div style={heroStyle}>
           <div style={heroBg} />
-          <div style={{ position: 'absolute', right: -8, top: '50%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', right: 8, top: '42%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
             <svg width="90" height="58" viewBox="0 0 90 58" fill="none">
               <rect x="1" y="1" width="88" height="56" rx="3" stroke="white" strokeWidth="2"/>
               <rect x="1" y="1" width="26" height="56" fill="white" fillOpacity="0.16"/>

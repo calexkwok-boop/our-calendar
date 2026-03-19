@@ -144,7 +144,7 @@ export default function RoundRobinPanel({
       {/* Court-stripe header */}
       <div className="relative px-5 pt-5 pb-4 overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}08 100%)` }}>
         {/* Decorative court lines */}
-        <div style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', opacity: 0.18, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', right: 22, top: '42%', transform: 'translateY(-50%)', opacity: 0.18, pointerEvents: 'none' }}>
           <svg width="90" height="58" viewBox="0 0 90 58" fill="none">
             <rect x="1" y="1" width="88" height="56" rx="3" stroke={accent} strokeWidth="2"/>
             <rect x="1" y="1" width="26" height="56" fill={accent} fillOpacity="0.16"/>
