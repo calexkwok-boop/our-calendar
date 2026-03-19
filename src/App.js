@@ -1515,6 +1515,16 @@ function App() {
     const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;
     window.open(googleUrl, '_blank', 'noopener,noreferrer');
   };
+  const clearPopupQueryParam = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('popup')) return;
+      url.searchParams.delete('popup');
+      const next = `${url.pathname}${url.search}${url.hash}`;
+      window.history.replaceState({}, '', next);
+    } catch {}
+  };
 
   // -- Sub-calendar functions ----------------------------------------------
 
@@ -9982,6 +9992,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     loadPopupEventData();
   }, [activeLayerId, layers, layerRefreshToken]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const popupId = String(params.get('popup') || '').trim();
+      if (!popupId) return;
+      setSelectedPopupEventPanelId(popupId);
+      setBottomNavTab('events');
+    } catch {}
+  }, [user?.id]);
 
   useEffect(() => {
     loadUserTabTrips();
@@ -18747,7 +18768,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 {selectedPopupEventPanelId && (
   <div
     className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-    onClick={() => setSelectedPopupEventPanelId(null)}
+    onClick={() => {
+      setSelectedPopupEventPanelId(null);
+      clearPopupQueryParam();
+    }}
   >
     <div
       className="w-full max-w-lg max-h-[90vh] overflow-y-auto"
@@ -18778,7 +18802,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             status: 'open',
           };
         })()}
-        onClose={() => setSelectedPopupEventPanelId(null)}
+        onClose={() => {
+          setSelectedPopupEventPanelId(null);
+          clearPopupQueryParam();
+        }}
         formatTime={formatTime}
         formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
         resolveHandleLikeLabel={resolveHandleLikeLabel}
@@ -18787,12 +18814,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           setUseManualRoundRobinRoster(true);
           setShowRoundRobinPanel(true);
           setSelectedPopupEventPanelId(null);
+          clearPopupQueryParam();
         }}
         onLaunchGauntlet={(ev, mems) => {
           setManualGauntletRosterInput(mems.map((m) => m.display_name).join('\n'));
           setUseManualGauntletRoster(true);
           setShowGauntletPanel(true);
           setSelectedPopupEventPanelId(null);
+          clearPopupQueryParam();
         }}
       />
     </div>
