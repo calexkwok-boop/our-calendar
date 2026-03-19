@@ -1028,6 +1028,7 @@ function App() {
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
   const [showPhotoSortMenu, setShowPhotoSortMenu] = useState(false);
   const [showSubCalInviteModal, setShowSubCalInviteModal] = useState(false);
+  const [tripInviteLinkCopied, setTripInviteLinkCopied] = useState(false);
   const [showSubCalNotesModal, setShowSubCalNotesModal] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUploadMessage, setPhotoUploadMessage] = useState('');
@@ -1521,6 +1522,16 @@ function App() {
       const url = new URL(window.location.href);
       if (!url.searchParams.has('popup')) return;
       url.searchParams.delete('popup');
+      const next = `${url.pathname}${url.search}${url.hash}`;
+      window.history.replaceState({}, '', next);
+    } catch {}
+  };
+  const clearTripQueryParam = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('trip')) return;
+      url.searchParams.delete('trip');
       const next = `${url.pathname}${url.search}${url.hash}`;
       window.history.replaceState({}, '', next);
     } catch {}
@@ -2338,6 +2349,86 @@ function App() {
     await loadSubCalendarMembers(activeSubCalendar.id);
     setSubCalInviteEmail('');
     setShowSubCalInviteModal(false);
+  };
+  const copyTripInviteLink = async () => {
+    const tripId = String(activeSubCalendar?.id || '').trim();
+    if (!tripId || typeof window === 'undefined') return;
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}?trip=${tripId}`);
+      setTripInviteLinkCopied(true);
+      setTimeout(() => setTripInviteLinkCopied(false), 2000);
+    } catch {
+      alert('Could not copy trip link.');
+    }
+  };
+  const openTripFromLink = async (tripId) => {
+    const normalizedTripId = String(tripId || '').trim();
+    if (!normalizedTripId || !user?.id) return;
+    try {
+      const { data: tripRow, error: tripErr } = await supabase
+        .from('sub_calendars')
+        .select('*')
+        .eq('id', normalizedTripId)
+        .maybeSingle();
+      if (tripErr || !tripRow) return;
+      const meEmail = normalizeEmail(user?.email);
+      const mePhone = normalizePhoneNumber(user?.phone);
+      const memberRecipientFilter = buildMemberRecipientFilter(meEmail, mePhone);
+      const isOwner = String(tripRow?.owner_id || '') === String(user.id);
+      if (!isOwner && memberRecipientFilter) {
+        const { data: existingMember } = await supabase
+          .from('sub_calendar_members')
+          .select('id,status')
+          .eq('sub_calendar_id', normalizedTripId)
+          .or(memberRecipientFilter)
+          .maybeSingle();
+        if (existingMember?.id) {
+          if (String(existingMember.status || '').toLowerCase() !== 'accepted') {
+            await supabase
+              .from('sub_calendar_members')
+              .update({ status: 'accepted' })
+              .eq('id', existingMember.id);
+          }
+        } else {
+          const payload = {
+            sub_calendar_id: normalizedTripId,
+            email: meEmail || null,
+            phone: mePhone || null,
+            added_by: String(tripRow?.owner_id || '') || null,
+            status: 'accepted',
+            invited_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+          };
+          let insertErr = (await supabase.from('sub_calendar_members').insert(payload)).error;
+          if (insertErr && /column .*created_at|schema cache/i.test(String(insertErr.message || ''))) {
+            insertErr = (await supabase.from('sub_calendar_members').insert({
+              sub_calendar_id: normalizedTripId,
+              email: meEmail || null,
+              phone: mePhone || null,
+              added_by: String(tripRow?.owner_id || '') || null,
+              status: 'accepted',
+              invited_at: new Date().toISOString(),
+            })).error;
+          }
+          if (insertErr && !/duplicate key|already exists|unique constraint/i.test(String(insertErr.message || ''))) {
+            console.error('Trip link join failed:', insertErr);
+          }
+        }
+      }
+      setSubCalendars((prev) => {
+        const next = new Map((prev || []).map((sc) => [String(sc?.id || ''), sc]));
+        next.set(normalizedTripId, tripRow);
+        return Array.from(next.values());
+      });
+      if (tripRow?.layer_id && String(tripRow.layer_id) !== String(activeLayerId || '')) {
+        setActiveLayerId(tripRow.layer_id);
+      }
+      await openSubCalendar(tripRow);
+      setBottomNavTab('home');
+      clearTripQueryParam();
+    } catch (err) {
+      console.error('Trip link open failed:', err);
+    }
   };
 
   const removeMemberFromSubCal = async (identity) => {
@@ -10001,6 +10092,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (!popupId) return;
       setSelectedPopupEventPanelId(popupId);
       setBottomNavTab('events');
+    } catch {}
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user?.id) return;
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const tripId = String(params.get('trip') || '').trim();
+      if (!tripId) return;
+      openTripFromLink(tripId);
     } catch {}
   }, [user?.id]);
 
@@ -21271,7 +21372,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {showSubCalInviteModal && activeSubCalendar && (
       <div
         className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center"
-        onClick={() => setShowSubCalInviteModal(false)}
+        onClick={() => {
+          setShowSubCalInviteModal(false);
+          setTripInviteLinkCopied(false);
+        }}
       >
         <div
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm"
@@ -21287,28 +21391,40 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </p>
             </div>
             <button
-              onClick={() => setShowSubCalInviteModal(false)}
+              onClick={() => {
+                setShowSubCalInviteModal(false);
+                setTripInviteLinkCopied(false);
+              }}
               className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               aria-label="Close invite modal"
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
-          <input
-            type="text"
-            value={subCalInviteEmail}
-            onChange={(e) => setSubCalInviteEmail(e.target.value)}
+            <input
+              type="text"
+              value={subCalInviteEmail}
+              onChange={(e) => setSubCalInviteEmail(e.target.value)}
             placeholder="Enter email or phone"
             className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl mb-4 focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
-            autoFocus
-            onKeyPress={(e) => e.key === 'Enter' && inviteToSubCalendar()}
-          />
-          <div className="flex gap-2">
+              autoFocus
+              onKeyPress={(e) => e.key === 'Enter' && inviteToSubCalendar()}
+            />
             <button
-              onClick={() => setShowSubCalInviteModal(false)}
-              className="flex-1 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium"
+              onClick={copyTripInviteLink}
+              className="w-full mb-4 px-3 py-2 rounded-xl border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 text-sm font-semibold"
             >
-              Cancel
+              {tripInviteLinkCopied ? 'Link Copied' : 'Copy Shareable Link'}
+            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowSubCalInviteModal(false);
+                  setTripInviteLinkCopied(false);
+                }}
+                className="flex-1 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium"
+              >
+                Cancel
             </button>
             <button
               onClick={() => inviteToSubCalendar()}
@@ -21537,7 +21653,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 shadow-md" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
-          <button onClick={() => setActiveSubCalendar(null)} className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium text-sm">
+          <button onClick={() => { setActiveSubCalendar(null); clearTripQueryParam(); }} className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium text-sm">
             <ChevronLeft className="w-4 h-4" /> Back
           </button>
           <div className="text-center">
