@@ -14162,7 +14162,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         supabase.from('popup_event_members').insert({
           event_id: eventId,
           user_id: user.id,
-          display_name: currentUser || user?.email || 'Host',
+          display_name: resolveHandleLikeLabel(currentUser || user?.email || user?.phone || 'Host', user?.id),
           role: 'host',
         }).then(() => {});
       }
@@ -19070,7 +19070,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         supabase={supabase}
         user={user}
         calendarId={activeLayerId}
-        displayName={currentUser || user?.email || 'Player'}
+        displayName={resolveHandleLikeLabel(currentUser || user?.email || user?.phone || 'Player', user?.id)}
         initialEventId={selectedPopupEventPanelId}
         eventMetaFallback={(() => {
           const meta = popupEventsByEventId[selectedPopupEventPanelId];

@@ -125,7 +125,7 @@ const CreateEventForm = ({ accent, darkMode, btnStyle, border, softBg, supabase,
         description: form.description.trim() || null, status: 'open',
       }).select().single();
       if (err) throw err;
-      await supabase.from('popup_event_members').insert({ event_id: data.id, user_id: user.id, display_name: displayName || user.email || 'Host', role: 'host' });
+      await supabase.from('popup_event_members').insert({ event_id: data.id, user_id: user.id, display_name: effectiveDisplayName || 'Host', role: 'host' });
       onCreated(data);
     } catch (e) { setError(e.message || 'Could not create event.'); }
     finally { setSaving(false); }
@@ -581,6 +581,10 @@ export default function PopupEventPanel({
   const softBg = darkMode ? `${accent}18` : `${accent}0d`;
   const cardBg = darkMode ? 'rgba(255,255,255,0.05)' : '#fff';
   const border = `${accent}30`;
+  const effectiveDisplayName = String(displayName || '').trim()
+    || (typeof resolveHandleLikeLabel === 'function'
+      ? resolveHandleLikeLabel(user?.email || user?.phone || 'Player', user?.id)
+      : (user?.email || user?.phone || 'Player'));
 
   const [screen, setScreen] = useState(initialEventId ? 'detail' : 'create');
   const [event, setEvent] = useState(null);
@@ -657,7 +661,7 @@ export default function PopupEventPanel({
     if (!event || isMember || isFull) return;
     if (!isUuid(event.id)) return;
     setJoining(true);
-    try { await supabase.from('popup_event_members').insert({ event_id: event.id, user_id: user.id, display_name: displayName || user.email || 'Player', role: 'player' }); await loadEvent(event.id); } catch {}
+    try { await supabase.from('popup_event_members').insert({ event_id: event.id, user_id: user.id, display_name: effectiveDisplayName || 'Player', role: 'player' }); await loadEvent(event.id); } catch {}
     setJoining(false);
   };
   const handleLeave = async () => { if (!myMember || isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', myMember.id); await loadEvent(event.id); };
