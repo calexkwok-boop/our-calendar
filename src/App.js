@@ -4278,6 +4278,22 @@ function App() {
     if (!coverHeaderControlsVisible) return;
     setCoverControlsInteractionTick((prev) => prev + 1);
   }, [coverHeaderControlsVisible]);
+  const closeHomeWidgetWindows = React.useCallback(() => {
+    setShowControlWidgetAddPanel(false);
+    setShowSharePanel(false);
+    setShowNotificationSettings(false);
+    setShowListPanel(false);
+    setShowNotesPanel(false);
+    setShowExpenseTrackerPanel(false);
+    setShowGauntletPanel(false);
+    setShowRoundRobinPanel(false);
+    setShowChatPanel(false);
+    setShowChatMembersPanel(false);
+    setShowAiAssistant(false);
+    setShowScanHelpModal(false);
+    setShowSportsImportModal(false);
+    setShowCategoryEditor(false);
+  }, []);
   const widgetCardOpenById = React.useMemo(() => ({
     account: Boolean(showSharePanel),
     notifications: Boolean(showNotificationSettings),
@@ -4506,28 +4522,27 @@ useEffect(() => {
     }
   }, [events, popupEventsByEventId, popupSignupsByEventId, selectedGauntletEventId]);
   useEffect(() => {
-    if (!coverHeaderControlsVisible) return undefined;
-    if (hasOpenWidgetWindow) return undefined;
+    if (!coverHeaderControlsVisible && !hasOpenWidgetWindow) return undefined;
     if (bottomNavTab !== 'home') return undefined;
     const timeoutId = window.setTimeout(() => {
       setCoverHeaderControlsVisible(false);
-      setShowControlWidgetAddPanel(false);
+      closeHomeWidgetWindows();
     }, 5000);
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [coverHeaderControlsVisible, activeLayerId, coverControlsInteractionTick, hasOpenWidgetWindow, bottomNavTab]);
+  }, [coverHeaderControlsVisible, activeLayerId, coverControlsInteractionTick, hasOpenWidgetWindow, bottomNavTab, closeHomeWidgetWindows]);
   useEffect(() => {
     const handleWindowScroll = () => {
       if (bottomNavTab !== 'home') return;
-      setShowControlWidgetAddPanel(false);
       setCoverHeaderControlsVisible(false);
+      closeHomeWidgetWindows();
     };
     window.addEventListener('scroll', handleWindowScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', handleWindowScroll);
     };
-  }, [bottomNavTab]);
+  }, [bottomNavTab, closeHomeWidgetWindows]);
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
   const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
   const activeShareRowForMe = (sharedCalendars || []).find((row) => {
