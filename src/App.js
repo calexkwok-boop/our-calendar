@@ -20403,8 +20403,17 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
     {/* -- Create Sub-Calendar Modal -- */}
     {!activeSubCalendar && (
-      <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        <div className="max-w-6xl mx-auto">
+      <div
+        className="fixed inset-x-0 bottom-0 z-30 px-3"
+        style={{
+          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
+          transform: 'translate3d(0, 0, 0)',
+          WebkitTransform: 'translate3d(0, 0, 0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+        }}
+      >
+        <div className="max-w-6xl mx-auto pointer-events-auto">
 
           {/* Widget toolbar — shown on home tab */}
           {bottomNavTab === 'home' && (
