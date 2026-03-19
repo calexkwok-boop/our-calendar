@@ -21112,7 +21112,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-gray-200 dark:ring-gray-700">
                           {canDelete && (
                             <div className="absolute right-0 top-0 bottom-0 w-[88px] flex items-center justify-center bg-red-500">
-                              <button onClick={() => handleDeleteSubCalendar(sc.id)} className="text-white text-xs font-semibold px-3 py-2">Delete</button>
+                              <button onClick={() => deleteSubCalendar(sc.id)} className="text-white text-xs font-semibold px-3 py-2">Delete</button>
                             </div>
                           )}
                           <div
@@ -21149,7 +21149,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-gray-200 dark:ring-gray-700">
                           {canDelete && (
                             <div className="absolute right-0 top-0 bottom-0 w-[88px] flex items-center justify-center bg-red-500">
-                              <button onClick={() => handleDeleteSubCalendar(sc.id)} className="text-white text-xs font-semibold px-3 py-2">Delete</button>
+                              <button onClick={() => deleteSubCalendar(sc.id)} className="text-white text-xs font-semibold px-3 py-2">Delete</button>
                             </div>
                           )}
                           <div
@@ -21195,7 +21195,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           <div key={sc.id} className="relative rounded-xl overflow-hidden ring-1 ring-inset ring-gray-200 dark:ring-gray-700">
                           {canDelete && (
                             <div className="absolute right-0 top-0 bottom-0 w-[88px] flex items-center justify-center bg-red-500">
-                              <button onClick={() => handleDeleteSubCalendar(sc.id)} className="text-white text-xs font-semibold px-3 py-2">Delete</button>
+                              <button onClick={() => deleteSubCalendar(sc.id)} className="text-white text-xs font-semibold px-3 py-2">Delete</button>
                             </div>
                           )}
                           <div

@@ -107,6 +107,7 @@ const CreateEventForm = ({ accent, darkMode, btnStyle, border, softBg, supabase,
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const locationRef = useRef(null);
+  const effectiveDisplayName = String(displayName || '').trim();
   const primaryText = darkMode ? '#f8fafc' : 'var(--color-text-primary)';
   const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
   usePlacesAutocomplete(locationRef, ({ location, lat, lng }) => setForm((p) => ({ ...p, location, location_lat: lat, location_lng: lng })));
