@@ -23296,6 +23296,83 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 );
                 const renderPlanCard = (event) => (
                   <div key={event.id}>
+                    {subCalEditingEvent === event.id ? (
+                      <div
+                        className="rounded-3xl border-2 border-purple-300 bg-white p-3 shadow-sm dark:border-purple-500/40 dark:bg-slate-900/85 space-y-2"
+                        style={{ touchAction: 'pan-y' }}
+                      >
+                        <input
+                          type="text"
+                          defaultValue={event.title}
+                          onBlur={e => updateSubCalEvent(event.id, { title: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-2xl text-base sm:text-sm"
+                          style={{ fontSize: '16px' }}
+                          autoFocus
+                        />
+                        <div className="flex gap-2 min-w-0">
+                          <input
+                            type="text"
+                            defaultValue={event.time || ''}
+                            placeholder="Start 9:00 AM"
+                            onBlur={e => {
+                              const val = e.target.value.trim();
+                              if (!val) return;
+                              const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                              if (match) {
+                                let h = parseInt(match[1]);
+                                const m = match[2] ? parseInt(match[2]) : 0;
+                                const p = match[3]?.toLowerCase();
+                                if (p === 'pm' && h < 12) h += 12;
+                                if (p === 'am' && h === 12) h = 0;
+                                updateSubCalEvent(event.id, { time: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` });
+                              }
+                            }}
+                            className="flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-2xl text-base sm:text-sm"
+                            style={{ fontSize: '16px' }}
+                          />
+                          <input
+                            type="text"
+                            defaultValue={event.endTime || ''}
+                            placeholder="End 10:00 AM"
+                            onBlur={e => {
+                              const val = e.target.value.trim();
+                              if (!val) return;
+                              const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                              if (match) {
+                                let h = parseInt(match[1]);
+                                const m = match[2] ? parseInt(match[2]) : 0;
+                                const p = match[3]?.toLowerCase();
+                                if (p === 'pm' && h < 12) h += 12;
+                                if (p === 'am' && h === 12) h = 0;
+                                updateSubCalEvent(event.id, { endTime: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` });
+                              }
+                            }}
+                            className="flex-1 min-w-0 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-2xl text-base sm:text-sm"
+                            style={{ fontSize: '16px' }}
+                          />
+                        </div>
+                        <textarea
+                          defaultValue={event.notes || ''}
+                          onBlur={e => updateSubCalEvent(event.id, { notes: e.target.value })}
+                          placeholder="Notes..."
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-2xl text-base sm:text-sm resize-none"
+                          style={{ fontSize: '16px' }}
+                        />
+                        <PlacesAutocomplete
+                          value={event.location || ''}
+                          onSelect={(val) => updateSubCalEvent(event.id, { location: val })}
+                          placeholder="Add location (optional)"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-2xl text-base sm:text-sm"
+                        />
+                        <button
+                          onClick={() => setSubCalEditingEvent(null)}
+                          className="w-full py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-2xl text-sm font-medium"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    ) : (
                     <div className="rounded-3xl border border-white/10 bg-white/75 p-3 shadow-sm dark:bg-slate-900/70">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
@@ -23354,6 +23431,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         </button>
                       )}
                     </div>
+                    )}
                   </div>
                 );
 
