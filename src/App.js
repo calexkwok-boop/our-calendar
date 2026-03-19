@@ -8973,12 +8973,32 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
       if (!signupErr || !memberErr) {
         signupsMap = {};
+        const selfAliasSet = new Set(
+          [
+            currentUser,
+            user?.email,
+            user?.phone,
+            resolveHandleLikeLabel(String(currentUser || user?.email || user?.phone || 'Member'), String(user?.id || '')),
+          ]
+            .map((value) => String(value || '').trim().toLowerCase())
+            .filter(Boolean)
+        );
         const memberIdentityByEvent = new Map();
+        const seenSelfAliasesByEvent = new Map();
         (memberRows || []).forEach((row) => {
           const eventId = String(row?.event_id || '').trim();
           if (!eventId) return;
           const userId = String(row?.user_id || '').trim();
           const displayName = String(row?.display_name || '').trim() || resolveHandleLikeLabel(String(row?.user_id || 'Member'), userId);
+          const isSelfAlias = userId === String(user?.id || '').trim() && selfAliasSet.has(displayName.trim().toLowerCase());
+          if (isSelfAlias) {
+            if (!seenSelfAliasesByEvent.has(eventId)) seenSelfAliasesByEvent.set(eventId, new Set());
+            const seen = seenSelfAliasesByEvent.get(eventId);
+            const roleKey = String(row?.role || 'player').trim() || 'player';
+            const dedupeKey = `${userId}|${roleKey}`;
+            if (seen.has(dedupeKey)) return;
+            seen.add(dedupeKey);
+          }
           if (!Array.isArray(signupsMap[eventId])) signupsMap[eventId] = [];
           signupsMap[eventId].push({
             userId,
@@ -8986,7 +9006,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             createdAt: String(row?.joined_at || ''),
           });
           if (!memberIdentityByEvent.has(eventId)) memberIdentityByEvent.set(eventId, new Set());
-          memberIdentityByEvent.get(eventId).add(`${userId}|${displayName.trim().toLowerCase()}`);
+          memberIdentityByEvent.get(eventId).add(isSelfAlias ? `${userId}|self` : `${userId}|${displayName.trim().toLowerCase()}`);
         });
         (signupRows || []).forEach((row) => {
           const eventId = String(row?.event_id || '').trim();
@@ -8994,9 +9014,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           const userId = String(row?.user_id || '').trim();
           const displayName = String(row?.display_name || '').trim() || resolveHandleLikeLabel(String(row?.user_id || 'Member'), userId);
           const memberIdentities = memberIdentityByEvent.get(eventId) || new Set();
-          const identityKey = `${userId}|${displayName.trim().toLowerCase()}`;
+          const isSelfAlias = userId === String(user?.id || '').trim() && selfAliasSet.has(displayName.trim().toLowerCase());
+          const identityKey = isSelfAlias ? `${userId}|self` : `${userId}|${displayName.trim().toLowerCase()}`;
           const hasSameSignup = Array.isArray(signupsMap[eventId]) && signupsMap[eventId].some((entry) => (
-            String(entry?.userId || '') === userId && String(entry?.displayName || '').trim().toLowerCase() === displayName.trim().toLowerCase()
+            String(entry?.userId || '') === userId && (
+              (isSelfAlias && selfAliasSet.has(String(entry?.displayName || '').trim().toLowerCase()))
+              || String(entry?.displayName || '').trim().toLowerCase() === displayName.trim().toLowerCase()
+            )
           ));
           if (memberIdentities.has(identityKey) || hasSameSignup) return;
           if (!Array.isArray(signupsMap[eventId])) signupsMap[eventId] = [];

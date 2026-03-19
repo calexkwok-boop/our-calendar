@@ -585,6 +585,16 @@ export default function PopupEventPanel({
     || (typeof resolveHandleLikeLabel === 'function'
       ? resolveHandleLikeLabel(user?.email || user?.phone || 'Player', user?.id)
       : (user?.email || user?.phone || 'Player'));
+  const selfAliasSet = new Set(
+    [
+      effectiveDisplayName,
+      user?.email,
+      user?.phone,
+      typeof resolveHandleLikeLabel === 'function' ? resolveHandleLikeLabel(user?.email || user?.phone || effectiveDisplayName, user?.id) : '',
+    ]
+      .map((value) => String(value || '').trim().toLowerCase())
+      .filter(Boolean)
+  );
 
   const [screen, setScreen] = useState(initialEventId ? 'detail' : 'create');
   const [event, setEvent] = useState(null);
@@ -626,7 +636,22 @@ export default function PopupEventPanel({
       if (ev) setEvent(ev);
       else if (eventMetaFallbackRef.current) setEvent(eventMetaFallbackRef.current);
       // Merge popup_event_members + popup_event_signups, dedupe by user_id
-      const memberList = [...(mems || [])];
+      const dedupedMembers = [];
+      const seenSelfAliasByRole = new Set();
+      (mems || []).forEach((member) => {
+        const memberUserId = String(member?.user_id || '').trim();
+        const memberRole = String(member?.role || 'player').trim() || 'player';
+        const memberName = String(member?.display_name || '').trim();
+        const memberKey = memberUserId === String(user?.id || '').trim() && selfAliasSet.has(memberName.toLowerCase())
+          ? `self:${memberRole}`
+          : null;
+        if (memberKey) {
+          if (seenSelfAliasByRole.has(memberKey)) return;
+          seenSelfAliasByRole.add(memberKey);
+        }
+        dedupedMembers.push(member);
+      });
+      const memberList = [...dedupedMembers];
       const memberUserIds = new Set(memberList.map(m => String(m.user_id || '')));
       (signups || []).forEach(s => {
         const uid = String(s.user_id || '');
