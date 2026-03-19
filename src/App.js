@@ -2491,9 +2491,13 @@ function App() {
   };
 
   const removeMemberFromSubCal = async (identity) => {
-    if (!assertCanEditActiveLayer('remove itinerary members')) return;
+    if (!activeSubCalendar || !canEditCurrentTrip) {
+      alert('Only trip hosts can remove members.');
+      return;
+    }
     const recipient = resolveInviteRecipient(identity);
     if (!recipient?.value) return;
+    if (!window.confirm(`Remove ${resolveHandleLikeLabel(recipient.value)} from this trip?`)) return;
     let deleteQuery = supabase.from('sub_calendar_members')
       .delete()
       .eq('sub_calendar_id', activeSubCalendar.id);
@@ -14774,7 +14778,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     : undefined;
   const canEditCurrentTrip = Boolean(
     activeSubCalendar
-    && canEditLayerById(String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || '').trim())
+    && (
+      String(activeSubCalendar?.owner_id || '') === String(user?.id || '')
+      || canEditLayerById(String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || '').trim())
+      || canEditActiveSubCalendar
+    )
   );
   const canGenerateTripHighlights = Boolean(
     activeSubCalendar
@@ -22864,7 +22872,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       {getTripMemberBadge(resolveHandleLikeLabel(m.identity || m.email || m.phone))}
                     </span>
                     <span>{resolveHandleLikeLabel(m.identity || m.email || m.phone)}</span>
-                    {activeSubCalendar.owner_id === user?.id && m.removable !== false && (
+                    {canEditCurrentTrip && m.removable !== false && (
                       <button onClick={() => removeMemberFromSubCal(m.identity || m.email || m.phone)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
                     )}
                   </span>
@@ -23076,12 +23084,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200">
                     {getRecipientKindLabel(m.identity || m.email || m.phone)}
                   </span>
-                  {activeSubCalendar.owner_id === user?.id && m.removable !== false && (
+                  {canEditCurrentTrip && m.removable !== false && (
                     <button onClick={() => removeMemberFromSubCal(m.identity || m.email || m.phone)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
                   )}
                 </span>
               ))}
-              {activeSubCalendar.owner_id === user?.id && (
+              {canEditCurrentTrip && (
                 <button
                   onClick={() => setShowSubCalInviteModal(true)}
                   className="px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-colors"
