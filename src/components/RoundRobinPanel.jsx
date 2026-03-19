@@ -159,12 +159,12 @@ export default function RoundRobinPanel({
           <div>
             <div className="flex items-center gap-2 mb-0.5">
               <span style={{ fontSize: 22 }}>🥒</span>
-              <h3 className="text-xl font-black tracking-tight text-gray-900 dark:text-gray-50">Round Robin</h3>
+              <h3 className="text-xl font-black tracking-tight" style={{ color: primaryText }}>Round Robin</h3>
             </div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Every team plays every other team · most wins wins</p>
+            <p className="text-xs font-medium" style={{ color: secondaryText }}>Every team plays every other team · most wins wins</p>
           </div>
           <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowRoundRobinPanel(false); }} className="relative z-10 p-1.5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
-            <X className="w-4 h-4 text-gray-400" />
+            <X className="w-4 h-4" style={{ color: secondaryText }} />
           </button>
         </div>
       </div>
@@ -172,7 +172,7 @@ export default function RoundRobinPanel({
       <div className="p-4 space-y-4 flex-1 min-h-0 overflow-y-auto">
         {/* Format cards */}
         <div>
-          <div className="text-[10px] font-black uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500 mb-2">Game Format</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.12em] mb-2" style={{ color: secondaryText }}>Game Format</div>
           <div className="grid grid-cols-2 gap-2.5">
             {[
               { v: 2, emoji: '👥', label: 'Doubles', sub: '2 vs 2', hint: 'Most popular' },
@@ -198,7 +198,7 @@ export default function RoundRobinPanel({
 
         {/* Roster source */}
         <div>
-          <div className="text-[10px] font-black uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500 mb-2">Roster Source</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.12em] mb-2" style={{ color: secondaryText }}>Roster Source</div>
           <div className="flex rounded-2xl overflow-hidden p-0.5" style={{ background: mutedBg }}>
             {[{ v: true, label: '✏️  Manual' }, { v: false, label: '📋  From Event' }].map(({ v, label }) => (
               <button key={String(v)} onClick={() => { setUseManualRoundRobinRoster(v); setRoundRobinError(''); }}
@@ -216,7 +216,7 @@ export default function RoundRobinPanel({
         {useManualRoundRobinRoster && (
           <div className="rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${border}` }}>
             <div className="px-4 pt-3 pb-2" style={{ background: cardBg }}>
-              <div className="text-[10px] font-black uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500 mb-2">
+              <div className="text-[10px] font-black uppercase tracking-[0.12em] mb-2" style={{ color: secondaryText }}>
                 {teamsOf === 2 ? 'Players — pairs of lines become teams' : 'Players — one per line'}
               </div>
               <textarea rows={teamsOf === 2 ? 8 : 5} value={manualRoundRobinRosterInput}
@@ -264,8 +264,8 @@ export default function RoundRobinPanel({
             {(eligibleRoundRobinEvents || []).length === 0 ? (
               <div className="rounded-2xl border px-4 py-8 text-center" style={{ borderColor: border, background: softBg }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>🏓</div>
-                <div className="text-sm font-bold text-gray-500 dark:text-gray-400">No eligible events yet</div>
-                <div className="text-xs text-gray-400 mt-1">Need at least {teamsOf * 2} players signed up</div>
+                <div className="text-sm font-bold" style={{ color: primaryText }}>No eligible events yet</div>
+                <div className="text-xs mt-1" style={{ color: secondaryText }}>Need at least {teamsOf * 2} players signed up</div>
               </div>
             ) : (
               (eligibleRoundRobinEvents || []).map((entry) => {
@@ -388,11 +388,11 @@ export default function RoundRobinPanel({
                     background: roundDone ? `${accent}22` : isCurrent ? accent : mutedChipBg }}>
                     {roundDone
                       ? <CheckCircle style={{ width: 16, height: 16, color: accent }} />
-                      : <span style={{ fontSize: 13, fontWeight: 900, color: isCurrent ? btnFg : '#9ca3af' }}>{round.index + 1}</span>}
+                      : <span style={{ fontSize: 13, fontWeight: 900, color: isCurrent ? btnFg : secondaryText }}>{round.index + 1}</span>}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-black text-gray-800 dark:text-gray-100">Round {round.index + 1}</span>
+                      <span className="text-sm font-black" style={{ color: primaryText }}>Round {round.index + 1}</span>
                       {isCurrent && !roundDone && (
                         <span className="px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wider uppercase"
                           style={{ background: accent, color: btnFg }}>Now Playing</span>
@@ -406,8 +406,8 @@ export default function RoundRobinPanel({
                       {doneInRound}/{round.matches.length} matches · {round.matches.length} court{round.matches.length !== 1 ? 's' : ''}
                     </div>
                   </div>
-                  <CourtDot accent={isCurrent ? accent : '#9ca3af'} />
-                  {expanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
+                  <CourtDot accent={isCurrent ? accent : secondaryText} />
+                  {expanded ? <ChevronUp className="w-3.5 h-3.5 shrink-0" style={{ color: secondaryText }} /> : <ChevronDown className="w-3.5 h-3.5 shrink-0" style={{ color: secondaryText }} />}
                 </button>
 
                 {/* Match cards */}
@@ -426,8 +426,8 @@ export default function RoundRobinPanel({
                           {/* Court label */}
                           <div className="flex items-center justify-between px-3 pt-2 pb-1">
                             <div className="flex items-center gap-1.5">
-                              <CourtDot accent={match.completed ? accent : '#9ca3af'} />
-                              <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: match.completed ? accent : '#9ca3af' }}>
+                              <CourtDot accent={match.completed ? accent : secondaryText} />
+                              <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: match.completed ? accent : secondaryText }}>
                                 Court {mi + 1}
                               </span>
                             </div>
@@ -462,7 +462,7 @@ export default function RoundRobinPanel({
                                 className="w-12 h-10 text-center font-black text-base rounded-xl border bg-white dark:bg-gray-800 dark:text-white disabled:opacity-50 disabled:cursor-default focus:outline-none focus:ring-2"
                                 style={{ borderColor: aWon ? accent : border, color: aWon ? accent : 'inherit', fontSize: '18px', fontVariantNumeric: 'tabular-nums',
                                   boxShadow: aWon ? `0 0 0 2px ${accent}33` : 'none' }} />
-                              <span className="text-gray-300 dark:text-gray-600 font-black text-sm">—</span>
+                              <span className="font-black text-sm" style={{ color: secondaryText }}>—</span>
                               <input type="number" min="0" max="99" value={match.scoreB}
                                 onChange={(e) => updateRoundRobinMatchScore(tid, round.index, match.id, 'scoreB', e.target.value)}
                                 disabled={match.completed}
@@ -499,7 +499,7 @@ export default function RoundRobinPanel({
           {standings.length === 0 ? (
             <div className="py-10 text-center">
               <div style={{ fontSize: 36, marginBottom: 8 }}>🥒</div>
-              <div className="text-sm font-bold text-gray-400">Play some matches to see standings</div>
+              <div className="text-sm font-bold" style={{ color: secondaryText }}>Play some matches to see standings</div>
             </div>
           ) : (
             standings.map((row, idx) => {
@@ -516,12 +516,12 @@ export default function RoundRobinPanel({
                     background: isWinner ? accent : mutedChipBg }}>
                     {isWinner
                       ? <span style={{ fontSize: 14 }}>🏆</span>
-                      : <span style={{ fontSize: 12, fontWeight: 900, color: '#9ca3af' }}>{idx + 1}</span>}
+                      : <span style={{ fontSize: 12, fontWeight: 900, color: secondaryText }}>{idx + 1}</span>}
                   </div>
                   {/* Avatar */}
                   <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 12, fontWeight: 900, background: isWinner ? `${accent}25` : mutedChipBg,
-                    color: isWinner ? accent : '#9ca3af', border: `1.5px solid ${isWinner ? accent + '44' : 'transparent'}` }}>
+                    color: isWinner ? accent : secondaryText, border: `1.5px solid ${isWinner ? accent + '44' : 'transparent'}` }}>
                     {initials(row.displayName)}
                   </div>
                   {/* Name */}
@@ -533,15 +533,15 @@ export default function RoundRobinPanel({
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="text-center">
                       <div className="text-sm font-black text-emerald-500">{row.wins}</div>
-                      <div className="text-[9px] font-bold text-gray-400 uppercase">W</div>
+                      <div className="text-[9px] font-bold uppercase" style={{ color: secondaryText }}>W</div>
                     </div>
                     <div className="text-center">
                       <div className="text-sm font-black text-rose-400">{row.losses}</div>
-                      <div className="text-[9px] font-bold text-gray-400 uppercase">L</div>
+                      <div className="text-[9px] font-bold uppercase" style={{ color: secondaryText }}>L</div>
                     </div>
                     <div className="text-center min-w-[32px]">
-                      <div className={`text-sm font-black ${diff > 0 ? 'text-emerald-500' : diff < 0 ? 'text-rose-400' : 'text-gray-400'}`}>{diff > 0 ? '+' : ''}{diff}</div>
-                      <div className="text-[9px] font-bold text-gray-400 uppercase">+/-</div>
+                      <div className={`text-sm font-black ${diff > 0 ? 'text-emerald-500' : diff < 0 ? 'text-rose-400' : ''}`} style={diff === 0 ? { color: secondaryText } : undefined}>{diff > 0 ? '+' : ''}{diff}</div>
+                      <div className="text-[9px] font-bold uppercase" style={{ color: secondaryText }}>+/-</div>
                     </div>
                   </div>
                 </div>
@@ -554,7 +554,7 @@ export default function RoundRobinPanel({
       {/* Footer */}
       <div className="px-4 py-3 flex items-center justify-between border-t" style={{ borderColor: border, background: softBg }}>
         <button onClick={() => resetRoundRobinTournament(tid)}
-          className="flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-red-500 transition-colors">
+          className="flex items-center gap-1.5 text-xs font-bold hover:text-red-500 transition-colors" style={{ color: secondaryText }}>
           <RotateCcw className="w-3.5 h-3.5" /> New Tournament
         </button>
         {roundRobinError && <span className="text-[11px] font-semibold text-red-500">{roundRobinError}</span>}
