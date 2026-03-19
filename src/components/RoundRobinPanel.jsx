@@ -141,7 +141,7 @@ export default function RoundRobinPanel({
 
   // ── SETUP SCREEN ──────────────────────────────────────────────────────────
   if (!tournament) return (
-    <div className="rounded-2xl sm:rounded-2xl mb-0 sm:mb-6 overflow-hidden glass-panel" style={{ border: `1.5px solid ${border}`, background: shellBg, boxShadow: shellShadow }}>
+    <div className="h-full max-h-full rounded-2xl sm:rounded-2xl mb-0 sm:mb-6 overflow-hidden glass-panel flex flex-col" style={{ border: `1.5px solid ${border}`, background: shellBg, boxShadow: shellShadow }}>
 
       {/* Court-stripe header */}
       <div className="relative px-5 pt-5 pb-4 overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}08 100%)` }}>
@@ -169,7 +169,7 @@ export default function RoundRobinPanel({
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 flex-1 min-h-0 overflow-y-auto">
         {/* Format cards */}
         <div>
           <div className="text-[10px] font-black uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500 mb-2">Game Format</div>
@@ -308,7 +308,7 @@ export default function RoundRobinPanel({
   const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
   return (
-    <div className="rounded-2xl sm:rounded-2xl mb-0 sm:mb-6 overflow-hidden glass-panel" style={{ border: `1.5px solid ${border}`, background: shellBg, boxShadow: shellShadow }}>
+    <div className="h-full max-h-full rounded-2xl sm:rounded-2xl mb-0 sm:mb-6 overflow-hidden glass-panel flex flex-col" style={{ border: `1.5px solid ${border}`, background: shellBg, boxShadow: shellShadow }}>
 
       {/* Header */}
       <div className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)` }}>
@@ -371,7 +371,7 @@ export default function RoundRobinPanel({
 
       {/* Schedule */}
       {activeTab === 'schedule' && (
-        <div className="p-3 space-y-2 max-h-[65vh] overflow-y-auto">
+        <div className="p-3 space-y-2 flex-1 min-h-0 overflow-y-auto">
           {(tournament.rounds || []).map((round) => {
             const roundDone = round.matches.every((m) => m.completed);
             const doneInRound = round.matches.filter((m) => m.completed).length;
@@ -495,7 +495,7 @@ export default function RoundRobinPanel({
 
       {/* Standings */}
       {activeTab === 'standings' && (
-        <div className="p-3 space-y-2">
+        <div className="p-3 space-y-2 flex-1 min-h-0 overflow-y-auto">
           {standings.length === 0 ? (
             <div className="py-10 text-center">
               <div style={{ fontSize: 36, marginBottom: 8 }}>🥒</div>
