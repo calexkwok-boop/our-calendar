@@ -945,6 +945,7 @@ function App() {
   const [lastTapTime, setLastTapTime] = useState(0);
   const [recurrence, setRecurrence] = useState('once');
   const [calendarView, setCalendarView] = useState('month');
+  const [preferCalendarHome, setPreferCalendarHome] = useState(false);
   const [showHomeCalendarOverview, setShowHomeCalendarOverview] = useState(false);
   const [agendaRangeDays, setAgendaRangeDays] = useState(30);
   const [agendaSearchQuery, setAgendaSearchQuery] = useState('');
@@ -1108,6 +1109,7 @@ function App() {
   const getUpcomingPopupsSortLocalKey = (userId, layerId) => `upcoming-popups-order-${String(userId || '').trim()}-${String(layerId || '').trim()}`;
   const getUpcomingEventsVisibleCalendarsLocalKey = (userId) => `upcoming-events-visible-calendars-${String(userId || '').trim()}`;
   const getUpcomingEventsHideRecurringLocalKey = (userId) => `upcoming-events-hide-recurring-${String(userId || '').trim()}`;
+  const getHomeLandingPreferenceLocalKey = (userId) => `home-calendar-first-${String(userId || '').trim()}`;
   const readLocalSortOrder = (key) => {
     try {
       const raw = localStorage.getItem(String(key || ''));
@@ -14822,6 +14824,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   });
   useEffect(() => {
     if (!user?.id) {
+      setPreferCalendarHome(false);
+      setShowHomeCalendarOverview(false);
       setActiveCalendarSortOrder([]);
       setUpcomingTripSortOrder([]);
       setUpcomingPopupSortOrder([]);
@@ -14836,12 +14840,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setUpcomingTripSortOrder(readLocalSortOrder(tripsKey));
     setUpcomingPopupSortOrder(readLocalSortOrder(popupsKey));
     setEventsTabHideRecurring(readLocalBoolean(getUpcomingEventsHideRecurringLocalKey(user.id), false));
+    const calendarFirst = readLocalBoolean(getHomeLandingPreferenceLocalKey(user.id), false);
+    setPreferCalendarHome(calendarFirst);
+    setShowHomeCalendarOverview(calendarFirst);
   }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
     writeLocalBoolean(getUpcomingEventsHideRecurringLocalKey(user.id), eventsTabHideRecurring);
   }, [user?.id, eventsTabHideRecurring]);
+  useEffect(() => {
+    if (!user?.id) return;
+    writeLocalBoolean(getHomeLandingPreferenceLocalKey(user.id), preferCalendarHome);
+    if (preferCalendarHome) setShowHomeCalendarOverview(true);
+  }, [user?.id, preferCalendarHome]);
   useEffect(() => {
     if (!user?.id) return;
     const ids = visibleLayerCalendars.map((layer) => String(layer?.id || '')).filter(Boolean);
@@ -19331,15 +19343,18 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {bottomNavTab === 'home' && (
+        {bottomNavTab === 'home' && !preferCalendarHome && (
           <div className="space-y-4 mb-4">
             <div className="flex justify-center">
               <button
-                onClick={() => setShowHomeCalendarOverview((prev) => !prev)}
+                onClick={() => {
+                  setPreferCalendarHome(true);
+                  setShowHomeCalendarOverview(true);
+                }}
                 className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
                 style={themeAccentEllieChipButtonStyle}
               >
-                {showHomeCalendarOverview ? 'Hide calendar overview' : 'Show calendar overview'}
+                Show calendar overview
               </button>
             </div>
 
@@ -19582,8 +19597,23 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         <div className="grid grid-cols-1 gap-4">
-          {showHomeCalendarOverview && (
+          {(showHomeCalendarOverview || preferCalendarHome) && (
           <div className={`${calendarView === 'agenda' ? 'bg-gray-100 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'} rounded-2xl shadow-xl p-3 sm:p-4 ${bottomNavTab !== 'home' ? 'hidden' : ''}`}>
+
+            {preferCalendarHome && (
+              <div className="flex justify-end mb-3">
+                <button
+                  onClick={() => {
+                    setPreferCalendarHome(false);
+                    setShowHomeCalendarOverview(false);
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                  style={themeAccentEllieChipButtonStyle}
+                >
+                  Show today&apos;s overview
+                </button>
+              </div>
+            )}
 
             {/* Active sub-calendar banner */}
             {(() => {
