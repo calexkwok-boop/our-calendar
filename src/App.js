@@ -911,7 +911,7 @@ function App() {
   const [showHomeAddEventModal, setShowHomeAddEventModal] = useState(false);
   const [homeAddEventForm, setHomeAddEventForm] = useState(() => ({
     title: '',
-    date: getDateKey(new Date()),
+    date: new Date().toISOString().slice(0, 10),
     time: '',
     location: '',
   }));
