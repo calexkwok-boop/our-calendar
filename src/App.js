@@ -4561,17 +4561,6 @@ useEffect(() => {
     setCoverHeaderControlsVisible(false);
     closeHomeWidgetWindows();
   }, [bottomNavTab, preferCalendarHome, closeHomeWidgetWindows]);
-  useEffect(() => {
-    const handleWindowScroll = () => {
-      if (bottomNavTab !== 'home') return;
-      setCoverHeaderControlsVisible(false);
-      closeHomeWidgetWindows();
-    };
-    window.addEventListener('scroll', handleWindowScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleWindowScroll);
-    };
-  }, [bottomNavTab, closeHomeWidgetWindows]);
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
   const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
   const activeShareRowForMe = (sharedCalendars || []).find((row) => {
