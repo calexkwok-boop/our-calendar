@@ -945,6 +945,7 @@ function App() {
   const [lastTapTime, setLastTapTime] = useState(0);
   const [recurrence, setRecurrence] = useState('once');
   const [calendarView, setCalendarView] = useState('month');
+  const [showHomeCalendarOverview, setShowHomeCalendarOverview] = useState(false);
   const [agendaRangeDays, setAgendaRangeDays] = useState(30);
   const [agendaSearchQuery, setAgendaSearchQuery] = useState('');
   const [showReactionPicker, setShowReactionPicker] = useState(null);
@@ -14786,6 +14787,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return endTs !== null && endTs < todayTs;
     })
     .sort((a, b) => toDateOnlyTs(getSubCalEndRaw(b)) - toDateOnlyTs(getSubCalEndRaw(a)));
+  const greetingHour = new Date().getHours();
+  const homeGreeting = greetingHour < 12 ? 'Good morning' : greetingHour < 18 ? 'Good afternoon' : 'Good evening';
+  const homeGreetingName = String(currentUser || user?.user_metadata?.handle || user?.user_metadata?.username || user?.email || 'there')
+    .trim()
+    .split('@')[0];
+  const getHomeSectionKeyForEvent = (event) => {
+    const hour = Number(String(event?.time || '').split(':')[0]);
+    if (!Number.isFinite(hour)) return 'morning';
+    if (hour < 12) return 'morning';
+    if (hour < 18) return 'afternoon';
+    return 'evening';
+  };
+  const homeDaySections = [
+    { key: 'morning', label: 'Morning', emptyTitle: 'Ease into the day', emptyCopy: 'Add breakfast, a workout, or one clear priority.' },
+    { key: 'afternoon', label: 'Afternoon', emptyTitle: 'Keep the middle light', emptyCopy: 'Drop in a lunch, meeting, or errand when plans take shape.' },
+    { key: 'evening', label: 'Evening', emptyTitle: 'Save space for later', emptyCopy: 'Dinner, downtime, or a night plan can live here.' },
+  ].map((section) => ({
+    ...section,
+    events: todayEvents.filter((event) => getHomeSectionKeyForEvent(event) === section.key),
+  }));
+  const homeTripsPreview = [...activeTrips, ...upcomingTrips]
+    .filter((trip, index, arr) => arr.findIndex((row) => String(row?.id || '') === String(trip?.id || '')) === index)
+    .slice(0, 3);
   const ownedLayerCalendars = layers.filter(layer => String(layer.owner_id) === String(user?.id));
   const uniqueVisibleLayers = Array.from(
     new Map((layers || []).map(layer => [String(layer?.id || ''), layer])).values()
@@ -15754,6 +15778,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const unreadInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 0 : 1), 0);
   const readInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 1 : 0), 0);
+  const homeActivityItems = [
+    unreadInAppCount > 0 ? { label: 'Notifications', value: `${unreadInAppCount} unread` } : null,
+    filteredUpcomingUserTabEvents.length > 0 ? { label: 'Upcoming', value: `${filteredUpcomingUserTabEvents.length} planned` } : null,
+    activeTrips.length > 0 ? { label: 'Trips live', value: `${activeTrips.length} active` } : null,
+  ].filter(Boolean);
   const activeChatUnreadCount = Number(chatUnreadCounts[String(activeLayerId || '')] || 0);
   const activeControlWidgets = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
   const popupEventDetailsById = (() => {
@@ -19303,49 +19332,256 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {bottomNavTab === 'home' && (
-          <div className="glass-panel rounded-2xl border border-white/50 dark:border-gray-700/70 p-3 sm:p-4 mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base sm:text-lg font-semibold" style={themeAccentHeadingStyle}>Today At A Glance</h3>
+          <div className="space-y-4 mb-4">
+            <div
+              className="glass-panel rounded-[28px] border border-white/50 dark:border-white/10 p-4 sm:p-5"
+              style={{
+                background: darkMode
+                  ? `linear-gradient(180deg, ${hexToRgba('#0f172a', 0.88)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`
+                  : `linear-gradient(180deg, ${hexToRgba('#ffffff', 0.94)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 100%)`,
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400 mb-2">Today</div>
+                  <h2 className="text-2xl sm:text-3xl font-semibold leading-tight" style={themeAccentHeadingStyle}>
+                    {homeGreeting}, {homeGreetingName}
+                  </h2>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </div>
+                </div>
                 <button
                   onClick={() => {
                     setSelectedDate(new Date());
                     setSelectedDates([]);
                     setShowDateDetailModal(true);
                   }}
-                  className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:shadow-md"
+                  className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:shadow-md shrink-0"
                   style={themeAccentEllieChipButtonStyle}
                 >
                   Open Today
                 </button>
-            </div>
-            {todayEvents.length === 0 ? (
-                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No events today.</div>
-                  ) : (
-                    <div className="space-y-1.5 max-h-24 sm:max-h-28 overflow-y-auto pr-1">
-                      {todayEvents.slice(0, 4).map(event => {
-                        const category = categories[event.category || 'other'] || categories.other;
-                        return (
-                    <div key={`${event.id}-${event.date}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white/80 dark:bg-gray-800/65 border border-gray-200/70 dark:border-gray-700/70">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${category.color}`} />
-                        <span className="text-xs sm:text-sm text-gray-800 dark:text-gray-100 truncate">{event.title}</span>
-                        {event.isUrgent && <span className="text-xs">??</span>}
-                      </div>
-                      <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 shrink-0">
-                        {event.time ? formatTime(event.time) : 'All day'}
+              </div>
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  {
+                    label: 'Add plan',
+                    icon: <Plus className="w-3.5 h-3.5" />,
+                    action: () => {
+                      setSelectedDate(new Date());
+                      setSelectedDates([]);
+                      setShowDateDetailModal(true);
+                    },
+                  },
+                  {
+                    label: 'Add event',
+                    icon: <Calendar className="w-3.5 h-3.5" />,
+                    action: () => {
+                      setIsPopupEventDraft(false);
+                      setSelectedDate(new Date());
+                      setSelectedDates([]);
+                      setShowDateDetailModal(true);
+                    },
+                  },
+                  {
+                    label: 'Start trip',
+                    icon: <MapPin className="w-3.5 h-3.5" />,
+                    action: () => setShowSubCalendarModal(true),
+                  },
+                  {
+                    label: 'Invite friends',
+                    icon: <MessageSquare className="w-3.5 h-3.5" />,
+                    action: () => setShowSharePanel(true),
+                  },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={item.action}
+                    className="rounded-2xl border border-white/10 bg-white/5 dark:bg-white/[0.04] px-3 py-3 text-left hover:bg-white/10 transition-all"
+                  >
+                    <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full" style={{ backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.18 : 0.12), color: activeLayerPageTheme.accent }}>
+                        {item.icon}
                       </span>
+                      <span>{item.label}</span>
                     </div>
-                  );
-                })}
-                {todayEvents.length > 4 && (
-                  <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">+{todayEvents.length - 4} more today</div>
-                )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {todayEvents.length === 0 && homeTripsPreview.length === 0 && (
+              <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-5">
+                <div className="text-base font-semibold text-gray-900 dark:text-gray-100">A clean slate today</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Start with one plan, one event, or your next trip and the day will fill in naturally.</div>
               </div>
             )}
+
+            <div className="glass-panel rounded-[28px] border border-white/50 dark:border-white/10 p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Today&apos;s rhythm</h3>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Morning, afternoon, and evening at a glance.</div>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">{todayEvents.length} plan{todayEvents.length === 1 ? '' : 's'}</div>
+              </div>
+              <div className="space-y-3">
+                {homeDaySections.map((section, index) => (
+                  <div
+                    key={section.key}
+                    className="rounded-[24px] border border-white/40 dark:border-white/10 p-4"
+                    style={{
+                      background: darkMode
+                        ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.07)} 0%, ${hexToRgba('#0f172a', 0.72)} 100%)`
+                        : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.92) 100%)`,
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{section.label}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{section.events.length > 0 ? `${section.events.length} item${section.events.length === 1 ? '' : 's'}` : section.emptyTitle}</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const next = new Date();
+                          next.setHours(index === 0 ? 9 : index === 1 ? 14 : 19, 0, 0, 0);
+                          setSelectedDate(next);
+                          setSelectedDates([]);
+                          setShowDateDetailModal(true);
+                        }}
+                        className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                        style={themeAccentEllieChipButtonStyle}
+                      >
+                        + Add plan
+                      </button>
+                    </div>
+                    {section.events.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-white/20 dark:border-white/10 px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        {section.emptyCopy}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {section.events.slice(0, 3).map((event) => {
+                          const category = categories[event.category || 'other'] || categories.other;
+                          return (
+                            <button
+                              key={`${section.key}-${event.id}-${event.date}`}
+                              onClick={() => {
+                                setSelectedDate(new Date());
+                                setSelectedDates([]);
+                                setShowDateDetailModal(true);
+                              }}
+                              className="w-full rounded-2xl border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/[0.04] px-3 py-3 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className={`w-2 h-2 rounded-full shrink-0 ${category.color}`} />
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{event.title}</span>
+                                  </div>
+                                  {event.location && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{event.location}</div>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                                  {event.time ? formatTime(event.time) : 'Anytime'}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                        {section.events.length > 3 && (
+                          <button
+                            onClick={() => {
+                              setSelectedDate(new Date());
+                              setSelectedDates([]);
+                              setShowDateDetailModal(true);
+                            }}
+                            className="text-xs text-gray-500 dark:text-gray-400 px-1"
+                          >
+                            +{section.events.length - 3} more
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Trips</h3>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Keep travel plans close, but secondary.</div>
+                </div>
+                <button
+                  onClick={() => setBottomNavTab('trips')}
+                  className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                  style={themeAccentEllieChipButtonStyle}
+                >
+                  Open Trips
+                </button>
+              </div>
+              {homeTripsPreview.length === 0 ? (
+                <div className="text-sm text-gray-500 dark:text-gray-400">No trips on deck yet.</div>
+              ) : (
+                <div className="space-y-2">
+                  {homeTripsPreview.map((trip) => (
+                    <button
+                      key={trip.id}
+                      onClick={() => openSubCalendar(trip)}
+                      className="w-full rounded-2xl border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/[0.04] px-3 py-3 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{trip.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {formatTripDate(getSubCalStartRaw(trip), true)} - {formatTripDate(getSubCalEndRaw(trip), true)}
+                          </div>
+                        </div>
+                        <span className="text-xs font-medium shrink-0" style={themeAccentTextStyle}>
+                          {activeTrips.some((row) => String(row?.id || '') === String(trip?.id || '')) ? 'Now' : 'Soon'}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {homeActivityItems.length > 0 && (
+              <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Bell className="w-4 h-4" style={themeAccentTextStyle} />
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Activity</div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {homeActivityItems.map((item) => (
+                    <div key={item.label} className="rounded-2xl border border-white/30 dark:border-white/10 bg-white/60 dark:bg-white/[0.04] px-3 py-3">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">{item.label}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-center">
+              <button
+                onClick={() => setShowHomeCalendarOverview((prev) => !prev)}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                style={themeAccentEllieChipButtonStyle}
+              >
+                {showHomeCalendarOverview ? 'Hide calendar overview' : 'Show calendar overview'}
+              </button>
+            </div>
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-4">
+          {showHomeCalendarOverview && (
           <div className={`${calendarView === 'agenda' ? 'bg-gray-100 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'} rounded-2xl shadow-xl p-3 sm:p-4 ${bottomNavTab !== 'home' ? 'hidden' : ''}`}>
 
             {/* Active sub-calendar banner */}
@@ -19730,6 +19966,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             )}
           </div>
+          )}
 
           {showDateDetailModal && (
           <div
