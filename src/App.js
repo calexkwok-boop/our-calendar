@@ -18940,58 +18940,66 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         })()}
 
         {showGauntletPanel && (
-          <GauntletPanel
-            activeLayerPageTheme={activeLayerPageTheme}
-            darkMode={darkMode}
-            deriveGauntletStandings={deriveGauntletStandings}
-            eligibleGauntletPopupEvents={eligibleGauntletPopupEvents}
-            finalizeGauntletRound={finalizeGauntletRound}
-            formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
-            formatTime={formatTime}
-            gauntletDraftRounds={gauntletDraftRounds}
-            gauntletError={gauntletError}
-            getGauntletCourtResult={getGauntletCourtResult}
-            layerGauntlets={layerGauntlets}
-            manualGauntletEligible={manualGauntletEligible}
-            manualGauntletParticipants={manualGauntletParticipants}
-            manualGauntletRosterInput={manualGauntletRosterInput}
-            resetGauntletTournament={resetGauntletTournament}
-            selectedGauntletEventId={selectedGauntletEventId}
-            setGauntletDraftRounds={setGauntletDraftRounds}
-            setGauntletError={setGauntletError}
-            setManualGauntletRosterInput={setManualGauntletRosterInput}
-            setSelectedGauntletEventId={setSelectedGauntletEventId}
-            setShowGauntletPanel={setShowGauntletPanel}
-            setUseManualGauntletRoster={setUseManualGauntletRoster}
-            startGauntletTournament={startGauntletTournament}
-            themeAccentBorder={themeAccentBorder}
-            themeAccentHeadingStyle={themeAccentHeadingStyle}
-            updateGauntletCourtScore={updateGauntletCourtScore}
-            useManualGauntletRoster={useManualGauntletRoster}
-          />
+          <div className="fixed inset-0 z-[70] bg-black/50 p-4 overflow-y-auto flex items-start sm:items-center justify-center">
+            <div className="w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+              <GauntletPanel
+                activeLayerPageTheme={activeLayerPageTheme}
+                darkMode={darkMode}
+                deriveGauntletStandings={deriveGauntletStandings}
+                eligibleGauntletPopupEvents={eligibleGauntletPopupEvents}
+                finalizeGauntletRound={finalizeGauntletRound}
+                formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
+                formatTime={formatTime}
+                gauntletDraftRounds={gauntletDraftRounds}
+                gauntletError={gauntletError}
+                getGauntletCourtResult={getGauntletCourtResult}
+                layerGauntlets={layerGauntlets}
+                manualGauntletEligible={manualGauntletEligible}
+                manualGauntletParticipants={manualGauntletParticipants}
+                manualGauntletRosterInput={manualGauntletRosterInput}
+                resetGauntletTournament={resetGauntletTournament}
+                selectedGauntletEventId={selectedGauntletEventId}
+                setGauntletDraftRounds={setGauntletDraftRounds}
+                setGauntletError={setGauntletError}
+                setManualGauntletRosterInput={setManualGauntletRosterInput}
+                setSelectedGauntletEventId={setSelectedGauntletEventId}
+                setShowGauntletPanel={setShowGauntletPanel}
+                setUseManualGauntletRoster={setUseManualGauntletRoster}
+                startGauntletTournament={startGauntletTournament}
+                themeAccentBorder={themeAccentBorder}
+                themeAccentHeadingStyle={themeAccentHeadingStyle}
+                updateGauntletCourtScore={updateGauntletCourtScore}
+                useManualGauntletRoster={useManualGauntletRoster}
+              />
+            </div>
+          </div>
         )} {showRoundRobinPanel && (
-  <RoundRobinPanel
-    activeLayerPageTheme={activeLayerPageTheme}
-    darkMode={darkMode}
-    eligibleRoundRobinEvents={eligibleRoundRobinEvents}
-    layerRoundRobins={layerRoundRobins}
-    manualRoundRobinRosterInput={manualRoundRobinRosterInput}
-    useManualRoundRobinRoster={useManualRoundRobinRoster}
-    selectedRoundRobinEventId={selectedRoundRobinEventId}
-    roundRobinError={roundRobinError}
-    setSelectedRoundRobinEventId={setSelectedRoundRobinEventId}
-    setManualRoundRobinRosterInput={setManualRoundRobinRosterInput}
-    setUseManualRoundRobinRoster={setUseManualRoundRobinRoster}
-    setRoundRobinError={setRoundRobinError}
-    setShowRoundRobinPanel={setShowRoundRobinPanel}
-    startRoundRobinTournament={startRoundRobinTournament}
-    resetRoundRobinTournament={resetRoundRobinTournament}
-    updateRoundRobinMatchScore={updateRoundRobinMatchScore}
-    finalizeRoundRobinMatch={finalizeRoundRobinMatch}
-    formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
-    formatTime={formatTime}
-    resolveHandleLikeLabel={resolveHandleLikeLabel}
-  />
+  <div className="fixed inset-0 z-[70] bg-black/50 p-4 overflow-y-auto flex items-start sm:items-center justify-center">
+    <div className="w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+      <RoundRobinPanel
+        activeLayerPageTheme={activeLayerPageTheme}
+        darkMode={darkMode}
+        eligibleRoundRobinEvents={eligibleRoundRobinEvents}
+        layerRoundRobins={layerRoundRobins}
+        manualRoundRobinRosterInput={manualRoundRobinRosterInput}
+        useManualRoundRobinRoster={useManualRoundRobinRoster}
+        selectedRoundRobinEventId={selectedRoundRobinEventId}
+        roundRobinError={roundRobinError}
+        setSelectedRoundRobinEventId={setSelectedRoundRobinEventId}
+        setManualRoundRobinRosterInput={setManualRoundRobinRosterInput}
+        setUseManualRoundRobinRoster={setUseManualRoundRobinRoster}
+        setRoundRobinError={setRoundRobinError}
+        setShowRoundRobinPanel={setShowRoundRobinPanel}
+        startRoundRobinTournament={startRoundRobinTournament}
+        resetRoundRobinTournament={resetRoundRobinTournament}
+        updateRoundRobinMatchScore={updateRoundRobinMatchScore}
+        finalizeRoundRobinMatch={finalizeRoundRobinMatch}
+        formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
+        formatTime={formatTime}
+        resolveHandleLikeLabel={resolveHandleLikeLabel}
+      />
+    </div>
+  </div>
 )}
 {showCalendarSwitcher && (
   <div
