@@ -76,9 +76,12 @@ const initials = (name) => {
 
 const getNames = (team, fn) => {
   if (!team || team.isBye) return ['Bye'];
-  return (team.members || []).map((p) =>
-    typeof fn === 'function' ? fn(p.displayName || p.name || 'Player', p.userId || '') : String(p.displayName || p.name || 'Player')
-  );
+  return (team.members || []).map((p) => {
+    const rawName = String(p.displayName || p.name || 'Player');
+    const rawUserId = String(p.userId || '').trim();
+    if (typeof fn === 'function' && rawUserId) return fn(rawName, rawUserId);
+    return rawName;
+  });
 };
 
 // Pickleball court SVG as a tiny decorative element
