@@ -21921,7 +21921,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {/* Cleaner mobile trip header */}
         <div
-          className="px-4 pb-4 pt-3 bg-white/80 dark:bg-slate-950/72 backdrop-blur-xl border-b border-white/10"
+          className="relative z-30 overflow-visible px-4 pb-4 pt-3 bg-white/80 dark:bg-slate-950/72 backdrop-blur-xl border-b border-white/10"
           style={{
             paddingTop: 'max(0.9rem, env(safe-area-inset-top))',
             paddingLeft: 'max(1rem, env(safe-area-inset-left))',
@@ -22046,7 +22046,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
 
           {subCalWeatherExpanded && (
-            <div className="relative mt-3 rounded-3xl border border-white/10 bg-white/80 p-3 shadow-lg dark:bg-slate-900/80">
+            <div className="relative z-40 mt-3 overflow-visible rounded-3xl border border-white/10 bg-white/80 p-3 shadow-lg dark:bg-slate-900/80">
               <div className="flex items-center gap-2">
                 <span className="text-sm shrink-0">🌤️</span>
                 <input
@@ -22091,7 +22091,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </button>
               </div>
               {subCalWeatherSuggestions.length > 0 && (
-                <div className="absolute top-full left-3 right-3 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-white/10 dark:bg-slate-900 z-50">
+                <div className="absolute top-full left-3 right-3 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-white/10 dark:bg-slate-900 z-[80]">
                   {subCalWeatherSuggestions.map((result, i) => (
                     <button
                       key={i}
