@@ -17241,7 +17241,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             }
             : undefined}
         >
-          {showHomeCalendarWidgets && (
+          {bottomNavTab === 'home' && (
             <div className="absolute inset-0 z-[25] pointer-events-none">
 
               {/* Icon — top left, opens account */}
