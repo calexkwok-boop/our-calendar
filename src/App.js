@@ -22067,10 +22067,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               {canEditCurrentTrip && (
                 <button
                   onClick={() => setShowTripBackgroundPhotoMenu(true)}
-                  className="relative flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10"
+                  className="relative flex h-7 w-7 items-center justify-center rounded-full border border-gray-200/80 bg-white/85 text-gray-500 shadow-sm transition-colors hover:bg-white dark:border-white/10 dark:bg-slate-900/70 dark:text-gray-300 dark:hover:bg-slate-900/90"
                   title={activeTripCoverPhoto?.url ? 'Change trip background photo' : 'Add trip background photo'}
                 >
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-3.5 h-3.5" />
                 </button>
               )}
               <button
@@ -22221,10 +22221,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             {canEditCurrentTrip && (
               <button
                 onClick={() => setShowTripBackgroundPhotoMenu(true)}
-                className="relative p-1.5 rounded-lg bg-gray-100/90 dark:bg-gray-700/90 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                className="relative flex h-7 w-7 items-center justify-center rounded-full border border-gray-200/80 bg-white/90 text-gray-500 shadow-sm transition-colors hover:bg-white dark:border-white/10 dark:bg-slate-900/70 dark:text-gray-300 dark:hover:bg-slate-900/90"
                 title={activeTripCoverPhoto?.url ? 'Change trip background photo' : 'Add trip background photo'}
               >
-                <Camera className="w-4 h-4" />
+                <Camera className="w-3.5 h-3.5" />
               </button>
             )}
             <button
