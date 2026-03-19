@@ -1019,7 +1019,7 @@ function App() {
   const [subCalSelectedDate, setSubCalSelectedDate] = useState(null);
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
   const [subCalAddingSlot, setSubCalAddingSlot] = useState(null); // hour number being added to
-  const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', endTime: '', location: '' });
+  const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', startTime: '', endTime: '', location: '' });
   const [subCalTab, setSubCalTab] = useState('itinerary'); // 'itinerary' | 'expenses' | 'photos'
   const [shareMyLocation, setShareMyLocation] = useState(() => localStorage.getItem('subcal-share-location') === 'true');
   const [memberLocations, setMemberLocations] = useState({});
@@ -23228,7 +23228,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           }));
           const handleStartAddPlan = (slotValue) => {
             setSubCalAddingSlot(slotValue);
-            setSubCalNewEventForm({ title: '', endTime: '', location: '' });
+            setSubCalNewEventForm({
+              title: '',
+              startTime: slotValue === -1 ? '' : `${slotValue === 0 ? '12' : slotValue > 12 ? slotValue - 12 : slotValue}:00 ${slotValue >= 12 ? 'PM' : 'AM'}`,
+              endTime: '',
+              location: '',
+            });
           };
 
           return (
@@ -23249,9 +23254,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <div className="flex gap-2 min-w-0">
                       <input
                         type="text"
-                        readOnly
-                        value={slotValue === -1 ? 'Anytime' : `${slotValue === 0 ? '12' : slotValue > 12 ? slotValue - 12 : slotValue}:00 ${slotValue >= 12 ? 'PM' : 'AM'}`}
-                        className="w-28 shrink-0 rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-base text-gray-500 dark:border-white/10 dark:bg-white/5 dark:text-gray-300"
+                        placeholder={slotValue === -1 ? 'Start time (optional)' : 'Start time'}
+                        value={subCalNewEventForm.startTime}
+                        onChange={e => setSubCalNewEventForm(f => ({ ...f, startTime: e.target.value }))}
+                        className="w-32 shrink-0 rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-base text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
                         style={{ fontSize: '16px' }}
                       />
                       <input
@@ -23273,6 +23279,21 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       <button
                         onClick={async () => {
                           if (!subCalNewEventForm.title.trim()) return;
+                          let timeStr = null;
+                          const rawStartTime = String(subCalNewEventForm.startTime || '').trim();
+                          if (rawStartTime) {
+                            const match = rawStartTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                            if (match) {
+                              let h = parseInt(match[1]);
+                              const m = match[2] ? parseInt(match[2]) : 0;
+                              const p = match[3]?.toLowerCase();
+                              if (p === 'pm' && h < 12) h += 12;
+                              if (p === 'am' && h === 12) h = 0;
+                              timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                            }
+                          } else if (slotValue !== -1) {
+                            timeStr = `${String(slotValue).padStart(2, '0')}:00`;
+                          }
                           let endTimeStr = null;
                           if (subCalNewEventForm.endTime.trim()) {
                             const match = subCalNewEventForm.endTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
@@ -23285,17 +23306,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               endTimeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                             }
                           }
-                          const timeStr = slotValue === -1 ? null : `${String(slotValue).padStart(2, '0')}:00`;
                           await addSubCalEvent(subCalSelectedDate, subCalNewEventForm.title, timeStr, endTimeStr, subCalNewEventForm.location || null);
                           setSubCalAddingSlot(null);
-                          setSubCalNewEventForm({ title: '', endTime: '', location: '' });
+                          setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '' });
                         }}
                         className="flex-1 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 px-3 py-2 text-sm font-medium text-white"
                       >
                         Add plan
                       </button>
                       <button
-                        onClick={() => { setSubCalAddingSlot(null); setSubCalNewEventForm({ title: '', endTime: '', location: '' }); }}
+                        onClick={() => { setSubCalAddingSlot(null); setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '' }); }}
                         className="rounded-2xl bg-gray-100 px-3 py-2 text-sm text-gray-600 dark:bg-white/10 dark:text-gray-300"
                       >
                         Cancel
@@ -23545,7 +23565,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         onClick={() => {
                           if (subCalAddingSlot === hour || slotEvents.length > 0 || subCalEditingEvent) return;
                           setSubCalAddingSlot(hour);
-                          setSubCalNewEventForm({ title: '', endTime: '', location: '' });
+                          setSubCalNewEventForm({
+                            title: '',
+                            startTime: `${hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`,
+                            endTime: '',
+                            location: '',
+                          });
                         }}
                       >
                         {slotEvents.map(event => (
@@ -23710,8 +23735,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               <input
                                 type="text"
                                 readOnly
-                                value={`${hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`}
-                                className="w-24 shrink-0 text-base sm:text-xs px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-gray-300 rounded-lg bg-gray-50"
+                                value={subCalNewEventForm.startTime}
+                                onChange={e => setSubCalNewEventForm(f => ({ ...f, startTime: e.target.value }))}
+                                placeholder="Start time"
+                                className="w-28 shrink-0 text-base sm:text-xs px-2 py-1.5 border border-gray-200 dark:border-gray-600 dark:bg-gray-600 dark:text-gray-200 rounded-lg bg-gray-50"
                                 style={{ fontSize: '16px' }}
                               />
                               <input
@@ -23733,7 +23760,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               <button
                                 onClick={async () => {
                                   if (!subCalNewEventForm.title.trim()) return;
-                                  const timeStr = `${String(hour).padStart(2,'0')}:00`;
+                                  let timeStr = `${String(hour).padStart(2,'0')}:00`;
+                                  const rawStartTime = String(subCalNewEventForm.startTime || '').trim();
+                                  if (rawStartTime) {
+                                    const startMatch = rawStartTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                                    if (startMatch) {
+                                      let h = parseInt(startMatch[1]);
+                                      const m = startMatch[2] ? parseInt(startMatch[2]) : 0;
+                                      const p = startMatch[3]?.toLowerCase();
+                                      if (p === 'pm' && h < 12) h += 12;
+                                      if (p === 'am' && h === 12) h = 0;
+                                      timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+                                    }
+                                  }
                                   let endTimeStr = null;
                                   if (subCalNewEventForm.endTime.trim()) {
                                     const match = subCalNewEventForm.endTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
@@ -23748,12 +23787,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                   }
                                   await addSubCalEvent(subCalSelectedDate, subCalNewEventForm.title, timeStr, endTimeStr, subCalNewEventForm.location || null);
                                   setSubCalAddingSlot(null);
-                                  setSubCalNewEventForm({ title: '', endTime: '', location: '' });
+                                  setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '' });
                                 }}
                                 className="flex-1 py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg text-xs font-medium"
                               >Add Event</button>
                               <button
-                                onClick={() => { setSubCalAddingSlot(null); setSubCalNewEventForm({ title: '', endTime: '', location: '' }); }}
+                                onClick={() => { setSubCalAddingSlot(null); setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '' }); }}
                                 className="px-3 py-1.5 bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-lg text-xs"
                               >Cancel</button>
                             </div>
