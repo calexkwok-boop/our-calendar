@@ -125,8 +125,8 @@ export default function RoundRobinPanel({
   const shellShadow = darkMode ? undefined : '0 24px 60px rgba(15,23,42,0.12)';
   const mutedBg = darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.035)';
   const mutedChipBg = darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)';
-  const primaryText = darkMode ? 'var(--color-text-primary)' : '#0f172a';
-  const secondaryText = darkMode ? 'var(--color-text-secondary)' : '#64748b';
+  const primaryText = darkMode ? '#f8fafc' : '#0f172a';
+  const secondaryText = darkMode ? '#cbd5e1' : '#64748b';
 
   const tid = useManualRoundRobinRoster ? '__manual__' : String(selectedRoundRobinEventId || '');
   const tournament = tid ? layerRoundRobins?.[tid] : null;
