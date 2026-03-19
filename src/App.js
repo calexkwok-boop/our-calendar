@@ -8962,13 +8962,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       ] = await Promise.all([
         supabase
           .from('popup_event_signups')
-          .select('event_id,user_id,display_name,created_at')
+          .select('id,event_id,user_id,display_name,created_at')
           .in('layer_id', visibleLayerIds)
           .in('event_id', eventIds)
           .order('created_at', { ascending: true }),
         supabase
           .from('popup_event_members')
-          .select('event_id,user_id,display_name,role,joined_at')
+          .select('id,event_id,user_id,display_name,role,joined_at')
           .in('event_id', eventIds)
           .order('joined_at', { ascending: true }),
       ]);
@@ -9007,8 +9007,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           }
           if (!Array.isArray(signupsMap[eventId])) signupsMap[eventId] = [];
           signupsMap[eventId].push({
+            memberId: String(row?.id || ''),
             userId,
             displayName,
+            manual: userId === String(user?.id || '').trim() && !selfAliasSet.has(displayName.trim().toLowerCase()),
             createdAt: String(row?.joined_at || ''),
           });
           if (!memberIdentityByEvent.has(eventId)) memberIdentityByEvent.set(eventId, new Set());
@@ -9035,8 +9037,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           if (memberIdentities.has(identityKey) || hasSameSignup) return;
           if (!Array.isArray(signupsMap[eventId])) signupsMap[eventId] = [];
           signupsMap[eventId].push({
+            signupId: String(row?.id || ''),
             userId,
             displayName,
+            manual: false,
             createdAt: String(row?.created_at || ''),
           });
         });
@@ -16080,7 +16084,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const entry = eligibleRoundRobinEvents.find((item) => String(item?.eventId || '') === normalizedEventId) || null;
     if (!entry || entry.signupCount < 3) { setRoundRobinError('Need at least 3 signed-up players.'); return; }
     participants = (entry.signups || []).map((signup, idx) => ({
-      id: String(signup?.userId || `guest-${idx + 1}`),
+      id: String(
+        signup?.memberId
+        || signup?.signupId
+        || (signup?.userId && !signup?.manual ? signup.userId : '')
+        || `guest-${idx + 1}-${String(signup?.displayName || 'player').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+      ),
       userId: String(signup?.userId || ''),
       displayName: String(signup?.displayName || `Player ${idx + 1}`),
     }));
