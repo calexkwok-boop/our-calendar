@@ -15989,7 +15989,34 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!tournament) return;
     const rounds = Array.isArray(tournament?.rounds) ? tournament.rounds : [];
     const roundIndex = rounds.findIndex((round) => !round?.finalizedAt);
+    const participantsById = (tournament?.participants || []).reduce((acc, participant) => {
+      const id = String(participant?.id || '').trim();
+      if (!id) return acc;
+      acc[id] = participant;
+      return acc;
+    }, {});
     if (roundIndex < 0) {
+      if (String(tournament?.status || '') !== 'completed') {
+        const fallbackNextRound = buildGauntletRoundFromOrder({
+          participantOrder: tournament?.participantOrder || [],
+          participantsById,
+          roundIndex: rounds.length,
+          byeCursor: Number(tournament?.byeCursor || 0),
+        });
+        if (fallbackNextRound) {
+          setLayerGauntlets((prev) => ({
+            ...(prev || {}),
+            [normalizedEventId]: {
+              ...tournament,
+              rounds: [...rounds, fallbackNextRound],
+              status: 'active',
+              completedAt: null,
+            },
+          }));
+          setGauntletError('');
+          return;
+        }
+      }
       setGauntletError('This gauntlet is already complete.');
       return;
     }
@@ -15999,12 +16026,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setGauntletError('Enter non-tied scores for every court before advancing.');
       return;
     }
-    const participantsById = (tournament?.participants || []).reduce((acc, participant) => {
-      const id = String(participant?.id || '').trim();
-      if (!id) return acc;
-      acc[id] = participant;
-      return acc;
-    }, {});
     const nextParticipantOrder = buildNextGauntletParticipantOrder(round, participantsById, tournament?.participantOrder || []);
     const updatedRounds = rounds.map((item, idx) => (
       idx === roundIndex ? { ...item, finalizedAt: new Date().toISOString() } : item

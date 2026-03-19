@@ -819,9 +819,9 @@ function GauntletPanel({
                   Round {roundNum} of {totalRounds} - {tournament.status === 'completed' ? 'Completed' : 'In Progress'}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {activeRound && (
+                  {(activeRound || tournament?.status !== 'completed') && (
                     <button onClick={() => finalizeGauntletRound(tournamentKey)} style={actionPrimary}>
-                      Finalize Round
+                      {activeRound ? 'Finalize Round' : 'Next Round'}
                     </button>
                   )}
                   <button onClick={() => resetGauntletTournament(tournamentKey)} style={actionSecondary}>
