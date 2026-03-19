@@ -74,14 +74,9 @@ const initials = (name) => {
   return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : String(name || '?')[0].toUpperCase();
 };
 
-const getNames = (team, fn) => {
+const getNames = (team) => {
   if (!team || team.isBye) return ['Bye'];
-  return (team.members || []).map((p) => {
-    const rawName = String(p.displayName || p.name || 'Player');
-    const rawUserId = String(p.userId || '').trim();
-    if (typeof fn === 'function' && rawUserId) return fn(rawName, rawUserId);
-    return rawName;
-  });
+  return (team.members || []).map((p) => String(p.displayName || p.name || 'Player'));
 };
 
 // Pickleball court SVG as a tiny decorative element
@@ -421,8 +416,8 @@ export default function RoundRobinPanel({
                 {expanded && (
                   <div className="px-3 pb-3 space-y-2 border-t pt-3" style={{ borderColor: border }}>
                     {round.matches.map((match, mi) => {
-                      const namesA = getNames(match.teamA, resolveHandleLikeLabel);
-                      const namesB = getNames(match.teamB, resolveHandleLikeLabel);
+                      const namesA = getNames(match.teamA);
+                      const namesB = getNames(match.teamB);
                       const aWon = match.completed && parseInt(match.scoreA) > parseInt(match.scoreB);
                       const bWon = match.completed && parseInt(match.scoreB) > parseInt(match.scoreA);
 
