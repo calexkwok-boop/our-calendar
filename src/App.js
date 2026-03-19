@@ -9908,6 +9908,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_signups', filter: `layer_id=eq.${activeLayerId}` }, () => {
         loadPopupEventData();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_event_members' }, () => {
+        loadPopupEventData();
+      })
       .subscribe();
     return () => {
       channel.unsubscribe();
