@@ -8989,9 +8989,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           const eventId = String(row?.event_id || '').trim();
           if (!eventId) return;
           const userId = String(row?.user_id || '').trim();
-          const displayName = String(row?.display_name || '').trim() || resolveHandleLikeLabel(String(row?.user_id || 'Member'), userId);
-          const isSelfAlias = userId === String(user?.id || '').trim() && selfAliasSet.has(displayName.trim().toLowerCase());
-          if (isSelfAlias) {
+          const rawDisplayName = String(row?.display_name || '').trim();
+          const isSelfAlias = userId === String(user?.id || '').trim() && selfAliasSet.has(rawDisplayName.toLowerCase());
+          const displayName = isSelfAlias
+            ? resolveHandleLikeLabel(String(currentUser || user?.email || user?.phone || 'Member'), String(user?.id || ''))
+            : (rawDisplayName || resolveHandleLikeLabel(String(row?.user_id || 'Member'), userId));
+          const normalizedIsSelfAlias = userId === String(user?.id || '').trim() && selfAliasSet.has(displayName.trim().toLowerCase());
+          if (normalizedIsSelfAlias) {
             if (!seenSelfAliasesByEvent.has(eventId)) seenSelfAliasesByEvent.set(eventId, new Set());
             const seen = seenSelfAliasesByEvent.get(eventId);
             const roleKey = String(row?.role || 'player').trim() || 'player';
@@ -9006,19 +9010,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             createdAt: String(row?.joined_at || ''),
           });
           if (!memberIdentityByEvent.has(eventId)) memberIdentityByEvent.set(eventId, new Set());
-          memberIdentityByEvent.get(eventId).add(isSelfAlias ? `${userId}|self` : `${userId}|${displayName.trim().toLowerCase()}`);
+          memberIdentityByEvent.get(eventId).add(normalizedIsSelfAlias ? `${userId}|self` : `${userId}|${displayName.trim().toLowerCase()}`);
         });
         (signupRows || []).forEach((row) => {
           const eventId = String(row?.event_id || '').trim();
           if (!eventId) return;
           const userId = String(row?.user_id || '').trim();
-          const displayName = String(row?.display_name || '').trim() || resolveHandleLikeLabel(String(row?.user_id || 'Member'), userId);
+          const rawDisplayName = String(row?.display_name || '').trim();
+          const isSelfAlias = userId === String(user?.id || '').trim() && selfAliasSet.has(rawDisplayName.toLowerCase());
+          const displayName = isSelfAlias
+            ? resolveHandleLikeLabel(String(currentUser || user?.email || user?.phone || 'Member'), String(user?.id || ''))
+            : (rawDisplayName || resolveHandleLikeLabel(String(row?.user_id || 'Member'), userId));
           const memberIdentities = memberIdentityByEvent.get(eventId) || new Set();
-          const isSelfAlias = userId === String(user?.id || '').trim() && selfAliasSet.has(displayName.trim().toLowerCase());
-          const identityKey = isSelfAlias ? `${userId}|self` : `${userId}|${displayName.trim().toLowerCase()}`;
+          const normalizedIsSelfAlias = userId === String(user?.id || '').trim() && selfAliasSet.has(displayName.trim().toLowerCase());
+          const identityKey = normalizedIsSelfAlias ? `${userId}|self` : `${userId}|${displayName.trim().toLowerCase()}`;
           const hasSameSignup = Array.isArray(signupsMap[eventId]) && signupsMap[eventId].some((entry) => (
             String(entry?.userId || '') === userId && (
-              (isSelfAlias && selfAliasSet.has(String(entry?.displayName || '').trim().toLowerCase()))
+              (normalizedIsSelfAlias && selfAliasSet.has(String(entry?.displayName || '').trim().toLowerCase()))
               || String(entry?.displayName || '').trim().toLowerCase() === displayName.trim().toLowerCase()
             )
           ));

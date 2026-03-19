@@ -595,6 +595,14 @@ export default function PopupEventPanel({
       .map((value) => String(value || '').trim().toLowerCase())
       .filter(Boolean)
   );
+  const normalizeOwnPopupLabel = (rawName, rawUserId) => {
+    const uid = String(rawUserId || '').trim();
+    const nextName = String(rawName || '').trim();
+    if (uid && uid === String(user?.id || '').trim() && selfAliasSet.has(nextName.toLowerCase())) {
+      return effectiveDisplayName;
+    }
+    return nextName || 'Player';
+  };
 
   const [screen, setScreen] = useState(initialEventId ? 'detail' : 'create');
   const [event, setEvent] = useState(null);
@@ -649,7 +657,10 @@ export default function PopupEventPanel({
           if (seenSelfAliasByRole.has(memberKey)) return;
           seenSelfAliasByRole.add(memberKey);
         }
-        dedupedMembers.push(member);
+        dedupedMembers.push({
+          ...member,
+          display_name: normalizeOwnPopupLabel(memberName, memberUserId),
+        });
       });
       const memberList = [...dedupedMembers];
       const memberUserIds = new Set(memberList.map(m => String(m.user_id || '')));
@@ -661,7 +672,7 @@ export default function PopupEventPanel({
           id: `signup-${s.user_id}`,
           event_id: id,
           user_id: s.user_id,
-          display_name: s.display_name || 'Player',
+          display_name: normalizeOwnPopupLabel(s.display_name, s.user_id),
           role: 'player',
           joined_at: s.created_at,
         });
