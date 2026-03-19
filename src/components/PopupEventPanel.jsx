@@ -613,6 +613,10 @@ export default function PopupEventPanel({
   const [manualPlayerName, setManualPlayerName] = useState('');
   const [manualAddBusy, setManualAddBusy] = useState(false);
   const [manualAddError, setManualAddError] = useState('');
+  const [editingCapacity, setEditingCapacity] = useState(false);
+  const [capacityDraft, setCapacityDraft] = useState('10');
+  const [capacityBusy, setCapacityBusy] = useState(false);
+  const [capacityError, setCapacityError] = useState('');
   const eventMetaFallbackRef = useRef(eventMetaFallback);
 
   useEffect(() => {
@@ -625,6 +629,10 @@ export default function PopupEventPanel({
   const isHostOrCohost = isHost || isCohost;
   const isMember = Boolean(myMember);
   const isFull = event && members.length >= (event.max_players || 99);
+
+  useEffect(() => {
+    setCapacityDraft(String(Math.max(1, Number(event?.max_players || 10))));
+  }, [event?.max_players]);
 
   const loadEvent = useCallback(async (id) => {
     if (!id || !supabase) return;
@@ -736,6 +744,30 @@ export default function PopupEventPanel({
       setManualAddError(err?.message || 'Could not add player.');
     }
     setManualAddBusy(false);
+  };
+  const handleSaveCapacity = async () => {
+    if (!isHost || !isUuid(event?.id)) return;
+    const nextMax = Math.max(memberCount || 1, Number.parseInt(String(capacityDraft || '').trim(), 10) || 0);
+    if (!Number.isFinite(nextMax) || nextMax < Math.max(memberCount || 1, 1)) {
+      setCapacityError(`Player limit must be at least ${Math.max(memberCount || 1, 1)}.`);
+      return;
+    }
+    setCapacityBusy(true);
+    setCapacityError('');
+    try {
+      const [detailResult, summaryResult] = await Promise.all([
+        supabase.from('popup_event_details').update({ max_players: nextMax }).eq('id', event.id),
+        supabase.from('popup_events').update({ max_people: nextMax }).eq('event_id', event.id),
+      ]);
+      if (detailResult.error) throw detailResult.error;
+      if (summaryResult.error) throw summaryResult.error;
+      setEvent((prev) => prev ? { ...prev, max_players: nextMax } : prev);
+      setEditingCapacity(false);
+      await loadEvent(event.id);
+    } catch (err) {
+      setCapacityError(err?.message || 'Could not update player limit.');
+    }
+    setCapacityBusy(false);
   };
   const handleCopyLink = () => { navigator.clipboard.writeText(`${window.location.origin}?popup=${event.id}`).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
@@ -864,6 +896,55 @@ export default function PopupEventPanel({
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 14, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)' }}>
               <Crown style={{ width: 14, height: 14, color: '#f59e0b' }} />
               <span style={{ fontSize: 12, fontWeight: 700, color: '#d97706' }}>Hosted by {hostMember.display_name}</span>
+            </div>
+          )}
+          {isHost && !isLegacyInvalidEvent && (
+            <div style={{ padding: '12px 14px', borderRadius: 14, background: softBg, border: `1px solid ${border}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: editingCapacity ? 10 : 0 }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: accent, marginBottom: 2 }}>Player limit</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: primaryText }}>{memberCount} / {event.max_players} players</div>
+                </div>
+                {!editingCapacity ? (
+                  <button
+                    onClick={() => { setCapacityDraft(String(Math.max(memberCount || 1, Number(event?.max_players || 10)))); setCapacityError(''); setEditingCapacity(true); }}
+                    style={{ padding: '8px 12px', borderRadius: 999, fontSize: 12, fontWeight: 800, border: `1px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#fff', color: primaryText, cursor: 'pointer' }}
+                  >
+                    Edit
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      type="number"
+                      min={Math.max(memberCount || 1, 1)}
+                      max={99}
+                      value={capacityDraft}
+                      onChange={(e) => { setCapacityDraft(e.target.value); if (capacityError) setCapacityError(''); }}
+                      style={{ width: 72, padding: '8px 10px', borderRadius: 12, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', color: primaryText, outline: 'none', fontSize: 13, fontWeight: 700 }}
+                    />
+                    <button
+                      onClick={handleSaveCapacity}
+                      disabled={capacityBusy}
+                      style={{ ...btnStyle, padding: '8px 12px', borderRadius: 999, fontSize: 12, fontWeight: 800, opacity: capacityBusy ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      {capacityBusy ? <Loader style={{ width: 14, height: 14 }} /> : null}
+                      {capacityBusy ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => { setEditingCapacity(false); setCapacityDraft(String(Math.max(1, Number(event?.max_players || 10)))); setCapacityError(''); }}
+                      style={{ padding: '8px 12px', borderRadius: 999, fontSize: 12, fontWeight: 800, border: 'none', background: 'transparent', color: secondaryText, cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+              {editingCapacity && (
+                <div style={{ fontSize: 11, color: secondaryText }}>
+                  Set the max number of players. Minimum: {Math.max(memberCount || 1, 1)}.
+                </div>
+              )}
+              {capacityError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 8 }}>{capacityError}</div>}
             </div>
           )}
           {!isLegacyInvalidEvent && !isMember && event.status === 'open' && !isFull && (
