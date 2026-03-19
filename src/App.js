@@ -15929,11 +15929,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         >
           <div className="flex items-start justify-between gap-3 mb-5">
             <div>
-              <div className="text-xs uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400 mb-2">Plan ahead</div>
-              <h2 className="text-2xl font-semibold leading-tight" style={themeAccentHeadingStyle}>
+              <div className="text-[11px] uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-1.5">Plan ahead</div>
+              <h2 className="text-[2rem] font-semibold leading-none" style={themeAccentHeadingStyle}>
                 Add Event
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 max-w-sm leading-relaxed">
                 Pick the date, time, place, and what you&apos;re doing.
               </p>
             </div>
@@ -15942,16 +15942,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 setShowHomeAddEventModal(false);
                 resetHomeAddEventForm();
               }}
-              className="w-9 h-9 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-500 dark:text-gray-300 flex items-center justify-center"
+              className="w-10 h-10 rounded-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-white/[0.04] text-gray-500 dark:text-gray-300 flex items-center justify-center shrink-0"
               aria-label="Close add event"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <label className="block text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-2">
+              <label className="block text-[11px] uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400 mb-2">
                 What you&apos;re doing
               </label>
               <input
@@ -15964,9 +15964,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               />
             </div>
 
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] gap-2.5 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-2">
+                <label className="block text-[11px] uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400 mb-2">
                   Date
                 </label>
                 <input
@@ -15974,24 +15974,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   min={getDateKey(new Date())}
                   value={homeAddEventForm.date}
                   onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, date: e.target.value }))}
-                  className="w-full min-w-0 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full min-w-0 h-12 px-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
                 />
               </div>
               <div>
-                <label className="block text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-2">
+                <label className="block text-[11px] uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400 mb-2">
                   Time
                 </label>
                 <input
                   type="time"
                   value={homeAddEventForm.time}
                   onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, time: e.target.value }))}
-                  className="w-full min-w-0 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full min-w-0 h-12 px-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-2">
+              <label className="block text-[11px] uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400 mb-2">
                 Location
               </label>
               <PlacesAutocomplete
@@ -16003,7 +16003,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             </div>
           </div>
 
-          <div className="flex gap-3 mt-5">
+          <div className="flex gap-3 mt-6">
             <button
               onClick={handleSubmitHomeAddEvent}
               className="flex-1 px-4 py-3 rounded-2xl text-white font-medium transition-all hover:shadow-lg"
