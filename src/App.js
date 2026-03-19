@@ -1021,6 +1021,8 @@ function App() {
   const layerLocationChannelRef = useRef(null);
   const layerGeoWatchRef = useRef(null);
   const [tripPhotos, setTripPhotos] = useState([]);
+  const [tripCoverPhoto, setTripCoverPhoto] = useState(null);
+  const [tripCoverPhotoNoteId, setTripCoverPhotoNoteId] = useState(null);
   const [tripHighlightsSlides, setTripHighlightsSlides] = useState([]);
   const [showTripHighlightsModal, setShowTripHighlightsModal] = useState(false);
   const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
@@ -1050,6 +1052,7 @@ function App() {
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
   const DELETED_PHOTOS_NOTE_TEXT = '__DELETED_PHOTOS_V1__';
+  const TRIP_COVER_PHOTO_NOTE_TEXT = '__TRIP_COVER_PHOTO_V1__';
   const AUTO_MERGE_SHARED_LAYERS = false;
   const getDeletedPhotosLocalKey = (subCalId) => `subcal-deleted-photos-${subCalId}`;
   const readLocalDeletedPhotoIds = (subCalId) => {
@@ -2264,6 +2267,8 @@ function App() {
     }
     setSubCalTab('itinerary');
     setTripPhotos([]);
+    setTripCoverPhoto(null);
+    setTripCoverPhotoNoteId(null);
     setDeletedPhotoIds([]);
     setDeletedPhotosNoteId(null);
     await loadGlobalVenmoHandles();
@@ -2461,6 +2466,8 @@ function App() {
       let loadedCashAppHandlesNoteId = null;
       let loadedDeletedPhotoIds = [];
       let loadedDeletedPhotosNoteId = null;
+      let loadedTripCoverPhoto = null;
+      let loadedTripCoverPhotoNoteId = null;
       (data || []).forEach((n) => {
         let parsedChecklist = [];
         try {
@@ -2502,6 +2509,13 @@ function App() {
           loadedDeletedPhotoIds = Array.isArray(parsedChecklist) ? parsedChecklist : [];
           return;
         }
+        if (n.text === TRIP_COVER_PHOTO_NOTE_TEXT) {
+          loadedTripCoverPhotoNoteId = n.id;
+          loadedTripCoverPhoto = (parsedChecklist && typeof parsedChecklist === 'object' && !Array.isArray(parsedChecklist))
+            ? parsedChecklist
+            : null;
+          return;
+        }
         visibleNotes.push({ ...n, checklist: parsedChecklist });
       });
       setSubCalNotes(visibleNotes);
@@ -2515,8 +2529,11 @@ function App() {
       const mergedDeletedPhotoIds = Array.from(new Set([...(loadedDeletedPhotoIds || []).map(id => String(id)), ...localDeleted]));
       setDeletedPhotoIds(mergedDeletedPhotoIds);
       setDeletedPhotosNoteId(loadedDeletedPhotosNoteId);
+      setTripCoverPhoto(loadedTripCoverPhoto && loadedTripCoverPhoto.url ? loadedTripCoverPhoto : null);
+      setTripCoverPhotoNoteId(loadedTripCoverPhotoNoteId);
       return {
         deletedPhotoIds: mergedDeletedPhotoIds,
+        tripCoverPhoto: loadedTripCoverPhoto && loadedTripCoverPhoto.url ? loadedTripCoverPhoto : null,
       };
     } catch (e) { console.error(e); }
     return {
@@ -2859,6 +2876,57 @@ function App() {
     }
     setPhotoEventId(null);
     if (clearInput) clearInput();
+  };
+  const saveTripCoverPhoto = async (photo) => {
+    if (!assertCanEditSubCalendar('change the trip cover photo')) return false;
+    if (!activeSubCalendar) return false;
+    const nextCover = photo?.url ? {
+      id: String(photo.id || '').trim() || null,
+      url: String(photo.url || '').trim(),
+      caption: String(photo.caption || '').trim() || null,
+    } : null;
+    if (!nextCover?.url) return false;
+    const payload = {
+      checklist: JSON.stringify(nextCover),
+    };
+    if (tripCoverPhotoNoteId) {
+      const { error } = await supabase.from('sub_calendar_notes').update(payload).eq('id', tripCoverPhotoNoteId);
+      if (error) {
+        console.error('Trip cover update failed:', error);
+        return false;
+      }
+    } else {
+      const row = {
+        id: `sccover_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        sub_calendar_id: activeSubCalendar.id,
+        text: TRIP_COVER_PHOTO_NOTE_TEXT,
+        checklist: JSON.stringify(nextCover),
+        created_by: currentUser,
+        user_id: user?.id,
+        created_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from('sub_calendar_notes').insert(row);
+      if (error) {
+        console.error('Trip cover insert failed:', error);
+        return false;
+      }
+      setTripCoverPhotoNoteId(row.id);
+    }
+    setTripCoverPhoto(nextCover);
+    return true;
+  };
+  const clearTripCoverPhoto = async () => {
+    if (!assertCanEditSubCalendar('remove the trip cover photo')) return false;
+    if (tripCoverPhotoNoteId) {
+      const { error } = await supabase.from('sub_calendar_notes').delete().eq('id', tripCoverPhotoNoteId);
+      if (error) {
+        console.error('Trip cover delete failed:', error);
+        return false;
+      }
+    }
+    setTripCoverPhoto(null);
+    setTripCoverPhotoNoteId(null);
+    return true;
   };
 
   const addSubCalNote = async () => {
@@ -14374,6 +14442,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (ts === null) return 'Unknown date';
     return new Date(ts).toLocaleDateString('en-US', withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
   };
+  const activeTripCoverPhoto = tripCoverPhoto?.url ? tripCoverPhoto : null;
+  const canEditCurrentTrip = Boolean(
+    activeSubCalendar
+    && canEditLayerById(String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || '').trim())
+  );
   const canGenerateTripHighlights = Boolean(
     activeSubCalendar
     && toDateOnlyTs(activeSubCalendar?.end_date) !== null
@@ -21725,6 +21798,65 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         >
 
         {/* Weather location — collapsed pill or expanding input */}
+        <div className="px-4 pt-3 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+          <div className="relative overflow-hidden rounded-3xl h-44 bg-gradient-to-br from-purple-200 via-pink-100 to-indigo-100 dark:from-gray-700 dark:via-gray-800 dark:to-gray-900">
+            {activeTripCoverPhoto?.url ? (
+              <>
+                <img
+                  src={activeTripCoverPhoto.url}
+                  alt={`${activeSubCalendar.name} cover`}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
+              </>
+            ) : null}
+            <div className="absolute inset-x-0 bottom-0 p-4">
+              <div className={`text-lg font-bold ${activeTripCoverPhoto?.url ? 'text-white' : 'text-gray-800 dark:text-white'}`}>
+                {activeSubCalendar.name}
+              </div>
+              <div className={`text-xs mt-1 ${activeTripCoverPhoto?.url ? 'text-white/85' : 'text-gray-500 dark:text-gray-300'}`}>
+                {activeTripCoverPhoto?.url ? 'Trip cover photo' : 'Add a cover photo for this trip'}
+              </div>
+            </div>
+          </div>
+          {canEditCurrentTrip && (
+            <div className="flex items-center gap-2 overflow-x-auto py-3">
+              {tripPhotos.slice(0, 6).map((photo) => {
+                const isSelected = String(tripCoverPhoto?.id || '') === String(photo?.id || '');
+                return (
+                  <button
+                    key={`trip-cover-${photo.id}`}
+                    onClick={() => saveTripCoverPhoto(photo)}
+                    className={`relative shrink-0 w-16 h-16 rounded-2xl overflow-hidden border-2 ${isSelected ? 'border-purple-500' : 'border-transparent'}`}
+                    title="Set as cover photo"
+                  >
+                    <img src={photo.url} alt={photo.caption || 'Trip photo'} className="w-full h-full object-cover" />
+                    {isSelected && (
+                      <span className="absolute inset-x-1 bottom-1 px-1 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-semibold">
+                        Cover
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                className="shrink-0 px-3 py-2 rounded-2xl border border-dashed border-purple-300 dark:border-purple-700 text-xs font-semibold text-purple-700 dark:text-purple-300"
+              >
+                + Photo
+              </button>
+              {tripCoverPhoto?.url && (
+                <button
+                  onClick={clearTripCoverPhoto}
+                  className="shrink-0 px-3 py-2 rounded-2xl bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200"
+                >
+                  Clear Cover
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="relative px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2" ref={weatherAutocompleteRef}>
           {subCalWeatherLocation && !subCalWeatherExpanded ? (
             // Collapsed pill
