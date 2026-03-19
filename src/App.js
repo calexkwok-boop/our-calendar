@@ -15918,8 +15918,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div
-          style={{ width: 'calc(100vw - 2rem)', maxWidth: '30rem', boxSizing: 'border-box', borderColor: themeAccentBorder }}
-          className="w-full glass-panel rounded-[28px] border p-5 sm:p-6"
+          style={{
+            width: 'calc(100vw - 2rem)',
+            maxWidth: '28rem',
+            boxSizing: 'border-box',
+            borderColor: themeAccentBorder,
+            background: darkMode ? 'rgba(15, 23, 42, 0.96)' : '#ffffff',
+          }}
+          className="w-full rounded-[28px] border shadow-2xl p-5 sm:p-6"
         >
           <div className="flex items-start justify-between gap-3 mb-5">
             <div>
@@ -15936,7 +15942,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 setShowHomeAddEventModal(false);
                 resetHomeAddEventForm();
               }}
-              className="w-10 h-10 rounded-full border border-white/10 bg-white/5 dark:bg-white/[0.04] text-gray-500 dark:text-gray-300 flex items-center justify-center"
+              className="w-9 h-9 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-500 dark:text-gray-300 flex items-center justify-center"
               aria-label="Close add event"
             >
               <X className="w-4 h-4" />
@@ -15954,11 +15960,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 value={homeAddEventForm.title}
                 onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, title: e.target.value }))}
                 placeholder="Dinner, workout, birthday, meeting..."
-                className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/[0.04] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] gap-2.5 items-end">
               <div>
                 <label className="block text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-2">
                   Date
@@ -15968,7 +15974,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   min={getDateKey(new Date())}
                   value={homeAddEventForm.date}
                   onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, date: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/[0.04] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full min-w-0 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
                 />
               </div>
               <div>
@@ -15979,7 +15985,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   type="time"
                   value={homeAddEventForm.time}
                   onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, time: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/[0.04] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full min-w-0 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
                 />
               </div>
             </div>
@@ -15992,7 +15998,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 value={homeAddEventForm.location}
                 onSelect={(val) => setHomeAddEventForm((prev) => ({ ...prev, location: val || '' }))}
                 placeholder="Search for a place"
-                className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/[0.04] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
               />
             </div>
           </div>
