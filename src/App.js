@@ -3765,6 +3765,9 @@ function App() {
   const [accountCashAppInput, setAccountCashAppInput] = useState('');
   const [accountPaymentMessage, setAccountPaymentMessage] = useState('');
   const [savingAccountPayments, setSavingAccountPayments] = useState(false);
+  const [showExpensePaymentHandlePrompt, setShowExpensePaymentHandlePrompt] = useState(false);
+  const [skipExpensePaymentHandlePrompt, setSkipExpensePaymentHandlePrompt] = useState(false);
+  const [returnToExpenseFlowAfterPaymentSave, setReturnToExpenseFlowAfterPaymentSave] = useState(false);
   const [showListPanel, setShowListPanel] = useState(false);
   const [listPanelAttention, setListPanelAttention] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
@@ -4271,6 +4274,11 @@ function App() {
     };
   }, [showTitleStyleModal]);
   const activeLayer = layers.find(layer => layer.id === activeLayerId) || null;
+  const accountPaymentIdentity = String(user?.email || currentUser || '').trim();
+  const hasSavedAccountPaymentHandle = Boolean(
+    (accountPaymentIdentity && getVenmoHandleForIdentity(accountPaymentIdentity))
+    || (accountPaymentIdentity && getCashAppHandleForIdentity(accountPaymentIdentity))
+  );
   useEffect(() => {
     if (!showSharePanel) return;
     setAccountHandleInput(String(currentUser || '').trim());
@@ -4281,6 +4289,25 @@ function App() {
     setAccountCashAppInput(accountKey ? (cashAppHandles[accountKey] || globalCashAppHandles[accountKey] || '') : '');
     setAccountPaymentMessage('');
   }, [showSharePanel, currentUser, user?.email, venmoHandles, globalVenmoHandles, cashAppHandles, globalCashAppHandles]);
+  useEffect(() => {
+    const inExpenseFlow = showExpenseTrackerPanel || (Boolean(activeSubCalendar) && subCalTab === 'expenses');
+    if (!inExpenseFlow) return;
+    if (!accountPaymentIdentity || hasSavedAccountPaymentHandle || skipExpensePaymentHandlePrompt || showSharePanel) return;
+    setShowExpensePaymentHandlePrompt(true);
+  }, [
+    showExpenseTrackerPanel,
+    activeSubCalendar,
+    subCalTab,
+    accountPaymentIdentity,
+    hasSavedAccountPaymentHandle,
+    skipExpensePaymentHandlePrompt,
+    showSharePanel,
+  ]);
+  useEffect(() => {
+    if (!hasSavedAccountPaymentHandle) return;
+    setShowExpensePaymentHandlePrompt(false);
+    setSkipExpensePaymentHandlePrompt(false);
+  }, [hasSavedAccountPaymentHandle]);
   const bumpCoverControlsInteraction = React.useCallback(() => {
     if (!coverHeaderControlsVisible) return;
     setCoverControlsInteractionTick((prev) => prev + 1);
@@ -8336,6 +8363,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setAccountVenmoInput(venmoValue);
       setAccountCashAppInput(cashValue);
       setAccountPaymentMessage('Payment handles updated.');
+      if (returnToExpenseFlowAfterPaymentSave) {
+        setShowSharePanel(false);
+        setShowExpensePaymentHandlePrompt(false);
+        setSkipExpensePaymentHandlePrompt(false);
+        setReturnToExpenseFlowAfterPaymentSave(false);
+      }
     } catch (error) {
       setAccountPaymentMessage(`Could not save payment handles: ${error?.message || 'Unknown error'}`);
     } finally {
@@ -18312,6 +18345,45 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             {!activeLayer?.is_public && myShares.length === 0 && (
               <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add an email or phone above to get started.</p>
             )}
+          </div>
+        )}
+
+        {showExpensePaymentHandlePrompt && (
+          <div className="glass-panel rounded-2xl p-4 mb-6 border border-white/50 dark:border-white/10">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  Add your payment handle so friends can pay you easily
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  You can manage Venmo and Cash App in Account anytime.
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    setShowExpensePaymentHandlePrompt(false);
+                    setReturnToExpenseFlowAfterPaymentSave(true);
+                    setShowSharePanel(true);
+                  }}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold text-white"
+                  style={themeAccentButtonStyle}
+                >
+                  Add handle
+                </button>
+                <button
+                  onClick={() => {
+                    setShowExpensePaymentHandlePrompt(false);
+                    setSkipExpensePaymentHandlePrompt(true);
+                    setReturnToExpenseFlowAfterPaymentSave(false);
+                  }}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold"
+                  style={themeAccentSoftButtonStyle}
+                >
+                  Skip for now
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
