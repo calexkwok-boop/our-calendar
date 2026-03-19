@@ -18961,8 +18961,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         })()}
 
         {showGauntletPanel && (
-          <div className="fixed inset-0 z-[70] bg-black/50 p-4 overflow-y-auto flex items-start sm:items-center justify-center">
-            <div className="w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[70] bg-black/50 p-0 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center">
+            <div
+              className="w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
+              style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <GauntletPanel
                 activeLayerPageTheme={activeLayerPageTheme}
                 darkMode={darkMode}
@@ -18995,8 +18999,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
           </div>
         )} {showRoundRobinPanel && (
-  <div className="fixed inset-0 z-[70] bg-black/50 p-4 overflow-y-auto flex items-start sm:items-center justify-center">
-    <div className="w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+  <div className="fixed inset-0 z-[70] bg-black/50 p-0 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center">
+    <div
+      className="w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
+      style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+      onClick={(e) => e.stopPropagation()}
+    >
       <RoundRobinPanel
         activeLayerPageTheme={activeLayerPageTheme}
         darkMode={darkMode}

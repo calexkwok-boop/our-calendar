@@ -141,7 +141,7 @@ export default function RoundRobinPanel({
 
   // ── SETUP SCREEN ──────────────────────────────────────────────────────────
   if (!tournament) return (
-    <div className="rounded-2xl mb-6 overflow-hidden glass-panel" style={{ border: `1.5px solid ${border}`, background: shellBg, boxShadow: shellShadow }}>
+    <div className="rounded-none sm:rounded-2xl mb-0 sm:mb-6 overflow-hidden glass-panel min-h-full" style={{ border: `1.5px solid ${border}`, background: shellBg, boxShadow: shellShadow }}>
 
       {/* Court-stripe header */}
       <div className="relative px-5 pt-5 pb-4 overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}08 100%)` }}>
@@ -308,7 +308,7 @@ export default function RoundRobinPanel({
   const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
   return (
-    <div className="rounded-2xl mb-6 overflow-hidden glass-panel" style={{ border: `1.5px solid ${border}`, background: shellBg, boxShadow: shellShadow }}>
+    <div className="rounded-none sm:rounded-2xl mb-0 sm:mb-6 overflow-hidden glass-panel min-h-full" style={{ border: `1.5px solid ${border}`, background: shellBg, boxShadow: shellShadow }}>
 
       {/* Header */}
       <div className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)` }}>
