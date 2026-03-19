@@ -4287,7 +4287,6 @@ function App() {
   }, [coverHeaderControlsVisible]);
   const closeHomeWidgetWindows = React.useCallback(() => {
     setShowControlWidgetAddPanel(false);
-    setShowSharePanel(false);
     setShowNotificationSettings(false);
     setShowListPanel(false);
     setShowNotesPanel(false);
@@ -7757,13 +7756,35 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const handleSubmitHomeAddEvent = React.useCallback(async () => {
     if (!assertCanEditActiveLayer('add events to this calendar')) return;
     const title = String(homeAddEventForm.title || '').trim();
-    const dateKey = String(homeAddEventForm.date || '').trim();
-    const time = String(homeAddEventForm.time || '').trim();
+    const rawDateKey = String(homeAddEventForm.date || '').trim();
+    const rawTime = String(homeAddEventForm.time || '').trim();
     const location = String(homeAddEventForm.location || '').trim();
-    if (!title || !dateKey || !time || !location) {
+    if (!title || !rawDateKey || !rawTime || !location) {
       alert('Choose a date, time, location, and what you’re doing.');
       return;
     }
+
+    const dateMatch = rawDateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!dateMatch) {
+      alert('Enter the date as YYYY-MM-DD.');
+      return;
+    }
+    const timeMatch = rawTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+    if (!timeMatch) {
+      alert('Enter a valid time like 3:30 PM or 15:30.');
+      return;
+    }
+    let hours = Number(timeMatch[1] || 0);
+    const minutes = Number(timeMatch[2] || 0);
+    const period = String(timeMatch[3] || '').toLowerCase();
+    if (period === 'pm' && hours < 12) hours += 12;
+    if (period === 'am' && hours === 12) hours = 0;
+    if (hours > 23 || minutes > 59) {
+      alert('Enter a valid time like 3:30 PM or 15:30.');
+      return;
+    }
+    const dateKey = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
+    const time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
     const [year, month, day] = dateKey.split('-').map((part) => Number(part));
     const nextSelectedDate = new Date(year, (month || 1) - 1, day || 1);
@@ -15916,17 +15937,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   if (showHomeAddEventModal) {
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div
-          style={{
-            width: 'calc(100vw - 2rem)',
-            maxWidth: '28rem',
-            boxSizing: 'border-box',
-            borderColor: themeAccentBorder,
-            background: darkMode ? 'rgba(15, 23, 42, 0.96)' : '#ffffff',
-          }}
-          className="w-full rounded-[28px] border shadow-2xl p-5 sm:p-6"
-        >
+      <div className="min-h-screen w-full" style={{ background: 'rgba(17, 24, 39, 0.58)' }}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div
+            style={{
+              width: 'calc(100vw - 2rem)',
+              maxWidth: '28rem',
+              boxSizing: 'border-box',
+              borderColor: themeAccentBorder,
+              background: darkMode ? 'rgba(15, 23, 42, 0.96)' : '#ffffff',
+            }}
+            className="w-full rounded-[28px] border shadow-2xl p-5 sm:p-6"
+          >
           <div className="flex items-start justify-between gap-3 mb-5">
             <div>
               <div className="text-[11px] uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-1.5">Plan ahead</div>
@@ -15970,11 +15992,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   Date
                 </label>
                 <input
-                  type="date"
-                  min={getDateKey(new Date())}
+                  type="text"
                   value={homeAddEventForm.date}
                   onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, date: e.target.value }))}
-                  className="w-full min-w-0 h-12 px-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  placeholder="YYYY-MM-DD"
+                  className="w-full min-w-0 h-12 px-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  inputMode="numeric"
                 />
               </div>
               <div>
@@ -15982,10 +16005,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                   Time
                 </label>
                 <input
-                  type="time"
+                  type="text"
                   value={homeAddEventForm.time}
                   onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, time: e.target.value }))}
-                  className="w-full min-w-0 h-12 px-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  placeholder="3:30 PM or 15:30"
+                  className="w-full min-w-0 h-12 px-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
                 />
               </div>
             </div>
@@ -16022,6 +16046,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               Cancel
             </button>
           </div>
+        </div>
         </div>
       </div>
     );
