@@ -14520,9 +14520,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const activeTripCoverPhoto = tripCoverPhoto?.url ? tripCoverPhoto : null;
   const activeTripBackgroundStyle = activeTripCoverPhoto?.url
     ? {
-        backgroundImage: `${darkMode ? 'linear-gradient(rgba(3,7,18,0.76), rgba(3,7,18,0.88))' : 'linear-gradient(rgba(255,255,255,0.68), rgba(248,250,252,0.9))'}, url(${activeTripCoverPhoto.url})`,
+        backgroundImage: `${darkMode ? 'linear-gradient(rgba(2,6,23,0.92), rgba(2,6,23,0.97))' : 'linear-gradient(rgba(248,250,252,0.88), rgba(248,250,252,0.95))'}, url(${activeTripCoverPhoto.url})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
+        backgroundAttachment: 'scroll',
       }
     : undefined;
   const canEditCurrentTrip = Boolean(
@@ -14534,6 +14535,36 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     && toDateOnlyTs(activeSubCalendar?.end_date) !== null
     && toDateOnlyTs(activeSubCalendar?.end_date) <= todayTs
   );
+  const TRIP_DAY_SECTIONS = [
+    { key: 'morning', label: 'Morning', startHour: 6, endHour: 11, defaultHour: 9, accent: 'from-amber-400/20 to-orange-400/5' },
+    { key: 'afternoon', label: 'Afternoon', startHour: 12, endHour: 17, defaultHour: 14, accent: 'from-sky-400/20 to-indigo-400/5' },
+    { key: 'evening', label: 'Evening', startHour: 18, endHour: 23, defaultHour: 19, accent: 'from-purple-500/20 to-fuchsia-500/5' },
+    { key: 'anytime', label: 'Anytime', startHour: null, endHour: null, defaultHour: null, accent: 'from-white/10 to-white/5' },
+  ];
+  const getTripSectionKeyForEvent = (event) => {
+    const time = String(event?.time || '').trim();
+    if (!time) return 'anytime';
+    const hour = Number(time.split(':')[0]);
+    if (!Number.isFinite(hour)) return 'anytime';
+    if (hour < 12) return 'morning';
+    if (hour < 18) return 'afternoon';
+    return 'evening';
+  };
+  const getTripMemberBadge = (label = '') => {
+    const parts = String(label || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+  };
+  const getTripDaySummary = (dateKey) => {
+    const rows = (subCalendarEvents?.[dateKey] || []).filter(Boolean);
+    const timed = rows.filter((row) => String(row?.time || '').trim());
+    const firstTime = timed.length > 0 ? formatTime(timed.sort((a, b) => String(a?.time || '').localeCompare(String(b?.time || '')))[0]?.time) : '';
+    return {
+      count: rows.length,
+      firstTime,
+    };
+  };
   const openTripHighlights = () => {
     if (!activeSubCalendar) return;
     const itineraryItems = Object.values(subCalendarEvents || {}).flatMap((rows) => Array.isArray(rows) ? rows : []);
@@ -21864,8 +21895,230 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {activeSubCalendar && (
       <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden" style={activeTripBackgroundStyle}>
 
+        {/* Cleaner mobile trip header */}
+        <div
+          className="px-4 pb-4 pt-3 bg-white/80 dark:bg-slate-950/72 backdrop-blur-xl border-b border-white/10"
+          style={{
+            paddingTop: 'max(0.9rem, env(safe-area-inset-top))',
+            paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+            paddingRight: 'max(1rem, env(safe-area-inset-right))',
+          }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <button
+              onClick={() => { setActiveSubCalendar(null); clearTripQueryParam(); }}
+              className="shrink-0 flex items-center gap-1.5 rounded-full px-3 py-2 bg-white/70 dark:bg-white/5 text-purple-600 dark:text-purple-300 font-medium text-sm"
+            >
+              <ChevronLeft className="w-4 h-4" /> Back
+            </button>
+            <div className="min-w-0 flex-1 text-center px-1 pt-1">
+              {editingSubCalTitle ? (
+                <input
+                  autoFocus
+                  defaultValue={activeSubCalendar.name}
+                  onBlur={e => updateSubCalTitle(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && updateSubCalTitle(e.target.value)}
+                  className="font-semibold text-xl text-gray-900 dark:text-white bg-transparent border-b-2 border-purple-400 text-center outline-none w-full max-w-[220px]"
+                  style={{ fontSize: '16px' }}
+                />
+              ) : (
+                <div
+                  className="font-semibold text-[1.6rem] leading-tight tracking-[-0.03em] text-gray-900 dark:text-white cursor-pointer hover:text-purple-600 dark:hover:text-purple-300"
+                  onClick={() => setEditingSubCalTitle(true)}
+                >
+                  {activeSubCalendar.name}
+                </div>
+              )}
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-300/80">
+                {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSubCalInviteModal(true)}
+              className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-sm rounded-2xl font-semibold shadow-[0_10px_30px_rgba(139,92,246,0.28)]"
+            >
+              <Plus className="w-4 h-4" /> Invite
+            </button>
+          </div>
+
+          <div className="mt-4 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" ref={weatherAutocompleteRef}>
+            <button
+              onClick={() => setSubCalMembersCollapsed((prev) => !prev)}
+              className="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/70 px-3.5 py-2 text-sm text-gray-700 dark:bg-white/5 dark:text-gray-200"
+            >
+              <div className="flex -space-x-2">
+                {[`${currentUser} (you)`, ...subCalMembers.slice(0, 2).map((m) => resolveHandleLikeLabel(m.identity || m.email || m.phone))].map((label, idx) => (
+                  <div
+                    key={`${label}-${idx}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-white/80 bg-purple-100 text-[10px] font-semibold text-purple-700 dark:border-slate-900 dark:bg-purple-500/20 dark:text-purple-200"
+                  >
+                    {getTripMemberBadge(label)}
+                  </div>
+                ))}
+              </div>
+              <span>{subCalMembers.length + 1} members</span>
+            </button>
+
+            {subCalWeatherLocation && !subCalWeatherExpanded ? (
+              <button
+                onClick={() => setSubCalWeatherExpanded(true)}
+                className="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/70 px-3.5 py-2 text-sm text-gray-700 dark:bg-white/5 dark:text-gray-200"
+              >
+                <span>📍</span>
+                <span className="max-w-[160px] truncate">{subCalWeatherLocation}</span>
+              </button>
+            ) : !subCalWeatherExpanded ? (
+              <button
+                onClick={() => setSubCalWeatherExpanded(true)}
+                className="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/70 px-3.5 py-2 text-sm text-gray-500 dark:bg-white/5 dark:text-gray-300"
+              >
+                🌤️ Add weather
+              </button>
+            ) : null}
+
+            <button
+              onClick={() => setShowSubCalNotesModal(true)}
+              className="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/70 px-3 py-2 text-sm text-gray-600 dark:bg-white/5 dark:text-gray-300"
+            >
+              <span>Notes</span>
+              {subCalNotes.length > 0 && (
+                <span className="rounded-full bg-yellow-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {subCalNotes.length}
+                </span>
+              )}
+            </button>
+
+            <div className="shrink-0 flex items-center gap-2 rounded-full border border-white/10 bg-white/70 px-2 py-1.5 dark:bg-white/5">
+              {canEditCurrentTrip && (
+                <button
+                  onClick={() => setShowTripBackgroundPhotoMenu(true)}
+                  className="relative flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10"
+                  title={activeTripCoverPhoto?.url ? 'Change trip background photo' : 'Add trip background photo'}
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                onClick={() => setShowSubCalLocationSheet(true)}
+                className="relative flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10"
+                title="Trip live location"
+              >
+                <MapPin className="w-4 h-4" />
+                {Object.values(memberLocations).filter(loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number').length > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[1rem] h-[1rem] px-1 rounded-full bg-emerald-500 text-white text-[9px] leading-none font-bold flex items-center justify-center">
+                    {Object.values(memberLocations).filter(loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number').length}
+                  </span>
+                )}
+              </button>
+              {canGenerateTripHighlights && (
+                <button
+                  onClick={openTripHighlights}
+                  className="rounded-full bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-700 transition-colors hover:bg-purple-500/20 dark:text-purple-300"
+                >
+                  Highlights
+                </button>
+              )}
+            </div>
+          </div>
+
+          {subCalWeatherExpanded && (
+            <div className="relative mt-3 rounded-3xl border border-white/10 bg-white/80 p-3 shadow-lg dark:bg-slate-900/80">
+              <div className="flex items-center gap-2">
+                <span className="text-sm shrink-0">🌤️</span>
+                <input
+                  autoFocus={subCalWeatherExpanded}
+                  type="text"
+                  value={subCalWeatherInput}
+                  onChange={e => { setSubCalWeatherInput(e.target.value); searchWeatherLocations(e.target.value); }}
+                  onKeyDown={e => {
+                    if (e.key === 'Escape') {
+                      setSubCalWeatherExpanded(false);
+                      setSubCalWeatherSuggestions([]);
+                      e.currentTarget.blur();
+                      return;
+                    }
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const firstSuggestion = subCalWeatherSuggestions[0];
+                      if (firstSuggestion) {
+                        fetchSubCalWeather(firstSuggestion);
+                      } else {
+                        setSubCalWeatherExpanded(false);
+                        setSubCalWeatherSuggestions([]);
+                      }
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  placeholder="Search city for weather..."
+                  className="flex-1 rounded-2xl border border-gray-200 bg-white px-3 py-2 text-base text-gray-900 outline-none focus:ring-1 focus:ring-purple-400 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                  style={{ fontSize: '16px' }}
+                />
+                {subCalWeatherLoading && <span className="text-xs text-purple-400 animate-pulse shrink-0">Loading...</span>}
+                <button
+                  onClick={() => {
+                    setSubCalWeatherExpanded(false);
+                    setSubCalWeatherInput(subCalWeatherLocation);
+                    setSubCalWeatherSuggestions([]);
+                  }}
+                  className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-white/10 shrink-0"
+                  aria-label="Close weather search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {subCalWeatherSuggestions.length > 0 && (
+                <div className="absolute top-full left-3 right-3 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-white/10 dark:bg-slate-900 z-50">
+                  {subCalWeatherSuggestions.map((result, i) => (
+                    <button
+                      key={i}
+                      onClick={() => fetchSubCalWeather(result)}
+                      className="w-full text-left px-3 py-2.5 text-sm hover:bg-purple-50 dark:hover:bg-white/5 border-b border-gray-100 dark:border-white/5 last:border-0"
+                    >
+                      <span className="font-medium text-gray-800 dark:text-white">{result.name}</span>
+                      <span className="text-gray-400 ml-1">{[result.admin1, result.country].filter(Boolean).join(', ')}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!subCalMembersCollapsed && (
+            <div className="mt-3 rounded-3xl border border-white/10 bg-white/75 p-3 dark:bg-slate-900/70">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Travel crew</h4>
+                <button
+                  onClick={() => setSubCalMembersCollapsed(true)}
+                  className="text-xs font-medium text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-300"
+                >
+                  Hide
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-2.5 py-1.5 rounded-full bg-purple-100 text-purple-700 text-xs flex items-center gap-2 dark:bg-purple-500/15 dark:text-purple-200">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-[10px] font-semibold text-purple-700 dark:bg-purple-500/20 dark:text-purple-100">
+                    {getTripMemberBadge(currentUser)}
+                  </span>
+                  {currentUser} (you)
+                </span>
+                {subCalMembers.map(m => (
+                  <span key={m.identity || m.email || m.phone} className="px-2.5 py-1.5 rounded-full bg-gray-100 text-gray-700 text-xs flex items-center gap-2 dark:bg-white/5 dark:text-gray-200">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-gray-600 dark:bg-slate-800 dark:text-gray-200">
+                      {getTripMemberBadge(resolveHandleLikeLabel(m.identity || m.email || m.phone))}
+                    </span>
+                    <span>{resolveHandleLikeLabel(m.identity || m.email || m.phone)}</span>
+                    {activeSubCalendar.owner_id === user?.id && m.removable !== false && (
+                      <button onClick={() => removeMemberFromSubCal(m.identity || m.email || m.phone)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-gray-800/85 backdrop-blur-md shadow-md" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
+        <div className="hidden" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
           <button onClick={() => { setActiveSubCalendar(null); clearTripQueryParam(); }} className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium text-sm">
             <ChevronLeft className="w-4 h-4" /> Back
           </button>
@@ -21947,7 +22200,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         >
 
         {/* Weather location — collapsed pill or expanding input */}
-        <div className="relative px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2" ref={weatherAutocompleteRef}>
+        <div className="hidden relative px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2" ref={weatherAutocompleteRef}>
           {subCalWeatherLocation && !subCalWeatherExpanded ? (
             // Collapsed pill
             <button
@@ -22045,7 +22298,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         </div>
 
         {/* Members (quick access near top) */}
-        <div className="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+        <div className="hidden px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400">Members ({subCalMembers.length + 1})</h4>
             <button
@@ -22082,7 +22335,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         </div>
 
         {/* Day tabs */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="bg-white/55 dark:bg-slate-950/35 border-b border-white/10 backdrop-blur-sm">
           <div
             className="flex gap-2 px-4 py-3 overflow-x-auto items-center"
             onMouseLeave={() => { if (shakingDates) { clearTimeout(shakingTimeoutRef.current); setShakingDates(false); } }}
@@ -22090,7 +22343,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             {/* Add day before */}
             <button
               onClick={() => extendSubCalDates('before')}
-              className="flex flex-col items-center justify-center w-10 h-14 rounded-xl shrink-0 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-all"
+              className="flex flex-col items-center justify-center w-10 h-[72px] rounded-2xl shrink-0 border border-dashed border-gray-300/80 dark:border-white/10 text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-all bg-white/40 dark:bg-white/[0.03]"
             >
               <span className="text-lg leading-none">+</span>
             </button>
@@ -22119,16 +22372,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 >
                   <button
                     onClick={() => { if (shakingDates) return; setSubCalSelectedDate(date); }}
-                    className={`flex flex-col items-center px-3 py-2 rounded-xl transition-all ${
+                    className={`flex min-w-[68px] flex-col items-center px-3 py-2.5 rounded-2xl transition-all ${
                       isSelected && !shakingDates
-                        ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-md'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                        ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white shadow-[0_14px_28px_rgba(99,102,241,0.28)]'
+                        : 'bg-white/55 dark:bg-white/[0.04] text-gray-500 dark:text-gray-300'
                     }`}
                   >
-                    <span className="text-xs font-medium">{date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
-                    <span className="text-lg font-bold leading-none">{date.getDate()}</span>
+                    <span className={`text-[11px] font-medium ${isSelected ? 'text-white/80' : 'text-gray-400 dark:text-gray-500'}`}>{date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                    <span className="text-[1.7rem] font-semibold leading-none">{date.getDate()}</span>
                     {subCalWeather[dk] && (
-                      <span className="text-xs mt-0.5">{subCalWeather[dk].icon}</span>
+                      <span className="text-xs mt-1">{subCalWeather[dk].icon}</span>
                     )}
                     {subCalWeather[dk] && (
                       <span className={`text-xs leading-none ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
@@ -22152,7 +22405,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             {/* Add day after */}
             <button
               onClick={() => extendSubCalDates('after')}
-              className="flex flex-col items-center justify-center w-10 h-14 rounded-xl shrink-0 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-all"
+              className="flex flex-col items-center justify-center w-10 h-[72px] rounded-2xl shrink-0 border border-dashed border-gray-300/80 dark:border-white/10 text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-all bg-white/40 dark:bg-white/[0.03]"
             >
               <span className="text-lg leading-none">+</span>
             </button>
@@ -22166,23 +22419,25 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           )}
         </div>
 
-        {/* Tab bar */}
-        <div className="flex bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        {/* Softer segmented tab bar */}
+        <div className="px-4 pt-3">
+          <div className="flex rounded-2xl bg-white/60 p-1 dark:bg-white/[0.04]">
           <button
             onClick={() => setSubCalTab('itinerary')}
-            className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'itinerary' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+            className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all ${subCalTab === 'itinerary' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >Itinerary</button>
           <button
             onClick={() => setSubCalTab('photos')}
-            className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 relative ${subCalTab === 'photos' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+            className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'photos' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >
             Photos
             {tripPhotos.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{tripPhotos.length}</span>}
           </button>
           <button
             onClick={() => setSubCalTab('expenses')}
-            className={`flex-1 py-2.5 text-sm font-medium transition-all border-b-2 ${subCalTab === 'expenses' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+            className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all ${subCalTab === 'expenses' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >Expenses</button>
+          </div>
         </div>
 
         <input
@@ -22207,9 +22462,213 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           });
           const dayEventPhotos = tripPhotos.filter(p => p.event_id && (p.date === dk || !p.date));
           const getEventPhotos = (eventId) => dayEventPhotos.filter(p => p.event_id === eventId);
+          const daySummary = getTripDaySummary(dk);
+          const selectedWeather = subCalWeather[dk];
+          const groupedSections = TRIP_DAY_SECTIONS.map((section) => ({
+            ...section,
+            slotValue: section.key === 'anytime' ? -1 : section.defaultHour,
+            events: dayEvents.filter((event) => getTripSectionKeyForEvent(event) === section.key),
+          }));
+          const handleStartAddPlan = (slotValue) => {
+            setSubCalAddingSlot(slotValue);
+            setSubCalNewEventForm({ title: '', endTime: '', location: '' });
+          };
 
           return (
             <div className="px-4 py-4 space-y-4">
+              {/* Designed day sections replace the empty spreadsheet-like timeline */}
+              {(() => {
+                const renderSectionAddForm = (slotValue) => (
+                  <div className="mt-3 rounded-3xl border border-purple-300/70 bg-white p-3 shadow-sm space-y-2 dark:border-purple-500/40 dark:bg-slate-900/90">
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Plan title *"
+                      value={subCalNewEventForm.title}
+                      onChange={e => setSubCalNewEventForm(f => ({ ...f, title: e.target.value }))}
+                      className="w-full rounded-2xl border border-gray-200 px-3 py-2 text-base text-gray-900 focus:outline-none focus:ring-1 focus:ring-purple-400 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                      style={{ fontSize: '16px' }}
+                    />
+                    <div className="flex gap-2 min-w-0">
+                      <input
+                        type="text"
+                        readOnly
+                        value={slotValue === -1 ? 'Anytime' : `${slotValue === 0 ? '12' : slotValue > 12 ? slotValue - 12 : slotValue}:00 ${slotValue >= 12 ? 'PM' : 'AM'}`}
+                        className="w-28 shrink-0 rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-base text-gray-500 dark:border-white/10 dark:bg-white/5 dark:text-gray-300"
+                        style={{ fontSize: '16px' }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="End time (optional)"
+                        value={subCalNewEventForm.endTime}
+                        onChange={e => setSubCalNewEventForm(f => ({ ...f, endTime: e.target.value }))}
+                        className="flex-1 min-w-0 rounded-2xl border border-gray-200 px-3 py-2 text-base text-gray-900 focus:outline-none focus:ring-1 focus:ring-purple-400 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                        style={{ fontSize: '16px' }}
+                      />
+                    </div>
+                    <PlacesAutocomplete
+                      value={subCalNewEventForm.location}
+                      onSelect={val => setSubCalNewEventForm(f => ({ ...f, location: val || '' }))}
+                      placeholder="📍 Add location (optional)"
+                      className="w-full rounded-2xl border border-gray-200 px-3 py-2 text-base text-gray-900 focus:outline-none focus:ring-1 focus:ring-purple-400 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                          if (!subCalNewEventForm.title.trim()) return;
+                          let endTimeStr = null;
+                          if (subCalNewEventForm.endTime.trim()) {
+                            const match = subCalNewEventForm.endTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                            if (match) {
+                              let h = parseInt(match[1]);
+                              const m = match[2] ? parseInt(match[2]) : 0;
+                              const p = match[3]?.toLowerCase();
+                              if (p === 'pm' && h < 12) h += 12;
+                              if (p === 'am' && h === 12) h = 0;
+                              endTimeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                            }
+                          }
+                          const timeStr = slotValue === -1 ? null : `${String(slotValue).padStart(2, '0')}:00`;
+                          await addSubCalEvent(subCalSelectedDate, subCalNewEventForm.title, timeStr, endTimeStr, subCalNewEventForm.location || null);
+                          setSubCalAddingSlot(null);
+                          setSubCalNewEventForm({ title: '', endTime: '', location: '' });
+                        }}
+                        className="flex-1 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 px-3 py-2 text-sm font-medium text-white"
+                      >
+                        Add plan
+                      </button>
+                      <button
+                        onClick={() => { setSubCalAddingSlot(null); setSubCalNewEventForm({ title: '', endTime: '', location: '' }); }}
+                        className="rounded-2xl bg-gray-100 px-3 py-2 text-sm text-gray-600 dark:bg-white/10 dark:text-gray-300"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                );
+                const renderPlanCard = (event) => (
+                  <div key={event.id}>
+                    <div className="rounded-3xl border border-white/10 bg-white/75 p-3 shadow-sm dark:bg-slate-900/70">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-[15px] text-gray-900 dark:text-gray-100">{event.title}</div>
+                          {(event.time || event.endTime) && (
+                            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-1 text-xs text-purple-700 dark:text-purple-300">
+                              <Clock className="w-3 h-3" />
+                              {event.time ? formatTime(event.time) : 'Anytime'}{event.endTime && ` - ${formatTime(event.endTime)}`}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <button
+                            onClick={() => { setPhotoEventId(event.id); setPhotoDate(dk); photoInputRef.current?.click(); }}
+                            className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10"
+                            title="Add photo"
+                          >📸</button>
+                          <button onClick={() => setSubCalEditingEvent(event.id)} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10"><Edit2 className="w-3.5 h-3.5 text-gray-500" /></button>
+                          <button onClick={() => deleteSubCalEvent(event.id, dk)} className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
+                        </div>
+                      </div>
+                      {event.notes && <div className="mt-2 text-sm text-gray-500 dark:text-gray-300/80">{event.notes}</div>}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {event.location && (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-300"
+                            onClick={(e) => handleLocationLinkClick(e, event.location)}
+                          >📍 {event.location}</button>
+                        )}
+                        {event.createdBy && (
+                          <div className="inline-flex items-center gap-1 rounded-full bg-black/5 px-2.5 py-1 text-xs text-gray-500 dark:bg-white/5 dark:text-gray-400">
+                            <User className="w-3 h-3" />
+                            {resolveHandleLikeLabel(event.createdBy, event.userId)}
+                          </div>
+                        )}
+                      </div>
+                      {getEventPhotos(event.id).length > 0 && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setLightboxPhoto(getEventPhotos(event.id)[0]); }}
+                          className="mt-3 relative overflow-hidden rounded-2xl"
+                          title="View event photo"
+                        >
+                          <img
+                            src={getEventPhotos(event.id)[0].url}
+                            alt=""
+                            className="h-28 w-full rounded-2xl object-cover"
+                          />
+                          {getEventPhotos(event.id).length > 1 && (
+                            <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">
+                              +{getEventPhotos(event.id).length - 1}
+                            </span>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+
+                return (
+                  <div className="space-y-4">
+                    <div className="rounded-[28px] border border-white/10 bg-white/78 p-4 shadow-sm dark:bg-slate-900/72">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-[11px] uppercase tracking-[0.2em] text-purple-500/80 dark:text-purple-300/80">Selected day</div>
+                          <div className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-gray-900 dark:text-white">
+                            {subCalSelectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-300/80">
+                            {subCalWeatherLocation && <span>{subCalWeatherLocation}</span>}
+                            {selectedWeather && <span>{selectedWeather.icon} {selectedWeather.high}° / {selectedWeather.low}°</span>}
+                            <span>{daySummary.count} {daySummary.count === 1 ? 'plan' : 'plans'}</span>
+                            {daySummary.firstTime && <span>Starts {daySummary.firstTime}</span>}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleStartAddPlan(9)}
+                          className="shrink-0 rounded-full bg-purple-500/10 px-3 py-2 text-sm font-medium text-purple-700 dark:text-purple-300"
+                        >
+                          + Add plan
+                        </button>
+                      </div>
+                    </div>
+
+                    {groupedSections.filter((section) => section.key !== 'anytime').map((section) => (
+                      <div key={section.key} className="rounded-[28px] border border-white/10 bg-white/72 p-4 shadow-sm dark:bg-slate-900/68">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-lg font-semibold text-gray-900 dark:text-white">{section.label}</div>
+                            <div className="text-sm text-gray-400 dark:text-gray-500">
+                              {section.events.length > 0 ? `${section.events.length} ${section.events.length === 1 ? 'plan' : 'plans'}` : 'Nothing locked in yet'}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleStartAddPlan(section.slotValue)}
+                            className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 dark:border-purple-500/20 dark:bg-purple-500/10 dark:text-purple-300"
+                          >
+                            + Add plan
+                          </button>
+                        </div>
+
+                        {subCalAddingSlot === section.slotValue && renderSectionAddForm(section.slotValue)}
+
+                        <div className="mt-4 space-y-3">
+                          {section.events.length > 0 ? (
+                            section.events.map(renderPlanCard)
+                          ) : (
+                            <div className={`rounded-3xl bg-gradient-to-br ${section.accent} border border-white/5 px-4 py-5`}>
+                              <div className="text-sm font-medium text-gray-800 dark:text-gray-100">Keep {section.label.toLowerCase()} open until you need it.</div>
+                              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Add one anchor plan here instead of filling the day with placeholder slots.</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {false && (
+                <>
 
               {/* Weather for selected day */}
               {subCalWeather[dk] && (
@@ -22502,7 +22961,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </div>
                 )}
               </div>
-
+                </>
+              )}
             </div>
           );
         })()}
