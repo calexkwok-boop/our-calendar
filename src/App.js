@@ -928,7 +928,6 @@ function App() {
   const [pendingThemeMatchStyle, setPendingThemeMatchStyle] = useState(null);
   const [coverOpacityPreview, setCoverOpacityPreview] = useState(null);
   const [coverHeaderControlsVisible, setCoverHeaderControlsVisible] = useState(true);
-  const [coverControlsInteractionTick, setCoverControlsInteractionTick] = useState(0);
   const coverOpacityPreviewValueRef = useRef(null);
   const coverOpacityPreviewRafRef = useRef(null);
   const [user, setUser] = useState(null);
@@ -4309,8 +4308,10 @@ function App() {
     setSkipExpensePaymentHandlePrompt(false);
   }, [hasSavedAccountPaymentHandle]);
   const bumpCoverControlsInteraction = React.useCallback(() => {
-    setCoverControlsInteractionTick((prev) => prev + 1);
-  }, []);
+    if (!coverHeaderControlsVisible) {
+      setCoverHeaderControlsVisible(true);
+    }
+  }, [coverHeaderControlsVisible]);
   const closeHomeWidgetWindows = React.useCallback(() => {
     setShowControlWidgetAddPanel(false);
     setShowNotificationSettings(false);
@@ -4554,17 +4555,6 @@ useEffect(() => {
       setSelectedGauntletEventId(nextId);
     }
   }, [events, popupEventsByEventId, popupSignupsByEventId, selectedGauntletEventId]);
-  useEffect(() => {
-    if (!coverHeaderControlsVisible && !hasOpenWidgetWindow) return undefined;
-    if (bottomNavTab !== 'home') return undefined;
-    const timeoutId = window.setTimeout(() => {
-      setCoverHeaderControlsVisible(false);
-      closeHomeWidgetWindows();
-    }, 5000);
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [coverHeaderControlsVisible, activeLayerId, coverControlsInteractionTick, hasOpenWidgetWindow, bottomNavTab, closeHomeWidgetWindows]);
   useEffect(() => {
     if (bottomNavTab !== 'home') return;
     if (preferCalendarHome) return;
