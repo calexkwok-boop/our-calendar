@@ -14561,11 +14561,30 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const activeTripCoverPhoto = tripCoverPhoto?.url ? tripCoverPhoto : null;
   const activeTripBackgroundStyle = activeTripCoverPhoto?.url
     ? {
-        backgroundImage: `${darkMode ? 'linear-gradient(rgba(2,6,23,0.92), rgba(2,6,23,0.97))' : 'linear-gradient(rgba(248,250,252,0.88), rgba(248,250,252,0.95))'}, url(${activeTripCoverPhoto.url})`,
+        backgroundImage: `${darkMode ? 'linear-gradient(rgba(2,6,23,0.95), rgba(2,6,23,0.985))' : 'linear-gradient(rgba(248,250,252,0.88), rgba(248,250,252,0.95))'}, url(${activeTripCoverPhoto.url})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'scroll',
       }
+    : undefined;
+  const tripHeaderSurfaceStyle = darkMode
+    ? {
+        background: 'linear-gradient(180deg, rgba(2,6,23,0.92) 0%, rgba(2,6,23,0.82) 100%)',
+        borderColor: 'rgba(148,163,184,0.12)',
+        boxShadow: '0 18px 42px rgba(2,6,23,0.32)',
+      }
+    : undefined;
+  const tripHeaderPillClassName = darkMode
+    ? 'border border-white/10 bg-white/[0.06] text-slate-100'
+    : 'border border-white/10 bg-white/70 text-gray-700';
+  const tripHeaderSecondaryPillClassName = darkMode
+    ? 'border border-white/10 bg-white/[0.04] text-slate-200'
+    : 'border border-white/10 bg-white/70 text-gray-600';
+  const tripHeaderActionClusterStyle = darkMode
+    ? { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)' }
+    : undefined;
+  const tripHeaderPanelStyle = darkMode
+    ? { backgroundColor: 'rgba(2,6,23,0.76)', borderColor: 'rgba(148,163,184,0.12)' }
     : undefined;
   const canEditCurrentTrip = Boolean(
     activeSubCalendar
@@ -22317,12 +22336,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             paddingTop: 'max(0.9rem, env(safe-area-inset-top))',
             paddingLeft: 'max(1rem, env(safe-area-inset-left))',
             paddingRight: 'max(1rem, env(safe-area-inset-right))',
+            ...tripHeaderSurfaceStyle,
           }}
         >
           <div className="flex items-start justify-between gap-3">
             <button
               onClick={() => { setActiveSubCalendar(null); clearTripQueryParam(); }}
-              className="shrink-0 flex items-center gap-1.5 rounded-full px-3 py-2 bg-white/70 dark:bg-white/5 text-purple-600 dark:text-purple-300 font-medium text-sm"
+              className={`shrink-0 flex items-center gap-1.5 rounded-full px-3 py-2 font-medium text-sm ${tripHeaderPillClassName} ${darkMode ? 'text-purple-200' : 'text-purple-600'}`}
             >
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
@@ -22359,7 +22379,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           <div className="mt-4 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" ref={weatherAutocompleteRef}>
             <button
               onClick={() => setSubCalMembersCollapsed((prev) => !prev)}
-              className="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/70 px-3.5 py-2 text-sm text-gray-700 dark:bg-white/5 dark:text-gray-200"
+              className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm ${tripHeaderPillClassName}`}
             >
               <div className="flex -space-x-2">
                 {[`${currentUser} (you)`, ...subCalMembers.slice(0, 2).map((m) => resolveHandleLikeLabel(m.identity || m.email || m.phone))].map((label, idx) => (
@@ -22377,7 +22397,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             {subCalWeatherLocation && !subCalWeatherExpanded ? (
               <button
                 onClick={() => setSubCalWeatherExpanded(true)}
-                className="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/70 px-3.5 py-2 text-sm text-gray-700 dark:bg-white/5 dark:text-gray-200"
+                className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm ${tripHeaderPillClassName}`}
               >
                 <span>📍</span>
                 <span className="max-w-[160px] truncate">{subCalWeatherLocation}</span>
@@ -22385,7 +22405,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             ) : !subCalWeatherExpanded ? (
               <button
                 onClick={() => setSubCalWeatherExpanded(true)}
-                className="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/70 px-3.5 py-2 text-sm text-gray-500 dark:bg-white/5 dark:text-gray-300"
+                className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm ${tripHeaderSecondaryPillClassName}`}
               >
                 🌤️ Add weather
               </button>
@@ -22393,7 +22413,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
             <button
               onClick={() => setShowSubCalNotesModal(true)}
-              className="shrink-0 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/70 px-3 py-2 text-sm text-gray-600 dark:bg-white/5 dark:text-gray-300"
+              className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm ${tripHeaderSecondaryPillClassName}`}
             >
               <span>Notes</span>
               {subCalNotes.length > 0 && (
@@ -22403,7 +22423,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               )}
             </button>
 
-            <div className="shrink-0 flex items-center gap-2 rounded-full border border-white/10 bg-white/70 px-2 py-1.5 dark:bg-white/5">
+            <div className="shrink-0 flex items-center gap-2 rounded-full border border-white/10 bg-white/70 px-2 py-1.5 dark:bg-white/5" style={tripHeaderActionClusterStyle}>
               {canEditCurrentTrip && (
                 <button
                   onClick={() => setShowTripBackgroundPhotoMenu(true)}
@@ -22437,7 +22457,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
 
           {subCalWeatherExpanded && (
-            <div className="relative z-40 mt-3 overflow-visible rounded-3xl border border-white/10 bg-white/80 p-3 shadow-lg dark:bg-slate-900/80">
+            <div className="relative z-40 mt-3 overflow-visible rounded-3xl border border-white/10 bg-white/80 p-3 shadow-lg dark:bg-slate-900/80" style={tripHeaderPanelStyle}>
               <div className="flex items-center gap-2">
                 <span className="text-sm shrink-0">🌤️</span>
                 <input
@@ -22499,7 +22519,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           )}
 
           {!subCalMembersCollapsed && (
-            <div className="mt-3 rounded-3xl border border-white/10 bg-white/75 p-3 dark:bg-slate-900/70">
+            <div className="mt-3 rounded-3xl border border-white/10 bg-white/75 p-3 dark:bg-slate-900/70" style={tripHeaderPanelStyle}>
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Travel crew</h4>
                 <button
