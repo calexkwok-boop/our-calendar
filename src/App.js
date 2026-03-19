@@ -402,7 +402,11 @@ const buildTripHighlights = (trip, photos, itineraryItems) => {
     return `${hour}:${minute} ${suffix}`;
   };
   const foodRegex = /\b(food|restaurant|breakfast|brunch|lunch|dinner|coffee|cafe|bar|dessert|pizza|ramen|taco|bakery|wine)\b/i;
-  const attractionRegex = /\b(museum|park|beach|tour|gallery|cathedral|temple|castle|bridge|market|view|landmark|plaza|hike|attraction)\b/i;
+  const scenicRegex = /\b(view|scenic|sunset|sunrise|golden hour|beach|coast|lake|mountain|rooftop|lookout|vista)\b/i;
+  const nightlifeRegex = /\b(bar|club|cocktail|night|late|dj|dance|speakeasy|live music)\b/i;
+  const landmarkRegex = /\b(museum|park|tour|gallery|cathedral|temple|castle|bridge|market|landmark|plaza|hike|monument)\b/i;
+  const socialRegex = /\b(with|friends|family|crew|together|group|party|celebration|birthday)\b/i;
+  const fillerRegex = /\b(check in|check-in|hotel|airport|flight|train|taxi|uber|lyft|transfer)\b/i;
   const photoSeen = new Set();
   const dedupedPhotos = safePhotos.filter((photo) => {
     const key = [
@@ -435,82 +439,142 @@ const buildTripHighlights = (trip, photos, itineraryItems) => {
     if (aDate !== bDate) return aDate.localeCompare(bDate);
     return String(a?.time || '').localeCompare(String(b?.time || ''));
   });
-  const itemsByDate = sortedItems.reduce((acc, item) => {
-    const key = String(item?.date || '').trim();
-    if (!key) return acc;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
-    return acc;
-  }, {});
-  const scorePhoto = (photo, item) => {
-    const text = normalizeText(photo?.caption, item?.title, item?.location, item?.notes, item?.category);
-    return (photo?.caption ? 4 : 0)
-      + (photo?.event_id ? 3 : 0)
-      + (foodRegex.test(text) ? 3 : 0)
-      + (attractionRegex.test(text) ? 2 : 0)
-      + (item?.location ? 1 : 0);
-  };
   const uniqueLocations = Array.from(new Set([
     String(trip?.weather_location || '').trim(),
     ...sortedItems.map((item) => String(item?.location || '').trim()),
   ].filter(Boolean)));
-  const topPhoto = [...dedupedPhotos]
-    .sort((a, b) => scorePhoto(b, null) - scorePhoto(a, null))[0] || null;
+  const classifyMoment = (text) => ({
+    food: foodRegex.test(text),
+    scenic: scenicRegex.test(text),
+    nightlife: nightlifeRegex.test(text),
+    landmark: landmarkRegex.test(text),
+    social: socialRegex.test(text),
+    filler: fillerRegex.test(text),
+  });
+  const pickHighlightLabel = (moment, isHook = false) => {
+    if (isHook) return 'Best moment';
+    if (moment?.traits?.food) return 'Favorite meal';
+    if (moment?.traits?.scenic) return 'Golden hour';
+    if (moment?.traits?.nightlife) return 'After dark';
+    if (moment?.traits?.landmark) return 'Worth it';
+    if (moment?.traits?.social) return 'Core memory';
+    return 'Highlight';
+  };
+  const scorePhoto = (photo, text = '') => {
+    const combined = normalizeText(text, photo?.caption);
+    const traits = classifyMoment(combined);
+    return (photo?.url ? 10 : 0)
+      + (photo?.caption ? 6 : 0)
+      + (String(photo?.caption || '').trim().length > 24 ? 2 : 0)
+      + (traits.food ? 3 : 0)
+      + (traits.scenic ? 4 : 0)
+      + (traits.nightlife ? 3 : 0)
+      + (traits.landmark ? 3 : 0)
+      + (traits.social ? 2 : 0);
+  };
+  const moments = sortedItems.map((item, index) => {
+    const itemId = String(item?.id || '').trim();
+    const dateKey = String(item?.date || '').trim();
+    const text = normalizeText(item?.title, item?.location, item?.notes, item?.category);
+    const eventPhotos = photosByEventId[itemId] || [];
+    const datePhotos = photosByDate[dateKey] || [];
+    const featuredPhoto = [...eventPhotos, ...datePhotos]
+      .filter((photo, photoIdx, arr) => arr.findIndex((candidate) => String(candidate?.url || '') === String(photo?.url || '')) === photoIdx)
+      .sort((a, b) => scorePhoto(b, text) - scorePhoto(a, text))[0] || null;
+    const traits = classifyMoment(normalizeText(text, featuredPhoto?.caption));
+    const duplicatePenalty = sortedItems.findIndex((other) => normalizeText(other?.title, other?.location) === normalizeText(item?.title, item?.location)) !== index ? 2 : 0;
+    const score = (featuredPhoto ? 12 : 0)
+      + (featuredPhoto?.caption ? 5 : 0)
+      + Math.min(eventPhotos.length + datePhotos.length, 3)
+      + (traits.food ? 4 : 0)
+      + (traits.scenic ? 5 : 0)
+      + (traits.nightlife ? 4 : 0)
+      + (traits.landmark ? 4 : 0)
+      + (traits.social ? 3 : 0)
+      + (/popup|special|festival|concert|celebration/i.test(text) ? 3 : 0)
+      - (traits.filler ? 5 : 0)
+      - duplicatePenalty;
+    return {
+      item,
+      dateKey,
+      text,
+      featuredPhoto,
+      traits,
+      score,
+      bullets: [
+        normalizeText(item?.time ? formatHighlightTime(item.time) : '', item?.title),
+        item?.location ? `At ${item.location}` : '',
+        featuredPhoto?.caption || item?.notes || '',
+      ].filter(Boolean),
+    };
+  });
+  const rankedMoments = [...moments].sort((a, b) => b.score - a.score);
+  const selectedHighlights = [];
+  const usedDays = new Set();
+  const usedTypes = new Set();
+  rankedMoments.forEach((moment) => {
+    if (selectedHighlights.length >= 3) return;
+    const typeKey = moment.traits.food ? 'food'
+      : moment.traits.scenic ? 'scenic'
+      : moment.traits.nightlife ? 'nightlife'
+      : moment.traits.landmark ? 'landmark'
+      : 'general';
+    const sameDayPenalty = usedDays.has(moment.dateKey);
+    const sameTypePenalty = usedTypes.has(typeKey);
+    if (moment.score < 4) return;
+    if (sameDayPenalty && sameTypePenalty) return;
+    selectedHighlights.push({ ...moment, typeKey });
+    usedDays.add(moment.dateKey);
+    usedTypes.add(typeKey);
+  });
+  const hookMoment = selectedHighlights[0] || rankedMoments[0] || null;
+  const hookPhoto = hookMoment?.featuredPhoto || [...dedupedPhotos].sort((a, b) => scorePhoto(b) - scorePhoto(a))[0] || null;
+  const setupBullets = selectedHighlights.slice(0, 3).map((moment) => normalizeText(
+    moment?.item?.title,
+    moment?.item?.location ? `@ ${moment.item.location}` : ''
+  ));
   const slides = [{
-    type: 'cover',
-    title: tripTitle,
+    type: 'hook',
+    title: hookMoment?.item?.title || tripTitle,
     subtitle: tripDatesLabel,
-    caption: topPhoto?.caption || 'A quick vertical recap built from this trip itinerary.',
-    image: topPhoto?.url || null,
-    meta: uniqueLocations.slice(0, 2).join(' · '),
+    caption: hookPhoto?.caption || hookMoment?.item?.notes || `The part of ${tripTitle} that still feels worth replaying.`,
+    image: hookPhoto?.url || null,
+    meta: hookMoment?.item?.location || uniqueLocations.slice(0, 2).join(' · '),
+    tag: pickHighlightLabel(hookMoment, true),
+  }, {
+    type: 'context',
+    title: tripTitle,
+    subtitle: 'Quick setup',
+    caption: uniqueLocations.length > 0
+      ? `A trip built around ${uniqueLocations.slice(0, 3).join(', ')}.`
+      : 'A few standout stops, good meals, and the moments worth stealing.',
+    image: null,
+    meta: tripDatesLabel,
+    tag: 'Scene setter',
+    bullets: setupBullets,
   }];
-  const dayKeys = Object.keys(itemsByDate).sort().slice(0, 4);
-  dayKeys.forEach((dateKey) => {
-    const dayItems = itemsByDate[dateKey] || [];
-    const featuredItem = [...dayItems].sort((a, b) => {
-      const aText = normalizeText(a?.title, a?.location, a?.notes, a?.category);
-      const bText = normalizeText(b?.title, b?.location, b?.notes, b?.category);
-      const aScore = (photosByEventId[String(a?.id || '').trim()]?.length || 0) * 3 + (foodRegex.test(aText) ? 3 : 0) + (attractionRegex.test(aText) ? 2 : 0);
-      const bScore = (photosByEventId[String(b?.id || '').trim()]?.length || 0) * 3 + (foodRegex.test(bText) ? 3 : 0) + (attractionRegex.test(bText) ? 2 : 0);
-      return bScore - aScore;
-    })[0] || null;
-    const featuredPhoto = (featuredItem && photosByEventId[String(featuredItem?.id || '').trim()]?.sort((a, b) => scorePhoto(b, featuredItem) - scorePhoto(a, featuredItem))[0])
-      || (photosByDate[dateKey] || []).sort((a, b) => scorePhoto(b, featuredItem) - scorePhoto(a, featuredItem))[0]
-      || null;
-    const summaryBullets = dayItems.slice(0, 3).map((item) => normalizeText(item?.time ? formatHighlightTime(item.time) : '', item?.title, item?.location ? `@ ${item.location}` : ''));
-    const featuredText = normalizeText(featuredItem?.title, featuredItem?.location, featuredItem?.notes, featuredItem?.category);
+  selectedHighlights.slice(0, 3).forEach((moment, index) => {
     slides.push({
-      type: 'day',
-      title: featuredItem?.title || new Date(`${dateKey}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' }),
-      subtitle: new Date(`${dateKey}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-      caption: featuredPhoto?.caption || featuredItem?.notes || summaryBullets.join(' · ') || 'Itinerary highlights from this day.',
-      image: featuredPhoto?.url || null,
-      meta: featuredItem?.location || '',
-      tag: foodRegex.test(featuredText) ? 'Food' : attractionRegex.test(featuredText) ? 'Attraction' : 'Day highlight',
-      bullets: summaryBullets,
+      type: 'highlight',
+      title: moment?.item?.title || `Highlight ${index + 1}`,
+      subtitle: new Date(`${moment.dateKey}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+      caption: moment?.featuredPhoto?.caption || moment?.item?.notes || 'One of the moments that made the trip feel worth planning.',
+      image: moment?.featuredPhoto?.url || null,
+      meta: moment?.item?.location || '',
+      tag: pickHighlightLabel(moment),
+      bullets: moment?.bullets?.slice(0, 2),
     });
   });
-  if (uniqueLocations.length > 0) {
-    slides.push({
-      type: 'summary',
-      title: 'Stops worth copying',
-      subtitle: 'Locations from the trip',
-      caption: uniqueLocations.slice(0, 5).join(' · '),
-      image: null,
-      bullets: sortedItems
-        .filter((item) => foodRegex.test(normalizeText(item?.title, item?.location, item?.notes, item?.category)) || attractionRegex.test(normalizeText(item?.title, item?.location, item?.notes, item?.category)))
-        .slice(0, 4)
-        .map((item) => normalizeText(item?.title, item?.location ? `@ ${item.location}` : '')),
-    });
-  }
   slides.push({
     type: 'end',
-    title: `Copy ${tripTitle}`,
-    subtitle: 'Turn this trip into your own version',
-    caption: 'Publish it to Explore when you want other people to discover the itinerary, restaurants, and highlights.',
-    image: null,
+    title: `Steal this trip`,
+    subtitle: tripTitle,
+    caption: `Save the restaurants, landmarks, and standout moments from ${tripTitle}, then publish it to Explore when you're ready.`,
+    image: selectedHighlights[1]?.featuredPhoto?.url || hookPhoto?.url || null,
+    meta: uniqueLocations.slice(0, 2).join(' · '),
+    tag: 'Do it again',
   });
-  return slides.slice(0, 7);
+  return slides.slice(0, 6);
 };
 
 
