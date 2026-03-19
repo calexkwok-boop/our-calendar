@@ -885,7 +885,7 @@ export default function PopupEventPanel({
                 {[
                   { label: 'Copy Link',         icon: copied ? Check : Copy,  action: handleCopyLink,                            color: copied ? '#10b981' : undefined },
                   { label: 'Go to Roster',      icon: Users,                  action: () => setScreen('roster') },
-                  { label: 'Start Round Robin', icon: Gamepad2,               action: () => setScreen('game'),                   color: accent },
+                  { label: 'Start Play',        icon: Gamepad2,               action: () => setScreen('game'),                   color: accent },
                   { label: 'Open Chat',         icon: MessageCircle,          action: () => setScreen('chat') },
                 ].map(({ label, icon: Icon, action, color }) => (
                   <button key={label} onClick={action} style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', color: color || primaryText, fontSize: 12, fontWeight: 700 }}>
