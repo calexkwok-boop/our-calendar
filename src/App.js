@@ -1032,6 +1032,7 @@ function App() {
   const [showSubCalInviteModal, setShowSubCalInviteModal] = useState(false);
   const [tripInviteLinkCopied, setTripInviteLinkCopied] = useState(false);
   const [showSubCalNotesModal, setShowSubCalNotesModal] = useState(false);
+  const [showTripBackgroundPhotoMenu, setShowTripBackgroundPhotoMenu] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUploadMessage, setPhotoUploadMessage] = useState('');
   const [photoUploadError, setPhotoUploadError] = useState(false);
@@ -2644,6 +2645,68 @@ function App() {
       setUploadingPhoto(false);
     }
   };
+  const uploadTripBackgroundPhoto = async (file) => {
+    if (!file) return null;
+    if (!activeSubCalendar) {
+      setPhotoUploadError(true);
+      setPhotoUploadMessage('No active trip selected.');
+      return null;
+    }
+    if (!user) {
+      setPhotoUploadError(true);
+      setPhotoUploadMessage('Please sign in again, then retry uploading.');
+      return null;
+    }
+    setUploadingPhoto(true);
+    setPhotoUploadError(false);
+    setPhotoUploadMessage('');
+    try {
+      const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const filename = `${activeSubCalendar.id}/background_${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+      let selectedBucket = null;
+      let uploadError = null;
+      for (const bucket of TRIP_PHOTO_BUCKETS) {
+        const { error } = await supabase.storage.from(bucket).upload(filename, file, { contentType: file.type });
+        if (!error) {
+          selectedBucket = bucket;
+          uploadError = null;
+          break;
+        }
+        uploadError = error;
+        if (!/bucket.*not found/i.test(error.message || '')) break;
+      }
+      if (!selectedBucket) {
+        console.error('Background upload error:', uploadError);
+        setPhotoUploadError(true);
+        setPhotoUploadMessage(`Upload failed: ${uploadError?.message || 'Unknown upload error'}`);
+        return null;
+      }
+      const { data: urlData } = supabase.storage.from(selectedBucket).getPublicUrl(filename);
+      if (!urlData?.publicUrl) {
+        setPhotoUploadError(true);
+        setPhotoUploadMessage('Upload succeeded but no public URL was generated.');
+        return null;
+      }
+      const backgroundPhoto = {
+        id: `bg_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+        url: urlData.publicUrl,
+        caption: null,
+      };
+      const ok = await saveTripCoverPhoto(backgroundPhoto);
+      if (!ok) return null;
+      setPhotoUploadError(false);
+      setPhotoUploadMessage('Trip background photo updated.');
+      return backgroundPhoto;
+    } catch (e) {
+      console.error(e);
+      setPhotoUploadError(true);
+      setPhotoUploadMessage(`Upload failed: ${e.message || 'Unknown error'}`);
+      return null;
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   const removeTripPhotoRecord = async (photo) => {
     try {
@@ -2861,8 +2924,16 @@ function App() {
     if (!files || files.length === 0) return;
     setPhotoUploadError(false);
     setPhotoUploadMessage('');
+    if (tripPhotoUploadTarget === 'background') {
+      await uploadTripBackgroundPhoto(files[0]);
+      setPhotoEventId(null);
+      setPhotoDate(null);
+      setTripPhotoUploadTarget('gallery');
+      setShowTripBackgroundPhotoMenu(false);
+      if (clearInput) clearInput();
+      return;
+    }
     let successCount = 0;
-    let firstUploadedPhoto = null;
     for (const file of files) {
       const uploadedPhoto = await uploadTripPhoto(
         file,
@@ -2870,18 +2941,11 @@ function App() {
         photoEventId,
         photoDate || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null)
       );
-      if (uploadedPhoto) {
-        successCount += 1;
-        if (!firstUploadedPhoto) firstUploadedPhoto = uploadedPhoto;
-      }
+      if (uploadedPhoto) successCount += 1;
     }
     if (successCount > 1) {
       setPhotoUploadError(false);
       setPhotoUploadMessage(`Uploaded ${successCount} photos.`);
-    }
-    if (tripPhotoUploadTarget === 'background' && firstUploadedPhoto) {
-      await saveTripCoverPhoto(firstUploadedPhoto);
-      setPhotoUploadMessage('Trip background photo updated.');
     }
     setPhotoEventId(null);
     setPhotoDate(null);
@@ -21660,6 +21724,64 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       </div>
     )}
 
+    {showTripBackgroundPhotoMenu && activeSubCalendar && (
+      <div
+        className="fixed inset-0 z-[55] bg-black/50 p-4 flex items-center justify-center"
+        onClick={() => setShowTripBackgroundPhotoMenu(false)}
+      >
+        <div
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Trip Background Photo</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {activeSubCalendar.name}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowTripBackgroundPhotoMenu(false)}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                setPhotoEventId(null);
+                setPhotoDate(null);
+                setTripPhotoUploadTarget('background');
+                setShowTripBackgroundPhotoMenu(false);
+                photoInputRef.current?.click();
+              }}
+              className="w-full px-4 py-3 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 text-white text-sm font-semibold"
+            >
+              {activeTripCoverPhoto?.url ? 'Change Photo' : 'Upload Photo'}
+            </button>
+            {activeTripCoverPhoto?.url && (
+              <button
+                onClick={async () => {
+                  await clearTripCoverPhoto();
+                  setShowTripBackgroundPhotoMenu(false);
+                }}
+                className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium"
+              >
+                Remove Photo
+              </button>
+            )}
+            <button
+              onClick={() => setShowTripBackgroundPhotoMenu(false)}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-sm font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     {showTripHighlightsModal && activeSubCalendar && (
       <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex flex-col">
         <div
@@ -21770,25 +21892,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           <div className="flex items-center gap-2">
             {canEditCurrentTrip && (
               <button
-                onClick={() => {
-                  setPhotoEventId(null);
-                  setPhotoDate(null);
-                  setTripPhotoUploadTarget('background');
-                  photoInputRef.current?.click();
-                }}
+                onClick={() => setShowTripBackgroundPhotoMenu(true)}
                 className="relative p-1.5 rounded-lg bg-gray-100/90 dark:bg-gray-700/90 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
                 title={activeTripCoverPhoto?.url ? 'Change trip background photo' : 'Add trip background photo'}
               >
                 <Camera className="w-4 h-4" />
-              </button>
-            )}
-            {canEditCurrentTrip && activeTripCoverPhoto?.url && (
-              <button
-                onClick={() => { clearTripCoverPhoto(); }}
-                className="relative p-1.5 rounded-lg bg-gray-100/90 dark:bg-gray-700/90 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
-                title="Clear trip background photo"
-              >
-                <X className="w-4 h-4" />
               </button>
             )}
             <button
