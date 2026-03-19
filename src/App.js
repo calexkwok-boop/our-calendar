@@ -4321,6 +4321,7 @@ function App() {
     showSportsImportModal,
     showCategoryEditor,
   ]);
+  const showHomeCalendarWidgets = bottomNavTab === 'home' && preferCalendarHome;
   const hasOpenWidgetWindow = showControlWidgetAddPanel || Object.values(widgetCardOpenById).some(Boolean);
   const getLayerNotesStorageKey = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
     const userKey = String(uid || '').trim();
@@ -4532,6 +4533,12 @@ useEffect(() => {
       window.clearTimeout(timeoutId);
     };
   }, [coverHeaderControlsVisible, activeLayerId, coverControlsInteractionTick, hasOpenWidgetWindow, bottomNavTab, closeHomeWidgetWindows]);
+  useEffect(() => {
+    if (bottomNavTab !== 'home') return;
+    if (preferCalendarHome) return;
+    setCoverHeaderControlsVisible(false);
+    closeHomeWidgetWindows();
+  }, [bottomNavTab, preferCalendarHome, closeHomeWidgetWindows]);
   useEffect(() => {
     const handleWindowScroll = () => {
       if (bottomNavTab !== 'home') return;
@@ -17045,7 +17052,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             }
             : undefined}
         >
-          {bottomNavTab === 'home' && (
+          {showHomeCalendarWidgets && (
             <div className="absolute inset-0 z-[25] pointer-events-none">
 
               {/* Icon — top left, opens account */}
@@ -21210,7 +21217,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         <div className="max-w-6xl mx-auto pointer-events-auto">
 
           {/* Widget toolbar — shown on home tab */}
-          {bottomNavTab === 'home' && (
+          {showHomeCalendarWidgets && (
             <div className="flex items-center gap-1.5 mb-1.5 px-1 pt-1 pr-2 overflow-x-auto overflow-y-visible">
               {activeControlWidgets.map((widgetId) => {
                 const meta = getControlWidgetMeta(widgetId);
