@@ -1661,6 +1661,8 @@ function App() {
       setSubCalendars(dedupedRows);
       setActiveSubCalendar((prev) => {
         if (!prev?.id) return prev;
+        const prevLayerId = String(prev?.layer_id || prev?.calendar_id || '').trim();
+        if (prevLayerId && prevLayerId !== requestedLayerId) return prev;
         return dedupedRows.some((sc) => String(sc.id) === String(prev.id)) ? prev : null;
       });
       return dedupedRows;
