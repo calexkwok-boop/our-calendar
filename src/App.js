@@ -20153,7 +20153,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                   )}
                                 </div>
                                 {popupSignups.length > 0 && (
-                                  <div className="mt-1 text-[11px] text-rose-700/90 dark:text-rose-300/90 truncate">
+                                  <div className="mt-1 text-[11px] text-rose-700/90 dark:text-rose-300/90 break-words leading-relaxed">
                                     {popupSignups.map((row) => row.displayName || 'Member').join(', ')}
                                   </div>
                                 )}
