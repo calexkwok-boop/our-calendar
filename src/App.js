@@ -19621,12 +19621,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       onClick={() => {
                         setSelectedDate(new Date());
                         setSelectedDates([]);
-                        setShowDateDetailModal(true);
+                        setPreferCalendarHome(false);
+                        setShowHomeCalendarOverview(false);
                       }}
                       className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:shadow-md"
                       style={themeAccentEllieChipButtonStyle}
                     >
-                      Open Today
+                      Show today&apos;s overview
                     </button>
                   </div>
                   {todayEvents.length === 0 ? (
