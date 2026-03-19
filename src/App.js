@@ -15822,7 +15822,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       y: Math.max(2, Math.min(98, snap(slotY, yStep))),
     };
   };
-  const parseManualRoundRobinRoster = (value) => {
+const parseManualRoundRobinRoster = (value) => {
   const seen = new Set();
   return String(value || '')
     .split(/\r?\n|,/)
@@ -15840,6 +15840,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       displayName: name,
     }));
 };
+  const buildRoundRobinSourceSignature = (participants) => (
+    (Array.isArray(participants) ? participants : [])
+      .map((participant, idx) => {
+        const id = String(participant?.id || '').trim();
+        const name = String(participant?.displayName || participant?.name || '').trim().toLowerCase();
+        return `${idx}:${id}:${name}`;
+      })
+      .join('|')
+  );
   const addControlWidget = (widgetId) => {
     const id = String(widgetId || '').trim();
     if (!id || !CONTROL_WIDGET_IDS.includes(id)) return;
@@ -16094,9 +16103,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       displayName: String(signup?.displayName || `Player ${idx + 1}`),
     }));
   }
+  const sourceSignature = buildRoundRobinSourceSignature(participants);
   if (!restart && layerRoundRobins[normalizedEventId]) {
+    const existingTournament = layerRoundRobins[normalizedEventId];
+    const existingSignature = String(existingTournament?.sourceSignature || buildRoundRobinSourceSignature(existingTournament?.participants || [])).trim();
+    if (existingSignature !== sourceSignature || Number(existingTournament?.teamsOf || 2) !== Number(teamsOf || 2)) {
+      restart = true;
+    } else {
     setRoundRobinError('A round robin already exists. Reset it first.');
     return;
+    }
   }
   // createRoundRobinTournament is defined inside RoundRobinPanel but we can recreate the logic here:
   const safe = participants.filter((p) => String(p?.id || '').trim());
@@ -16133,6 +16149,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const tournament = {
     eventId: normalizedEventId,
+    sourceSignature,
     createdAt: new Date().toISOString(),
     completedAt: null,
     status: 'active',
@@ -22650,9 +22667,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         <div className="flex gap-1 shrink-0">
                           <button
                             onClick={() => { setPhotoEventId(event.id); setPhotoDate(dk); photoInputRef.current?.click(); }}
-                            className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10"
+                            className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200/80 bg-white/90 text-gray-500 shadow-sm transition-colors hover:bg-white dark:border-white/10 dark:bg-slate-900/70 dark:text-gray-300 dark:hover:bg-slate-900/90"
                             title="Add photo"
-                          >📸</button>
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                          </button>
                           <button onClick={() => setSubCalEditingEvent(event.id)} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10"><Edit2 className="w-3.5 h-3.5 text-gray-500" /></button>
                           <button onClick={() => deleteSubCalEvent(event.id, dk)} className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
                         </div>

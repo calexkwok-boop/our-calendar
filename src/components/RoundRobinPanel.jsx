@@ -125,9 +125,44 @@ export default function RoundRobinPanel({
   const mutedChipBg = darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)';
   const primaryText = darkMode ? '#f8fafc' : '#0f172a';
   const secondaryText = darkMode ? '#cbd5e1' : '#64748b';
+  const buildSourceSignature = (participants) => (
+    (Array.isArray(participants) ? participants : [])
+      .map((participant, idx) => {
+        const id = String(participant?.id || '').trim();
+        const name = String(participant?.displayName || participant?.name || '').trim().toLowerCase();
+        return `${idx}:${id}:${name}`;
+      })
+      .join('|')
+  );
 
   const tid = useManualRoundRobinRoster ? '__manual__' : String(selectedRoundRobinEventId || '');
-  const tournament = tid ? layerRoundRobins?.[tid] : null;
+  const selectedEntry = !useManualRoundRobinRoster
+    ? (eligibleRoundRobinEvents || []).find((item) => String(item?.eventId || '') === tid) || null
+    : null;
+  const tournamentRecord = tid ? layerRoundRobins?.[tid] : null;
+  const liveSourceSignature = selectedEntry
+    ? buildSourceSignature((selectedEntry.signups || []).map((signup, idx) => ({
+        id: String(
+          signup?.memberId
+          || signup?.signupId
+          || (signup?.userId && !signup?.manual ? signup.userId : '')
+          || `guest-${idx + 1}-${String(signup?.displayName || 'player').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+        ),
+        displayName: String(signup?.displayName || `Player ${idx + 1}`),
+      })))
+    : '';
+  const tournamentSignature = String(
+    tournamentRecord?.sourceSignature
+    || buildSourceSignature(tournamentRecord?.participants || [])
+  ).trim();
+  const tournamentIsStale = Boolean(
+    !useManualRoundRobinRoster
+    && tournamentRecord
+    && liveSourceSignature
+    && tournamentSignature
+    && tournamentSignature !== liveSourceSignature
+  );
+  const tournament = tournamentIsStale ? null : tournamentRecord;
   const standings = useMemo(() => tournament ? deriveStandings(tournament.participants, tournament.rounds) : [], [tournament]);
   const allMatches = useMemo(() => (tournament?.rounds || []).flatMap((r) => r.matches || []), [tournament]);
   const doneCount = allMatches.filter((m) => m.completed).length;
@@ -290,6 +325,11 @@ export default function RoundRobinPanel({
         {roundRobinError && (
           <div className="px-3 py-2 rounded-xl text-xs font-semibold bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50">
             {roundRobinError}
+          </div>
+        )}
+        {tournamentIsStale && (
+          <div className="px-3 py-2 rounded-xl text-xs font-semibold border" style={{ borderColor: `${accent}33`, background: softBg, color: secondaryText }}>
+            Roster changed. Generate a new schedule to match the current event players.
           </div>
         )}
 
