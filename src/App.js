@@ -23221,8 +23221,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </button>
                   <button
                     type="button"
-                    onPointerDown={(e) => {
-                      e.preventDefault();
+                    onClick={() => {
                       setIsPhotoSelectionMode(false);
                       setPhotoDeleteMode(true);
                       setShowPhotoSortMenu(false);
@@ -23282,7 +23281,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
             {tripPhotos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center px-8">
-                <div className="text-6xl mb-4">{'\uD83D\uDCF8'}</div>
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200/80 bg-white/90 text-gray-500 shadow-sm dark:border-white/10 dark:bg-slate-900/70 dark:text-gray-300">
+                  <Camera className="w-4 h-4" />
+                </div>
                 <div className="text-gray-500 dark:text-gray-400 font-medium mb-1">No photos yet</div>
                 <div className="text-sm text-gray-400 dark:text-gray-500">Tap "Add Photos" to share memories from this trip</div>
               </div>
