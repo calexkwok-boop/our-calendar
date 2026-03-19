@@ -8520,8 +8520,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           const eventId = String(row?.event_id || '').trim();
           if (!eventId) return;
           const userId = String(row?.user_id || '').trim();
-          const displayName = resolveHandleLikeLabel(
-            String(row?.display_name || row?.user_id || 'Member'),
+          const rawDisplayName = String(row?.display_name || '').trim();
+          const displayName = rawDisplayName || resolveHandleLikeLabel(
+            String(row?.user_id || 'Member'),
             userId
           );
           const dedupeKey = `${eventId}|${userId}|${displayName.trim().toLowerCase()}`;
