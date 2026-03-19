@@ -3,6 +3,40 @@ import { X } from 'lucide-react';
 
 const FONT_INJECT = `
   @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Lora:wght@400;500&display=swap');
+
+  .expense-tracker-shell {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .expense-tracker-add-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.6fr);
+    gap: 8px;
+  }
+
+  .expense-tracker-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  }
+
+  .expense-tracker-col,
+  .expense-tracker-col-right {
+    min-width: 0;
+  }
+
+  @media (max-width: 860px) {
+    .expense-tracker-add-grid,
+    .expense-tracker-body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .expense-tracker-col-right {
+      border-left: none !important;
+      border-top: 1px solid var(--expense-tracker-border);
+    }
+  }
 `;
 
 const LIGHT = {
@@ -94,7 +128,6 @@ const createStyles = (C) => ({
   },
   addGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1.6fr',
     gap: 8,
   },
   fieldLabel: {
@@ -140,16 +173,16 @@ const createStyles = (C) => ({
     color: C.textSub,
   },
   body: {
-    display: 'grid',
-    gridTemplateColumns: '1.35fr 1fr',
     background: C.bg,
   },
   col: {
     padding: '16px 20px',
+    minWidth: 0,
   },
   colRight: {
     padding: '16px 20px',
     borderLeft: `1px solid ${C.border}`,
+    minWidth: 0,
   },
   colTitle: {
     fontSize: 11,
@@ -356,7 +389,10 @@ function ExpenseTrackerPanel({
   return (
     <>
       <style>{FONT_INJECT}</style>
-      <div style={s.shell}>
+      <div
+        className="expense-tracker-shell"
+        style={{ ...s.shell, '--expense-tracker-border': palette.border }}
+      >
         <div style={s.header}>
           <div>
             <div style={s.title}>{title}</div>
@@ -370,7 +406,7 @@ function ExpenseTrackerPanel({
         </div>
 
         <div style={s.addSection}>
-          <div style={s.addGrid}>
+          <div className="expense-tracker-add-grid" style={s.addGrid}>
             <div>
               <label style={s.fieldLabel}>Paid by</label>
               {Array.isArray(payerOptions) ? (
@@ -444,8 +480,8 @@ function ExpenseTrackerPanel({
           {error ? <p style={s.errorMsg}>{error}</p> : null}
         </div>
 
-        <div style={s.body}>
-          <div style={s.col}>
+        <div className="expense-tracker-body" style={s.body}>
+          <div className="expense-tracker-col" style={s.col}>
             <div style={s.colTitle}>Expenses</div>
             {expenses.length === 0 ? (
               <p style={s.empty}>{emptyExpensesText}</p>
@@ -465,7 +501,7 @@ function ExpenseTrackerPanel({
             )}
           </div>
 
-          <div style={s.colRight}>
+          <div className="expense-tracker-col-right" style={s.colRight}>
             <div style={s.colTitle}>Split summary</div>
             <div style={s.perPersonCard}>
               <span style={s.perPersonLabel}>Per person</span>
