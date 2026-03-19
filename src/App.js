@@ -19333,6 +19333,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {bottomNavTab === 'home' && (
           <div className="space-y-4 mb-4">
+            <div className="flex justify-center">
+              <button
+                onClick={() => setShowHomeCalendarOverview((prev) => !prev)}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                style={themeAccentEllieChipButtonStyle}
+              >
+                {showHomeCalendarOverview ? 'Hide calendar overview' : 'Show calendar overview'}
+              </button>
+            </div>
+
             <div
               className="glass-panel rounded-[28px] border border-white/50 dark:border-white/10 p-4 sm:p-5"
               style={{
@@ -19568,15 +19578,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             )}
 
-            <div className="flex justify-center">
-              <button
-                onClick={() => setShowHomeCalendarOverview((prev) => !prev)}
-                className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-                style={themeAccentEllieChipButtonStyle}
-              >
-                {showHomeCalendarOverview ? 'Hide calendar overview' : 'Show calendar overview'}
-              </button>
-            </div>
           </div>
         )}
 
