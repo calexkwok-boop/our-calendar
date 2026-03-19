@@ -366,6 +366,153 @@ const writeExploreVotesLocal = (userId, votesByLayer) => {
   localStorage.setItem(getExploreVotesLocalKey(userId), JSON.stringify(next));
 };
 
+const formatHighlightDateRange = (startDate, endDate) => {
+  const toDate = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(`${raw}T00:00:00`) : new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+  const start = toDate(startDate);
+  const end = toDate(endDate);
+  if (!start && !end) return 'Trip recap';
+  const fmt = (date, withYear = false) => date.toLocaleDateString('en-US', withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
+  if (start && end) {
+    const sameYear = start.getFullYear() === end.getFullYear();
+    return `${fmt(start)} - ${fmt(end, !sameYear)}`;
+  }
+  return fmt(start || end, true);
+};
+
+const buildTripHighlights = (trip, photos, itineraryItems) => {
+  const tripTitle = String(trip?.name || 'Trip').trim() || 'Trip';
+  const tripDatesLabel = formatHighlightDateRange(trip?.start_date, trip?.end_date);
+  const safePhotos = Array.isArray(photos) ? photos.filter(Boolean) : [];
+  const safeItems = Array.isArray(itineraryItems) ? itineraryItems.filter(Boolean) : [];
+  const normalizeText = (...parts) => parts.map((part) => String(part || '').trim()).filter(Boolean).join(' ');
+  const formatHighlightTime = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const [hh = '0', mm = '00'] = raw.split(':');
+    let hour = Number(hh);
+    const minute = String(mm || '00').padStart(2, '0');
+    const suffix = hour >= 12 ? 'PM' : 'AM';
+    if (hour === 0) hour = 12;
+    else if (hour > 12) hour -= 12;
+    return `${hour}:${minute} ${suffix}`;
+  };
+  const foodRegex = /\b(food|restaurant|breakfast|brunch|lunch|dinner|coffee|cafe|bar|dessert|pizza|ramen|taco|bakery|wine)\b/i;
+  const attractionRegex = /\b(museum|park|beach|tour|gallery|cathedral|temple|castle|bridge|market|view|landmark|plaza|hike|attraction)\b/i;
+  const photoSeen = new Set();
+  const dedupedPhotos = safePhotos.filter((photo) => {
+    const key = [
+      String(photo?.event_id || '').trim(),
+      String(photo?.date || '').trim(),
+      String(photo?.caption || '').trim().toLowerCase(),
+      String(photo?.url || '').trim().toLowerCase(),
+    ].join('|');
+    if (photoSeen.has(key)) return false;
+    photoSeen.add(key);
+    return true;
+  });
+  const photosByEventId = dedupedPhotos.reduce((acc, photo) => {
+    const key = String(photo?.event_id || '').trim();
+    if (!key) return acc;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(photo);
+    return acc;
+  }, {});
+  const photosByDate = dedupedPhotos.reduce((acc, photo) => {
+    const key = String(photo?.date || '').trim();
+    if (!key) return acc;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(photo);
+    return acc;
+  }, {});
+  const sortedItems = [...safeItems].sort((a, b) => {
+    const aDate = String(a?.date || '').trim();
+    const bDate = String(b?.date || '').trim();
+    if (aDate !== bDate) return aDate.localeCompare(bDate);
+    return String(a?.time || '').localeCompare(String(b?.time || ''));
+  });
+  const itemsByDate = sortedItems.reduce((acc, item) => {
+    const key = String(item?.date || '').trim();
+    if (!key) return acc;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {});
+  const scorePhoto = (photo, item) => {
+    const text = normalizeText(photo?.caption, item?.title, item?.location, item?.notes, item?.category);
+    return (photo?.caption ? 4 : 0)
+      + (photo?.event_id ? 3 : 0)
+      + (foodRegex.test(text) ? 3 : 0)
+      + (attractionRegex.test(text) ? 2 : 0)
+      + (item?.location ? 1 : 0);
+  };
+  const uniqueLocations = Array.from(new Set([
+    String(trip?.weather_location || '').trim(),
+    ...sortedItems.map((item) => String(item?.location || '').trim()),
+  ].filter(Boolean)));
+  const topPhoto = [...dedupedPhotos]
+    .sort((a, b) => scorePhoto(b, null) - scorePhoto(a, null))[0] || null;
+  const slides = [{
+    type: 'cover',
+    title: tripTitle,
+    subtitle: tripDatesLabel,
+    caption: topPhoto?.caption || 'A quick vertical recap built from this trip itinerary.',
+    image: topPhoto?.url || null,
+    meta: uniqueLocations.slice(0, 2).join(' · '),
+  }];
+  const dayKeys = Object.keys(itemsByDate).sort().slice(0, 4);
+  dayKeys.forEach((dateKey) => {
+    const dayItems = itemsByDate[dateKey] || [];
+    const featuredItem = [...dayItems].sort((a, b) => {
+      const aText = normalizeText(a?.title, a?.location, a?.notes, a?.category);
+      const bText = normalizeText(b?.title, b?.location, b?.notes, b?.category);
+      const aScore = (photosByEventId[String(a?.id || '').trim()]?.length || 0) * 3 + (foodRegex.test(aText) ? 3 : 0) + (attractionRegex.test(aText) ? 2 : 0);
+      const bScore = (photosByEventId[String(b?.id || '').trim()]?.length || 0) * 3 + (foodRegex.test(bText) ? 3 : 0) + (attractionRegex.test(bText) ? 2 : 0);
+      return bScore - aScore;
+    })[0] || null;
+    const featuredPhoto = (featuredItem && photosByEventId[String(featuredItem?.id || '').trim()]?.sort((a, b) => scorePhoto(b, featuredItem) - scorePhoto(a, featuredItem))[0])
+      || (photosByDate[dateKey] || []).sort((a, b) => scorePhoto(b, featuredItem) - scorePhoto(a, featuredItem))[0]
+      || null;
+    const summaryBullets = dayItems.slice(0, 3).map((item) => normalizeText(item?.time ? formatHighlightTime(item.time) : '', item?.title, item?.location ? `@ ${item.location}` : ''));
+    const featuredText = normalizeText(featuredItem?.title, featuredItem?.location, featuredItem?.notes, featuredItem?.category);
+    slides.push({
+      type: 'day',
+      title: featuredItem?.title || new Date(`${dateKey}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' }),
+      subtitle: new Date(`${dateKey}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+      caption: featuredPhoto?.caption || featuredItem?.notes || summaryBullets.join(' · ') || 'Itinerary highlights from this day.',
+      image: featuredPhoto?.url || null,
+      meta: featuredItem?.location || '',
+      tag: foodRegex.test(featuredText) ? 'Food' : attractionRegex.test(featuredText) ? 'Attraction' : 'Day highlight',
+      bullets: summaryBullets,
+    });
+  });
+  if (uniqueLocations.length > 0) {
+    slides.push({
+      type: 'summary',
+      title: 'Stops worth copying',
+      subtitle: 'Locations from the trip',
+      caption: uniqueLocations.slice(0, 5).join(' · '),
+      image: null,
+      bullets: sortedItems
+        .filter((item) => foodRegex.test(normalizeText(item?.title, item?.location, item?.notes, item?.category)) || attractionRegex.test(normalizeText(item?.title, item?.location, item?.notes, item?.category)))
+        .slice(0, 4)
+        .map((item) => normalizeText(item?.title, item?.location ? `@ ${item.location}` : '')),
+    });
+  }
+  slides.push({
+    type: 'end',
+    title: `Copy ${tripTitle}`,
+    subtitle: 'Turn this trip into your own version',
+    caption: 'Publish it to Explore when you want other people to discover the itinerary, restaurants, and highlights.',
+    image: null,
+  });
+  return slides.slice(0, 7);
+};
+
 
 const urlBase64ToUint8Array = (base64String) => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -810,6 +957,8 @@ function App() {
   const layerLocationChannelRef = useRef(null);
   const layerGeoWatchRef = useRef(null);
   const [tripPhotos, setTripPhotos] = useState([]);
+  const [tripHighlightsSlides, setTripHighlightsSlides] = useState([]);
+  const [showTripHighlightsModal, setShowTripHighlightsModal] = useState(false);
   const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
   const [deletedPhotosNoteId, setDeletedPhotosNoteId] = useState(null);
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
@@ -8515,35 +8664,38 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       ]);
 
       if (!signupErr || !memberErr) {
-        const mergedMap = new Map();
-        const pushEntry = (row, createdAtField = 'created_at') => {
+        signupsMap = {};
+        const memberIdentityByEvent = new Map();
+        (memberRows || []).forEach((row) => {
           const eventId = String(row?.event_id || '').trim();
           if (!eventId) return;
           const userId = String(row?.user_id || '').trim();
-          const rawDisplayName = String(row?.display_name || '').trim();
-          const displayName = rawDisplayName || resolveHandleLikeLabel(
-            String(row?.user_id || 'Member'),
-            userId
-          );
-          const dedupeKey = `${eventId}|${userId}|${displayName.trim().toLowerCase()}`;
-          if (!mergedMap.has(dedupeKey)) {
-            mergedMap.set(dedupeKey, {
-              eventId,
-              userId,
-              displayName,
-              createdAt: String(row?.[createdAtField] || ''),
-            });
-          }
-        };
-        (signupRows || []).forEach((row) => pushEntry(row, 'created_at'));
-        (memberRows || []).forEach((row) => pushEntry(row, 'joined_at'));
-        signupsMap = {};
-        Array.from(mergedMap.values()).forEach((row) => {
-          if (!Array.isArray(signupsMap[row.eventId])) signupsMap[row.eventId] = [];
-          signupsMap[row.eventId].push({
-            userId: row.userId,
-            displayName: row.displayName,
-            createdAt: row.createdAt,
+          const displayName = String(row?.display_name || '').trim() || resolveHandleLikeLabel(String(row?.user_id || 'Member'), userId);
+          if (!Array.isArray(signupsMap[eventId])) signupsMap[eventId] = [];
+          signupsMap[eventId].push({
+            userId,
+            displayName,
+            createdAt: String(row?.joined_at || ''),
+          });
+          if (!memberIdentityByEvent.has(eventId)) memberIdentityByEvent.set(eventId, new Set());
+          memberIdentityByEvent.get(eventId).add(`${userId}|${displayName.trim().toLowerCase()}`);
+        });
+        (signupRows || []).forEach((row) => {
+          const eventId = String(row?.event_id || '').trim();
+          if (!eventId) return;
+          const userId = String(row?.user_id || '').trim();
+          const displayName = String(row?.display_name || '').trim() || resolveHandleLikeLabel(String(row?.user_id || 'Member'), userId);
+          const memberIdentities = memberIdentityByEvent.get(eventId) || new Set();
+          const identityKey = `${userId}|${displayName.trim().toLowerCase()}`;
+          const hasSameSignup = Array.isArray(signupsMap[eventId]) && signupsMap[eventId].some((entry) => (
+            String(entry?.userId || '') === userId && String(entry?.displayName || '').trim().toLowerCase() === displayName.trim().toLowerCase()
+          ));
+          if (memberIdentities.has(identityKey) || hasSameSignup) return;
+          if (!Array.isArray(signupsMap[eventId])) signupsMap[eventId] = [];
+          signupsMap[eventId].push({
+            userId,
+            displayName,
+            createdAt: String(row?.created_at || ''),
           });
         });
       }
@@ -14035,6 +14187,57 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const ts = toDateOnlyTs(value);
     if (ts === null) return 'Unknown date';
     return new Date(ts).toLocaleDateString('en-US', withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
+  };
+  const canGenerateTripHighlights = Boolean(
+    activeSubCalendar
+    && toDateOnlyTs(activeSubCalendar?.end_date) !== null
+    && toDateOnlyTs(activeSubCalendar?.end_date) <= todayTs
+  );
+  const openTripHighlights = () => {
+    if (!activeSubCalendar) return;
+    const itineraryItems = Object.values(subCalendarEvents || {}).flatMap((rows) => Array.isArray(rows) ? rows : []);
+    const slides = buildTripHighlights(activeSubCalendar, tripPhotos, itineraryItems);
+    setTripHighlightsSlides(slides);
+    setShowTripHighlightsModal(true);
+  };
+  const prepareTripHighlightsForExplore = () => {
+    if (!activeSubCalendar?.layer_id) return;
+    const targetLayer = (layers || []).find((layer) => String(layer?.id || '') === String(activeSubCalendar.layer_id || ''));
+    if (!targetLayer) {
+      alert('This trip needs to belong to one of your calendars before it can be prepared for Explore.');
+      return;
+    }
+    if (String(targetLayer?.owner_id || '') !== String(user?.id || '')) {
+      alert('Only the calendar owner can publish this trip to Explore.');
+      return;
+    }
+    const previewSlides = tripHighlightsSlides.length > 0 ? tripHighlightsSlides : buildTripHighlights(
+      activeSubCalendar,
+      tripPhotos,
+      Object.values(subCalendarEvents || {}).flatMap((rows) => Array.isArray(rows) ? rows : [])
+    );
+    const summaryText = previewSlides
+      .slice(1, 4)
+      .map((slide) => String(slide?.title || '').trim())
+      .filter(Boolean)
+      .join(', ');
+    const locationBits = Array.from(new Set([
+      String(activeSubCalendar?.weather_location || '').trim(),
+      ...Object.values(subCalendarEvents || {}).flatMap((rows) => (rows || []).map((item) => String(item?.location || '').trim())),
+    ].filter(Boolean))).slice(0, 3);
+    setPublishLayerTargetId(String(targetLayer.id));
+    setPublishLayerDescription(
+      `${String(activeSubCalendar?.name || 'Trip').trim()} highlights reel with restaurants, food spots, attractions, and a reusable itinerary.${summaryText ? ` Featured: ${summaryText}.` : ''}${locationBits.length > 0 ? ` Stops: ${locationBits.join(', ')}.` : ''}`
+    );
+    setPublishLayerTagsInput(
+      ['trip', 'itinerary', 'restaurants', 'food', 'attractions', ...locationBits.map((item) => item.toLowerCase())]
+        .filter(Boolean)
+        .slice(0, 8)
+        .join(', ')
+    );
+    setPublishPolicyConfirmed(Boolean(targetLayer?.is_public));
+    setShowTripHighlightsModal(false);
+    setShowPublishLayerModal(true);
   };
   const parseNotificationTimestamp = (value) => {
     const raw = String(value || '').trim();
@@ -21148,6 +21351,84 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       </div>
     )}
 
+    {showTripHighlightsModal && activeSubCalendar && (
+      <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex flex-col">
+        <div
+          className="flex items-center justify-between px-4 py-3 text-white"
+          style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}
+        >
+          <div>
+            <div className="text-sm font-semibold">Trip Highlights</div>
+            <div className="text-xs text-white/70">{activeSubCalendar.name}</div>
+          </div>
+          <button
+            onClick={() => setShowTripHighlightsModal(false)}
+            className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto snap-y snap-mandatory px-4 pb-24 space-y-4">
+          {(tripHighlightsSlides || []).map((slide, index) => {
+            const hasImage = Boolean(slide?.image);
+            return (
+              <div
+                key={`${slide?.type || 'slide'}-${index}`}
+                className="snap-start min-h-[72vh] rounded-[2rem] overflow-hidden border border-white/10 bg-gradient-to-b from-purple-600 via-fuchsia-500 to-orange-400 shadow-2xl relative"
+              >
+                {hasImage && (
+                  <img
+                    src={slide.image}
+                    alt={slide.title || 'Trip highlight'}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )}
+                <div className={`absolute inset-0 ${hasImage ? 'bg-gradient-to-b from-black/15 via-black/35 to-black/80' : 'bg-gradient-to-b from-purple-600 via-fuchsia-500 to-orange-400'}`} />
+                <div className="relative z-10 h-full flex flex-col justify-end p-6 text-white">
+                  {slide?.tag && (
+                    <span className="self-start mb-3 px-3 py-1 rounded-full bg-white/15 backdrop-blur text-[11px] font-semibold uppercase tracking-[0.18em]">
+                      {slide.tag}
+                    </span>
+                  )}
+                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-white/70 mb-2">{slide?.subtitle}</div>
+                  <div className="text-3xl sm:text-4xl font-bold leading-tight mb-2">{slide?.title}</div>
+                  {slide?.meta && <div className="text-sm text-white/80 mb-3">{slide.meta}</div>}
+                  {slide?.caption && <div className="text-sm sm:text-base text-white/90 max-w-md">{slide.caption}</div>}
+                  {Array.isArray(slide?.bullets) && slide.bullets.filter(Boolean).length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {slide.bullets.filter(Boolean).slice(0, 3).map((bullet, bulletIdx) => (
+                        <div key={bulletIdx} className="text-sm text-white/90 flex items-start gap-2">
+                          <span className="mt-1 w-1.5 h-1.5 rounded-full bg-white/80 shrink-0" />
+                          <span>{bullet}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div
+          className="px-4 pb-4 pt-3 flex items-center gap-3"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
+          <button
+            onClick={() => setShowTripHighlightsModal(false)}
+            className="flex-1 px-4 py-3 rounded-2xl bg-white/10 text-white text-sm font-medium"
+          >
+            Close
+          </button>
+          <button
+            onClick={prepareTripHighlightsForExplore}
+            className="flex-1 px-4 py-3 rounded-2xl bg-white text-gray-900 text-sm font-semibold"
+          >
+            Prepare for Explore
+          </button>
+        </div>
+      </div>
+    )}
+
     {/* -- Sub-Calendar Full View -- */}
     {activeSubCalendar && (
       <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-40 flex flex-col overflow-hidden">
@@ -21198,6 +21479,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             >
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
+            {canGenerateTripHighlights && (
+              <button
+                onClick={openTripHighlights}
+                className="px-3 py-1.5 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-semibold hover:bg-purple-200 dark:hover:bg-purple-900/60 transition-colors"
+              >
+                Highlights
+              </button>
+            )}
             {/* Invite button */}
             <button
               onClick={() => setShowSubCalInviteModal(true)}
