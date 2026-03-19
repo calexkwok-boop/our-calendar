@@ -19175,7 +19175,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         resolveHandleLikeLabel={resolveHandleLikeLabel}
         onLaunchRoundRobin={(ev, mems) => {
           setManualRoundRobinRosterInput(mems.map((m) => m.display_name).join('\n'));
-          setUseManualRoundRobinRoster(true);
+          setSelectedRoundRobinEventId(String(ev?.id || ''));
+          setUseManualRoundRobinRoster(false);
+          setRoundRobinError('');
           setShowRoundRobinPanel(true);
           setSelectedPopupEventPanelId(null);
           clearPopupQueryParam();
