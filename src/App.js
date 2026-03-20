@@ -20606,9 +20606,21 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
 
             {!primaryJourneyGoal && showJourneyHomeStarterCard && (
-              <div className="mt-3 rounded-[24px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.05] p-3 sm:p-4 shadow-sm">
-                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Start your Journey</div>
-                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Add a goal, note, or picture to get moving.</div>
+              <div className="mt-3 rounded-[26px] border border-white/60 dark:border-white/10 bg-white/95 dark:bg-slate-900/92 p-4 sm:p-5 shadow-xl backdrop-blur-md">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Start your Journey</div>
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Add a goal, note, or picture to get moving.</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeJourneyHomeStarterCard}
+                    className="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10"
+                    aria-label="Close journey starter"
+                  >
+                    <X className="w-4 h-4 text-gray-500 dark:text-gray-300" />
+                  </button>
+                </div>
                 <div className="mt-3 space-y-2">
                   <button
                     type="button"
