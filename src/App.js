@@ -3167,13 +3167,28 @@ function App() {
   };
 
   const saveVenmoHandleEverywhere = async (identity, handle) => {
-    if (!assertCanEditActiveLayer('edit payment handles')) return false;
     const key = normalizeIdentityKey(identity);
     if (!key) {
       setExpenseError('Could not save Venmo handle: Missing identity.');
       return false;
     }
     const cleaned = cleanVenmoHandle(handle);
+    writeLocalAccountPaymentHandle('venmo', identity, cleaned);
+    setGlobalVenmoHandles(prev => {
+      const next = { ...prev };
+      if (cleaned) next[key] = cleaned;
+      else delete next[key];
+      return next;
+    });
+    setVenmoHandles((prev) => {
+      const next = { ...prev };
+      if (cleaned) next[key] = cleaned;
+      else delete next[key];
+      return next;
+    });
+    if (!activeSubCalendar || !assertCanEditActiveLayer('edit payment handles')) {
+      return true;
+    }
     const { data, error } = await supabase
       .from('sub_calendar_notes')
       .select('id,sub_calendar_id,checklist')
@@ -3192,7 +3207,6 @@ function App() {
         const ok = await saveVenmoHandles(initial);
         if (!ok) return false;
       }
-      writeLocalAccountPaymentHandle('venmo', identity, cleaned);
       setGlobalVenmoHandles(initial);
       setVenmoHandles((prev) => {
         const next = { ...prev };
@@ -3241,13 +3255,6 @@ function App() {
       setVenmoHandles(nextCurrent);
     }
 
-    writeLocalAccountPaymentHandle('venmo', identity, cleaned);
-    setGlobalVenmoHandles(prev => {
-      const next = { ...prev };
-      if (cleaned) next[key] = cleaned;
-      else delete next[key];
-      return next;
-    });
     return true;
   };
 
@@ -3284,13 +3291,28 @@ function App() {
   };
 
   const saveCashAppHandleEverywhere = async (identity, handle) => {
-    if (!assertCanEditActiveLayer('edit payment handles')) return false;
     const key = normalizeIdentityKey(identity);
     if (!key) {
       setExpenseError('Could not save Cash App handle: Missing identity.');
       return false;
     }
     const cleaned = cleanCashAppHandle(handle);
+    writeLocalAccountPaymentHandle('cashapp', identity, cleaned);
+    setGlobalCashAppHandles(prev => {
+      const next = { ...prev };
+      if (cleaned) next[key] = cleaned;
+      else delete next[key];
+      return next;
+    });
+    setCashAppHandles((prev) => {
+      const next = { ...prev };
+      if (cleaned) next[key] = cleaned;
+      else delete next[key];
+      return next;
+    });
+    if (!activeSubCalendar || !assertCanEditActiveLayer('edit payment handles')) {
+      return true;
+    }
     const { data, error } = await supabase
       .from('sub_calendar_notes')
       .select('id,sub_calendar_id,checklist')
@@ -3309,7 +3331,6 @@ function App() {
         const ok = await saveCashAppHandles(initial);
         if (!ok) return false;
       }
-      writeLocalAccountPaymentHandle('cashapp', identity, cleaned);
       setGlobalCashAppHandles(initial);
       setCashAppHandles((prev) => {
         const next = { ...prev };
@@ -3358,13 +3379,6 @@ function App() {
       setCashAppHandles(nextCurrent);
     }
 
-    writeLocalAccountPaymentHandle('cashapp', identity, cleaned);
-    setGlobalCashAppHandles(prev => {
-      const next = { ...prev };
-      if (cleaned) next[key] = cleaned;
-      else delete next[key];
-      return next;
-    });
     return true;
   };
 
