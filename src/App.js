@@ -20811,9 +20811,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           const category = categories[effectiveCategoryKey] || categories.other;
                           const eventLayer = (layers || []).find((layer) => String(layer?.id || '') === String(popupMeta?.layerId || popupCard?.layerId || event?.layerId || event?.layer_id || '')) || null;
                           const eventLayerTheme = normalizeLayerPageTheme(eventLayer?.page_theme, eventLayer?.title_style);
-                          const chipBg = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.82 : 0.88);
-                          const chipBorder = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.56 : 0.72);
-                          const chipText = isLightHexColor(eventLayerTheme.accent) ? '#111111' : eventLayerTheme.accent;
+                          const chipBg = darkMode
+                            ? mixHexColors(eventLayerTheme.accent, '#111827', 0.8)
+                            : mixHexColors(eventLayerTheme.accent, '#ffffff', 0.88);
+                          const chipBorder = darkMode
+                            ? 'transparent'
+                            : mixHexColors(eventLayerTheme.accent, '#ffffff', 0.72);
+                          const chipText = darkMode
+                            ? mixHexColors(eventLayerTheme.accent, '#ffffff', 0.34)
+                            : (isLightHexColor(eventLayerTheme.accent) ? '#111111' : eventLayerTheme.accent);
                           return (
                             <button
                               key={`${section.key}-${event.id}-${event.date}`}
@@ -20842,7 +20848,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                     ) : null}
                                     {eventLayer ? (
                                       <span
-                                        className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium"
+                                        className={`rounded-full border px-1.5 py-0.5 text-[10px] ${darkMode ? 'font-bold' : 'font-medium'}`}
                                         style={{ backgroundColor: chipBg, borderColor: chipBorder, color: chipText }}
                                       >
                                         {eventLayer.name || 'Calendar'}
@@ -20976,9 +20982,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         const category = categories[effectiveCategoryKey] || categories.other;
                         const eventLayer = (layers || []).find((layer) => String(layer?.id || '') === String(popupMeta?.layerId || popupCard?.layerId || event?.layerId || event?.layer_id || '')) || null;
                         const eventLayerTheme = normalizeLayerPageTheme(eventLayer?.page_theme, eventLayer?.title_style);
-                        const chipBg = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.82 : 0.88);
-                        const chipBorder = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.56 : 0.72);
-                        const chipText = isLightHexColor(eventLayerTheme.accent) ? '#111111' : eventLayerTheme.accent;
+                        const chipBg = darkMode
+                          ? mixHexColors(eventLayerTheme.accent, '#111827', 0.8)
+                          : mixHexColors(eventLayerTheme.accent, '#ffffff', 0.88);
+                        const chipBorder = darkMode
+                          ? 'transparent'
+                          : mixHexColors(eventLayerTheme.accent, '#ffffff', 0.72);
+                        const chipText = darkMode
+                          ? mixHexColors(eventLayerTheme.accent, '#ffffff', 0.34)
+                          : (isLightHexColor(eventLayerTheme.accent) ? '#111111' : eventLayerTheme.accent);
                         return (
                           <button
                             key={`${event.id}-${event.date}`}
@@ -21006,7 +21018,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                   ) : null}
                                   {eventLayer ? (
                                     <span
-                                      className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium"
+                                      className={`rounded-full border px-1.5 py-0.5 text-[10px] ${darkMode ? 'font-bold' : 'font-medium'}`}
                                       style={{ backgroundColor: chipBg, borderColor: chipBorder, color: chipText }}
                                     >
                                       {eventLayer.name || 'Calendar'}
