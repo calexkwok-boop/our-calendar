@@ -5747,6 +5747,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const mapSupabaseEventRow = (event, currentUserId) => ({
     id: event.id,
     layerId: event.layer_id || null,
+    subCalendarId: event.sub_calendar_id || null,
     title: event.title,
     time: event.time,
     date: event.date,
@@ -9674,9 +9675,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (eventIds.length > 0) {
       const { data: eventRows, error: eventRowsErr } = await supabase
         .from('events')
-        .select('id,title,date,time,location,layer_id')
+        .select('id,title,date,time,location,layer_id,sub_calendar_id')
         .in('id', eventIds);
       if (!eventRowsErr) {
+        (eventRows || []).forEach((row) => {
+          const eventId = String(row?.id || '').trim();
+          if (!eventId || !eventsMap[eventId]) return;
+          eventsMap[eventId] = {
+            ...eventsMap[eventId],
+            subCalendarId: String(row?.sub_calendar_id || '').trim() || null,
+          };
+        });
         popupEventCards = (eventRows || [])
           .map((row) => ({
             id: String(row?.id || ''),
@@ -9686,6 +9695,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             time: row?.time || null,
             location: row?.location || null,
             layerId: String(row?.layer_id || ''),
+            subCalendarId: String(row?.sub_calendar_id || '').trim() || null,
           }))
           .filter((row) => row.id && row.date)
           .sort((a, b) => {
@@ -12874,11 +12884,56 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       target = data || null;
     }
     if (!target) return false;
+    if (target?.layer_id && String(target.layer_id) !== String(activeLayerId || '')) {
+      setActiveLayerId(target.layer_id);
+      if (user?.id) localStorage.setItem(`active-layer-${user.id}`, String(target.layer_id));
+    }
     await openSubCalendar(target);
     setShowNotificationSettings(false);
     setShowChatPanel(false);
     setShowListPanel(false);
     return true;
+  };
+
+  const openUserTabEvent = async (event, popupMetaOverride = null) => {
+    if (!event) return;
+    const popupMeta = popupMetaOverride || popupEventsByEventId[String(event?.id || '')] || null;
+    const popupCard = (userTabPopupEvents || []).find((row) => String(row?.id || '') === String(event?.id || '')) || null;
+    const isPopupEvent = Boolean(popupMeta || popupCard);
+    const targetLayerId = String(
+      popupMeta?.layerId
+      || popupCard?.layerId
+      || event?.layerId
+      || event?.layer_id
+      || ''
+    ).trim();
+    const targetSubCalendarId = String(
+      popupMeta?.subCalendarId
+      || popupCard?.subCalendarId
+      || event?.subCalendarId
+      || event?.sub_calendar_id
+      || ''
+    ).trim();
+    if (targetLayerId && targetLayerId !== String(activeLayerId || '')) {
+      setActiveLayerId(targetLayerId);
+      if (user?.id) localStorage.setItem(`active-layer-${user.id}`, targetLayerId);
+    }
+    if (targetSubCalendarId) {
+      const opened = await openSubCalendarById(targetSubCalendarId);
+      if (opened && !isPopupEvent) {
+        const dateKey = String(event?.date || event?.dateKey || '').trim();
+        const m = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (m) {
+          const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+          if (!Number.isNaN(d.getTime())) setSubCalSelectedDate(d);
+        }
+      }
+    }
+    if (isPopupEvent) {
+      setSelectedPopupEventPanelId(String(event?.id || ''));
+      return;
+    }
+    openAgendaItem(event);
   };
 
   const handleInAppNotificationClick = async (item) => {
@@ -20759,9 +20814,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <div className="space-y-1.5 max-h-24 sm:max-h-28 overflow-y-auto pr-1">
                       {overviewTodayEvents.slice(0, 4).map(event => {
                         const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
-                        const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
+                        const popupCard = (userTabPopupEvents || []).find((row) => String(row?.id || '') === String(event?.id || '')) || null;
+                        const isPopupEvent = Boolean(popupMeta || popupCard);
+                        const effectiveCategoryKey = isPopupEvent ? 'popup_event' : (event.category || 'other');
                         const category = categories[effectiveCategoryKey] || categories.other;
-                        const eventLayer = visibleLayerCalendars.find((layer) => String(layer?.id || '') === String(event?.layerId || event?.layer_id || popupMeta?.layerId || '')) || null;
+                        const eventLayer = (layers || []).find((layer) => String(layer?.id || '') === String(popupMeta?.layerId || popupCard?.layerId || event?.layerId || event?.layer_id || '')) || null;
                         const eventLayerTheme = normalizeLayerPageTheme(eventLayer?.page_theme, eventLayer?.title_style);
                         const chipBg = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.82 : 0.88);
                         const chipBorder = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.56 : 0.72);
@@ -20770,21 +20827,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           <button
                             key={`${event.id}-${event.date}`}
                             type="button"
-                            onClick={() => {
-                              const targetLayerId = String(popupMeta?.layerId || event?.layerId || event?.layer_id || '').trim();
-                              if (targetLayerId && targetLayerId !== String(activeLayerId || '')) setActiveLayerId(targetLayerId);
-                              if (popupMeta) {
-                                setSelectedPopupEventPanelId(String(event.id || ''));
-                              } else {
-                                openAgendaItem(event);
-                              }
-                            }}
+                            onClick={() => { openUserTabEvent(event, popupMeta || popupCard); }}
                             className="w-full flex items-center justify-between gap-2 p-2 rounded-lg border text-left"
                             style={{
-                              background: popupMeta
+                              background: isPopupEvent
                                 ? (darkMode ? 'rgba(244,63,94,0.12)' : 'rgba(255,241,242,0.96)')
                                 : (darkMode ? 'rgba(31,41,55,0.65)' : 'rgba(255,255,255,0.8)'),
-                              borderColor: popupMeta
+                              borderColor: isPopupEvent
                                 ? (darkMode ? 'rgba(244,114,182,0.28)' : 'rgba(251,113,133,0.28)')
                                 : (darkMode ? 'rgba(55,65,81,0.7)' : 'rgba(229,231,235,0.7)'),
                             }}
@@ -20794,7 +20843,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               <div className="min-w-0">
                                 <div className="text-xs sm:text-sm text-gray-800 dark:text-gray-100 truncate">{event.title}</div>
                                 <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                                  {popupMeta ? (
+                                  {isPopupEvent ? (
                                     <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
                                       Pop-up
                                     </span>
@@ -21909,15 +21958,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             onPointerMove={moveEventSwipeDrag}
                             onPointerUp={endEventSwipeDrag}
                             onPointerCancel={endEventSwipeDrag}
-                            onClick={() => {
-                              const popupLayerId = String(popupMeta?.layerId || event?.layerId || '').trim();
-                              if (popupLayerId && popupLayerId !== String(activeLayerId || '')) setActiveLayerId(popupLayerId);
-                              if (popupMeta) {
-                                setSelectedPopupEventPanelId(String(event.id || ''));
-                              } else {
-                                openAgendaItem(event);
-                              }
-                            }}
+                            onClick={() => { openUserTabEvent(event, popupMeta); }}
                             className="relative z-10 w-full text-left rounded-2xl p-3 sm:p-4 border transition-all hover:-translate-y-0.5 hover:shadow-md"
                             style={{ background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', borderColor: `${activeLayerPageTheme.accent}30`, transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease', touchAction: 'pan-y' }}
                           >
@@ -25671,12 +25712,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         {showJourneyGoalCreatedPrompt && createdJourneyGoal && (
           <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
             <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Goal created 🎉</div>
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Goal created</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Log your first update?</div>
               <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.04] px-4 py-3">
                 <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{createdJourneyGoal.title}</div>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {formatJourneyProgressText(createdJourneyGoal)}{createdJourneyGoal?.timeframe ? ` • ${createdJourneyGoal.timeframe}` : ''}
+                  {formatJourneyProgressText(createdJourneyGoal)}{createdJourneyGoal?.timeframe ? ` | ${createdJourneyGoal.timeframe}` : ''}
                 </div>
               </div>
               <div className="mt-5 flex gap-2">
