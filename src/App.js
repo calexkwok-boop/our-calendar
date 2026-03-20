@@ -80,6 +80,54 @@ const writeJourneyState = (userId, nextState) => {
   } catch {}
 };
 
+const buildJourneyLogDraft = (goalId = '') => ({
+  goalId: String(goalId || ''),
+  amount: '',
+  note: '',
+  photoUrl: '',
+  photoName: '',
+});
+
+const readJourneyPhotoFile = (file) => new Promise((resolve, reject) => {
+  if (!file) {
+    resolve({ photoUrl: '', photoName: '' });
+    return;
+  }
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error('photo_read_failed'));
+  reader.onload = () => {
+    const img = new Image();
+    img.onerror = () => resolve({
+      photoUrl: typeof reader.result === 'string' ? reader.result : '',
+      photoName: String(file.name || 'Photo'),
+    });
+    img.onload = () => {
+      const maxSize = 960;
+      const scale = Math.min(1, maxSize / Math.max(img.width || 1, img.height || 1));
+      const width = Math.max(1, Math.round((img.width || 1) * scale));
+      const height = Math.max(1, Math.round((img.height || 1) * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        resolve({
+          photoUrl: typeof reader.result === 'string' ? reader.result : '',
+          photoName: String(file.name || 'Photo'),
+        });
+        return;
+      }
+      context.drawImage(img, 0, 0, width, height);
+      resolve({
+        photoUrl: canvas.toDataURL('image/jpeg', 0.78),
+        photoName: String(file.name || 'Photo'),
+      });
+    };
+    img.src = typeof reader.result === 'string' ? reader.result : '';
+  };
+  reader.readAsDataURL(file);
+});
+
 const normalizeJourneyNumber = (value) => {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : 0;
@@ -1031,8 +1079,11 @@ function App() {
   const [showJourneyLogModal, setShowJourneyLogModal] = useState(false);
   const [showJourneyNoteModal, setShowJourneyNoteModal] = useState(false);
   const [journeyGoalDraft, setJourneyGoalDraft] = useState({ title: '', target: '', unit: '', pinned: true });
-  const [journeyLogDraft, setJourneyLogDraft] = useState({ amount: '', note: '' });
+  const [journeyLogDraft, setJourneyLogDraft] = useState(buildJourneyLogDraft());
+  const [journeyLogSavingPhoto, setJourneyLogSavingPhoto] = useState(false);
+  const [journeyLogError, setJourneyLogError] = useState('');
   const [journeyNoteDraft, setJourneyNoteDraft] = useState('');
+  const journeyLogPhotoInputRef = useRef(null);
   const [swipedTripId, setSwipedTripId] = useState(null);
   const [tripSwipeDrag, setTripSwipeDrag] = useState({ id: null, offset: 0 });
   const tripSwipeStartXRef = useRef(0);
@@ -15461,6 +15512,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const primaryJourneyGoal = sortedJourneyGoals.find((goal) => goal?.active !== false) || null;
   const primaryJourneyGoalProgress = getJourneyGoalProgress(primaryJourneyGoal);
   const primaryJourneyProgressText = formatJourneyProgressText(primaryJourneyGoal);
+  const primaryJourneyTodayEntries = (journeyState?.entries || []).filter((entry) => (
+    String(entry?.goalId || '') === String(primaryJourneyGoal?.id || '')
+    && String(entry?.createdAt || '').slice(0, 10) === todayKey
+  ));
+  const primaryJourneyLoggedToday = primaryJourneyTodayEntries.length > 0;
   const journeyLatestEntry = [...(journeyState?.entries || [])]
     .sort((a, b) => Number(new Date(b?.createdAt || 0)) - Number(new Date(a?.createdAt || 0)))[0] || null;
   const journeyUpdatedToday = Boolean(
@@ -15482,6 +15538,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     return 'Goal completed. Keep the momentum going.';
   })();
+  const selectedJourneyLogGoal = journeyGoalById[String(journeyLogDraft?.goalId || '')] || primaryJourneyGoal || null;
+  const journeyQuickPrompt = (() => {
+    if (!primaryJourneyGoal) {
+      return 'Start with one clear goal and keep your momentum visible.';
+    }
+    if (primaryJourneyLoggedToday) {
+      return 'Today is already in motion. Add a note, photo, or another small win.';
+    }
+    return 'A quick update keeps this goal moving today.';
+  })();
+  const journeyHomeCtaLabel = !primaryJourneyGoal
+    ? 'Set your first goal'
+    : primaryJourneyLoggedToday
+      ? 'Add a quick update'
+      : 'Log today';
   const ownedLayerCalendars = layers.filter(layer => String(layer.owner_id) === String(user?.id));
   const uniqueVisibleLayers = Array.from(
     new Map((layers || []).map(layer => [String(layer?.id || ''), layer])).values()
@@ -15505,9 +15576,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setShowJourneyScreen(true);
   };
 
+  const closeJourneyLogModal = () => {
+    setShowJourneyLogModal(false);
+    setJourneyLogDraft(buildJourneyLogDraft());
+    setJourneyLogSavingPhoto(false);
+    setJourneyLogError('');
+  };
+
   const openJourneyGoalFlow = () => {
     setJourneyGoalDraft({ title: '', target: '', unit: '', pinned: sortedJourneyGoals.length === 0 });
-    setShowJourneyGoalModal(true);
+  setShowJourneyGoalModal(true);
   };
 
   const openJourneyLogFlow = (goal = primaryJourneyGoal) => {
@@ -15515,7 +15593,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       openJourneyGoalFlow();
       return;
     }
-    setJourneyLogDraft({ amount: '', note: '' });
+    setJourneyLogDraft(buildJourneyLogDraft(goal?.id));
+    setJourneyLogSavingPhoto(false);
+    setJourneyLogError('');
     setShowJourneyLogModal(true);
   };
 
@@ -15541,33 +15621,42 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       goals: (prev?.goals || []).map((goal) => ({ ...goal, pinned: nextGoal.pinned ? false : goal.pinned })).concat(nextGoal),
     }));
     setShowJourneyGoalModal(false);
-    setShowJourneyScreen(true);
     setJourneyGoalDraft({ title: '', target: '', unit: '', pinned: false });
-    setJourneyLogDraft({ amount: '', note: '' });
+    setJourneyLogDraft(buildJourneyLogDraft(nextGoal.id));
+    setJourneyLogSavingPhoto(false);
+    setJourneyLogError('');
     setShowJourneyLogModal(true);
   };
 
   const addJourneyLog = () => {
-    if (!primaryJourneyGoal) {
+    const goalToLog = journeyGoalById[String(journeyLogDraft?.goalId || '')] || primaryJourneyGoal;
+    if (!goalToLog) {
       openJourneyGoalFlow();
       return;
     }
     const amount = Math.max(0, normalizeJourneyNumber(journeyLogDraft?.amount));
     const note = String(journeyLogDraft?.note || '').trim();
-    if (!amount && !note) return;
+    const photoUrl = String(journeyLogDraft?.photoUrl || '');
+    const photoName = String(journeyLogDraft?.photoName || '').trim();
+    if (!amount && !note && !photoUrl) {
+      setJourneyLogError('Add progress, a note, or a photo.');
+      return;
+    }
     const now = new Date().toISOString();
     const entry = {
       id: `journey_entry_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      goalId: primaryJourneyGoal.id,
+      goalId: goalToLog.id,
       type: 'log',
       amount,
       note,
+      photoUrl,
+      photoName,
       createdAt: now,
     };
     setJourneyState((prev) => ({
       ...prev,
       goals: (prev?.goals || []).map((goal) => (
-        String(goal?.id || '') === String(primaryJourneyGoal.id)
+        String(goal?.id || '') === String(goalToLog.id)
           ? {
               ...goal,
               current: normalizeJourneyNumber(goal?.current) + amount,
@@ -15577,9 +15666,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       )),
       entries: [entry, ...(prev?.entries || [])].slice(0, 50),
     }));
-    setShowJourneyLogModal(false);
-    setShowJourneyScreen(true);
-    setJourneyLogDraft({ amount: '', note: '' });
+    closeJourneyLogModal();
   };
 
   const addJourneyNote = () => {
@@ -20377,27 +20464,29 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
-                  <div className="mt-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 line-clamp-1">{journeyQuote}</div>
+                  <div className="mt-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 line-clamp-2">{journeyQuickPrompt}</div>
                   {primaryJourneyGoal ? (
                     <>
                       <div className="mt-2.5 text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">{primaryJourneyGoal.title}</div>
-                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{journeySupportLabel}</div>
+                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{primaryJourneyProgressText}</div>
                     </>
                   ) : (
                     <>
                       <div className="mt-2.5 text-lg font-semibold text-gray-900 dark:text-gray-100">Set your first goal</div>
-                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Start tracking one focused priority.</div>
+                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{journeyQuote}</div>
                     </>
                   )}
                 </div>
                 <div
                   className="shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-semibold"
                   style={{
-                    backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.18 : 0.12),
-                    color: activeLayerPageTheme.accent,
+                    backgroundColor: primaryJourneyLoggedToday
+                      ? (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)')
+                      : hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.18 : 0.12),
+                    color: primaryJourneyLoggedToday ? (darkMode ? '#e5e7eb' : '#475569') : activeLayerPageTheme.accent,
                   }}
                 >
-                  Open
+                  {primaryJourneyLoggedToday ? 'Logged today' : 'Focus'}
                 </div>
               </div>
 
@@ -20405,7 +20494,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <>
                   <div className="mt-3.5">
                     <div className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                      <span>{primaryJourneyProgressText}</span>
+                      <span>{journeySupportLabel}</span>
                       <span>{Math.round(primaryJourneyGoalProgress * 100)}%</span>
                     </div>
                     <div className="h-2 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
@@ -20419,29 +20508,26 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     </div>
                   </div>
 
-                  <div className="mt-3.5 flex items-center gap-2">
+                  <div className="mt-3.5 flex items-center">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         openJourneyLogFlow(primaryJourneyGoal);
                       }}
-                      className="rounded-xl px-3 py-2 text-xs font-semibold text-white"
-                      style={themeAccentButtonStyle}
+                      className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
+                        primaryJourneyLoggedToday
+                          ? 'border text-gray-700 dark:text-gray-200'
+                          : 'text-white'
+                      }`}
+                      style={primaryJourneyLoggedToday
+                        ? {
+                            borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16),
+                            backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08),
+                          }
+                        : themeAccentButtonStyle}
                     >
-                      Log today
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setJourneyNoteDraft('');
-                        setShowJourneyNoteModal(true);
-                      }}
-                      className="rounded-xl border px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200"
-                      style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
-                    >
-                      Add note
+                      {journeyHomeCtaLabel}
                     </button>
                   </div>
                 </>
@@ -25401,7 +25487,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         return (
                           <div key={entry.id} className="rounded-2xl border border-white/10 bg-white/80 dark:bg-white/[0.03] px-3 py-3">
                             <div className="flex items-center justify-between gap-3">
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                   {entry.type === 'log'
                                     ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
@@ -25411,6 +25497,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                   <div className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">{entry.note}</div>
                                 ) : null}
                               </div>
+                              {entry.photoUrl ? (
+                                <img
+                                  src={entry.photoUrl}
+                                  alt={entry.photoName || 'Journey log'}
+                                  className="w-10 h-10 rounded-xl object-cover shrink-0 border border-white/10"
+                                />
+                              ) : null}
                               <div className="shrink-0 text-[11px] text-gray-400 dark:text-gray-500">
                                 {new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </div>
@@ -25453,17 +25546,106 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {showJourneyLogModal && (
-          <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setShowJourneyLogModal(false)}>
+          <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyLogModal}>
             <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Log today</div>
-              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{primaryJourneyGoal ? primaryJourneyGoal.title : 'No active goal yet.'}</div>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {primaryJourneyLoggedToday ? 'Add a quick update' : 'Log today'}
+                  </div>
+                  <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {selectedJourneyLogGoal ? selectedJourneyLogGoal.title : 'No active goal yet.'}
+                  </div>
+                </div>
+                {selectedJourneyLogGoal ? (
+                  <div className="rounded-xl px-2.5 py-1 text-[11px] font-semibold" style={{ backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.18 : 0.12), color: activeLayerPageTheme.accent }}>
+                    {formatJourneyProgressText(selectedJourneyLogGoal)}
+                  </div>
+                ) : null}
+              </div>
               <div className="mt-4 space-y-3">
-                <input value={journeyLogDraft.amount} onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, amount: e.target.value }))} placeholder={primaryJourneyGoal?.unit ? `Amount in ${primaryJourneyGoal.unit}` : 'Amount'} inputMode="decimal" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
-                <textarea value={journeyLogDraft.note} onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, note: e.target.value }))} placeholder="Optional note" rows={3} className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+                {sortedJourneyGoals.length > 1 && (
+                  <select
+                    value={journeyLogDraft.goalId}
+                    onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, goalId: e.target.value }))}
+                    className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white"
+                    style={{ fontSize: '16px' }}
+                  >
+                    {sortedJourneyGoals.filter((goal) => goal?.active !== false).map((goal) => (
+                      <option key={goal.id} value={goal.id}>{goal.title}</option>
+                    ))}
+                  </select>
+                )}
+                <input
+                  value={journeyLogDraft.amount}
+                  onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, amount: e.target.value }))}
+                  placeholder={selectedJourneyLogGoal?.unit ? `Progress in ${selectedJourneyLogGoal.unit}` : 'Progress amount'}
+                  inputMode="decimal"
+                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white"
+                  style={{ fontSize: '16px' }}
+                />
+                <textarea
+                  value={journeyLogDraft.note}
+                  onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, note: e.target.value }))}
+                  placeholder="What moved forward today?"
+                  rows={3}
+                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white"
+                  style={{ fontSize: '16px' }}
+                />
+                <input
+                  ref={journeyLogPhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setJourneyLogSavingPhoto(true);
+                    setJourneyLogError('');
+                    try {
+                      const nextPhoto = await readJourneyPhotoFile(file);
+                      setJourneyLogDraft((prev) => ({ ...prev, ...nextPhoto }));
+                    } catch {
+                      setJourneyLogError('Could not attach that photo.');
+                    } finally {
+                      setJourneyLogSavingPhoto(false);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => journeyLogPhotoInputRef.current?.click()}
+                    className="rounded-xl border px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200"
+                    style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
+                  >
+                    {journeyLogSavingPhoto ? 'Adding photo...' : (journeyLogDraft.photoUrl ? 'Change photo' : 'Add photo')}
+                  </button>
+                  {journeyLogDraft.photoUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => setJourneyLogDraft((prev) => ({ ...prev, photoUrl: '', photoName: '' }))}
+                      className="rounded-xl px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400"
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+                {journeyLogDraft.photoUrl ? (
+                  <img
+                    src={journeyLogDraft.photoUrl}
+                    alt={journeyLogDraft.photoName || 'Journey log'}
+                    className="w-full h-40 rounded-2xl object-cover border border-gray-200 dark:border-white/10"
+                  />
+                ) : null}
+                {journeyLogError ? (
+                  <div className="text-xs text-red-500">{journeyLogError}</div>
+                ) : null}
               </div>
               <div className="mt-5 flex gap-2">
-                <button type="button" onClick={() => setShowJourneyLogModal(false)} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
-                <button type="button" onClick={addJourneyLog} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Save log</button>
+                <button type="button" onClick={closeJourneyLogModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
+                <button type="button" onClick={addJourneyLog} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Save update</button>
               </div>
             </div>
           </div>
