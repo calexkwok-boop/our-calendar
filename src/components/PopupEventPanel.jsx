@@ -714,20 +714,47 @@ export default function PopupEventPanel({
     if (!isUuid(event?.id)) return null;
     const memberUserId = String(member?.user_id || '').trim();
     if (!memberUserId) return null;
-    const payload = {
-      event_id: event.id,
-      user_id: memberUserId,
-      display_name: String(member?.display_name || 'Player').trim() || 'Player',
-      role: fallbackRole,
-    };
-    const { error } = await supabase
+    const displayName = String(member?.display_name || 'Player').trim() || 'Player';
+    const { data: existingRows, error: existingError } = await supabase
       .from('popup_event_members')
-      .upsert(payload, { onConflict: 'event_id,user_id' });
-    if (error) {
-      console.error('Could not ensure popup member record:', error);
+      .select('id')
+      .eq('event_id', event.id)
+      .eq('user_id', memberUserId);
+    if (existingError) {
+      console.error('Could not look up popup member record:', existingError);
       return null;
     }
-    return payload;
+    const existingRow = Array.isArray(existingRows) ? existingRows[0] : existingRows;
+    if (existingRow?.id) {
+      return {
+        id: String(existingRow.id),
+        event_id: event.id,
+        user_id: memberUserId,
+        display_name: displayName,
+      };
+    }
+
+    const insertPayload = {
+      event_id: event.id,
+      user_id: memberUserId,
+      display_name: displayName,
+      role: fallbackRole,
+    };
+    const { data: insertedRow, error: insertError } = await supabase
+      .from('popup_event_members')
+      .insert(insertPayload)
+      .select('id')
+      .maybeSingle();
+    if (insertError) {
+      console.error('Could not create popup member record:', insertError);
+      return null;
+    }
+    return {
+      id: String(insertedRow?.id || ''),
+      event_id: event.id,
+      user_id: memberUserId,
+      display_name: displayName,
+    };
   };
   const handleLeave = async () => { if (!myMember || isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', myMember.id); await loadEvent(event.id); };
   const handleKick = async (member) => { if (!isHostOrCohost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', member.id); await loadEvent(event.id); };
@@ -736,7 +763,7 @@ export default function PopupEventPanel({
     setRosterActionError('');
     const memberUserId = String(member?.user_id || '').trim();
     if (!memberUserId) {
-      setRosterActionError('Could not promote this player to co-host.');
+      setRosterActionError('Only signed-in players can be promoted to co-host.');
       return;
     }
     const ensured = await ensurePopupMemberRecord(member, 'cohost');
@@ -747,8 +774,7 @@ export default function PopupEventPanel({
     const { error } = await supabase
       .from('popup_event_members')
       .update({ role: 'cohost', display_name: ensured.display_name })
-      .eq('event_id', event.id)
-      .eq('user_id', memberUserId);
+      .eq('id', ensured.id);
     if (error) {
       console.error('Could not promote popup member:', error);
       setRosterActionError(error.message || 'Could not promote this player to co-host.');
@@ -765,11 +791,12 @@ export default function PopupEventPanel({
     if (!isHostOrCohost || !isUuid(event?.id)) return;
     const memberUserId = String(member?.user_id || '').trim();
     if (!memberUserId) return;
+    const ensured = await ensurePopupMemberRecord(member, 'player');
+    if (!ensured?.id) return;
     await supabase
       .from('popup_event_members')
       .update({ role: 'player' })
-      .eq('event_id', event.id)
-      .eq('user_id', memberUserId);
+      .eq('id', ensured.id);
     await loadEvent(event.id);
   };
   const handleAddManualPlayer = async () => {
@@ -793,7 +820,7 @@ export default function PopupEventPanel({
     try {
       const { error } = await supabase.from('popup_event_members').insert({
         event_id: event.id,
-        user_id: user.id,
+        user_id: null,
         display_name: nextName,
         role: 'player',
       });
