@@ -25816,7 +25816,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
               <div className="mt-5 flex gap-2">
                 <button type="button" onClick={closeJourneyGoalModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
-                <button type="button" onClick={addJourneyGoal} disabled={!canSaveJourneyGoal} className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white ${canSaveJourneyGoal ? '' : 'cursor-not-allowed opacity-60'}`} style={themeAccentButtonStyle}>Save goal</button>
+                <button type="button" onClick={addJourneyGoal} disabled={!canSaveJourneyGoal} className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white ${canSaveJourneyGoal ? '' : 'cursor-not-allowed opacity-60'}`} style={themeAccentButtonStyle}>Start</button>
               </div>
             </div>
           </div>
@@ -25825,7 +25825,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         {showJourneyGoalCreatedPrompt && createdJourneyGoal && (
           <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
             <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Goal created</div>
+              <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <span>Goal created!</span>
+                <span className="inline-flex animate-bounce">🎉</span>
+              </div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Log your first update?</div>
               <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.04] px-4 py-3">
                 <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{createdJourneyGoal.title}</div>
@@ -26320,7 +26323,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
           <div className="mt-5 flex gap-2">
             <button type="button" onClick={closeJourneyGoalModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
-            <button type="button" onClick={addJourneyGoal} disabled={!canSaveJourneyGoal} className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white ${canSaveJourneyGoal ? '' : 'cursor-not-allowed opacity-60'}`} style={themeAccentButtonStyle}>Save goal</button>
+            <button type="button" onClick={addJourneyGoal} disabled={!canSaveJourneyGoal} className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white ${canSaveJourneyGoal ? '' : 'cursor-not-allowed opacity-60'}`} style={themeAccentButtonStyle}>Start</button>
           </div>
         </div>
       </div>
@@ -26329,7 +26332,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {!activeSubCalendar && showJourneyGoalCreatedPrompt && createdJourneyGoal && (
       <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
         <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Goal created</div>
+              <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <span>Goal created!</span>
+                <span className="inline-flex animate-bounce">🎉</span>
+              </div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Log your first update?</div>
           <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.04] px-4 py-3">
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{createdJourneyGoal.title}</div>
