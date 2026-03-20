@@ -16,18 +16,20 @@ export default function JourneyPanel({
   primaryJourneyLoggedToday,
   themeAccentButtonStyle,
 }) {
+  const panelClickHandler = primaryJourneyGoal ? onClick : onCtaClick;
+
   return (
     <div
-      role={primaryJourneyGoal ? 'button' : undefined}
-      tabIndex={primaryJourneyGoal ? 0 : undefined}
-      onClick={primaryJourneyGoal ? onClick : undefined}
-      onKeyDown={primaryJourneyGoal ? ((e) => {
+      role="button"
+      tabIndex={0}
+      onClick={panelClickHandler}
+      onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onClick();
+          panelClickHandler();
         }
-      }) : undefined}
-      className="w-full overflow-hidden rounded-[26px] border p-4 text-left transition-all hover:shadow-lg"
+      }}
+      className="w-full overflow-hidden rounded-[26px] border p-4 text-left transition-all hover:shadow-lg cursor-pointer"
       style={{
         borderColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)',
         background: darkMode
@@ -106,7 +108,10 @@ export default function JourneyPanel({
         <div className="mt-3.5 flex items-center">
           <button
             type="button"
-            onClick={onCtaClick}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCtaClick();
+            }}
             className="w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white"
             style={themeAccentButtonStyle}
           >
