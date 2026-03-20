@@ -20466,11 +20466,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <div
               role="button"
               tabIndex={0}
-              onClick={openJourneyScreen}
+              onClick={primaryJourneyGoal ? openJourneyScreen : openJourneyGoalFlow}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  openJourneyScreen();
+                  if (primaryJourneyGoal) openJourneyScreen();
+                  else openJourneyGoalFlow();
                 }
               }}
               className="w-full overflow-hidden rounded-[26px] border p-4 text-left transition-all hover:shadow-lg"
