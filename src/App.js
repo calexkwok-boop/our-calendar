@@ -16253,6 +16253,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   ].filter(Boolean);
   const activeChatUnreadCount = Number(chatUnreadCounts[String(activeLayerId || '')] || 0);
   const activeControlWidgets = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
+  const todayOverviewWidgetIds = activeControlWidgets.slice(0, 4);
+  const todayOverviewLeftWidgetIds = todayOverviewWidgetIds.slice(0, Math.ceil(todayOverviewWidgetIds.length / 2));
+  const todayOverviewRightWidgetIds = todayOverviewWidgetIds.slice(Math.ceil(todayOverviewWidgetIds.length / 2));
   const popupEventDetailsById = (() => {
     const lookup = {};
     Object.entries(events || {}).forEach(([dateKey, rows]) => {
@@ -19837,17 +19840,76 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {bottomNavTab === 'home' && !preferCalendarHome && (
           <div className="space-y-4 mb-4">
-            <div className="flex justify-center">
+            <div className="flex items-center justify-center gap-2">
+              <div className="flex min-w-0 flex-1 justify-end gap-1.5">
+                {todayOverviewLeftWidgetIds.map((widgetId) => {
+                  const meta = getControlWidgetMeta(widgetId);
+                  return (
+                    <button
+                      key={`today-overview-left-${widgetId}`}
+                      onClick={() => handleControlWidgetClick(widgetId)}
+                      disabled={meta.disabled}
+                      title={meta.label}
+                      className={`relative shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border transition-all overflow-visible ${
+                        meta.active
+                          ? 'border-transparent text-white shadow-sm'
+                          : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 backdrop-blur-sm'
+                      } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      style={meta.active ? themeAccentButtonStyle : undefined}
+                    >
+                      <span className="flex items-center justify-center">{meta.icon}</span>
+                      {meta.badge ? (
+                        <span className="absolute -top-1 -right-1 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
+                          {meta.badge}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
               <button
                 onClick={() => {
                   setPreferCalendarHome(true);
                   setShowHomeCalendarOverview(true);
                 }}
-                className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
                 style={themeAccentEllieChipButtonStyle}
               >
                 Show calendar view
               </button>
+              <div className="flex min-w-0 flex-1 justify-start gap-1.5">
+                {todayOverviewRightWidgetIds.map((widgetId) => {
+                  const meta = getControlWidgetMeta(widgetId);
+                  return (
+                    <button
+                      key={`today-overview-right-${widgetId}`}
+                      onClick={() => handleControlWidgetClick(widgetId)}
+                      disabled={meta.disabled}
+                      title={meta.label}
+                      className={`relative shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border transition-all overflow-visible ${
+                        meta.active
+                          ? 'border-transparent text-white shadow-sm'
+                          : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 backdrop-blur-sm'
+                      } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      style={meta.active ? themeAccentButtonStyle : undefined}
+                    >
+                      <span className="flex items-center justify-center">{meta.icon}</span>
+                      {meta.badge ? (
+                        <span className="absolute -top-1 -right-1 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
+                          {meta.badge}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setShowControlWidgetAddPanel(true)}
+                  className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-gray-400 dark:hover:border-gray-400 transition-all"
+                  title="Add widgets"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div
