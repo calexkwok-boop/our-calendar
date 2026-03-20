@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Monitor, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
@@ -739,6 +739,8 @@ const urlBase64ToUint8Array = (base64String) => {
 };
 
 const getLayerDarkModeStorageKey = (userId, layerId) => `darkMode:${String(userId || '').trim()}:${String(layerId || '').trim()}`;
+const getLayerThemeModeStorageKey = (userId, layerId) => `themeMode:${String(userId || '').trim()}:${String(layerId || '').trim()}`;
+const THEME_MODE_OPTIONS = Object.freeze(['auto', 'dark', 'light']);
 const GAUNTLET_PAIRING_PATTERNS = Object.freeze([
   Object.freeze([[0, 3], [1, 2]]),
   Object.freeze([[0, 2], [1, 3]]),
@@ -4182,7 +4184,13 @@ function App() {
   const [mergeTargetLayerId, setMergeTargetLayerId] = useState('');
   const [mergeInProgress, setMergeInProgress] = useState(false);
   const autoMergeSeenRef = useRef(new Set());
-  const [darkMode, setDarkMode] = useState(false);
+  const [themeMode, setThemeMode] = useState('auto');
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() => (
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : false
+  ));
+  const darkMode = themeMode === 'auto' ? systemPrefersDark : themeMode === 'dark';
   const [showTipBanner, setShowTipBanner] = useState(() => localStorage.getItem('hideTipBanner') !== 'true');
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
   const [showWeather, setShowWeather] = useState(true);
@@ -5686,6 +5694,18 @@ useEffect(() => {
     color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent,
     borderColor: 'transparent',
   };
+  const cycleThemeMode = () => {
+    setThemeMode((prev) => {
+      const currentIndex = THEME_MODE_OPTIONS.indexOf(prev);
+      return THEME_MODE_OPTIONS[(currentIndex + 1 + THEME_MODE_OPTIONS.length) % THEME_MODE_OPTIONS.length];
+    });
+  };
+  const themeModeLabel = themeMode === 'auto' ? 'Auto' : themeMode === 'dark' ? 'Dark' : 'Light';
+  const themeModeIcon = themeMode === 'auto'
+    ? <Monitor className="w-4 h-4" />
+    : darkMode
+      ? <Sun className="w-4 h-4" />
+      : <Moon className="w-4 h-4" />;
   const themeAccentSoftSurfaceStyle = {
     backgroundImage: `linear-gradient(135deg, ${themeAccentSofterBg} 0%, ${themeAccentSoftBg} 100%)`,
     borderColor: themeAccentBorder,
@@ -7408,29 +7428,69 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [darkMode]);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (event) => {
+      setSystemPrefersDark(Boolean(event.matches));
+    };
+    setSystemPrefersDark(Boolean(mediaQuery.matches));
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
+
+  useEffect(() => {
     const userId = String(user?.id || '').trim();
     const layerId = String(activeLayerId || '').trim();
+    const normalizeStoredThemeMode = (value) => (
+      THEME_MODE_OPTIONS.includes(value) ? value : null
+    );
+    const legacyToThemeMode = (value) => (
+      value === 'true' ? 'dark' : value === 'false' ? 'light' : null
+    );
     if (!userId || !layerId) {
+      const storedThemeMode = typeof window !== 'undefined' ? normalizeStoredThemeMode(localStorage.getItem('themeMode')) : null;
+      if (storedThemeMode) {
+        setThemeMode(storedThemeMode);
+        return;
+      }
       const legacy = typeof window !== 'undefined' ? localStorage.getItem('darkMode') : null;
-      setDarkMode(legacy === 'true');
+      setThemeMode(legacyToThemeMode(legacy) || 'auto');
+      return;
+    }
+    const scopedThemeMode = normalizeStoredThemeMode(localStorage.getItem(getLayerThemeModeStorageKey(userId, layerId)));
+    if (scopedThemeMode) {
+      setThemeMode(scopedThemeMode);
       return;
     }
     const scopedKey = getLayerDarkModeStorageKey(userId, layerId);
     const scopedValue = localStorage.getItem(scopedKey);
-    if (scopedValue === 'true' || scopedValue === 'false') {
-      setDarkMode(scopedValue === 'true');
+    const scopedLegacyThemeMode = legacyToThemeMode(scopedValue);
+    if (scopedLegacyThemeMode) {
+      setThemeMode(scopedLegacyThemeMode);
+      return;
+    }
+    const storedThemeMode = normalizeStoredThemeMode(localStorage.getItem('themeMode'));
+    if (storedThemeMode) {
+      setThemeMode(storedThemeMode);
       return;
     }
     const legacy = localStorage.getItem('darkMode');
-    setDarkMode(legacy === 'true');
+    setThemeMode(legacyToThemeMode(legacy) || 'auto');
   }, [user?.id, activeLayerId]);
 
   useEffect(() => {
     const userId = String(user?.id || '').trim();
     const layerId = String(activeLayerId || '').trim();
+    localStorage.setItem('themeMode', themeMode);
+    localStorage.setItem('darkMode', String(darkMode));
     if (!userId || !layerId) return;
+    localStorage.setItem(getLayerThemeModeStorageKey(userId, layerId), themeMode);
     localStorage.setItem(getLayerDarkModeStorageKey(userId, layerId), String(darkMode));
-  }, [darkMode, user?.id, activeLayerId]);
+  }, [themeMode, darkMode, user?.id, activeLayerId]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -17657,7 +17717,7 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
       return;
     }
     if (id === 'theme') {
-      setDarkMode((prev) => !prev);
+      cycleThemeMode();
       return;
     }
     if (id === 'ai') {
@@ -17696,7 +17756,7 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     };
     if (id === 'weather') return { label: 'Weather', icon: <span className="text-sm leading-none">🌤️</span>, active: showWeather, disabled: false };
     if (id === 'categories') return { label: 'Categories', icon: <Settings className="w-4 h-4" />, active: Boolean(widgetCardOpenById.categories), disabled: false };
-    if (id === 'theme') return { label: darkMode ? 'Light' : 'Dark', icon: darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />, active: false, disabled: false };
+    if (id === 'theme') return { label: themeModeLabel, icon: themeModeIcon, active: false, disabled: false };
     if (id === 'ai') return { label: 'AI', icon: <MessageSquare className="w-4 h-4" />, active: Boolean(widgetCardOpenById.ai), disabled: false };
     if (id === 'scan') return { label: isScanningReminder ? 'Scanning' : 'Scan', icon: <Camera className="w-4 h-4" />, active: Boolean(widgetCardOpenById.scan), disabled: isScanningReminder };
     if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: Boolean(widgetCardOpenById.import), disabled: Boolean(activeSubCalendar) };
@@ -23967,11 +24027,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </button>
             {/* Dark mode toggle */}
             <button
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={cycleThemeMode}
               className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
-              title={darkMode ? 'Light mode' : 'Dark mode'}
+              title={`Theme: ${themeModeLabel}`}
             >
-              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {themeModeIcon}
             </button>
             {canGenerateTripHighlights && (
               <button
