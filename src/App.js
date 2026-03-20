@@ -18141,7 +18141,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </button>
             </div>
           )}
-        </div>
+        </>
+          )}
 
         {/* Notification Settings Panel */}
         {showNotificationSettings && (
@@ -25496,6 +25497,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           }
         }
       `}</style>
+    </div>
     </>
   );
 }
