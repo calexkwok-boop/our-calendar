@@ -25577,7 +25577,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       className="mt-2 max-w-[24rem]"
                     />
                     <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      {primaryJourneyGoal ? 'Your personal progress layer.' : 'One step changes everything.'}
+                      {primaryJourneyGoal ? 'Your personal progress layer.' : 'One small step, can change everything.'}
                     </div>
                   </div>
                   <button
@@ -26091,7 +26091,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   className="mt-2 max-w-[24rem]"
                 />
                 <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {primaryJourneyGoal ? 'Your personal progress layer.' : 'One step changes everything.'}
+                  {primaryJourneyGoal ? 'Your personal progress layer.' : 'One small step, can change everything.'}
                 </div>
               </div>
               <button
