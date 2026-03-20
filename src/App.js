@@ -1070,6 +1070,7 @@ function App() {
   const TRIP_COVER_PHOTO_NOTE_TEXT = '__TRIP_COVER_PHOTO_V1__';
   const AUTO_MERGE_SHARED_LAYERS = false;
   const getDeletedPhotosLocalKey = (subCalId) => `subcal-deleted-photos-${subCalId}`;
+  const getRemovedTripMembersLocalKey = (subCalId) => `subcal-removed-members-${subCalId}`;
   const readLocalDeletedPhotoIds = (subCalId) => {
     try {
       const raw = localStorage.getItem(getDeletedPhotosLocalKey(subCalId));
@@ -1079,6 +1080,24 @@ function App() {
     } catch {
       return [];
     }
+  };
+  const readLocalRemovedTripMembers = (subCalId) => {
+    try {
+      const raw = localStorage.getItem(getRemovedTripMembersLocalKey(subCalId));
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return Array.from(new Set(parsed.map((value) => normalizeIdentityKey(value)).filter(Boolean)));
+    } catch {
+      return [];
+    }
+  };
+  const writeLocalRemovedTripMembers = (subCalId, identities) => {
+    try {
+      localStorage.setItem(
+        getRemovedTripMembersLocalKey(subCalId),
+        JSON.stringify(Array.from(new Set((identities || []).map((value) => normalizeIdentityKey(value)).filter(Boolean))))
+      );
+    } catch {}
   };
   const writeLocalDeletedPhotoIds = (subCalId, ids) => {
     try {
@@ -1871,6 +1890,7 @@ function App() {
     try {
       const myEmail = normalizeEmail(user?.email);
       const myPhone = normalizePhoneNumber(user?.phone);
+      const removedRecipients = new Set(readLocalRemovedTripMembers(subCalId));
       const { data: memberRows } = await supabase
         .from('sub_calendar_members')
         .select('*')
@@ -1881,6 +1901,7 @@ function App() {
         const recipient = resolveInviteRecipient(identityValue);
         if (!recipient?.value) return;
         if (recipient.value === myEmail || recipient.value === myPhone) return;
+        if (removedRecipients.has(normalizeIdentityKey(recipient.value))) return;
         if (!merged.has(recipient.value)) {
           merged.set(recipient.value, {
             id: recipient.value,
@@ -2010,6 +2031,7 @@ function App() {
       const subCalId = String(subCal?.id || '').trim();
       const layerId = String(subCal?.layer_id || '').trim();
       if (!subCalId || !layerId || !user?.id) return;
+      const removedRecipients = new Set(readLocalRemovedTripMembers(subCalId));
 
       // Only owner should maintain canonical trip member mirror from layer shares.
       if (String(subCal?.owner_id || '') !== String(user.id)) return;
@@ -2045,7 +2067,7 @@ function App() {
           .map((r) => normalizeEmail(r?.email) || normalizePhoneNumber(r?.phone))
           .filter(Boolean)
       );
-      const missingRecipients = sharedRecipients.filter((identity) => !existingRecipients.has(identity));
+      const missingRecipients = sharedRecipients.filter((identity) => !existingRecipients.has(identity) && !removedRecipients.has(normalizeIdentityKey(identity)));
       if (missingRecipients.length === 0) return;
 
       const nowIso = new Date().toISOString();
@@ -2523,6 +2545,11 @@ function App() {
       } catch (error) {
         console.error('Trip member shared_access removal failed:', error);
       }
+    }
+    const removedKey = normalizeIdentityKey(recipient.value);
+    if (removedKey) {
+      const prevRemoved = readLocalRemovedTripMembers(activeSubCalendar.id);
+      writeLocalRemovedTripMembers(activeSubCalendar.id, [...prevRemoved, removedKey]);
     }
     setSubCalMembers(prev => prev.filter(m => m.identity !== recipient.value));
   };
