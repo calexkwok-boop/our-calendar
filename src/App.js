@@ -1078,11 +1078,13 @@ function App() {
   const [showJourneyGoalModal, setShowJourneyGoalModal] = useState(false);
   const [showJourneyLogModal, setShowJourneyLogModal] = useState(false);
   const [showJourneyNoteModal, setShowJourneyNoteModal] = useState(false);
-  const [journeyGoalDraft, setJourneyGoalDraft] = useState({ title: '', target: '', unit: '', pinned: true });
+  const [journeyGoalDraft, setJourneyGoalDraft] = useState({ title: '', target: '', unit: '', timeframe: '', pinned: true });
   const [journeyLogDraft, setJourneyLogDraft] = useState(buildJourneyLogDraft());
   const [journeyLogSavingPhoto, setJourneyLogSavingPhoto] = useState(false);
   const [journeyLogError, setJourneyLogError] = useState('');
   const [journeyNoteDraft, setJourneyNoteDraft] = useState('');
+  const [showJourneyGoalCreatedPrompt, setShowJourneyGoalCreatedPrompt] = useState(false);
+  const [journeyCreatedGoalId, setJourneyCreatedGoalId] = useState('');
   const journeyLogPhotoInputRef = useRef(null);
   const [swipedTripId, setSwipedTripId] = useState(null);
   const [tripSwipeDrag, setTripSwipeDrag] = useState({ id: null, offset: 0 });
@@ -15539,6 +15541,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return 'Goal completed. Keep the momentum going.';
   })();
   const selectedJourneyLogGoal = journeyGoalById[String(journeyLogDraft?.goalId || '')] || primaryJourneyGoal || null;
+  const createdJourneyGoal = journeyGoalById[String(journeyCreatedGoalId || '')] || null;
   const journeyQuickPrompt = (() => {
     if (!primaryJourneyGoal) {
       return 'Start with one clear goal and keep your momentum visible.';
@@ -15583,9 +15586,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setJourneyLogError('');
   };
 
+  const closeJourneyGoalModal = () => {
+    setShowJourneyGoalModal(false);
+    setJourneyGoalDraft({ title: '', target: '', unit: '', timeframe: '', pinned: sortedJourneyGoals.length === 0 });
+  };
+
+  const closeJourneyGoalCreatedPrompt = () => {
+    setShowJourneyGoalCreatedPrompt(false);
+    setJourneyCreatedGoalId('');
+  };
+
   const openJourneyGoalFlow = () => {
-    setJourneyGoalDraft({ title: '', target: '', unit: '', pinned: sortedJourneyGoals.length === 0 });
-  setShowJourneyGoalModal(true);
+    setJourneyGoalDraft({ title: '', target: '', unit: '', timeframe: '', pinned: sortedJourneyGoals.length === 0 });
+    setShowJourneyGoalCreatedPrompt(false);
+    setJourneyCreatedGoalId('');
+    setShowJourneyGoalModal(true);
   };
 
   const openJourneyLogFlow = (goal = primaryJourneyGoal) => {
@@ -15603,6 +15618,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const title = String(journeyGoalDraft?.title || '').trim();
     const target = Math.max(0, normalizeJourneyNumber(journeyGoalDraft?.target));
     const unit = String(journeyGoalDraft?.unit || '').trim();
+    const timeframe = String(journeyGoalDraft?.timeframe || '').trim();
     if (!title || !target) return;
     const now = new Date().toISOString();
     const nextGoal = {
@@ -15610,22 +15626,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       title,
       target,
       unit,
+      timeframe,
       current: 0,
       active: true,
-      pinned: Boolean(journeyGoalDraft?.pinned) || sortedJourneyGoals.length === 0,
+      pinned: true,
       createdAt: now,
       updatedAt: now,
     };
     setJourneyState((prev) => ({
       ...prev,
-      goals: (prev?.goals || []).map((goal) => ({ ...goal, pinned: nextGoal.pinned ? false : goal.pinned })).concat(nextGoal),
+      goals: (prev?.goals || []).map((goal) => ({ ...goal, pinned: false })).concat(nextGoal),
     }));
-    setShowJourneyGoalModal(false);
-    setJourneyGoalDraft({ title: '', target: '', unit: '', pinned: false });
-    setJourneyLogDraft(buildJourneyLogDraft(nextGoal.id));
-    setJourneyLogSavingPhoto(false);
-    setJourneyLogError('');
-    setShowJourneyLogModal(true);
+    closeJourneyGoalModal();
+    setJourneyCreatedGoalId(nextGoal.id);
+    setShowJourneyGoalCreatedPrompt(true);
   };
 
   const addJourneyLog = () => {
@@ -25520,26 +25534,59 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {showJourneyGoalModal && (
-          <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setShowJourneyGoalModal(false)}>
+          <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
             <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">New goal</div>
-              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Keep it measurable and specific.</div>
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{sortedJourneyGoals.length === 0 ? 'Set your first goal' : 'New goal'}</div>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Keep it measurable, simple, and easy to log.</div>
               <div className="mt-4 space-y-3">
                 <input value={journeyGoalDraft.title} onChange={(e) => setJourneyGoalDraft((prev) => ({ ...prev, title: e.target.value }))} placeholder="Read 12 books" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
                 <div className="grid grid-cols-2 gap-3">
                   <input value={journeyGoalDraft.target} onChange={(e) => setJourneyGoalDraft((prev) => ({ ...prev, target: e.target.value }))} placeholder="12" inputMode="decimal" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
                   <input value={journeyGoalDraft.unit} onChange={(e) => setJourneyGoalDraft((prev) => ({ ...prev, unit: e.target.value }))} placeholder="books" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
                 </div>
-                <button type="button" onClick={() => setJourneyGoalDraft((prev) => ({ ...prev, pinned: !prev.pinned }))} className="flex items-center justify-between rounded-2xl border border-gray-200 dark:border-white/10 px-3 py-3 text-sm text-gray-700 dark:text-gray-200">
-                  <span>Pin as primary goal</span>
-                  <span className={`inline-flex h-6 w-11 items-center rounded-full transition-colors ${journeyGoalDraft.pinned ? 'bg-purple-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${journeyGoalDraft.pinned ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </span>
-                </button>
+                <input value={journeyGoalDraft.timeframe} onChange={(e) => setJourneyGoalDraft((prev) => ({ ...prev, timeframe: e.target.value }))} placeholder="This month" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+                <div className="rounded-2xl border border-gray-200 dark:border-white/10 px-3 py-3 text-sm text-gray-500 dark:text-gray-400">
+                  This goal will become your primary Journey focus.
+                </div>
               </div>
               <div className="mt-5 flex gap-2">
-                <button type="button" onClick={() => setShowJourneyGoalModal(false)} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
+                <button type="button" onClick={closeJourneyGoalModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
                 <button type="button" onClick={addJourneyGoal} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Save goal</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showJourneyGoalCreatedPrompt && createdJourneyGoal && (
+          <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
+            <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Goal created</div>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{createdJourneyGoal.title} is now your primary Journey goal.</div>
+              <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.04] px-4 py-3">
+                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{createdJourneyGoal.title}</div>
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {formatJourneyProgressText(createdJourneyGoal)}{createdJourneyGoal?.timeframe ? ` • ${createdJourneyGoal.timeframe}` : ''}
+                </div>
+              </div>
+              <div className="mt-5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeJourneyGoalCreatedPrompt();
+                    openJourneyLogFlow(createdJourneyGoal);
+                  }}
+                  className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white"
+                  style={themeAccentButtonStyle}
+                >
+                  Log now
+                </button>
+                <button
+                  type="button"
+                  onClick={closeJourneyGoalCreatedPrompt}
+                  className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"
+                >
+                  Later
+                </button>
               </div>
             </div>
           </div>
