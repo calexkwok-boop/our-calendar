@@ -23059,7 +23059,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-gray-600 dark:bg-slate-800 dark:text-gray-200">
                         {getTripMemberBadge(memberLabel)}
                       </span>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="truncate font-medium">{memberLabel}</div>
                         {m.status && (
                           <div className="text-[10px] uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
@@ -23070,7 +23070,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       {isRemovable && (
                         <button
                           onClick={() => removeMemberFromSubCal(memberIdentity)}
-                          className="ml-1 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
+                          className="ml-auto shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
                         >
                           Remove
                         </button>
@@ -23279,17 +23279,25 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full text-xs flex items-center gap-1">
                 👤 {currentUser} (you)
               </span>
-              {subCalMembers.map(m => (
-                <span key={m.identity || m.email || m.phone} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1">
-                  {resolveHandleLikeLabel(m.identity || m.email || m.phone)}
-                  <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200">
-                    {getRecipientKindLabel(m.identity || m.email || m.phone)}
-                  </span>
-                  {canEditCurrentTrip && m.removable !== false && (
-                    <button onClick={() => removeMemberFromSubCal(m.identity || m.email || m.phone)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
-                  )}
-                </span>
-              ))}
+              {subCalMembers.map((m) => {
+                const memberIdentity = m.identity || m.email || m.phone;
+                return (
+                  <div key={memberIdentity} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1.5">
+                    <span className="truncate max-w-[10rem]">{resolveHandleLikeLabel(memberIdentity)}</span>
+                    <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200">
+                      {getRecipientKindLabel(memberIdentity)}
+                    </span>
+                    {canEditCurrentTrip && m.removable !== false && (
+                      <button
+                        onClick={() => removeMemberFromSubCal(memberIdentity)}
+                        className="ml-1 shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
               {canEditCurrentTrip && (
                 <button
                   onClick={() => setShowSubCalInviteModal(true)}
