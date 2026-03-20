@@ -20540,7 +20540,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               journeyQuote={journeyQuote}
               journeySupportLabel={journeySupportLabel}
               onClick={openJourneyScreen}
-              onCtaClick={primaryJourneyGoal ? (() => openJourneyLogFlow(primaryJourneyGoal)) : openJourneyEntryFlow}
+              onCtaClick={primaryJourneyGoal ? (() => openJourneyLogFlow(primaryJourneyGoal)) : openJourneyScreen}
               primaryJourneyGoal={primaryJourneyGoal}
               primaryJourneyGoalProgress={primaryJourneyGoalProgress}
               primaryJourneyLoggedToday={primaryJourneyLoggedToday}
