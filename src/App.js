@@ -14958,20 +14958,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const activeTripCoverPhoto = tripCoverPhoto?.url ? tripCoverPhoto : null;
   const activeTripBackgroundStyle = activeTripCoverPhoto?.url
     ? {
-        backgroundImage: `${darkMode ? 'linear-gradient(rgba(2,6,23,0.38), rgba(2,6,23,0.48))' : 'linear-gradient(rgba(248,250,252,0.5), rgba(248,250,252,0.62))'}, url(${activeTripCoverPhoto.url})`,
+        backgroundImage: `url(${activeTripCoverPhoto.url})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'scroll',
-        filter: 'saturate(1.05) contrast(1.03)',
       }
     : undefined;
-  const tripHeaderSurfaceStyle = darkMode
-    ? {
-        background: 'linear-gradient(180deg, rgba(2,6,23,0.42) 0%, rgba(2,6,23,0.28) 100%)',
-        borderColor: 'rgba(148,163,184,0.12)',
-        boxShadow: '0 18px 42px rgba(2,6,23,0.18)',
-      }
-    : undefined;
+  const tripHeaderSurfaceStyle = undefined;
   const tripHeaderPillClassName = darkMode
     ? 'border border-white/10 bg-white/[0.06] text-slate-100'
     : 'border border-white/10 bg-white/70 text-gray-700';
@@ -14981,9 +14974,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const tripHeaderActionClusterStyle = darkMode
     ? { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)' }
     : undefined;
-  const tripHeaderPanelStyle = darkMode
-    ? { backgroundColor: 'rgba(2,6,23,0.24)', borderColor: 'rgba(148,163,184,0.12)' }
-    : undefined;
+  const tripHeaderPanelStyle = undefined;
   const getTripChatInitials = (label) => {
     const parts = String(label || '').trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) return '?';
