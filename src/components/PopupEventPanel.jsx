@@ -727,7 +727,6 @@ export default function PopupEventPanel({
     const existingRow = Array.isArray(existingRows) ? existingRows[0] : existingRows;
     if (existingRow?.id) {
       return {
-        id: String(existingRow.id),
         event_id: event.id,
         user_id: memberUserId,
         display_name: displayName,
@@ -750,7 +749,6 @@ export default function PopupEventPanel({
       return null;
     }
     return {
-      id: String(insertedRow?.id || ''),
       event_id: event.id,
       user_id: memberUserId,
       display_name: displayName,
@@ -774,7 +772,8 @@ export default function PopupEventPanel({
     const { error } = await supabase
       .from('popup_event_members')
       .update({ role: 'cohost', display_name: ensured.display_name })
-      .eq('id', ensured.id);
+      .eq('event_id', event.id)
+      .eq('user_id', memberUserId);
     if (error) {
       console.error('Could not promote popup member:', error);
       setRosterActionError(error.message || 'Could not promote this player to co-host.');
@@ -792,11 +791,12 @@ export default function PopupEventPanel({
     const memberUserId = String(member?.user_id || '').trim();
     if (!memberUserId) return;
     const ensured = await ensurePopupMemberRecord(member, 'player');
-    if (!ensured?.id) return;
+    if (!ensured) return;
     await supabase
       .from('popup_event_members')
       .update({ role: 'player' })
-      .eq('id', ensured.id);
+      .eq('event_id', event.id)
+      .eq('user_id', memberUserId);
     await loadEvent(event.id);
   };
   const handleAddManualPlayer = async () => {
