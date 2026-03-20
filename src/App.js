@@ -20703,22 +20703,50 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     ) : (
                       <div className="space-y-2">
                         {section.events.slice(0, 3).map((event) => {
-                          const category = categories[event.category || 'other'] || categories.other;
+                          const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                          const popupCard = (userTabPopupEvents || []).find((row) => String(row?.id || '') === String(event?.id || '')) || null;
+                          const isPopupEvent = Boolean(popupMeta || popupCard);
+                          const effectiveCategoryKey = isPopupEvent ? 'popup_event' : (event.category || 'other');
+                          const category = categories[effectiveCategoryKey] || categories.other;
+                          const eventLayer = (layers || []).find((layer) => String(layer?.id || '') === String(popupMeta?.layerId || popupCard?.layerId || event?.layerId || event?.layer_id || '')) || null;
+                          const eventLayerTheme = normalizeLayerPageTheme(eventLayer?.page_theme, eventLayer?.title_style);
+                          const chipBg = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.82 : 0.88);
+                          const chipBorder = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.56 : 0.72);
+                          const chipText = isLightHexColor(eventLayerTheme.accent) ? '#111111' : eventLayerTheme.accent;
                           return (
                             <button
                               key={`${section.key}-${event.id}-${event.date}`}
-                              onClick={() => {
-                                setSelectedDate(new Date());
-                                setSelectedDates([]);
-                                setShowDateDetailModal(true);
+                              onClick={() => { openUserTabEvent(event, popupMeta || popupCard); }}
+                              className="w-full rounded-2xl border px-3 py-3 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+                              style={{
+                                background: isPopupEvent
+                                  ? (darkMode ? 'rgba(244,63,94,0.12)' : 'rgba(255,241,242,0.96)')
+                                  : (darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)'),
+                                borderColor: isPopupEvent
+                                  ? (darkMode ? 'rgba(244,114,182,0.28)' : 'rgba(251,113,133,0.28)')
+                                  : (darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)'),
                               }}
-                              className="w-full rounded-2xl border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/[0.04] px-3 py-3 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
                             >
                               <div className="flex items-center justify-between gap-3">
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2 min-w-0">
                                     <span className={`w-2 h-2 rounded-full shrink-0 ${category.color}`} />
                                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{event.title}</span>
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap items-center gap-1">
+                                    {isPopupEvent ? (
+                                      <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                                        Pop-up
+                                      </span>
+                                    ) : null}
+                                    {eventLayer ? (
+                                      <span
+                                        className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium"
+                                        style={{ backgroundColor: chipBg, borderColor: chipBorder, color: chipText }}
+                                      >
+                                        {eventLayer.name || 'Calendar'}
+                                      </span>
+                                    ) : null}
                                   </div>
                                   {event.location && (
                                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{event.location}</div>
@@ -20763,13 +20791,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     style={themeAccentEllieChipButtonStyle}
                   >
                     Start trip
-                  </button>
-                  <button
-                    onClick={() => setBottomNavTab('trips')}
-                    className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-                    style={themeAccentEllieChipButtonStyle}
-                  >
-                    Open Trips
                   </button>
                 </div>
               </div>
