@@ -8,6 +8,31 @@ import {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
+const getPopupManualPlayersStorageKey = (eventId) => `popup-manual-players:${String(eventId || '').trim()}`;
+const readPopupManualPlayers = (eventId) => {
+  if (typeof window === 'undefined') return [];
+  const key = getPopupManualPlayersStorageKey(eventId);
+  if (!key) return [];
+  try {
+    const raw = window.localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+const writePopupManualPlayers = (eventId, players) => {
+  if (typeof window === 'undefined') return;
+  const key = getPopupManualPlayersStorageKey(eventId);
+  if (!key) return;
+  try {
+    if (!Array.isArray(players) || players.length === 0) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    window.localStorage.setItem(key, JSON.stringify(players));
+  } catch {}
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -768,6 +793,21 @@ export default function PopupEventPanel({
           joined_at: s.created_at,
         });
       });
+      readPopupManualPlayers(id).forEach((player) => {
+        const manualName = String(player?.display_name || '').trim();
+        if (!manualName) return;
+        const duplicate = memberList.some((entry) => String(entry?.display_name || '').trim().toLowerCase() === manualName.toLowerCase());
+        if (duplicate) return;
+        memberList.push({
+          id: String(player?.id || `manual-${manualName.toLowerCase()}`),
+          event_id: id,
+          user_id: '',
+          display_name: manualName,
+          role: 'player',
+          joined_at: player?.joined_at || new Date().toISOString(),
+          is_manual: true,
+        });
+      });
       const nextMembers = memberList.map((entry) => {
         const overrideKey = String(entry?.user_id || '').trim();
         const overrideRole = String(memberRoleOverrides?.[overrideKey] || '').trim();
@@ -841,7 +881,17 @@ export default function PopupEventPanel({
     };
   };
   const handleLeave = async () => { if (!myMember || isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', myMember.id); await loadEvent(event.id); };
-  const handleKick = async (member) => { if (!isHostOrCohost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', member.id); await loadEvent(event.id); };
+  const handleKick = async (member) => {
+    if (!isHostOrCohost || !isUuid(event?.id)) return;
+    if (member?.is_manual) {
+      const nextManualPlayers = readPopupManualPlayers(event.id).filter((player) => String(player?.id || '') !== String(member?.id || ''));
+      writePopupManualPlayers(event.id, nextManualPlayers);
+      await loadEvent(event.id);
+      return;
+    }
+    await supabase.from('popup_event_members').delete().eq('id', member.id);
+    await loadEvent(event.id);
+  };
   const handlePromote = async (member) => {
     if (!isHostOrCohost || !isUuid(event?.id)) return;
     setRosterActionError('');
@@ -912,13 +962,13 @@ export default function PopupEventPanel({
     setManualAddBusy(true);
     setManualAddError('');
     try {
-      const { error } = await supabase.from('popup_event_members').insert({
-        event_id: event.id,
-        user_id: null,
+      const currentManualPlayers = readPopupManualPlayers(event.id);
+      currentManualPlayers.push({
+        id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         display_name: nextName,
-        role: 'player',
+        joined_at: new Date().toISOString(),
       });
-      if (error) throw error;
+      writePopupManualPlayers(event.id, currentManualPlayers);
       setManualPlayerName('');
       await loadEvent(event.id);
     } catch (err) {
