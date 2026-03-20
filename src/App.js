@@ -1020,7 +1020,7 @@ function App() {
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
   const [subCalAddingSlot, setSubCalAddingSlot] = useState(null); // hour number being added to
   const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', startTime: '', endTime: '', location: '' });
-  const [subCalTab, setSubCalTab] = useState('itinerary'); // 'itinerary' | 'expenses' | 'photos'
+  const [subCalTab, setSubCalTab] = useState('itinerary'); // 'itinerary' | 'expenses' | 'photos' | 'chat'
   const [shareMyLocation, setShareMyLocation] = useState(() => localStorage.getItem('subcal-share-location') === 'true');
   const [memberLocations, setMemberLocations] = useState({});
   const subCalLocationChannelRef = useRef(null);
@@ -1043,6 +1043,7 @@ function App() {
   const [showSubCalNotesModal, setShowSubCalNotesModal] = useState(false);
   const [tripChatMessages, setTripChatMessages] = useState([]);
   const [tripChatDraft, setTripChatDraft] = useState('');
+  const [tripChatUnreadCounts, setTripChatUnreadCounts] = useState({});
   const [showTripBackgroundPhotoMenu, setShowTripBackgroundPhotoMenu] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUploadMessage, setPhotoUploadMessage] = useState('');
@@ -2324,6 +2325,7 @@ function App() {
     setSubCalTab('itinerary');
     setTripChatDraft('');
     setTripChatMessages([]);
+    setTripChatUnreadCounts((prev) => ({ ...prev, [String(sc?.id || '')]: 0 }));
     setTripPhotos([]);
     setTripCoverPhoto(null);
     setTripCoverPhotoNoteId(null);
@@ -10525,9 +10527,25 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setTripChatDraft('');
       return;
     }
+    if (subCalTab === 'chat') {
+      setTripChatUnreadCounts((prev) => ({ ...prev, [subCalId]: 0 }));
+    }
     const channel = supabase
       .channel(`trip-chat-${subCalId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sub_calendar_notes', filter: `sub_calendar_id=eq.${subCalId}` }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sub_calendar_notes', filter: `sub_calendar_id=eq.${subCalId}` }, (payload) => {
+        const eventType = String(payload?.eventType || '').toUpperCase();
+        const row = payload?.new;
+        if (
+          eventType === 'INSERT'
+          && String(row?.text || '') === TRIP_CHAT_MESSAGE_NOTE_TEXT
+          && String(row?.user_id || '') !== String(user?.id || '')
+          && subCalTab !== 'chat'
+        ) {
+          setTripChatUnreadCounts((prev) => ({
+            ...prev,
+            [subCalId]: Number(prev?.[subCalId] || 0) + 1,
+          }));
+        }
         loadSubCalNotes(subCalId);
       })
       .subscribe();
@@ -10535,7 +10553,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return () => {
       channel.unsubscribe();
     };
-  }, [activeSubCalendar?.id]);
+  }, [activeSubCalendar?.id, subCalTab, user?.id]);
 
   useEffect(() => {
     if (!activeLayerId) {
@@ -14866,6 +14884,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const tripHeaderPanelStyle = darkMode
     ? { backgroundColor: 'rgba(2,6,23,0.76)', borderColor: 'rgba(148,163,184,0.12)' }
     : undefined;
+  const getTripChatInitials = (label) => {
+    const parts = String(label || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+  };
+  const getTripChatAvatarClassName = (label) => {
+    const palettes = [
+      'from-pink-500 to-rose-500',
+      'from-orange-500 to-amber-500',
+      'from-emerald-500 to-teal-500',
+      'from-sky-500 to-cyan-500',
+      'from-indigo-500 to-violet-500',
+    ];
+    const value = String(label || '').trim();
+    const hash = Array.from(value).reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+    return palettes[hash % palettes.length];
+  };
   const canEditCurrentTrip = Boolean(
     activeSubCalendar
     && (
@@ -23293,7 +23329,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'chat' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >
             Chat
-            {tripChatMessages.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{tripChatMessages.length}</span>}
+            {Number(tripChatUnreadCounts?.[String(activeSubCalendar?.id || '')] || 0) > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 bg-red-500 text-white text-xs rounded-full">
+                {Number(tripChatUnreadCounts?.[String(activeSubCalendar?.id || '')] || 0) > 99 ? '99+' : Number(tripChatUnreadCounts?.[String(activeSubCalendar?.id || '')] || 0)}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setSubCalTab('expenses')}
@@ -24339,18 +24379,25 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 ) : (
                   tripChatMessages.map((message) => {
                     const isMine = String(message?.userId || '') === String(user?.id || '');
+                    const avatarLabel = getTripChatInitials(message.createdBy);
+                    const avatarClassName = getTripChatAvatarClassName(message.createdBy);
                     const createdAtLabel = message?.createdAt
                       ? new Date(message.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
                       : '';
                     return (
                       <div key={message.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[85%] rounded-3xl px-4 py-3 shadow-sm ${isMine ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white' : 'bg-gray-50 text-gray-900 dark:bg-white/[0.06] dark:text-white'}`}>
-                          <div className={`text-[11px] font-semibold ${isMine ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
-                            {message.createdBy}
-                            {createdAtLabel ? ` • ${createdAtLabel}` : ''}
+                        <div className={`flex max-w-[90%] items-end gap-2 ${isMine ? 'flex-row-reverse' : ''}`}>
+                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-semibold text-white shadow-sm ${avatarClassName}`}>
+                            {avatarLabel}
                           </div>
-                          <div className={`mt-1 whitespace-pre-wrap break-words text-sm ${isMine ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
-                            {message.text}
+                          <div className={`max-w-full rounded-3xl px-4 py-3 shadow-sm ${isMine ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white' : 'bg-gray-50 text-gray-900 dark:bg-white/[0.06] dark:text-white'}`}>
+                            <div className={`text-[11px] font-semibold ${isMine ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                              {message.createdBy}
+                              {createdAtLabel ? ` • ${createdAtLabel}` : ''}
+                            </div>
+                            <div className={`mt-1 whitespace-pre-wrap break-words text-sm ${isMine ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                              {message.text}
+                            </div>
                           </div>
                         </div>
                       </div>
