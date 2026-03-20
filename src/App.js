@@ -1041,6 +1041,8 @@ function App() {
   const [showSubCalInviteModal, setShowSubCalInviteModal] = useState(false);
   const [tripInviteLinkCopied, setTripInviteLinkCopied] = useState(false);
   const [showSubCalNotesModal, setShowSubCalNotesModal] = useState(false);
+  const [tripChatMessages, setTripChatMessages] = useState([]);
+  const [tripChatDraft, setTripChatDraft] = useState('');
   const [showTripBackgroundPhotoMenu, setShowTripBackgroundPhotoMenu] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoUploadMessage, setPhotoUploadMessage] = useState('');
@@ -1062,6 +1064,7 @@ function App() {
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
+  const TRIP_CHAT_MESSAGE_NOTE_TEXT = '__TRIP_CHAT_MESSAGE_V1__';
   const DELETED_PHOTOS_NOTE_TEXT = '__DELETED_PHOTOS_V1__';
   const TRIP_COVER_PHOTO_NOTE_TEXT = '__TRIP_COVER_PHOTO_V1__';
   const AUTO_MERGE_SHARED_LAYERS = false;
@@ -2319,6 +2322,8 @@ function App() {
       setSubCalWeatherInput('');
     }
     setSubCalTab('itinerary');
+    setTripChatDraft('');
+    setTripChatMessages([]);
     setTripPhotos([]);
     setTripCoverPhoto(null);
     setTripCoverPhotoNoteId(null);
@@ -2522,6 +2527,7 @@ function App() {
       let loadedVenmoHandlesNoteId = null;
       let loadedCashAppHandles = {};
       let loadedCashAppHandlesNoteId = null;
+      let loadedTripChatMessages = [];
       let loadedDeletedPhotoIds = [];
       let loadedDeletedPhotosNoteId = null;
       let loadedTripCoverPhoto = null;
@@ -2562,6 +2568,19 @@ function App() {
           loadedCashAppHandles = sanitized;
           return;
         }
+        if (n.text === TRIP_CHAT_MESSAGE_NOTE_TEXT) {
+          const parsed = (parsedChecklist && typeof parsedChecklist === 'object' && !Array.isArray(parsedChecklist)) ? parsedChecklist : {};
+          const message = String(parsed?.message || '').trim();
+          if (!message) return;
+          loadedTripChatMessages.push({
+            id: String(n.id || ''),
+            text: message,
+            createdAt: String(n.created_at || ''),
+            createdBy: String(parsed?.displayName || n.created_by || 'Member').trim() || 'Member',
+            userId: String(n.user_id || '').trim(),
+          });
+          return;
+        }
         if (n.text === DELETED_PHOTOS_NOTE_TEXT) {
           loadedDeletedPhotosNoteId = n.id;
           loadedDeletedPhotoIds = Array.isArray(parsedChecklist) ? parsedChecklist : [];
@@ -2583,6 +2602,7 @@ function App() {
       setVenmoHandlesNoteId(loadedVenmoHandlesNoteId);
       setCashAppHandles({ ...globalCashAppHandles, ...loadedCashAppHandles });
       setCashAppHandlesNoteId(loadedCashAppHandlesNoteId);
+      setTripChatMessages(loadedTripChatMessages);
       const localDeleted = readLocalDeletedPhotoIds(subCalId);
       const mergedDeletedPhotoIds = Array.from(new Set([...(loadedDeletedPhotoIds || []).map(id => String(id)), ...localDeleted]));
       setDeletedPhotoIds(mergedDeletedPhotoIds);
@@ -3076,6 +3096,43 @@ function App() {
     if (error) { console.error('Error adding note:', error); return; }
     setSubCalNotes(prev => [...prev, { ...note, checklist: [] }]);
     setNewNote('');
+  };
+
+  const sendTripChatMessage = async () => {
+    if (!activeSubCalendar || !user?.id) return;
+    const message = String(tripChatDraft || '').trim();
+    if (!message) return;
+    const createdAt = new Date().toISOString();
+    const createdBy = String(currentUser || user?.email || user?.phone || 'Member').trim() || 'Member';
+    const note = {
+      id: `scchat_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      sub_calendar_id: activeSubCalendar.id,
+      text: TRIP_CHAT_MESSAGE_NOTE_TEXT,
+      checklist: JSON.stringify({ message, displayName: createdBy }),
+      created_by: currentUser,
+      user_id: user?.id,
+      created_at: createdAt,
+    };
+    const { error } = await supabase.from('sub_calendar_notes').insert(note);
+    if (error) {
+      console.error('Error sending trip chat message:', error);
+      return;
+    }
+    setTripChatDraft('');
+    setTripChatMessages((prev) => (
+      prev.some((item) => String(item?.id || '') === String(note.id))
+        ? prev
+        : [
+            ...prev,
+            {
+              id: note.id,
+              text: message,
+              createdAt,
+              createdBy,
+              userId: String(user?.id || ''),
+            },
+          ]
+    ));
   };
 
   const deleteSubCalNote = async (noteId) => {
@@ -10460,6 +10517,25 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     loadCalendarChatMessages();
   }, [showChatPanel, activeLayerId]);
+
+  useEffect(() => {
+    const subCalId = String(activeSubCalendar?.id || '').trim();
+    if (!subCalId) {
+      setTripChatMessages([]);
+      setTripChatDraft('');
+      return;
+    }
+    const channel = supabase
+      .channel(`trip-chat-${subCalId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sub_calendar_notes', filter: `sub_calendar_id=eq.${subCalId}` }, () => {
+        loadSubCalNotes(subCalId);
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [activeSubCalendar?.id]);
 
   useEffect(() => {
     if (!activeLayerId) {
@@ -23213,6 +23289,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             {tripPhotos.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{tripPhotos.length}</span>}
           </button>
           <button
+            onClick={() => setSubCalTab('chat')}
+            className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'chat' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+          >
+            Chat
+            {tripChatMessages.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{tripChatMessages.length}</span>}
+          </button>
+          <button
             onClick={() => setSubCalTab('expenses')}
             className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all ${subCalTab === 'expenses' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >Expenses</button>
@@ -24235,6 +24318,74 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 })()}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Chat tab */}
+        {subCalTab === 'chat' && (
+          <div className="px-4 py-4">
+            <div className="rounded-[28px] border border-gray-200/80 bg-white/90 shadow-sm dark:border-white/10 dark:bg-slate-900/75">
+              <div className="border-b border-gray-100 px-4 py-3 dark:border-white/10">
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">Trip Chat</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Message everyone in {activeSubCalendar?.name || 'this trip'}.</div>
+              </div>
+
+              <div className="max-h-[24rem] overflow-y-auto px-3 py-3 space-y-3">
+                {tripChatMessages.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-center dark:border-white/10">
+                    <div className="text-sm font-medium text-gray-600 dark:text-gray-300">No messages yet</div>
+                    <div className="mt-1 text-xs text-gray-400 dark:text-gray-500">Start the chat for this trip.</div>
+                  </div>
+                ) : (
+                  tripChatMessages.map((message) => {
+                    const isMine = String(message?.userId || '') === String(user?.id || '');
+                    const createdAtLabel = message?.createdAt
+                      ? new Date(message.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+                      : '';
+                    return (
+                      <div key={message.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[85%] rounded-3xl px-4 py-3 shadow-sm ${isMine ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white' : 'bg-gray-50 text-gray-900 dark:bg-white/[0.06] dark:text-white'}`}>
+                          <div className={`text-[11px] font-semibold ${isMine ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {message.createdBy}
+                            {createdAtLabel ? ` • ${createdAtLabel}` : ''}
+                          </div>
+                          <div className={`mt-1 whitespace-pre-wrap break-words text-sm ${isMine ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                            {message.text}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="border-t border-gray-100 px-3 py-3 dark:border-white/10">
+                <div className="flex items-end gap-2">
+                  <textarea
+                    value={tripChatDraft}
+                    onChange={(e) => setTripChatDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendTripChatMessage();
+                      }
+                    }}
+                    rows={2}
+                    placeholder="Message the trip..."
+                    className="min-h-[4.5rem] flex-1 resize-none rounded-2xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-purple-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+                    style={{ fontSize: '16px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={sendTripChatMessage}
+                    disabled={!String(tripChatDraft || '').trim()}
+                    className="rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-opacity disabled:opacity-40"
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
