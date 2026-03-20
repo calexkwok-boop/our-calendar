@@ -952,7 +952,17 @@ export default function PopupEventPanel({
   };
   const handleCopyLink = () => { navigator.clipboard.writeText(`${window.location.origin}?popup=${event.id}`).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
-  const panelStyle = { borderRadius: 24, overflow: 'hidden', marginBottom: 24, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(17,24,39,0.95)' : '#fff', boxShadow: `0 8px 40px ${accent}18` };
+  const panelStyle = {
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 24,
+    border: `1.5px solid ${border}`,
+    background: darkMode ? 'rgba(17,24,39,0.95)' : '#fff',
+    boxShadow: `0 8px 40px ${accent}18`,
+    maxHeight: 'min(88vh, 52rem)',
+    display: 'flex',
+    flexDirection: 'column',
+  };
   const headerStyle = { background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)`, padding: '18px 20px 16px', position: 'relative', overflow: 'hidden' };
 
   if (loading) return (
@@ -1056,7 +1066,7 @@ export default function PopupEventPanel({
 
       {/* ── INFO TAB ── */}
       {screen === 'detail' && (
-        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain' }}>
           {isLegacyInvalidEvent && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 14, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
               <AlertCircle style={{ width: 16, height: 16, color: '#d97706', flexShrink: 0, marginTop: 1 }} />
@@ -1180,7 +1190,7 @@ export default function PopupEventPanel({
 
       {/* ── ROSTER TAB ── */}
       {screen === 'roster' && (
-        <div style={{ paddingBottom: 112 }}>
+        <div style={{ paddingBottom: 112, flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain' }}>
           <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent }}>{memberCount} / {event.max_players} players</div>
             <div style={{ flex: 1, height: 4, borderRadius: 999, background: border, margin: '0 12px', overflow: 'hidden' }}>
