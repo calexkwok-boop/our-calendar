@@ -128,6 +128,14 @@ const readJourneyPhotoFile = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file);
 });
 
+const deferJourneyOverlayOpen = (callback) => {
+  if (typeof window === 'undefined') {
+    callback();
+    return;
+  }
+  window.setTimeout(callback, 0);
+};
+
 const normalizeJourneyNumber = (value) => {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : 0;
@@ -15577,7 +15585,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, journeyState]);
 
   const openJourneyScreen = () => {
-    setShowJourneyScreen(true);
+    deferJourneyOverlayOpen(() => setShowJourneyScreen(true));
   };
 
   const closeJourneyEntryModal = () => {
@@ -15585,7 +15593,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const openJourneyEntryFlow = () => {
-    setShowJourneyEntryModal(true);
+    deferJourneyOverlayOpen(() => setShowJourneyEntryModal(true));
   };
 
   const closeJourneyLogModal = () => {
@@ -15610,7 +15618,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setJourneyGoalDraft({ title: '', target: '', unit: '', timeframe: '', pinned: sortedJourneyGoals.length === 0 });
     setShowJourneyGoalCreatedPrompt(false);
     setJourneyCreatedGoalId('');
-    setShowJourneyGoalModal(true);
+    deferJourneyOverlayOpen(() => setShowJourneyGoalModal(true));
   };
 
   const openJourneyLogFlow = (goal = primaryJourneyGoal) => {
@@ -15618,7 +15626,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setJourneyLogDraft(buildJourneyLogDraft(goal?.id));
     setJourneyLogSavingPhoto(false);
     setJourneyLogError('');
-    setShowJourneyLogModal(true);
+    deferJourneyOverlayOpen(() => setShowJourneyLogModal(true));
   };
 
   const addJourneyGoal = () => {
