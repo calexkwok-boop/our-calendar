@@ -15837,6 +15837,42 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }));
   };
 
+  const deleteJourneyGoal = (goalId) => {
+    const normalizedGoalId = String(goalId || '').trim();
+    if (!normalizedGoalId) return;
+    const targetGoal = journeyGoalById[normalizedGoalId] || null;
+    if (!targetGoal) return;
+    const confirmed = typeof window === 'undefined'
+      ? true
+      : window.confirm(`Delete "${targetGoal.title}"? This removes the goal and its Journey updates.`);
+    if (!confirmed) return;
+
+    setJourneyState((prev) => {
+      const remainingGoals = (prev?.goals || []).filter((goal) => String(goal?.id || '') !== normalizedGoalId);
+      const nextPrimaryId = String(
+        remainingGoals.find((goal) => goal?.pinned && goal?.active !== false)?.id
+        || remainingGoals.find((goal) => goal?.active !== false)?.id
+        || remainingGoals[0]?.id
+        || ''
+      );
+
+      return {
+        ...prev,
+        goals: remainingGoals.map((goal) => ({
+          ...goal,
+          pinned: nextPrimaryId ? String(goal?.id || '') === nextPrimaryId : false,
+          active: nextPrimaryId
+            ? (String(goal?.id || '') === nextPrimaryId ? true : goal?.active !== false)
+            : goal?.active !== false,
+        })),
+        entries: (prev?.entries || []).filter((entry) => String(entry?.goalId || '') !== normalizedGoalId),
+      };
+    });
+
+    if (String(journeyLogDraft?.goalId || '') === normalizedGoalId) closeJourneyLogModal();
+    if (String(journeyCreatedGoalId || '') === normalizedGoalId) closeJourneyGoalCreatedPrompt();
+  };
+
   useEffect(() => {
     if (!user?.id) {
       setPreferCalendarHome(false);
@@ -25516,6 +25552,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       </button>
                       <button
                         type="button"
+                        onClick={() => openJourneyGoalFlow()}
+                        className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
+                        style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
+                      >
+                        Add another goal
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => openJourneyLogFlow(primaryJourneyGoal)}
                         className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
                         style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
@@ -25532,6 +25576,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
                       >
                         Add note
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteJourneyGoal(primaryJourneyGoal.id)}
+                        className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-rose-600 dark:text-rose-300"
+                        style={{ borderColor: darkMode ? 'rgba(251,113,133,0.24)' : 'rgba(244,63,94,0.2)' }}
+                      >
+                        Delete goal
                       </button>
                     </div>
                   </div>
@@ -25572,7 +25624,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <div className="rounded-[28px] border border-white/10 bg-gray-50/80 dark:bg-white/[0.03] p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Goals</div>
-                      <button type="button" onClick={openJourneyGoalFlow} className="text-xs font-semibold" style={themeAccentTextStyle}>New goal</button>
+                      <button type="button" onClick={openJourneyGoalFlow} className="text-xs font-semibold" style={themeAccentTextStyle}>Add another</button>
                     </div>
                     <div className="mt-3 space-y-2">
                       {sortedJourneyGoals.slice(0, 4).map((goal) => (
@@ -25582,11 +25634,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{goal.title}</div>
                               <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{formatJourneyProgressText(goal)}</div>
                             </div>
-                            {!goal?.pinned && (
-                              <button type="button" onClick={() => pinJourneyGoal(goal.id)} className="text-[11px] font-semibold" style={themeAccentTextStyle}>
-                                Pin
+                            <div className="flex items-center gap-2">
+                              {!goal?.pinned && (
+                                <button type="button" onClick={() => pinJourneyGoal(goal.id)} className="text-[11px] font-semibold" style={themeAccentTextStyle}>
+                                  Pin
+                                </button>
+                              )}
+                              <button type="button" onClick={() => deleteJourneyGoal(goal.id)} className="text-[11px] font-semibold text-rose-600 dark:text-rose-300">
+                                Delete
                               </button>
-                            )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -25964,6 +26021,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </button>
                   <button
                     type="button"
+                    onClick={() => openJourneyGoalFlow()}
+                    className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
+                    style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
+                  >
+                    Add another goal
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => openJourneyLogFlow(primaryJourneyGoal)}
                     className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
                     style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
@@ -25980,6 +26045,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
                   >
                     Add note
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteJourneyGoal(primaryJourneyGoal.id)}
+                    className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-rose-600 dark:text-rose-300"
+                    style={{ borderColor: darkMode ? 'rgba(251,113,133,0.24)' : 'rgba(244,63,94,0.2)' }}
+                  >
+                    Delete goal
                   </button>
                 </div>
               </div>
@@ -26020,7 +26093,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <div className="rounded-[28px] border border-white/10 bg-gray-50/80 dark:bg-white/[0.03] p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Goals</div>
-                  <button type="button" onClick={openJourneyGoalFlow} className="text-xs font-semibold" style={themeAccentTextStyle}>New goal</button>
+                  <button type="button" onClick={openJourneyGoalFlow} className="text-xs font-semibold" style={themeAccentTextStyle}>Add another</button>
                 </div>
                 <div className="mt-3 space-y-2">
                   {sortedJourneyGoals.slice(0, 4).map((goal) => (
@@ -26030,11 +26103,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{goal.title}</div>
                           <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{formatJourneyProgressText(goal)}</div>
                         </div>
-                        {!goal?.pinned && (
-                          <button type="button" onClick={() => pinJourneyGoal(goal.id)} className="text-[11px] font-semibold" style={themeAccentTextStyle}>
-                            Pin
+                        <div className="flex items-center gap-2">
+                          {!goal?.pinned && (
+                            <button type="button" onClick={() => pinJourneyGoal(goal.id)} className="text-[11px] font-semibold" style={themeAccentTextStyle}>
+                              Pin
+                            </button>
+                          )}
+                          <button type="button" onClick={() => deleteJourneyGoal(goal.id)} className="text-[11px] font-semibold text-rose-600 dark:text-rose-300">
+                            Delete
                           </button>
-                        )}
+                        </div>
                       </div>
                     </div>
                   ))}
