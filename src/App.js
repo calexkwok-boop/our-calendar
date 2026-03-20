@@ -14958,7 +14958,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const activeTripCoverPhoto = tripCoverPhoto?.url ? tripCoverPhoto : null;
   const activeTripBackgroundStyle = activeTripCoverPhoto?.url
     ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url(${activeTripCoverPhoto.url})`,
+        backgroundImage: darkMode
+          ? `linear-gradient(rgba(2,6,23,0.95), rgba(2,6,23,0.95)), url(${activeTripCoverPhoto.url})`
+          : `linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url(${activeTripCoverPhoto.url})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'scroll',
