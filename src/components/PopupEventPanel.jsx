@@ -709,9 +709,44 @@ export default function PopupEventPanel({
     try { await supabase.from('popup_event_members').insert({ event_id: event.id, user_id: user.id, display_name: effectiveDisplayName || 'Player', role: 'player' }); await loadEvent(event.id); } catch {}
     setJoining(false);
   };
+  const ensurePopupMemberRecord = async (member, fallbackRole = 'player') => {
+    if (!isUuid(event?.id)) return '';
+    const existingId = String(member?.id || '').trim();
+    if (isUuid(existingId)) return existingId;
+    const memberUserId = String(member?.user_id || '').trim();
+    if (!memberUserId) return '';
+    const { data: existingRow } = await supabase
+      .from('popup_event_members')
+      .select('id')
+      .eq('event_id', event.id)
+      .eq('user_id', memberUserId)
+      .maybeSingle();
+    if (existingRow?.id) return String(existingRow.id);
+    const { data: insertedRow, error } = await supabase
+      .from('popup_event_members')
+      .insert({
+        event_id: event.id,
+        user_id: memberUserId,
+        display_name: String(member?.display_name || 'Player').trim() || 'Player',
+        role: fallbackRole,
+      })
+      .select('id')
+      .maybeSingle();
+    if (error) {
+      console.error('Could not create popup member record:', error);
+      return '';
+    }
+    return String(insertedRow?.id || '');
+  };
   const handleLeave = async () => { if (!myMember || isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', myMember.id); await loadEvent(event.id); };
   const handleKick = async (member) => { if (!isHostOrCohost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', member.id); await loadEvent(event.id); };
-  const handlePromote = async (member) => { if (!isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').update({ role: 'cohost' }).eq('id', member.id); await loadEvent(event.id); };
+  const handlePromote = async (member) => {
+    if (!isHost || !isUuid(event?.id)) return;
+    const memberId = await ensurePopupMemberRecord(member, 'cohost');
+    if (!memberId) return;
+    await supabase.from('popup_event_members').update({ role: 'cohost' }).eq('id', memberId);
+    await loadEvent(event.id);
+  };
   const handleDemote = async (member) => { if (!isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').update({ role: 'player' }).eq('id', member.id); await loadEvent(event.id); };
   const handleAddManualPlayer = async () => {
     const nextName = String(manualPlayerName || '').trim();
