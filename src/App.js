@@ -46,7 +46,7 @@ const storage = {
 const JOURNEY_GOAL_TEMPLATES = [
   { id: 'run', label: 'Run / walk', title: 'Run 50 miles', target: '50', unit: 'miles', timeframe: 'This month', hint: 'Build consistency one outing at a time.' },
   { id: 'workout', label: 'Work out', title: 'Work out 12 times', target: '12', unit: 'workouts', timeframe: 'This month', hint: 'Keep the bar low and the momentum high.' },
-  { id: 'read', label: 'Read', title: 'Read 200 pages', target: '200', unit: 'pages', timeframe: 'This month', hint: 'A few pages a day adds up fast.' },
+  { id: 'lose-weight', label: 'Lose weight', title: 'Lose 5 pounds', target: '5', unit: 'Pounds', timeframe: 'this month', hint: 'Keep it steady and celebrate each small shift.' },
   { id: 'save', label: 'Save money', title: 'Save $500', target: '500', unit: 'dollars', timeframe: 'This quarter', hint: 'Track one small win at a time.' },
   { id: 'journal', label: 'Journal', title: 'Journal 10 days', target: '10', unit: 'days', timeframe: 'This month', hint: 'Capture the days you showed up.' },
   { id: 'custom', label: 'Custom goal', title: '', target: '', unit: '', timeframe: '', hint: 'Start with your own measurable target.' },
@@ -25799,12 +25799,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
               ) : null}
               <div className="mt-4 space-y-3">
-                <input value={journeyGoalDraft.title} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, title: e.target.value })); setJourneyGoalError(''); }} placeholder="Read 200 pages" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+                <input value={journeyGoalDraft.title} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, title: e.target.value })); setJourneyGoalError(''); }} placeholder="Lose 5 pounds" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
                 <div className="grid grid-cols-2 gap-3">
-                  <input value={journeyGoalDraft.target} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, target: e.target.value })); setJourneyGoalError(''); }} placeholder="200" inputMode="decimal" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
-                  <input value={journeyGoalDraft.unit} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, unit: e.target.value })); setJourneyGoalError(''); }} placeholder="pages" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+                  <input value={journeyGoalDraft.target} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, target: e.target.value })); setJourneyGoalError(''); }} placeholder="5" inputMode="decimal" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+                  <input value={journeyGoalDraft.unit} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, unit: e.target.value })); setJourneyGoalError(''); }} placeholder="Pounds" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
                 </div>
-                <input value={journeyGoalDraft.timeframe} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, timeframe: e.target.value })); setJourneyGoalError(''); }} placeholder="This month" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+                <input value={journeyGoalDraft.timeframe} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, timeframe: e.target.value })); setJourneyGoalError(''); }} placeholder="this month" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
                 <div className="rounded-2xl border border-gray-200 dark:border-white/10 px-3 py-3 text-sm text-gray-500 dark:text-gray-400">
                   This goal will become your primary Journey focus.
                 </div>
@@ -26306,12 +26306,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
           ) : null}
           <div className="mt-4 space-y-3">
-            <input value={journeyGoalDraft.title} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, title: e.target.value })); setJourneyGoalError(''); }} placeholder="Read 200 pages" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+            <input value={journeyGoalDraft.title} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, title: e.target.value })); setJourneyGoalError(''); }} placeholder="Lose 5 pounds" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
             <div className="grid grid-cols-2 gap-3">
-              <input value={journeyGoalDraft.target} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, target: e.target.value })); setJourneyGoalError(''); }} placeholder="200" inputMode="decimal" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
-              <input value={journeyGoalDraft.unit} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, unit: e.target.value })); setJourneyGoalError(''); }} placeholder="pages" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+              <input value={journeyGoalDraft.target} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, target: e.target.value })); setJourneyGoalError(''); }} placeholder="5" inputMode="decimal" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+              <input value={journeyGoalDraft.unit} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, unit: e.target.value })); setJourneyGoalError(''); }} placeholder="Pounds" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
             </div>
-            <input value={journeyGoalDraft.timeframe} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, timeframe: e.target.value })); setJourneyGoalError(''); }} placeholder="This month" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+            <input value={journeyGoalDraft.timeframe} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, timeframe: e.target.value })); setJourneyGoalError(''); }} placeholder="this month" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
             <div className="rounded-2xl border border-gray-200 dark:border-white/10 px-3 py-3 text-sm text-gray-500 dark:text-gray-400">
               This goal will become your primary Journey focus.
             </div>
