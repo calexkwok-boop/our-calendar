@@ -25855,6 +25855,422 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
       </div>
     )}
+    {!activeSubCalendar && showJourneyScreen && (
+      <div
+        className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+        onClick={() => setShowJourneyScreen(false)}
+      >
+        <div
+          className="w-full sm:w-[34rem] max-h-[88vh] overflow-y-auto rounded-t-[32px] sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className="p-5 sm:p-6 border-b border-gray-100 dark:border-white/10"
+            style={{
+              background: darkMode
+                ? `linear-gradient(180deg, ${hexToRgba('#0f172a', 0.98)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.16)} 100%)`
+                : `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
+            }}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
+                <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{journeyQuote}</div>
+                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {primaryJourneyGoal ? 'Your personal progress layer.' : 'Start with one goal and keep it visible.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowJourneyScreen(false)}
+                className="rounded-xl p-2 text-gray-500 hover:bg-black/5 dark:text-gray-400 dark:hover:bg-white/5"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-5 sm:p-6 space-y-4">
+            {primaryJourneyGoal ? (
+              <div className="rounded-[28px] border border-white/10 bg-gray-50/90 dark:bg-white/[0.04] p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{primaryJourneyGoal.title}</div>
+                    <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{journeySupportLabel}</div>
+                  </div>
+                  {primaryJourneyGoal?.pinned ? (
+                    <div className="rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.22 : 0.12), color: activeLayerPageTheme.accent }}>
+                      Pinned
+                    </div>
+                  ) : null}
+                </div>
+                <div className="mt-4 flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
+                  <span>{primaryJourneyProgressText}</span>
+                  <span>{Math.round(primaryJourneyGoalProgress * 100)}%</span>
+                </div>
+                <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-black/8 dark:bg-white/10">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
+                      background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
+                    }}
+                  />
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => openJourneyLogFlow(primaryJourneyGoal)} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
+                    Log today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openJourneyLogFlow(primaryJourneyGoal)}
+                    className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
+                    style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
+                  >
+                    Add photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setJourneyNoteDraft('');
+                      setShowJourneyNoteModal(true);
+                    }}
+                    className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
+                    style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
+                  >
+                    Add note
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-[28px] border border-dashed border-gray-200 dark:border-white/10 p-5">
+                <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Start with one goal</div>
+                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Pick something to work toward. Small progress adds up over time.</div>
+                <div className="mt-4 grid grid-cols-1 gap-2.5">
+                  {JOURNEY_GOAL_TEMPLATES.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => openJourneyGoalFlow(template)}
+                      className="w-full rounded-2xl border px-4 py-3 text-left transition"
+                      style={{
+                        borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.12),
+                        background: template.id === 'custom'
+                          ? (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.9)')
+                          : (darkMode ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.09)} 0%, rgba(15,23,42,0.82) 100%)` : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.95) 100%)`),
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{template.label}</div>
+                          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{template.id === 'custom' ? 'Start from scratch with your own target.' : template.title}</div>
+                        </div>
+                        <div className="shrink-0 text-[11px] font-semibold" style={themeAccentTextStyle}>
+                          {template.id === 'custom' ? 'Custom' : 'Use'}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {sortedJourneyGoals.length > 0 && (
+              <div className="rounded-[28px] border border-white/10 bg-gray-50/80 dark:bg-white/[0.03] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Goals</div>
+                  <button type="button" onClick={openJourneyGoalFlow} className="text-xs font-semibold" style={themeAccentTextStyle}>New goal</button>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {sortedJourneyGoals.slice(0, 4).map((goal) => (
+                    <div key={goal.id} className="rounded-2xl border border-white/10 bg-white/80 dark:bg-white/[0.03] px-3 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{goal.title}</div>
+                          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{formatJourneyProgressText(goal)}</div>
+                        </div>
+                        {!goal?.pinned && (
+                          <button type="button" onClick={() => pinJourneyGoal(goal.id)} className="text-[11px] font-semibold" style={themeAccentTextStyle}>
+                            Pin
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(journeyState?.entries || []).length > 0 && (
+              <div className="rounded-[28px] border border-white/10 bg-gray-50/80 dark:bg-white/[0.03] p-4">
+                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Recent</div>
+                <div className="mt-3 space-y-2">
+                  {(journeyState.entries || []).slice(0, 4).map((entry) => {
+                    const entryGoal = journeyGoalById[String(entry?.goalId || '')] || null;
+                    return (
+                      <div key={entry.id} className="rounded-2xl border border-white/10 bg-white/80 dark:bg-white/[0.03] px-3 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              {entry.type === 'log'
+                                ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
+                                : 'Added a note'}
+                            </div>
+                            {entry.note ? (
+                              <div className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">{entry.note}</div>
+                            ) : null}
+                          </div>
+                          {entry.photoUrl ? (
+                            <img
+                              src={entry.photoUrl}
+                              alt={entry.photoName || 'Journey log'}
+                              className="w-10 h-10 rounded-xl object-cover shrink-0 border border-white/10"
+                            />
+                          ) : null}
+                          <div className="shrink-0 text-[11px] text-gray-400 dark:text-gray-500">
+                            {new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {!activeSubCalendar && showJourneyEntryModal && (
+      <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
+        <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pick something to work toward</div>
+          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Small progress adds up over time.</div>
+          <div className="mt-4 space-y-2">
+            {JOURNEY_GOAL_TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => openJourneyGoalFlow(template)}
+                className="w-full rounded-2xl border px-4 py-3 text-left"
+                style={{
+                  borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.12),
+                  background: template.id === 'custom'
+                    ? (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.96)')
+                    : (darkMode ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.09)} 0%, rgba(15,23,42,0.82) 100%)` : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)`),
+                }}
+              >
+                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{template.label}</div>
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{template.hint}</div>
+              </button>
+            ))}
+          </div>
+          <div className="mt-5 flex gap-2">
+            <button
+              type="button"
+              onClick={closeJourneyEntryModal}
+              className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {!activeSubCalendar && showJourneyGoalModal && (
+      <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
+        <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}</div>
+          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {selectedJourneyGoalTemplate?.hint || 'Keep it measurable, simple, and easy to log.'}
+          </div>
+          {selectedJourneyGoalTemplate ? (
+            <div className="mt-4 rounded-2xl border px-4 py-3" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16), backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.06) }}>
+              <div className="text-xs uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Starting point</div>
+              <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate.label}</div>
+            </div>
+          ) : null}
+          <div className="mt-4 space-y-3">
+            <input value={journeyGoalDraft.title} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, title: e.target.value })); setJourneyGoalError(''); }} placeholder="Read 200 pages" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+            <div className="grid grid-cols-2 gap-3">
+              <input value={journeyGoalDraft.target} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, target: e.target.value })); setJourneyGoalError(''); }} placeholder="200" inputMode="decimal" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+              <input value={journeyGoalDraft.unit} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, unit: e.target.value })); setJourneyGoalError(''); }} placeholder="pages" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+            </div>
+            <input value={journeyGoalDraft.timeframe} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, timeframe: e.target.value })); setJourneyGoalError(''); }} placeholder="This month" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+            <div className="rounded-2xl border border-gray-200 dark:border-white/10 px-3 py-3 text-sm text-gray-500 dark:text-gray-400">
+              This goal will become your primary Journey focus.
+            </div>
+            {journeyGoalError ? (
+              <div className="rounded-2xl border border-rose-200/70 bg-rose-50/90 px-3 py-3 text-sm text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
+                {journeyGoalError}
+              </div>
+            ) : null}
+          </div>
+          <div className="mt-5 flex gap-2">
+            <button type="button" onClick={closeJourneyGoalModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
+            <button type="button" onClick={addJourneyGoal} disabled={!canSaveJourneyGoal} className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white ${canSaveJourneyGoal ? '' : 'cursor-not-allowed opacity-60'}`} style={themeAccentButtonStyle}>Save goal</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {!activeSubCalendar && showJourneyGoalCreatedPrompt && createdJourneyGoal && (
+      <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
+        <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Goal created ðŸŽ‰</div>
+          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Log your first update?</div>
+          <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.04] px-4 py-3">
+            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{createdJourneyGoal.title}</div>
+            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {formatJourneyProgressText(createdJourneyGoal)}{createdJourneyGoal?.timeframe ? ` â€¢ ${createdJourneyGoal.timeframe}` : ''}
+            </div>
+          </div>
+          <div className="mt-5 flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                closeJourneyGoalCreatedPrompt();
+                openJourneyLogFlow(createdJourneyGoal);
+              }}
+              className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white"
+              style={themeAccentButtonStyle}
+            >
+              Log now
+            </button>
+            <button
+              type="button"
+              onClick={closeJourneyGoalCreatedPrompt}
+              className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"
+            >
+              Later
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {!activeSubCalendar && showJourneyLogModal && (
+      <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyLogModal}>
+        <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {primaryJourneyLoggedToday ? 'Add a quick update' : 'Log today'}
+              </div>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {selectedJourneyLogGoal ? selectedJourneyLogGoal.title : 'No active goal yet.'}
+              </div>
+            </div>
+            {selectedJourneyLogGoal ? (
+              <div className="rounded-xl px-2.5 py-1 text-[11px] font-semibold" style={{ backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.18 : 0.12), color: activeLayerPageTheme.accent }}>
+                {formatJourneyProgressText(selectedJourneyLogGoal)}
+              </div>
+            ) : null}
+          </div>
+          <div className="mt-4 space-y-3">
+            {sortedJourneyGoals.length > 1 && (
+              <select
+                value={journeyLogDraft.goalId}
+                onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, goalId: e.target.value }))}
+                className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white"
+                style={{ fontSize: '16px' }}
+              >
+                {sortedJourneyGoals.filter((goal) => goal?.active !== false).map((goal) => (
+                  <option key={goal.id} value={goal.id}>{goal.title}</option>
+                ))}
+              </select>
+            )}
+            <input
+              value={journeyLogDraft.amount}
+              onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, amount: e.target.value }))}
+              placeholder={selectedJourneyLogGoal?.unit ? `Progress in ${selectedJourneyLogGoal.unit}` : 'Progress amount'}
+              inputMode="decimal"
+              className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white"
+              style={{ fontSize: '16px' }}
+            />
+            <textarea
+              value={journeyLogDraft.note}
+              onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, note: e.target.value }))}
+              placeholder="What moved forward today?"
+              rows={3}
+              className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white"
+              style={{ fontSize: '16px' }}
+            />
+            <input
+              ref={journeyLogPhotoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setJourneyLogSavingPhoto(true);
+                setJourneyLogError('');
+                try {
+                  const nextPhoto = await readJourneyPhotoFile(file);
+                  setJourneyLogDraft((prev) => ({ ...prev, ...nextPhoto }));
+                } catch {
+                  setJourneyLogError('Could not attach that photo.');
+                } finally {
+                  setJourneyLogSavingPhoto(false);
+                  e.target.value = '';
+                }
+              }}
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => journeyLogPhotoInputRef.current?.click()}
+                className="rounded-xl border px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200"
+                style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
+              >
+                {journeyLogSavingPhoto ? 'Adding photo...' : (journeyLogDraft.photoUrl ? 'Change photo' : 'Add photo')}
+              </button>
+              {journeyLogDraft.photoUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setJourneyLogDraft((prev) => ({ ...prev, photoUrl: '', photoName: '' }))}
+                  className="rounded-xl px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400"
+                >
+                  Remove
+                </button>
+              ) : null}
+            </div>
+            {journeyLogDraft.photoUrl ? (
+              <img
+                src={journeyLogDraft.photoUrl}
+                alt={journeyLogDraft.photoName || 'Journey log'}
+                className="w-full h-40 rounded-2xl object-cover border border-gray-200 dark:border-white/10"
+              />
+            ) : null}
+            {journeyLogError ? (
+              <div className="text-xs text-red-500">{journeyLogError}</div>
+            ) : null}
+          </div>
+          <div className="mt-5 flex gap-2">
+            <button type="button" onClick={closeJourneyLogModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
+            <button type="button" onClick={addJourneyLog} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Save update</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {!activeSubCalendar && showJourneyNoteModal && (
+      <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setShowJourneyNoteModal(false)}>
+        <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add note</div>
+          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Capture a quick thought or reflection.</div>
+          <textarea value={journeyNoteDraft} onChange={(e) => setJourneyNoteDraft(e.target.value)} placeholder="Write a quick note..." rows={5} className="mt-4 w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+          <div className="mt-5 flex gap-2">
+            <button type="button" onClick={() => setShowJourneyNoteModal(false)} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
+            <button type="button" onClick={addJourneyNote} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Save note</button>
+          </div>
+        </div>
+      </div>
+    )}
+
     {!activeSubCalendar && locationActionTarget && (
       <div
         className="fixed inset-0 z-50 bg-black/45 flex items-end sm:items-center justify-center"
