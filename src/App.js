@@ -1044,6 +1044,7 @@ function App() {
   const [showSubCalNotesModal, setShowSubCalNotesModal] = useState(false);
   const [tripChatMessages, setTripChatMessages] = useState([]);
   const [tripChatDraft, setTripChatDraft] = useState('');
+  const [deletingTripChatMessageId, setDeletingTripChatMessageId] = useState('');
   const [tripChatUnreadCounts, setTripChatUnreadCounts] = useState({});
   const [showTripBackgroundPhotoMenu, setShowTripBackgroundPhotoMenu] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -3194,6 +3195,24 @@ function App() {
             },
           ]
     ));
+  };
+
+  const deleteTripChatMessage = async (message) => {
+    const messageId = String(message?.id || '').trim();
+    if (!messageId || !activeSubCalendar || !user?.id) return;
+    const isMine = String(message?.userId || '') === String(user?.id || '');
+    if (!isMine && !canEditCurrentTrip) return;
+    const previousMessages = tripChatMessages;
+    setDeletingTripChatMessageId(messageId);
+    setTripChatMessages((prev) => prev.filter((item) => String(item?.id || '') !== messageId));
+    const query = supabase.from('sub_calendar_notes').delete().eq('id', messageId);
+    if (isMine) query.eq('user_id', user.id);
+    const { error } = await query;
+    if (error) {
+      console.error('Error deleting trip chat message:', error);
+      setTripChatMessages(previousMessages);
+    }
+    setDeletingTripChatMessageId('');
   };
 
   const deleteSubCalNote = async (noteId) => {
@@ -24734,8 +24753,21 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             {avatarLabel}
                           </div>
                           <div className={`max-w-full rounded-3xl px-4 py-3 shadow-sm ${isMine ? 'bg-gradient-to-br from-purple-500 to-indigo-500 text-white' : 'bg-gray-50 text-gray-900 dark:bg-white/[0.06] dark:text-white'}`}>
-                            <div className={`text-[11px] font-semibold ${isMine ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
-                              {message.createdBy}
+                            <div className={`flex items-center justify-between gap-3 text-[11px] font-semibold ${isMine ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                              <span>{message.createdBy}
+                              </span>
+                              {(isMine || canEditCurrentTrip) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => deleteTripChatMessage(message)}
+                                  disabled={String(deletingTripChatMessageId || '') === String(message?.id || '')}
+                                  className={`ml-auto shrink-0 rounded-md p-1 transition-colors disabled:opacity-50 ${isMine ? 'text-white/80 hover:bg-white/15' : 'text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'}`}
+                                  title={isMine ? 'Unsend message' : 'Delete message'}
+                                  aria-label={isMine ? 'Unsend message' : 'Delete message'}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              ) : null}
                               {createdAtLabel ? ` • ${createdAtLabel}` : ''}
                             </div>
                             <div className={`mt-1 whitespace-pre-wrap break-words text-sm ${isMine ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>

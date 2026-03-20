@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   X, Plus, Users, Lock, Globe, Edit3, Crown, Send,
   Shield, UserMinus, ChevronRight, MapPin, Clock,
-  Calendar, CheckCircle, AlertCircle, Loader, Copy, Check,
+  Calendar, CheckCircle, AlertCircle, Loader, Copy, Check, Trash2,
   Navigation, Radio, Gamepad2, MessageCircle, Map,
 } from 'lucide-react';
 
@@ -256,6 +256,7 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [chatError, setChatError] = useState('');
+  const [deletingMessageId, setDeletingMessageId] = useState('');
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const primaryText = darkMode ? '#f8fafc' : 'var(--color-text-primary)';
@@ -281,7 +282,13 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
     if (!eventId || !supabase) return;
     const channel = supabase.channel(`chat-${eventId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'popup_event_messages', filter: `event_id=eq.${eventId}` },
-        (payload) => setMessages((prev) => [...prev, payload.new]))
+        (payload) => setMessages((prev) => (
+          prev.some((msg) => String(msg?.id || '') === String(payload?.new?.id || ''))
+            ? prev
+            : [...prev, payload.new]
+        )))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'popup_event_messages', filter: `event_id=eq.${eventId}` },
+        (payload) => setMessages((prev) => prev.filter((msg) => String(msg?.id || '') !== String(payload?.old?.id || ''))))
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, [eventId, supabase]);
@@ -327,6 +334,30 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
     }
     setSending(false);
     inputRef.current?.focus();
+  };
+
+  const deleteMessage = async (message) => {
+    const messageId = String(message?.id || '').trim();
+    if (!messageId || String(message?.user_id || '') !== String(user?.id || '')) return;
+    if (String(messageId).startsWith('local-')) {
+      setMessages((prev) => prev.filter((msg) => String(msg?.id || '') !== messageId));
+      return;
+    }
+    const previousMessages = messages;
+    setDeletingMessageId(messageId);
+    setChatError('');
+    setMessages((prev) => prev.filter((msg) => String(msg?.id || '') !== messageId));
+    const { error } = await supabase
+      .from('popup_event_messages')
+      .delete()
+      .eq('id', messageId)
+      .eq('user_id', user.id);
+    if (error) {
+      console.error('Could not delete popup chat message:', error);
+      setMessages(previousMessages);
+      setChatError(error.message || 'Could not unsend message.');
+    }
+    setDeletingMessageId('');
   };
 
   const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
@@ -379,7 +410,32 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
                   wordBreak: 'break-word' }}>
                   {msg.content}
                 </div>
-                <div style={{ fontSize: 10, color: secondaryText, marginTop: 3, opacity: 0.75 }}>{formatMsgTime(msg.created_at)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                  <div style={{ fontSize: 10, color: secondaryText, opacity: 0.75 }}>{formatMsgTime(msg.created_at)}</div>
+                  {me && (
+                    <button
+                      type="button"
+                      onClick={() => deleteMessage(msg)}
+                      disabled={deletingMessageId === String(msg.id || '')}
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        padding: 0,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: secondaryText,
+                        opacity: deletingMessageId === String(msg.id || '') ? 0.5 : 0.8,
+                        cursor: deletingMessageId === String(msg.id || '') ? 'default' : 'pointer',
+                      }}
+                    >
+                      <Trash2 style={{ width: 10, height: 10 }} />
+                      Unsend
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );
