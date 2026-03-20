@@ -20365,7 +20365,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <button
               type="button"
               onClick={openJourneyScreen}
-              className="w-full overflow-hidden rounded-[30px] border p-5 text-left transition-all hover:shadow-lg"
+              className="w-full overflow-hidden rounded-[26px] border p-4 text-left transition-all hover:shadow-lg"
               style={{
                 borderColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)',
                 background: darkMode
@@ -20374,24 +20374,24 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 boxShadow: darkMode ? '0 20px 44px rgba(2,6,23,0.34)' : '0 20px 44px rgba(15,23,42,0.08)',
               }}
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
-                  <div className="mt-2 text-sm font-medium text-gray-500 dark:text-gray-400">{journeyQuote}</div>
+                  <div className="mt-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 line-clamp-1">{journeyQuote}</div>
                   {primaryJourneyGoal ? (
                     <>
-                      <div className="mt-4 text-xl font-semibold text-gray-900 dark:text-gray-100">{primaryJourneyGoal.title}</div>
-                      <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{journeySupportLabel}</div>
+                      <div className="mt-2.5 text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">{primaryJourneyGoal.title}</div>
+                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{journeySupportLabel}</div>
                     </>
                   ) : (
                     <>
-                      <div className="mt-4 text-xl font-semibold text-gray-900 dark:text-gray-100">Set your first goal</div>
-                      <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Start tracking progress with one focused priority.</div>
+                      <div className="mt-2.5 text-lg font-semibold text-gray-900 dark:text-gray-100">Set your first goal</div>
+                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Start tracking one focused priority.</div>
                     </>
                   )}
                 </div>
                 <div
-                  className="shrink-0 rounded-2xl px-3 py-1.5 text-xs font-semibold"
+                  className="shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-semibold"
                   style={{
                     backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.18 : 0.12),
                     color: activeLayerPageTheme.accent,
@@ -20403,12 +20403,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
               {primaryJourneyGoal ? (
                 <>
-                  <div className="mt-5">
-                    <div className="mb-2 flex items-center justify-between gap-3 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  <div className="mt-3.5">
+                    <div className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-medium text-gray-500 dark:text-gray-400">
                       <span>{primaryJourneyProgressText}</span>
                       <span>{Math.round(primaryJourneyGoalProgress * 100)}%</span>
                     </div>
-                    <div className="h-2.5 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
+                    <div className="h-2 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all"
                         style={{
@@ -20419,14 +20419,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     </div>
                   </div>
 
-                  <div className="mt-5 flex items-center gap-2">
+                  <div className="mt-3.5 flex items-center gap-2">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         openJourneyLogFlow(primaryJourneyGoal);
                       }}
-                      className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white"
+                      className="rounded-xl px-3 py-2 text-xs font-semibold text-white"
                       style={themeAccentButtonStyle}
                     >
                       Log today
@@ -20438,7 +20438,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         setJourneyNoteDraft('');
                         setShowJourneyNoteModal(true);
                       }}
-                      className="rounded-2xl border px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
+                      className="rounded-xl border px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200"
                       style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
                     >
                       Add note
@@ -20446,14 +20446,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </div>
                 </>
               ) : (
-                <div className="mt-5 flex items-center">
+                <div className="mt-3.5 flex items-center">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       openJourneyGoalFlow();
                     }}
-                    className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white"
+                    className="rounded-xl px-3 py-2 text-xs font-semibold text-white"
                     style={themeAccentButtonStyle}
                   >
                     Set your first goal
