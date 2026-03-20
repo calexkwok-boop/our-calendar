@@ -26119,12 +26119,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {!activeSubCalendar && showJourneyGoalCreatedPrompt && createdJourneyGoal && (
       <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
         <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Goal created ðŸŽ‰</div>
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Goal created</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Log your first update?</div>
           <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.04] px-4 py-3">
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{createdJourneyGoal.title}</div>
             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {formatJourneyProgressText(createdJourneyGoal)}{createdJourneyGoal?.timeframe ? ` â€¢ ${createdJourneyGoal.timeframe}` : ''}
+                  {formatJourneyProgressText(createdJourneyGoal)}{createdJourneyGoal?.timeframe ? ` | ${createdJourneyGoal.timeframe}` : ''}
             </div>
           </div>
           <div className="mt-5 flex gap-2">
