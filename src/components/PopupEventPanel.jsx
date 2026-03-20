@@ -643,6 +643,11 @@ export default function PopupEventPanel({
     }
     return nextName || 'Player';
   };
+  const getPopupRoleOverridesStorageKey = (targetEventId = event?.id) => {
+    const normalizedEventId = String(targetEventId || '').trim();
+    if (!normalizedEventId) return '';
+    return `popup-role-overrides:${normalizedEventId}`;
+  };
 
   const [screen, setScreen] = useState(initialEventId ? 'detail' : 'create');
   const [event, setEvent] = useState(null);
@@ -677,12 +682,36 @@ export default function PopupEventPanel({
   }, [event?.max_players]);
 
   useEffect(() => {
+    const storageKey = getPopupRoleOverridesStorageKey(event?.id || initialEventId);
+    if (!storageKey || typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      const parsed = raw ? JSON.parse(raw) : {};
+      setMemberRoleOverrides(parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {});
+    } catch {
+      setMemberRoleOverrides({});
+    }
+  }, [event?.id, initialEventId]);
+
+  useEffect(() => {
+    const storageKey = getPopupRoleOverridesStorageKey(event?.id || initialEventId);
+    if (!storageKey || typeof window === 'undefined') return;
+    try {
+      if (!memberRoleOverrides || Object.keys(memberRoleOverrides).length === 0) {
+        window.localStorage.removeItem(storageKey);
+        return;
+      }
+      window.localStorage.setItem(storageKey, JSON.stringify(memberRoleOverrides));
+    } catch {}
+  }, [memberRoleOverrides, event?.id, initialEventId]);
+
+  useEffect(() => {
     if (!event?.id) return;
     setMemberRoleOverrides((prev) => {
-      const next = {};
-      const prefix = `${String(event.id)}:`;
-      Object.entries(prev || {}).forEach(([key, value]) => {
-        if (String(key || '').startsWith(prefix)) next[key] = value;
+      const next = { ...(prev || {}) };
+      const validUserIds = new Set((members || []).map((member) => String(member?.user_id || '').trim()).filter(Boolean));
+      Object.keys(next).forEach((key) => {
+        if (!validUserIds.has(String(key || '').trim())) delete next[key];
       });
       return next;
     });
@@ -740,7 +769,7 @@ export default function PopupEventPanel({
         });
       });
       const nextMembers = memberList.map((entry) => {
-        const overrideKey = `${String(id || '')}:${String(entry?.user_id || '')}`;
+        const overrideKey = String(entry?.user_id || '').trim();
         const overrideRole = String(memberRoleOverrides?.[overrideKey] || '').trim();
         return overrideRole ? { ...entry, role: overrideRole } : entry;
       });
@@ -843,7 +872,7 @@ export default function PopupEventPanel({
     )));
     setMemberRoleOverrides((prev) => ({
       ...(prev || {}),
-      [`${String(event?.id || '')}:${memberUserId}`]: 'cohost',
+      [memberUserId]: 'cohost',
     }));
     await loadEvent(event.id);
   };
@@ -860,7 +889,7 @@ export default function PopupEventPanel({
       .eq('user_id', memberUserId);
     setMemberRoleOverrides((prev) => ({
       ...(prev || {}),
-      [`${String(event?.id || '')}:${memberUserId}`]: 'player',
+      [memberUserId]: 'player',
     }));
     await loadEvent(event.id);
   };
