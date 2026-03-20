@@ -15638,7 +15638,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const pendingDeleteJourneyGoal = journeyGoalById[String(journeyGoalPendingDeleteId || '')] || null;
   const journeyQuickPrompt = (() => {
     if (!primaryJourneyGoal) {
-      return 'Start with one clear goal and keep your momentum visible.';
+      return 'Start your one thing.';
     }
     if (primaryJourneyLoggedToday) {
       return 'Today is already in motion. Add a note, photo, or another small win.';
@@ -25563,7 +25563,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       className="mt-2 max-w-[24rem]"
                     />
                     <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      {primaryJourneyGoal ? 'Your personal progress layer.' : 'Start with one goal and keep it visible.'}
+                      {primaryJourneyGoal ? 'Your personal progress layer.' : 'One step changes everything.'}
                     </div>
                   </div>
                   <button
@@ -26068,7 +26068,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   className="mt-2 max-w-[24rem]"
                 />
                 <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {primaryJourneyGoal ? 'Your personal progress layer.' : 'Start with one goal and keep it visible.'}
+                  {primaryJourneyGoal ? 'Your personal progress layer.' : 'One step changes everything.'}
                 </div>
               </div>
               <button

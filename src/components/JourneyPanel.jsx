@@ -55,11 +55,7 @@ export default function JourneyPanel({
               <div className="mt-2.5 text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">{primaryJourneyGoal.title}</div>
               <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{journeyProgressText}</div>
             </>
-          ) : (
-            <>
-              <div className="mt-2.5 text-lg font-semibold text-gray-900 dark:text-gray-100">Set your first goal</div>
-            </>
-          )}
+          ) : null}
         </div>
         <div
           className="shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-semibold"
