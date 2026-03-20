@@ -20463,9 +20463,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             </div>
 
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               onClick={openJourneyScreen}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openJourneyScreen();
+                }
+              }}
               className="w-full overflow-hidden rounded-[26px] border p-4 text-left transition-all hover:shadow-lg"
               style={{
                 borderColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)',
@@ -20560,7 +20567,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </button>
                 </div>
               )}
-            </button>
+            </div>
 
             {overviewTodayEvents.length === 0 && homeTripsPreview.length === 0 && (
               <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-5">
