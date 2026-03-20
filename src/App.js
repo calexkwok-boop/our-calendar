@@ -7489,11 +7489,67 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (month === 0) fetchHolidays(year - 1);
   }, [currentDate]);
 
+  const getEasterDateKey = (year) => {
+    const y = Number(year);
+    if (!Number.isFinite(y) || y < 1900) return '';
+    const a = y % 19;
+    const b = Math.floor(y / 100);
+    const c = y % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+  const getDerivedHolidayForDate = (dateKey) => {
+    const match = String(dateKey || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return null;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    if (month === 2 && day === 14) {
+      return { localName: "Valentine's Day", name: "Valentine's Day", aliases: ['Valentines Day', 'Valentine Day'] };
+    }
+    if (month === 10 && day === 31) {
+      return { localName: 'Halloween', name: 'Halloween', aliases: ['Halloween Day'] };
+    }
+    if (dateKey === getEasterDateKey(year)) {
+      return { localName: 'Easter', name: 'Easter Sunday', aliases: ['Easter Sunday'] };
+    }
+    const novemberDate = new Date(`${year}-11-01T00:00:00`);
+    if (!Number.isNaN(novemberDate.getTime())) {
+      const firstMondayOffset = (8 - novemberDate.getDay()) % 7;
+      const electionDate = new Date(novemberDate);
+      electionDate.setDate(1 + firstMondayOffset + 1);
+      const electionKey = getDateKey(electionDate);
+      if (dateKey === electionKey) {
+        return { localName: 'Election Day', name: 'Election Day', aliases: ['US Election Day'] };
+      }
+    }
+    return null;
+  };
+  const getHolidayNameSet = (holiday) => new Set(
+    [
+      holiday?.localName,
+      holiday?.name,
+      ...(Array.isArray(holiday?.aliases) ? holiday.aliases : []),
+    ]
+      .map(normalizeHolidayLikeTitle)
+      .filter(Boolean)
+  );
+
   // Helper: get holiday info for a specific date key
   const getHolidayForDate = (dateKey) => {
     const year = parseInt(dateKey.split('-')[0]);
     const yearHolidays = holidays[year] || [];
-    return yearHolidays.find(h => h.date === dateKey) || null;
+    return yearHolidays.find(h => h.date === dateKey) || getDerivedHolidayForDate(dateKey) || null;
   };
 
   // Weather code ? display object with emoji/label and a color
@@ -7641,10 +7697,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         || t.includes('mothersday')
         || t.includes('flagday')
         || t.includes('easter')
+        || t.includes('eastersunday')
         || t.includes('goodfriday')
         || t.includes('taxday')
         || t.includes('stpatrick')
         || t.includes('cincodemayo')
+        || t.includes('valentinesday')
+        || t.includes('valentineday')
+        || t.includes('halloween')
+        || t.includes('electionday')
       );
     };
 
@@ -7683,11 +7744,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     });
 
     const holiday = getHolidayForDate(dateKey);
-    const holidayNames = new Set(
-      [holiday?.localName, holiday?.name]
-        .map(normalizeHolidayTitle)
-        .filter(Boolean)
-    );
+    const holidayNames = getHolidayNameSet(holiday);
     const holidayDedupKey = holiday ? `holiday:${dateKey}` : null;
     const seenHolidayTitles = new Set();
     const dedupedDirectEvents = [];
@@ -13785,10 +13842,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       'mothersday',
       'flagday',
       'easter',
+      'eastersunday',
       'goodfriday',
       'taxday',
       'stpatrick',
       'cincodemayo',
+      'valentinesday',
+      'valentineday',
+      'halloween',
+      'electionday',
     ].some((token) => t.includes(token));
   };
 
@@ -15182,11 +15244,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (eventTs === null || eventTs < todayTs) return false;
         const holiday = getHolidayForDate(dateKey);
         const normalizedTitle = normalizeHolidayLikeTitle(event?.title);
-        const holidayNames = new Set(
-          [holiday?.localName, holiday?.name]
-            .map(normalizeHolidayLikeTitle)
-            .filter(Boolean)
-        );
+        const holidayNames = getHolidayNameSet(holiday);
         const categoryKey = String(event?.category || '').trim().toLowerCase();
         const isHolidayLike = isAllDayLike(event) && (
           Boolean(event?.isHoliday)
