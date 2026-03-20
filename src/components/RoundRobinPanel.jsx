@@ -576,14 +576,14 @@ export default function RoundRobinPanel({
                                 onChange={(e) => updateRoundRobinMatchScore(tid, round.index, match.id, 'scoreA', e.target.value)}
                                 disabled={match.completed}
                                 className="w-12 h-10 text-center font-black text-base rounded-xl border bg-white dark:bg-gray-800 dark:text-white disabled:opacity-50 disabled:cursor-default focus:outline-none focus:ring-2"
-                                style={{ borderColor: aWon ? accent : border, color: aWon ? accent : 'inherit', fontSize: '18px', fontVariantNumeric: 'tabular-nums',
+                                style={{ borderColor: aWon ? accent : border, color: aWon ? accent : primaryText, fontSize: '18px', fontVariantNumeric: 'tabular-nums',
                                   boxShadow: aWon ? `0 0 0 2px ${accent}33` : 'none' }} />
                               <span className="font-black text-sm" style={{ color: secondaryText }}>—</span>
                               <input type="number" min="0" max="99" value={match.scoreB}
                                 onChange={(e) => updateRoundRobinMatchScore(tid, round.index, match.id, 'scoreB', e.target.value)}
                                 disabled={match.completed}
                                 className="w-12 h-10 text-center font-black text-base rounded-xl border bg-white dark:bg-gray-800 dark:text-white disabled:opacity-50 disabled:cursor-default focus:outline-none focus:ring-2"
-                                style={{ borderColor: bWon ? accent : border, color: bWon ? accent : 'inherit', fontSize: '18px', fontVariantNumeric: 'tabular-nums',
+                                style={{ borderColor: bWon ? accent : border, color: bWon ? accent : primaryText, fontSize: '18px', fontVariantNumeric: 'tabular-nums',
                                   boxShadow: bWon ? `0 0 0 2px ${accent}33` : 'none' }} />
                             </div>
 
