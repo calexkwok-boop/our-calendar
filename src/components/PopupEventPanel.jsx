@@ -230,16 +230,22 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [chatError, setChatError] = useState('');
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const primaryText = darkMode ? '#f8fafc' : 'var(--color-text-primary)';
   const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
-
-  const memberRole = members.find((m) => m.user_id === user?.id)?.role || 'player';
+  const effectiveChatDisplayName = String(displayName || user?.email || user?.phone || 'Player').trim() || 'Player';
 
   const loadMessages = useCallback(async () => {
     if (!eventId || !supabase) return;
-    const { data } = await supabase.from('popup_event_messages').select('*').eq('event_id', eventId).order('created_at').limit(200);
+    const { data, error } = await supabase.from('popup_event_messages').select('*').eq('event_id', eventId).order('created_at').limit(200);
+    if (error) {
+      console.error('Could not load popup chat messages:', error);
+      setChatError(error.message || 'Could not load chat.');
+      return;
+    }
+    setChatError('');
     if (data) setMessages(data);
   }, [eventId, supabase]);
 
@@ -260,12 +266,40 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
 
   const sendMessage = async () => {
     const content = draft.trim();
-    if (!content || sending) return;
+    if (!content || sending || !eventId || !user?.id) return;
     setSending(true);
+    setChatError('');
+    const optimisticId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const optimisticMessage = {
+      id: optimisticId,
+      event_id: eventId,
+      user_id: user.id,
+      display_name: effectiveChatDisplayName,
+      content,
+      created_at: new Date().toISOString(),
+    };
     setDraft('');
+    setMessages((prev) => [...prev, optimisticMessage]);
     try {
-      await supabase.from('popup_event_messages').insert({ event_id: eventId, user_id: user.id, display_name: displayName || user.email || 'Player', content });
-    } catch {}
+      const { data, error } = await supabase
+        .from('popup_event_messages')
+        .insert({ event_id: eventId, user_id: user.id, display_name: effectiveChatDisplayName, content })
+        .select('*')
+        .maybeSingle();
+      if (error) throw error;
+      if (data) {
+        setMessages((prev) => prev.map((msg) => (
+          String(msg?.id || '') === optimisticId ? data : msg
+        )));
+      } else {
+        await loadMessages();
+      }
+    } catch (error) {
+      console.error('Could not send popup chat message:', error);
+      setMessages((prev) => prev.filter((msg) => String(msg?.id || '') !== optimisticId));
+      setDraft(content);
+      setChatError(error?.message || 'Could not send message.');
+    }
     setSending(false);
     inputRef.current?.focus();
   };
@@ -287,6 +321,11 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
     <div style={{ display: 'flex', flexDirection: 'column', height: 420 }}>
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {chatError && (
+          <div style={{ marginBottom: 8, padding: '8px 10px', borderRadius: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', fontSize: 12, color: '#ef4444' }}>
+            {chatError}
+          </div>
+        )}
         {messages.length === 0 && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: 0.5 }}>
             <MessageCircle style={{ width: 32, height: 32, color: accent }} />
@@ -1158,7 +1197,7 @@ export default function PopupEventPanel({
 
       {/* ── CHAT TAB ── */}
       {screen === 'chat' && (
-        <ChatRoom eventId={event.id} supabase={supabase} user={user} displayName={displayName}
+        <ChatRoom eventId={event.id} supabase={supabase} user={user} displayName={effectiveDisplayName}
           accent={accent} darkMode={darkMode} border={border} softBg={softBg} members={members} />
       )}
 
