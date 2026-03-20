@@ -20847,17 +20847,62 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   ) : (
                     <div className="space-y-1.5 max-h-24 sm:max-h-28 overflow-y-auto pr-1">
                       {overviewTodayEvents.slice(0, 4).map(event => {
-                        const category = categories[event.category || 'other'] || categories.other;
+                        const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                        const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
+                        const category = categories[effectiveCategoryKey] || categories.other;
+                        const eventLayer = visibleLayerCalendars.find((layer) => String(layer?.id || '') === String(event?.layerId || event?.layer_id || popupMeta?.layerId || '')) || null;
+                        const eventLayerTheme = normalizeLayerPageTheme(eventLayer?.page_theme, eventLayer?.title_style);
+                        const chipBg = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.82 : 0.88);
+                        const chipBorder = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.56 : 0.72);
+                        const chipText = isLightHexColor(eventLayerTheme.accent) ? '#111111' : eventLayerTheme.accent;
                         return (
-                          <div key={`${event.id}-${event.date}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white/80 dark:bg-gray-800/65 border border-gray-200/70 dark:border-gray-700/70">
-                            <div className="flex items-center gap-1.5 min-w-0">
+                          <button
+                            key={`${event.id}-${event.date}`}
+                            type="button"
+                            onClick={() => {
+                              const targetLayerId = String(popupMeta?.layerId || event?.layerId || event?.layer_id || '').trim();
+                              if (targetLayerId && targetLayerId !== String(activeLayerId || '')) setActiveLayerId(targetLayerId);
+                              if (popupMeta) {
+                                setSelectedPopupEventPanelId(String(event.id || ''));
+                              } else {
+                                openAgendaItem(event);
+                              }
+                            }}
+                            className="w-full flex items-center justify-between gap-2 p-2 rounded-lg border text-left"
+                            style={{
+                              background: popupMeta
+                                ? (darkMode ? 'rgba(244,63,94,0.12)' : 'rgba(255,241,242,0.96)')
+                                : (darkMode ? 'rgba(31,41,55,0.65)' : 'rgba(255,255,255,0.8)'),
+                              borderColor: popupMeta
+                                ? (darkMode ? 'rgba(244,114,182,0.28)' : 'rgba(251,113,133,0.28)')
+                                : (darkMode ? 'rgba(55,65,81,0.7)' : 'rgba(229,231,235,0.7)'),
+                            }}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
                               <div className={`w-2 h-2 rounded-full shrink-0 ${category.color}`} />
-                              <span className="text-xs sm:text-sm text-gray-800 dark:text-gray-100 truncate">{event.title}</span>
+                              <div className="min-w-0">
+                                <div className="text-xs sm:text-sm text-gray-800 dark:text-gray-100 truncate">{event.title}</div>
+                                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                                  {popupMeta ? (
+                                    <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                                      Pop-up
+                                    </span>
+                                  ) : null}
+                                  {eventLayer ? (
+                                    <span
+                                      className="rounded-full border px-1.5 py-0.5 text-[10px] font-medium"
+                                      style={{ backgroundColor: chipBg, borderColor: chipBorder, color: chipText }}
+                                    >
+                                      {eventLayer.name || 'Calendar'}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
                             </div>
                             <span className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 shrink-0">
                               {event.time ? formatTime(event.time) : 'All day'}
                             </span>
-                          </div>
+                          </button>
                         );
                       })}
                       {overviewTodayEvents.length > 4 && (
