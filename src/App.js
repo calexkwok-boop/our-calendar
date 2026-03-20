@@ -20469,12 +20469,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <div
               role="button"
               tabIndex={0}
-              onClick={primaryJourneyGoal ? openJourneyScreen : openJourneyEntryFlow}
+              onClick={openJourneyScreen}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  if (primaryJourneyGoal) openJourneyScreen();
-                  else openJourneyEntryFlow();
+                  openJourneyScreen();
                 }
               }}
               className="w-full overflow-hidden rounded-[26px] border p-4 text-left transition-all hover:shadow-lg"
@@ -20562,7 +20561,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openJourneyEntryFlow();
+                        openJourneyScreen();
                       }}
                     className="rounded-xl px-3 py-2 text-xs font-semibold text-white"
                     style={themeAccentButtonStyle}
@@ -25470,10 +25469,36 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 ) : (
                   <div className="rounded-[28px] border border-dashed border-gray-200 dark:border-white/10 p-5">
                     <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Set your first goal</div>
-                    <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Track one measurable target and keep your progress easy to see.</div>
-                    <button type="button" onClick={openJourneyEntryFlow} className="mt-4 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
-                      Get started
-                    </button>
+                    <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Start with a goal, quick note, or picture to begin your Journey.</div>
+                    <div className="mt-4 space-y-2">
+                      <button
+                        type="button"
+                        onClick={openJourneyGoalFlow}
+                        className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-left bg-white dark:bg-white/[0.04]"
+                      >
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add goal</div>
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Create one measurable target to track.</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setJourneyNoteDraft('');
+                          setShowJourneyNoteModal(true);
+                        }}
+                        className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-left bg-white dark:bg-white/[0.04]"
+                      >
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add note</div>
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Capture a thought, intention, or reflection.</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openJourneyLogFlow(null)}
+                        className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-left bg-white dark:bg-white/[0.04]"
+                      >
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add picture</div>
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Save a photo update now and connect progress later.</div>
+                      </button>
+                    </div>
                   </div>
                 )}
 
