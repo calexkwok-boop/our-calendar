@@ -20362,79 +20362,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             </div>
 
-            <div
-              className="glass-panel rounded-[28px] border border-white/50 dark:border-white/10 p-4 sm:p-5"
-              style={{
-                background: darkMode
-                  ? `linear-gradient(180deg, ${hexToRgba('#0f172a', 0.88)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`
-                  : `linear-gradient(180deg, ${hexToRgba('#ffffff', 0.94)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 100%)`,
-              }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-xs uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400 mb-2">Today</div>
-                  <h2 className="text-2xl sm:text-3xl font-semibold leading-tight" style={themeAccentHeadingStyle}>
-                    {homeGreeting}, {homeGreetingName}
-                  </h2>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setSelectedDate(new Date());
-                    setSelectedDates([]);
-                    setShowDateDetailModal(true);
-                  }}
-                  className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:shadow-md shrink-0"
-                  style={themeAccentEllieChipButtonStyle}
-                >
-                  Open Today
-                </button>
-              </div>
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  {
-                    label: 'Add plan',
-                    icon: <Plus className="w-3.5 h-3.5" />,
-                    action: () => {
-                      setSelectedDate(new Date());
-                      setSelectedDates([]);
-                      setShowDateDetailModal(true);
-                    },
-                  },
-                  {
-                    label: 'Add event',
-                    icon: <Calendar className="w-3.5 h-3.5" />,
-                    action: () => openHomeAddEventModal(),
-                  },
-                  {
-                    label: 'Start trip',
-                    icon: <MapPin className="w-3.5 h-3.5" />,
-                    action: () => setShowSubCalendarModal(true),
-                  },
-                  {
-                    label: 'Invite friends',
-                    icon: <MessageSquare className="w-3.5 h-3.5" />,
-                    action: () => setShowSharePanel(true),
-                  },
-                ].map((item) => (
-                  <button
-                    key={item.label}
-                    onClick={item.action}
-                    className="rounded-2xl border border-white/10 bg-white/5 dark:bg-white/[0.04] px-3 py-3 text-left hover:bg-white/10 transition-all"
-                  >
-                    <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full" style={{ backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.18 : 0.12), color: activeLayerPageTheme.accent }}>
-                        {item.icon}
-                      </span>
-                      <span>{item.label}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <button
               type="button"
               onClick={openJourneyScreen}
@@ -20545,10 +20472,25 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <div className="glass-panel rounded-[28px] border border-white/50 dark:border-white/10 p-4 sm:p-5">
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div>
-                  <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Today&apos;s rhythm</h3>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Morning, afternoon, and evening at a glance.</div>
+                  <div className="text-xs uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400 mb-2">Today</div>
+                  <h2 className="text-2xl sm:text-3xl font-semibold leading-tight" style={themeAccentHeadingStyle}>
+                    {homeGreeting}, {homeGreetingName}
+                  </h2>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-3">Morning, afternoon, and evening at a glance.</div>
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">{overviewTodayEvents.length} plan{overviewTodayEvents.length === 1 ? '' : 's'}</div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => openHomeAddEventModal()}
+                    className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                    style={themeAccentEllieChipButtonStyle}
+                  >
+                    Add event
+                  </button>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{overviewTodayEvents.length} plan{overviewTodayEvents.length === 1 ? '' : 's'}</div>
+                </div>
               </div>
               <div className="space-y-3">
                 {homeDaySections.map((section, index) => (
@@ -20640,13 +20582,22 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Trips</h3>
                   <div className="text-xs text-gray-500 dark:text-gray-400">Keep travel plans close, but secondary.</div>
                 </div>
-                <button
-                  onClick={() => setBottomNavTab('trips')}
-                  className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-                  style={themeAccentEllieChipButtonStyle}
-                >
-                  Open Trips
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowSubCalendarModal(true)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                    style={themeAccentEllieChipButtonStyle}
+                  >
+                    Start trip
+                  </button>
+                  <button
+                    onClick={() => setBottomNavTab('trips')}
+                    className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                    style={themeAccentEllieChipButtonStyle}
+                  >
+                    Open Trips
+                  </button>
+                </div>
               </div>
               {homeTripsPreview.length === 0 ? (
                 <div className="text-sm text-gray-500 dark:text-gray-400">No trips on deck yet.</div>
