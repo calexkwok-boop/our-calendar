@@ -905,6 +905,7 @@ function App() {
   const [userTabPopupEvents, setUserTabPopupEvents] = useState([]);
   const [userTabTrips, setUserTabTrips] = useState([]);
   const [userTabEvents, setUserTabEvents] = useState([]);
+  const [eventRelationships, setEventRelationships] = useState({});
   const [eventsTabHideRecurring, setEventsTabHideRecurring] = useState(false);
   const [eventsTabVisibleLayerIds, setEventsTabVisibleLayerIds] = useState([]);
   const [showEventsTabCalendarFilter, setShowEventsTabCalendarFilter] = useState(false);
@@ -1204,6 +1205,24 @@ function App() {
   };
   const normalizeIdentityKey = (value) => String(value || '').trim().toLowerCase();
   const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+  const getEventRelationshipStorageKey = (userId) => `calendar-event-relationships-${String(userId || '').trim()}`;
+  const readLocalEventRelationships = (userId) => {
+    if (typeof window === 'undefined' || !userId) return {};
+    try {
+      const raw = window.localStorage.getItem(getEventRelationshipStorageKey(userId));
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  };
+  const writeLocalEventRelationships = (userId, value) => {
+    if (typeof window === 'undefined' || !userId) return;
+    try {
+      window.localStorage.setItem(getEventRelationshipStorageKey(userId), JSON.stringify(value && typeof value === 'object' ? value : {}));
+    } catch {}
+  };
   const isEmailValue = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim().toLowerCase());
   const normalizePhoneNumber = (value) => {
     const raw = String(value || '').trim();
@@ -4680,6 +4699,9 @@ useEffect(() => {
   }, [bottomNavTab, preferCalendarHome, closeHomeWidgetWindows]);
   const activeLayerOwnerId = activeLayer?.owner_id || user?.id || null;
   const isActiveLayerOwner = String(activeLayerOwnerId || '') === String(user?.id || '');
+  useEffect(() => {
+    setEventRelationships(readLocalEventRelationships(user?.id));
+  }, [user?.id]);
   const activeShareRowForMe = (sharedCalendars || []).find((row) => {
     const layerId = String(row?.layer_id || row?.calendar_id || '');
     if (layerId !== String(activeLayerId || '')) return false;
@@ -4725,6 +4747,44 @@ useEffect(() => {
       normalizePhoneNumber(user?.phone),
     ].filter(Boolean));
     return aliases.has(createdBy);
+  };
+  const getEventRelationshipKey = (event) => {
+    const layerId = String(event?.layerId || event?.layer_id || '').trim();
+    const eventId = String(event?.id || '').trim();
+    if (!layerId || !eventId) return '';
+    return `${layerId}:${eventId}`;
+  };
+  const getLayerForEvent = (event) => {
+    const eventLayerId = String(event?.layerId || event?.layer_id || '').trim();
+    if (!eventLayerId) return null;
+    return (layers || []).find((layer) => String(layer?.id || '') === eventLayerId) || null;
+  };
+  const getEventRelationshipStatus = (event) => {
+    if (!event) return 'none';
+    if (isEventOwnedByCurrentUser(event)) return 'hosting';
+    const key = getEventRelationshipKey(event);
+    const value = String(eventRelationships?.[key] || '').trim().toLowerCase();
+    if (value === 'going' || value === 'interested') return value;
+    return 'none';
+  };
+  const setEventRelationshipStatus = (event, status) => {
+    if (!user?.id || !event) return;
+    const nextStatus = String(status || 'none').trim().toLowerCase();
+    const key = getEventRelationshipKey(event);
+    if (!key) return;
+    setEventRelationships((prev) => {
+      const next = { ...(prev || {}) };
+      if (nextStatus === 'none' || nextStatus === 'hosting') delete next[key];
+      else next[key] = nextStatus;
+      writeLocalEventRelationships(user.id, next);
+      return next;
+    });
+  };
+  const shouldIncludeEventInPersonalOverview = (event) => {
+    const eventLayer = getLayerForEvent(event);
+    if (!eventLayer?.is_public) return true;
+    const relationship = getEventRelationshipStatus(event);
+    return relationship === 'hosting' || relationship === 'going';
   };
   const canDeleteEventInActiveLayer = (event) => {
     if (!event) return false;
@@ -14784,7 +14844,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const selectedDateKey = getDateKey(selectedDate);
   const selectedEvents = getEventsForDate(selectedDate);
   const todayKey = getDateKey(new Date());
-  const todayEvents = getEventsForDate(new Date()).filter(e => !e.isHoliday);
   const multiDaySpanCounts = {};
   Object.values(events || {}).forEach((rows) => {
     (rows || []).forEach((row) => {
@@ -15181,13 +15240,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (hour < 18) return 'afternoon';
     return 'evening';
   };
+  const overviewTodayEvents = upcomingUserTabEvents.filter((event) => {
+    const dateKey = String(event?.date || event?.dateKey || '').trim();
+    return dateKey === todayKey && !event?.isHoliday && shouldIncludeEventInPersonalOverview(event);
+  });
   const homeDaySections = [
     { key: 'morning', label: 'Morning', emptyTitle: 'Ease into the day', emptyCopy: 'Add breakfast, a workout, or one clear priority.' },
     { key: 'afternoon', label: 'Afternoon', emptyTitle: 'Keep the middle light', emptyCopy: 'Drop in a lunch, meeting, or errand when plans take shape.' },
     { key: 'evening', label: 'Evening', emptyTitle: 'Save space for later', emptyCopy: 'Dinner, downtime, or a night plan can live here.' },
   ].map((section) => ({
     ...section,
-    events: todayEvents.filter((event) => getHomeSectionKeyForEvent(event) === section.key),
+    events: overviewTodayEvents.filter((event) => getHomeSectionKeyForEvent(event) === section.key),
   }));
   const homeTripsPreview = [...activeTrips, ...upcomingTrips]
     .filter((trip, index, arr) => arr.findIndex((row) => String(row?.id || '') === String(trip?.id || '')) === index)
@@ -20019,7 +20082,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             </div>
 
-            {todayEvents.length === 0 && homeTripsPreview.length === 0 && (
+            {overviewTodayEvents.length === 0 && homeTripsPreview.length === 0 && (
               <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-5">
                 <div className="text-base font-semibold text-gray-900 dark:text-gray-100">A clean slate today</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Start with one plan, one event, or your next trip and the day will fill in naturally.</div>
@@ -20032,7 +20095,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Today&apos;s rhythm</h3>
                   <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Morning, afternoon, and evening at a glance.</div>
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">{todayEvents.length} plan{todayEvents.length === 1 ? '' : 's'}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">{overviewTodayEvents.length} plan{overviewTodayEvents.length === 1 ? '' : 's'}</div>
               </div>
               <div className="space-y-3">
                 {homeDaySections.map((section, index) => (
@@ -20201,11 +20264,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       Show today&apos;s overview
                     </button>
                   </div>
-                  {todayEvents.length === 0 ? (
+                  {overviewTodayEvents.length === 0 ? (
                     <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No events today.</div>
                   ) : (
                     <div className="space-y-1.5 max-h-24 sm:max-h-28 overflow-y-auto pr-1">
-                      {todayEvents.slice(0, 4).map(event => {
+                      {overviewTodayEvents.slice(0, 4).map(event => {
                         const category = categories[event.category || 'other'] || categories.other;
                         return (
                           <div key={`${event.id}-${event.date}`} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white/80 dark:bg-gray-800/65 border border-gray-200/70 dark:border-gray-700/70">
@@ -20219,8 +20282,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           </div>
                         );
                       })}
-                      {todayEvents.length > 4 && (
-                        <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">+{todayEvents.length - 4} more today</div>
+                      {overviewTodayEvents.length > 4 && (
+                        <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">+{overviewTodayEvents.length - 4} more today</div>
                       )}
                     </div>
                   )}
@@ -20809,6 +20872,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   const popupJoined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
                   const popupNoMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
                   const popupFull = popupMeta ? (!popupNoMax && popupSignups.length >= Number(popupMeta.maxPeople || 1)) : false;
+                  const eventLayer = getLayerForEvent(event);
+                  const isPublicRegularEvent = Boolean(eventLayer?.is_public) && !popupMeta;
+                  const eventRelationshipStatus = getEventRelationshipStatus(event);
                   const canDeleteThisEvent = canDeleteEventInActiveLayer(event);
                   const eventSwipeKey = `${String(event.date || selectedDateKey || '')}:${String(event.id || '')}`;
                   const rowOffset = eventSwipeDrag.id === eventSwipeKey ? eventSwipeDrag.offset : (swipedEventKey === eventSwipeKey ? -88 : 0);
@@ -21025,6 +21091,55 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                 {event.isShared && (
                                   <span className="ml-1 px-1.5 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full text-xs">shared</span>
                                 )}
+                              </div>
+                            )}
+                            {isPublicRegularEvent && (
+                              <div className="mt-2 p-2 rounded-lg border border-sky-200 dark:border-sky-700 bg-sky-50 dark:bg-sky-900/20">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                  <div className="text-xs font-semibold text-sky-700 dark:text-sky-300">
+                                    {eventRelationshipStatus === 'hosting'
+                                      ? 'Hosting'
+                                      : eventRelationshipStatus === 'going'
+                                        ? 'Going'
+                                        : eventRelationshipStatus === 'interested'
+                                          ? 'Saved'
+                                          : 'Public event'}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    {eventRelationshipStatus === 'hosting' ? null : eventRelationshipStatus === 'going' ? (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEventRelationshipStatus(event, 'none');
+                                        }}
+                                        className="px-2 py-1 text-[11px] rounded-md border border-sky-300 dark:border-sky-700 bg-white dark:bg-gray-800 text-sky-700 dark:text-sky-300"
+                                      >
+                                        Leave
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEventRelationshipStatus(event, 'going');
+                                        }}
+                                        className="px-2 py-1 text-[11px] rounded-md border border-sky-300 dark:border-sky-700 bg-white dark:bg-gray-800 text-sky-700 dark:text-sky-300"
+                                      >
+                                        Join
+                                      </button>
+                                    )}
+                                    {eventRelationshipStatus !== 'hosting' && eventRelationshipStatus !== 'going' && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEventRelationshipStatus(event, eventRelationshipStatus === 'interested' ? 'none' : 'interested');
+                                        }}
+                                        className="px-2 py-1 text-[11px] rounded-md border border-sky-300 dark:border-sky-700 bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-200"
+                                      >
+                                        {eventRelationshipStatus === 'interested' ? 'Unsave' : 'Save'}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             )}
                             {popupMeta && (
