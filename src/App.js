@@ -18076,7 +18076,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               >
                 <ChevronRight className="w-6 h-6" style={undefined} />
               </button>
-              {!(showHomeCalendarOverview || preferCalendarHome) && (
+              {!(bottomNavTab === 'home' && !preferCalendarHome) && (
                 <div className="absolute left-1/2 -translate-x-1/2 bottom-2 sm:bottom-3 z-20 flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium">
                   <button
                     onClick={() => setCalendarView('month')}
@@ -18112,7 +18112,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <ChevronLeft className="w-6 h-6" style={undefined} />
               </button>
               <div className="flex flex-col items-center gap-1">
-                {!(showHomeCalendarOverview || preferCalendarHome) && (
+                {!(bottomNavTab === 'home' && !preferCalendarHome) && (
                   <div className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium" style={undefined}>
                     <button
                       onClick={() => setCalendarView('month')}
