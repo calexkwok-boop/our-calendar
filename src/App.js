@@ -14966,7 +14966,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         backgroundAttachment: 'scroll',
       }
     : undefined;
-  const tripHeaderSurfaceStyle = undefined;
+  const tripHeaderSurfaceStyle = darkMode
+    ? {
+        background: 'linear-gradient(180deg, rgba(2,6,23,0.78) 0%, rgba(2,6,23,0.58) 100%)',
+        borderColor: 'rgba(148,163,184,0.14)',
+        boxShadow: '0 14px 34px rgba(2,6,23,0.22)',
+      }
+    : undefined;
   const tripHeaderPillClassName = darkMode
     ? 'border border-white/10 bg-white/[0.06] text-slate-100'
     : 'border border-white/10 bg-white/70 text-gray-700';
@@ -14976,7 +14982,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const tripHeaderActionClusterStyle = darkMode
     ? { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)' }
     : undefined;
-  const tripHeaderPanelStyle = undefined;
+  const tripHeaderPanelStyle = darkMode
+    ? { backgroundColor: 'rgba(15,23,42,0.58)', borderColor: 'rgba(148,163,184,0.14)' }
+    : undefined;
   const getTripChatInitials = (label) => {
     const parts = String(label || '').trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) return '?';
@@ -22991,7 +22999,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {/* Cleaner mobile trip header */}
         <div
-          className="relative z-30 overflow-visible px-4 pb-4 pt-3 bg-white/80 dark:bg-slate-950/72 backdrop-blur-xl border-b border-white/10"
+          className="relative z-30 overflow-visible px-4 pb-4 pt-3 bg-white/80 dark:bg-transparent backdrop-blur-xl border-b border-white/10"
           style={{
             paddingTop: 'max(0.9rem, env(safe-area-inset-top))',
             paddingLeft: 'max(1rem, env(safe-area-inset-left))',
