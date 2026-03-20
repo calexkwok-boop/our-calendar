@@ -14958,11 +14958,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const activeTripCoverPhoto = tripCoverPhoto?.url ? tripCoverPhoto : null;
   const activeTripBackgroundStyle = activeTripCoverPhoto?.url
     ? {
-        backgroundImage: `${darkMode ? 'linear-gradient(rgba(2,6,23,0.58), rgba(2,6,23,0.68))' : 'linear-gradient(rgba(248,250,252,0.58), rgba(248,250,252,0.72))'}, url(${activeTripCoverPhoto.url})`,
+        backgroundImage: `${darkMode ? 'linear-gradient(rgba(2,6,23,0.38), rgba(2,6,23,0.48))' : 'linear-gradient(rgba(248,250,252,0.5), rgba(248,250,252,0.62))'}, url(${activeTripCoverPhoto.url})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'scroll',
-        filter: 'saturate(1.08) contrast(1.04) brightness(1.02)',
+        filter: 'saturate(1.05) contrast(1.03)',
       }
     : undefined;
   const tripHeaderSurfaceStyle = darkMode
