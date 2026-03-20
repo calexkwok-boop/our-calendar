@@ -7514,6 +7514,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const year = Number(match[1]);
     const month = Number(match[2]);
     const day = Number(match[3]);
+    const buildNthWeekdayOfMonth = (targetMonth, weekday, nth) => {
+      const first = new Date(year, targetMonth - 1, 1);
+      const offset = (weekday - first.getDay() + 7) % 7;
+      const date = 1 + offset + ((nth - 1) * 7);
+      return getDateKey(new Date(year, targetMonth - 1, date));
+    };
     if (month === 2 && day === 14) {
       return { localName: "Valentine's Day", name: "Valentine's Day", aliases: ['Valentines Day', 'Valentine Day'] };
     }
@@ -7523,8 +7529,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (dateKey === getEasterDateKey(year)) {
       return { localName: 'Easter', name: 'Easter Sunday', aliases: ['Easter Sunday'] };
     }
+    if (dateKey === buildNthWeekdayOfMonth(3, 0, 2)) {
+      return { localName: 'Daylight Saving Time Begins', name: 'Daylight Saving Time Begins', aliases: ['Daylight Savings Time Begins', 'DST Begins', 'Spring Forward'] };
+    }
+    if (dateKey === buildNthWeekdayOfMonth(11, 0, 1)) {
+      return { localName: 'Daylight Saving Time Ends', name: 'Daylight Saving Time Ends', aliases: ['Daylight Savings Time Ends', 'DST Ends', 'Fall Back'] };
+    }
     const novemberDate = new Date(`${year}-11-01T00:00:00`);
     if (!Number.isNaN(novemberDate.getTime())) {
+      const thanksgiving = new Date(year, 10, 1);
+      const thanksgivingOffset = (4 - thanksgiving.getDay() + 7) % 7;
+      thanksgiving.setDate(1 + thanksgivingOffset + (3 * 7));
+      const blackFriday = new Date(thanksgiving);
+      blackFriday.setDate(thanksgiving.getDate() + 1);
+      if (dateKey === getDateKey(blackFriday)) {
+        return { localName: 'Black Friday', name: 'Black Friday', aliases: ['Day After Thanksgiving'] };
+      }
       const firstMondayOffset = (8 - novemberDate.getDay()) % 7;
       const electionDate = new Date(novemberDate);
       electionDate.setDate(1 + firstMondayOffset + 1);
@@ -7706,6 +7726,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         || t.includes('valentineday')
         || t.includes('halloween')
         || t.includes('electionday')
+        || t.includes('blackfriday')
+        || t.includes('dayafterthanksgiving')
+        || t.includes('daylightsavingtime')
+        || t.includes('daylightsavingtimebegins')
+        || t.includes('daylightsavingtimeends')
+        || t.includes('daylightsavingstime')
+        || t.includes('daylightsavingstimebegins')
+        || t.includes('daylightsavingstimeends')
+        || t.includes('dstbegins')
+        || t.includes('dstends')
+        || t.includes('springforward')
+        || t.includes('fallback')
       );
     };
 
@@ -13851,6 +13883,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       'valentineday',
       'halloween',
       'electionday',
+      'blackfriday',
+      'dayafterthanksgiving',
+      'daylightsavingtime',
+      'daylightsavingtimebegins',
+      'daylightsavingtimeends',
+      'daylightsavingstime',
+      'daylightsavingstimebegins',
+      'daylightsavingstimeends',
+      'dstbegins',
+      'dstends',
+      'springforward',
+      'fallback',
     ].some((token) => t.includes(token));
   };
 
