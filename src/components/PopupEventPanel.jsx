@@ -756,7 +756,7 @@ export default function PopupEventPanel({
   const handleLeave = async () => { if (!myMember || isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', myMember.id); await loadEvent(event.id); };
   const handleKick = async (member) => { if (!isHostOrCohost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', member.id); await loadEvent(event.id); };
   const handlePromote = async (member) => {
-    if (!isHost || !isUuid(event?.id)) return;
+    if (!isHostOrCohost || !isUuid(event?.id)) return;
     setRosterActionError('');
     const memberId = await ensurePopupMemberRecord(member, 'cohost');
     if (!memberId) {
@@ -776,7 +776,11 @@ export default function PopupEventPanel({
     )));
     await loadEvent(event.id);
   };
-  const handleDemote = async (member) => { if (!isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').update({ role: 'player' }).eq('id', member.id); await loadEvent(event.id); };
+  const handleDemote = async (member) => {
+    if (!isHostOrCohost || !isUuid(event?.id)) return;
+    await supabase.from('popup_event_members').update({ role: 'player' }).eq('id', member.id);
+    await loadEvent(event.id);
+  };
   const handleAddManualPlayer = async () => {
     const nextName = String(manualPlayerName || '').trim();
     if (!isHost || !isUuid(event?.id)) return;

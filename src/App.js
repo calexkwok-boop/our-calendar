@@ -16253,7 +16253,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   ].filter(Boolean);
   const activeChatUnreadCount = Number(chatUnreadCounts[String(activeLayerId || '')] || 0);
   const activeControlWidgets = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
-  const todayOverviewWidgetIds = activeControlWidgets.slice(0, 4);
+  const todayOverviewWidgetIds = ['notifications', 'theme', 'categories', 'notes'];
   const todayOverviewLeftWidgetIds = todayOverviewWidgetIds.slice(0, Math.ceil(todayOverviewWidgetIds.length / 2));
   const todayOverviewRightWidgetIds = todayOverviewWidgetIds.slice(Math.ceil(todayOverviewWidgetIds.length / 2));
   const popupEventDetailsById = (() => {
