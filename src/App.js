@@ -20467,15 +20467,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
 
             <div
-              role="button"
-              tabIndex={0}
-              onClick={openJourneyScreen}
-              onKeyDown={(e) => {
+              role={primaryJourneyGoal ? 'button' : undefined}
+              tabIndex={primaryJourneyGoal ? 0 : undefined}
+              onClick={primaryJourneyGoal ? openJourneyScreen : undefined}
+              onKeyDown={primaryJourneyGoal ? ((e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   openJourneyScreen();
                 }
-              }}
+              }) : undefined}
               className="w-full overflow-hidden rounded-[26px] border p-4 text-left transition-all hover:shadow-lg"
               style={{
                 borderColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)',
