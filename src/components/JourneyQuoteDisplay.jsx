@@ -29,7 +29,15 @@ export default function JourneyQuoteDisplay({
       className={`text-left ${className}`.trim()}
       style={{ WebkitTapHighlightColor: 'transparent' }}
     >
-      <div className={compact ? 'text-xs text-gray-500 dark:text-gray-400 leading-5' : 'text-xl sm:text-2xl font-semibold text-gray-900 dark:text-gray-100 leading-tight'}>
+      <div
+        className={compact ? 'text-sm text-gray-700 dark:text-gray-200 leading-5' : 'text-xl sm:text-2xl text-gray-900 dark:text-gray-100 leading-tight'}
+        style={{
+          fontFamily: "'Lora', Georgia, serif",
+          fontStyle: 'italic',
+          letterSpacing: compact ? '-0.01em' : '-0.025em',
+          fontWeight: compact ? 500 : 600,
+        }}
+      >
         {quoteText}
       </div>
       <div

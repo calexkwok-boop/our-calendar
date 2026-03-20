@@ -39,6 +39,13 @@ export default function JourneyPanel({
         boxShadow: darkMode ? '0 20px 44px rgba(2,6,23,0.34)' : '0 20px 44px rgba(15,23,42,0.08)',
       }}
     >
+      <JourneyQuoteDisplay
+        quote={journeyQuote}
+        darkMode={darkMode}
+        compact
+        className="mb-3 max-w-[18rem]"
+      />
+
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
@@ -51,14 +58,8 @@ export default function JourneyPanel({
           ) : (
             <>
               <div className="mt-2.5 text-lg font-semibold text-gray-900 dark:text-gray-100">Set your first goal</div>
-               <JourneyQuoteDisplay
-                 quote={journeyQuote}
-                 darkMode={darkMode}
-                 compact
-                 className="mt-1"
-               />
-             </>
-           )}
+            </>
+          )}
         </div>
         <div
           className="shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-semibold"
