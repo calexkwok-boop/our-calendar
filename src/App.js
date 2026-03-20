@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Monitor, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
@@ -4185,12 +4185,11 @@ function App() {
   const [mergeInProgress, setMergeInProgress] = useState(false);
   const autoMergeSeenRef = useRef(new Set());
   const [themeMode, setThemeMode] = useState('auto');
-  const [systemPrefersDark, setSystemPrefersDark] = useState(() => (
-    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      : false
-  ));
-  const darkMode = themeMode === 'auto' ? systemPrefersDark : themeMode === 'dark';
+  const [timeBasedDarkMode, setTimeBasedDarkMode] = useState(() => {
+    const hour = new Date().getHours();
+    return hour >= 19 || hour < 7;
+  });
+  const darkMode = themeMode === 'auto' ? timeBasedDarkMode : themeMode === 'dark';
   const [showTipBanner, setShowTipBanner] = useState(() => localStorage.getItem('hideTipBanner') !== 'true');
   const [weather, setWeather] = useState({}); // { 'YYYY-MM-DD': { emoji, high, low } }
   const [showWeather, setShowWeather] = useState(true);
@@ -5702,7 +5701,7 @@ useEffect(() => {
   };
   const themeModeLabel = themeMode === 'auto' ? 'Auto' : themeMode === 'dark' ? 'Dark' : 'Light';
   const themeModeIcon = themeMode === 'auto'
-    ? <Monitor className="w-4 h-4" />
+    ? <Clock className="w-4 h-4" />
     : darkMode
       ? <Sun className="w-4 h-4" />
       : <Moon className="w-4 h-4" />;
@@ -7428,18 +7427,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [darkMode]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (event) => {
-      setSystemPrefersDark(Boolean(event.matches));
+    const syncTimeBasedThemeMode = () => {
+      const hour = new Date().getHours();
+      setTimeBasedDarkMode(hour >= 19 || hour < 7);
     };
-    setSystemPrefersDark(Boolean(mediaQuery.matches));
-    if (typeof mediaQuery.addEventListener === 'function') {
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
-    mediaQuery.addListener(handleChange);
-    return () => mediaQuery.removeListener(handleChange);
+    syncTimeBasedThemeMode();
+    const intervalId = window.setInterval(syncTimeBasedThemeMode, 60000);
+    return () => window.clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -20771,7 +20765,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   >
                     Add event
                   </button>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{overviewTodayEvents.length} plan{overviewTodayEvents.length === 1 ? '' : 's'}</div>
                 </div>
               </div>
               <div className="space-y-3">
