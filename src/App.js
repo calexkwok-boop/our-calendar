@@ -48,6 +48,25 @@ const JOURNEY_QUOTES = [
   'A steady pace still moves you forward.',
 ];
 
+// Keep the first Journey step opinionated so users can start quickly without facing a blank form.
+const JOURNEY_GOAL_TEMPLATES = [
+  { id: 'run', label: 'Run / walk', title: 'Run 50 miles', target: '50', unit: 'miles', timeframe: 'This month', hint: 'Build consistency one outing at a time.' },
+  { id: 'workout', label: 'Work out', title: 'Work out 12 times', target: '12', unit: 'workouts', timeframe: 'This month', hint: 'Keep the bar low and the momentum high.' },
+  { id: 'read', label: 'Read', title: 'Read 200 pages', target: '200', unit: 'pages', timeframe: 'This month', hint: 'A few pages a day adds up fast.' },
+  { id: 'save', label: 'Save money', title: 'Save $500', target: '500', unit: 'dollars', timeframe: 'This quarter', hint: 'Track one small win at a time.' },
+  { id: 'journal', label: 'Journal', title: 'Journal 10 days', target: '10', unit: 'days', timeframe: 'This month', hint: 'Capture the days you showed up.' },
+  { id: 'custom', label: 'Custom goal', title: '', target: '', unit: '', timeframe: '', hint: 'Start with your own measurable target.' },
+];
+
+const createJourneyGoalDraft = (overrides = {}, pinned = true) => ({
+  title: '',
+  target: '',
+  unit: '',
+  timeframe: '',
+  pinned,
+  ...overrides,
+});
+
 const getJourneyStorageKey = (userId) => `journey-home-${String(userId || 'guest').trim() || 'guest'}`;
 
 const createEmptyJourneyState = () => ({
@@ -1083,12 +1102,13 @@ function App() {
   const [bottomNavTab, setBottomNavTab] = useState('home');
   const [journeyState, setJourneyState] = useState(createEmptyJourneyState);
   const [showJourneyScreen, setShowJourneyScreen] = useState(false);
-  const [showJourneyHomeStarterCard, setShowJourneyHomeStarterCard] = useState(false);
   const [showJourneyEntryModal, setShowJourneyEntryModal] = useState(false);
   const [showJourneyGoalModal, setShowJourneyGoalModal] = useState(false);
   const [showJourneyLogModal, setShowJourneyLogModal] = useState(false);
   const [showJourneyNoteModal, setShowJourneyNoteModal] = useState(false);
-  const [journeyGoalDraft, setJourneyGoalDraft] = useState({ title: '', target: '', unit: '', timeframe: '', pinned: true });
+  const [journeyGoalDraft, setJourneyGoalDraft] = useState(createJourneyGoalDraft());
+  const [journeyGoalError, setJourneyGoalError] = useState('');
+  const [selectedJourneyGoalTemplateId, setSelectedJourneyGoalTemplateId] = useState('');
   const [journeyLogDraft, setJourneyLogDraft] = useState(buildJourneyLogDraft());
   const [journeyLogSavingPhoto, setJourneyLogSavingPhoto] = useState(false);
   const [journeyLogError, setJourneyLogError] = useState('');
@@ -15537,6 +15557,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   );
   const journeyPrimaryQuoteSeed = sortedJourneyGoals.length + (journeyState?.entries?.length || 0);
   const journeyQuote = JOURNEY_QUOTES[journeyPrimaryQuoteSeed % JOURNEY_QUOTES.length];
+  const selectedJourneyGoalTemplate = JOURNEY_GOAL_TEMPLATES.find((template) => template.id === selectedJourneyGoalTemplateId) || null;
+  const canSaveJourneyGoal = Boolean(
+    String(journeyGoalDraft?.title || '').trim()
+    && Math.max(0, normalizeJourneyNumber(journeyGoalDraft?.target)) > 0
+    && String(journeyGoalDraft?.unit || '').trim()
+    && String(journeyGoalDraft?.timeframe || '').trim()
+  );
   const journeySupportLabel = (() => {
     if (!primaryJourneyGoal) return 'Build one steady focus and keep it visible.';
     if (journeyUpdatedToday && journeyLatestEntry?.type === 'log' && normalizeJourneyNumber(journeyLatestEntry?.amount) > 0) {
@@ -15589,23 +15616,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     deferJourneyOverlayOpen(() => setShowJourneyScreen(true));
   };
 
-  const openJourneyHomeStarterCard = () => {
-    setShowJourneyHomeStarterCard(true);
-  };
-
-  const closeJourneyHomeStarterCard = () => {
-    setShowJourneyHomeStarterCard(false);
-  };
-
   const closeJourneyEntryModal = () => {
     setShowJourneyEntryModal(false);
-  };
-
-  const openJourneyEntryFlow = () => {
-    deferJourneyOverlayOpen(() => {
-      setShowJourneyScreen(true);
-      setShowJourneyEntryModal(true);
-    });
+    setSelectedJourneyGoalTemplateId('');
   };
 
   const launchJourneyEntryFromHome = (event) => {
@@ -15626,7 +15639,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const closeJourneyGoalModal = () => {
     setShowJourneyGoalModal(false);
-    setJourneyGoalDraft({ title: '', target: '', unit: '', timeframe: '', pinned: sortedJourneyGoals.length === 0 });
+    setJourneyGoalDraft(createJourneyGoalDraft({}, sortedJourneyGoals.length === 0));
+    setJourneyGoalError('');
+    setSelectedJourneyGoalTemplateId('');
   };
 
   const closeJourneyGoalCreatedPrompt = () => {
@@ -15634,17 +15649,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setJourneyCreatedGoalId('');
   };
 
-  const openJourneyGoalFlow = () => {
-    setShowJourneyHomeStarterCard(false);
+  const openJourneyGoalFlow = (template = null) => {
     setShowJourneyEntryModal(false);
-    setJourneyGoalDraft({ title: '', target: '', unit: '', timeframe: '', pinned: sortedJourneyGoals.length === 0 });
+    setJourneyGoalDraft(createJourneyGoalDraft(template ? {
+      title: template.title,
+      target: template.target,
+      unit: template.unit,
+      timeframe: template.timeframe,
+    } : {}, sortedJourneyGoals.length === 0));
+    setJourneyGoalError('');
+    setSelectedJourneyGoalTemplateId(template?.id || '');
     setShowJourneyGoalCreatedPrompt(false);
     setJourneyCreatedGoalId('');
     deferJourneyOverlayOpen(() => setShowJourneyGoalModal(true));
   };
 
   const openJourneyLogFlow = (goal = primaryJourneyGoal) => {
-    setShowJourneyHomeStarterCard(false);
     setShowJourneyEntryModal(false);
     setJourneyLogDraft(buildJourneyLogDraft(goal?.id));
     setJourneyLogSavingPhoto(false);
@@ -15657,7 +15677,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const target = Math.max(0, normalizeJourneyNumber(journeyGoalDraft?.target));
     const unit = String(journeyGoalDraft?.unit || '').trim();
     const timeframe = String(journeyGoalDraft?.timeframe || '').trim();
-    if (!title || !target) return;
+    if (!title || !target || !unit || !timeframe) {
+      setJourneyGoalError('Add a title, target, unit, and timeframe.');
+      return;
+    }
+    // Guard against accidental double-creates for the same first goal setup.
+    const duplicateGoal = sortedJourneyGoals.find((goal) => (
+      String(goal?.title || '').trim().toLowerCase() === title.toLowerCase()
+      && Math.max(0, normalizeJourneyNumber(goal?.target)) === target
+      && String(goal?.unit || '').trim().toLowerCase() === unit.toLowerCase()
+      && String(goal?.timeframe || '').trim().toLowerCase() === timeframe.toLowerCase()
+      && goal?.active !== false
+    ));
+    if (duplicateGoal) {
+      setJourneyGoalError('That goal already exists in Journey.');
+      return;
+    }
     const now = new Date().toISOString();
     const nextGoal = {
       id: `journey_goal_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -15678,6 +15713,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     closeJourneyGoalModal();
     setJourneyCreatedGoalId(nextGoal.id);
     setShowJourneyGoalCreatedPrompt(true);
+    setShowJourneyScreen(true);
   };
 
   const addJourneyLog = () => {
@@ -15734,7 +15770,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }));
     setShowJourneyNoteModal(false);
     setShowJourneyScreen(true);
-    setShowJourneyHomeStarterCard(false);
     setJourneyNoteDraft('');
   };
 
@@ -20591,11 +20626,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <div className="mt-3.5 flex items-center">
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      openJourneyHomeStarterCard();
-                    }}
+                    onClick={launchJourneyEntryFromHome}
                     className="rounded-xl px-3 py-2 text-xs font-semibold text-white"
                     style={themeAccentButtonStyle}
                   >
@@ -20604,55 +20635,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
               )}
             </div>
-
-            {!primaryJourneyGoal && showJourneyHomeStarterCard && (
-              <div className="mt-3 rounded-[26px] border border-white/60 dark:border-white/10 bg-white/95 dark:bg-slate-900/92 p-4 sm:p-5 shadow-xl backdrop-blur-md">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Start your Journey</div>
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Add a goal, note, or picture to get moving.</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={closeJourneyHomeStarterCard}
-                    className="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10"
-                    aria-label="Close journey starter"
-                  >
-                    <X className="w-4 h-4 text-gray-500 dark:text-gray-300" />
-                  </button>
-                </div>
-                <div className="mt-3 space-y-2">
-                  <button
-                    type="button"
-                    onClick={openJourneyGoalFlow}
-                    className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-left bg-white dark:bg-white/[0.04]"
-                  >
-                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add goal</div>
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Create one measurable target to track.</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      closeJourneyHomeStarterCard();
-                      setJourneyNoteDraft('');
-                      setShowJourneyNoteModal(true);
-                    }}
-                    className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-left bg-white dark:bg-white/[0.04]"
-                  >
-                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add note</div>
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Capture a thought, intention, or reflection.</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openJourneyLogFlow(null)}
-                    className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-left bg-white dark:bg-white/[0.04]"
-                  >
-                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add picture</div>
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Save a photo update now and connect progress later.</div>
-                  </button>
-                </div>
-              </div>
-            )}
 
             {overviewTodayEvents.length === 0 && homeTripsPreview.length === 0 && (
               <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-5">
@@ -25537,6 +25519,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       </button>
                       <button
                         type="button"
+                        onClick={() => openJourneyLogFlow(primaryJourneyGoal)}
+                        className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
+                        style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
+                      >
+                        Add photo
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => {
                           setJourneyNoteDraft('');
                           setShowJourneyNoteModal(true);
@@ -25550,36 +25540,33 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </div>
                 ) : (
                   <div className="rounded-[28px] border border-dashed border-gray-200 dark:border-white/10 p-5">
-                    <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Set your first goal</div>
-                    <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Start with a goal, quick note, or picture to begin your Journey.</div>
-                    <div className="mt-4 space-y-2">
-                      <button
-                        type="button"
-                        onClick={openJourneyGoalFlow}
-                        className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-left bg-white dark:bg-white/[0.04]"
-                      >
-                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add goal</div>
-                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Create one measurable target to track.</div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setJourneyNoteDraft('');
-                          setShowJourneyNoteModal(true);
-                        }}
-                        className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-left bg-white dark:bg-white/[0.04]"
-                      >
-                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add note</div>
-                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Capture a thought, intention, or reflection.</div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openJourneyLogFlow(null)}
-                        className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-left bg-white dark:bg-white/[0.04]"
-                      >
-                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add picture</div>
-                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Save a photo update now and connect progress later.</div>
-                      </button>
+                    <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Start with one goal</div>
+                    <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Pick something to work toward. Small progress adds up over time.</div>
+                    <div className="mt-4 grid grid-cols-1 gap-2.5">
+                      {JOURNEY_GOAL_TEMPLATES.map((template) => (
+                        <button
+                          key={template.id}
+                          type="button"
+                          onClick={() => openJourneyGoalFlow(template)}
+                          className="w-full rounded-2xl border px-4 py-3 text-left transition"
+                          style={{
+                            borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.12),
+                            background: template.id === 'custom'
+                              ? (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.9)')
+                              : (darkMode ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.09)} 0%, rgba(15,23,42,0.82) 100%)` : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.95) 100%)`),
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{template.label}</div>
+                              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{template.id === 'custom' ? 'Start from scratch with your own target.' : template.title}</div>
+                            </div>
+                            <div className="shrink-0 text-[11px] font-semibold" style={themeAccentTextStyle}>
+                              {template.id === 'custom' ? 'Custom' : 'Use'}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -25654,37 +25641,26 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         {showJourneyEntryModal && (
           <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
             <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Start your Journey</div>
-              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Add a goal, jot a quick note, or save a photo to begin.</div>
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pick something to work toward</div>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Small progress adds up over time.</div>
               <div className="mt-4 space-y-2">
-                <button
-                  type="button"
-                  onClick={openJourneyGoalFlow}
-                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-left bg-white dark:bg-white/[0.04]"
-                >
-                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add goal</div>
-                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Create one measurable target to track.</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    closeJourneyEntryModal();
-                    setJourneyNoteDraft('');
-                    setShowJourneyNoteModal(true);
-                  }}
-                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-left bg-white dark:bg-white/[0.04]"
-                >
-                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add note</div>
-                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Capture a thought, intention, or reflection.</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openJourneyLogFlow(null)}
-                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-left bg-white dark:bg-white/[0.04]"
-                >
-                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add picture</div>
-                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Save a photo update now and connect progress later.</div>
-                </button>
+                {JOURNEY_GOAL_TEMPLATES.map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    onClick={() => openJourneyGoalFlow(template)}
+                    className="w-full rounded-2xl border px-4 py-3 text-left"
+                    style={{
+                      borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.12),
+                      background: template.id === 'custom'
+                        ? (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.96)')
+                        : (darkMode ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.09)} 0%, rgba(15,23,42,0.82) 100%)` : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)`),
+                    }}
+                  >
+                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{template.label}</div>
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{template.hint}</div>
+                  </button>
+                ))}
               </div>
               <div className="mt-5 flex gap-2">
                 <button
@@ -25702,22 +25678,35 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         {showJourneyGoalModal && (
           <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
             <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{sortedJourneyGoals.length === 0 ? 'Set your first goal' : 'New goal'}</div>
-              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Keep it measurable, simple, and easy to log.</div>
-              <div className="mt-4 space-y-3">
-                <input value={journeyGoalDraft.title} onChange={(e) => setJourneyGoalDraft((prev) => ({ ...prev, title: e.target.value }))} placeholder="Read 12 books" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
-                <div className="grid grid-cols-2 gap-3">
-                  <input value={journeyGoalDraft.target} onChange={(e) => setJourneyGoalDraft((prev) => ({ ...prev, target: e.target.value }))} placeholder="12" inputMode="decimal" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
-                  <input value={journeyGoalDraft.unit} onChange={(e) => setJourneyGoalDraft((prev) => ({ ...prev, unit: e.target.value }))} placeholder="books" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}</div>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {selectedJourneyGoalTemplate?.hint || 'Keep it measurable, simple, and easy to log.'}
+              </div>
+              {selectedJourneyGoalTemplate ? (
+                <div className="mt-4 rounded-2xl border px-4 py-3" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16), backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.06) }}>
+                  <div className="text-xs uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Starting point</div>
+                  <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate.label}</div>
                 </div>
-                <input value={journeyGoalDraft.timeframe} onChange={(e) => setJourneyGoalDraft((prev) => ({ ...prev, timeframe: e.target.value }))} placeholder="This month" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+              ) : null}
+              <div className="mt-4 space-y-3">
+                <input value={journeyGoalDraft.title} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, title: e.target.value })); setJourneyGoalError(''); }} placeholder="Read 200 pages" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+                <div className="grid grid-cols-2 gap-3">
+                  <input value={journeyGoalDraft.target} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, target: e.target.value })); setJourneyGoalError(''); }} placeholder="200" inputMode="decimal" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+                  <input value={journeyGoalDraft.unit} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, unit: e.target.value })); setJourneyGoalError(''); }} placeholder="pages" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+                </div>
+                <input value={journeyGoalDraft.timeframe} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, timeframe: e.target.value })); setJourneyGoalError(''); }} placeholder="This month" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
                 <div className="rounded-2xl border border-gray-200 dark:border-white/10 px-3 py-3 text-sm text-gray-500 dark:text-gray-400">
                   This goal will become your primary Journey focus.
                 </div>
+                {journeyGoalError ? (
+                  <div className="rounded-2xl border border-rose-200/70 bg-rose-50/90 px-3 py-3 text-sm text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
+                    {journeyGoalError}
+                  </div>
+                ) : null}
               </div>
               <div className="mt-5 flex gap-2">
                 <button type="button" onClick={closeJourneyGoalModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
-                <button type="button" onClick={addJourneyGoal} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Save goal</button>
+                <button type="button" onClick={addJourneyGoal} disabled={!canSaveJourneyGoal} className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white ${canSaveJourneyGoal ? '' : 'cursor-not-allowed opacity-60'}`} style={themeAccentButtonStyle}>Save goal</button>
               </div>
             </div>
           </div>
@@ -25726,8 +25715,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         {showJourneyGoalCreatedPrompt && createdJourneyGoal && (
           <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
             <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Goal created</div>
-              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{createdJourneyGoal.title} is now your primary Journey goal.</div>
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Goal created 🎉</div>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Log your first update?</div>
               <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.04] px-4 py-3">
                 <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{createdJourneyGoal.title}</div>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
