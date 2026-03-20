@@ -22992,17 +22992,37 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </span>
                   {currentUser} (you)
                 </span>
-                {subCalMembers.map(m => (
-                  <span key={m.identity || m.email || m.phone} className="px-2.5 py-1.5 rounded-full bg-gray-100 text-gray-700 text-xs flex items-center gap-2 dark:bg-white/5 dark:text-gray-200">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-gray-600 dark:bg-slate-800 dark:text-gray-200">
-                      {getTripMemberBadge(resolveHandleLikeLabel(m.identity || m.email || m.phone))}
-                    </span>
-                    <span>{resolveHandleLikeLabel(m.identity || m.email || m.phone)}</span>
-                    {canEditCurrentTrip && m.removable !== false && (
-                      <button onClick={() => removeMemberFromSubCal(m.identity || m.email || m.phone)} className="ml-0.5 text-gray-400 hover:text-red-500">×</button>
-                    )}
-                  </span>
-                ))}
+                {subCalMembers.map((m) => {
+                  const memberIdentity = m.identity || m.email || m.phone;
+                  const memberLabel = resolveHandleLikeLabel(memberIdentity);
+                  const isRemovable = canEditCurrentTrip && m.removable !== false;
+                  return (
+                    <div
+                      key={memberIdentity}
+                      className="flex items-center gap-2 rounded-2xl border border-gray-200/80 bg-gray-100 px-2.5 py-2 text-xs text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
+                    >
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-gray-600 dark:bg-slate-800 dark:text-gray-200">
+                        {getTripMemberBadge(memberLabel)}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{memberLabel}</div>
+                        {m.status && (
+                          <div className="text-[10px] uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
+                            {String(m.status)}
+                          </div>
+                        )}
+                      </div>
+                      {isRemovable && (
+                        <button
+                          onClick={() => removeMemberFromSubCal(memberIdentity)}
+                          className="ml-1 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
