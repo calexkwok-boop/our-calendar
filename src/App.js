@@ -15482,6 +15482,44 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     return 'Goal completed. Keep the momentum going.';
   })();
+  const compactJourneyCard = (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={primaryJourneyGoal ? openJourneyScreen : openJourneyGoalFlow}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (primaryJourneyGoal) openJourneyScreen();
+          else openJourneyGoalFlow();
+        }
+      }}
+      className="min-w-[9.5rem] max-w-[11rem] rounded-2xl border px-3 py-2.5 text-left transition-all hover:shadow-md"
+      style={{
+        borderColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.08)',
+        background: darkMode
+          ? `linear-gradient(145deg, ${hexToRgba('#0f172a', 0.94)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.16)} 100%)`
+          : `linear-gradient(145deg, rgba(255,255,255,0.96) 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
+      }}
+    >
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Journey</div>
+      {primaryJourneyGoal ? (
+        <div className="mt-2">
+          <div className="h-2 overflow-hidden rounded-full bg-black/8 dark:bg-white/10">
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
+                background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="mt-2 text-xs font-medium text-gray-600 dark:text-gray-300">Set your first goal</div>
+      )}
+    </div>
+  );
   const ownedLayerCalendars = layers.filter(layer => String(layer.owner_id) === String(user?.id));
   const uniqueVisibleLayers = Array.from(
     new Map((layers || []).map(layer => [String(layer?.id || ''), layer])).values()
@@ -18076,28 +18114,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               >
                 <ChevronRight className="w-6 h-6" style={undefined} />
               </button>
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-2 sm:bottom-3 z-20 flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium">
-                <button
-                  onClick={() => setCalendarView('month')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
-                >
-                  Month
-                </button>
-                <button
-                  onClick={() => setCalendarView('week')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
-                >
-                  Week
-                </button>
-                <button
-                  onClick={() => setCalendarView('agenda')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
-                >
-                  Agenda
-                </button>
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-2 sm:bottom-3 z-20">
+                {compactJourneyCard}
               </div>
             </>
           ) : (
@@ -18110,7 +18128,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <ChevronLeft className="w-6 h-6" style={undefined} />
               </button>
               <div className="flex flex-col items-center gap-1">
-                <div className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium" style={undefined}>
+                {compactJourneyCard}
+                {false && <div className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium" style={undefined}>
                   <button
                     onClick={() => setCalendarView('month')}
                     className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
@@ -18132,8 +18151,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   >
                     Agenda
                   </button>
-                </div>
-                {calendarView !== 'month' && (
+                </div>}
+                {false && calendarView !== 'month' && (
                   <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
                     {calendarView === 'week'
                       ? (() => {
@@ -20430,106 +20449,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 ))}
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={openJourneyScreen}
-              className="w-full overflow-hidden rounded-[30px] border p-5 text-left transition-all hover:shadow-lg"
-              style={{
-                borderColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)',
-                background: darkMode
-                  ? `linear-gradient(145deg, ${hexToRgba('#0f172a', 0.96)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.18)} 100%)`
-                  : `linear-gradient(145deg, rgba(255,255,255,0.98) 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
-                boxShadow: darkMode ? '0 20px 44px rgba(2,6,23,0.34)' : '0 20px 44px rgba(15,23,42,0.08)',
-              }}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
-                  <div className="mt-2 text-sm font-medium text-gray-500 dark:text-gray-400">{journeyQuote}</div>
-                  {primaryJourneyGoal ? (
-                    <>
-                      <div className="mt-4 text-xl font-semibold text-gray-900 dark:text-gray-100">{primaryJourneyGoal.title}</div>
-                      <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{journeySupportLabel}</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="mt-4 text-xl font-semibold text-gray-900 dark:text-gray-100">Set your first goal</div>
-                      <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Start tracking progress with one focused priority.</div>
-                    </>
-                  )}
-                </div>
-                <div
-                  className="shrink-0 rounded-2xl px-3 py-1.5 text-xs font-semibold"
-                  style={{
-                    backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.18 : 0.12),
-                    color: activeLayerPageTheme.accent,
-                  }}
-                >
-                  Open
-                </div>
-              </div>
-
-              {primaryJourneyGoal ? (
-                <>
-                  <div className="mt-5">
-                    <div className="mb-2 flex items-center justify-between gap-3 text-xs font-medium text-gray-500 dark:text-gray-400">
-                      <span>{primaryJourneyProgressText}</span>
-                      <span>{Math.round(primaryJourneyGoalProgress * 100)}%</span>
-                    </div>
-                    <div className="h-2.5 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
-                          background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-5 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openJourneyLogFlow(primaryJourneyGoal);
-                      }}
-                      className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white"
-                      style={themeAccentButtonStyle}
-                    >
-                      Log today
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setJourneyNoteDraft('');
-                        setShowJourneyNoteModal(true);
-                      }}
-                      className="rounded-2xl border px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
-                      style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
-                    >
-                      Add note
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="mt-5 flex items-center">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openJourneyGoalFlow();
-                    }}
-                    className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white"
-                    style={themeAccentButtonStyle}
-                  >
-                    Set your first goal
-                  </button>
-                </div>
-              )}
-            </button>
 
             {overviewTodayEvents.length === 0 && homeTripsPreview.length === 0 && (
               <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-5">
