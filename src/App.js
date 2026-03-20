@@ -22010,7 +22010,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <div className="flex flex-wrap items-center gap-2 mb-4 relative">
                   <button
                     onClick={() => setEventsTabHideRecurring((prev) => !prev)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${eventsTabHideRecurring ? 'bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:border-gray-100' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${eventsTabHideRecurring ? 'bg-gray-900 text-white border-gray-900 dark:bg-white/[0.08] dark:text-gray-100 dark:border-white/15' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}
                   >
                     {eventsTabHideRecurring ? 'Show recurring' : 'Hide recurring'}
                   </button>
