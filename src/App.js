@@ -23067,7 +23067,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           </div>
                         ) : m.status ? (
                           <div className="text-[10px] uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
-                            {String(m.status)}
+                            {String(m.status).toLowerCase() === 'accepted' ? 'Remove' : String(m.status)}
                           </div>
                         ) : null}
                       </div>
