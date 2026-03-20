@@ -605,7 +605,7 @@ const buildTripHighlights = (trip, photos, itineraryItems) => {
     subtitle: tripDatesLabel,
     caption: hookPhoto?.caption || hookMoment?.item?.notes || `The part of ${tripTitle} that still feels worth replaying.`,
     image: hookPhoto?.url || null,
-    meta: hookMoment?.item?.location || uniqueLocations.slice(0, 2).join(' · '),
+    meta: hookMoment?.item?.location || uniqueLocations.slice(0, 2).join(' Â· '),
     tag: pickHighlightLabel(hookMoment, true),
   }, {
     type: 'context',
@@ -637,7 +637,7 @@ const buildTripHighlights = (trip, photos, itineraryItems) => {
     subtitle: tripTitle,
     caption: `Save the restaurants, landmarks, and standout moments from ${tripTitle}, then publish it to Explore when you're ready.`,
     image: selectedHighlights[1]?.featuredPhoto?.url || hookPhoto?.url || null,
-    meta: uniqueLocations.slice(0, 2).join(' · '),
+    meta: uniqueLocations.slice(0, 2).join(' Â· '),
     tag: 'Do it again',
   });
   return slides.slice(0, 6);
@@ -2282,7 +2282,7 @@ function App() {
       return;
     }
     if (!insertData || insertData.length === 0) {
-      alert('Saved silently failed — check Supabase RLS policies. Run the SQL fix in the console.');
+      alert('Saved silently failed â€” check Supabase RLS policies. Run the SQL fix in the console.');
       return;
     }
     setSubCalendars(prev => [...prev, newSC]);
@@ -3915,7 +3915,7 @@ function App() {
   };
 
   // Hours to show in timeline
-  const TIMELINE_HOURS = Array.from({ length: 24 }, (_, i) => (i + 6) % 24); // 6am–5am
+  const TIMELINE_HOURS = Array.from({ length: 24 }, (_, i) => (i + 6) % 24); // 6amâ€“5am
 
   const handleReact = (event, emoji) => {
     const actualDateKey = Object.keys(events).find(k => events[k].some(e => e.id === event.id));
@@ -3933,7 +3933,7 @@ function App() {
       if (updatedReactions[k].length === 0) delete updatedReactions[k];
     });
 
-    // Update local state immediately — single setEvents call, no saveEvents
+    // Update local state immediately â€” single setEvents call, no saveEvents
     setEvents(prev => ({
       ...prev,
       [actualDateKey]: prev[actualDateKey].map(e =>
@@ -3942,7 +3942,7 @@ function App() {
     }));
     setShowReactionPicker(null);
 
-    // Save only the reactions field directly to DB — bypass saveEvents entirely
+    // Save only the reactions field directly to DB â€” bypass saveEvents entirely
     supabase
       .from('events')
       .update({ reactions: JSON.stringify(updatedReactions) })
@@ -7552,7 +7552,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (conflicts.length === 0) return true;
     const lines = conflicts
       .slice(0, 4)
-      .map((row) => `• ${row.title} (${row.layerName}) at ${formatConflictDateTime(row.date, row.time)}`)
+      .map((row) => `â€¢ ${row.title} (${row.layerName}) at ${formatConflictDateTime(row.date, row.time)}`)
       .filter(Boolean);
     return openConflictPrompt({
       title: `"${draftTitle}" is within ${SCHEDULING_CONFLICT_WINDOW_HOURS} hours of:`,
@@ -7667,16 +7667,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   // Weather code ? display object with emoji/label and a color
   const weatherDisplay = (code) => {
-    if (code === 0) return { icon: '☀️', color: 'text-yellow-500' };
-    if (code <= 2) return { icon: '⛅', color: 'text-yellow-400' };
-    if (code <= 3) return { icon: '☁️', color: 'text-gray-400' };
+    if (code === 0) return { icon: 'â˜€ï¸', color: 'text-yellow-500' };
+    if (code <= 2) return { icon: 'â›…', color: 'text-yellow-400' };
+    if (code <= 3) return { icon: 'â˜ï¸', color: 'text-gray-400' };
     if (code <= 49) return { icon: 'FOG', color: 'text-gray-400' };
-    if (code <= 59) return { icon: '🌦️', color: 'text-blue-400' };
-    if (code <= 67) return { icon: '🌧️', color: 'text-blue-500' };
-    if (code <= 77) return { icon: '🌨️', color: 'text-blue-200' };
-    if (code <= 84) return { icon: '🌧️', color: 'text-blue-500' };
-    if (code <= 99) return { icon: '⛈️', color: 'text-purple-500' };
-    return { icon: '⛈️', color: 'text-purple-500' };
+    if (code <= 59) return { icon: 'ðŸŒ¦ï¸', color: 'text-blue-400' };
+    if (code <= 67) return { icon: 'ðŸŒ§ï¸', color: 'text-blue-500' };
+    if (code <= 77) return { icon: 'ðŸŒ¨ï¸', color: 'text-blue-200' };
+    if (code <= 84) return { icon: 'ðŸŒ§ï¸', color: 'text-blue-500' };
+    if (code <= 99) return { icon: 'â›ˆï¸', color: 'text-purple-500' };
+    return { icon: 'â›ˆï¸', color: 'text-purple-500' };
   };
 
   const fetchWeather = async (lat, lon) => {
@@ -7719,7 +7719,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           return () => clearInterval(interval);
         },
         () => {
-          // User denied or error — fallback to Fresno
+          // User denied or error â€” fallback to Fresno
           fetchWeather(36.7378, -119.7871);
         },
         { timeout: 10000 }
@@ -7961,7 +7961,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               // Virtual recurrence rows are derived UI projections and should never be persisted as standalone DB rows.
               if (event?.isVirtualAnnual || event?.isVirtualRecurrence) return;
               if (event.userId && event.userId !== saveUserId) {
-                // Shared event — do a targeted update on just the fields we allow editing
+                // Shared event â€” do a targeted update on just the fields we allow editing
                 sharedUpdates.push(event);
                 return;
               }
@@ -8124,7 +8124,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const rawTime = String(homeAddEventForm.time || '').trim();
     const location = String(homeAddEventForm.location || '').trim();
     if (!title || !rawDateKey || !rawTime || !location) {
-      alert('Choose a date, time, location, and what you’re doing.');
+      alert('Choose a date, time, location, and what youâ€™re doing.');
       return;
     }
 
@@ -10668,7 +10668,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     // Listen for changes to OTHER users' events (shared calendars)
     // We use a separate loadSharedEvents function that only fetches shared data
-    // and merges it with local state — never triggers a save
+    // and merges it with local state â€” never triggers a save
     const loadSharedEvents = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -14722,7 +14722,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           .sort((a, b) => a.deltaMs - b.deltaMs)
           .slice(0, 4);
         const lines = unique
-          .map((row) => `• ${row.title} (${row.layerName}) at ${formatConflictDateTime(row.date, row.time)}`)
+          .map((row) => `â€¢ ${row.title} (${row.layerName}) at ${formatConflictDateTime(row.date, row.time)}`)
           .filter(Boolean);
         // Close "What time?" first so the conflict modal is the only active prompt.
         setShowTimePrompt(false);
@@ -16502,7 +16502,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             {pendingEvent.isMultiDay ? "Multi-day events don't need a time" : 'Enter a time or skip to add without time'}
             {recurrence !== 'once' && (
               <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium" style={themeAccentSoftSurfaceStyle}>
-                {recurrence === 'weekly' ? '🔁 Weekly' : recurrence === 'monthly' ? '🗓️ Monthly' : '🎂 Annual'}
+                {recurrence === 'weekly' ? 'ðŸ” Weekly' : recurrence === 'monthly' ? 'ðŸ—“ï¸ Monthly' : 'ðŸŽ‚ Annual'}
               </span>
             )}
           </p>
@@ -17417,9 +17417,9 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
       badge: unreadInAppCount > 0 ? (unreadInAppCount > 99 ? '99+' : String(unreadInAppCount)) : '',
     };
     if (id === 'list') return { label: 'List', icon: <Tag className="w-4 h-4" />, active: Boolean(widgetCardOpenById.list), disabled: false };
-    if (id === 'notes') return { label: 'Notes', icon: <span className="text-sm leading-none">📝</span>, active: Boolean(widgetCardOpenById.notes), disabled: false };
-    if (id === 'expenses') return { label: 'Expenses', icon: <span className="text-sm leading-none">💸</span>, active: Boolean(widgetCardOpenById.expenses), disabled: false };
-    if (id === 'gauntlet') return { label: 'Bracket', icon: <span className="text-sm leading-none">🥒</span>, active: Boolean(widgetCardOpenById.gauntlet), disabled: false };
+    if (id === 'notes') return { label: 'Notes', icon: <span className="text-sm leading-none">ðŸ“</span>, active: Boolean(widgetCardOpenById.notes), disabled: false };
+    if (id === 'expenses') return { label: 'Expenses', icon: <span className="text-sm leading-none">ðŸ’¸</span>, active: Boolean(widgetCardOpenById.expenses), disabled: false };
+    if (id === 'gauntlet') return { label: 'Bracket', icon: <span className="text-sm leading-none">ðŸ¥’</span>, active: Boolean(widgetCardOpenById.gauntlet), disabled: false };
     if (id === 'chat') return {
       label: 'Chat',
       icon: <MessageSquare className="w-4 h-4" />,
@@ -17427,7 +17427,7 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
       disabled: false,
       badge: activeChatUnreadCount > 0 ? (activeChatUnreadCount > 99 ? '99+' : String(activeChatUnreadCount)) : '',
     };
-    if (id === 'weather') return { label: 'Weather', icon: <span className="text-sm leading-none">🌤️</span>, active: showWeather, disabled: false };
+    if (id === 'weather') return { label: 'Weather', icon: <span className="text-sm leading-none">ðŸŒ¤ï¸</span>, active: showWeather, disabled: false };
     if (id === 'categories') return { label: 'Categories', icon: <Settings className="w-4 h-4" />, active: Boolean(widgetCardOpenById.categories), disabled: false };
     if (id === 'theme') return { label: darkMode ? 'Light' : 'Dark', icon: darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />, active: false, disabled: false };
     if (id === 'ai') return { label: 'AI', icon: <MessageSquare className="w-4 h-4" />, active: Boolean(widgetCardOpenById.ai), disabled: false };
@@ -17435,7 +17435,7 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: Boolean(widgetCardOpenById.import), disabled: Boolean(activeSubCalendar) };
     if (id === 'roundrobin') return {
   label: 'Round Robin',
-  icon: <span className="text-sm leading-none">🏓</span>,
+  icon: <span className="text-sm leading-none">ðŸ“</span>,
   active: Boolean(widgetCardOpenById.roundrobin),
   disabled: false,
 };
@@ -17519,7 +17519,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               title="Close add widgets"
               aria-label="Close add widgets panel"
             >
-              ×
+              Ã—
             </button>
           </div>
           <div className="flex items-center justify-end gap-1.5 mb-3">
@@ -17661,10 +17661,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             {selectedSportsScheduleTemplate && (
               <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 p-3">
                 <div className="text-xs text-gray-700 dark:text-gray-200">
-                  <span className="font-semibold">{selectedSportsScheduleTemplate.league}</span> · {selectedSportsScheduleTemplate.team}
+                  <span className="font-semibold">{selectedSportsScheduleTemplate.league}</span> Â· {selectedSportsScheduleTemplate.team}
                 </div>
                 <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-                  Source: {selectedSportsScheduleTemplate.sourceLabel} · {selectedSportsScheduleTemplate.events.length} games in template
+                  Source: {selectedSportsScheduleTemplate.sourceLabel} Â· {selectedSportsScheduleTemplate.events.length} games in template
                 </div>
               </div>
             )}
@@ -17926,7 +17926,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           {bottomNavTab === 'home' && (
             <div className="absolute inset-0 z-[25] pointer-events-none">
 
-              {/* Icon — top left, opens account */}
+              {/* Icon â€” top left, opens account */}
               <div className="absolute top-3 left-3 sm:top-4 sm:left-4 pointer-events-auto">
                 <div className="relative" ref={(el) => { headerModuleNodeRefs.current.icon = el; }}>
                   <button
@@ -17958,7 +17958,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
               </div>
 
-              {/* Title + date — top right */}
+              {/* Title + date â€” top right */}
               <div className="absolute top-3 right-3 sm:top-4 sm:right-4 pointer-events-auto flex flex-col items-end gap-0.5">
                 {activeLayerTitleVisible && (
                   <button
@@ -17969,7 +17969,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   >
                     {calendarTitle}
                   </button>
-                )}
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); if (canEditActiveLayerTitle) openTitleStyleModal(); }}
@@ -18129,42 +18128,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </button>
               <div className="flex flex-col items-center gap-1">
                 {compactJourneyCard}
-                {false && <div className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium" style={undefined}>
-                  <button
-                    onClick={() => setCalendarView('month')}
-                    className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                    style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
-                  >
-                    Month
-                  </button>
-                  <button
-                    onClick={() => setCalendarView('week')}
-                    className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                    style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
-                  >
-                    Week
-                  </button>
-                  <button
-                    onClick={() => setCalendarView('agenda')}
-                    className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                    style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
-                  >
-                    Agenda
-                  </button>
-                </div>}
-                {false && calendarView !== 'month' && (
-                  <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
-                    {calendarView === 'week'
-                      ? (() => {
-                        const days = getWeekDays(currentDate);
-                        const start = days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        const end = days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                        return `${start} – ${end}`;
-                      })()
-                      : `Agenda · Next ${agendaRangeDays} days`
-                    }
-                  </h2>
-                )}
               </div>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
@@ -18174,8 +18137,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <ChevronRight className="w-6 h-6" style={undefined} />
               </button>
             </div>
-          )}
-            </>
           )}
         </div>
 
@@ -18432,7 +18393,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${onlyNotifyUrgent ? 'translate-x-6' : 'translate-x-1'}`} />
                   </button>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Only send notifications for events marked as urgent 🚨</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Only send notifications for events marked as urgent ðŸš¨</p>
               </div>
             </div>
           </div>
@@ -18898,7 +18859,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <>
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">📍 Live Location</h4>
+                        <h4 className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">ðŸ“ Live Location</h4>
                         <p className="text-xs text-emerald-600/90 dark:text-emerald-400/90">
                           {hasCollaborators
                             ? `${liveLocations.length} member${liveLocations.length === 1 ? '' : 's'} sharing now in this calendar.`
@@ -18929,7 +18890,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             rel="noopener noreferrer"
                             className="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800 hover:border-emerald-400"
                           >
-                            <span className="text-gray-700 dark:text-gray-200 truncate">📍 {resolveHandleLikeLabel(loc.name || loc.email || loc.userId, loc.userId)}</span>
+                            <span className="text-gray-700 dark:text-gray-200 truncate">ðŸ“ {resolveHandleLikeLabel(loc.name || loc.email || loc.userId, loc.userId)}</span>
                             <span className="text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
                           </a>
                         ))}
@@ -19167,13 +19128,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold mb-1 ${mine ? 'bg-indigo-400/40 text-indigo-100' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'}`}>
                               Pop-up Event
                             </div>
-                            <div className="font-semibold">📌 {popupInvite.title}</div>
+                            <div className="font-semibold">ðŸ“Œ {popupInvite.title}</div>
                             <div className={`text-[11px] mt-0.5 ${mine ? 'text-indigo-100/90' : 'text-gray-600 dark:text-gray-300'}`}>
                               {formatDateKeyMMDDYYYY(popupInvite.dateKey)}{popupInvite.time ? ` at ${formatTime(popupInvite.time)}` : ''}
                             </div>
                             {popupInvite.location && (
                               <div className={`text-[11px] mt-0.5 ${mine ? 'text-indigo-100/90' : 'text-gray-600 dark:text-gray-300'}`}>
-                                📍 {popupInvite.location}
+                                ðŸ“ {popupInvite.location}
                               </div>
                             )}
                             {(() => {
@@ -19340,14 +19301,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         className="w-full px-3 py-3 rounded-xl border text-left transition-colors"
                         style={{ borderColor: themeAccentBorder, backgroundColor: themeAccentSofterBg }}
                       >
-                        <div className="text-sm font-semibold" style={themeAccentHeadingStyle}>🗳️ Create an event poll</div>
+                        <div className="text-sm font-semibold" style={themeAccentHeadingStyle}>ðŸ—³ï¸ Create an event poll</div>
                         <div className="text-xs mt-0.5" style={themeAccentTextStyle}>Ask members to vote, then auto-add the winner.</div>
                       </button>
                       <button
                         onClick={() => setPollComposerStep('popup')}
                         className="w-full px-3 py-3 rounded-xl border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 text-left hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors"
                       >
-                        <div className="text-sm font-semibold text-rose-700 dark:text-rose-300">🎟️ Create a pop-up event</div>
+                        <div className="text-sm font-semibold text-rose-700 dark:text-rose-300">ðŸŽŸï¸ Create a pop-up event</div>
                         <div className="text-xs text-rose-700/90 dark:text-rose-300/90 mt-0.5">First come, first served with max headcount.</div>
                       </button>
                     </div>
@@ -19386,7 +19347,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       <PlacesAutocomplete
                         value={popupDraftLocation}
                         onSelect={(val) => setPopupDraftLocation(val || '')}
-                        placeholder="📍 Location (optional)"
+                        placeholder="ðŸ“ Location (optional)"
                         className="w-full px-3 py-2 text-sm border border-rose-200 dark:border-rose-700 bg-white/90 dark:bg-gray-800 dark:text-white rounded-xl"
                       />
                       <div className="flex items-center gap-2">
@@ -19672,7 +19633,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
             {selectedSharedListGroup && (
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3 px-1">
-                {selectedSharedListGroup.title}: {totalSharedListItems} item{totalSharedListItems === 1 ? '' : 's'} · {completedSharedListCount} done
+                {selectedSharedListGroup.title}: {totalSharedListItems} item{totalSharedListItems === 1 ? '' : 's'} Â· {completedSharedListCount} done
               </p>
             )}
 
@@ -19848,9 +19809,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           onClick={() => setExpandedLayerNoteId((prev) => (String(prev || '') === noteId ? null : noteId))}
                           className="text-xs text-gray-400 shrink-0 w-3"
                         >
-                          {isExpanded ? '−' : '+'}
+                          {isExpanded ? 'âˆ’' : '+'}
                         </button>
-                        <span className="text-xs">📝</span>
+                        <span className="text-xs">ðŸ“</span>
                         {isEditing ? (
                           <input
                             autoFocus
@@ -19883,7 +19844,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                 onClick={() => toggleLayerChecklistItem(noteId, item.id)}
                                 className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${item?.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
                               >
-                                {item?.done && <span className="text-xs leading-none">✓</span>}
+                                {item?.done && <span className="text-xs leading-none">âœ“</span>}
                               </button>
                               <span className={`text-xs flex-1 ${item?.done ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
                                 {String(item?.text || '')}
@@ -20156,7 +20117,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           onClick={() => { setShowCalendarSwitcher(false); setShowSharePanel(true); }}
           className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
         >
-          ⚙️ Account settings & sharing
+          âš™ï¸ Account settings & sharing
         </button>
       </div>
     </div>
@@ -20698,14 +20659,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           className="relative z-10 w-full flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 hover:shadow-md transition-all text-left cursor-pointer"
                           style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                         >
-                          <span className="text-xl">🧳</span>
+                          <span className="text-xl">ðŸ§³</span>
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-sm text-green-800 dark:text-green-300">{sc.name}</div>
                             <div className="text-xs text-green-600 dark:text-green-400">
-                              Happening now · {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              Happening now Â· {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} â€“ {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </div>
                           </div>
-                          <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open →</span>
+                          <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open â†’</span>
                         </div>
                       </div>
                     );
@@ -20724,7 +20685,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <X className="w-4 h-4" />
                 </button>
                 <p className="text-sm text-purple-700 dark:text-purple-300 text-center pr-4">
-                  💡 <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
+                  ðŸ’¡ <strong>Tip:</strong> Double-tap a start date, then tap an end date to create multi-day events like vacations!
                 </p>
                 <label className="flex items-center justify-center gap-1.5 mt-2 cursor-pointer">
                   <input
@@ -20868,7 +20829,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         <div className={`text-xs sm:text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
                           {date ? date.getDate() : ''}
                           {hasHoliday && !isSelected && !isInSelection && (
-                            <span className="absolute top-0.5 right-0.5 text-xs">🎉</span>
+                            <span className="absolute top-0.5 right-0.5 text-xs">ðŸŽ‰</span>
                           )}
                         </div>
                         {weatherData && !isSelected && !isInSelection && (
@@ -20877,7 +20838,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               {weatherData.icon}
                             </span>
                             <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
-                              {weatherData.high}°/{weatherData.low}°
+                              {weatherData.high}Â°/{weatherData.low}Â°
                             </span>
                           </div>
                         )}
@@ -20946,14 +20907,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       {/* Date number */}
                       <div className={`text-xs font-bold mb-1 ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-200' : 'text-gray-700 dark:text-gray-200'}`}>
                         {date.getDate()}
-                        {hasHoliday && <span className="ml-1">🎉</span>}
+                        {hasHoliday && <span className="ml-1">ðŸŽ‰</span>}
                       </div>
 
                       {/* Weather */}
                       {weatherData && !isSelected && (
                         <div className="flex items-center gap-0.5 mb-1">
                           <span style={{ fontSize: '0.7rem' }}>{weatherData.icon.length > 2 ? <span className={`text-xs font-bold ${weatherData.color}`}>{weatherData.icon}</span> : weatherData.icon}</span>
-                          <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{weatherData.high}°/{weatherData.low}°</span>
+                          <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{weatherData.high}Â°/{weatherData.low}Â°</span>
                         </div>
                       )}
 
@@ -20963,7 +20924,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           const cat = categories[event.category || 'other'] || categories.other;
                           if (event.isHoliday) return (
                             <div key={event.id} className="text-xs px-1.5 py-1 rounded-md bg-red-500 text-white truncate font-medium shadow-sm">
-                              🎉 {event.title}
+                              ðŸŽ‰ {event.title}
                             </div>
                           );
                           return (
@@ -20975,7 +20936,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               `}
                             >
                               {event.time && <span className="opacity-80 mr-1">{formatTime(event.time)}</span>}
-                              {event.isPrivate && '🔒 '}
+                              {event.isPrivate && 'ðŸ”’ '}
                               {event.title}
                             </div>
                           );
@@ -21084,7 +21045,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
                       style={themeAccentButtonStyle}
                     >
-                      🗓️ Create Sub-Calendar
+                      ðŸ—“ï¸ Create Sub-Calendar
                     </button>
                   </div>
                 </div>
@@ -21134,7 +21095,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   style={isUrgent ? themeAccentButtonStyle : undefined}
                 >
                   <AlertTriangle className="w-4 h-4" />
-                  {isUrgent ? '🚨 Urgent Event' : 'Normal Event'}
+                  {isUrgent ? 'ðŸš¨ Urgent Event' : 'Normal Event'}
               </button>
               <div className="w-full">
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
@@ -21143,10 +21104,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: 'once', label: '🕐 One-time' },
-                    { value: 'weekly', label: '🔁 Weekly' },
-                    { value: 'monthly', label: '🗓️ Monthly' },
-                    { value: 'annual', label: '🎂 Annual' },
+                    { value: 'once', label: 'ðŸ• One-time' },
+                    { value: 'weekly', label: 'ðŸ” Weekly' },
+                    { value: 'monthly', label: 'ðŸ—“ï¸ Monthly' },
+                    { value: 'annual', label: 'ðŸŽ‚ Annual' },
                   ].map(opt => (
                     <button
                       key={opt.value}
@@ -21253,7 +21214,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       <div key={event.id} className="bg-red-50 dark:bg-red-900/30 rounded-xl p-3 border-2 border-red-200 dark:border-red-700 transition-all duration-200 hover:shadow-md">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">🎉</span>
+                            <span className="text-lg">ðŸŽ‰</span>
                             <div>
                               <div className="text-gray-800 dark:text-gray-200 font-medium">{event.title}</div>
                               {event.fullName !== event.title && (
@@ -21345,7 +21306,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                 handleUpdateEventField(event.date, event.id, { location: val });
                               }
                             }}
-                            placeholder="📍 Add location (optional)"
+                            placeholder="ðŸ“ Add location (optional)"
                             className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                           />
                           <textarea
@@ -21399,7 +21360,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               })}
                               className="rounded"
                             />
-                            🎂 Annual (repeats every year)
+                            ðŸŽ‚ Annual (repeats every year)
                           </label>
                           <button
                             onClick={() => setEditingEvent(null)}
@@ -21444,7 +21405,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                 className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 mb-1"
                                 onClick={(e) => handleLocationLinkClick(e, event.location)}
                               >
-                                📍 {event.location}
+                                ðŸ“ {event.location}
                               </button>
                             )}
                             {event.description && (
@@ -21697,7 +21658,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
                 {filteredUpcomingUserTabEvents.length === 0 ? (
                   <div className="text-center py-10">
-                    <div className="text-4xl mb-3">🎾</div>
+                    <div className="text-4xl mb-3">ðŸŽ¾</div>
                     <div className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">No upcoming events</div>
                     <div className="text-xs text-gray-400 dark:text-gray-500">Adjust filters or tap "New Event" to create one</div>
                   </div>
@@ -21760,7 +21721,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                 <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{event.title}</div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                   {formatDateKeyMMDDYYYY ? formatDateKeyMMDDYYYY(event.date || event.dateKey) : (event.date || event.dateKey)}
-                                  {event.time ? ` · ${formatTime ? formatTime(event.time) : event.time}` : ''}
+                                  {event.time ? ` Â· ${formatTime ? formatTime(event.time) : event.time}` : ''}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-1 mt-1">
                                   {popupMeta && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">Pop-up</span>}
@@ -21786,7 +21747,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                 {popupMeta ? (
                                   <>
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${joined ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : isFull ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}`}>
-                                      {joined ? '✓ Joined' : isFull ? 'Full' : 'Open'}
+                                      {joined ? 'âœ“ Joined' : isFull ? 'Full' : 'Open'}
                                     </span>
                                     {maxPeople > 0 && (
                                       <span className="text-[10px] text-gray-400 dark:text-gray-500">{signups.length}/{maxPeople} players</span>
@@ -21813,7 +21774,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 {/* Active Trips */}
                 {activeTrips.length > 0 && (
                   <div className="mb-5">
-                    <h4 className="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">🟢 Active Now</h4>
+                    <h4 className="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">ðŸŸ¢ Active Now</h4>
                     <div className="space-y-2">
                       {activeTrips.map(sc => {
                         const canDelete = sc.owner_id === user?.id;
@@ -21837,7 +21798,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           >
                             <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} – {getSubCalEndRaw(sc)}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} â€“ {getSubCalEndRaw(sc)}</div>
                             </div>
                             <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                           </div>
@@ -21851,7 +21812,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 {/* Upcoming Trips */}
                 {upcomingTrips.length > 0 && (
                   <div className="mb-5">
-                    <h4 className="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">📅 Upcoming</h4>
+                    <h4 className="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">ðŸ“… Upcoming</h4>
                     <div className="space-y-2">
                       {upcomingTrips.map(sc => {
                         const canDelete = sc.owner_id === user?.id;
@@ -21874,7 +21835,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           >
                             <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} – {getSubCalEndRaw(sc)}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} â€“ {getSubCalEndRaw(sc)}</div>
                             </div>
                             <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                           </div>
@@ -21888,11 +21849,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 {/* Archived Trips */}
                 <div>
                   {(activeTrips.length > 0 || upcomingTrips.length > 0) && (
-                    <h4 className="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">🗂 Past</h4>
+                    <h4 className="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">ðŸ—‚ Past</h4>
                   )}
                   {archivedTrips.length === 0 && activeTrips.length === 0 && upcomingTrips.length === 0 ? (
                     <div className="text-center py-10">
-                      <div className="text-4xl mb-3">🧳</div>
+                      <div className="text-4xl mb-3">ðŸ§³</div>
                       <div className="text-sm font-semibold text-gray-500 dark:text-gray-400">No trips yet</div>
                     </div>
                   ) : archivedTrips.length === 0 ? (
@@ -21920,7 +21881,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           >
                             <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} – {getSubCalEndRaw(sc)}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} â€“ {getSubCalEndRaw(sc)}</div>
                             </div>
                             <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                           </div>
@@ -21936,7 +21897,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 console.error('Trips rendering error:', error);
                 return (
                   <div className="text-center py-10">
-                    <div className="text-4xl mb-3">⚠️</div>
+                    <div className="text-4xl mb-3">âš ï¸</div>
                     <div className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">Error loading trips</div>
                     <div className="text-xs text-gray-500">{String(error.message || error)}</div>
                   </div>
@@ -22200,7 +22161,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       >
         <div className="max-w-6xl mx-auto pointer-events-auto">
 
-          {/* Widget toolbar — shown on home tab */}
+          {/* Widget toolbar â€” shown on home tab */}
           {showHomeCalendarWidgets && (
             <div className="flex items-center gap-1.5 mb-1.5 px-1 pt-1 pr-2 overflow-x-auto overflow-y-visible">
               {activeControlWidgets.map((widgetId) => {
@@ -22227,7 +22188,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </button>
                 );
               })}
-              {/* + Add button — always visible */}
+              {/* + Add button â€” always visible */}
               <button
                 onClick={() => setShowControlWidgetAddPanel(true)}
                 className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-gray-400 dark:hover:border-gray-400 transition-all"
@@ -23003,7 +22964,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </button>
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {selectedDates.length > 0 && `${selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${selectedDates[selectedDates.length-1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${selectedDates.length} days)`}
+            {selectedDates.length > 0 && `${selectedDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} â€“ ${selectedDates[selectedDates.length-1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${selectedDates.length} days)`}
           </div>
           <input
             type="text"
@@ -23147,9 +23108,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <div className="flex items-center gap-2 px-2.5 py-2">
                     <span className="text-gray-300 dark:text-gray-500 cursor-grab active:cursor-grabbing shrink-0 select-none text-sm">::</span>
                     <button onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)} className="text-xs text-gray-400 shrink-0 w-3">
-                      {expandedNote === note.id ? '−' : '+'}
+                      {expandedNote === note.id ? 'âˆ’' : '+'}
                     </button>
-                    <span className="text-xs">📝</span>
+                    <span className="text-xs">ðŸ“</span>
                     {editingNote === note.id ? (
                       <input
                         autoFocus
@@ -23182,7 +23143,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             onClick={() => toggleChecklistItem(note.id, item.id)}
                             className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
                           >
-                            {item.done && <span className="text-xs leading-none">✓</span>}
+                            {item.done && <span className="text-xs leading-none">âœ“</span>}
                           </button>
                           <span className={`text-xs flex-1 ${item.done ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>{item.text}</span>
                           <button onClick={() => deleteChecklistItem(note.id, item.id)} className="text-gray-300 hover:text-red-400 text-xs">
@@ -23434,7 +23395,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 onClick={() => setSubCalWeatherExpanded(true)}
                 className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm ${tripHeaderPillClassName}`}
               >
-                <span>📍</span>
+                <span>ðŸ“</span>
                 <span className="max-w-[160px] truncate">{subCalWeatherLocation}</span>
               </button>
             ) : !subCalWeatherExpanded ? (
@@ -23442,7 +23403,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 onClick={() => setSubCalWeatherExpanded(true)}
                 className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm ${tripHeaderSecondaryPillClassName}`}
               >
-                🌤️ Add weather
+                ðŸŒ¤ï¸ Add weather
               </button>
             ) : null}
 
@@ -23494,7 +23455,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           {subCalWeatherExpanded && (
             <div className="relative z-40 mt-3 overflow-visible rounded-3xl border border-white/10 bg-white/80 p-3 shadow-lg dark:bg-slate-900/80" style={tripHeaderPanelStyle}>
               <div className="flex items-center gap-2">
-                <span className="text-sm shrink-0">🌤️</span>
+                <span className="text-sm shrink-0">ðŸŒ¤ï¸</span>
                 <input
                   autoFocus={subCalWeatherExpanded}
                   type="text"
@@ -23630,7 +23591,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               >{activeSubCalendar.name}</div>
             )}
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} â€“ {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -23690,7 +23651,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           }}
         >
 
-        {/* Weather location — collapsed pill or expanding input */}
+        {/* Weather location â€” collapsed pill or expanding input */}
         <div className="hidden relative px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2" ref={weatherAutocompleteRef}>
           {subCalWeatherLocation && !subCalWeatherExpanded ? (
             // Collapsed pill
@@ -23698,14 +23659,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               onClick={() => setSubCalWeatherExpanded(true)}
               className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-full text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-all"
             >
-              📍 {subCalWeatherLocation}
-              <span className="text-blue-400 text-xs">✏️</span>
+              ðŸ“ {subCalWeatherLocation}
+              <span className="text-blue-400 text-xs">âœï¸</span>
             </button>
           ) : (
             // Expanded input with autocomplete
             <div className="flex-1 relative">
               <div className="flex items-center gap-2">
-                <span className="text-sm shrink-0">🌤️</span>
+                <span className="text-sm shrink-0">ðŸŒ¤ï¸</span>
                 <input
                   autoFocus={subCalWeatherExpanded}
                   type="text"
@@ -23730,11 +23691,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       e.currentTarget.blur();
                     }
                   }}
-                  placeholder="Search city for weather…"
+                  placeholder="Search city for weatherâ€¦"
                   className="flex-1 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 text-base sm:text-xs"
                   style={{ fontSize: '16px' }}
                 />
-                {subCalWeatherLoading && <span className="text-xs text-blue-400 animate-pulse shrink-0">Loading…</span>}
+                {subCalWeatherLoading && <span className="text-xs text-blue-400 animate-pulse shrink-0">Loadingâ€¦</span>}
                 {subCalWeatherLocation && (
                   <button
                     onClick={() => {
@@ -23771,7 +23732,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <button
               onClick={() => setSubCalWeatherExpanded(true)}
               className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-500 flex items-center gap-1"
-            >🌤️ Add trip weather</button>
+            >ðŸŒ¤ï¸ Add trip weather</button>
           )}
           <button
             onClick={() => setShowSubCalNotesModal(true)}
@@ -23779,7 +23740,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             title="Open reminders and notes"
             aria-label="Open reminders and notes"
           >
-            <span className="text-base leading-none" aria-hidden="true">🗒️</span>
+            <span className="text-base leading-none" aria-hidden="true">ðŸ—’ï¸</span>
             {subCalNotes.length > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[1rem] h-[1rem] px-1 rounded-full bg-yellow-500 text-white text-[9px] leading-none font-bold flex items-center justify-center">
                 {subCalNotes.length}
@@ -23802,7 +23763,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           {!subCalMembersCollapsed && (
             <div className="flex flex-wrap gap-2">
               <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full text-xs flex items-center gap-1">
-                👤 {currentUser} (you)
+                ðŸ‘¤ {currentUser} (you)
               </span>
               {subCalMembers.map((m) => {
                 const memberIdentity = m.identity || m.email || m.phone;
@@ -23884,13 +23845,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     )}
                     {subCalWeather[dk] && (
                       <span className={`text-xs leading-none ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
-                        {subCalWeather[dk].high}°
+                        {subCalWeather[dk].high}Â°
                       </span>
                     )}
                     {hasEvents && !shakingDates && !subCalWeather[dk] && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
                     {hasEvents && !shakingDates && subCalWeather[dk] && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-purple-500'}`} />}
                   </button>
-                  {/* Minus badge — only on first/last when shaking */}
+                  {/* Minus badge â€” only on first/last when shaking */}
                   {shakingDates && canRemove && (
                     <button
                       onClick={e => { e.stopPropagation(); shrinkSubCalDate(isFirst ? 'before' : 'after'); if (allDates.length <= 2) setShakingDates(false); }}
@@ -24025,7 +23986,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <PlacesAutocomplete
                       value={subCalNewEventForm.location}
                       onSelect={val => setSubCalNewEventForm(f => ({ ...f, location: val || '' }))}
-                      placeholder="📍 Add location (optional)"
+                      placeholder="ðŸ“ Add location (optional)"
                       className="w-full rounded-2xl border border-gray-200 px-3 py-2 text-base text-gray-900 focus:outline-none focus:ring-1 focus:ring-purple-400 dark:border-white/10 dark:bg-white/5 dark:text-white"
                     />
                     <div className="flex gap-2">
@@ -24185,7 +24146,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             type="button"
                             className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-300"
                             onClick={(e) => handleLocationLinkClick(e, event.location)}
-                          >📍 {event.location}</button>
+                          >ðŸ“ {event.location}</button>
                         )}
                         {event.createdBy && (
                           <div className="inline-flex items-center gap-1 rounded-full bg-black/5 px-2.5 py-1 text-xs text-gray-500 dark:bg-white/5 dark:text-gray-400">
@@ -24228,7 +24189,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           </div>
                           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-300/80">
                             {subCalWeatherLocation && <span>{subCalWeatherLocation}</span>}
-                            {selectedWeather && <span>{selectedWeather.icon} {selectedWeather.high}° / {selectedWeather.low}°</span>}
+                            {selectedWeather && <span>{selectedWeather.icon} {selectedWeather.high}Â° / {selectedWeather.low}Â°</span>}
                             <span>{daySummary.count} {daySummary.count === 1 ? 'plan' : 'plans'}</span>
                             {daySummary.firstTime && <span>Starts {daySummary.firstTime}</span>}
                           </div>
@@ -24289,7 +24250,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       {subCalSelectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                     </div>
                     <div className="text-xs text-gray-600 dark:text-gray-300">
-                      {subCalWeatherLocation} · High {subCalWeather[dk].high}° / Low {subCalWeather[dk].low}°
+                      {subCalWeatherLocation} Â· High {subCalWeather[dk].high}Â° / Low {subCalWeather[dk].low}Â°
                     </div>
                   </div>
                 </div>
@@ -24394,7 +24355,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                 <PlacesAutocomplete
                                   value={event.location || ''}
                                   onSelect={(val) => updateSubCalEvent(event.id, { location: val })}
-                                  placeholder="📍 Add location (optional)"
+                                  placeholder="ðŸ“ Add location (optional)"
                                   className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg text-base sm:text-sm"
                                 />
                                 <button onClick={() => setSubCalEditingEvent(null)} className="w-full py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg text-sm font-medium">Done</button>
@@ -24409,7 +24370,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                   {(event.time || event.endTime) && (
                                     <div className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1">
                                       <Clock className="w-3 h-3" />
-                                      {event.time && formatTime(event.time)}{event.endTime && ` – ${formatTime(event.endTime)}`}
+                                      {event.time && formatTime(event.time)}{event.endTime && ` â€“ ${formatTime(event.endTime)}`}
                                     </div>
                                   )}
                                   {event.notes && <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 italic">{event.notes}</div>}
@@ -24418,7 +24379,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                       type="button"
                                       className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 mt-0.5"
                                       onClick={(e) => handleLocationLinkClick(e, event.location)}
-                                    >📍 {event.location}</button>
+                                    >ðŸ“ {event.location}</button>
                                   )}
                                   {getEventPhotos(event.id).length > 0 && (
                                     <button
@@ -24463,7 +24424,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                     onClick={() => { setPhotoEventId(event.id); setPhotoDate(dk); photoInputRef.current?.click(); }}
                                     className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-lg"
                                     title="Add photo"
-                                  >📸</button>
+                                  >ðŸ“¸</button>
                                   <button onClick={() => setSubCalEditingEvent(event.id)} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-lg"><Edit2 className="w-3.5 h-3.5 text-gray-500" /></button>
                                   <button onClick={() => deleteSubCalEvent(event.id, dk)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
                                 </div>
@@ -24506,7 +24467,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             <PlacesAutocomplete
                               value={subCalNewEventForm.location}
                               onSelect={val => setSubCalNewEventForm(f => ({ ...f, location: val || '' }))}
-                              placeholder="📍 Add location (optional)"
+                              placeholder="ðŸ“ Add location (optional)"
                               className="w-full text-base sm:text-xs px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-600 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400"
                             />
                             <div className="flex gap-2">
@@ -24694,7 +24655,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 disabled={uploadingPhoto || isPhotoSelectionMode || photoDeleteMode}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl text-sm font-medium shadow hover:shadow-lg transition-all disabled:opacity-50"
               >
-                {uploadingPhoto ? 'Uploading…' : 'Add Photos'}
+                {uploadingPhoto ? 'Uploadingâ€¦' : 'Add Photos'}
               </button>
               {isPhotoSelectionMode ? (
                 <>
@@ -24824,7 +24785,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <div key={date} className="mb-6">
                       <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2">
                         <span>{date !== 'unlinked' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Unlinked'}</span>
-                        {subCalWeather[date] && <span>{subCalWeather[date].icon} {subCalWeather[date].high}°</span>}
+                        {subCalWeather[date] && <span>{subCalWeather[date].icon} {subCalWeather[date].high}Â°</span>}
                         <span className="text-gray-300 dark:text-gray-600">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -24850,7 +24811,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             />
                             {isPhotoSelectionMode && (
                               <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
-                                <span className={`text-xs ${isSelectedPhoto ? 'text-emerald-300' : 'text-white/70'}`}>{isSelectedPhoto ? '✓' : ''}</span>
+                                <span className={`text-xs ${isSelectedPhoto ? 'text-emerald-300' : 'text-white/70'}`}>{isSelectedPhoto ? 'âœ“' : ''}</span>
                               </div>
                             )}
                             {photo.caption && (
@@ -24905,7 +24866,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         </div>
                         {subCalWeather[date] && (
                           <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                            {subCalWeather[date].icon} {subCalWeather[date].high}° / {subCalWeather[date].low}°
+                            {subCalWeather[date].icon} {subCalWeather[date].high}Â° / {subCalWeather[date].low}Â°
                           </div>
                         )}
                       </div>
@@ -24940,7 +24901,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             <div className="px-3 py-2 flex items-start justify-between gap-2">
                               <div>
                                 {photo.caption && <p className="text-sm text-gray-800 dark:text-gray-200 mb-0.5">{photo.caption}</p>}
-                                <p className="text-xs text-gray-400 dark:text-gray-500">👤 {photo.uploaded_by}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500">ðŸ‘¤ {photo.uploaded_by}</p>
                               </div>
                               {!isPhotoSelectionMode && photoDeleteMode && <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Delete mode</span>}
                             </div>
@@ -25014,7 +24975,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                               ) : null}
-                              {createdAtLabel ? ` • ${createdAtLabel}` : ''}
+                              {createdAtLabel ? ` â€¢ ${createdAtLabel}` : ''}
                             </div>
                             <div className={`mt-1 whitespace-pre-wrap break-words text-sm ${isMine ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
                               {message.text}
@@ -25112,7 +25073,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
                 <div className="mt-4">
                   <div className="mb-2 text-[11px] text-gray-500 dark:text-gray-400">
-                    Live location is limited to this trip’s member list and does not share outside the trip.
+                    Live location is limited to this tripâ€™s member list and does not share outside the trip.
                   </div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
                     Members Sharing
@@ -25131,7 +25092,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           rel="noopener noreferrer"
                           className="flex items-center justify-between text-sm px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 hover:border-emerald-300 dark:hover:border-emerald-700"
                         >
-                          <span className="text-gray-700 dark:text-gray-200 truncate">📍 {resolveHandleLikeLabel(loc.name || loc.email || loc.userId, loc.userId)}</span>
+                          <span className="text-gray-700 dark:text-gray-200 truncate">ðŸ“ {resolveHandleLikeLabel(loc.name || loc.email || loc.userId, loc.userId)}</span>
                           <span className="text-xs text-gray-400 dark:text-gray-500 ml-2 shrink-0">Open</span>
                         </a>
                       ))}
@@ -25472,7 +25433,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             />
             <div className="mt-3 text-center" onClick={e => e.stopPropagation()}>
               {lightboxPhoto.caption && <p className="text-white text-sm mb-1">{lightboxPhoto.caption}</p>}
-              <p className="text-gray-400 text-xs">👤 {lightboxPhoto.uploaded_by} · {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
+              <p className="text-gray-400 text-xs">ðŸ‘¤ {lightboxPhoto.uploaded_by} Â· {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
             </div>
           </div>
         )}
@@ -25608,7 +25569,7 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
             if (val !== (value || null)) onSelect(val);
           }, 200);
         }}
-        placeholder={placeholder || '📍 Add location (optional)'}
+        placeholder={placeholder || 'ðŸ“ Add location (optional)'}
         className={className}
       />
       {showSuggestions && suggestions.length > 0 && (
@@ -25619,7 +25580,7 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
               onMouseDown={(e) => { e.preventDefault(); handleSelect(s); }}
               className="w-full text-left px-3 py-2 text-xs hover:bg-purple-50 dark:hover:bg-purple-900/30 border-b border-gray-100 dark:border-gray-700 last:border-0"
             >
-              <span className="text-gray-400 mr-1">📍</span>
+              <span className="text-gray-400 mr-1">ðŸ“</span>
               <span className="font-medium text-gray-800 dark:text-white">{s.structured_formatting?.main_text}</span>
               {s.structured_formatting?.secondary_text && (
                 <span className="text-gray-400 ml-1">{s.structured_formatting.secondary_text}</span>
