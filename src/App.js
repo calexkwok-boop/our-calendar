@@ -22131,12 +22131,18 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                   {(() => {
                                     const eventLayer = visibleLayerCalendars.find((layer) => String(layer?.id || '') === String(event?.layerId || event?.layer_id || '')) || null;
                                     const eventLayerTheme = normalizeLayerPageTheme(eventLayer?.page_theme, eventLayer?.title_style);
-                                    const chipBg = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.82 : 0.86);
-                                    const chipBorder = mixHexColors(eventLayerTheme.accent, '#ffffff', darkMode ? 0.56 : 0.66);
-                                    const chipText = isLightHexColor(eventLayerTheme.accent) ? '#111111' : eventLayerTheme.accent;
+                                    const chipBg = darkMode
+                                      ? mixHexColors(eventLayerTheme.accent, '#111827', 0.8)
+                                      : mixHexColors(eventLayerTheme.accent, '#ffffff', 0.86);
+                                    const chipBorder = darkMode
+                                      ? 'transparent'
+                                      : mixHexColors(eventLayerTheme.accent, '#ffffff', 0.66);
+                                    const chipText = darkMode
+                                      ? mixHexColors(eventLayerTheme.accent, '#ffffff', 0.34)
+                                      : (isLightHexColor(eventLayerTheme.accent) ? '#111111' : eventLayerTheme.accent);
                                     return (
                                       <span
-                                        className="text-[10px] font-medium px-2 py-0.5 rounded-full border"
+                                        className={`text-[10px] px-2 py-0.5 rounded-full ${darkMode ? 'font-bold' : 'font-medium'} border`}
                                         style={{ backgroundColor: chipBg, borderColor: chipBorder, color: chipText }}
                                       >
                                         {eventLayer?.name || 'Calendar'}
