@@ -19902,13 +19902,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     </button>
                   );
                 })}
-                <button
-                  onClick={() => setShowControlWidgetAddPanel(true)}
-                  className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-gray-400 dark:hover:border-gray-400 transition-all"
-                  title="Add widgets"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
               </div>
             </div>
 
