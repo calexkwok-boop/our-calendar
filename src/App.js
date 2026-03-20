@@ -15593,7 +15593,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const openJourneyEntryFlow = () => {
-    deferJourneyOverlayOpen(() => setShowJourneyEntryModal(true));
+    deferJourneyOverlayOpen(() => {
+      setShowJourneyScreen(true);
+      setShowJourneyEntryModal(true);
+    });
+  };
+
+  const launchJourneyEntryFromHome = (event) => {
+    if (event?.preventDefault) event.preventDefault();
+    if (event?.stopPropagation) event.stopPropagation();
+    deferJourneyOverlayOpen(() => {
+      setShowJourneyScreen(true);
+      setShowJourneyEntryModal(true);
+    });
   };
 
   const closeJourneyLogModal = () => {
@@ -20567,10 +20579,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <div className="mt-3.5 flex items-center">
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openJourneyEntryFlow();
-                    }}
+                    onClick={launchJourneyEntryFromHome}
                     className="rounded-xl px-3 py-2 text-xs font-semibold text-white"
                     style={themeAccentButtonStyle}
                   >
