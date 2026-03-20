@@ -1,0 +1,31 @@
+// Add, remove, or reorder quotes here to control the Journey daily rotation.
+const JOURNEY_QUOTES = [
+  { text: 'Show up today.', source: 'Unknown' },
+  { text: 'Small steps compound.', source: 'Unknown' },
+  { text: 'Progress over perfection.', source: 'Unknown' },
+  { text: 'Keep the promise you made to yourself.', source: 'Unknown' },
+  { text: 'A steady pace still moves you forward.', source: 'Unknown' },
+  { text: "Life isn't about finding yourself. Life is about creating yourself.", source: 'George Bernard Shaw' },
+  { text: 'Doubt kills more dreams than failure ever will.', source: 'Suzy Kassem' },
+  { text: 'The secret of getting ahead is getting started.', source: 'Mark Twain' },
+  { text: "Don't watch the clock; do what it does. Keep going.", source: 'Sam Levenson' },
+  { text: 'It does not matter how slowly you go as long as you do not stop.', source: 'Confucius' },
+  { text: "Whether you think you can or think you can't, you're right.", source: 'Henry Ford' },
+  { text: "Nothing is impossible. The word itself says \"I'm possible!\"", source: 'Audrey Hepburn' },
+  { text: 'You do not find the happy life. You make it.', source: 'Camilla Eyring Kimball' },
+  { text: 'Happiness is not something ready made. It comes from your own actions.', source: 'Dalai Lama' },
+  { text: "The bad news is time flies. The good news is you're the pilot.", source: 'Michael Altshuler' },
+  { text: "You learn more from failure than from success. Don't let it stop you. Failure builds character.", source: 'Unknown' },
+  { text: 'The most important thing is to stop saying "I wish" and start saying "I will".', source: 'Charles Dickens (paraphrased)' },
+  { text: 'All our dreams can come true if we have the courage to pursue them.', source: 'Walt Disney' },
+  { text: 'May your choices reflect your hopes, not your fears.', source: 'Nelson Mandela' },
+  { text: 'Remember always that you have not only the right to be an individual; you have an obligation to be one.', source: 'Eleanor Roosevelt' },
+  { text: 'There are no limits to what you can accomplish, except the limits you place on your own thinking.', source: 'Brian Tracy' },
+  { text: 'Develop an attitude of gratitude. Say thank you to everyone you meet for everything you do.', source: 'Brian Tracy' },
+  { text: 'You are never too old to set another goal or to dream a new dream.', source: 'C.S. Lewis' },
+  { text: "For every reason it's not possible, there are people who have faced the same circumstances and succeeded.", source: 'Jack Canfield (paraphrased)' },
+  { text: 'If you can change your mind, you can change your life.', source: 'William James' },
+  { text: 'Life is a journey, not a destination.', source: 'Ralph Waldo Emerson' },
+];
+
+export default JOURNEY_QUOTES;

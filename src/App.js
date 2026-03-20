@@ -10,6 +10,8 @@ import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
 import PopupEventPanel from "./components/PopupEventPanel";
 import JourneyPanel from "./components/JourneyPanel";
+import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
+import JOURNEY_QUOTES from "./data/journeyQuotes";
 
 // Initialize Supabase
 const supabase = createClient(
@@ -39,15 +41,6 @@ const storage = {
     return { key, value, shared: true };
   }
 };
-
-// Journey stays self-contained so the featured home card and modal can reuse one local state shape.
-const JOURNEY_QUOTES = [
-  'Show up today.',
-  'Small steps compound.',
-  'Progress over perfection.',
-  'Keep the promise you made to yourself.',
-  'A steady pace still moves you forward.',
-];
 
 // Keep the first Journey step opinionated so users can start quickly without facing a blank form.
 const JOURNEY_GOAL_TEMPLATES = [
@@ -1116,7 +1109,6 @@ function App() {
   const [journeyNoteDraft, setJourneyNoteDraft] = useState('');
   const [showJourneyGoalCreatedPrompt, setShowJourneyGoalCreatedPrompt] = useState(false);
   const [journeyCreatedGoalId, setJourneyCreatedGoalId] = useState('');
-  const [journeyQuoteIndex, setJourneyQuoteIndex] = useState(0);
   const journeyLogPhotoInputRef = useRef(null);
   const [swipedTripId, setSwipedTripId] = useState(null);
   const [tripSwipeDrag, setTripSwipeDrag] = useState({ id: null, offset: 0 });
@@ -15612,8 +15604,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     journeyLatestEntry
     && String(journeyLatestEntry?.createdAt || '').slice(0, 10) === todayKey
   );
-  const journeyPrimaryQuoteSeed = sortedJourneyGoals.length + (journeyState?.entries?.length || 0);
-  const journeyQuote = JOURNEY_QUOTES[journeyQuoteIndex % JOURNEY_QUOTES.length];
+  const journeyToday = new Date();
+  const journeyDailyQuoteSeed = (
+    (journeyToday.getFullYear() * 10000)
+    + ((journeyToday.getMonth() + 1) * 100)
+    + journeyToday.getDate()
+  );
+  const journeyQuote = JOURNEY_QUOTES[((journeyDailyQuoteSeed % JOURNEY_QUOTES.length) + JOURNEY_QUOTES.length) % JOURNEY_QUOTES.length] || null;
   const selectedJourneyGoalTemplate = JOURNEY_GOAL_TEMPLATES.find((template) => template.id === selectedJourneyGoalTemplateId) || null;
   const canSaveJourneyGoal = Boolean(
     String(journeyGoalDraft?.title || '').trim()
@@ -15668,18 +15665,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!user?.id) return;
     writeJourneyState(user.id, journeyState);
   }, [user?.id, journeyState]);
-
-  useEffect(() => {
-    setJourneyQuoteIndex(journeyPrimaryQuoteSeed % JOURNEY_QUOTES.length);
-  }, [journeyPrimaryQuoteSeed]);
-
-  useEffect(() => {
-    if (JOURNEY_QUOTES.length <= 1) return undefined;
-    const quoteInterval = window.setInterval(() => {
-      setJourneyQuoteIndex((prev) => (prev + 1) % JOURNEY_QUOTES.length);
-    }, 7000);
-    return () => window.clearInterval(quoteInterval);
-  }, []);
 
   const openJourneyScreen = () => {
     deferJourneyOverlayOpen(() => setShowJourneyScreen(true));
@@ -25517,7 +25502,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
-                    <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{journeyQuote}</div>
+                    <JourneyQuoteDisplay
+                      quote={journeyQuote}
+                      darkMode={darkMode}
+                      className="mt-2 max-w-[24rem]"
+                    />
                     <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                       {primaryJourneyGoal ? 'Your personal progress layer.' : 'Start with one goal and keep it visible.'}
                     </div>
@@ -25986,7 +25975,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
-                <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{journeyQuote}</div>
+                <JourneyQuoteDisplay
+                  quote={journeyQuote}
+                  darkMode={darkMode}
+                  className="mt-2 max-w-[24rem]"
+                />
                 <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   {primaryJourneyGoal ? 'Your personal progress layer.' : 'Start with one goal and keep it visible.'}
                 </div>
