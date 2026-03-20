@@ -15662,8 +15662,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user?.id) return;
-    writeJourneyState(user.id, journeyState);
+    writeJourneyState(user?.id, journeyState);
   }, [user?.id, journeyState]);
 
   const openJourneyScreen = () => {
