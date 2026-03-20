@@ -1925,7 +1925,7 @@ function App() {
           const ownerId = String(row?.owner_id || '').trim();
 
           if (sharedIdentity) {
-            addMember(sharedIdentity, { status: 'accepted', source: 'layer_share', removable: false });
+            addMember(sharedIdentity, { status: 'accepted', source: 'layer_share', removable: true });
           }
 
           // If this row is "owner shared to me", also include the owner label/email.
@@ -1946,7 +1946,7 @@ function App() {
           .limit(500);
         (layerEventRows || []).forEach((row) => {
           const createdBy = String(row?.created_by || '').trim();
-          if (createdBy) addMember(createdBy, { status: 'accepted', source: 'layer_events', removable: false });
+          if (createdBy) addMember(createdBy, { status: 'accepted', source: 'layer_events', removable: true });
           const ownerLabel = String(sharedOwnerLabels?.[String(row?.user_id || '')] || '').trim();
           if (ownerLabel) addMember(ownerLabel, { status: 'accepted', source: 'layer_events_owner', removable: false });
         });
@@ -1960,7 +1960,7 @@ function App() {
         .limit(500);
       (subCalEventRows || []).forEach((row) => {
         const createdBy = String(row?.created_by || '').trim();
-        if (createdBy) addMember(createdBy, { status: 'accepted', source: 'trip_events', removable: false });
+        if (createdBy) addMember(createdBy, { status: 'accepted', source: 'trip_events', removable: true });
       });
 
       setSubCalMembers(Array.from(merged.values()));
@@ -2511,6 +2511,19 @@ function App() {
     const recipientFilter = buildMemberRecipientFilter(recipient.email, recipient.phone);
     if (recipientFilter) deleteQuery = deleteQuery.or(recipientFilter);
     await deleteQuery;
+    if (activeSubCalendar?.layer_id) {
+      try {
+        let shareDeleteQuery = supabase
+          .from('shared_access')
+          .delete()
+          .eq('layer_id', activeSubCalendar.layer_id);
+        const shareRecipientFilter = buildShareRecipientFilter('', recipient.email, recipient.phone);
+        if (shareRecipientFilter) shareDeleteQuery = shareDeleteQuery.or(shareRecipientFilter);
+        await shareDeleteQuery;
+      } catch (error) {
+        console.error('Trip member shared_access removal failed:', error);
+      }
+    }
     setSubCalMembers(prev => prev.filter(m => m.identity !== recipient.value));
   };
 
