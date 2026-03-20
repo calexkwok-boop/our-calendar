@@ -615,6 +615,7 @@ export default function PopupEventPanel({
   const [manualAddBusy, setManualAddBusy] = useState(false);
   const [manualAddError, setManualAddError] = useState('');
   const [rosterActionError, setRosterActionError] = useState('');
+  const [memberRoleOverrides, setMemberRoleOverrides] = useState({});
   const [editingCapacity, setEditingCapacity] = useState(false);
   const [capacityDraft, setCapacityDraft] = useState('10');
   const [capacityBusy, setCapacityBusy] = useState(false);
@@ -635,6 +636,18 @@ export default function PopupEventPanel({
   useEffect(() => {
     setCapacityDraft(String(Math.max(1, Number(event?.max_players || 10))));
   }, [event?.max_players]);
+
+  useEffect(() => {
+    if (!event?.id) return;
+    setMemberRoleOverrides((prev) => {
+      const next = {};
+      const prefix = `${String(event.id)}:`;
+      Object.entries(prev || {}).forEach(([key, value]) => {
+        if (String(key || '').startsWith(prefix)) next[key] = value;
+      });
+      return next;
+    });
+  }, [event?.id]);
 
   const loadEvent = useCallback(async (id) => {
     if (!id || !supabase) return;
@@ -687,10 +700,15 @@ export default function PopupEventPanel({
           joined_at: s.created_at,
         });
       });
-      setMembers(memberList);
+      const nextMembers = memberList.map((entry) => {
+        const overrideKey = `${String(id || '')}:${String(entry?.user_id || '')}`;
+        const overrideRole = String(memberRoleOverrides?.[overrideKey] || '').trim();
+        return overrideRole ? { ...entry, role: overrideRole } : entry;
+      });
+      setMembers(nextMembers);
     } catch {}
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, memberRoleOverrides]);
 
   useEffect(() => { if (initialEventId) loadEvent(initialEventId); }, [initialEventId, loadEvent]);
 
@@ -784,6 +802,10 @@ export default function PopupEventPanel({
         ? { ...item, role: 'cohost' }
         : item
     )));
+    setMemberRoleOverrides((prev) => ({
+      ...(prev || {}),
+      [`${String(event?.id || '')}:${memberUserId}`]: 'cohost',
+    }));
     await loadEvent(event.id);
   };
   const handleDemote = async (member) => {
@@ -797,6 +819,10 @@ export default function PopupEventPanel({
       .update({ role: 'player' })
       .eq('event_id', event.id)
       .eq('user_id', memberUserId);
+    setMemberRoleOverrides((prev) => ({
+      ...(prev || {}),
+      [`${String(event?.id || '')}:${memberUserId}`]: 'player',
+    }));
     await loadEvent(event.id);
   };
   const handleAddManualPlayer = async () => {
