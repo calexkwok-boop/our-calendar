@@ -25646,8 +25646,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </div>
                 ) : (
                   <div className="rounded-[28px] border border-dashed border-gray-200 dark:border-white/10 p-5">
-                    <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Start with one goal</div>
-                    <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Pick something to work toward. Small progress adds up over time.</div>
+                    <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">What are you working towards?</div>
                     <div className="mt-4 grid grid-cols-1 gap-2.5">
                       {JOURNEY_GOAL_TEMPLATES.map((template) => (
                         <button
@@ -26151,8 +26150,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             ) : (
               <div className="rounded-[28px] border border-dashed border-gray-200 dark:border-white/10 p-5">
-                <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Start with one goal</div>
-                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Pick something to work toward. Small progress adds up over time.</div>
+                <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">What are you working towards?</div>
                 <div className="mt-4 grid grid-cols-1 gap-2.5">
                   {JOURNEY_GOAL_TEMPLATES.map((template) => (
                     <button
