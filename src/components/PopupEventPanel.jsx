@@ -614,6 +614,7 @@ export default function PopupEventPanel({
   const [manualPlayerName, setManualPlayerName] = useState('');
   const [manualAddBusy, setManualAddBusy] = useState(false);
   const [manualAddError, setManualAddError] = useState('');
+  const [rosterActionError, setRosterActionError] = useState('');
   const [editingCapacity, setEditingCapacity] = useState(false);
   const [capacityDraft, setCapacityDraft] = useState('10');
   const [capacityBusy, setCapacityBusy] = useState(false);
@@ -715,36 +716,64 @@ export default function PopupEventPanel({
     if (isUuid(existingId)) return existingId;
     const memberUserId = String(member?.user_id || '').trim();
     if (!memberUserId) return '';
-    const { data: existingRow } = await supabase
+    const { data: existingRows, error: existingError } = await supabase
       .from('popup_event_members')
       .select('id')
       .eq('event_id', event.id)
-      .eq('user_id', memberUserId)
-      .maybeSingle();
+      .eq('user_id', memberUserId);
+    if (existingError) {
+      console.error('Could not look up popup member record:', existingError);
+      return '';
+    }
+    const existingRow = Array.isArray(existingRows) ? existingRows[0] : existingRows;
     if (existingRow?.id) return String(existingRow.id);
-    const { data: insertedRow, error } = await supabase
+
+    const { error: upsertError } = await supabase
       .from('popup_event_members')
-      .insert({
+      .upsert({
         event_id: event.id,
         user_id: memberUserId,
         display_name: String(member?.display_name || 'Player').trim() || 'Player',
         role: fallbackRole,
-      })
-      .select('id')
-      .maybeSingle();
-    if (error) {
-      console.error('Could not create popup member record:', error);
+      }, { onConflict: 'event_id,user_id' });
+    if (upsertError) {
+      console.error('Could not create popup member record:', upsertError);
       return '';
     }
+
+    const { data: insertedRows, error: refetchError } = await supabase
+      .from('popup_event_members')
+      .select('id')
+      .eq('event_id', event.id)
+      .eq('user_id', memberUserId);
+    if (refetchError) {
+      console.error('Could not refetch popup member record:', refetchError);
+      return '';
+    }
+    const insertedRow = Array.isArray(insertedRows) ? insertedRows[0] : insertedRows;
     return String(insertedRow?.id || '');
   };
   const handleLeave = async () => { if (!myMember || isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', myMember.id); await loadEvent(event.id); };
   const handleKick = async (member) => { if (!isHostOrCohost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', member.id); await loadEvent(event.id); };
   const handlePromote = async (member) => {
     if (!isHost || !isUuid(event?.id)) return;
+    setRosterActionError('');
     const memberId = await ensurePopupMemberRecord(member, 'cohost');
-    if (!memberId) return;
-    await supabase.from('popup_event_members').update({ role: 'cohost' }).eq('id', memberId);
+    if (!memberId) {
+      setRosterActionError('Could not promote this player to co-host.');
+      return;
+    }
+    const { error } = await supabase.from('popup_event_members').update({ role: 'cohost' }).eq('id', memberId);
+    if (error) {
+      console.error('Could not promote popup member:', error);
+      setRosterActionError(error.message || 'Could not promote this player to co-host.');
+      return;
+    }
+    setMembers((prev) => prev.map((item) => (
+      String(item?.user_id || '') === String(member?.user_id || '')
+        ? { ...item, id: isUuid(String(item?.id || '')) ? item.id : memberId, role: 'cohost' }
+        : item
+    )));
     await loadEvent(event.id);
   };
   const handleDemote = async (member) => { if (!isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').update({ role: 'player' }).eq('id', member.id); await loadEvent(event.id); };
@@ -1051,6 +1080,7 @@ export default function PopupEventPanel({
                       />
                     </div>
                     {manualAddError && <div style={{ fontSize: 12, color: '#ef4444' }}>{manualAddError}</div>}
+                    {rosterActionError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 6 }}>{rosterActionError}</div>}
                   </div>
                 </div>
               )}
