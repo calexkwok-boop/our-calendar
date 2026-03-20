@@ -923,7 +923,14 @@ export default function PopupEventPanel({
   if (!event) return null;
 
   const memberCount = members.length;
+  const sortedMembers = [...members].sort((a, b) => {
+    const rank = (role) => (role === 'host' ? 0 : role === 'cohost' ? 1 : 2);
+    const rankDelta = rank(a?.role) - rank(b?.role);
+    if (rankDelta !== 0) return rankDelta;
+    return String(a?.display_name || '').localeCompare(String(b?.display_name || ''));
+  });
   const hostMember = members.find((m) => m.role === 'host');
+  const cohostMembers = sortedMembers.filter((m) => m.role === 'cohost');
   const isLegacyInvalidEvent = !isUuid(event.id);
 
   // ── TABS ───────────────────────────────────────────────────────────────────
@@ -1006,9 +1013,20 @@ export default function PopupEventPanel({
             </div>
           )}
           {hostMember && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 14, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)' }}>
-              <Crown style={{ width: 14, height: 14, color: '#f59e0b' }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#d97706' }}>Hosted by {hostMember.display_name}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 14px', borderRadius: 14, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Crown style={{ width: 14, height: 14, color: '#f59e0b' }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#d97706' }}>{hostMember.display_name}</span>
+              </div>
+              {cohostMembers.map((member) => (
+                <div
+                  key={`cohost-summary-${member.id || member.user_id}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 999, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.24)' }}
+                >
+                  <Shield style={{ width: 12, height: 12, color: '#8b5cf6' }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed' }}>{member.display_name}</span>
+                </div>
+              ))}
             </div>
           )}
           {isHost && !isLegacyInvalidEvent && (
@@ -1102,7 +1120,7 @@ export default function PopupEventPanel({
             </div>
             <div style={{ fontSize: 10, fontWeight: 700, color: isFull ? '#f59e0b' : secondaryText }}>{isFull ? 'Full' : `${event.max_players - memberCount} spots left`}</div>
           </div>
-          {members.map((m) => (
+          {sortedMembers.map((m) => (
             <React.Fragment key={m.id || m.user_id}>
               <RosterRow member={m} isMe={m.id === myMember?.id}
                 isHost={isHostOrCohost} accent={accent} darkMode={darkMode}
