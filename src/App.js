@@ -23061,13 +23061,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-medium">{memberLabel}</div>
-                        {isRemovable ? (
-                          <div className="text-[10px] uppercase tracking-[0.14em] text-red-500 dark:text-red-300">
-                            Remove
-                          </div>
-                        ) : m.status ? (
+                        {m.status && !isRemovable ? (
                           <div className="text-[10px] uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
-                            {String(m.status).toLowerCase() === 'accepted' ? 'Remove' : String(m.status)}
+                            {String(m.status)}
                           </div>
                         ) : null}
                       </div>
@@ -23075,6 +23071,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         <button
                           onClick={() => removeMemberFromSubCal(memberIdentity)}
                           className="ml-auto shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
+                          type="button"
                         >
                           Remove
                         </button>
