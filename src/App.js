@@ -23061,11 +23061,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-medium">{memberLabel}</div>
-                        {m.status && (
+                        {isRemovable ? (
+                          <div className="text-[10px] uppercase tracking-[0.14em] text-red-500 dark:text-red-300">
+                            Remove
+                          </div>
+                        ) : m.status ? (
                           <div className="text-[10px] uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
                             {String(m.status)}
                           </div>
-                        )}
+                        ) : null}
                       </div>
                       {isRemovable && (
                         <button
