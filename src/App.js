@@ -1116,6 +1116,7 @@ function App() {
   const [journeyNoteDraft, setJourneyNoteDraft] = useState('');
   const [showJourneyGoalCreatedPrompt, setShowJourneyGoalCreatedPrompt] = useState(false);
   const [journeyCreatedGoalId, setJourneyCreatedGoalId] = useState('');
+  const [journeyQuoteIndex, setJourneyQuoteIndex] = useState(0);
   const journeyLogPhotoInputRef = useRef(null);
   const [swipedTripId, setSwipedTripId] = useState(null);
   const [tripSwipeDrag, setTripSwipeDrag] = useState({ id: null, offset: 0 });
@@ -15612,7 +15613,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     && String(journeyLatestEntry?.createdAt || '').slice(0, 10) === todayKey
   );
   const journeyPrimaryQuoteSeed = sortedJourneyGoals.length + (journeyState?.entries?.length || 0);
-  const journeyQuote = JOURNEY_QUOTES[journeyPrimaryQuoteSeed % JOURNEY_QUOTES.length];
+  const journeyQuote = JOURNEY_QUOTES[journeyQuoteIndex % JOURNEY_QUOTES.length];
   const selectedJourneyGoalTemplate = JOURNEY_GOAL_TEMPLATES.find((template) => template.id === selectedJourneyGoalTemplateId) || null;
   const canSaveJourneyGoal = Boolean(
     String(journeyGoalDraft?.title || '').trim()
@@ -15667,6 +15668,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!user?.id) return;
     writeJourneyState(user.id, journeyState);
   }, [user?.id, journeyState]);
+
+  useEffect(() => {
+    setJourneyQuoteIndex(journeyPrimaryQuoteSeed % JOURNEY_QUOTES.length);
+  }, [journeyPrimaryQuoteSeed]);
+
+  useEffect(() => {
+    if (JOURNEY_QUOTES.length <= 1) return undefined;
+    const quoteInterval = window.setInterval(() => {
+      setJourneyQuoteIndex((prev) => (prev + 1) % JOURNEY_QUOTES.length);
+    }, 7000);
+    return () => window.clearInterval(quoteInterval);
+  }, []);
 
   const openJourneyScreen = () => {
     deferJourneyOverlayOpen(() => setShowJourneyScreen(true));
