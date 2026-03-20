@@ -1109,6 +1109,8 @@ function App() {
   const [journeyNoteDraft, setJourneyNoteDraft] = useState('');
   const [showJourneyGoalCreatedPrompt, setShowJourneyGoalCreatedPrompt] = useState(false);
   const [journeyCreatedGoalId, setJourneyCreatedGoalId] = useState('');
+  const [showJourneyDeleteGoalPrompt, setShowJourneyDeleteGoalPrompt] = useState(false);
+  const [journeyGoalPendingDeleteId, setJourneyGoalPendingDeleteId] = useState('');
   const journeyLogPhotoInputRef = useRef(null);
   const [swipedTripId, setSwipedTripId] = useState(null);
   const [tripSwipeDrag, setTripSwipeDrag] = useState({ id: null, offset: 0 });
@@ -15633,6 +15635,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   })();
   const selectedJourneyLogGoal = journeyGoalById[String(journeyLogDraft?.goalId || '')] || primaryJourneyGoal || null;
   const createdJourneyGoal = journeyGoalById[String(journeyCreatedGoalId || '')] || null;
+  const pendingDeleteJourneyGoal = journeyGoalById[String(journeyGoalPendingDeleteId || '')] || null;
   const journeyQuickPrompt = (() => {
     if (!primaryJourneyGoal) {
       return 'Start with one clear goal and keep your momentum visible.';
@@ -15665,6 +15668,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     writeJourneyState(user?.id, journeyState);
   }, [user?.id, journeyState]);
 
+  useEffect(() => {
+    const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal;
+    if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal]);
+
   const openJourneyScreen = () => {
     deferJourneyOverlayOpen(() => setShowJourneyScreen(true));
   };
@@ -15696,6 +15709,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const closeJourneyGoalCreatedPrompt = () => {
     setShowJourneyGoalCreatedPrompt(false);
     setJourneyCreatedGoalId('');
+  };
+
+  const closeJourneyDeleteGoalPrompt = () => {
+    setShowJourneyDeleteGoalPrompt(false);
+    setJourneyGoalPendingDeleteId('');
   };
 
   const openJourneyGoalFlow = (template = null) => {
@@ -15834,15 +15852,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }));
   };
 
-  const deleteJourneyGoal = (goalId) => {
+  const performJourneyGoalDeletion = (goalId) => {
     const normalizedGoalId = String(goalId || '').trim();
     if (!normalizedGoalId) return;
     const targetGoal = journeyGoalById[normalizedGoalId] || null;
     if (!targetGoal) return;
-    const confirmed = typeof window === 'undefined'
-      ? true
-      : window.confirm(`Delete "${targetGoal.title}"? This removes the goal and its Journey updates.`);
-    if (!confirmed) return;
 
     setJourneyState((prev) => {
       const remainingGoals = (prev?.goals || []).filter((goal) => String(goal?.id || '') !== normalizedGoalId);
@@ -15868,6 +15882,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     if (String(journeyLogDraft?.goalId || '') === normalizedGoalId) closeJourneyLogModal();
     if (String(journeyCreatedGoalId || '') === normalizedGoalId) closeJourneyGoalCreatedPrompt();
+    closeJourneyDeleteGoalPrompt();
+  };
+
+  const deleteJourneyGoal = (goalId) => {
+    const normalizedGoalId = String(goalId || '').trim();
+    if (!normalizedGoalId) return;
+    if (!journeyGoalById[normalizedGoalId]) return;
+    setJourneyGoalPendingDeleteId(normalizedGoalId);
+    setShowJourneyDeleteGoalPrompt(true);
   };
 
   useEffect(() => {
@@ -25504,11 +25527,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyScreen && (
           <div
-            className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+            className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-4"
             onClick={() => setShowJourneyScreen(false)}
           >
             <div
-              className="w-full sm:w-[34rem] max-h-[88vh] overflow-y-auto rounded-t-[32px] sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
+              className="w-full sm:w-[34rem] max-h-[calc(100vh-1.5rem-env(safe-area-inset-top))] overflow-y-auto rounded-t-[32px] sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div
@@ -25823,6 +25846,38 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
+        {showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && (
+          <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyDeleteGoalPrompt}>
+            <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete goal?</div>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">This removes the goal and any Journey updates attached to it.</div>
+              <div className="mt-4 rounded-2xl border border-rose-200/70 dark:border-rose-400/20 bg-rose-50/80 dark:bg-rose-500/10 px-4 py-3">
+                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{pendingDeleteJourneyGoal.title}</div>
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {formatJourneyProgressText(pendingDeleteJourneyGoal)}{pendingDeleteJourneyGoal?.timeframe ? ` | ${pendingDeleteJourneyGoal.timeframe}` : ''}
+                </div>
+              </div>
+              <div className="mt-5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={closeJourneyDeleteGoalPrompt}
+                  className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"
+                >
+                  Keep goal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => performJourneyGoalDeletion(pendingDeleteJourneyGoal.id)}
+                  className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white"
+                  style={{ background: darkMode ? 'linear-gradient(135deg, #fb7185 0%, #e11d48 100%)' : 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)' }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showJourneyLogModal && (
           <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyLogModal}>
             <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -25977,11 +26032,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )}
     {!activeSubCalendar && showJourneyScreen && (
       <div
-        className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+        className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-4"
         onClick={() => setShowJourneyScreen(false)}
       >
         <div
-          className="w-full sm:w-[34rem] max-h-[88vh] overflow-y-auto rounded-t-[32px] sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
+          className="w-full sm:w-[34rem] max-h-[calc(100vh-1.5rem-env(safe-area-inset-top))] overflow-y-auto rounded-t-[32px] sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div
@@ -26290,6 +26345,38 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"
             >
               Later
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {!activeSubCalendar && showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && (
+      <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyDeleteGoalPrompt}>
+        <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete goal?</div>
+          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">This removes the goal and any Journey updates attached to it.</div>
+          <div className="mt-4 rounded-2xl border border-rose-200/70 dark:border-rose-400/20 bg-rose-50/80 dark:bg-rose-500/10 px-4 py-3">
+            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{pendingDeleteJourneyGoal.title}</div>
+            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {formatJourneyProgressText(pendingDeleteJourneyGoal)}{pendingDeleteJourneyGoal?.timeframe ? ` | ${pendingDeleteJourneyGoal.timeframe}` : ''}
+            </div>
+          </div>
+          <div className="mt-5 flex gap-2">
+            <button
+              type="button"
+              onClick={closeJourneyDeleteGoalPrompt}
+              className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"
+            >
+              Keep goal
+            </button>
+            <button
+              type="button"
+              onClick={() => performJourneyGoalDeletion(pendingDeleteJourneyGoal.id)}
+              className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white"
+              style={{ background: darkMode ? 'linear-gradient(135deg, #fb7185 0%, #e11d48 100%)' : 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)' }}
+            >
+              Delete
             </button>
           </div>
         </div>
