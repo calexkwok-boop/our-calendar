@@ -15623,10 +15623,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const openJourneyEntryFlow = () => {
-    deferJourneyOverlayOpen(() => {
-      setShowJourneyScreen(true);
-      setShowJourneyEntryModal(true);
-    });
+    setShowJourneyScreen(true);
+    setShowJourneyEntryModal(true);
   };
 
   const closeJourneyLogModal = () => {
