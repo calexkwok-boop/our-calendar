@@ -44,12 +44,12 @@ const storage = {
 
 // Keep the first Journey step opinionated so users can start quickly without facing a blank form.
 const JOURNEY_GOAL_TEMPLATES = [
-  { id: 'run', label: 'Run / walk', title: 'Run 50 miles', target: '50', unit: 'miles', timeframe: 'This month', hint: 'Build consistency one outing at a time.' },
-  { id: 'workout', label: 'Work out', title: 'Work out 12 times', target: '12', unit: 'workouts', timeframe: 'This month', hint: 'Keep the bar low and the momentum high.' },
-  { id: 'lose-weight', label: 'Lose weight', title: 'Lose 5 pounds', target: '5', unit: 'Pounds', timeframe: 'this month', hint: 'Keep it steady and celebrate each small shift.' },
-  { id: 'save', label: 'Save money', title: 'Save $500', target: '500', unit: 'dollars', timeframe: 'This quarter', hint: 'Track one small win at a time.' },
-  { id: 'journal', label: 'Journal', title: 'Journal 10 days', target: '10', unit: 'days', timeframe: 'This month', hint: 'Capture the days you showed up.' },
-  { id: 'custom', label: 'Custom goal', title: '', target: '', unit: '', timeframe: '', hint: 'Start with your own measurable target.' },
+  { id: 'run', label: 'Run / walk', emoji: '🏃', title: 'Run 50 miles', target: '50', unit: 'miles', timeframe: 'This month', hint: 'Build consistency one outing at a time.' },
+  { id: 'workout', label: 'Work out', emoji: '💪', title: 'Work out 12 times', target: '12', unit: 'workouts', timeframe: 'This month', hint: 'Keep the bar low and the momentum high.' },
+  { id: 'lose-weight', label: 'Lose weight', emoji: '⚖️', title: 'Lose 5 pounds', target: '5', unit: 'Pounds', timeframe: 'this month', hint: 'Keep it steady and celebrate each small shift.' },
+  { id: 'save', label: 'Save money', emoji: '💰', title: 'Save $500', target: '500', unit: 'dollars', timeframe: 'This quarter', hint: 'Track one small win at a time.' },
+  { id: 'journal', label: 'Journal', emoji: '📓', title: 'Journal 10 days', target: '10', unit: 'days', timeframe: 'This month', hint: 'Capture the days you showed up.' },
+  { id: 'custom', label: 'Custom goal', emoji: '✨', title: '', target: '', unit: '', timeframe: '', hint: 'Start with your own measurable target.' },
 ];
 
 const createJourneyGoalDraft = (overrides = {}, pinned = true) => ({
@@ -172,6 +172,20 @@ const formatJourneyProgressText = (goal) => {
   };
   if (!target && !unit) return formatValue(current);
   return `${formatValue(current)} / ${formatValue(target)}${unit ? ` ${unit}` : ''}`;
+};
+
+const formatJourneyTemplateLabel = (template) => `${template?.emoji ? `${template.emoji} ` : ''}${template?.label || ''}`.trim();
+
+const getJourneyGoalEmoji = (goal) => {
+  const title = String(goal?.title || '').toLowerCase();
+  const unit = String(goal?.unit || '').toLowerCase();
+  const combined = `${title} ${unit}`;
+  if (/(run|walk|mile)/.test(combined)) return '🏃';
+  if (/(work ?out|gym|exercise|fitness|workouts?)/.test(combined)) return '💪';
+  if (/(lose weight|pound|lbs?|kg|kilogram)/.test(combined)) return '⚖️';
+  if (/(save|\$|dollar|money|budget)/.test(combined)) return '💰';
+  if (/(journal|write|writing|diary)/.test(combined)) return '📓';
+  return '✨';
 };
 
 const generateUuid = () => uuidv4();
@@ -25581,7 +25595,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <div className="rounded-[28px] border border-white/10 bg-gray-50/90 dark:bg-white/[0.04] p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{primaryJourneyGoal.title}</div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{getJourneyGoalEmoji(primaryJourneyGoal)} {primaryJourneyGoal.title}</div>
                         <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{journeySupportLabel}</div>
                       </div>
                       {primaryJourneyGoal?.pinned ? (
@@ -25663,7 +25677,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div>
-                              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{template.label}</div>
+                              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatJourneyTemplateLabel(template)}</div>
                               <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{template.id === 'custom' ? 'Start from scratch with your own target.' : template.title}</div>
                             </div>
                             <div className="shrink-0 text-[11px] font-semibold" style={themeAccentTextStyle}>
@@ -25687,7 +25701,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         <div key={goal.id} className="rounded-2xl border border-white/10 bg-white/80 dark:bg-white/[0.03] px-3 py-3">
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">
-                              <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{goal.title}</div>
+                              <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{getJourneyGoalEmoji(goal)} {goal.title}</div>
                               <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{formatJourneyProgressText(goal)}</div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -25767,7 +25781,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         : (darkMode ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.09)} 0%, rgba(15,23,42,0.82) 100%)` : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)`),
                     }}
                   >
-                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{template.label}</div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatJourneyTemplateLabel(template)}</div>
                     <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{template.hint}</div>
                   </button>
                 ))}
@@ -25795,7 +25809,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               {selectedJourneyGoalTemplate ? (
                 <div className="mt-4 rounded-2xl border px-4 py-3" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16), backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.06) }}>
                   <div className="text-xs uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Starting point</div>
-                  <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate.label}</div>
+                  <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{formatJourneyTemplateLabel(selectedJourneyGoalTemplate)}</div>
                 </div>
               ) : null}
               <div className="mt-4 space-y-3">
@@ -25919,7 +25933,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     style={{ fontSize: '16px' }}
                   >
                     {sortedJourneyGoals.filter((goal) => goal?.active !== false).map((goal) => (
-                      <option key={goal.id} value={goal.id}>{goal.title}</option>
+                      <option key={goal.id} value={goal.id}>{getJourneyGoalEmoji(goal)} {goal.title}</option>
                     ))}
                   </select>
                 )}
@@ -26088,7 +26102,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <div className="rounded-[28px] border border-white/10 bg-gray-50/90 dark:bg-white/[0.04] p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{primaryJourneyGoal.title}</div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{getJourneyGoalEmoji(primaryJourneyGoal)} {primaryJourneyGoal.title}</div>
                     <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{journeySupportLabel}</div>
                   </div>
                   {primaryJourneyGoal?.pinned ? (
@@ -26170,7 +26184,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{template.label}</div>
+                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatJourneyTemplateLabel(template)}</div>
                           <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{template.id === 'custom' ? 'Start from scratch with your own target.' : template.title}</div>
                         </div>
                         <div className="shrink-0 text-[11px] font-semibold" style={themeAccentTextStyle}>
@@ -26194,7 +26208,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <div key={goal.id} className="rounded-2xl border border-white/10 bg-white/80 dark:bg-white/[0.03] px-3 py-3">
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{goal.title}</div>
+                          <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{getJourneyGoalEmoji(goal)} {goal.title}</div>
                           <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{formatJourneyProgressText(goal)}</div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -26274,7 +26288,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     : (darkMode ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.09)} 0%, rgba(15,23,42,0.82) 100%)` : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)`),
                 }}
               >
-                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{template.label}</div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatJourneyTemplateLabel(template)}</div>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{template.hint}</div>
               </button>
             ))}
@@ -26302,7 +26316,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           {selectedJourneyGoalTemplate ? (
             <div className="mt-4 rounded-2xl border px-4 py-3" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16), backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.06) }}>
               <div className="text-xs uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Starting point</div>
-              <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate.label}</div>
+              <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{formatJourneyTemplateLabel(selectedJourneyGoalTemplate)}</div>
             </div>
           ) : null}
           <div className="mt-4 space-y-3">
@@ -26426,7 +26440,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 style={{ fontSize: '16px' }}
               >
                 {sortedJourneyGoals.filter((goal) => goal?.active !== false).map((goal) => (
-                  <option key={goal.id} value={goal.id}>{goal.title}</option>
+                  <option key={goal.id} value={goal.id}>{getJourneyGoalEmoji(goal)} {goal.title}</option>
                 ))}
               </select>
             )}
