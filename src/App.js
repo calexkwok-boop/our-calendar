@@ -25617,45 +25617,52 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         }}
                       />
                     </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button type="button" onClick={() => openJourneyLogFlow(primaryJourneyGoal)} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
-                        Log today
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openJourneyGoalFlow()}
-                        className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
-                        style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
-                      >
-                        Add another goal
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openJourneyLogFlow(primaryJourneyGoal)}
-                        className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
-                        style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
-                      >
-                        Add photo
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setJourneyNoteDraft('');
-                          setShowJourneyNoteModal(true);
-                        }}
-                        className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
-                        style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
-                      >
-                        Add note
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteJourneyGoal(primaryJourneyGoal.id)}
-                        className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-rose-600 dark:text-rose-300"
-                        style={{ borderColor: darkMode ? 'rgba(251,113,133,0.24)' : 'rgba(244,63,94,0.2)' }}
-                      >
-                        Delete goal
-                      </button>
+                    <div className="mt-4 space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => openJourneyLogFlow(primaryJourneyGoal)} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
+                          {primaryJourneyLoggedToday ? 'Add update' : 'Log today'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openJourneyGoalFlow()}
+                          className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
+                          style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
+                        >
+                          <span className="inline-flex items-center gap-2">
+                            <Plus size={14} />
+                            Add goal
+                          </span>
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                        <button
+                          type="button"
+                          onClick={() => openJourneyLogFlow(primaryJourneyGoal)}
+                          className="inline-flex items-center gap-1.5 text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          <Camera size={14} />
+                          Photo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setJourneyNoteDraft('');
+                            setShowJourneyNoteModal(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          <MessageSquare size={14} />
+                          Note
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteJourneyGoal(primaryJourneyGoal.id)}
+                          className="inline-flex items-center gap-1.5 text-rose-500 transition hover:text-rose-600 dark:text-rose-300 dark:hover:text-rose-200"
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -26124,45 +26131,52 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     }}
                   />
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => openJourneyLogFlow(primaryJourneyGoal)} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
-                    Log today
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openJourneyGoalFlow()}
-                    className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
-                    style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
-                  >
-                    Add another goal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openJourneyLogFlow(primaryJourneyGoal)}
-                    className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
-                    style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
-                  >
-                    Add photo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setJourneyNoteDraft('');
-                      setShowJourneyNoteModal(true);
-                    }}
-                    className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
-                    style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
-                  >
-                    Add note
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteJourneyGoal(primaryJourneyGoal.id)}
-                    className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-rose-600 dark:text-rose-300"
-                    style={{ borderColor: darkMode ? 'rgba(251,113,133,0.24)' : 'rgba(244,63,94,0.2)' }}
-                  >
-                    Delete goal
-                  </button>
+                <div className="mt-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => openJourneyLogFlow(primaryJourneyGoal)} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
+                      {primaryJourneyLoggedToday ? 'Add update' : 'Log today'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openJourneyGoalFlow()}
+                      className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
+                      style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <Plus size={14} />
+                        Add goal
+                      </span>
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => openJourneyLogFlow(primaryJourneyGoal)}
+                      className="inline-flex items-center gap-1.5 text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      <Camera size={14} />
+                      Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setJourneyNoteDraft('');
+                        setShowJourneyNoteModal(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      <MessageSquare size={14} />
+                      Note
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteJourneyGoal(primaryJourneyGoal.id)}
+                      className="inline-flex items-center gap-1.5 text-rose-500 transition hover:text-rose-600 dark:text-rose-300 dark:hover:text-rose-200"
+                    >
+                      <Trash2 size={14} />
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
