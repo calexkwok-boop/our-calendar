@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { X, Trophy, RotateCcw, CheckCircle, ChevronDown, ChevronUp, Users } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -62,7 +62,10 @@ const deriveStandings = (participants, rounds) => {
       });
     });
   });
-  return Object.values(stats).sort((a, b) => {
+  return Object.values(stats).map((row) => ({
+    ...row,
+    participant: (Array.isArray(participants) ? participants : []).find((p) => String(p?.id || '') === String(row.id || '')) || null,
+  })).sort((a, b) => {
     if (b.wins !== a.wins) return b.wins - a.wins;
     const diff = (b.pointsFor - b.pointsAgainst) - (a.pointsFor - a.pointsAgainst);
     return diff !== 0 ? diff : b.pointsFor - a.pointsFor;
@@ -89,6 +92,73 @@ const CourtDot = ({ accent }) => (
     <line x1="15" y1="1" x2="15" y2="11" stroke={accent} strokeWidth="0.5" strokeDasharray="1.5 1"/>
   </svg>
 );
+
+const getParticipantPhotoUrl = (participant) => String(
+  participant?.photoUrl
+  || participant?.photo_url
+  || participant?.avatarUrl
+  || participant?.avatar_url
+  || ''
+).trim();
+
+const CelebrationConfetti = ({ accent }) => {
+  const pieces = Array.from({ length: 18 }, (_, idx) => ({
+    id: idx,
+    left: `${4 + ((idx * 11) % 92)}%`,
+    delay: `${(idx % 6) * 0.12}s`,
+    duration: `${3 + (idx % 4) * 0.35}s`,
+    background: idx % 3 === 0 ? accent : idx % 3 === 1 ? '#f59e0b' : '#fb7185',
+    rotate: `${(idx % 2 === 0 ? 1 : -1) * (16 + idx * 5)}deg`,
+  }));
+  return (
+    <>
+      <style>{`
+        @keyframes rr-confetti-fall {
+          0% { transform: translate3d(0,-18px,0) rotate(0deg); opacity: 0; }
+          10% { opacity: 1; }
+          100% { transform: translate3d(0,150px,0) rotate(220deg); opacity: 0; }
+        }
+        @keyframes rr-podium-pop {
+          0% { transform: translateY(12px) scale(0.96); opacity: 0; }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+      `}</style>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        {pieces.map((piece) => (
+          <span
+            key={piece.id}
+            style={{
+              position: 'absolute',
+              top: -6,
+              left: piece.left,
+              width: 8,
+              height: 14,
+              borderRadius: 999,
+              background: piece.background,
+              opacity: 0,
+              transform: `rotate(${piece.rotate})`,
+              animation: `rr-confetti-fall ${piece.duration} ease-in infinite`,
+              animationDelay: piece.delay,
+              boxShadow: '0 4px 10px rgba(15,23,42,0.12)',
+            }}
+          />
+        ))}
+      </div>
+    </>
+  );
+};
+
+const PodiumAvatar = ({ participant, label, accent }) => {
+  const photoUrl = getParticipantPhotoUrl(participant);
+  if (photoUrl) {
+    return <img src={photoUrl} alt={label} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${accent}33` }} />;
+  }
+  return (
+    <div style={{ width: 56, height: 56, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, background: `${accent}20`, color: accent, border: `2px solid ${accent}33` }}>
+      {initials(label)}
+    </div>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -168,9 +238,13 @@ export default function RoundRobinPanel({
   const doneCount = allMatches.filter((m) => m.completed).length;
   const totalCount = allMatches.length;
   const allDone = totalCount > 0 && doneCount === totalCount;
+  const podium = allDone ? standings.slice(0, 3) : [];
   const firstIncomplete = (tournament?.rounds || []).find((r) => r.matches.some((m) => !m.completed));
   const isExpanded = (round) => expandedRounds[round.index] === undefined ? firstIncomplete?.index === round.index : expandedRounds[round.index];
   const toggleRound = (idx) => setExpandedRounds((p) => ({ ...p, [idx]: p[idx] === undefined ? false : !p[idx] }));
+  useEffect(() => {
+    if (allDone) setActiveTab('standings');
+  }, [allDone]);
 
   // ── SETUP SCREEN ──────────────────────────────────────────────────────────
   if (!tournament) return (
@@ -538,6 +612,48 @@ export default function RoundRobinPanel({
       {/* Standings */}
       {activeTab === 'standings' && (
         <div className="p-3 space-y-2 flex-1 min-h-0 overflow-y-auto">
+          {allDone && podium.length > 0 && (
+            <div
+              className="relative overflow-hidden rounded-[24px] px-4 py-5 mb-2"
+              style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}08 100%)`, border: `1.5px solid ${accent}33` }}
+            >
+              <CelebrationConfetti accent={accent} />
+              <div className="relative z-10">
+                <div className="text-[11px] font-black uppercase tracking-[0.18em] mb-1" style={{ color: accent }}>Final podium</div>
+                <div className="text-lg font-black tracking-tight" style={{ color: primaryText }}>Top 3 finishers</div>
+                <div className="mt-4 grid grid-cols-3 gap-2 items-end">
+                  {[podium[1], podium[0], podium[2]].filter(Boolean).map((row, visualIndex) => {
+                    const place = row === podium[0] ? 1 : row === podium[1] ? 2 : 3;
+                    const trophyTone = place === 1 ? '#f59e0b' : place === 2 ? '#94a3b8' : '#fb7185';
+                    const height = place === 1 ? 124 : place === 2 ? 108 : 96;
+                    return (
+                      <div
+                        key={`podium-${row.id}`}
+                        className="rounded-[20px] px-2 py-3 text-center"
+                        style={{
+                          minHeight: height,
+                          background: place === 1 ? `${accent}14` : mutedBg,
+                          border: `1.5px solid ${place === 1 ? `${accent}44` : border}`,
+                          animation: `rr-podium-pop 420ms ease ${visualIndex * 90}ms both`,
+                        }}
+                      >
+                        <div className="flex justify-center mb-2">
+                          <PodiumAvatar participant={row.participant} label={row.displayName} accent={accent} />
+                        </div>
+                        <div className="flex justify-center mb-1">
+                          <Trophy className="w-4 h-4" style={{ color: trophyTone }} />
+                        </div>
+                        <div className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: trophyTone }}>
+                          {place === 1 ? '1st place' : place === 2 ? '2nd place' : '3rd place'}
+                        </div>
+                        <div className="mt-1 text-sm font-black truncate" style={{ color: primaryText }}>{row.displayName}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
           {standings.length === 0 ? (
             <div className="py-10 text-center">
               <div style={{ fontSize: 36, marginBottom: 8 }}>🥒</div>

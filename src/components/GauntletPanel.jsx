@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trophy, X } from 'lucide-react';
 
 const T = {
   bg: '#0d0f14',
@@ -510,7 +510,109 @@ const historyCard = {
 
 const FONT_STYLE = `
   @keyframes g-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes g-confetti-fall {
+    0% { transform: translate3d(0,-18px,0) rotate(0deg); opacity: 0; }
+    10% { opacity: 1; }
+    100% { transform: translate3d(0,150px,0) rotate(220deg); opacity: 0; }
+  }
+  @keyframes g-podium-pop {
+    0% { transform: translateY(12px) scale(0.96); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
 `;
+
+const getParticipantPhotoUrl = (participant) => String(
+  participant?.photoUrl
+  || participant?.photo_url
+  || participant?.avatarUrl
+  || participant?.avatar_url
+  || ''
+).trim();
+
+function PodiumAvatar({ participant, label }) {
+  const photoUrl = getParticipantPhotoUrl(participant);
+  if (photoUrl) {
+    return <img src={photoUrl} alt={label} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${T.borderGlow}` }} />;
+  }
+  return (
+    <div style={{ width: 56, height: 56, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, background: 'rgba(255,214,0,0.1)', color: T.gold, border: `2px solid ${T.borderGlow}` }}>
+      {String(label || '?').trim().charAt(0).toUpperCase() || '?'}
+    </div>
+  );
+}
+
+function CelebrationPodium({ rows }) {
+  const pieces = Array.from({ length: 18 }, (_, idx) => ({
+    id: idx,
+    left: `${4 + ((idx * 11) % 92)}%`,
+    delay: `${(idx % 6) * 0.12}s`,
+    duration: `${3 + (idx % 4) * 0.35}s`,
+    background: idx % 3 === 0 ? T.gold : idx % 3 === 1 ? T.accent : '#fb7185',
+    rotate: `${(idx % 2 === 0 ? 1 : -1) * (16 + idx * 5)}deg`,
+  }));
+  const visualRows = [rows[1], rows[0], rows[2]].filter(Boolean);
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, padding: '18px 16px', background: 'linear-gradient(135deg, rgba(255,214,0,0.12) 0%, rgba(79,255,176,0.08) 100%)', border: `1px solid ${T.borderGlow}` }}>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        {pieces.map((piece) => (
+          <span
+            key={piece.id}
+            style={{
+              position: 'absolute',
+              top: -6,
+              left: piece.left,
+              width: 8,
+              height: 14,
+              borderRadius: 999,
+              background: piece.background,
+              opacity: 0,
+              transform: `rotate(${piece.rotate})`,
+              animation: `g-confetti-fall ${piece.duration} ease-in infinite`,
+              animationDelay: piece.delay,
+              boxShadow: '0 4px 10px rgba(0,0,0,0.18)',
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: T.goldText, marginBottom: 4, fontFamily: '"Syne", sans-serif' }}>Final podium</div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', fontFamily: '"Syne", sans-serif' }}>Top 3 finishers</div>
+        <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, alignItems: 'end' }}>
+          {visualRows.map((row, visualIndex) => {
+            const place = row === rows[0] ? 1 : row === rows[1] ? 2 : 3;
+            const trophyTone = place === 1 ? T.gold : place === 2 ? '#c0c8d8' : '#fb7185';
+            const minHeight = place === 1 ? 126 : place === 2 ? 110 : 98;
+            return (
+              <div
+                key={`podium-${row.id}`}
+                style={{
+                  minHeight,
+                  borderRadius: 16,
+                  padding: '12px 10px',
+                  textAlign: 'center',
+                  background: place === 1 ? 'rgba(255,214,0,0.08)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${place === 1 ? 'rgba(255,214,0,0.3)' : T.border}`,
+                  animation: `g-podium-pop 420ms ease ${visualIndex * 90}ms both`,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                  <PodiumAvatar participant={row.participant} label={row.name} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 2 }}>
+                  <Trophy style={{ width: 16, height: 16, color: trophyTone }} />
+                </div>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: trophyTone, fontFamily: '"Syne", sans-serif' }}>
+                  {place === 1 ? '1st place' : place === 2 ? '2nd place' : '3rd place'}
+                </div>
+                <div style={{ marginTop: 4, fontSize: 13, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.name}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function RankBadge({ index }) {
   const medals = [
@@ -578,6 +680,7 @@ function GauntletPanel({
   const tournamentKey = useManualGauntletRoster ? '__manual__' : String(selectedGauntletEventId || '');
   const tournament = layerGauntlets[tournamentKey] || null;
   const tournamentStandings = deriveGauntletStandings(tournament);
+  const podium = tournament?.status === 'completed' ? tournamentStandings.slice(0, 3) : [];
   const rounds = tournament?.rounds || [];
   const activeRoundIndex = rounds.findIndex((round) => !round?.finalizedAt);
   const activeRound = activeRoundIndex >= 0 ? rounds[activeRoundIndex] : null;
@@ -933,9 +1036,12 @@ function GauntletPanel({
                 </div>
               )}
 
-              <div style={{ display: 'grid', gap: 10 }}>
-                <div style={cardOuter}>
-                  <div style={cardHeaderStyle}>Standings</div>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {podium.length > 0 && (
+                    <CelebrationPodium rows={podium} />
+                  )}
+                  <div style={cardOuter}>
+                    <div style={cardHeaderStyle}>Standings</div>
                   {tournamentStandings.length > 0 && (
                     <div style={standingsCols}>
                       <div>Place</div>
