@@ -17961,22 +17961,25 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               {/* Title + date â€” top right */}
               <div className="absolute top-3 right-3 sm:top-4 sm:right-4 pointer-events-auto flex flex-col items-end gap-0.5">
                 {activeLayerTitleVisible && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); if (canEditActiveLayerTitle) openTitleStyleModal(); }}
-                    className={`text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate ${canEditActiveLayerTitle ? 'hover:opacity-80' : 'cursor-default'}`}
-                    style={activeLayerTitleNameTextStyle}
-                  >
-                    {calendarTitle}
-                  </button>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); if (canEditActiveLayerTitle) openTitleStyleModal(); }}
-                  className={canEditActiveLayerTitle ? 'hover:opacity-80' : 'cursor-default'}
-                  style={activeLayerMonthYearTextStyle}
-                >
-                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); if (canEditActiveLayerTitle) openTitleStyleModal(); }}
+                      className={`text-sm sm:text-base font-semibold text-right max-w-[65vw] truncate ${canEditActiveLayerTitle ? 'hover:opacity-80' : 'cursor-default'}`}
+                      style={activeLayerTitleNameTextStyle}
+                    >
+                      {calendarTitle}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); if (canEditActiveLayerTitle) openTitleStyleModal(); }}
+                      className={canEditActiveLayerTitle ? 'hover:opacity-80' : 'cursor-default'}
+                      style={activeLayerMonthYearTextStyle}
+                    >
+                      {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </button>
+                  </>
+                )}
               </div>
 
             </div>
