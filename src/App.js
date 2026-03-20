@@ -18076,41 +18076,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               >
                 <ChevronRight className="w-6 h-6" style={undefined} />
               </button>
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-2 sm:bottom-3 z-20 flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium">
-                <button
-                  onClick={() => setCalendarView('month')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
-                >
-                  Month
-                </button>
-                <button
-                  onClick={() => setCalendarView('week')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
-                >
-                  Week
-                </button>
-                <button
-                  onClick={() => setCalendarView('agenda')}
-                  className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                  style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
-                >
-                  Agenda
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="absolute inset-x-0 bottom-2 sm:bottom-3 flex items-center justify-between gap-2 px-2 sm:px-3">
-              <button
-                onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-                className="p-2 rounded-xl transition-all duration-200"
-                style={undefined}
-              >
-                <ChevronLeft className="w-6 h-6" style={undefined} />
-              </button>
-              <div className="flex flex-col items-center gap-1">
-                <div className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium" style={undefined}>
+              {!(showHomeCalendarOverview || preferCalendarHome) && (
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-2 sm:bottom-3 z-20 flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium">
                   <button
                     onClick={() => setCalendarView('month')}
                     className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
@@ -18133,6 +18100,43 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     Agenda
                   </button>
                 </div>
+              )}
+            </>
+          ) : (
+            <div className="absolute inset-x-0 bottom-2 sm:bottom-3 flex items-center justify-between gap-2 px-2 sm:px-3">
+              <button
+                onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
+                className="p-2 rounded-xl transition-all duration-200"
+                style={undefined}
+              >
+                <ChevronLeft className="w-6 h-6" style={undefined} />
+              </button>
+              <div className="flex flex-col items-center gap-1">
+                {!(showHomeCalendarOverview || preferCalendarHome) && (
+                  <div className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium" style={undefined}>
+                    <button
+                      onClick={() => setCalendarView('month')}
+                      className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                      style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
+                    >
+                      Month
+                    </button>
+                    <button
+                      onClick={() => setCalendarView('week')}
+                      className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                      style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
+                    >
+                      Week
+                    </button>
+                    <button
+                      onClick={() => setCalendarView('agenda')}
+                      className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                      style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
+                    >
+                      Agenda
+                    </button>
+                  </div>
+                )}
                 {calendarView !== 'month' && (
                   <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
                     {calendarView === 'week'
