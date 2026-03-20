@@ -14967,9 +14967,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     : undefined;
   const tripHeaderSurfaceStyle = darkMode
     ? {
-        background: 'linear-gradient(180deg, rgba(2,6,23,0.72) 0%, rgba(2,6,23,0.58) 100%)',
+        background: 'linear-gradient(180deg, rgba(2,6,23,0.42) 0%, rgba(2,6,23,0.28) 100%)',
         borderColor: 'rgba(148,163,184,0.12)',
-        boxShadow: '0 18px 42px rgba(2,6,23,0.32)',
+        boxShadow: '0 18px 42px rgba(2,6,23,0.18)',
       }
     : undefined;
   const tripHeaderPillClassName = darkMode
@@ -14982,7 +14982,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     ? { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)' }
     : undefined;
   const tripHeaderPanelStyle = darkMode
-    ? { backgroundColor: 'rgba(2,6,23,0.52)', borderColor: 'rgba(148,163,184,0.12)' }
+    ? { backgroundColor: 'rgba(2,6,23,0.24)', borderColor: 'rgba(148,163,184,0.12)' }
     : undefined;
   const getTripChatInitials = (label) => {
     const parts = String(label || '').trim().split(/\s+/).filter(Boolean);
