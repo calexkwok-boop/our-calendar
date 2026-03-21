@@ -27615,21 +27615,23 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {showJourneyScreen && renderJourneyPortal((
+        {showJourneyScreen && (
           <div
-            className="fixed inset-0 z-[96] bg-black/55 backdrop-blur-sm p-4 flex items-center justify-center"
+            className="fixed inset-0 z-40 bg-black/50 p-4 flex items-center justify-center"
             onClick={() => setShowJourneyScreen(false)}
             style={{ touchAction: 'none', overscrollBehavior: 'none' }}
           >
             <div
-              className="w-full max-w-lg rounded-[28px] border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-950 shadow-2xl overflow-hidden"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
               style={{
-                paddingBottom: 'env(safe-area-inset-bottom)',
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehaviorY: 'contain',
+                touchAction: 'pan-y',
               }}
             >
               <div
-                className="p-5 sm:p-6 border-b border-gray-100 dark:border-white/10"
+                className="p-6 border-b border-gray-100 dark:border-white/10"
                 style={{
                   background: darkMode
                     ? `linear-gradient(180deg, ${hexToRgba('#0f172a', 0.98)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`
@@ -27654,14 +27656,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
               </div>
 
-              <div
-                className="p-5 sm:p-6 pb-6 space-y-4 max-h-[70vh] overflow-y-auto"
-                style={{
-                  WebkitOverflowScrolling: 'touch',
-                  overscrollBehaviorY: 'contain',
-                  touchAction: 'pan-y',
-                }}
-              >
+              <div className="p-6 space-y-4">
                 <div className="rounded-[24px] border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] p-5">
                   <div className="text-base font-semibold text-gray-900 dark:text-gray-100">
                     {primaryJourneyGoal ? `${getJourneyGoalEmoji(primaryJourneyGoal)} ${primaryJourneyGoal.title}` : 'No goal yet'}
@@ -27701,9 +27696,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             </div>
           </div>
-        ))}
+        )}
 
-        {showJourneyEntryModal && (
+        {false && showJourneyEntryModal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
             <div className="w-full sm:w-[26rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pick something to work toward</div>
@@ -27740,7 +27735,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {showJourneyGoalModal && (
+        {false && showJourneyGoalModal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
             <div className="w-full sm:w-[28rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}</div>
@@ -27779,7 +27774,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {showJourneyGoalCreatedPrompt && createdJourneyGoal && (
+        {false && showJourneyGoalCreatedPrompt && createdJourneyGoal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
             <div className="w-full sm:w-[26rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -27825,7 +27820,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && (
+        {false && showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyDeleteGoalPrompt}>
             <div className="w-full sm:w-[26rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete goal?</div>
@@ -27857,7 +27852,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {showJourneyLogModal && (
+        {false && showJourneyLogModal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyLogModal}>
             <div className="w-full sm:w-[28rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-start justify-between gap-3">
@@ -27963,7 +27958,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {showJourneyNoteModal && (
+        {false && showJourneyNoteModal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={() => setShowJourneyNoteModal(false)}>
             <div className="w-full sm:w-[28rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add note</div>
