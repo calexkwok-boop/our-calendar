@@ -16457,11 +16457,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const previousBodyRight = document.body.style.right;
     const previousBodyWidth = document.body.style.width;
     const previousBodyBackground = document.body.style.background;
+    const previousBodyBackgroundColor = document.body.style.backgroundColor;
     const previousBodyBackgroundImage = document.body.style.backgroundImage;
     const previousDocOverflow = document.documentElement.style.overflow;
     const previousDocTouchAction = document.documentElement.style.touchAction;
     const previousDocOverscroll = document.documentElement.style.overscrollBehavior;
     const previousDocBackground = document.documentElement.style.background;
+    const previousDocBackgroundColor = document.documentElement.style.backgroundColor;
     const previousDocBackgroundImage = document.documentElement.style.backgroundImage;
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
@@ -16474,6 +16476,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     document.documentElement.style.overflow = 'hidden';
     document.documentElement.style.touchAction = 'none';
     document.documentElement.style.overscrollBehavior = 'none';
+    if (darkMode) {
+      document.body.style.backgroundColor = 'rgb(2, 6, 23)';
+      document.documentElement.style.backgroundColor = 'rgb(2, 6, 23)';
+    }
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.body.style.touchAction = previousBodyTouchAction;
@@ -16484,11 +16490,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       document.body.style.right = previousBodyRight;
       document.body.style.width = previousBodyWidth;
       document.body.style.background = previousBodyBackground;
+      document.body.style.backgroundColor = previousBodyBackgroundColor;
       document.body.style.backgroundImage = previousBodyBackgroundImage;
       document.documentElement.style.overflow = previousDocOverflow;
       document.documentElement.style.touchAction = previousDocTouchAction;
       document.documentElement.style.overscrollBehavior = previousDocOverscroll;
       document.documentElement.style.background = previousDocBackground;
+      document.documentElement.style.backgroundColor = previousDocBackgroundColor;
       document.documentElement.style.backgroundImage = previousDocBackgroundImage;
       window.scrollTo(0, scrollY);
     };
