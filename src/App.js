@@ -8,6 +8,7 @@ import { getMessagingIfSupported } from "./firebase";
 import GauntletPanel from "./components/GauntletPanel";
 import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
+import ScramblePanel from "./components/ScramblePanel";
 import PopupEventPanel from "./components/PopupEventPanel";
 import JourneyPanel from "./components/JourneyPanel";
 import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
@@ -626,6 +627,7 @@ const CONTROL_WIDGET_IDS = Object.freeze([
   'expenses',
   'gauntlet',
   'roundrobin',
+  'scramble',
   'chat',
   'weather',
   'categories',
@@ -642,6 +644,7 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'expenses',
   'gauntlet',
   'roundrobin',
+  'scramble',
   'chat',
   'ai',
   'scan',
@@ -665,6 +668,7 @@ const WIDGET_SPAWN_SLOTS = Object.freeze({
   expenses: { x: 60, y: 80 },
   gauntlet: { x: 70, y: 80 },
   roundrobin: { x: 78, y: 80 },
+  scramble: { x: 86, y: 80 },
   ai: { x: 80, y: 80 },
   scan: { x: 90, y: 80 },
   weather: { x: 15, y: 65 },
@@ -1249,6 +1253,166 @@ const parseManualGauntletRoster = (value) => {
       displayName: name,
       seed: idx + 1,
     }));
+};
+
+const parseManualScrambleRoster = (value) => {
+  const seen = new Set();
+  return String(value || '')
+    .split(/\r?\n|,/)
+    .map((entry) => String(entry || '').trim())
+    .filter((name) => {
+      if (!name) return false;
+      const key = name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((name, idx) => ({
+      id: `scramble-${idx + 1}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      userId: '',
+      displayName: name,
+      seed: idx + 1,
+    }));
+};
+
+const normalizeStoredScrambleMap = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.entries(value).reduce((acc, [eventId, tournament]) => {
+    const id = String(eventId || '').trim();
+    if (!id || !tournament || typeof tournament !== 'object') return acc;
+    acc[id] = tournament;
+    return acc;
+  }, {});
+};
+
+const shuffleScrambleIds = (ids, seed) => {
+  const out = [...(ids || [])];
+  let state = Math.max(1, Number(seed) || 1);
+  const nextRand = () => {
+    state = (state * 1664525 + 1013904223) % 4294967296;
+    return state / 4294967296;
+  };
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(nextRand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+
+const buildScrambleRound = ({ participantIds, roundIndex, courtCount }) => {
+  const shuffledIds = shuffleScrambleIds(participantIds, roundIndex + 1);
+  const maxCourtCount = Math.max(1, Number(courtCount || 1));
+  const activeCount = Math.min(shuffledIds.length - (shuffledIds.length % 4), maxCourtCount * 4);
+  const activeIds = shuffledIds.slice(0, activeCount);
+  const byeIds = shuffledIds.slice(activeCount);
+  const courts = [];
+  for (let i = 0; i < activeIds.length; i += 4) {
+    const batch = activeIds.slice(i, i + 4);
+    if (batch.length < 4) break;
+    courts.push({
+      courtNumber: courts.length + 1,
+      teamA: [batch[0], batch[1]],
+      teamB: [batch[2], batch[3]],
+      scoreA: '',
+      scoreB: '',
+    });
+  }
+  return {
+    index: Number(roundIndex || 0) + 1,
+    finalizedAt: null,
+    byeIds,
+    courts,
+  };
+};
+
+const createScrambleTournament = ({ eventId, totalRounds, courtCount, participants }) => {
+  const safeParticipants = Array.isArray(participants) ? participants.filter((participant) => String(participant?.id || '').trim()) : [];
+  const participantIds = safeParticipants.map((participant) => String(participant?.id || '')).filter(Boolean);
+  const roundsTarget = Math.max(1, parseInt(String(totalRounds || ''), 10) || 1);
+  const normalizedCourtCount = Math.max(1, parseInt(String(courtCount || ''), 10) || 1);
+  return {
+    eventId: String(eventId || ''),
+    totalRounds: roundsTarget,
+    courtCount: normalizedCourtCount,
+    createdAt: new Date().toISOString(),
+    completedAt: null,
+    status: 'active',
+    participants: safeParticipants,
+    participantIds,
+    rounds: participantIds.length >= 4 ? [buildScrambleRound({ participantIds, roundIndex: 0, courtCount: normalizedCourtCount })] : [],
+  };
+};
+
+const getScrambleCourtResult = (court) => {
+  const scoreA = parseInt(String(court?.scoreA ?? '').trim(), 10);
+  const scoreB = parseInt(String(court?.scoreB ?? '').trim(), 10);
+  if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB) || scoreA < 0 || scoreB < 0 || scoreA === scoreB) return null;
+  return { scoreA, scoreB };
+};
+
+const deriveScrambleStandings = (tournament) => {
+  const participants = Array.isArray(tournament?.participants) ? tournament.participants : [];
+  const stats = participants.reduce((acc, participant) => {
+    const id = String(participant?.id || '').trim();
+    if (!id) return acc;
+    acc[id] = {
+      id,
+      name: String(participant?.displayName || participant?.name || 'Player'),
+      wins: 0,
+      losses: 0,
+      games: 0,
+      byes: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      pointDiff: 0,
+    };
+    return acc;
+  }, {});
+
+  (tournament?.rounds || []).forEach((round) => {
+    if (!round?.finalizedAt) return;
+    (round?.byeIds || []).forEach((playerId) => {
+      const row = stats[String(playerId || '')];
+      if (row) row.byes += 1;
+    });
+    (round?.courts || []).forEach((court) => {
+      const result = getScrambleCourtResult(court);
+      if (!result) return;
+      const teamAIds = Array.isArray(court?.teamA) ? court.teamA.map((id) => String(id || '')).filter(Boolean) : [];
+      const teamBIds = Array.isArray(court?.teamB) ? court.teamB.map((id) => String(id || '')).filter(Boolean) : [];
+      teamAIds.forEach((playerId) => {
+        const row = stats[playerId];
+        if (!row) return;
+        row.games += 1;
+        row.pointsFor += result.scoreA;
+        row.pointsAgainst += result.scoreB;
+        if (result.scoreA > result.scoreB) row.wins += 1;
+        else row.losses += 1;
+      });
+      teamBIds.forEach((playerId) => {
+        const row = stats[playerId];
+        if (!row) return;
+        row.games += 1;
+        row.pointsFor += result.scoreB;
+        row.pointsAgainst += result.scoreA;
+        if (result.scoreB > result.scoreA) row.wins += 1;
+        else row.losses += 1;
+      });
+    });
+  });
+
+  return Object.values(stats)
+    .map((row) => ({
+      ...row,
+      pointDiff: row.pointsFor - row.pointsAgainst,
+      winPct: row.games > 0 ? row.wins / row.games : 0,
+    }))
+    .sort((a, b) => (
+      b.winPct - a.winPct
+      || b.pointDiff - a.pointDiff
+      || b.pointsFor - a.pointsFor
+      || a.name.localeCompare(b.name)
+    ));
 };
 
 function App() {
@@ -4467,6 +4631,14 @@ function App() {
   const [showRoundRobinPanel, setShowRoundRobinPanel] = useState(false);
   const [selectedRoundRobinEventId, setSelectedRoundRobinEventId] = useState('');
   const [layerRoundRobins, setLayerRoundRobins] = useState({});
+  const [showScramblePanel, setShowScramblePanel] = useState(false);
+  const [selectedScrambleEventId, setSelectedScrambleEventId] = useState('');
+  const [scrambleRoundsCount, setScrambleRoundsCount] = useState(4);
+  const [scrambleCourtCount, setScrambleCourtCount] = useState(2);
+  const [layerScrambles, setLayerScrambles] = useState({});
+  const [manualScramblePlayerNames, setManualScramblePlayerNames] = useState('Alex, Pearl, Justin, Ngan, Matt, Helen, Gilbert, Elizabeth');
+  const [useManualScrambleRoster, setUseManualScrambleRoster] = useState(true);
+  const [scrambleError, setScrambleError] = useState('');
   const [selectedPopupEventPanelId, setSelectedPopupEventPanelId] = useState(null);
   const [showCalendarSwitcher, setShowCalendarSwitcher] = useState(false);
   const [manualRoundRobinRosterInput, setManualRoundRobinRosterInput] = useState(
@@ -5003,6 +5175,7 @@ function App() {
     setShowExpenseTrackerPanel(false);
     setShowGauntletPanel(false);
     setShowRoundRobinPanel(false);
+    setShowScramblePanel(false);
     setShowChatPanel(false);
     setShowChatMembersPanel(false);
     setShowAiAssistant(false);
@@ -5018,6 +5191,7 @@ function App() {
     expenses: Boolean(showExpenseTrackerPanel),
     gauntlet: Boolean(showGauntletPanel),
     roundrobin: Boolean(showRoundRobinPanel),
+    scramble: Boolean(showScramblePanel),
     chat: Boolean(showChatPanel),
     ai: Boolean(showAiAssistant),
     scan: Boolean(showScanHelpModal),
@@ -5031,6 +5205,7 @@ function App() {
     showExpenseTrackerPanel,
     showGauntletPanel,
     showRoundRobinPanel,
+    showScramblePanel,
     showChatPanel,
     showAiAssistant,
     showScanHelpModal,
@@ -5070,6 +5245,12 @@ function App() {
   if (!userKey || !layerKey) return '';
   return `calendar-layer-roundrobins-${userKey}-${layerKey}`;
 }, [user?.id, activeLayerId]);
+  const getLayerScramblesStorageKey = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
+    const userKey = String(uid || '').trim();
+    const layerKey = String(layerId || '').trim();
+    if (!userKey || !layerKey) return '';
+    return `calendar-layer-scrambles-${userKey}-${layerKey}`;
+  }, [user?.id, activeLayerId]);
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
       setLayerNotes([]);
@@ -5183,6 +5364,23 @@ useEffect(() => {
     localStorage.setItem(key, JSON.stringify(layerRoundRobins || {}));
   } catch {}
 }, [user?.id, activeLayerId, layerRoundRobins, getLayerRoundRobinsStorageKey]);
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) { setLayerScrambles({}); return; }
+    try {
+      const key = getLayerScramblesStorageKey(user.id, activeLayerId);
+      const raw = key ? localStorage.getItem(key) : '';
+      setLayerScrambles(normalizeStoredScrambleMap(raw ? JSON.parse(raw) : {}));
+    } catch { setLayerScrambles({}); }
+  }, [user?.id, activeLayerId, getLayerScramblesStorageKey]);
+
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) return;
+    try {
+      const key = getLayerScramblesStorageKey(user.id, activeLayerId);
+      if (!key) return;
+      localStorage.setItem(key, JSON.stringify(layerScrambles || {}));
+    } catch {}
+  }, [user?.id, activeLayerId, layerScrambles, getLayerScramblesStorageKey]);
   useEffect(() => {
     if (!user?.id || !activeLayerId) return;
     try {
@@ -18048,8 +18246,57 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const bDate = String(b?.event?.dateKey || '');
     return aDate.localeCompare(bDate);
   });
+  const eligibleScramblePopupEvents = Object.keys(popupEventsByEventId || {})
+    .map((eventId) => {
+      const event = popupEventDetailsById[String(eventId || '')] || null;
+      const signups = popupSignupsByEventId[String(eventId || '')] || [];
+      return {
+        id: String(eventId || ''),
+        eventId: String(eventId || ''),
+        title: String(event?.title || ''),
+        dateKey: String(event?.dateKey || event?.date || ''),
+        date: String(event?.dateKey || event?.date || ''),
+        time: String(event?.time || ''),
+        location: String(event?.location || ''),
+        signups,
+        eligible: signups.length >= 4,
+      };
+    })
+    .filter((entry) => entry.title)
+    .sort((a, b) => {
+      const aDate = String(a?.dateKey || '');
+      const bDate = String(b?.dateKey || '');
+      if (aDate !== bDate) return aDate.localeCompare(bDate);
+      return String(a?.title || '').localeCompare(String(b?.title || ''));
+    });
   const manualGauntletParticipants = parseManualGauntletRoster(manualGauntletRosterInput);
   const manualGauntletEligible = manualGauntletParticipants.length >= 4;
+  const manualScrambleParticipants = parseManualScrambleRoster(manualScramblePlayerNames);
+  const selectedScrambleEvent = !useManualScrambleRoster
+    ? (eligibleScramblePopupEvents.find((entry) => String(entry?.id || '') === String(selectedScrambleEventId || '')) || null)
+    : null;
+  const selectedScrambleSignups = selectedScrambleEvent?.signups || [];
+  const scrambleTournamentKey = useManualScrambleRoster ? '__manual__' : String(selectedScrambleEventId || '');
+  const scrambleTournament = scrambleTournamentKey ? (layerScrambles[scrambleTournamentKey] || null) : null;
+  const scrambleRounds = scrambleTournament?.rounds || [];
+  const scrambleActiveRoundIndex = scrambleRounds.findIndex((round) => !round?.finalizedAt);
+  const scrambleActiveRound = scrambleActiveRoundIndex >= 0 ? scrambleRounds[scrambleActiveRoundIndex] : null;
+  const scrambleParticipantMap = (scrambleTournament?.participants || []).reduce((acc, participant) => {
+    const id = String(participant?.id || '').trim();
+    if (!id) return acc;
+    acc[id] = participant;
+    return acc;
+  }, {});
+  const scrambleTournamentStandings = deriveScrambleStandings(scrambleTournament);
+  const renderScrambleTeamName = (playerIds) => (
+    (playerIds || [])
+      .map((id) => scrambleParticipantMap[String(id || '')]?.displayName || 'Player')
+      .join(' + ')
+  );
+  const scrambleRoundNum = Math.min(
+    scrambleActiveRoundIndex >= 0 ? scrambleActiveRoundIndex + 1 : scrambleRounds.length,
+    Number(scrambleTournament?.totalRounds || scrambleRoundsCount || 1)
+  );
   const getWidgetSlotForIndex = (index, widgetId = '') => {
     const safeIndex = Math.max(0, Number(index) || 0);
     const xStep = 100 / Math.max(1, (WIDGET_GRID_COLUMNS - 1));
@@ -18328,6 +18575,114 @@ const parseManualRoundRobinRoster = (value) => {
       return next;
     });
     setGauntletError('');
+  };
+  const startScrambleTournament = () => {
+    const normalizedEventId = useManualScrambleRoster ? '__manual__' : String(selectedScrambleEventId || '').trim();
+    if (!normalizedEventId) {
+      setScrambleError(useManualScrambleRoster ? 'Enter player names first.' : 'Select a popup event first.');
+      return;
+    }
+    let participants = [];
+    if (useManualScrambleRoster) {
+      if (manualScrambleParticipants.length < 4) {
+        setScrambleError('Manual roster needs at least 4 names.');
+        return;
+      }
+      participants = manualScrambleParticipants;
+    } else {
+      const entry = eligibleScramblePopupEvents.find((item) => String(item?.id || '') === normalizedEventId) || null;
+      const signups = entry?.signups || [];
+      if (!entry?.eligible) {
+        setScrambleError('Scramble play needs at least 4 joined players.');
+        return;
+      }
+      participants = signups.map((signup, idx) => ({
+        id: String(signup?.memberId || signup?.signupId || signup?.userId || `guest-${idx + 1}-${String(signup?.displayName || 'player').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`),
+        userId: String(signup?.userId || ''),
+        displayName: String(signup?.displayName || `Player ${idx + 1}`),
+        seed: idx + 1,
+      }));
+    }
+    setLayerScrambles((prev) => ({
+      ...(prev || {}),
+      [normalizedEventId]: createScrambleTournament({
+        eventId: normalizedEventId,
+        totalRounds: scrambleRoundsCount,
+        courtCount: scrambleCourtCount,
+        participants,
+      }),
+    }));
+    if (!useManualScrambleRoster) setSelectedScrambleEventId(normalizedEventId);
+    setScrambleError('');
+  };
+  const updateScrambleCourtScore = (eventId, roundIndex, courtNumber, scoreKey, value) => {
+    const normalizedEventId = String(eventId || '').trim();
+    if (!normalizedEventId || (scoreKey !== 'scoreA' && scoreKey !== 'scoreB')) return;
+    const nextValue = value === '' ? '' : String(value).replace(/[^\d]/g, '');
+    setLayerScrambles((prev) => {
+      const tournament = prev?.[normalizedEventId];
+      if (!tournament) return prev;
+      const rounds = (tournament.rounds || []).map((round, idx) => {
+        if (idx !== roundIndex || round?.finalizedAt) return round;
+        return {
+          ...round,
+          courts: (round.courts || []).map((court) => (
+            Number(court?.courtNumber || 0) === Number(courtNumber || 0)
+              ? { ...court, [scoreKey]: nextValue }
+              : court
+          )),
+        };
+      });
+      return { ...(prev || {}), [normalizedEventId]: { ...tournament, rounds } };
+    });
+  };
+  const finalizeScrambleRound = (eventId) => {
+    const normalizedEventId = String(eventId || '').trim();
+    const tournament = layerScrambles[normalizedEventId];
+    if (!tournament) return;
+    const rounds = Array.isArray(tournament?.rounds) ? tournament.rounds : [];
+    const roundIndex = rounds.findIndex((round) => !round?.finalizedAt);
+    if (roundIndex < 0) {
+      setScrambleError('This scramble is already complete.');
+      return;
+    }
+    const round = rounds[roundIndex];
+    const hasInvalidCourt = (round?.courts || []).some((court) => !getScrambleCourtResult(court));
+    if (hasInvalidCourt) {
+      setScrambleError('Enter non-tied scores for every court before advancing.');
+      return;
+    }
+    const updatedRounds = rounds.map((item, idx) => (
+      idx === roundIndex ? { ...item, finalizedAt: new Date().toISOString() } : item
+    ));
+    const shouldComplete = (roundIndex + 1) >= Math.max(1, Number(tournament?.totalRounds || 1));
+    const nextRound = shouldComplete
+      ? null
+      : buildScrambleRound({
+          participantIds: tournament?.participantIds || [],
+          roundIndex: roundIndex + 1,
+          courtCount: tournament?.courtCount || scrambleCourtCount,
+        });
+    setLayerScrambles((prev) => ({
+      ...(prev || {}),
+      [normalizedEventId]: {
+        ...tournament,
+        rounds: shouldComplete || !nextRound ? updatedRounds : [...updatedRounds, nextRound],
+        status: shouldComplete ? 'completed' : 'active',
+        completedAt: shouldComplete ? new Date().toISOString() : null,
+      },
+    }));
+    setScrambleError('');
+  };
+  const resetScrambleTournament = (eventId) => {
+    const normalizedEventId = String(eventId || '').trim();
+    if (!normalizedEventId) return;
+    setLayerScrambles((prev) => {
+      const next = { ...(prev || {}) };
+      delete next[normalizedEventId];
+      return next;
+    });
+    setScrambleError('');
   };
   const startRoundRobinTournament = (eventId, restart = false, teamsOf = 2) => {
   const normalizedEventId = useManualRoundRobinRoster ? '__manual__' : String(eventId || selectedRoundRobinEventId || '').trim();
@@ -18632,6 +18987,10 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
       setShowRoundRobinPanel((prev) => !prev);
       return;
     }
+    if (id === 'scramble') {
+      setShowScramblePanel((prev) => !prev);
+      return;
+    }
     if (id === 'chat') {
       const layerKey = String(activeLayerId || '');
       const next = !showChatPanel;
@@ -18679,6 +19038,7 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     if (id === 'notes') return { label: 'Notes', icon: <span className="text-sm leading-none">📝</span>, active: Boolean(widgetCardOpenById.notes), disabled: false };
     if (id === 'expenses') return { label: 'Expenses', icon: <span className="text-sm leading-none">💸</span>, active: Boolean(widgetCardOpenById.expenses), disabled: false };
     if (id === 'gauntlet') return { label: 'Bracket', icon: <span className="text-sm leading-none">🥒</span>, active: Boolean(widgetCardOpenById.gauntlet), disabled: false };
+    if (id === 'scramble') return { label: 'Scramble', icon: <span className="text-sm leading-none">🔀</span>, active: Boolean(widgetCardOpenById.scramble), disabled: false };
     if (id === 'chat') return {
       label: 'Chat',
       icon: <MessageSquare className="w-4 h-4" />,
@@ -18858,11 +19218,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         }}
         style={{
           paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
-          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+          paddingBottom: '0',
         }}
       >
         <div
-          className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+          className="w-full sm:w-[32rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] rounded-b-none sm:rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
         >
@@ -19021,11 +19381,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         }}
         style={{
           paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
-          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+          paddingBottom: '0',
         }}
       >
         <div
-          className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+          className="w-full sm:w-[32rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] rounded-b-none sm:rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
         >
@@ -19189,11 +19549,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           onClick={closeJourneyWeightTrackerModal}
           style={{
             paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
-            paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+            paddingBottom: '0',
           }}
         >
           <div
-            className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+            className="w-full sm:w-[32rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] rounded-b-none sm:rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
             style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
           >
@@ -21819,7 +22179,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               />
             </div>
           </div>
-        )} {showRoundRobinPanel && (
+)} {showRoundRobinPanel && (
   <div
     className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
     style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
@@ -21850,6 +22210,51 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
         formatTime={formatTime}
         resolveHandleLikeLabel={resolveHandleLikeLabel}
+      />
+    </div>
+  </div>
+)} {showScramblePanel && (
+  <div
+    className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
+    style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
+  >
+    <div
+      className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
+      style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <ScramblePanel
+        onClose={() => setShowScramblePanel(false)}
+        eligibleScramblePopupEvents={eligibleScramblePopupEvents}
+        selectedEvent={selectedScrambleEvent}
+        setSelectedEvent={(event) => setSelectedScrambleEventId(String(event?.id || event?.eventId || ''))}
+        formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
+        formatTime={formatTime}
+        signups={selectedScrambleSignups}
+        useManualScrambleRoster={useManualScrambleRoster}
+        setUseManualScrambleRoster={setUseManualScrambleRoster}
+        manualScramblePlayerNames={manualScramblePlayerNames}
+        setManualScramblePlayerNames={setManualScramblePlayerNames}
+        scrambleRoundsCount={scrambleRoundsCount}
+        setScrambleRoundsCount={setScrambleRoundsCount}
+        scrambleCourtCount={scrambleCourtCount}
+        setScrambleCourtCount={setScrambleCourtCount}
+        scrambleError={scrambleError}
+        startScrambleTournament={startScrambleTournament}
+        tournament={scrambleTournament}
+        rounds={scrambleRounds}
+        totalRounds={Number(scrambleTournament?.totalRounds || scrambleRoundsCount || 1)}
+        roundNum={scrambleRoundNum}
+        activeRound={scrambleActiveRound}
+        activeRoundIndex={scrambleActiveRoundIndex}
+        updateScrambleCourtScore={updateScrambleCourtScore}
+        finalizeScrambleRound={finalizeScrambleRound}
+        resetScrambleTournament={resetScrambleTournament}
+        tournamentStandings={scrambleTournamentStandings}
+        getScrambleCourtResult={getScrambleCourtResult}
+        renderTeamName={renderScrambleTeamName}
+        participantMap={scrambleParticipantMap}
+        tournamentKey={scrambleTournamentKey}
       />
     </div>
   </div>
@@ -22002,6 +22407,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           setManualGauntletRosterInput(mems.map((m) => m.display_name).join('\n'));
           setUseManualGauntletRoster(true);
           setShowGauntletPanel(true);
+          setSelectedPopupEventPanelId(null);
+          clearPopupQueryParam();
+        }}
+        onLaunchScramble={(ev, mems) => {
+          setManualScramblePlayerNames(mems.map((m) => m.display_name).join(', '));
+          setSelectedScrambleEventId(String(ev?.id || ''));
+          setUseManualScrambleRoster(false);
+          setScrambleError('');
+          setShowScramblePanel(true);
           setSelectedPopupEventPanelId(null);
           clearPopupQueryParam();
         }}
@@ -27063,12 +27477,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyScreen && (
           <div
-            className="fixed inset-0 z-[82] bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4"
+            className="fixed inset-0 z-[82] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
             onClick={() => setShowJourneyScreen(false)}
             style={{ touchAction: 'none', overscrollBehavior: 'none' }}
           >
             <div
-              className="w-full sm:w-[34rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
+              className="w-full sm:w-[34rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] rounded-b-none sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
               style={{
                 touchAction: 'pan-y',
@@ -27356,7 +27770,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyEntryModal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
-            <div className="w-full sm:w-[26rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full sm:w-[26rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pick something to work toward</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Small progress adds up over time.</div>
               <div className="mt-4 space-y-2">
@@ -27393,7 +27807,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyGoalModal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
-            <div className="w-full sm:w-[28rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full sm:w-[28rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {selectedJourneyGoalTemplate?.hint || 'Keep it measurable, simple, and easy to log.'}
@@ -27432,7 +27846,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyGoalCreatedPrompt && createdJourneyGoal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
-            <div className="w-full sm:w-[26rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full sm:w-[26rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
                 <span>Goal created!</span>
                 <span className="inline-flex animate-bounce">🎉</span>
@@ -27478,7 +27892,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyDeleteGoalPrompt}>
-            <div className="w-full sm:w-[26rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full sm:w-[26rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete goal?</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">This removes the goal and any Journey updates attached to it.</div>
               <div className="mt-4 rounded-2xl border border-rose-200/70 dark:border-rose-400/20 bg-rose-50/80 dark:bg-rose-500/10 px-4 py-3">
@@ -27510,7 +27924,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyLogModal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyLogModal}>
-            <div className="w-full sm:w-[28rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full sm:w-[28rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -27616,7 +28030,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyNoteModal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={() => setShowJourneyNoteModal(false)}>
-            <div className="w-full sm:w-[28rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full sm:w-[28rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add note</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Capture a quick thought or reflection.</div>
               <textarea value={journeyNoteDraft} onChange={(e) => setJourneyNoteDraft(e.target.value)} placeholder="Write a quick note..." rows={5} className="mt-4 w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
@@ -27662,12 +28076,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )}
     {!activeSubCalendar && showJourneyScreen && (
       <div
-        className="fixed inset-0 z-[82] bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4"
+        className="fixed inset-0 z-[82] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
         onClick={() => setShowJourneyScreen(false)}
         style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
         <div
-          className="w-full sm:w-[34rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
+          className="w-full sm:w-[34rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] rounded-b-none sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
           style={{
             touchAction: 'pan-y',
@@ -27955,7 +28369,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
     {!activeSubCalendar && showJourneyEntryModal && (
       <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
-        <div className="w-full sm:w-[26rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="w-full sm:w-[26rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pick something to work toward</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Small progress adds up over time.</div>
           <div className="mt-4 space-y-2">
@@ -27992,7 +28406,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
     {!activeSubCalendar && showJourneyGoalModal && (
       <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
-        <div className="w-full sm:w-[28rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="w-full sm:w-[28rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {selectedJourneyGoalTemplate?.hint || 'Keep it measurable, simple, and easy to log.'}
@@ -28031,7 +28445,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
     {!activeSubCalendar && showJourneyGoalCreatedPrompt && createdJourneyGoal && (
       <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
-        <div className="w-full sm:w-[26rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="w-full sm:w-[26rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
                 <span>Goal created!</span>
                 <span className="inline-flex animate-bounce">🎉</span>
@@ -28077,7 +28491,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
     {!activeSubCalendar && showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && (
       <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyDeleteGoalPrompt}>
-        <div className="w-full sm:w-[26rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="w-full sm:w-[26rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete goal?</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">This removes the goal and any Journey updates attached to it.</div>
           <div className="mt-4 rounded-2xl border border-rose-200/70 dark:border-rose-400/20 bg-rose-50/80 dark:bg-rose-500/10 px-4 py-3">
@@ -28109,7 +28523,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
     {!activeSubCalendar && showJourneyLogModal && (
       <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyLogModal}>
-        <div className="w-full sm:w-[28rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="w-full sm:w-[28rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -28215,7 +28629,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
     {!activeSubCalendar && showJourneyNoteModal && (
       <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={() => setShowJourneyNoteModal(false)}>
-        <div className="w-full sm:w-[28rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="w-full sm:w-[28rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add note</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Capture a quick thought or reflection.</div>
           <textarea value={journeyNoteDraft} onChange={(e) => setJourneyNoteDraft(e.target.value)} placeholder="Write a quick note..." rows={5} className="mt-4 w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />

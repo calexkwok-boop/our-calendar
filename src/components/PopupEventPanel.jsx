@@ -618,7 +618,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
 // GameModeLauncher
 // ─────────────────────────────────────────────────────────────────────────────
 
-const GameModeLauncher = ({ event, members, accent, darkMode, border, softBg, btnStyle, onLaunchRoundRobin, onLaunchGauntlet, isHost }) => {
+const GameModeLauncher = ({ event, members, accent, darkMode, border, softBg, btnStyle, onLaunchRoundRobin, onLaunchGauntlet, onLaunchScramble, isHost }) => {
   const playerCount = members.length;
   const canStart = playerCount >= 3;
 
@@ -674,6 +674,16 @@ const GameModeLauncher = ({ event, members, accent, darkMode, border, softBg, bt
             </div>
             <ChevronRight style={{ width: 16, height: 16, marginLeft: 'auto' }} />
           </button>
+
+          <button onClick={() => onLaunchScramble?.(event, members)}
+            style={{ ...btnStyle, padding: '14px 16px', borderRadius: 16, fontSize: 14, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: `0 6px 20px ${accent}40` }}>
+            <span style={{ fontSize: 24 }}>🔀</span>
+            <div style={{ textAlign: 'left' }}>
+              <div>Scramble</div>
+              <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 600 }}>Fresh random teams every round</div>
+            </div>
+            <ChevronRight style={{ width: 16, height: 16, marginLeft: 'auto' }} />
+          </button>
         </div>
       )}
     </div>
@@ -691,7 +701,7 @@ export default function PopupEventPanel({
   eventMetaFallback,
   onClose, onEventCreated,
   formatTime, formatDateKeyMMDDYYYY, resolveHandleLikeLabel,
-  onLaunchRoundRobin, onLaunchGauntlet,
+  onLaunchRoundRobin, onLaunchGauntlet, onLaunchScramble,
 }) {
   const accent = activeLayerPageTheme?.accent || '#16a34a';
   const isLight = (hex) => { const h = (hex || '#000').replace('#', ''); return (0.2126 * parseInt(h.slice(0,2),16) + 0.7152 * parseInt(h.slice(2,4),16) + 0.0722 * parseInt(h.slice(4,6),16)) / 255 > 0.72; };
@@ -1356,7 +1366,7 @@ export default function PopupEventPanel({
       {screen === 'game' && (
         <GameModeLauncher event={event} members={members} accent={accent} darkMode={darkMode}
           border={border} softBg={softBg} btnStyle={btnStyle} isHost={isHostOrCohost}
-          onLaunchRoundRobin={onLaunchRoundRobin} onLaunchGauntlet={onLaunchGauntlet} />
+          onLaunchRoundRobin={onLaunchRoundRobin} onLaunchGauntlet={onLaunchGauntlet} onLaunchScramble={onLaunchScramble} />
       )}
     </div>
   );
