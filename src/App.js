@@ -28008,7 +28008,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       <div
         className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
         onClick={() => setShowJourneyScreen(false)}
-        style={{ touchAction: 'none', overscrollBehavior: 'none' }}
+        style={{
+          touchAction: 'none',
+          overscrollBehavior: 'none',
+          paddingBottom: darkMode ? 'env(safe-area-inset-bottom)' : undefined,
+          backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined,
+        }}
       >
         <div
           className="bg-white dark:bg-slate-950 rounded-t-[28px] rounded-b-none sm:rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
@@ -28017,6 +28022,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             touchAction: 'pan-y',
             overscrollBehaviorY: 'contain',
             WebkitOverflowScrolling: 'touch',
+            paddingBottom: darkMode ? 'env(safe-area-inset-bottom)' : undefined,
           }}
         >
           <div
