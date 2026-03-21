@@ -16184,7 +16184,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal || showJourneyWeightTrackerModal;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
     const scrollY = window.scrollY || window.pageYOffset || 0;
-    const journeyOverlayPageBg = 'transparent';
+    const journeyOverlayPageBg = darkMode ? 'rgba(2, 6, 23, 0.72)' : 'rgba(15, 23, 42, 0.16)';
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyTouchAction = document.body.style.touchAction;
     const previousBodyOverscroll = document.body.style.overscrollBehavior;
@@ -16193,11 +16193,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const previousBodyLeft = document.body.style.left;
     const previousBodyRight = document.body.style.right;
     const previousBodyWidth = document.body.style.width;
-    const previousBodyBackground = document.body.style.backgroundColor;
+    const previousBodyBackground = document.body.style.background;
     const previousDocOverflow = document.documentElement.style.overflow;
     const previousDocTouchAction = document.documentElement.style.touchAction;
     const previousDocOverscroll = document.documentElement.style.overscrollBehavior;
-    const previousDocBackground = document.documentElement.style.backgroundColor;
+    const previousDocBackground = document.documentElement.style.background;
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
     document.body.style.overscrollBehavior = 'none';
@@ -16206,11 +16206,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     document.body.style.left = '0';
     document.body.style.right = '0';
     document.body.style.width = '100%';
-    document.body.style.backgroundColor = journeyOverlayPageBg;
+    document.body.style.background = journeyOverlayPageBg;
     document.documentElement.style.overflow = 'hidden';
     document.documentElement.style.touchAction = 'none';
     document.documentElement.style.overscrollBehavior = 'none';
-    document.documentElement.style.backgroundColor = journeyOverlayPageBg;
+    document.documentElement.style.background = journeyOverlayPageBg;
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.body.style.touchAction = previousBodyTouchAction;
@@ -16220,11 +16220,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       document.body.style.left = previousBodyLeft;
       document.body.style.right = previousBodyRight;
       document.body.style.width = previousBodyWidth;
-      document.body.style.backgroundColor = previousBodyBackground;
+      document.body.style.background = previousBodyBackground;
       document.documentElement.style.overflow = previousDocOverflow;
       document.documentElement.style.touchAction = previousDocTouchAction;
       document.documentElement.style.overscrollBehavior = previousDocOverscroll;
-      document.documentElement.style.backgroundColor = previousDocBackground;
+      document.documentElement.style.background = previousDocBackground;
       window.scrollTo(0, scrollY);
     };
   }, [darkMode, showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal, showJourneyWeightTrackerModal]);
