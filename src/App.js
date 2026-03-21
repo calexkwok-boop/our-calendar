@@ -1255,6 +1255,58 @@ const parseManualGauntletRoster = (value) => {
     }));
 };
 
+const deriveRoundRobinStandings = (tournament) => {
+  const participants = Array.isArray(tournament?.participants) ? tournament.participants : [];
+  const stats = participants.reduce((acc, participant) => {
+    const id = String(participant?.id || '').trim();
+    if (!id) return acc;
+    acc[id] = {
+      id,
+      displayName: String(participant?.displayName || participant?.name || 'Player'),
+      wins: 0,
+      losses: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      played: 0,
+    };
+    return acc;
+  }, {});
+
+  (tournament?.rounds || []).forEach((round) => {
+    (round?.matches || []).filter((match) => match?.completed).forEach((match) => {
+      const scoreA = parseInt(String(match?.scoreA || ''), 10);
+      const scoreB = parseInt(String(match?.scoreB || ''), 10);
+      if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB) || scoreA < 0 || scoreB < 0 || scoreA === scoreB) return;
+      const aWon = scoreA > scoreB;
+      (match?.teamA?.members || []).forEach((participant) => {
+        const row = stats[String(participant?.id || '')];
+        if (!row) return;
+        row.played += 1;
+        row.pointsFor += scoreA;
+        row.pointsAgainst += scoreB;
+        if (aWon) row.wins += 1;
+        else row.losses += 1;
+      });
+      (match?.teamB?.members || []).forEach((participant) => {
+        const row = stats[String(participant?.id || '')];
+        if (!row) return;
+        row.played += 1;
+        row.pointsFor += scoreB;
+        row.pointsAgainst += scoreA;
+        if (!aWon) row.wins += 1;
+        else row.losses += 1;
+      });
+    });
+  });
+
+  return Object.values(stats).sort((a, b) => (
+    b.wins - a.wins
+    || ((b.pointsFor - b.pointsAgainst) - (a.pointsFor - a.pointsAgainst))
+    || (b.pointsFor - a.pointsFor)
+    || a.displayName.localeCompare(b.displayName)
+  ));
+};
+
 const parseManualScrambleRoster = (value) => {
   const seen = new Set();
   return String(value || '')
@@ -4631,6 +4683,7 @@ function App() {
   const [showRoundRobinPanel, setShowRoundRobinPanel] = useState(false);
   const [selectedRoundRobinEventId, setSelectedRoundRobinEventId] = useState('');
   const [layerRoundRobins, setLayerRoundRobins] = useState({});
+  const [roundRobinTeamsOf, setRoundRobinTeamsOf] = useState(2);
   const [showScramblePanel, setShowScramblePanel] = useState(false);
   const [selectedScrambleEventId, setSelectedScrambleEventId] = useState('');
   const [scrambleRoundsCount, setScrambleRoundsCount] = useState(4);
@@ -18244,7 +18297,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (aDate !== bDate) return aDate.localeCompare(bDate);
       return String(a?.event?.title || '').localeCompare(String(b?.event?.title || ''));
     });
-    const eligibleRoundRobinEvents = Object.keys(popupEventsByEventId || {})
+  const eligibleRoundRobinEvents = Object.keys(popupEventsByEventId || {})
   .map((eventId) => {
     const event = popupEventDetailsById[String(eventId || '')] || null;
     const signups = popupSignupsByEventId[String(eventId || '')] || [];
@@ -18256,6 +18309,28 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const bDate = String(b?.event?.dateKey || '');
     return aDate.localeCompare(bDate);
   });
+  const manualRoundRobinParticipants = parseManualRoundRobinRoster(manualRoundRobinRosterInput);
+  const roundRobinTournamentKey = useManualRoundRobinRoster ? '__manual__' : String(selectedRoundRobinEventId || '').trim();
+  const selectedRoundRobinEntry = !useManualRoundRobinRoster
+    ? (eligibleRoundRobinEvents.find((entry) => String(entry?.eventId || '') === String(selectedRoundRobinEventId || '')) || null)
+    : null;
+  const selectedRoundRobinParticipants = useManualRoundRobinRoster
+    ? manualRoundRobinParticipants
+    : ((selectedRoundRobinEntry?.signups || []).map((signup, idx) => ({
+        id: String(
+          signup?.memberId
+          || signup?.signupId
+          || (signup?.userId && !signup?.manual ? signup.userId : '')
+          || `guest-${idx + 1}-${String(signup?.displayName || 'player').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+        ),
+        userId: String(signup?.userId || ''),
+        displayName: String(signup?.displayName || `Player ${idx + 1}`),
+      })));
+  const activeRoundRobinTournament = roundRobinTournamentKey ? (layerRoundRobins?.[roundRobinTournamentKey] || null) : null;
+  const activeRoundRobinRounds = activeRoundRobinTournament?.rounds || [];
+  const activeRoundRobinStandings = deriveRoundRobinStandings(activeRoundRobinTournament);
+  const activeRoundRobinCurrentRound = activeRoundRobinRounds.find((round) => Array.isArray(round?.matches) && round.matches.some((match) => !match?.completed)) || activeRoundRobinRounds[0] || null;
+  const activeRoundRobinTeamsOf = Number(activeRoundRobinTournament?.teamsOf || roundRobinTeamsOf || 2);
   const eligibleScramblePopupEvents = Object.keys(popupEventsByEventId || {})
     .map((eventId) => {
       const event = popupEventDetailsById[String(eventId || '')] || null;
@@ -22176,26 +22251,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       onClick={(e) => e.stopPropagation()}
     >
       <RoundRobinPanel
-        activeLayerPageTheme={activeLayerPageTheme}
-        darkMode={darkMode}
-        eligibleRoundRobinEvents={eligibleRoundRobinEvents}
-        layerRoundRobins={layerRoundRobins}
-        manualRoundRobinRosterInput={manualRoundRobinRosterInput}
-        useManualRoundRobinRoster={useManualRoundRobinRoster}
-        selectedRoundRobinEventId={selectedRoundRobinEventId}
+        onClose={() => setShowRoundRobinPanel(false)}
+        participants={selectedRoundRobinParticipants}
+        teamsOf={activeRoundRobinTeamsOf}
+        setTeamsOf={setRoundRobinTeamsOf}
+        rounds={activeRoundRobinRounds}
+        activeRound={activeRoundRobinCurrentRound}
+        standings={activeRoundRobinStandings}
+        tid={roundRobinTournamentKey}
         roundRobinError={roundRobinError}
-        setSelectedRoundRobinEventId={setSelectedRoundRobinEventId}
-        setManualRoundRobinRosterInput={setManualRoundRobinRosterInput}
-        setUseManualRoundRobinRoster={setUseManualRoundRobinRoster}
-        setRoundRobinError={setRoundRobinError}
-        setShowRoundRobinPanel={setShowRoundRobinPanel}
-        startRoundRobinTournament={startRoundRobinTournament}
+        startRoundRobinTournament={() => startRoundRobinTournament(roundRobinTournamentKey, false, roundRobinTeamsOf)}
         resetRoundRobinTournament={resetRoundRobinTournament}
         updateRoundRobinMatchScore={updateRoundRobinMatchScore}
-        finalizeRoundRobinMatch={finalizeRoundRobinMatch}
-        formatDateKeyMMDDYYYY={formatDateKeyMMDDYYYY}
-        formatTime={formatTime}
-        resolveHandleLikeLabel={resolveHandleLikeLabel}
+        completeRoundRobinMatch={finalizeRoundRobinMatch}
       />
     </div>
   </div>
