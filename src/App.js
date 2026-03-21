@@ -28006,12 +28006,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )}
     {!activeSubCalendar && showJourneyScreen && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-6 sm:pt-4 pb-0 sm:pb-4"
+        className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
         onClick={() => setShowJourneyScreen(false)}
         style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
         <div
-          className="bg-white dark:bg-gray-800 rounded-t-[28px] rounded-b-none sm:rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto"
+          className="bg-white dark:bg-gray-800 rounded-t-[28px] rounded-b-none sm:rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
           style={{
             touchAction: 'pan-y',
