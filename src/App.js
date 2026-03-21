@@ -18849,21 +18849,23 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )
     : null;
   const renderJourneyRunTrackerModal = () => (
-    <div
-      className="fixed inset-0 z-[85] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
-      onClick={() => {
-        if (journeyRunSession?.status !== 'active') closeJourneyRunTrackerModal();
-      }}
-      style={{
-        paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
-        paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
-      }}
-    >
+    typeof document !== 'undefined'
+      ? createPortal(
       <div
-        className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-        style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+        className="fixed inset-0 z-[85] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
+        onClick={() => {
+          if (journeyRunSession?.status !== 'active') closeJourneyRunTrackerModal();
+        }}
+        style={{
+          paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
+          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+        }}
       >
+        <div
+          className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+        >
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Run / Walk</div>
@@ -18975,7 +18977,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         ) : null}
 
-        <div className="mt-5 flex gap-2">
+          <div className="mt-5 flex gap-2">
           {journeyRunSession?.status === 'idle' && (
             <>
               <button type="button" onClick={closeJourneyRunTrackerModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
@@ -19001,27 +19003,32 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <button type="button" onClick={saveJourneyRunSession} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>{journeyRunSession?.sessionType === 'walk' ? 'Save walk' : 'Save run'}</button>
             </>
           )}
+          </div>
         </div>
-      </div>
-    </div>
+      </div>,
+      document.body
+    )
+      : null
   );
 
   const renderJourneyWorkoutTrackerModal = () => (
-    <div
-      className="fixed inset-0 z-[85] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
-      onClick={() => {
-        if (journeyWorkoutSession?.status !== 'active') closeJourneyWorkoutTrackerModal();
-      }}
-      style={{
-        paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
-        paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
-      }}
-    >
+    typeof document !== 'undefined'
+      ? createPortal(
       <div
-        className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-        style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+        className="fixed inset-0 z-[85] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
+        onClick={() => {
+          if (journeyWorkoutSession?.status !== 'active') closeJourneyWorkoutTrackerModal();
+        }}
+        style={{
+          paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
+          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+        }}
       >
+        <div
+          className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+        >
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Workout</div>
@@ -19138,7 +19145,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         ) : null}
 
-        <div className="mt-5 flex gap-2">
+          <div className="mt-5 flex gap-2">
           {journeyWorkoutSession?.status === 'idle' && (
             <>
               <button type="button" onClick={closeJourneyWorkoutTrackerModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
@@ -19164,27 +19171,32 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <button type="button" onClick={saveJourneyWorkoutSession} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Save workout</button>
             </>
           )}
+          </div>
         </div>
-      </div>
-    </div>
+      </div>,
+      document.body
+    )
+      : null
   );
 
   const renderJourneyWeightTrackerModal = () => {
     const selectedCheckInOption = JOURNEY_WEIGHT_CHECKIN_OPTIONS.find((option) => option.id === String(journeyWeightCheckIn?.checkInType || 'weigh_in')) || JOURNEY_WEIGHT_CHECKIN_OPTIONS[0];
     return (
-      <div
-        className="fixed inset-0 z-[85] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
-        onClick={closeJourneyWeightTrackerModal}
-        style={{
-          paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
-          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
-        }}
-      >
+      typeof document !== 'undefined'
+        ? createPortal(
         <div
-          className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+          className="fixed inset-0 z-[85] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
+          onClick={closeJourneyWeightTrackerModal}
+          style={{
+            paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
+            paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+          }}
         >
+          <div
+            className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+          >
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Weight loss</div>
@@ -19287,12 +19299,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
           ) : null}
 
-          <div className="mt-5 flex gap-2">
+            <div className="mt-5 flex gap-2">
             <button type="button" onClick={closeJourneyWeightTrackerModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
             <button type="button" onClick={saveJourneyWeightCheckIn} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Save check-in</button>
+            </div>
           </div>
-        </div>
-      </div>
+        </div>,
+        document.body
+      )
+        : null
     );
   };
 
