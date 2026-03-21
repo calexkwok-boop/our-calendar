@@ -68,13 +68,14 @@ export default function JourneyPanel({
               <span>{Math.round(primaryJourneyGoalProgress * 100)}%</span>
             </div>
             <div className="h-2 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
-                  background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
-                }}
-              />
+             <div
+  className="h-2 rounded-full transition-all duration-700 ease-out"
+  style={{
+    width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
+    background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
+    boxShadow: `0 0 12px ${hexToRgba(activeLayerPageTheme.accent, 0.4)}`,
+           }}
+          />
             </div>
           </div>
 
