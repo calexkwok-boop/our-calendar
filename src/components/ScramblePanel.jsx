@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, X, Zap, Sparkles } from 'lucide-react';
+import { Shuffle, X, Zap, Sparkles } from 'lucide-react';
 
 const T = {
   bg: '#0a0e1a',
@@ -343,6 +343,15 @@ const courtCard = {
   position: 'relative',
   overflow: 'hidden',
 };
+
+// Add this CSS via inline style or class
+const courtCardHoverStyle = `
+  .court-card:hover {
+    border-color: ${T.neon1}60;
+    box-shadow: 0 0 30px ${T.neon1}20;
+    transform: translateY(-2px);
+  }
+`;
 
 const courtHeader = {
   display: 'flex',
@@ -721,10 +730,43 @@ function ScramblePanel({
             border-color: ${T.neon1} !important;
             box-shadow: 0 0 20px ${T.neon1}60 !important;
           }
+          
+          .court-card:hover {
+            border-color: ${T.neon1}60 !important;
+            box-shadow: 0 0 30px ${T.neon1}20 !important;
+            transform: translateY(-2px) !important;
+          }
+          
+          .scramble-button:hover {
+            box-shadow: 0 0 40px ${T.neon1}60, 0 8px 20px rgba(0,0,0,0.5) !important;
+            transform: translateY(-2px) !important;
+          }
+          
+          .scramble-button:active {
+            transform: translateY(0) scale(0.98) !important;
+          }
+          
+          @keyframes shell-glow {
+            0%, 100% {
+              box-shadow: 0 0 60px ${T.neon1}15, 0 20px 40px rgba(0,0,0,0.5);
+            }
+            50% {
+              box-shadow: 0 0 80px ${T.neon3}20, 0 20px 40px rgba(0,0,0,0.5);
+            }
+          }
+          
+          .scramble-shell {
+            animation: shell-glow 8s ease-in-out infinite;
+          }
+          
+          .standings-row:hover {
+            background: ${T.neon1}08 !important;
+            border-color: ${T.neon1}40 !important;
+          }
         `}
       </style>
 
-      <div style={shell}>
+      <div className="scramble-shell" style={shell}>
         <div style={heroStyle}>
           <div style={heroBg} />
           <div style={{ position: 'relative', zIndex: 1 }}>
@@ -847,7 +889,7 @@ function ScramblePanel({
             </div>
 
             {!tournament && (
-              <button onClick={startScrambleTournament} style={{ ...actionPrimary, width: '100%', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <button onClick={startScrambleTournament} className="scramble-button" style={{ ...actionPrimary, width: '100%', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 <Zap size={16} style={{ display: 'inline-block' }} />
                 START SCRAMBLE
                 <Sparkles size={14} style={{ display: 'inline-block' }} />
@@ -898,7 +940,7 @@ function ScramblePanel({
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {(activeRound || tournament?.status !== 'completed') && (
-                    <button onClick={() => finalizeScrambleRound(tournamentKey)} style={actionPrimary}>
+                    <button onClick={() => finalizeScrambleRound(tournamentKey)} className="scramble-button" style={actionPrimary}>
                       {activeRound ? 'Finalize Round' : 'Next Round'}
                     </button>
                   )}
@@ -925,7 +967,7 @@ function ScramblePanel({
                   {(activeRound.courts || []).map((court) => {
                     const result = getScrambleCourtResult(court);
                     return (
-                      <div key={`scramble-court-${court.courtNumber}`} style={courtCard}>
+                      <div key={`scramble-court-${court.courtNumber}`} className="court-card" style={courtCard}>
                         <div style={courtHeader}>
                           <div style={courtNameStyle}>Court {court.courtNumber}</div>
                           <span style={result ? courtStatusLocked : courtStatusBase}>
@@ -1020,7 +1062,7 @@ function ScramblePanel({
                     <div style={emptyState}>Finalize a round to generate standings.</div>
                   ) : (
                     tournamentStandings.map((row, index) => (
-                      <div key={`standing-${row.id}`} style={standingRowStyle}>
+                      <div key={`standing-${row.id}`} className="standings-row" style={standingRowStyle}>
                         <div>
                           <RankBadge index={index} />
                         </div>
