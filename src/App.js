@@ -28067,21 +28067,24 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
         <div
-          className="bg-white dark:bg-slate-950 rounded-[32px] shadow-2xl border border-white/10 w-full sm:w-[34rem] max-h-[90vh] overflow-y-auto"
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
           style={{
             touchAction: 'pan-y',
             overscrollBehaviorY: 'contain',
             WebkitOverflowScrolling: 'touch',
-            clipPath: 'inset(0 round 32px)',
           }}
         >
           <div
-            className="p-5 sm:p-6 border-b border-gray-100 dark:border-white/10"
+            className="mb-4"
             style={{
               background: darkMode
                 ? `linear-gradient(180deg, ${hexToRgba('#0f172a', 0.98)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.16)} 100%)`
                 : `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
+              marginLeft: '-1.5rem',
+              marginRight: '-1.5rem',
+              marginTop: '-1.5rem',
+              padding: '1.5rem',
             }}
           >
             <div className="flex items-start justify-between gap-4">
@@ -28106,7 +28109,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-4">
+          <div className="space-y-4 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
             {primaryJourneyGoal ? (
               <div className="rounded-[28px] border border-white/10 bg-gray-50/90 dark:bg-white/[0.04] p-5">
                 <div className="flex items-start justify-between gap-3">
