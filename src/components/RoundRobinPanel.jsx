@@ -116,7 +116,8 @@ const shell = {
   fontFamily: '"DM Sans", sans-serif',
   display: 'flex',
   flexDirection: 'column',
-  maxHeight: '90vh',
+  maxHeight: '100%',
+  minHeight: 0,
 };
 
 const heroStyle = {
@@ -182,6 +183,7 @@ const closeBtn = {
   position: 'absolute',
   top: 18,
   right: 18,
+  zIndex: 3,
   width: 30,
   height: 30,
   borderRadius: 8,
@@ -589,7 +591,15 @@ function RoundRobinPanel({
               Everyone plays everyone. Fair matchups, full tournament bracket.
             </div>
           </div>
-          <button onClick={onClose} style={closeBtn}>
+          <button
+            type="button"
+            aria-label="Close round robin panel"
+            onClick={(event) => {
+              event.stopPropagation();
+              onClose();
+            }}
+            style={closeBtn}
+          >
             <X size={14} />
           </button>
         </div>

@@ -22244,6 +22244,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   <div
     className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
     style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
+    onClick={() => setShowRoundRobinPanel(false)}
+    onKeyDown={(e) => {
+      if (e.key === 'Escape') setShowRoundRobinPanel(false);
+    }}
+    role="dialog"
+    aria-modal="true"
+    tabIndex={-1}
   >
     <div
       className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
@@ -22271,6 +22278,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   <div
     className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
     style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
+    onClick={() => setShowScramblePanel(false)}
+    onKeyDown={(e) => {
+      if (e.key === 'Escape') setShowScramblePanel(false);
+    }}
+    role="dialog"
+    aria-modal="true"
+    tabIndex={-1}
   >
     <div
       className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"

@@ -98,6 +98,7 @@ const closeBtn = {
   position: 'absolute',
   top: 20,
   right: 20,
+  zIndex: 3,
   width: 32,
   height: 32,
   borderRadius: 10,
@@ -779,7 +780,15 @@ function ScramblePanel({
               Pure randomness. Every round reshuffles the deck—no rankings, no strategy, just mayhem. 🎲
             </div>
           </div>
-          <button onClick={onClose} style={closeBtn}>
+          <button
+            type="button"
+            aria-label="Close scramble panel"
+            onClick={(event) => {
+              event.stopPropagation();
+              onClose();
+            }}
+            style={closeBtn}
+          >
             <X size={14} />
           </button>
         </div>
