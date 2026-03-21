@@ -19207,14 +19207,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     typeof document !== 'undefined'
       ? createPortal(
       <div
-        className="fixed inset-0 z-[85] bg-black/40 backdrop-blur-sm p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
+        className="fixed inset-0 z-[85] bg-black/50 p-4 flex items-center justify-center"
         onClick={() => {
           if (journeyRunSession?.status !== 'active') closeJourneyRunTrackerModal();
         }}
-        style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
       >
         <div
-          className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:w-[32rem] sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+          className="bg-white dark:bg-slate-950 rounded-[32px] shadow-2xl border border-white/10 p-5 w-full sm:w-[32rem] max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px)' }}
         >
@@ -19367,14 +19366,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     typeof document !== 'undefined'
       ? createPortal(
       <div
-        className="fixed inset-0 z-[85] bg-black/40 backdrop-blur-sm p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
+        className="fixed inset-0 z-[85] bg-black/50 p-4 flex items-center justify-center"
         onClick={() => {
           if (journeyWorkoutSession?.status !== 'active') closeJourneyWorkoutTrackerModal();
         }}
-        style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
       >
         <div
-          className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:w-[32rem] sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+          className="bg-white dark:bg-slate-950 rounded-[32px] shadow-2xl border border-white/10 p-5 w-full sm:w-[32rem] max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px)' }}
         >
@@ -19534,12 +19532,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       typeof document !== 'undefined'
         ? createPortal(
         <div
-          className="fixed inset-0 z-[85] bg-black/40 backdrop-blur-sm p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
+          className="fixed inset-0 z-[85] bg-black/50 p-4 flex items-center justify-center"
           onClick={closeJourneyWeightTrackerModal}
-          style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
         >
           <div
-            className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:w-[32rem] sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+            className="bg-white dark:bg-slate-950 rounded-[32px] shadow-2xl border border-white/10 p-5 w-full sm:w-[32rem] max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
             style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px)' }}
           >
@@ -28050,12 +28047,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )}
     {!activeSubCalendar && showJourneyScreen && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[82] bg-black/50 backdrop-blur-sm p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
+        className="fixed inset-0 z-[82] bg-black/50 p-4 flex items-center justify-center"
         onClick={() => setShowJourneyScreen(false)}
-        style={{ touchAction: 'none', overscrollBehavior: 'none', paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
+        style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
         <div
-          className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:w-[34rem] sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
+          className="bg-white dark:bg-slate-950 rounded-[32px] shadow-2xl border border-white/10 w-full sm:w-[34rem] max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
           style={{
             touchAction: 'pan-y',
