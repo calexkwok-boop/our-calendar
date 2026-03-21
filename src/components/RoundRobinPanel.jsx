@@ -1,109 +1,192 @@
-import React from 'react';
-import { Shuffle, X, Zap, Sparkles } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { X, Trophy, RotateCcw, ChevronDown, ChevronUp, Users, Target } from 'lucide-react';
+
+// ---------------------------------------------------------------------------
+// Theme - Blue/Teal accent to differentiate from Gauntlet (gold) and Scramble (neon green)
+// ---------------------------------------------------------------------------
 
 const T = {
-  bg: '#0a0e1a',
-  surface: '#111827',
-  card: 'rgba(30,41,59,0.6)',
-  neon1: '#00ff88', // bright green
-  neon2: '#ff00ff', // magenta
-  neon3: '#00d9ff', // cyan
-  neon4: '#ffeb3b', // yellow
-  orange: '#ff6b35',
-  text: '#ffffff',
-  sub: 'rgba(255,255,255,0.65)',
-  muted: 'rgba(255,255,255,0.4)',
-  border: 'rgba(255,255,255,0.1)',
+  bg: '#0c0f16',
+  surface: '#12151d',
+  card: '#181c27',
+  border: 'rgba(255,255,255,0.08)',
+  borderGlow: 'rgba(59,130,246,0.25)',
+  blue: '#3b82f6',
+  blueText: '#60a5fa',
+  teal: '#14b8a6',
+  accent: '#0ea5e9',
+  red: '#ef4444',
+  muted: 'rgba(255,255,255,0.35)',
+  text: 'rgba(255,255,255,0.92)',
+  sub: 'rgba(255,255,255,0.55)',
 };
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const buildRoundRobinRounds = (participants, teamsOf = 2) => {
+  const list = [...(Array.isArray(participants) ? participants : [])];
+  if (list.length < teamsOf * 2) return [];
+  const teams = [];
+  if (teamsOf === 1) {
+    list.forEach((p, i) => teams.push({ id: `team-${i}`, members: [p] }));
+  } else {
+    for (let i = 0; i + 1 < list.length; i += 2)
+      teams.push({ id: `team-${i}`, members: [list[i], list[i + 1]] });
+    if (list.length % 2 !== 0)
+      teams.push({ id: `team-solo`, members: [list[list.length - 1]] });
+  }
+  const n = teams.length;
+  if (n < 2) return [];
+  const slots = n % 2 === 0 ? [...teams] : [...teams, { id: 'bye', members: [], isBye: true }];
+  const slotCount = slots.length;
+  const rounds = [];
+  const fixed = slots[0];
+  const rotating = slots.slice(1);
+  for (let r = 0; r < slotCount - 1; r++) {
+    const current = [fixed, ...rotating];
+    const matches = [];
+    for (let i = 0; i < slotCount / 2; i++) {
+      const teamA = current[i];
+      const teamB = current[slotCount - 1 - i];
+      if (teamA.isBye || teamB.isBye) continue;
+      matches.push({ id: `rr-r${r}-m${i}`, round: r, teamA, teamB, scoreA: '', scoreB: '', completed: false });
+    }
+    if (matches.length > 0) rounds.push({ index: r, matches });
+    rotating.unshift(rotating.pop());
+  }
+  return rounds;
+};
+
+const deriveStandings = (participants, rounds) => {
+  const stats = {};
+  (Array.isArray(participants) ? participants : []).forEach((p) => {
+    stats[p.id] = { id: p.id, displayName: String(p.displayName || p.name || 'Player'), wins: 0, losses: 0, pointsFor: 0, pointsAgainst: 0, played: 0 };
+  });
+  (Array.isArray(rounds) ? rounds : []).forEach((round) => {
+    (round.matches || []).filter((m) => m.completed).forEach((m) => {
+      const a = parseInt(String(m.scoreA || ''), 10);
+      const b = parseInt(String(m.scoreB || ''), 10);
+      if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0 || a === b) return;
+      const aWon = a > b;
+      [...(m.teamA?.members || [])].forEach((p) => {
+        if (!stats[p.id]) return;
+        stats[p.id].pointsFor += a; stats[p.id].pointsAgainst += b; stats[p.id].played++;
+        if (aWon) stats[p.id].wins++; else stats[p.id].losses++;
+      });
+      [...(m.teamB?.members || [])].forEach((p) => {
+        if (!stats[p.id]) return;
+        stats[p.id].pointsFor += b; stats[p.id].pointsAgainst += a; stats[p.id].played++;
+        if (!aWon) stats[p.id].wins++; else stats[p.id].losses++;
+      });
+    });
+  });
+  return Object.values(stats).map((row) => ({
+    ...row,
+    participant: (Array.isArray(participants) ? participants : []).find((p) => String(p?.id || '') === String(row.id || '')) || null,
+  })).sort((a, b) => {
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    const diff = (b.pointsFor - b.pointsAgainst) - (a.pointsFor - a.pointsAgainst);
+    return diff !== 0 ? diff : b.pointsFor - a.pointsFor;
+  });
+};
+
+const initials = (name) => {
+  const parts = String(name || '?').trim().split(/\s+/);
+  return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : String(name || '?')[0].toUpperCase();
+};
+
+const getNames = (team) => {
+  if (!team || team.isBye) return ['Bye'];
+  return (team.members || []).map((p) => String(p.displayName || p.name || 'Player'));
+};
+
+// ---------------------------------------------------------------------------
+// Styled Components
+// ---------------------------------------------------------------------------
+
 const shell = {
-  background: T.bg,
-  border: `2px solid transparent`,
-  backgroundImage: `linear-gradient(${T.bg}, ${T.bg}), linear-gradient(135deg, ${T.neon1}, ${T.neon2}, ${T.neon3})`,
-  backgroundOrigin: 'border-box',
-  backgroundClip: 'padding-box, border-box',
-  borderRadius: 24,
+  background: `linear-gradient(180deg, ${T.bg} 0%, ${T.surface} 100%)`,
+  border: `1px solid ${T.borderGlow}`,
+  borderRadius: 20,
   overflow: 'hidden',
   color: T.text,
-  boxShadow: `0 0 60px rgba(0,255,136,0.15), 0 20px 40px rgba(0,0,0,0.5)`,
-  fontFamily: '"Inter", sans-serif',
+  boxShadow: '0 22px 48px rgba(0,0,0,0.32)',
+  fontFamily: '"DM Sans", sans-serif',
+  display: 'flex',
+  flexDirection: 'column',
+  maxHeight: '90vh',
 };
 
 const heroStyle = {
-  padding: '24px',
+  padding: '20px 22px 18px',
   borderBottom: `1px solid ${T.border}`,
   position: 'relative',
   overflow: 'hidden',
-  background: `linear-gradient(135deg, rgba(0,255,136,0.08) 0%, rgba(255,0,255,0.08) 50%, rgba(0,217,255,0.08) 100%)`,
 };
 
 const heroBg = {
   position: 'absolute',
   inset: 0,
   pointerEvents: 'none',
-  opacity: 0.6,
   background: `
-    radial-gradient(circle at 20% 80%, ${T.neon1}20 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, ${T.neon2}20 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, ${T.neon3}15 0%, transparent 50%)
+    radial-gradient(ellipse 60% 80% at 90% 50%, rgba(59,130,246,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 30% 60% at 10% 0%, rgba(20,184,166,0.04) 0%, transparent 60%)
   `,
-  animation: 'scramble-pulse 4s ease-in-out infinite',
 };
 
 const badge = {
   display: 'inline-flex',
   alignItems: 'center',
-  gap: 8,
-  background: 'rgba(0,0,0,0.5)',
-  border: `2px solid ${T.neon1}`,
+  gap: 6,
+  background: 'rgba(59,130,246,0.10)',
+  border: '1px solid rgba(59,130,246,0.25)',
   borderRadius: 999,
-  padding: '6px 14px',
-  fontSize: 11,
-  fontWeight: 900,
-  letterSpacing: '0.15em',
-  color: T.neon1,
+  padding: '4px 11px',
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: '0.18em',
+  color: T.blueText,
   textTransform: 'uppercase',
-  marginBottom: 12,
-  boxShadow: `0 0 20px ${T.neon1}60, inset 0 0 20px ${T.neon1}20`,
-  animation: 'badge-glow 3s ease-in-out infinite',
+  marginBottom: 10,
+  fontFamily: '"Syne", sans-serif',
 };
 
 const liveDot = {
-  width: 8,
-  height: 8,
+  width: 6,
+  height: 6,
   borderRadius: '50%',
-  background: T.neon1,
-  boxShadow: `0 0 12px ${T.neon1}, 0 0 4px ${T.neon1}`,
-  animation: 'dot-spin 2s linear infinite',
+  background: T.blue,
+  animation: 'rr-pulse 2s infinite',
 };
 
 const heroTitle = {
-  fontSize: 32,
-  fontWeight: 900,
-  letterSpacing: '-0.03em',
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 26,
+  fontWeight: 800,
+  letterSpacing: '-0.02em',
   color: '#fff',
   lineHeight: 1,
-  textShadow: `0 0 40px ${T.neon1}60, 0 2px 8px rgba(0,0,0,0.8)`,
 };
 
 const heroSub = {
-  fontSize: 14,
+  fontSize: 13,
   color: T.sub,
-  marginTop: 8,
-  lineHeight: 1.6,
-  maxWidth: 440,
+  marginTop: 6,
+  lineHeight: 1.5,
+  maxWidth: 420,
 };
 
 const closeBtn = {
   position: 'absolute',
-  top: 20,
-  right: 20,
-  width: 32,
-  height: 32,
-  borderRadius: 10,
-  background: 'rgba(0,0,0,0.5)',
-  backdropFilter: 'blur(10px)',
-  border: `2px solid ${T.border}`,
+  top: 18,
+  right: 18,
+  width: 30,
+  height: 30,
+  borderRadius: 8,
+  background: 'rgba(255,255,255,0.06)',
+  border: `1px solid ${T.border}`,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -114,315 +197,145 @@ const closeBtn = {
 
 const infoBar = {
   margin: '14px 14px 0',
-  background: `linear-gradient(135deg, ${T.neon1}08 0%, ${T.neon3}05 100%)`,
-  border: `2px solid ${T.neon1}30`,
-  borderRadius: 12,
-  padding: '12px 16px',
-  fontSize: 12,
-  fontWeight: 600,
-  color: T.sub,
-  lineHeight: 1.6,
-  boxShadow: `0 0 20px ${T.neon1}15`,
-};
-
-const segRow = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: 6,
-  background: 'rgba(255,255,255,0.05)',
-  border: `2px solid ${T.border}`,
-  borderRadius: 14,
-  padding: 6,
-  marginBottom: 14,
-};
-
-const segBtnBase = {
-  padding: '10px 14px',
+  background: 'rgba(59,130,246,0.05)',
+  border: '1px solid rgba(59,130,246,0.13)',
   borderRadius: 10,
+  padding: '9px 13px',
+  fontSize: 11.5,
+  color: 'rgba(96,165,250,0.75)',
+  lineHeight: 1.5,
+};
+
+const tabRow = {
+  display: 'flex',
+  gap: 4,
+  background: 'rgba(255,255,255,0.04)',
+  border: `1px solid ${T.border}`,
+  borderRadius: 12,
+  padding: 4,
+  margin: '14px 14px 0',
+};
+
+const tabBtnBase = {
+  fontFamily: '"Syne", sans-serif',
+  flex: 1,
+  padding: '9px 12px',
+  borderRadius: 9,
   fontSize: 12,
-  fontWeight: 900,
-  letterSpacing: '0.08em',
+  fontWeight: 700,
+  letterSpacing: '0.06em',
   textTransform: 'uppercase',
   cursor: 'pointer',
   border: 'none',
-  transition: 'all 0.2s',
+  transition: 'all 0.18s',
   background: 'transparent',
   color: T.sub,
 };
 
-const segBtnActive = {
-  ...segBtnBase,
-  background: `linear-gradient(135deg, ${T.neon1} 0%, ${T.neon3} 100%)`,
-  color: '#0a0e1a',
-  boxShadow: `0 0 20px ${T.neon1}40`,
-};
-
-const formGrid = {
-  display: 'grid',
-  gridTemplateColumns: 'minmax(0,1fr) 90px 130px',
-  gap: 10,
-  alignItems: 'start',
-};
-
-const fieldLabel = {
-  fontSize: 10,
-  fontWeight: 900,
-  letterSpacing: '0.18em',
-  textTransform: 'uppercase',
-  color: T.muted,
-  marginBottom: 6,
-  display: 'block',
-};
-
-const inputBase = {
-  width: '100%',
-  background: 'rgba(0,0,0,0.4)',
-  border: `2px solid ${T.border}`,
-  borderRadius: 12,
-  color: T.text,
-  fontSize: 13,
-  fontWeight: 600,
-  padding: '12px 14px',
-  outline: 'none',
-  transition: 'all 0.2s',
-};
-
-const stepper = {
-  background: 'rgba(0,0,0,0.4)',
-  border: `2px solid ${T.border}`,
-  borderRadius: 12,
-  overflow: 'hidden',
-};
-
-const stepperTop = {
-  fontSize: 9,
-  fontWeight: 900,
-  letterSpacing: '0.18em',
-  textTransform: 'uppercase',
-  color: T.muted,
-  padding: '8px 12px 0',
-};
-
-const stepBtnStyle = {
-  width: 40,
-  height: 40,
-  border: 'none',
-  background: 'transparent',
-  color: T.neon1,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'all 0.2s',
-};
-
-const stepNum = {
-  fontSize: 24,
-  fontWeight: 900,
-  color: T.text,
-  textAlign: 'center',
-  padding: '6px 12px',
+const tabBtnActive = {
+  ...tabBtnBase,
+  background: T.blue,
+  color: '#fff',
 };
 
 const actionPrimary = {
-  padding: '12px 20px',
-  borderRadius: 12,
-  fontSize: 13,
-  fontWeight: 900,
-  letterSpacing: '0.08em',
+  fontFamily: '"Syne", sans-serif',
+  padding: '9px 16px',
+  borderRadius: 10,
+  fontSize: 12,
+  fontWeight: 700,
+  letterSpacing: '0.06em',
   textTransform: 'uppercase',
   cursor: 'pointer',
   border: 'none',
-  background: `linear-gradient(135deg, ${T.neon1} 0%, ${T.neon3} 100%)`,
-  color: '#0a0e1a',
-  boxShadow: `0 0 30px ${T.neon1}50, 0 4px 16px rgba(0,0,0,0.4)`,
-  transition: 'all 0.2s',
-  position: 'relative',
-  overflow: 'hidden',
+  background: T.blue,
+  color: '#fff',
+  boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
+  transition: 'all 0.18s',
 };
 
 const actionSecondary = {
   ...actionPrimary,
-  background: 'rgba(255,255,255,0.08)',
-  color: T.text,
+  background: 'rgba(255,255,255,0.06)',
+  color: T.sub,
   boxShadow: 'none',
-  border: `2px solid ${T.border}`,
+  border: `1px solid ${T.border}`,
 };
 
 const emptyState = {
-  padding: '50px 24px',
+  padding: '40px 20px',
   textAlign: 'center',
   fontSize: 13,
-  fontWeight: 600,
-  color: T.sub,
-  lineHeight: 1.7,
-};
-
-const rosterCard = {
-  background: T.card,
-  backdropFilter: 'blur(20px)',
-  border: `2px solid ${T.border}`,
-  borderRadius: 14,
-  padding: '14px 16px',
-  marginTop: 14,
-};
-
-const rosterHeader = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 12,
-};
-
-const rosterTitleStyle = {
-  fontSize: 15,
-  fontWeight: 900,
-  color: T.text,
-};
-
-const rosterCountBadge = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 4,
-  background: `linear-gradient(135deg, ${T.neon1}15 0%, ${T.neon3}10 100%)`,
-  border: `2px solid ${T.neon1}40`,
-  borderRadius: 999,
-  padding: '4px 10px',
-  fontSize: 10,
-  fontWeight: 900,
-  letterSpacing: '0.12em',
-  color: T.neon1,
-  textTransform: 'uppercase',
-};
-
-const roundBar = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 12,
-  background: `linear-gradient(135deg, ${T.neon1}08 0%, ${T.neon2}05 100%)`,
-  border: `2px solid ${T.neon1}30`,
-  borderRadius: 14,
-  padding: '12px 16px',
-  marginBottom: 16,
-  boxShadow: `0 0 20px ${T.neon1}15`,
-};
-
-const roundLabel = {
-  fontSize: 12,
-  fontWeight: 900,
-  letterSpacing: '0.14em',
-  textTransform: 'uppercase',
-  color: T.neon1,
-  textShadow: `0 0 10px ${T.neon1}60`,
-};
-
-const byeCardStyle = {
-  background: `linear-gradient(135deg, ${T.neon2}10 0%, ${T.neon2}05 100%)`,
-  border: `2px solid ${T.neon2}40`,
-  borderRadius: 14,
-  padding: '12px 16px',
-  marginBottom: 16,
-  boxShadow: `0 0 20px ${T.neon2}15`,
-};
-
-const courtsGrid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-  gap: 16,
-  marginBottom: 16,
-};
-
-const courtCard = {
-  background: T.card,
-  backdropFilter: 'blur(20px)',
-  border: `2px solid ${T.border}`,
-  borderRadius: 16,
-  padding: '16px',
-  transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-  position: 'relative',
-  overflow: 'hidden',
-};
-
-// Add this CSS via inline style or class
-const courtCardHoverStyle = `
-  .court-card:hover {
-    border-color: ${T.neon1}60;
-    box-shadow: 0 0 30px ${T.neon1}20;
-    transform: translateY(-2px);
-  }
-`;
-
-const courtHeader = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  marginBottom: 14,
-  paddingBottom: 10,
-  borderBottom: `1px solid ${T.border}`,
-};
-
-const courtNameStyle = {
-  fontSize: 13,
-  fontWeight: 900,
-  letterSpacing: '0.12em',
-  textTransform: 'uppercase',
-  color: T.neon1,
-  textShadow: `0 0 12px ${T.neon1}`,
-};
-
-const courtStatusBase = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 4,
-  border: `2px solid ${T.border}`,
-  borderRadius: 999,
-  padding: '4px 10px',
-  fontSize: 9,
-  fontWeight: 900,
-  letterSpacing: '0.12em',
   color: T.muted,
-  textTransform: 'uppercase',
-  background: 'rgba(0,0,0,0.3)',
+  lineHeight: 1.6,
 };
 
-const courtStatusLocked = {
-  ...courtStatusBase,
-  background: `linear-gradient(135deg, ${T.neon1}15 0%, ${T.neon3}10 100%)`,
-  border: `2px solid ${T.neon1}`,
-  color: T.neon1,
-  boxShadow: `0 0 15px ${T.neon1}40`,
-};
-
-const teamSlotBase = {
-  background: 'rgba(255,255,255,0.04)',
-  border: `2px solid ${T.border}`,
+const matchCard = {
+  background: T.card,
+  border: `1px solid ${T.border}`,
   borderRadius: 12,
   padding: '12px 14px',
   marginBottom: 10,
-  position: 'relative',
-  transition: 'all 0.3s',
+};
+
+const matchHeader = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginBottom: 10,
+};
+
+const matchNum = {
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase',
+  color: T.muted,
+};
+
+const completeBadge = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+  background: 'rgba(59,130,246,0.12)',
+  border: '1px solid rgba(59,130,246,0.22)',
+  borderRadius: 999,
+  padding: '3px 8px',
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: '0.14em',
+  color: T.blueText,
+  textTransform: 'uppercase',
+};
+
+const teamSlotBase = {
+  background: 'rgba(255,255,255,0.03)',
+  border: `1px solid ${T.border}`,
+  borderRadius: 10,
+  padding: '10px 12px',
+  marginBottom: 8,
 };
 
 const teamSlotWinner = {
   ...teamSlotBase,
-  background: `linear-gradient(135deg, ${T.neon1}15 0%, ${T.neon3}10 100%)`,
-  border: `2px solid ${T.neon1}`,
-  boxShadow: `0 0 20px ${T.neon1}30, inset 0 0 20px ${T.neon1}10`,
+  background: 'rgba(59,130,246,0.08)',
+  border: '1px solid rgba(59,130,246,0.22)',
 };
 
 const teamTag = {
-  fontSize: 10,
-  fontWeight: 900,
-  letterSpacing: '0.18em',
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: '0.16em',
   textTransform: 'uppercase',
   color: T.muted,
-  marginBottom: 6,
+  marginBottom: 5,
 };
 
 const teamNameText = {
-  fontSize: 14,
-  fontWeight: 700,
+  fontSize: 13,
+  fontWeight: 600,
   color: T.text,
   lineHeight: 1.3,
 };
@@ -430,114 +343,96 @@ const teamNameText = {
 const scoreRow = {
   display: 'grid',
   gridTemplateColumns: '1fr auto 1fr',
-  gap: 12,
+  gap: 10,
   alignItems: 'center',
 };
 
 const scoreInput = {
   width: '100%',
-  background: 'rgba(0,0,0,0.4)',
-  border: `2px solid ${T.border}`,
-  borderRadius: 10,
+  background: T.card,
+  border: `1px solid ${T.border}`,
+  borderRadius: 8,
   color: T.text,
-  fontSize: 22,
-  fontWeight: 900,
-  padding: '10px',
+  fontFamily: '"DM Sans", sans-serif',
+  fontSize: 18,
+  fontWeight: 700,
+  padding: '8px',
   textAlign: 'center',
   outline: 'none',
-  transition: 'all 0.2s',
-  boxShadow: `0 0 0 0 ${T.neon1}00`,
 };
 
 const cardOuter = {
   background: T.card,
-  backdropFilter: 'blur(20px)',
-  border: `2px solid ${T.border}`,
-  borderRadius: 16,
+  border: `1px solid ${T.border}`,
+  borderRadius: 12,
   overflow: 'hidden',
+  marginTop: 10,
 };
 
 const cardHeaderStyle = {
+  fontFamily: '"Syne", sans-serif',
   fontSize: 11,
-  fontWeight: 900,
-  letterSpacing: '0.16em',
+  fontWeight: 700,
+  letterSpacing: '0.14em',
   textTransform: 'uppercase',
-  color: T.neon3,
-  padding: '14px 16px',
+  color: T.muted,
+  padding: '12px 14px',
   borderBottom: `1px solid ${T.border}`,
-  background: 'rgba(0,0,0,0.3)',
 };
 
 const standingsCols = {
   display: 'grid',
-  gridTemplateColumns: '50px minmax(0,1fr) 60px 60px 50px 60px',
-  gap: 12,
-  padding: '10px 16px',
+  gridTemplateColumns: '50px minmax(0,1fr) 60px 60px 60px',
+  gap: 10,
+  padding: '8px 14px',
   fontSize: 10,
-  fontWeight: 900,
-  letterSpacing: '0.14em',
+  fontWeight: 700,
+  letterSpacing: '0.12em',
   textTransform: 'uppercase',
   color: T.muted,
   borderBottom: `1px solid ${T.border}`,
-  background: 'rgba(0,0,0,0.2)',
 };
 
 const standingRowStyle = {
   display: 'grid',
-  gridTemplateColumns: '50px minmax(0,1fr) 60px 60px 50px 60px',
-  gap: 12,
-  padding: '12px 16px',
+  gridTemplateColumns: '50px minmax(0,1fr) 60px 60px 60px',
+  gap: 10,
+  padding: '10px 14px',
   alignItems: 'center',
   borderBottom: `1px solid ${T.border}`,
-  transition: 'all 0.2s',
 };
 
-const historyCard = {
-  background: 'rgba(255,255,255,0.04)',
-  border: `2px solid ${T.border}`,
-  borderRadius: 12,
+const footerStyle = {
   padding: '12px 14px',
+  borderTop: `1px solid ${T.border}`,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
 };
 
 const RankBadge = ({ index }) => {
   const getRankStyle = () => {
-    if (index === 0) return { 
-      bg: `linear-gradient(135deg, ${T.neon4} 0%, ${T.orange} 100%)`, 
-      color: '#0a0e1a',
-      shadow: `0 0 20px ${T.neon4}80`
-    };
-    if (index === 1) return { 
-      bg: `linear-gradient(135deg, ${T.neon3} 0%, #94a3b8 100%)`, 
-      color: '#0a0e1a',
-      shadow: `0 0 20px ${T.neon3}60`
-    };
-    if (index === 2) return { 
-      bg: `linear-gradient(135deg, ${T.neon2} 0%, #fb7185 100%)`, 
-      color: '#fff',
-      shadow: `0 0 20px ${T.neon2}60`
-    };
-    return { 
-      bg: 'rgba(255,255,255,0.1)', 
-      color: T.sub,
-      shadow: 'none'
-    };
+    if (index === 0) return { bg: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)', color: '#1a1a1a' };
+    if (index === 1) return { bg: 'linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%)', color: '#1a1a1a' };
+    if (index === 2) return { bg: 'linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%)', color: '#1a1a1a' };
+    return { bg: 'rgba(255,255,255,0.08)', color: T.sub };
   };
 
   const style = getRankStyle();
   return (
     <div
       style={{
-        width: 32,
-        height: 32,
-        borderRadius: 10,
+        width: 28,
+        height: 28,
+        borderRadius: 8,
         background: style.bg,
         color: style.color,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: 14,
-        fontWeight: 900,
-        boxShadow: style.shadow,
+        fontSize: 13,
+        fontWeight: 800,
+        fontFamily: '"Syne", sans-serif',
       }}
     >
       {index + 1}
@@ -547,12 +442,12 @@ const RankBadge = ({ index }) => {
 
 const StatVal = ({ value, positive, negative, muted }) => {
   let color = T.text;
-  if (positive) color = T.neon1;
-  if (negative) color = T.neon2;
+  if (positive) color = '#4fffb0';
+  if (negative) color = '#ff6b9d';
   if (muted) color = T.muted;
 
   return (
-    <div style={{ fontSize: 13, fontWeight: 900, color, textAlign: 'right', textShadow: positive || negative ? `0 0 8px ${color}60` : 'none' }}>
+    <div style={{ fontSize: 13, fontWeight: 700, color, textAlign: 'right' }}>
       {value}
     </div>
   );
@@ -562,39 +457,33 @@ const CelebrationPodium = ({ rows }) => {
   const podiumStyle = {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 12,
-    background: `linear-gradient(135deg, ${T.neon1}10 0%, ${T.neon2}08 50%, ${T.neon3}10 100%)`,
-    border: `2px solid ${T.neon1}40`,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    position: 'relative',
-    overflow: 'hidden',
-    boxShadow: `0 0 40px ${T.neon1}20`,
+    gap: 10,
+    background: `linear-gradient(145deg, rgba(59,130,246,0.08) 0%, rgba(20,184,166,0.06) 100%)`,
+    border: `1px solid ${T.borderGlow}`,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    margin: '0 14px 10px',
   };
 
   const slotBase = {
     textAlign: 'center',
-    position: 'relative',
   };
 
   const iconRow = {
-    fontSize: 40,
-    marginBottom: 8,
-    filter: 'drop-shadow(0 0 8px rgba(0,255,136,0.6))',
+    fontSize: 32,
+    marginBottom: 6,
   };
 
   const nameRow = {
-    fontSize: 14,
-    fontWeight: 900,
+    fontSize: 13,
+    fontWeight: 700,
     color: T.text,
     marginBottom: 4,
-    textShadow: `0 0 10px ${T.neon1}60`,
   };
 
   const statRow = {
     fontSize: 11,
-    fontWeight: 700,
     color: T.sub,
   };
 
@@ -603,7 +492,7 @@ const CelebrationPodium = ({ rows }) => {
       {rows[1] && (
         <div style={slotBase}>
           <div style={iconRow}>🥈</div>
-          <div style={nameRow}>{rows[1].name}</div>
+          <div style={nameRow}>{rows[1].displayName}</div>
           <div style={statRow}>
             {rows[1].wins}W-{rows[1].losses}L
           </div>
@@ -612,7 +501,7 @@ const CelebrationPodium = ({ rows }) => {
       {rows[0] && (
         <div style={slotBase}>
           <div style={iconRow}>🏆</div>
-          <div style={nameRow}>{rows[0].name}</div>
+          <div style={nameRow}>{rows[0].displayName}</div>
           <div style={statRow}>
             {rows[0].wins}W-{rows[0].losses}L
           </div>
@@ -621,7 +510,7 @@ const CelebrationPodium = ({ rows }) => {
       {rows[2] && (
         <div style={slotBase}>
           <div style={iconRow}>🥉</div>
-          <div style={nameRow}>{rows[2].name}</div>
+          <div style={nameRow}>{rows[2].displayName}</div>
           <div style={statRow}>
             {rows[2].wins}W-{rows[2].losses}L
           </div>
@@ -631,52 +520,48 @@ const CelebrationPodium = ({ rows }) => {
   );
 };
 
-function ScramblePanel({
+// ---------------------------------------------------------------------------
+// Main Component
+// ---------------------------------------------------------------------------
+
+function RoundRobinPanel({
   onClose,
-  eligibleScramblePopupEvents,
-  selectedEvent,
-  setSelectedEvent,
-  formatDateKeyMMDDYYYY,
-  formatTime,
-  signups,
-  useManualScrambleRoster,
-  setUseManualScrambleRoster,
-  manualScramblePlayerNames,
-  setManualScramblePlayerNames,
-  scrambleRoundsCount,
-  setScrambleRoundsCount,
-  scrambleCourtCount,
-  setScrambleCourtCount,
-  scrambleError,
-  startScrambleTournament,
-  tournament,
+  participants,
+  teamsOf,
+  setTeamsOf,
+  startRoundRobinTournament,
   rounds,
-  totalRounds,
-  roundNum,
   activeRound,
-  activeRoundIndex,
-  updateScrambleCourtScore,
-  finalizeScrambleRound,
-  resetScrambleTournament,
-  tournamentStandings,
-  getScrambleCourtResult,
-  renderTeamName,
-  participantMap,
-  tournamentKey,
+  updateRoundRobinMatchScore,
+  completeRoundRobinMatch,
+  standings,
+  resetRoundRobinTournament,
+  roundRobinError,
+  tid,
 }) {
-  const signupCount = signups.length;
-  const selectedEntry =
-    selectedEvent && eligibleScramblePopupEvents
-      ? eligibleScramblePopupEvents.find((ev) => ev.id === selectedEvent.id)
-      : null;
+  const [activeTab, setActiveTab] = useState('matches');
+  const [expandedRounds, setExpandedRounds] = useState(new Set([0]));
 
-  const podium = tournamentStandings.slice(0, 3);
+  const allDone = useMemo(() => {
+    if (!Array.isArray(rounds) || rounds.length === 0) return false;
+    return rounds.every((r) => (r.matches || []).every((m) => m.completed));
+  }, [rounds]);
 
-  const getTeamSlotStyle = (result, team) => {
-    if (!result) return teamSlotBase;
-    const isWinner =
-      (team === 'A' && result.scoreA > result.scoreB) ||
-      (team === 'B' && result.scoreB > result.scoreA);
+  const podium = useMemo(() => standings.slice(0, 3), [standings]);
+
+  const toggleRound = (idx) => {
+    const newSet = new Set(expandedRounds);
+    if (newSet.has(idx)) newSet.delete(idx);
+    else newSet.add(idx);
+    setExpandedRounds(newSet);
+  };
+
+  const getTeamSlotStyle = (match, team) => {
+    if (!match.completed) return teamSlotBase;
+    const a = parseInt(String(match.scoreA || ''), 10);
+    const b = parseInt(String(match.scoreB || ''), 10);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return teamSlotBase;
+    const isWinner = (team === 'A' && a > b) || (team === 'B' && b > a);
     return isWinner ? teamSlotWinner : teamSlotBase;
   };
 
@@ -684,99 +569,24 @@ function ScramblePanel({
     <>
       <style>
         {`
-          @keyframes scramble-pulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 0.9; }
-          }
-          
-          @keyframes badge-glow {
-            0%, 100% { 
-              border-color: ${T.neon1}; 
-              color: ${T.neon1};
-              box-shadow: 0 0 20px ${T.neon1}60, inset 0 0 20px ${T.neon1}20;
-            }
-            33% { 
-              border-color: ${T.neon2}; 
-              color: ${T.neon2};
-              box-shadow: 0 0 20px ${T.neon2}60, inset 0 0 20px ${T.neon2}20;
-            }
-            66% { 
-              border-color: ${T.neon3}; 
-              color: ${T.neon3};
-              box-shadow: 0 0 20px ${T.neon3}60, inset 0 0 20px ${T.neon3}20;
-            }
-          }
-          
-          @keyframes dot-spin {
-            0% { 
-              background: ${T.neon1}; 
-              box-shadow: 0 0 12px ${T.neon1}, 0 0 4px ${T.neon1};
-            }
-            33% { 
-              background: ${T.neon2}; 
-              box-shadow: 0 0 12px ${T.neon2}, 0 0 4px ${T.neon2};
-            }
-            66% { 
-              background: ${T.neon3}; 
-              box-shadow: 0 0 12px ${T.neon3}, 0 0 4px ${T.neon3};
-            }
-            100% { 
-              background: ${T.neon1}; 
-              box-shadow: 0 0 12px ${T.neon1}, 0 0 4px ${T.neon1};
-            }
-          }
-          
-          .scramble-input:focus {
-            border-color: ${T.neon1} !important;
-            box-shadow: 0 0 20px ${T.neon1}60 !important;
-          }
-          
-          .court-card:hover {
-            border-color: ${T.neon1}60 !important;
-            box-shadow: 0 0 30px ${T.neon1}20 !important;
-            transform: translateY(-2px) !important;
-          }
-          
-          .scramble-button:hover {
-            box-shadow: 0 0 40px ${T.neon1}60, 0 8px 20px rgba(0,0,0,0.5) !important;
-            transform: translateY(-2px) !important;
-          }
-          
-          .scramble-button:active {
-            transform: translateY(0) scale(0.98) !important;
-          }
-          
-          @keyframes shell-glow {
-            0%, 100% {
-              box-shadow: 0 0 60px ${T.neon1}15, 0 20px 40px rgba(0,0,0,0.5);
-            }
-            50% {
-              box-shadow: 0 0 80px ${T.neon3}20, 0 20px 40px rgba(0,0,0,0.5);
-            }
-          }
-          
-          .scramble-shell {
-            animation: shell-glow 8s ease-in-out infinite;
-          }
-          
-          .standings-row:hover {
-            background: ${T.neon1}08 !important;
-            border-color: ${T.neon1}40 !important;
+          @keyframes rr-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(0.95); }
           }
         `}
       </style>
 
-      <div className="scramble-shell" style={shell}>
+      <div style={shell}>
         <div style={heroStyle}>
           <div style={heroBg} />
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={badge}>
               <div style={liveDot} />
-              SCRAMBLE
+              Round Robin
             </div>
-            <div style={heroTitle}>⚡ CHAOS MODE</div>
+            <div style={heroTitle}>Complete Circuit</div>
             <div style={heroSub}>
-              Pure randomness. Every round reshuffles the deck—no rankings, no strategy, just mayhem. 🎲
+              Everyone plays everyone. Fair matchups, full tournament bracket.
             </div>
           </div>
           <button onClick={onClose} style={closeBtn}>
@@ -784,340 +594,229 @@ function ScramblePanel({
           </button>
         </div>
 
-        <div style={{ padding: '0 14px 18px' }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={infoBar}>
-            🎲 Random pairings every round—stats tracked, but matchups are pure chaos. May the odds be ever in your favor!
+            🎯 Round robin ensures every team faces each other once. Perfect for balanced competition.
           </div>
 
-          <div style={{ marginTop: 14 }}>
-            <div style={segRow}>
-              <button
-                onClick={() => setUseManualScrambleRoster(true)}
-                style={useManualScrambleRoster ? segBtnActive : segBtnBase}
-              >
-                Manual Roster
-              </button>
-              <button
-                onClick={() => setUseManualScrambleRoster(false)}
-                style={!useManualScrambleRoster ? segBtnActive : segBtnBase}
-              >
-                From Event
-              </button>
-            </div>
-
-            {useManualScrambleRoster ? (
+          {!rounds || rounds.length === 0 ? (
+            <div style={{ padding: '14px 14px 0' }}>
               <div>
-                <label style={fieldLabel}>Player names (comma-separated)</label>
-                <input
-                  type="text"
-                  value={manualScramblePlayerNames}
-                  onChange={(e) => setManualScramblePlayerNames(e.target.value)}
-                  placeholder="Alice, Bob, Charlie, Diana"
-                  className="scramble-input"
-                  style={inputBase}
-                />
-              </div>
-            ) : (
-              <div>
-                <label style={fieldLabel}>Select event</label>
-                <select
-                  value={selectedEvent?.id || ''}
-                  onChange={(e) => {
-                    const eventId = e.target.value;
-                    const evt = eligibleScramblePopupEvents.find((ev) => ev.id === eventId);
-                    setSelectedEvent(evt || null);
-                  }}
-                  className="scramble-input"
-                  style={inputBase}
-                >
-                  <option value="">-- Choose Event --</option>
-                  {(eligibleScramblePopupEvents || []).map((evt) => (
-                    <option key={evt.id} value={evt.id}>
-                      {evt.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div style={{ marginTop: 12, ...formGrid }}>
-              <div>
-                <label style={fieldLabel}>Game name</label>
-                <input
-                  type="text"
-                  value={tournamentKey}
-                  disabled
-                  style={{ ...inputBase, opacity: 0.6 }}
-                />
-              </div>
-              <div>
-                <label style={fieldLabel}>Courts</label>
-                <div style={stepper}>
-                  <div style={stepperTop}>Courts</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <button
-                      onClick={() => setScrambleCourtCount(Math.max(1, scrambleCourtCount - 1))}
-                      style={stepBtnStyle}
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <div style={stepNum}>{scrambleCourtCount}</div>
-                    <button onClick={() => setScrambleCourtCount(scrambleCourtCount + 1)} style={stepBtnStyle}>
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label style={fieldLabel}>Rounds</label>
-                <div style={stepper}>
-                  <div style={stepperTop}>Total</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <button
-                      onClick={() => setScrambleRoundsCount(Math.max(1, scrambleRoundsCount - 1))}
-                      style={stepBtnStyle}
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <div style={stepNum}>{scrambleRoundsCount}</div>
-                    <button onClick={() => setScrambleRoundsCount(scrambleRoundsCount + 1)} style={stepBtnStyle}>
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {!tournament && (
-              <button onClick={startScrambleTournament} className="scramble-button" style={{ ...actionPrimary, width: '100%', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <Zap size={16} style={{ display: 'inline-block' }} />
-                START SCRAMBLE
-                <Sparkles size={14} style={{ display: 'inline-block' }} />
-              </button>
-            )}
-          </div>
-
-          {!useManualScrambleRoster && selectedEvent ? (
-            <div style={rosterCard}>
-              <div style={rosterHeader}>
-                <div style={rosterTitleStyle}>{selectedEvent.title}</div>
-                <span style={rosterCountBadge}>{signupCount} joined</span>
-              </div>
-              <div style={{ fontSize: 12, color: T.sub, marginTop: 6 }}>
-                {formatDateKeyMMDDYYYY(selectedEvent.dateKey || selectedEvent.date)}
-                {selectedEvent.time ? ` at ${formatTime(selectedEvent.time)}` : ''}
-                {selectedEvent.location ? ` - ${selectedEvent.location}` : ''}
-              </div>
-              <div style={{ fontSize: 12, color: T.sub, marginTop: 6 }}>
-                {signupCount} players joined
-                {selectedEntry?.eligible
-                  ? ` - ${Math.floor(signupCount / 4)} active court${Math.floor(signupCount / 4) === 1 ? '' : 's'}${signupCount % 4 ? ` + ${signupCount % 4} bye${signupCount % 4 === 1 ? '' : 's'}` : ''}`
-                  : ' - needs at least 4 players'}
-              </div>
-              {signups.length > 0 && (
-                <div style={{ fontSize: 11, color: T.muted, marginTop: 8, lineHeight: 1.6 }}>
-                  {signups.map((row) => row.displayName || 'Member').join(', ')}
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          {scrambleError && <p style={{ marginTop: 12, fontSize: 12, color: T.accent }}>{scrambleError}</p>}
-
-          {!tournament ? (
-            <div style={emptyState}>
-              {useManualScrambleRoster
-                ? 'Enter player names above and start the scramble.'
-                : eligibleScramblePopupEvents.length === 0
-                  ? 'Create a popup event and have players join it first.'
-                  : 'Choose an eligible popup event and start the scramble.'}
-            </div>
-          ) : (
-            <div style={{ marginTop: 14 }}>
-              <div style={roundBar}>
-                <div style={roundLabel}>
-                  Round {roundNum} of {totalRounds} - {tournament.status === 'completed' ? 'Completed' : 'Shuffling'}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {(activeRound || tournament?.status !== 'completed') && (
-                    <button onClick={() => finalizeScrambleRound(tournamentKey)} className="scramble-button" style={actionPrimary}>
-                      {activeRound ? 'Finalize Round' : 'Next Round'}
-                    </button>
-                  )}
-                  <button onClick={() => resetScrambleTournament(tournamentKey)} style={actionSecondary}>
-                    Reset
+                <label style={{ fontFamily: '"Syne", sans-serif', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: T.muted, marginBottom: 5, display: 'block' }}>
+                  Team Size
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <button
+                    onClick={() => setTeamsOf(1)}
+                    style={teamsOf === 1 ? { ...tabBtnBase, background: T.blue, color: '#fff' } : tabBtnBase}
+                  >
+                    Singles (1v1)
+                  </button>
+                  <button
+                    onClick={() => setTeamsOf(2)}
+                    style={teamsOf === 2 ? { ...tabBtnBase, background: T.blue, color: '#fff' } : tabBtnBase}
+                  >
+                    Doubles (2v2)
                   </button>
                 </div>
               </div>
 
-              {activeRound && Array.isArray(activeRound.byeIds) && activeRound.byeIds.length > 0 && (
-                <div style={byeCardStyle}>
-                  <div style={{ ...roundLabel, color: T.neon2, textShadow: `0 0 10px ${T.neon2}60`, marginBottom: 6 }}>Bye This Round</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
-                    {activeRound.byeIds.map((playerId) => participantMap[String(playerId || '')]?.displayName || 'Player').join(', ')}
-                  </div>
-                  <div style={{ marginTop: 6, fontSize: 11, fontWeight: 600, color: T.sub }}>
-                    Bye rounds are neutral and do not add a win or loss.
-                  </div>
-                </div>
-              )}
+              <button onClick={startRoundRobinTournament} style={{ ...actionPrimary, width: '100%', marginTop: 14 }}>
+                <Target size={14} style={{ marginRight: 6, display: 'inline-block', verticalAlign: 'middle' }} />
+                Start Tournament
+              </button>
 
-              {activeRound && (
-                <div style={courtsGrid}>
-                  {(activeRound.courts || []).map((court) => {
-                    const result = getScrambleCourtResult(court);
+              <div style={emptyState}>
+                Add at least {teamsOf === 1 ? '2 players' : '4 players'} to start a round robin tournament.
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={tabRow}>
+                <button onClick={() => setActiveTab('matches')} style={activeTab === 'matches' ? tabBtnActive : tabBtnBase}>
+                  Matches
+                </button>
+                <button onClick={() => setActiveTab('standings')} style={activeTab === 'standings' ? tabBtnActive : tabBtnBase}>
+                  Standings
+                </button>
+              </div>
+
+              {activeTab === 'matches' && (
+                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px' }}>
+                  {rounds.map((round, roundIdx) => {
+                    const isExpanded = expandedRounds.has(roundIdx);
+                    const allCompleted = (round.matches || []).every((m) => m.completed);
                     return (
-                      <div key={`scramble-court-${court.courtNumber}`} className="court-card" style={courtCard}>
-                        <div style={courtHeader}>
-                          <div style={courtNameStyle}>Court {court.courtNumber}</div>
-                          <span style={result ? courtStatusLocked : courtStatusBase}>
-                            {result ? 'Result Locked' : 'Match'}
-                          </span>
-                        </div>
-
-                        <div style={getTeamSlotStyle(result, 'A')}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                            <div style={teamTag}>Team A</div>
-                            {result && result.scoreA > result.scoreB && (
-                              <span style={{ ...teamTag, color: T.neon1, marginBottom: 0, textShadow: `0 0 10px ${T.neon1}` }}>Winner</span>
+                      <div key={`round-${roundIdx}`} style={{ marginBottom: 10 }}>
+                        <button
+                          onClick={() => toggleRound(roundIdx)}
+                          style={{
+                            width: '100%',
+                            background: T.card,
+                            border: `1px solid ${T.border}`,
+                            borderRadius: 12,
+                            padding: '10px 14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                            marginBottom: isExpanded ? 10 : 0,
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ fontFamily: '"Syne", sans-serif', fontSize: 13, fontWeight: 700, color: T.text }}>
+                              Round {roundIdx + 1}
+                            </div>
+                            {allCompleted && (
+                              <div style={{ ...completeBadge, marginBottom: 0 }}>
+                                Complete
+                              </div>
                             )}
                           </div>
-                          <div style={teamNameText}>{renderTeamName(court.teamA)}</div>
-                        </div>
+                          {isExpanded ? <ChevronUp size={16} color={T.sub} /> : <ChevronDown size={16} color={T.sub} />}
+                        </button>
 
-                        <div style={getTeamSlotStyle(result, 'B')}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                            <div style={teamTag}>Team B</div>
-                            {result && result.scoreB > result.scoreA && (
-                              <span style={{ ...teamTag, color: T.neon1, marginBottom: 0, textShadow: `0 0 10px ${T.neon1}` }}>Winner</span>
-                            )}
-                          </div>
-                          <div style={teamNameText}>{renderTeamName(court.teamB)}</div>
-                        </div>
+                        {isExpanded && (
+                          <div>
+                            {(round.matches || []).map((match) => {
+                              const namesA = getNames(match.teamA);
+                              const namesB = getNames(match.teamB);
+                              const a = parseInt(String(match.scoreA || ''), 10);
+                              const b = parseInt(String(match.scoreB || ''), 10);
+                              const aWon = match.completed && Number.isFinite(a) && Number.isFinite(b) && a > b;
+                              const bWon = match.completed && Number.isFinite(a) && Number.isFinite(b) && b > a;
 
-                        <div style={scoreRow}>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={court.scoreA}
-                            disabled={Boolean(activeRound.finalizedAt)}
-                            onChange={(e) =>
-                              updateScrambleCourtScore(
-                                tournamentKey,
-                                activeRoundIndex,
-                                court.courtNumber,
-                                'scoreA',
-                                e.target.value
-                              )
-                            }
-                            className="scramble-input"
-                            style={scoreInput}
-                            placeholder="0"
-                          />
-                          <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 900, letterSpacing: '0.2em', color: T.neon3, textTransform: 'uppercase', textShadow: `0 0 10px ${T.neon3}` }}>
-                            VS
+                              return (
+                                <div key={match.id} style={matchCard}>
+                                  <div style={matchHeader}>
+                                    <div style={matchNum}>Match {match.id}</div>
+                                    {match.completed && (
+                                      <div style={completeBadge}>Completed</div>
+                                    )}
+                                  </div>
+
+                                  <div style={getTeamSlotStyle(match, 'A')}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                      <div style={teamTag}>Team A</div>
+                                      {aWon && <span style={{ ...teamTag, color: T.blue, marginBottom: 0 }}>Winner</span>}
+                                    </div>
+                                    <div style={teamNameText}>{namesA.join(' & ')}</div>
+                                  </div>
+
+                                  <div style={getTeamSlotStyle(match, 'B')}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                      <div style={teamTag}>Team B</div>
+                                      {bWon && <span style={{ ...teamTag, color: T.blue, marginBottom: 0 }}>Winner</span>}
+                                    </div>
+                                    <div style={teamNameText}>{namesB.join(' & ')}</div>
+                                  </div>
+
+                                  <div style={scoreRow}>
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      value={match.scoreA}
+                                      disabled={match.completed}
+                                      onChange={(e) => updateRoundRobinMatchScore(tid, roundIdx, match.id, 'scoreA', e.target.value)}
+                                      style={scoreInput}
+                                      placeholder="0"
+                                    />
+                                    <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', color: T.muted, textTransform: 'uppercase' }}>
+                                      vs
+                                    </div>
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      value={match.scoreB}
+                                      disabled={match.completed}
+                                      onChange={(e) => updateRoundRobinMatchScore(tid, roundIdx, match.id, 'scoreB', e.target.value)}
+                                      style={scoreInput}
+                                      placeholder="0"
+                                    />
+                                  </div>
+
+                                  {!match.completed && (
+                                    <button
+                                      onClick={() => completeRoundRobinMatch(tid, roundIdx, match.id)}
+                                      style={{ ...actionPrimary, width: '100%', marginTop: 10 }}
+                                    >
+                                      Complete Match
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={court.scoreB}
-                            disabled={Boolean(activeRound.finalizedAt)}
-                            onChange={(e) =>
-                              updateScrambleCourtScore(
-                                tournamentKey,
-                                activeRoundIndex,
-                                court.courtNumber,
-                                'scoreB',
-                                e.target.value
-                              )
-                            }
-                            className="scramble-input"
-                            style={scoreInput}
-                            placeholder="0"
-                          />
-                        </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               )}
 
-              <div style={{ display: 'grid', gap: 10 }}>
-                {podium.length > 0 && <CelebrationPodium rows={podium} />}
-                <div style={cardOuter}>
-                  <div style={cardHeaderStyle}>Standings</div>
-                  {tournamentStandings.length > 0 && (
-                    <div style={standingsCols}>
-                      <div>Place</div>
-                      <div>Player</div>
-                      <div style={{ textAlign: 'right' }}>Win%</div>
-                      <div style={{ textAlign: 'right' }}>W-L</div>
-                      <div style={{ textAlign: 'right' }}>Bye</div>
-                      <div style={{ textAlign: 'right' }}>Diff</div>
-                    </div>
-                  )}
-                  {tournamentStandings.length === 0 ? (
-                    <div style={emptyState}>Finalize a round to generate standings.</div>
-                  ) : (
-                    tournamentStandings.map((row, index) => (
-                      <div key={`standing-${row.id}`} className="standings-row" style={standingRowStyle}>
-                        <div>
-                          <RankBadge index={index} />
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {row.name}
-                          </div>
-                          <div style={{ fontSize: 10.5, color: T.muted }}>
-                            PF {row.pointsFor} - PA {row.pointsAgainst}
-                          </div>
-                        </div>
-                        <StatVal value={(Number(row.winPct || 0) * 100).toFixed(0)} />
-                        <StatVal value={`${row.wins}-${row.losses}`} />
-                        <StatVal value={row.byes || 0} muted />
-                        <StatVal
-                          value={row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
-                          positive={row.pointDiff > 0}
-                          negative={row.pointDiff < 0}
-                        />
+              {activeTab === 'standings' && (
+                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                  {allDone && podium.length > 0 && <CelebrationPodium rows={podium} />}
+                  
+                  <div style={cardOuter}>
+                    <div style={cardHeaderStyle}>Standings</div>
+                    {standings.length > 0 && (
+                      <div style={standingsCols}>
+                        <div>Place</div>
+                        <div>Player</div>
+                        <div style={{ textAlign: 'right' }}>W-L</div>
+                        <div style={{ textAlign: 'right' }}>Played</div>
+                        <div style={{ textAlign: 'right' }}>+/-</div>
                       </div>
-                    ))
-                  )}
-                </div>
-
-                <div style={cardOuter}>
-                  <div style={cardHeaderStyle}>Round History</div>
-                  <div style={{ padding: 10, display: 'grid', gap: 8 }}>
-                    {rounds.map((round) => (
-                      <div key={`round-history-${round.index}`} style={historyCard}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: T.text, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-                          Round {round.index} {round.finalizedAt ? '- final' : '- current'}
-                        </div>
-                        {Array.isArray(round?.byeIds) && round.byeIds.length > 0 && (
-                          <div style={{ marginTop: 4, fontSize: 11, color: T.accent }}>
-                            Bye: {round.byeIds.map((playerId) => participantMap[String(playerId || '')]?.displayName || 'Player').join(', ')}
-                          </div>
-                        )}
-                        <div style={{ marginTop: 5, display: 'grid', gap: 4 }}>
-                          {(round.courts || []).map((court) => (
-                            <div key={`round-${round.index}-court-${court.courtNumber}`} style={{ fontSize: 11, color: T.sub }}>
-                              Court {court.courtNumber}: {renderTeamName(court.teamA)} {court.scoreA === '' || court.scoreB === '' ? 'vs' : `${court.scoreA}-${court.scoreB}`} {renderTeamName(court.teamB)}
+                    )}
+                    {standings.length === 0 ? (
+                      <div style={emptyState}>Complete some matches to see standings.</div>
+                    ) : (
+                      standings.map((row, index) => {
+                        const diff = row.pointsFor - row.pointsAgainst;
+                        return (
+                          <div key={row.id} style={standingRowStyle}>
+                            <div>
+                              <RankBadge index={index} />
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {row.displayName}
+                              </div>
+                              <div style={{ fontSize: 10.5, color: T.muted }}>
+                                PF {row.pointsFor} - PA {row.pointsAgainst}
+                              </div>
+                            </div>
+                            <StatVal value={`${row.wins}-${row.losses}`} />
+                            <StatVal value={row.played} muted />
+                            <StatVal
+                              value={diff >= 0 ? `+${diff}` : diff}
+                              positive={diff > 0}
+                              negative={diff < 0}
+                            />
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
-              </div>
-            </div>
+              )}
+            </>
           )}
+        </div>
+
+        <div style={footerStyle}>
+          <button onClick={() => resetRoundRobinTournament(tid)} style={actionSecondary}>
+            <RotateCcw size={14} style={{ marginRight: 6, display: 'inline-block', verticalAlign: 'middle' }} />
+            Reset
+          </button>
+          {roundRobinError && <span style={{ fontSize: 11, fontWeight: 600, color: T.red }}>{roundRobinError}</span>}
         </div>
       </div>
     </>
   );
 }
 
-export default ScramblePanel;
+export default RoundRobinPanel;
