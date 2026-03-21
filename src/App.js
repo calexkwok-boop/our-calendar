@@ -16448,8 +16448,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal || showJourneyWeightTrackerModal;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
     const scrollY = window.scrollY || window.pageYOffset || 0;
-    const journeyUnderlay = darkMode ? 'rgba(2, 6, 23, 0.5)' : 'rgba(15, 23, 42, 0.18)';
-    const rootElement = document.getElementById('root');
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyTouchAction = document.body.style.touchAction;
     const previousBodyOverscroll = document.body.style.overscrollBehavior;
@@ -16465,7 +16463,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const previousDocOverscroll = document.documentElement.style.overscrollBehavior;
     const previousDocBackground = document.documentElement.style.background;
     const previousDocBackgroundImage = document.documentElement.style.backgroundImage;
-    const previousJourneyUnderlayVar = document.documentElement.style.getPropertyValue('--journey-underlay');
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
     document.body.style.overscrollBehavior = 'none';
@@ -16477,10 +16474,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     document.documentElement.style.overflow = 'hidden';
     document.documentElement.style.touchAction = 'none';
     document.documentElement.style.overscrollBehavior = 'none';
-    document.documentElement.style.setProperty('--journey-underlay', journeyUnderlay);
-    document.documentElement.classList.add('journey-overlay-active');
-    document.body.classList.add('journey-overlay-active');
-    if (rootElement) rootElement.classList.add('journey-overlay-active');
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.body.style.touchAction = previousBodyTouchAction;
@@ -16497,14 +16490,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       document.documentElement.style.overscrollBehavior = previousDocOverscroll;
       document.documentElement.style.background = previousDocBackground;
       document.documentElement.style.backgroundImage = previousDocBackgroundImage;
-      if (previousJourneyUnderlayVar) {
-        document.documentElement.style.setProperty('--journey-underlay', previousJourneyUnderlayVar);
-      } else {
-        document.documentElement.style.removeProperty('--journey-underlay');
-      }
-      document.documentElement.classList.remove('journey-overlay-active');
-      document.body.classList.remove('journey-overlay-active');
-      if (rootElement) rootElement.classList.remove('journey-overlay-active');
       window.scrollTo(0, scrollY);
     };
   }, [darkMode, showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal, showJourneyWeightTrackerModal]);
@@ -27632,12 +27617,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyScreen && renderJourneyPortal((
           <div
-            className="fixed inset-0 z-[84] bg-black/50 backdrop-blur-sm p-4 overflow-y-auto flex items-center justify-center"
+            className="fixed inset-0 z-[96] bg-black/55 backdrop-blur-sm p-4 flex items-center justify-center"
             onClick={() => setShowJourneyScreen(false)}
             style={{ touchAction: 'none', overscrollBehavior: 'none' }}
           >
             <div
-              className="w-full max-w-xl rounded-[28px] border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-950 shadow-2xl overflow-hidden my-6"
+              className="w-full max-w-lg rounded-[28px] border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-950 shadow-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
               style={{
                 paddingBottom: 'env(safe-area-inset-bottom)',
@@ -27654,9 +27639,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
-                    <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">Progress Hub</div>
+                    <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">Journey</div>
                     <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      {primaryJourneyGoal ? 'Track your main goal and quick actions here.' : 'Set your first goal and start logging progress.'}
+                      {primaryJourneyGoal ? 'Your goal hub is open.' : 'Start here with one goal.'}
                     </div>
                   </div>
                   <button
@@ -27670,121 +27655,49 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
 
               <div
-                className="p-5 sm:p-6 pb-6 space-y-4 overflow-y-auto"
+                className="p-5 sm:p-6 pb-6 space-y-4 max-h-[70vh] overflow-y-auto"
                 style={{
-                  maxHeight: 'calc(100vh - 10rem)',
                   WebkitOverflowScrolling: 'touch',
                   overscrollBehaviorY: 'contain',
                   touchAction: 'pan-y',
                 }}
               >
                 <div className="rounded-[24px] border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] p-5">
-                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    {primaryJourneyGoal ? `${getJourneyGoalEmoji(primaryJourneyGoal)} ${primaryJourneyGoal.title}` : 'No active goal yet'}
+                  <div className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    {primaryJourneyGoal ? `${getJourneyGoalEmoji(primaryJourneyGoal)} ${primaryJourneyGoal.title}` : 'No goal yet'}
                   </div>
                   <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    {primaryJourneyGoal ? journeySupportLabel : 'Pick a goal template below to get Journey started.'}
+                    {primaryJourneyGoal ? primaryJourneyProgressText : 'Create one goal first, then log updates from here.'}
                   </div>
                   {primaryJourneyGoal ? (
-                    <>
-                      <div className="mt-4 flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
-                        <span>{primaryJourneyProgressText}</span>
-                        <span>{Math.round(primaryJourneyGoalProgress * 100)}%</span>
-                      </div>
-                      <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-black/8 dark:bg-white/10">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
-                            background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
-                          }}
-                        />
-                      </div>
-                    </>
+                    <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-black/8 dark:bg-white/10">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
+                          background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
+                        }}
+                      />
+                    </div>
                   ) : null}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => (primaryJourneyGoal
-                      ? (primaryJourneyGoalType === 'run_walk'
-                        ? openJourneyRunTracker(primaryJourneyGoal)
-                        : primaryJourneyGoalType === 'workout'
-                          ? openJourneyWorkoutTracker(primaryJourneyGoal)
-                          : primaryJourneyGoalType === 'lose_weight'
-                            ? openJourneyWeightTracker(primaryJourneyGoal)
-                            : openJourneyLogFlow(primaryJourneyGoal))
-                      : openJourneyGoalFlow())}
-                    className="rounded-2xl px-4 py-3 text-sm font-semibold text-white"
-                    style={themeAccentButtonStyle}
-                  >
-                    {primaryJourneyGoal ? journeyHomeCtaLabel : 'Set your first goal'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openJourneyGoalFlow()}
-                    className="rounded-2xl border px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-white/[0.04]"
-                    style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
-                  >
-                    Add goal
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => (primaryJourneyGoal ? openJourneyLogFlow(primaryJourneyGoal) : openJourneyGoalFlow())}
+                  className="w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white"
+                  style={themeAccentButtonStyle}
+                >
+                  {primaryJourneyGoal ? 'Log progress' : 'Set your first goal'}
+                </button>
 
-                {sortedJourneyGoals.length > 0 ? (
-                  <div className="rounded-[24px] border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Goals</div>
-                      <button type="button" onClick={openJourneyGoalFlow} className="text-xs font-semibold" style={themeAccentTextStyle}>Add another</button>
-                    </div>
-                    <div className="mt-3 space-y-2">
-                      {sortedJourneyGoals.slice(0, 4).map((goal) => (
-                        <div key={goal.id} className="rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] px-3 py-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{getJourneyGoalEmoji(goal)} {goal.title}</div>
-                              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{formatJourneyProgressText(goal)}</div>
-                            </div>
-                            <button type="button" onClick={() => deleteJourneyGoal(goal.id)} className="text-[11px] font-semibold text-rose-600 dark:text-rose-300">
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                {(journeyState?.entries || []).length > 0 ? (
-                  <div className="rounded-[24px] border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-4">
-                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Recent</div>
-                    <div className="mt-3 space-y-2">
-                      {(journeyState.entries || []).slice(0, 4).map((entry) => (
-                        <div key={entry.id} className="rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] px-3 py-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {entry.type === 'weight_checkin'
-                                  ? 'Weight check-in'
-                                  : entry.type === 'workout'
-                                    ? 'Workout'
-                                    : entry.type === 'log'
-                                      ? 'Progress update'
-                                      : 'Note'}
-                              </div>
-                              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">
-                                {entry.note || entry.summaryLabel || 'Journey activity'}
-                              </div>
-                            </div>
-                            <div className="shrink-0 text-[11px] text-gray-400 dark:text-gray-500">
-                              {new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setShowJourneyScreen(false)}
+                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-white/[0.04]"
+                >
+                  Close Journey
+                </button>
               </div>
             </div>
           </div>
