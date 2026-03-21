@@ -26337,10 +26337,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         }}
                       />
                     </div>
-                    {journeyCoachLabel ? (
+                    {journeyQuickPrompt ? (
                       <div className="mt-3 rounded-2xl border px-3 py-3 text-sm" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, 0.12), backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08), color: darkMode ? '#e5e7eb' : '#334155' }}>
                         <span className="font-semibold">Coach tip:</span> {journeyQuickPrompt}
-                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{journeyCoachLabel}</div>
+                        {journeyCoachLabel ? (
+                          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{journeyCoachLabel}</div>
+                        ) : null}
                       </div>
                     ) : null}
                     <div className="mt-4 space-y-3">
@@ -26898,10 +26900,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     }}
                   />
                 </div>
-                {journeyCoachLabel ? (
+                {journeyQuickPrompt ? (
                   <div className="mt-3 rounded-2xl border px-3 py-3 text-sm" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, 0.12), backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08), color: darkMode ? '#e5e7eb' : '#334155' }}>
                     <span className="font-semibold">Coach tip:</span> {journeyQuickPrompt}
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{journeyCoachLabel}</div>
+                    {journeyCoachLabel ? (
+                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{journeyCoachLabel}</div>
+                    ) : null}
                   </div>
                 ) : null}
                 <div className="mt-4 space-y-3">
