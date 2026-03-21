@@ -16256,7 +16256,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const openJourneyGoalFlow = (template = null) => {
-    const nextTemplate = template && typeof template === 'object' && !('currentTarget' in template) && !('target' in template)
+    const nextTemplate = template && typeof template === 'object' && !('currentTarget' in template) && !('nativeEvent' in template)
       ? template
       : null;
     setShowJourneyEntryModal(false);
