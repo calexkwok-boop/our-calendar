@@ -586,7 +586,7 @@ function RoundRobinPanel({
               <div style={liveDot} />
               Live
             </div>
-            <div style={heroTitle}>Complete Circuit</div>
+            <div style={heroTitle}>Single Elimination</div>
             <div style={heroSub}>
               Everyone plays everyone. Fair matchups, full tournament bracket.
             </div>
@@ -699,7 +699,7 @@ function RoundRobinPanel({
                               return (
                                 <div key={match.id} style={matchCard}>
                                   <div style={matchHeader}>
-                                    <div style={matchNum}>Match {match.id}</div>
+                                    <div style={matchNum}>Match {roundIdx + 1}.{((round.matches || []).findIndex((m) => m.id === match.id) + 1)}</div>
                                     {match.completed && (
                                       <div style={completeBadge}>Completed</div>
                                     )}
