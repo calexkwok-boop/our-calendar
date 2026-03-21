@@ -27562,6 +27562,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 overscrollBehaviorY: 'contain',
                 WebkitOverflowScrolling: 'touch',
                 clipPath: 'inset(0 round 32px)',
+                paddingBottom: 'env(safe-area-inset-bottom)',
               }}
             >
               <div
@@ -27594,7 +27595,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
               </div>
 
-              <div className="p-5 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-4">
+              <div className="p-5 sm:p-6 pb-6 space-y-4">
                 {primaryJourneyGoal ? (
                   <div className="rounded-[28px] border border-white/10 bg-gray-50/90 dark:bg-white/[0.04] p-5">
                     <div className="flex items-start justify-between gap-3">
