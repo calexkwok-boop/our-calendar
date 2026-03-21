@@ -28012,6 +28012,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           touchAction: 'none',
           overscrollBehavior: 'none',
           backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined,
+          minHeight: '100dvh',
         }}
       >
         <div
@@ -28027,6 +28028,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               ? '0 24px 60px rgba(2, 6, 23, 0.62)'
               : undefined,
             borderBottom: darkMode ? '1px solid rgb(2, 6, 23)' : undefined,
+            marginBottom: darkMode ? '-1px' : undefined,
           }}
         >
           <div
