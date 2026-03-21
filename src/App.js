@@ -28006,12 +28006,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )}
     {!activeSubCalendar && showJourneyScreen && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[82] bg-black/50 p-4 flex items-center justify-center"
+        className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-6 sm:pt-4 pb-0 sm:pb-4"
         onClick={() => setShowJourneyScreen(false)}
         style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
         <div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+          className="bg-white dark:bg-gray-800 rounded-t-[28px] rounded-b-none sm:rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
           style={{
             touchAction: 'pan-y',
@@ -28053,7 +28053,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
           </div>
 
-          <div className="space-y-4 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+          <div className="space-y-4 pb-6">
             {primaryJourneyGoal ? (
               <div className="rounded-[28px] border border-white/10 bg-gray-50/90 dark:bg-white/[0.04] p-5">
                 <div className="flex items-start justify-between gap-3">
