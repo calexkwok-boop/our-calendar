@@ -27880,8 +27880,20 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {showJourneyGoalModal && (
-        <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
-            <div className="w-full sm:w-[28rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-none overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
+          onClick={closeJourneyGoalModal}
+        >
+            <div
+              className="w-full sm:w-[28rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                touchAction: 'pan-y',
+                overscrollBehaviorY: 'contain',
+                WebkitOverflowScrolling: 'touch',
+                paddingBottom: 'env(safe-area-inset-bottom)',
+              }}
+            >
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {selectedJourneyGoalTemplate?.hint || 'Keep it measurable, simple, and easy to log.'}
@@ -28482,8 +28494,20 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     ))}
 
     {!activeSubCalendar && showJourneyGoalModal && renderJourneyPortal((
-      <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
-        <div className="w-full sm:w-[28rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
+        onClick={closeJourneyGoalModal}
+      >
+        <div
+          className="w-full sm:w-[28rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            touchAction: 'pan-y',
+            overscrollBehaviorY: 'contain',
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+          }}
+        >
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {selectedJourneyGoalTemplate?.hint || 'Keep it measurable, simple, and easy to log.'}
