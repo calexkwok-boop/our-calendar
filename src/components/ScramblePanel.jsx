@@ -773,7 +773,7 @@ function ScramblePanel({
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={badge}>
               <div style={liveDot} />
-              SCRAMBLE
+              Live
             </div>
             <div style={heroTitle}>⚡ CHAOS MODE</div>
             <div style={heroSub}>

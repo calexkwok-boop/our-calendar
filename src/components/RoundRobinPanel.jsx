@@ -584,7 +584,7 @@ function RoundRobinPanel({
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={badge}>
               <div style={liveDot} />
-              Round Robin
+              Live
             </div>
             <div style={heroTitle}>Complete Circuit</div>
             <div style={heroSub}>

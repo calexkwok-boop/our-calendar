@@ -100,12 +100,6 @@ const pillBase = {
   fontFamily: '"Syne", sans-serif',
 };
 
-const pillLive = {
-  ...pillBase,
-  border: '1px solid rgba(79,255,176,0.30)',
-  color: T.accent,
-};
-
 const closeBtn = {
   position: 'absolute',
   top: 18,
@@ -729,7 +723,7 @@ function GauntletPanel({
           </div>
           <div style={badge}>
             <span style={liveDot} />
-            Tournament Suite
+            Live
           </div>
           <h3 style={heroTitle}>
             Pickleball <span style={{ color: T.gold }}>Gauntlet</span>
@@ -745,15 +739,6 @@ function GauntletPanel({
                 </span>
                 <span style={pillBase}>
                   Players <strong style={{ color: '#fff' }}>{tournament?.participants?.length || 0}</strong>
-                </span>
-                <span
-                  style={
-                    tournament?.status === 'completed'
-                      ? { ...pillLive, border: '1px solid rgba(255,214,0,0.35)', color: T.goldText }
-                      : pillLive
-                  }
-                >
-                  {tournament?.status === 'completed' ? 'Final' : 'Live'}
                 </span>
               </>
             )}
