@@ -19297,15 +19297,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     typeof document !== 'undefined'
       ? createPortal(
       <div
-        className="fixed inset-0 z-[85] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
+        className="fixed inset-0 z-[85] bg-black/50 p-4 flex items-center justify-center"
         onClick={() => {
           if (journeyRunSession?.status !== 'active') closeJourneyRunTrackerModal();
         }}
       >
         <div
-          className="w-full sm:w-[32rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] rounded-b-none sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl p-5 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+          className="bg-white dark:bg-slate-950 rounded-[32px] shadow-2xl border border-white/10 p-5 w-full sm:w-[32rem] max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px)' }}
         >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -19456,15 +19456,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     typeof document !== 'undefined'
       ? createPortal(
       <div
-        className="fixed inset-0 z-[85] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
+        className="fixed inset-0 z-[85] bg-black/50 p-4 flex items-center justify-center"
         onClick={() => {
           if (journeyWorkoutSession?.status !== 'active') closeJourneyWorkoutTrackerModal();
         }}
       >
         <div
-          className="w-full sm:w-[32rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] rounded-b-none sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl p-5 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+          className="bg-white dark:bg-slate-950 rounded-[32px] shadow-2xl border border-white/10 p-5 w-full sm:w-[32rem] max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px)' }}
         >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -19622,13 +19622,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       typeof document !== 'undefined'
         ? createPortal(
         <div
-          className="fixed inset-0 z-[85] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
+          className="fixed inset-0 z-[85] bg-black/50 p-4 flex items-center justify-center"
           onClick={closeJourneyWeightTrackerModal}
         >
           <div
-            className="w-full sm:w-[32rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] rounded-b-none sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl p-5 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+            className="bg-white dark:bg-slate-950 rounded-[32px] shadow-2xl border border-white/10 p-5 w-full sm:w-[32rem] max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
-            style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+            style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px)' }}
           >
           <div className="flex items-start justify-between gap-3">
             <div>
