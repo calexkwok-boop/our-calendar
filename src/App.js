@@ -203,10 +203,20 @@ const getJourneyGoalType = (goal) => {
 };
 
 const JOURNEY_RUN_WALK_TIPS = Object.freeze([
-  'Easy miles still count. A short walk keeps your streak alive.',
-  'Start slower than you think and let the pace come to you.',
-  'Consistency beats intensity. One more session moves the goal.',
-  'A recovery walk is progress, not a backup plan.',
+  'Consistency beats one hard workout.',
+  'Most runs should feel conversational.',
+  'Build mileage gradually.',
+  'Don’t increase distance too fast.',
+  'Easy runs build endurance.',
+  'Walk breaks are fine.',
+  'Your shoes matter more than pace.',
+  'Warm up before you run.',
+  'Track effort, not just speed.',
+  'Finish most runs feeling like you could do more.',
+  'Rest days help you improve.',
+  'Small progress adds up.',
+  'Good form matters more than speed.',
+  'Make running enjoyable enough to repeat.',
 ]);
 
 const buildJourneyRunSession = (goalId = '', sessionType = 'run') => ({
@@ -15883,7 +15893,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const journeyCoachLabel = (() => {
     if (!primaryJourneyGoal) return '';
     if (primaryJourneyGoalType === 'run_walk') {
-      if (primaryJourneyWorkoutCount === 0) return 'First run saved unlocks your weekly streak.';
+      if (primaryJourneyWorkoutCount === 0) return '';
       if (primaryJourneyStreak >= 2) return `${primaryJourneyStreak}-day movement streak`;
       if (primaryJourneyWeeklyDistance > 0) return `${formatJourneyMiles(primaryJourneyWeeklyDistance)} mi this week`;
       return `${primaryJourneyWorkoutCount} session${primaryJourneyWorkoutCount === 1 ? '' : 's'} logged`;
@@ -26179,7 +26189,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             style={{ touchAction: 'none', overscrollBehavior: 'none' }}
           >
             <div
-              className="w-full sm:w-[34rem] max-h-[calc(100vh-1.5rem-env(safe-area-inset-top))] overflow-y-auto rounded-t-[32px] sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
+              className="w-full sm:w-[34rem] max-h-[calc(100vh-1.5rem-env(safe-area-inset-top))] overflow-y-auto rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
               style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
             >
@@ -26712,7 +26722,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
         <div
-          className="w-full sm:w-[34rem] max-h-[calc(100vh-1.5rem-env(safe-area-inset-top))] overflow-y-auto rounded-t-[32px] sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
+          className="w-full sm:w-[34rem] max-h-[calc(100vh-1.5rem-env(safe-area-inset-top))] overflow-y-auto rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
           style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
         >
