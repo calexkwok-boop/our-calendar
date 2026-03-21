@@ -10381,8 +10381,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setPopupEventsByEventId(eventsMap);
     setPopupSignupsByEventId(signupsMap);
     setUserTabPopupEvents(popupEventCards.filter((event) => {
+      const eventId = String(event?.id || '').trim();
       const eventTs = toDateOnlyTs(event?.date || event?.dateKey || '');
-      return eventTs !== null && eventTs >= todayTs;
+      if (eventTs === null || eventTs < todayTs) return false;
+      const popupMeta = eventsMap[eventId] || null;
+      const joined = (signupsMap[eventId] || []).some((row) => String(row?.userId || '').trim() === String(user?.id || '').trim());
+      const createdByMe = String(popupMeta?.createdByUserId || '').trim() === String(user?.id || '').trim();
+      return joined || createdByMe;
     }));
   };
 
