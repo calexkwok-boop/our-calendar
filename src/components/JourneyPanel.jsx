@@ -116,19 +116,22 @@ export default function JourneyPanel({
           </div>
         </>
       ) : (
-        <div className="mt-3.5 flex items-center">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCtaClick();
-            }}
-            className="w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white"
-            style={themeAccentButtonStyle}
-          >
-            Set your first goal
-          </button>
-        </div>
+<div className="mt-3.5 flex items-center">
+  <button
+    type="button"
+    onClick={(e) => {
+      e.stopPropagation();
+      onCtaClick();
+    }}
+    className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+    style={{
+      ...themeAccentButtonStyle,
+      boxShadow: `0 4px 16px ${hexToRgba(activeLayerPageTheme.accent, 0.3)}`
+    }}
+  >
+    ✨ Set your first goal
+  </button>
+</div>
       )}
     </div>
   );

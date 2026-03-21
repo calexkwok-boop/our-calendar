@@ -19290,9 +19290,31 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     );
   };
 
+  const showAnyJourneyOverlay = showJourneyScreen
+    || showJourneyEntryModal
+    || showJourneyGoalModal
+    || showJourneyGoalCreatedPrompt
+    || showJourneyDeleteGoalPrompt
+    || showJourneyLogModal
+    || showJourneyNoteModal
+    || showJourneyRunTrackerModal
+    || showJourneyWorkoutTrackerModal
+    || showJourneyWeightTrackerModal;
+
+  const journeyBackdropPortal = showAnyJourneyOverlay && typeof document !== 'undefined'
+    ? createPortal(
+        <div
+          className="fixed inset-0 z-[79] pointer-events-none backdrop-blur-sm"
+          style={{ background: darkMode ? 'rgba(2, 6, 23, 0.44)' : 'rgba(15, 23, 42, 0.18)' }}
+        />,
+        document.body
+      )
+    : null;
+
   return (
     <>
     <style>{shakeStyle}</style>
+    {journeyBackdropPortal}
     {controlWidgetAddPanelPortal}
     {showAppPrompt && (
       <div className="fixed inset-0 z-[95] bg-black/45 flex items-center justify-center p-4">
