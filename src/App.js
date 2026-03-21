@@ -19212,19 +19212,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     typeof document !== 'undefined'
       ? createPortal(
       <div
-        className="fixed inset-0 z-[85] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
+        className="fixed inset-0 z-[85] bg-black/40 backdrop-blur-md flex items-start sm:items-center justify-center px-0 sm:px-4"
         onClick={() => {
           if (journeyRunSession?.status !== 'active') closeJourneyRunTrackerModal();
         }}
         style={{
           paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
-          paddingBottom: '0',
+          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
         }}
       >
         <div
-          className="w-full sm:w-[32rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] rounded-b-none sm:rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+          className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px)' }}
         >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -19375,19 +19375,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     typeof document !== 'undefined'
       ? createPortal(
       <div
-        className="fixed inset-0 z-[85] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
+        className="fixed inset-0 z-[85] bg-black/40 backdrop-blur-md flex items-start sm:items-center justify-center px-0 sm:px-4"
         onClick={() => {
           if (journeyWorkoutSession?.status !== 'active') closeJourneyWorkoutTrackerModal();
         }}
         style={{
           paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
-          paddingBottom: '0',
+          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
         }}
       >
         <div
-          className="w-full sm:w-[32rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] rounded-b-none sm:rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+          className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px)' }}
         >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -19545,17 +19545,17 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       typeof document !== 'undefined'
         ? createPortal(
         <div
-          className="fixed inset-0 z-[85] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
+          className="fixed inset-0 z-[85] bg-black/40 backdrop-blur-md flex items-start sm:items-center justify-center px-0 sm:px-4"
           onClick={closeJourneyWeightTrackerModal}
           style={{
             paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
-            paddingBottom: '0',
+            paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
           }}
         >
           <div
-            className="w-full sm:w-[32rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] rounded-b-none sm:rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+            className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
-            style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+            style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px)' }}
           >
           <div className="flex items-start justify-between gap-3">
             <div>
