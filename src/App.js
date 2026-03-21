@@ -28351,7 +28351,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         </div>
       </div>
-    )}
+    ))}
 
     {!activeSubCalendar && showJourneyEntryModal && renderJourneyPortal((
       <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
@@ -28388,7 +28388,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         </div>
       </div>
-    )}
+    ))}
 
     {!activeSubCalendar && showJourneyGoalModal && renderJourneyPortal((
       <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
@@ -28427,7 +28427,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         </div>
       </div>
-    )}
+    ))}
 
     {!activeSubCalendar && showJourneyGoalCreatedPrompt && createdJourneyGoal && renderJourneyPortal((
       <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
@@ -28537,7 +28537,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <option key={goal.id} value={goal.id}>{getJourneyGoalEmoji(goal)} {goal.title}</option>
                 ))}
               </select>
-    ))}
+            )}
             <input
               value={journeyLogDraft.amount}
               onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, amount: e.target.value }))}
@@ -28683,7 +28683,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </button>
         </div>
       </div>
-    ))}
+    )}
     </div>
       <style>{`
         @media (max-width: 640px) {
@@ -28785,7 +28785,7 @@ function PlacesAutocomplete({ value, onSelect, placeholder, className }) {
               <span className="font-medium text-gray-800 dark:text-white">{s.structured_formatting?.main_text}</span>
               {s.structured_formatting?.secondary_text && (
                 <span className="text-gray-400 ml-1">{s.structured_formatting.secondary_text}</span>
-    ))}
+              )}
             </button>
           ))}
         </div>
