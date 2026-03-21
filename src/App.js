@@ -16382,7 +16382,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal || showJourneyWeightTrackerModal;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
     const scrollY = window.scrollY || window.pageYOffset || 0;
-    const journeyOverlayPageBg = themedPageBackgroundStyle?.backgroundImage || (darkMode ? 'rgba(2, 6, 23, 0.72)' : 'rgba(15, 23, 42, 0.16)');
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyTouchAction = document.body.style.touchAction;
     const previousBodyOverscroll = document.body.style.overscrollBehavior;
@@ -16406,13 +16405,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     document.body.style.left = '0';
     document.body.style.right = '0';
     document.body.style.width = '100%';
-    document.body.style.background = journeyOverlayPageBg;
-    document.body.style.backgroundImage = journeyOverlayPageBg;
     document.documentElement.style.overflow = 'hidden';
     document.documentElement.style.touchAction = 'none';
     document.documentElement.style.overscrollBehavior = 'none';
-    document.documentElement.style.background = journeyOverlayPageBg;
-    document.documentElement.style.backgroundImage = journeyOverlayPageBg;
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.body.style.touchAction = previousBodyTouchAction;
@@ -16431,7 +16426,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       document.documentElement.style.backgroundImage = previousDocBackgroundImage;
       window.scrollTo(0, scrollY);
     };
-  }, [darkMode, showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal, showJourneyWeightTrackerModal, themedPageBackgroundStyle]);
+  }, [showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal, showJourneyWeightTrackerModal]);
 
   useEffect(() => {
     if (journeyRunSession?.status !== 'active') return undefined;
