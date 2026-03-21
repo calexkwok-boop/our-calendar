@@ -6,6 +6,15 @@ html {
   height: -webkit-fill-available;
 }
 
+html,
+body,
+#root {
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
 body {
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
@@ -69,4 +78,11 @@ h3,
   min-height: 100svh;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
+}
+
+html.journey-overlay-active,
+body.journey-overlay-active,
+#root.journey-overlay-active {
+  background: var(--journey-underlay, rgba(15, 23, 42, 0.18)) !important;
+  background-color: var(--journey-underlay, rgba(15, 23, 42, 0.18)) !important;
 }

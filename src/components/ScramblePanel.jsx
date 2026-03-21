@@ -1,276 +1,270 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Shuffle, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Zap, Sparkles } from 'lucide-react';
 
 const T = {
-  bg: '#0f0d14',
-  surface: '#16141e',
-  card: '#1c1a27',
-  border: 'rgba(255,255,255,0.07)',
-  borderGlow: 'rgba(138,92,255,0.25)',
-  purple: '#8a5cff',
-  purpleText: '#b794ff',
-  accent: '#ff6bb5',
-  orange: '#ff9b4d',
-  muted: 'rgba(255,255,255,0.35)',
-  text: 'rgba(255,255,255,0.92)',
-  sub: 'rgba(255,255,255,0.55)',
+  bg: '#0a0e1a',
+  surface: '#111827',
+  card: 'rgba(30,41,59,0.6)',
+  neon1: '#00ff88', // bright green
+  neon2: '#ff00ff', // magenta
+  neon3: '#00d9ff', // cyan
+  neon4: '#ffeb3b', // yellow
+  orange: '#ff6b35',
+  text: '#ffffff',
+  sub: 'rgba(255,255,255,0.65)',
+  muted: 'rgba(255,255,255,0.4)',
+  border: 'rgba(255,255,255,0.1)',
 };
 
 const shell = {
-  background: `linear-gradient(180deg, ${T.bg} 0%, ${T.surface} 100%)`,
-  border: `1px solid ${T.borderGlow}`,
-  borderRadius: 20,
+  background: T.bg,
+  border: `2px solid transparent`,
+  backgroundImage: `linear-gradient(${T.bg}, ${T.bg}), linear-gradient(135deg, ${T.neon1}, ${T.neon2}, ${T.neon3})`,
+  backgroundOrigin: 'border-box',
+  backgroundClip: 'padding-box, border-box',
+  borderRadius: 24,
   overflow: 'hidden',
   color: T.text,
-  boxShadow: '0 22px 48px rgba(0,0,0,0.32)',
-  fontFamily: '"DM Sans", sans-serif',
+  boxShadow: `0 0 60px rgba(0,255,136,0.15), 0 20px 40px rgba(0,0,0,0.5)`,
+  fontFamily: '"Inter", sans-serif',
 };
 
 const heroStyle = {
-  padding: '20px 22px 18px',
+  padding: '24px',
   borderBottom: `1px solid ${T.border}`,
   position: 'relative',
   overflow: 'hidden',
+  background: `linear-gradient(135deg, rgba(0,255,136,0.08) 0%, rgba(255,0,255,0.08) 50%, rgba(0,217,255,0.08) 100%)`,
 };
 
 const heroBg = {
   position: 'absolute',
   inset: 0,
   pointerEvents: 'none',
+  opacity: 0.6,
   background: `
-    radial-gradient(ellipse 60% 80% at 10% 50%, rgba(138,92,255,0.08) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 70% at 90% 20%, rgba(255,107,181,0.06) 0%, transparent 60%)
+    radial-gradient(circle at 20% 80%, ${T.neon1}20 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, ${T.neon2}20 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, ${T.neon3}15 0%, transparent 50%)
   `,
+  animation: 'scramble-pulse 4s ease-in-out infinite',
 };
 
 const badge = {
   display: 'inline-flex',
   alignItems: 'center',
-  gap: 6,
-  background: 'rgba(138,92,255,0.12)',
-  border: '1px solid rgba(138,92,255,0.28)',
+  gap: 8,
+  background: 'rgba(0,0,0,0.5)',
+  border: `2px solid ${T.neon1}`,
   borderRadius: 999,
-  padding: '4px 11px',
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: '0.18em',
-  color: T.purpleText,
+  padding: '6px 14px',
+  fontSize: 11,
+  fontWeight: 900,
+  letterSpacing: '0.15em',
+  color: T.neon1,
   textTransform: 'uppercase',
-  marginBottom: 10,
-  fontFamily: '"Syne", sans-serif',
+  marginBottom: 12,
+  boxShadow: `0 0 20px ${T.neon1}60, inset 0 0 20px ${T.neon1}20`,
+  animation: 'badge-glow 3s ease-in-out infinite',
 };
 
 const liveDot = {
-  width: 6,
-  height: 6,
+  width: 8,
+  height: 8,
   borderRadius: '50%',
-  background: T.accent,
-  animation: 's-pulse 2s infinite',
+  background: T.neon1,
+  boxShadow: `0 0 12px ${T.neon1}, 0 0 4px ${T.neon1}`,
+  animation: 'dot-spin 2s linear infinite',
 };
 
 const heroTitle = {
-  fontFamily: '"Syne", sans-serif',
-  fontSize: 26,
-  fontWeight: 800,
-  letterSpacing: '-0.02em',
+  fontSize: 32,
+  fontWeight: 900,
+  letterSpacing: '-0.03em',
   color: '#fff',
   lineHeight: 1,
+  textShadow: `0 0 40px ${T.neon1}60, 0 2px 8px rgba(0,0,0,0.8)`,
 };
 
 const heroSub = {
-  fontSize: 13,
+  fontSize: 14,
   color: T.sub,
-  marginTop: 6,
-  lineHeight: 1.5,
-  maxWidth: 420,
-};
-
-const pillBase = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 5,
-  border: `1px solid ${T.border}`,
-  borderRadius: 999,
-  padding: '4px 10px',
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: '0.14em',
-  color: T.sub,
-  textTransform: 'uppercase',
-  fontFamily: '"Syne", sans-serif',
-};
-
-const pillLive = {
-  ...pillBase,
-  border: '1px solid rgba(255,107,181,0.30)',
-  color: T.accent,
+  marginTop: 8,
+  lineHeight: 1.6,
+  maxWidth: 440,
 };
 
 const closeBtn = {
   position: 'absolute',
-  top: 18,
-  right: 18,
-  width: 30,
-  height: 30,
-  borderRadius: 8,
-  background: 'rgba(255,255,255,0.06)',
-  border: `1px solid ${T.border}`,
+  top: 20,
+  right: 20,
+  width: 32,
+  height: 32,
+  borderRadius: 10,
+  background: 'rgba(0,0,0,0.5)',
+  backdropFilter: 'blur(10px)',
+  border: `2px solid ${T.border}`,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   cursor: 'pointer',
   color: T.sub,
+  transition: 'all 0.2s',
 };
 
 const infoBar = {
   margin: '14px 14px 0',
-  background: 'rgba(138,92,255,0.06)',
-  border: '1px solid rgba(138,92,255,0.16)',
-  borderRadius: 10,
-  padding: '9px 13px',
-  fontSize: 11.5,
-  color: 'rgba(183,148,255,0.8)',
-  lineHeight: 1.5,
+  background: `linear-gradient(135deg, ${T.neon1}08 0%, ${T.neon3}05 100%)`,
+  border: `2px solid ${T.neon1}30`,
+  borderRadius: 12,
+  padding: '12px 16px',
+  fontSize: 12,
+  fontWeight: 600,
+  color: T.sub,
+  lineHeight: 1.6,
+  boxShadow: `0 0 20px ${T.neon1}15`,
 };
 
 const segRow = {
   display: 'grid',
   gridTemplateColumns: '1fr 1fr',
-  gap: 4,
-  background: 'rgba(255,255,255,0.04)',
-  border: `1px solid ${T.border}`,
-  borderRadius: 12,
-  padding: 4,
-  marginBottom: 12,
+  gap: 6,
+  background: 'rgba(255,255,255,0.05)',
+  border: `2px solid ${T.border}`,
+  borderRadius: 14,
+  padding: 6,
+  marginBottom: 14,
 };
 
 const segBtnBase = {
-  fontFamily: '"Syne", sans-serif',
-  padding: '9px 12px',
-  borderRadius: 9,
+  padding: '10px 14px',
+  borderRadius: 10,
   fontSize: 12,
-  fontWeight: 700,
-  letterSpacing: '0.06em',
+  fontWeight: 900,
+  letterSpacing: '0.08em',
   textTransform: 'uppercase',
   cursor: 'pointer',
   border: 'none',
-  transition: 'all 0.18s',
+  transition: 'all 0.2s',
   background: 'transparent',
   color: T.sub,
 };
 
 const segBtnActive = {
   ...segBtnBase,
-  background: `linear-gradient(135deg, ${T.purple} 0%, ${T.accent} 100%)`,
-  color: '#fff',
-  boxShadow: '0 4px 12px rgba(138,92,255,0.3)',
+  background: `linear-gradient(135deg, ${T.neon1} 0%, ${T.neon3} 100%)`,
+  color: '#0a0e1a',
+  boxShadow: `0 0 20px ${T.neon1}40`,
 };
 
 const formGrid = {
   display: 'grid',
-  gridTemplateColumns: 'minmax(0,1fr) 80px 120px',
-  gap: 8,
+  gridTemplateColumns: 'minmax(0,1fr) 90px 130px',
+  gap: 10,
   alignItems: 'start',
 };
 
 const fieldLabel = {
-  fontFamily: '"Syne", sans-serif',
-  fontSize: 9.5,
-  fontWeight: 700,
+  fontSize: 10,
+  fontWeight: 900,
   letterSpacing: '0.18em',
   textTransform: 'uppercase',
   color: T.muted,
-  marginBottom: 5,
+  marginBottom: 6,
   display: 'block',
 };
 
 const inputBase = {
   width: '100%',
-  background: T.card,
-  border: `1px solid ${T.border}`,
-  borderRadius: 10,
+  background: 'rgba(0,0,0,0.4)',
+  border: `2px solid ${T.border}`,
+  borderRadius: 12,
   color: T.text,
-  fontFamily: '"DM Sans", sans-serif',
-  fontSize: 13.5,
-  padding: '10px 12px',
+  fontSize: 13,
+  fontWeight: 600,
+  padding: '12px 14px',
   outline: 'none',
+  transition: 'all 0.2s',
 };
 
 const stepper = {
-  background: T.card,
-  border: `1px solid ${T.border}`,
-  borderRadius: 10,
+  background: 'rgba(0,0,0,0.4)',
+  border: `2px solid ${T.border}`,
+  borderRadius: 12,
   overflow: 'hidden',
 };
 
 const stepperTop = {
-  fontFamily: '"Syne", sans-serif',
   fontSize: 9,
-  fontWeight: 700,
+  fontWeight: 900,
   letterSpacing: '0.18em',
   textTransform: 'uppercase',
   color: T.muted,
-  padding: '7px 10px 0',
+  padding: '8px 12px 0',
 };
 
 const stepBtnStyle = {
-  width: 36,
-  height: 36,
+  width: 40,
+  height: 40,
   border: 'none',
   background: 'transparent',
-  color: T.sub,
+  color: T.neon1,
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  transition: 'all 0.2s',
 };
 
 const stepNum = {
-  fontSize: 22,
-  fontWeight: 700,
+  fontSize: 24,
+  fontWeight: 900,
   color: T.text,
   textAlign: 'center',
-  padding: '4px 10px',
+  padding: '6px 12px',
 };
 
 const actionPrimary = {
-  fontFamily: '"Syne", sans-serif',
-  padding: '9px 16px',
-  borderRadius: 10,
-  fontSize: 12,
-  fontWeight: 700,
-  letterSpacing: '0.06em',
+  padding: '12px 20px',
+  borderRadius: 12,
+  fontSize: 13,
+  fontWeight: 900,
+  letterSpacing: '0.08em',
   textTransform: 'uppercase',
   cursor: 'pointer',
   border: 'none',
-  background: `linear-gradient(135deg, ${T.purple} 0%, ${T.accent} 100%)`,
-  color: '#fff',
-  boxShadow: '0 4px 12px rgba(138,92,255,0.3)',
-  transition: 'all 0.18s',
+  background: `linear-gradient(135deg, ${T.neon1} 0%, ${T.neon3} 100%)`,
+  color: '#0a0e1a',
+  boxShadow: `0 0 30px ${T.neon1}50, 0 4px 16px rgba(0,0,0,0.4)`,
+  transition: 'all 0.2s',
+  position: 'relative',
+  overflow: 'hidden',
 };
 
 const actionSecondary = {
   ...actionPrimary,
-  background: 'rgba(255,255,255,0.06)',
-  color: T.sub,
+  background: 'rgba(255,255,255,0.08)',
+  color: T.text,
   boxShadow: 'none',
-  border: `1px solid ${T.border}`,
+  border: `2px solid ${T.border}`,
 };
 
 const emptyState = {
-  padding: '40px 20px',
+  padding: '50px 24px',
   textAlign: 'center',
   fontSize: 13,
-  color: T.muted,
-  lineHeight: 1.6,
+  fontWeight: 600,
+  color: T.sub,
+  lineHeight: 1.7,
 };
 
 const rosterCard = {
   background: T.card,
-  border: `1px solid ${T.border}`,
-  borderRadius: 12,
-  padding: '12px 14px',
-  marginTop: 12,
+  backdropFilter: 'blur(20px)',
+  border: `2px solid ${T.border}`,
+  borderRadius: 14,
+  padding: '14px 16px',
+  marginTop: 14,
 };
 
 const rosterHeader = {
@@ -281,17 +275,24 @@ const rosterHeader = {
 };
 
 const rosterTitleStyle = {
-  fontFamily: '"Syne", sans-serif',
   fontSize: 15,
-  fontWeight: 700,
+  fontWeight: 900,
   color: T.text,
 };
 
 const rosterCountBadge = {
-  ...pillBase,
-  background: 'rgba(138,92,255,0.12)',
-  border: '1px solid rgba(138,92,255,0.22)',
-  color: T.purpleText,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+  background: `linear-gradient(135deg, ${T.neon1}15 0%, ${T.neon3}10 100%)`,
+  border: `2px solid ${T.neon1}40`,
+  borderRadius: 999,
+  padding: '4px 10px',
+  fontSize: 10,
+  fontWeight: 900,
+  letterSpacing: '0.12em',
+  color: T.neon1,
+  textTransform: 'uppercase',
 };
 
 const roundBar = {
@@ -299,101 +300,120 @@ const roundBar = {
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 12,
-  background: T.card,
-  border: `1px solid ${T.border}`,
-  borderRadius: 12,
-  padding: '10px 14px',
-  marginBottom: 14,
+  background: `linear-gradient(135deg, ${T.neon1}08 0%, ${T.neon2}05 100%)`,
+  border: `2px solid ${T.neon1}30`,
+  borderRadius: 14,
+  padding: '12px 16px',
+  marginBottom: 16,
+  boxShadow: `0 0 20px ${T.neon1}15`,
 };
 
 const roundLabel = {
-  fontFamily: '"Syne", sans-serif',
-  fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: '0.12em',
+  fontSize: 12,
+  fontWeight: 900,
+  letterSpacing: '0.14em',
   textTransform: 'uppercase',
-  color: T.purpleText,
+  color: T.neon1,
+  textShadow: `0 0 10px ${T.neon1}60`,
 };
 
 const byeCardStyle = {
-  background: 'rgba(255,107,181,0.06)',
-  border: '1px solid rgba(255,107,181,0.16)',
-  borderRadius: 12,
-  padding: '10px 14px',
-  marginBottom: 14,
+  background: `linear-gradient(135deg, ${T.neon2}10 0%, ${T.neon2}05 100%)`,
+  border: `2px solid ${T.neon2}40`,
+  borderRadius: 14,
+  padding: '12px 16px',
+  marginBottom: 16,
+  boxShadow: `0 0 20px ${T.neon2}15`,
 };
 
 const courtsGrid = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-  gap: 12,
-  marginBottom: 14,
+  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+  gap: 16,
+  marginBottom: 16,
 };
 
 const courtCard = {
   background: T.card,
-  border: `1px solid ${T.border}`,
-  borderRadius: 12,
-  padding: '12px 14px',
-  transition: 'all 0.2s',
+  backdropFilter: 'blur(20px)',
+  border: `2px solid ${T.border}`,
+  borderRadius: 16,
+  padding: '16px',
+  transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+  position: 'relative',
+  overflow: 'hidden',
 };
 
 const courtHeader = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  marginBottom: 10,
+  marginBottom: 14,
+  paddingBottom: 10,
+  borderBottom: `1px solid ${T.border}`,
 };
 
 const courtNameStyle = {
-  fontFamily: '"Syne", sans-serif',
-  fontSize: 12,
-  fontWeight: 700,
-  letterSpacing: '0.1em',
+  fontSize: 13,
+  fontWeight: 900,
+  letterSpacing: '0.12em',
   textTransform: 'uppercase',
-  color: T.text,
+  color: T.neon1,
+  textShadow: `0 0 12px ${T.neon1}`,
 };
 
 const courtStatusBase = {
-  ...pillBase,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+  border: `2px solid ${T.border}`,
+  borderRadius: 999,
+  padding: '4px 10px',
   fontSize: 9,
-  padding: '3px 8px',
+  fontWeight: 900,
+  letterSpacing: '0.12em',
+  color: T.muted,
+  textTransform: 'uppercase',
+  background: 'rgba(0,0,0,0.3)',
 };
 
 const courtStatusLocked = {
   ...courtStatusBase,
-  background: 'rgba(255,107,181,0.12)',
-  border: '1px solid rgba(255,107,181,0.25)',
-  color: T.accent,
+  background: `linear-gradient(135deg, ${T.neon1}15 0%, ${T.neon3}10 100%)`,
+  border: `2px solid ${T.neon1}`,
+  color: T.neon1,
+  boxShadow: `0 0 15px ${T.neon1}40`,
 };
 
 const teamSlotBase = {
-  background: 'rgba(255,255,255,0.03)',
-  border: `1px solid ${T.border}`,
-  borderRadius: 10,
-  padding: '10px 12px',
-  marginBottom: 8,
+  background: 'rgba(255,255,255,0.04)',
+  border: `2px solid ${T.border}`,
+  borderRadius: 12,
+  padding: '12px 14px',
+  marginBottom: 10,
+  position: 'relative',
+  transition: 'all 0.3s',
 };
 
 const teamSlotWinner = {
   ...teamSlotBase,
-  background: 'rgba(138,92,255,0.08)',
-  border: '1px solid rgba(138,92,255,0.22)',
+  background: `linear-gradient(135deg, ${T.neon1}15 0%, ${T.neon3}10 100%)`,
+  border: `2px solid ${T.neon1}`,
+  boxShadow: `0 0 20px ${T.neon1}30, inset 0 0 20px ${T.neon1}10`,
 };
 
 const teamTag = {
-  fontFamily: '"Syne", sans-serif',
-  fontSize: 9,
-  fontWeight: 700,
-  letterSpacing: '0.16em',
+  fontSize: 10,
+  fontWeight: 900,
+  letterSpacing: '0.18em',
   textTransform: 'uppercase',
   color: T.muted,
-  marginBottom: 5,
+  marginBottom: 6,
 };
 
 const teamNameText = {
-  fontSize: 13,
-  fontWeight: 600,
+  fontSize: 14,
+  fontWeight: 700,
   color: T.text,
   lineHeight: 1.3,
 };
@@ -401,94 +421,114 @@ const teamNameText = {
 const scoreRow = {
   display: 'grid',
   gridTemplateColumns: '1fr auto 1fr',
-  gap: 10,
+  gap: 12,
   alignItems: 'center',
 };
 
 const scoreInput = {
   width: '100%',
-  background: T.card,
-  border: `1px solid ${T.border}`,
-  borderRadius: 8,
+  background: 'rgba(0,0,0,0.4)',
+  border: `2px solid ${T.border}`,
+  borderRadius: 10,
   color: T.text,
-  fontFamily: '"DM Sans", sans-serif',
-  fontSize: 18,
-  fontWeight: 700,
-  padding: '8px',
+  fontSize: 22,
+  fontWeight: 900,
+  padding: '10px',
   textAlign: 'center',
   outline: 'none',
+  transition: 'all 0.2s',
+  boxShadow: `0 0 0 0 ${T.neon1}00`,
 };
 
 const cardOuter = {
   background: T.card,
-  border: `1px solid ${T.border}`,
-  borderRadius: 12,
+  backdropFilter: 'blur(20px)',
+  border: `2px solid ${T.border}`,
+  borderRadius: 16,
   overflow: 'hidden',
 };
 
 const cardHeaderStyle = {
-  fontFamily: '"Syne", sans-serif',
   fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: '0.14em',
+  fontWeight: 900,
+  letterSpacing: '0.16em',
   textTransform: 'uppercase',
-  color: T.muted,
-  padding: '12px 14px',
+  color: T.neon3,
+  padding: '14px 16px',
   borderBottom: `1px solid ${T.border}`,
+  background: 'rgba(0,0,0,0.3)',
 };
 
 const standingsCols = {
   display: 'grid',
   gridTemplateColumns: '50px minmax(0,1fr) 60px 60px 50px 60px',
-  gap: 10,
-  padding: '8px 14px',
+  gap: 12,
+  padding: '10px 16px',
   fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: '0.12em',
+  fontWeight: 900,
+  letterSpacing: '0.14em',
   textTransform: 'uppercase',
   color: T.muted,
   borderBottom: `1px solid ${T.border}`,
+  background: 'rgba(0,0,0,0.2)',
 };
 
 const standingRowStyle = {
   display: 'grid',
   gridTemplateColumns: '50px minmax(0,1fr) 60px 60px 50px 60px',
-  gap: 10,
-  padding: '10px 14px',
+  gap: 12,
+  padding: '12px 16px',
   alignItems: 'center',
   borderBottom: `1px solid ${T.border}`,
+  transition: 'all 0.2s',
 };
 
 const historyCard = {
-  background: 'rgba(255,255,255,0.03)',
-  border: `1px solid ${T.border}`,
-  borderRadius: 10,
-  padding: '10px 12px',
+  background: 'rgba(255,255,255,0.04)',
+  border: `2px solid ${T.border}`,
+  borderRadius: 12,
+  padding: '12px 14px',
 };
 
 const RankBadge = ({ index }) => {
   const getRankStyle = () => {
-    if (index === 0) return { bg: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)', color: '#1a1a1a' };
-    if (index === 1) return { bg: 'linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%)', color: '#1a1a1a' };
-    if (index === 2) return { bg: 'linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%)', color: '#1a1a1a' };
-    return { bg: 'rgba(255,255,255,0.08)', color: T.sub };
+    if (index === 0) return { 
+      bg: `linear-gradient(135deg, ${T.neon4} 0%, ${T.orange} 100%)`, 
+      color: '#0a0e1a',
+      shadow: `0 0 20px ${T.neon4}80`
+    };
+    if (index === 1) return { 
+      bg: `linear-gradient(135deg, ${T.neon3} 0%, #94a3b8 100%)`, 
+      color: '#0a0e1a',
+      shadow: `0 0 20px ${T.neon3}60`
+    };
+    if (index === 2) return { 
+      bg: `linear-gradient(135deg, ${T.neon2} 0%, #fb7185 100%)`, 
+      color: '#fff',
+      shadow: `0 0 20px ${T.neon2}60`
+    };
+    return { 
+      bg: 'rgba(255,255,255,0.1)', 
+      color: T.sub,
+      shadow: 'none'
+    };
   };
 
   const style = getRankStyle();
   return (
     <div
       style={{
-        width: 28,
-        height: 28,
-        borderRadius: 8,
+        width: 32,
+        height: 32,
+        borderRadius: 10,
         background: style.bg,
         color: style.color,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: 13,
-        fontWeight: 800,
-        fontFamily: '"Syne", sans-serif',
+        fontSize: 14,
+        fontWeight: 900,
+        boxShadow: style.shadow,
       }}
     >
       {index + 1}
@@ -498,12 +538,12 @@ const RankBadge = ({ index }) => {
 
 const StatVal = ({ value, positive, negative, muted }) => {
   let color = T.text;
-  if (positive) color = '#4fffb0';
-  if (negative) color = '#ff6b9d';
+  if (positive) color = T.neon1;
+  if (negative) color = T.neon2;
   if (muted) color = T.muted;
 
   return (
-    <div style={{ fontSize: 13, fontWeight: 700, color, textAlign: 'right' }}>
+    <div style={{ fontSize: 13, fontWeight: 900, color, textAlign: 'right', textShadow: positive || negative ? `0 0 8px ${color}60` : 'none' }}>
       {value}
     </div>
   );
@@ -513,32 +553,39 @@ const CelebrationPodium = ({ rows }) => {
   const podiumStyle = {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 10,
-    background: `linear-gradient(145deg, rgba(138,92,255,0.08) 0%, rgba(255,107,181,0.06) 100%)`,
-    border: `1px solid ${T.borderGlow}`,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    gap: 12,
+    background: `linear-gradient(135deg, ${T.neon1}10 0%, ${T.neon2}08 50%, ${T.neon3}10 100%)`,
+    border: `2px solid ${T.neon1}40`,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    position: 'relative',
+    overflow: 'hidden',
+    boxShadow: `0 0 40px ${T.neon1}20`,
   };
 
   const slotBase = {
     textAlign: 'center',
+    position: 'relative',
   };
 
   const iconRow = {
-    fontSize: 32,
-    marginBottom: 6,
+    fontSize: 40,
+    marginBottom: 8,
+    filter: 'drop-shadow(0 0 8px rgba(0,255,136,0.6))',
   };
 
   const nameRow = {
-    fontSize: 13,
-    fontWeight: 700,
+    fontSize: 14,
+    fontWeight: 900,
     color: T.text,
     marginBottom: 4,
+    textShadow: `0 0 10px ${T.neon1}60`,
   };
 
   const statRow = {
     fontSize: 11,
+    fontWeight: 700,
     color: T.sub,
   };
 
@@ -628,9 +675,51 @@ function ScramblePanel({
     <>
       <style>
         {`
-          @keyframes s-pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(0.95); }
+          @keyframes scramble-pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 0.9; }
+          }
+          
+          @keyframes badge-glow {
+            0%, 100% { 
+              border-color: ${T.neon1}; 
+              color: ${T.neon1};
+              box-shadow: 0 0 20px ${T.neon1}60, inset 0 0 20px ${T.neon1}20;
+            }
+            33% { 
+              border-color: ${T.neon2}; 
+              color: ${T.neon2};
+              box-shadow: 0 0 20px ${T.neon2}60, inset 0 0 20px ${T.neon2}20;
+            }
+            66% { 
+              border-color: ${T.neon3}; 
+              color: ${T.neon3};
+              box-shadow: 0 0 20px ${T.neon3}60, inset 0 0 20px ${T.neon3}20;
+            }
+          }
+          
+          @keyframes dot-spin {
+            0% { 
+              background: ${T.neon1}; 
+              box-shadow: 0 0 12px ${T.neon1}, 0 0 4px ${T.neon1};
+            }
+            33% { 
+              background: ${T.neon2}; 
+              box-shadow: 0 0 12px ${T.neon2}, 0 0 4px ${T.neon2};
+            }
+            66% { 
+              background: ${T.neon3}; 
+              box-shadow: 0 0 12px ${T.neon3}, 0 0 4px ${T.neon3};
+            }
+            100% { 
+              background: ${T.neon1}; 
+              box-shadow: 0 0 12px ${T.neon1}, 0 0 4px ${T.neon1};
+            }
+          }
+          
+          .scramble-input:focus {
+            border-color: ${T.neon1} !important;
+            box-shadow: 0 0 20px ${T.neon1}60 !important;
           }
         `}
       </style>
@@ -641,11 +730,11 @@ function ScramblePanel({
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={badge}>
               <div style={liveDot} />
-              Scramble Mode
+              SCRAMBLE
             </div>
-            <div style={heroTitle}>Random Chaos</div>
+            <div style={heroTitle}>⚡ CHAOS MODE</div>
             <div style={heroSub}>
-              Every round shuffles the deck. No rankings, no seeding—just pure randomized matchups.
+              Pure randomness. Every round reshuffles the deck—no rankings, no strategy, just mayhem. 🎲
             </div>
           </div>
           <button onClick={onClose} style={closeBtn}>
@@ -655,7 +744,7 @@ function ScramblePanel({
 
         <div style={{ padding: '0 14px 18px' }}>
           <div style={infoBar}>
-            💫 Scramble mode pairs players randomly each round—scores don't affect matchups, just bragging rights.
+            🎲 Random pairings every round—stats tracked, but matchups are pure chaos. May the odds be ever in your favor!
           </div>
 
           <div style={{ marginTop: 14 }}>
@@ -682,6 +771,7 @@ function ScramblePanel({
                   value={manualScramblePlayerNames}
                   onChange={(e) => setManualScramblePlayerNames(e.target.value)}
                   placeholder="Alice, Bob, Charlie, Diana"
+                  className="scramble-input"
                   style={inputBase}
                 />
               </div>
@@ -695,6 +785,7 @@ function ScramblePanel({
                     const evt = eligibleScramblePopupEvents.find((ev) => ev.id === eventId);
                     setSelectedEvent(evt || null);
                   }}
+                  className="scramble-input"
                   style={inputBase}
                 >
                   <option value="">-- Choose Event --</option>
@@ -756,9 +847,10 @@ function ScramblePanel({
             </div>
 
             {!tournament && (
-              <button onClick={startScrambleTournament} style={{ ...actionPrimary, width: '100%', marginTop: 14 }}>
-                <Shuffle size={14} style={{ marginRight: 6, display: 'inline-block', verticalAlign: 'middle' }} />
-                Start Scramble
+              <button onClick={startScrambleTournament} style={{ ...actionPrimary, width: '100%', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <Zap size={16} style={{ display: 'inline-block' }} />
+                START SCRAMBLE
+                <Sparkles size={14} style={{ display: 'inline-block' }} />
               </button>
             )}
           </div>
@@ -818,11 +910,11 @@ function ScramblePanel({
 
               {activeRound && Array.isArray(activeRound.byeIds) && activeRound.byeIds.length > 0 && (
                 <div style={byeCardStyle}>
-                  <div style={{ ...roundLabel, color: T.accent, marginBottom: 4 }}>Bye This Round</div>
-                  <div style={{ fontSize: 13, color: T.text }}>
+                  <div style={{ ...roundLabel, color: T.neon2, textShadow: `0 0 10px ${T.neon2}60`, marginBottom: 6 }}>Bye This Round</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
                     {activeRound.byeIds.map((playerId) => participantMap[String(playerId || '')]?.displayName || 'Player').join(', ')}
                   </div>
-                  <div style={{ marginTop: 4, fontSize: 11, color: 'rgba(255,107,181,0.7)' }}>
+                  <div style={{ marginTop: 6, fontSize: 11, fontWeight: 600, color: T.sub }}>
                     Bye rounds are neutral and do not add a win or loss.
                   </div>
                 </div>
@@ -845,7 +937,7 @@ function ScramblePanel({
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                             <div style={teamTag}>Team A</div>
                             {result && result.scoreA > result.scoreB && (
-                              <span style={{ ...teamTag, color: T.accent, marginBottom: 0 }}>Winner</span>
+                              <span style={{ ...teamTag, color: T.neon1, marginBottom: 0, textShadow: `0 0 10px ${T.neon1}` }}>Winner</span>
                             )}
                           </div>
                           <div style={teamNameText}>{renderTeamName(court.teamA)}</div>
@@ -855,7 +947,7 @@ function ScramblePanel({
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                             <div style={teamTag}>Team B</div>
                             {result && result.scoreB > result.scoreA && (
-                              <span style={{ ...teamTag, color: T.accent, marginBottom: 0 }}>Winner</span>
+                              <span style={{ ...teamTag, color: T.neon1, marginBottom: 0, textShadow: `0 0 10px ${T.neon1}` }}>Winner</span>
                             )}
                           </div>
                           <div style={teamNameText}>{renderTeamName(court.teamB)}</div>
@@ -877,11 +969,12 @@ function ScramblePanel({
                                 e.target.value
                               )
                             }
+                            className="scramble-input"
                             style={scoreInput}
                             placeholder="0"
                           />
-                          <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', color: T.muted, textTransform: 'uppercase' }}>
-                            vs
+                          <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 900, letterSpacing: '0.2em', color: T.neon3, textTransform: 'uppercase', textShadow: `0 0 10px ${T.neon3}` }}>
+                            VS
                           </div>
                           <input
                             type="text"
@@ -898,6 +991,7 @@ function ScramblePanel({
                                 e.target.value
                               )
                             }
+                            className="scramble-input"
                             style={scoreInput}
                             placeholder="0"
                           />

@@ -16382,6 +16382,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal || showJourneyWeightTrackerModal;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
     const scrollY = window.scrollY || window.pageYOffset || 0;
+    const journeyUnderlay = darkMode ? 'rgba(2, 6, 23, 0.5)' : 'rgba(15, 23, 42, 0.18)';
+    const rootElement = document.getElementById('root');
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyTouchAction = document.body.style.touchAction;
     const previousBodyOverscroll = document.body.style.overscrollBehavior;
@@ -16397,6 +16399,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const previousDocOverscroll = document.documentElement.style.overscrollBehavior;
     const previousDocBackground = document.documentElement.style.background;
     const previousDocBackgroundImage = document.documentElement.style.backgroundImage;
+    const previousJourneyUnderlayVar = document.documentElement.style.getPropertyValue('--journey-underlay');
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
     document.body.style.overscrollBehavior = 'none';
@@ -16408,6 +16411,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     document.documentElement.style.overflow = 'hidden';
     document.documentElement.style.touchAction = 'none';
     document.documentElement.style.overscrollBehavior = 'none';
+    document.documentElement.style.setProperty('--journey-underlay', journeyUnderlay);
+    document.documentElement.classList.add('journey-overlay-active');
+    document.body.classList.add('journey-overlay-active');
+    if (rootElement) rootElement.classList.add('journey-overlay-active');
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.body.style.touchAction = previousBodyTouchAction;
@@ -16424,9 +16431,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       document.documentElement.style.overscrollBehavior = previousDocOverscroll;
       document.documentElement.style.background = previousDocBackground;
       document.documentElement.style.backgroundImage = previousDocBackgroundImage;
+      if (previousJourneyUnderlayVar) {
+        document.documentElement.style.setProperty('--journey-underlay', previousJourneyUnderlayVar);
+      } else {
+        document.documentElement.style.removeProperty('--journey-underlay');
+      }
+      document.documentElement.classList.remove('journey-overlay-active');
+      document.body.classList.remove('journey-overlay-active');
+      if (rootElement) rootElement.classList.remove('journey-overlay-active');
       window.scrollTo(0, scrollY);
     };
-  }, [showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal, showJourneyWeightTrackerModal]);
+  }, [darkMode, showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal, showJourneyWeightTrackerModal]);
 
   useEffect(() => {
     if (journeyRunSession?.status !== 'active') return undefined;
