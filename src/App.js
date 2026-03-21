@@ -28011,7 +28011,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
         <div
-          className="bg-white dark:bg-gray-800 rounded-t-[28px] rounded-b-none sm:rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
+          className="bg-white dark:bg-slate-950 rounded-t-[28px] rounded-b-none sm:rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
           onClick={(e) => e.stopPropagation()}
           style={{
             touchAction: 'pan-y',
@@ -28046,7 +28046,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <button
                 type="button"
                 onClick={() => setShowJourneyScreen(false)}
-                className="rounded-xl p-2 text-gray-500 hover:bg-black/5 dark:text-gray-400 dark:hover:bg-white/5"
+                className="rounded-xl p-2 text-gray-500 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -28055,7 +28055,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
           <div className="space-y-4 pb-6">
             {primaryJourneyGoal ? (
-              <div className="rounded-[28px] border border-white/10 bg-gray-50/90 dark:bg-white/[0.04] p-5">
+              <div className="rounded-[28px] border border-gray-200/80 dark:border-white/10 bg-gray-50/90 dark:bg-slate-900/80 p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{getJourneyGoalEmoji(primaryJourneyGoal)} {primaryJourneyGoal.title}</div>
@@ -28088,8 +28088,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <button
                       type="button"
                       onClick={() => openJourneyGoalFlow()}
-                      className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200"
-                      style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
+                      className="rounded-2xl border px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-100"
+                      style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)', backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'transparent' }}
                     >
                       <span className="inline-flex items-center gap-2">
                         <Plus size={14} />
@@ -28129,7 +28129,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
               </div>
             ) : (
-              <div className="rounded-[28px] border border-dashed border-gray-200 dark:border-white/10 p-5">
+              <div className="rounded-[28px] border border-dashed border-gray-200 dark:border-white/10 bg-transparent dark:bg-slate-900/40 p-5">
                 <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">What are you working towards?</div>
                 <div className="mt-4 grid grid-cols-1 gap-2.5">
                   {JOURNEY_GOAL_TEMPLATES.map((template) => (
@@ -28161,14 +28161,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             )}
 
             {sortedJourneyGoals.length > 0 && (
-              <div className="rounded-[28px] border border-white/10 bg-gray-50/80 dark:bg-white/[0.03] p-4">
+              <div className="rounded-[28px] border border-gray-200/80 dark:border-white/10 bg-gray-50/80 dark:bg-slate-900/70 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Goals</div>
                   <button type="button" onClick={openJourneyGoalFlow} className="text-xs font-semibold" style={themeAccentTextStyle}>Add another</button>
                 </div>
                 <div className="mt-3 space-y-2">
                   {sortedJourneyGoals.slice(0, 4).map((goal) => (
-                    <div key={goal.id} className="rounded-2xl border border-white/10 bg-white/80 dark:bg-white/[0.03] px-3 py-3">
+                    <div key={goal.id} className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 px-3 py-3">
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{getJourneyGoalEmoji(goal)} {goal.title}</div>
@@ -28192,7 +28192,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             )}
 
             {(journeyState?.entries || []).length > 0 && (
-              <div className="rounded-[28px] border border-white/10 bg-gray-50/80 dark:bg-white/[0.03] p-4">
+              <div className="rounded-[28px] border border-gray-200/80 dark:border-white/10 bg-gray-50/80 dark:bg-slate-900/70 p-4">
                 <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Recent</div>
                 <div className="mt-3 space-y-2">
                   {(journeyState.entries || []).slice(0, 4).map((entry) => {
@@ -28209,7 +28209,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           </button>
                         </div>
                         <div
-                          className="relative z-10 rounded-2xl border border-white/10 bg-white/80 dark:bg-white/[0.03] px-3 py-3"
+                          className="relative z-10 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 px-3 py-3"
                           style={{
                             transform: `translateX(${journeyEntrySwipeDrag.id === entry.id ? journeyEntrySwipeDrag.offset : (swipedJourneyEntryId === entry.id ? -88 : 0)}px)`,
                             transition: journeyEntrySwipeDrag.id === entry.id ? 'none' : 'transform 180ms ease',
@@ -28344,7 +28344,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
         <div
-          className="w-full sm:w-[28rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-gray-800 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
+          className="w-full sm:w-[28rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
           onClick={(e) => e.stopPropagation()}
           style={{
             touchAction: 'pan-y',
@@ -28357,19 +28357,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             {selectedJourneyGoalTemplate?.hint || 'Keep it measurable, simple, and easy to log.'}
           </div>
           {selectedJourneyGoalTemplate ? (
-            <div className="mt-4 rounded-2xl border px-4 py-3" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16), backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.06) }}>
+            <div className="mt-4 rounded-2xl border px-4 py-3" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16), backgroundColor: darkMode ? 'rgba(15,23,42,0.88)' : hexToRgba(activeLayerPageTheme.accent, 0.06) }}>
               <div className="text-xs uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Starting point</div>
               <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{formatJourneyTemplateLabel(selectedJourneyGoalTemplate)}</div>
             </div>
           ) : null}
           <div className="mt-4 space-y-3">
-            <input value={journeyGoalDraft.title} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, title: e.target.value })); setJourneyGoalError(''); }} placeholder="Lose 5 pounds" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+            <input value={journeyGoalDraft.title} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, title: e.target.value })); setJourneyGoalError(''); }} placeholder="Lose 5 pounds" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
             <div className="grid grid-cols-2 gap-3">
-              <input value={journeyGoalDraft.target} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, target: e.target.value })); setJourneyGoalError(''); }} placeholder="5" inputMode="decimal" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
-              <input value={journeyGoalDraft.unit} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, unit: e.target.value })); setJourneyGoalError(''); }} placeholder="Pounds" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+              <input value={journeyGoalDraft.target} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, target: e.target.value })); setJourneyGoalError(''); }} placeholder="5" inputMode="decimal" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+              <input value={journeyGoalDraft.unit} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, unit: e.target.value })); setJourneyGoalError(''); }} placeholder="Pounds" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
             </div>
-            <input value={journeyGoalDraft.timeframe} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, timeframe: e.target.value })); setJourneyGoalError(''); }} placeholder="this month" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
-            <div className="rounded-2xl border border-gray-200 dark:border-white/10 px-3 py-3 text-sm text-gray-500 dark:text-gray-400">
+            <input value={journeyGoalDraft.timeframe} onChange={(e) => { setJourneyGoalDraft((prev) => ({ ...prev, timeframe: e.target.value })); setJourneyGoalError(''); }} placeholder="this month" className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+            <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-transparent dark:bg-slate-900/60 px-3 py-3 text-sm text-gray-500 dark:text-slate-300">
               This goal will become your primary Journey focus.
             </div>
             {journeyGoalError ? (
@@ -28380,7 +28380,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
           <div className="mt-5 pb-6">
             <div className="flex items-center gap-3">
-              <button type="button" onClick={closeJourneyGoalModal} className="flex-1 rounded-2xl px-6 py-3.5 text-base font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-white/[0.06]">Cancel</button>
+              <button type="button" onClick={closeJourneyGoalModal} className="flex-1 rounded-2xl px-6 py-3.5 text-base font-semibold text-gray-700 dark:text-slate-100 bg-gray-100 dark:bg-white/[0.08]">Cancel</button>
               <button type="button" onClick={addJourneyGoal} disabled={!canSaveJourneyGoal} className={`flex-[2] rounded-2xl px-6 py-3.5 text-base font-semibold text-white ${canSaveJourneyGoal ? '' : 'cursor-not-allowed opacity-60'}`} style={themeAccentButtonStyle}>Start</button>
             </div>
           </div>
