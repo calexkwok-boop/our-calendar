@@ -15938,6 +15938,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyRunTrackerModal;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
     const scrollY = window.scrollY || window.pageYOffset || 0;
+    const journeyOverlayPageBg = darkMode ? '#020617' : '#0f172a';
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyTouchAction = document.body.style.touchAction;
     const previousBodyOverscroll = document.body.style.overscrollBehavior;
@@ -15946,9 +15947,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const previousBodyLeft = document.body.style.left;
     const previousBodyRight = document.body.style.right;
     const previousBodyWidth = document.body.style.width;
+    const previousBodyBackground = document.body.style.backgroundColor;
     const previousDocOverflow = document.documentElement.style.overflow;
     const previousDocTouchAction = document.documentElement.style.touchAction;
     const previousDocOverscroll = document.documentElement.style.overscrollBehavior;
+    const previousDocBackground = document.documentElement.style.backgroundColor;
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
     document.body.style.overscrollBehavior = 'none';
@@ -15957,9 +15960,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     document.body.style.left = '0';
     document.body.style.right = '0';
     document.body.style.width = '100%';
+    document.body.style.backgroundColor = journeyOverlayPageBg;
     document.documentElement.style.overflow = 'hidden';
     document.documentElement.style.touchAction = 'none';
     document.documentElement.style.overscrollBehavior = 'none';
+    document.documentElement.style.backgroundColor = journeyOverlayPageBg;
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.body.style.touchAction = previousBodyTouchAction;
@@ -15969,12 +15974,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       document.body.style.left = previousBodyLeft;
       document.body.style.right = previousBodyRight;
       document.body.style.width = previousBodyWidth;
+      document.body.style.backgroundColor = previousBodyBackground;
       document.documentElement.style.overflow = previousDocOverflow;
       document.documentElement.style.touchAction = previousDocTouchAction;
       document.documentElement.style.overscrollBehavior = previousDocOverscroll;
+      document.documentElement.style.backgroundColor = previousDocBackground;
       window.scrollTo(0, scrollY);
     };
-  }, [showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal]);
+  }, [darkMode, showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal]);
 
   useEffect(() => {
     if (journeyRunSession?.status !== 'active') return undefined;
@@ -18297,14 +18304,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     : null;
   const renderJourneyRunTrackerModal = () => (
     <div
-      className="fixed inset-0 z-[83] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
+      className="fixed inset-x-0 top-0 z-[83] h-[100dvh] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
       onClick={() => {
         if (journeyRunSession?.status !== 'active') closeJourneyRunTrackerModal();
       }}
+      style={{
+        paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
+        paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+      }}
     >
       <div
-        className="w-full sm:w-[32rem] rounded-t-[32px] sm:rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+        className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] sm:rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
+        style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -26162,7 +26174,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyScreen && (
           <div
-            className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
+            className="fixed inset-x-0 top-0 z-[80] h-[100dvh] bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
             onClick={() => setShowJourneyScreen(false)}
             style={{ touchAction: 'none', overscrollBehavior: 'none' }}
           >
@@ -26394,7 +26406,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {showJourneyEntryModal && (
-          <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
+        <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
             <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pick something to work toward</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Small progress adds up over time.</div>
@@ -26431,7 +26443,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {showJourneyGoalModal && (
-          <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
+        <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
             <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -26468,7 +26480,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {showJourneyGoalCreatedPrompt && createdJourneyGoal && (
-          <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
+        <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
             <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
                 <span>Goal created!</span>
@@ -26510,7 +26522,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && (
-          <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyDeleteGoalPrompt}>
+        <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyDeleteGoalPrompt}>
             <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete goal?</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">This removes the goal and any Journey updates attached to it.</div>
@@ -26542,7 +26554,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {showJourneyLogModal && (
-          <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyLogModal}>
+        <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyLogModal}>
             <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -26648,7 +26660,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {showJourneyNoteModal && (
-          <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setShowJourneyNoteModal(false)}>
+        <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setShowJourneyNoteModal(false)}>
             <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add note</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Capture a quick thought or reflection.</div>
@@ -26695,7 +26707,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )}
     {!activeSubCalendar && showJourneyScreen && (
       <div
-        className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
+        className="fixed inset-x-0 top-0 z-[80] h-[100dvh] bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
         onClick={() => setShowJourneyScreen(false)}
         style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
@@ -26927,7 +26939,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )}
 
     {!activeSubCalendar && showJourneyEntryModal && (
-      <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
+      <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
         <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pick something to work toward</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Small progress adds up over time.</div>
@@ -26964,7 +26976,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )}
 
     {!activeSubCalendar && showJourneyGoalModal && (
-      <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
+      <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
         <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -27001,7 +27013,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )}
 
     {!activeSubCalendar && showJourneyGoalCreatedPrompt && createdJourneyGoal && (
-      <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
+      <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
         <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
                 <span>Goal created!</span>
@@ -27043,7 +27055,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )}
 
     {!activeSubCalendar && showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && (
-      <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyDeleteGoalPrompt}>
+      <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyDeleteGoalPrompt}>
         <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete goal?</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">This removes the goal and any Journey updates attached to it.</div>
@@ -27075,7 +27087,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )}
 
     {!activeSubCalendar && showJourneyLogModal && (
-      <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyLogModal}>
+      <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyLogModal}>
         <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -27181,7 +27193,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     )}
 
     {!activeSubCalendar && showJourneyNoteModal && (
-      <div className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setShowJourneyNoteModal(false)}>
+      <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setShowJourneyNoteModal(false)}>
         <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add note</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Capture a quick thought or reflection.</div>
