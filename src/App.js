@@ -16176,16 +16176,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
 
   const openJourneyGoalFlow = (template = null) => {
+    const nextTemplate = template && typeof template === 'object' && !('currentTarget' in template) && !('target' in template)
+      ? template
+      : null;
     setShowJourneyEntryModal(false);
-    setJourneyGoalDraft(createJourneyGoalDraft(template ? {
-      title: template.title,
-      target: template.target,
-      unit: template.unit,
-      timeframe: template.timeframe,
-      goalType: template.goalType,
+    setJourneyGoalDraft(createJourneyGoalDraft(nextTemplate ? {
+      title: nextTemplate.title,
+      target: nextTemplate.target,
+      unit: nextTemplate.unit,
+      timeframe: nextTemplate.timeframe,
+      goalType: nextTemplate.goalType,
     } : {}, sortedJourneyGoals.length === 0));
     setJourneyGoalError('');
-    setSelectedJourneyGoalTemplateId(template?.id || '');
+    setSelectedJourneyGoalTemplateId(nextTemplate?.id || '');
     setShowJourneyGoalCreatedPrompt(false);
     setJourneyCreatedGoalId('');
     deferJourneyOverlayOpen(() => setShowJourneyGoalModal(true));
