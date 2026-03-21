@@ -19608,7 +19608,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     />
     <div
       ref={widgetSurfaceRef}
-      className="relative min-h-screen overflow-x-hidden overscroll-x-none p-2 sm:p-3 pt-7 sm:pt-10 pb-24"
+      className="relative min-h-[100dvh] overflow-x-hidden overscroll-x-none p-2 sm:p-3 pt-7 sm:pt-10 pb-[calc(6rem+env(safe-area-inset-bottom))]"
       style={themedPageBackgroundStyle}
       onPointerDownCapture={(event) => {
         if (bottomNavTab !== 'home') return;
