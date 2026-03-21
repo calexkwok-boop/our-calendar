@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown, Share2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
@@ -1295,6 +1295,8 @@ function App() {
   const [journeyCreatedGoalId, setJourneyCreatedGoalId] = useState('');
   const [showJourneyDeleteGoalPrompt, setShowJourneyDeleteGoalPrompt] = useState(false);
   const [journeyGoalPendingDeleteId, setJourneyGoalPendingDeleteId] = useState('');
+  const [journeyEntryPhotoTargetId, setJourneyEntryPhotoTargetId] = useState('');
+  const journeyEntryPhotoInputRef = useRef(null);
   const journeyLogPhotoInputRef = useRef(null);
   const journeyRunWatchIdRef = useRef(null);
   const [swipedTripId, setSwipedTripId] = useState(null);
@@ -16322,6 +16324,91 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setJourneyNoteDraft('');
   };
 
+  const deleteJourneyEntry = (entryId) => {
+    const normalizedEntryId = String(entryId || '').trim();
+    if (!normalizedEntryId) return;
+    setJourneyState((prev) => {
+      const targetEntry = (prev?.entries || []).find((entry) => String(entry?.id || '') === normalizedEntryId) || null;
+      if (!targetEntry) return prev;
+      const progressReduction = Math.max(0, normalizeJourneyNumber(targetEntry?.amount));
+      const targetGoalId = String(targetEntry?.goalId || '');
+      return {
+        ...prev,
+        goals: (prev?.goals || []).map((goal) => (
+          targetGoalId && String(goal?.id || '') === targetGoalId
+            ? {
+                ...goal,
+                current: Math.max(0, normalizeJourneyNumber(goal?.current) - progressReduction),
+                updatedAt: new Date().toISOString(),
+              }
+            : goal
+        )),
+        entries: (prev?.entries || []).filter((entry) => String(entry?.id || '') !== normalizedEntryId),
+      };
+    });
+  };
+
+  const promptJourneyEntryPhotoUpload = (entryId) => {
+    const normalizedEntryId = String(entryId || '').trim();
+    if (!normalizedEntryId) return;
+    setJourneyEntryPhotoTargetId(normalizedEntryId);
+    journeyEntryPhotoInputRef.current?.click();
+  };
+
+  const attachPhotoToJourneyEntry = async (file) => {
+    const normalizedEntryId = String(journeyEntryPhotoTargetId || '').trim();
+    if (!file || !normalizedEntryId) return;
+    try {
+      const nextPhoto = await readJourneyPhotoFile(file);
+      setJourneyState((prev) => ({
+        ...prev,
+        entries: (prev?.entries || []).map((entry) => (
+          String(entry?.id || '') === normalizedEntryId
+            ? { ...entry, photoUrl: nextPhoto.photoUrl, photoName: nextPhoto.photoName }
+            : entry
+        )),
+      }));
+    } catch {
+      alert('Could not attach that route photo.');
+    } finally {
+      setJourneyEntryPhotoTargetId('');
+    }
+  };
+
+  const shareJourneyEntry = async (entry) => {
+    if (!entry) return;
+    const entryGoal = journeyGoalById[String(entry?.goalId || '')] || null;
+    const summary = entry?.type === 'workout'
+      ? `${entry.workoutType === 'walk' ? 'Walked' : 'Ran'} ${formatJourneyMiles(entry.distanceMiles || entry.amount || 0)} miles in ${formatJourneyDuration(entry.durationMs || 0)}`
+      : entry?.type === 'log'
+        ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
+        : String(entry?.note || 'Journey update').trim();
+    const shareText = [
+      entryGoal?.title ? `Journey goal: ${entryGoal.title}` : 'Journey update',
+      summary,
+      entry?.paceLabel ? `Pace: ${entry.paceLabel}` : '',
+      Number(entry?.estimatedSteps || 0) > 0 ? `${Number(entry.estimatedSteps).toLocaleString()} steps` : '',
+    ].filter(Boolean).join('\n');
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: entryGoal?.title || 'Journey run',
+          text: shareText,
+        });
+        return;
+      }
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        alert('Run summary copied so you can share it anywhere.');
+        return;
+      }
+      alert(shareText);
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      alert('Could not share that run right now.');
+    }
+  };
+
   const pinJourneyGoal = (goalId) => {
     const now = new Date().toISOString();
     setJourneyState((prev) => ({
@@ -26223,7 +26310,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
               </div>
 
-              <div className="p-5 sm:p-6 space-y-4">
+              <div className="p-5 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-4">
                 {primaryJourneyGoal ? (
                   <div className="rounded-[28px] border border-white/10 bg-gray-50/90 dark:bg-white/[0.04] p-5">
                     <div className="flex items-start justify-between gap-3">
@@ -26385,9 +26472,37 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                       : 'Added a note'}
                                 </div>
                                 {entry.type === 'workout' ? (
-                                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    {formatJourneyDuration(entry.durationMs || 0)} • {entry.paceLabel || formatJourneyPace(entry.distanceMiles || entry.amount || 0, entry.durationMs || 0)} • {Number(entry.estimatedSteps || 0).toLocaleString()} steps
-                                  </div>
+                                  <>
+                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                      {formatJourneyDuration(entry.durationMs || 0)} • {entry.paceLabel || formatJourneyPace(entry.distanceMiles || entry.amount || 0, entry.durationMs || 0)} • {Number(entry.estimatedSteps || 0).toLocaleString()} steps
+                                    </div>
+                                    <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-medium">
+                                      <button
+                                        type="button"
+                                        onClick={() => promptJourneyEntryPhotoUpload(entry.id)}
+                                        className="inline-flex items-center gap-1.5 text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                      >
+                                        <Camera size={12} />
+                                        {entry.photoUrl ? 'Change photo' : 'Add photo'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => shareJourneyEntry(entry)}
+                                        className="inline-flex items-center gap-1.5 text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                      >
+                                        <Share2 size={12} />
+                                        Share
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => deleteJourneyEntry(entry.id)}
+                                        className="inline-flex items-center gap-1.5 text-rose-500 transition hover:text-rose-600 dark:text-rose-300 dark:hover:text-rose-200"
+                                      >
+                                        <Trash2 size={12} />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </>
                                 ) : null}
                                 {entry.note ? (
                                   <div className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">{entry.note}</div>
@@ -26756,7 +26871,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 space-y-4">
+          <div className="p-5 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-4">
             {primaryJourneyGoal ? (
               <div className="rounded-[28px] border border-white/10 bg-gray-50/90 dark:bg-white/[0.04] p-5">
                 <div className="flex items-start justify-between gap-3">
@@ -26917,11 +27032,39 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                   ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
                                   : 'Added a note'}
                             </div>
-                            {entry.type === 'workout' ? (
-                              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                {formatJourneyDuration(entry.durationMs || 0)} • {entry.paceLabel || formatJourneyPace(entry.distanceMiles || entry.amount || 0, entry.durationMs || 0)} • {Number(entry.estimatedSteps || 0).toLocaleString()} steps
-                              </div>
-                            ) : null}
+                                {entry.type === 'workout' ? (
+                                  <>
+                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                      {formatJourneyDuration(entry.durationMs || 0)} • {entry.paceLabel || formatJourneyPace(entry.distanceMiles || entry.amount || 0, entry.durationMs || 0)} • {Number(entry.estimatedSteps || 0).toLocaleString()} steps
+                                    </div>
+                                    <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-medium">
+                                      <button
+                                        type="button"
+                                        onClick={() => promptJourneyEntryPhotoUpload(entry.id)}
+                                        className="inline-flex items-center gap-1.5 text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                      >
+                                        <Camera size={12} />
+                                        {entry.photoUrl ? 'Change photo' : 'Add photo'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => shareJourneyEntry(entry)}
+                                        className="inline-flex items-center gap-1.5 text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                      >
+                                        <Share2 size={12} />
+                                        Share
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => deleteJourneyEntry(entry.id)}
+                                        className="inline-flex items-center gap-1.5 text-rose-500 transition hover:text-rose-600 dark:text-rose-300 dark:hover:text-rose-200"
+                                      >
+                                        <Trash2 size={12} />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </>
+                                ) : null}
                             {entry.note ? (
                               <div className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">{entry.note}</div>
                             ) : null}
@@ -27215,6 +27358,17 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         </div>
       </div>
     )}
+    <input
+      ref={journeyEntryPhotoInputRef}
+      type="file"
+      accept="image/*"
+      className="hidden"
+      onChange={async (e) => {
+        const file = e.target.files?.[0];
+        if (file) await attachPhotoToJourneyEntry(file);
+        e.target.value = '';
+      }}
+    />
 
     {!activeSubCalendar && locationActionTarget && (
       <div
