@@ -16569,7 +16569,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [showJourneyRunTrackerModal, journeyRunSession?.status]);
 
   const openJourneyScreen = () => {
-    deferJourneyOverlayOpen(() => setShowJourneyScreen(true));
+    setShowJourneyScreen(true);
   };
 
   const closeJourneyEntryModal = () => {
