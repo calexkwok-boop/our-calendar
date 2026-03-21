@@ -27383,9 +27383,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </div>
                 ) : null}
               </div>
-              <div className="mt-5 flex gap-2">
-                <button type="button" onClick={closeJourneyGoalModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
-                <button type="button" onClick={addJourneyGoal} disabled={!canSaveJourneyGoal} className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white ${canSaveJourneyGoal ? '' : 'cursor-not-allowed opacity-60'}`} style={themeAccentButtonStyle}>Start</button>
+              <div className="mt-5 pb-safe">
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={closeJourneyGoalModal} className="flex-1 rounded-2xl px-6 py-3.5 text-base font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-white/[0.06]">Cancel</button>
+                  <button type="button" onClick={addJourneyGoal} disabled={!canSaveJourneyGoal} className={`flex-[2] rounded-2xl px-6 py-3.5 text-base font-semibold text-white ${canSaveJourneyGoal ? '' : 'cursor-not-allowed opacity-60'}`} style={themeAccentButtonStyle}>Start</button>
+                </div>
               </div>
             </div>
           </div>
@@ -27980,9 +27982,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             ) : null}
           </div>
-          <div className="mt-5 flex gap-2">
-            <button type="button" onClick={closeJourneyGoalModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
-            <button type="button" onClick={addJourneyGoal} disabled={!canSaveJourneyGoal} className={`flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white ${canSaveJourneyGoal ? '' : 'cursor-not-allowed opacity-60'}`} style={themeAccentButtonStyle}>Start</button>
+          <div className="mt-5 pb-safe">
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={closeJourneyGoalModal} className="flex-1 rounded-2xl px-6 py-3.5 text-base font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-white/[0.06]">Cancel</button>
+              <button type="button" onClick={addJourneyGoal} disabled={!canSaveJourneyGoal} className={`flex-[2] rounded-2xl px-6 py-3.5 text-base font-semibold text-white ${canSaveJourneyGoal ? '' : 'cursor-not-allowed opacity-60'}`} style={themeAccentButtonStyle}>Start</button>
+            </div>
           </div>
         </div>
       </div>
