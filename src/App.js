@@ -26981,7 +26981,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyEntryModal && (
         <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
-            <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full sm:w-[26rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pick something to work toward</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Small progress adds up over time.</div>
               <div className="mt-4 space-y-2">
@@ -27018,7 +27018,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyGoalModal && (
         <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalModal}>
-            <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full sm:w-[28rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {selectedJourneyGoalTemplate?.hint || 'Keep it measurable, simple, and easy to log.'}
@@ -27055,7 +27055,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyGoalCreatedPrompt && createdJourneyGoal && (
         <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
-            <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full sm:w-[26rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
                 <span>Goal created!</span>
                 <span className="inline-flex animate-bounce">🎉</span>
@@ -27099,7 +27099,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && (
         <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyDeleteGoalPrompt}>
-            <div className="w-full sm:w-[26rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full sm:w-[26rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete goal?</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">This removes the goal and any Journey updates attached to it.</div>
               <div className="mt-4 rounded-2xl border border-rose-200/70 dark:border-rose-400/20 bg-rose-50/80 dark:bg-rose-500/10 px-4 py-3">
@@ -27131,7 +27131,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyLogModal && (
         <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={closeJourneyLogModal}>
-            <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full sm:w-[28rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -27237,7 +27237,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyNoteModal && (
         <div className="fixed inset-x-0 top-0 z-[82] h-[100dvh] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setShowJourneyNoteModal(false)}>
-            <div className="w-full sm:w-[28rem] rounded-t-[28px] sm:rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full sm:w-[28rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add note</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Capture a quick thought or reflection.</div>
               <textarea value={journeyNoteDraft} onChange={(e) => setJourneyNoteDraft(e.target.value)} placeholder="Write a quick note..." rows={5} className="mt-4 w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
