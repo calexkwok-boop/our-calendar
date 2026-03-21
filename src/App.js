@@ -27656,18 +27656,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {showJourneyScreen && renderJourneyPortal((
           <div
-            className="fixed inset-0 z-[82] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
+            className="fixed inset-0 z-[84] bg-black/50 backdrop-blur-sm p-4 overflow-y-auto flex items-center justify-center"
             onClick={() => setShowJourneyScreen(false)}
             style={{ touchAction: 'none', overscrollBehavior: 'none' }}
           >
             <div
-              className="w-full sm:w-[34rem] min-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] rounded-b-none sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
+              className="w-full max-w-3xl rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl overflow-hidden my-6"
               onClick={(e) => e.stopPropagation()}
               style={{
-                touchAction: 'pan-y',
-                overscrollBehaviorY: 'contain',
-                WebkitOverflowScrolling: 'touch',
-                clipPath: 'inset(0 round 32px)',
+                paddingBottom: 'env(safe-area-inset-bottom)',
               }}
             >
               <div
@@ -27700,7 +27697,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
               </div>
 
-              <div className="p-5 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-4">
+              <div
+                className="p-5 sm:p-6 pb-6 space-y-4 overflow-y-auto"
+                style={{
+                  maxHeight: 'calc(100vh - 10rem)',
+                  WebkitOverflowScrolling: 'touch',
+                  overscrollBehaviorY: 'contain',
+                  touchAction: 'pan-y',
+                }}
+              >
                 {primaryJourneyGoal ? (
                   <div className="rounded-[28px] border border-white/10 bg-gray-50/90 dark:bg-white/[0.04] p-5">
                     <div className="flex items-start justify-between gap-3">
