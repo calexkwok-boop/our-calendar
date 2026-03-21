@@ -28021,6 +28021,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             touchAction: 'pan-y',
             overscrollBehaviorY: 'contain',
             WebkitOverflowScrolling: 'touch',
+            backgroundClip: 'padding-box',
+            clipPath: 'inset(0 round 28px 28px 0 0)',
             boxShadow: darkMode
               ? '0 24px 60px rgba(2, 6, 23, 0.62), inset 0 -1px 0 rgba(15, 23, 42, 0.98)'
               : undefined,
