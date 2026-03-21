@@ -19303,15 +19303,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     typeof document !== 'undefined'
       ? createPortal(
       <div
-        className="fixed inset-0 z-[85] bg-black/50 p-4 flex items-center justify-center"
+        className="fixed inset-0 z-[85] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
         onClick={() => {
           if (journeyRunSession?.status !== 'active') closeJourneyRunTrackerModal();
         }}
+        style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
       >
         <div
-          className="bg-white dark:bg-slate-950 rounded-[32px] shadow-2xl border border-white/10 p-5 w-full sm:w-[32rem] max-h-[90vh] overflow-y-auto"
+          className="bg-white dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10 p-5 w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px)' }}
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px 32px 0 0)' }}
         >
         <div className="flex items-start justify-between gap-3">
           <div>
