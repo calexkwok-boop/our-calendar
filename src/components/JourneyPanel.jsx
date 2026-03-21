@@ -49,7 +49,9 @@ export default function JourneyPanel({
 
       <div className="min-w-0">
         <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
-        <div className="mt-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 line-clamp-2">{journeyQuickPrompt}</div>
+        <div className="mt-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 line-clamp-2">
+          {journeyQuickPrompt ? `Pro tip: ${journeyQuickPrompt}` : ''}
+        </div>
         {primaryJourneyGoal ? (
           <>
             <div className="mt-2.5 text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">{primaryJourneyGoal.title}</div>

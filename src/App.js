@@ -217,6 +217,21 @@ const JOURNEY_RUN_WALK_TIPS = Object.freeze([
   'Small progress adds up.',
   'Good form matters more than speed.',
   'Make running enjoyable enough to repeat.',
+  'Run easy more often than hard.',
+  'Start slower than you want to.',
+  'Increase mileage gradually.',
+  'Keep your cadence relaxed and steady.',
+  'Short strides help on tired legs.',
+  'Practice fueling before long runs.',
+  'Hydration matters before pace does.',
+  'Don’t chase every run with data.',
+  'Sleep is part of training.',
+  'Strength training helps prevent injuries.',
+  'A missed run is better than an overuse injury.',
+  'Consistency over perfection wins.',
+  'Dress for the second mile, not the first minute.',
+  'Recover hard days with easy days.',
+  'Good enough workouts build great seasons.',
 ]);
 
 const buildJourneyRunSession = (goalId = '', sessionType = 'run') => ({
