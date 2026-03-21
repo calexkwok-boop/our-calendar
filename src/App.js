@@ -16092,7 +16092,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
     const scrollY = window.scrollY || window.pageYOffset || 0;
-    const journeyOverlayPageBg = darkMode ? '#020617' : '#0f172a';
+    const journeyOverlayPageBg = 'transparent';
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyTouchAction = document.body.style.touchAction;
     const previousBodyOverscroll = document.body.style.overscrollBehavior;
