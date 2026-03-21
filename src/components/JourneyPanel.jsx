@@ -21,25 +21,25 @@ export default function JourneyPanel({
   const panelClickHandler = primaryJourneyGoal ? onClick : onCtaClick;
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={panelClickHandler}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          panelClickHandler();
-        }
-      }}
-      className="w-full overflow-hidden rounded-[26px] border p-4 text-left transition-all hover:shadow-lg cursor-pointer"
-      style={{
-        borderColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)',
-        background: darkMode
-          ? `linear-gradient(145deg, ${hexToRgba('#0f172a', 0.96)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.18)} 100%)`
-          : `linear-gradient(145deg, rgba(255,255,255,0.98) 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
-        boxShadow: darkMode ? '0 20px 44px rgba(2,6,23,0.34)' : '0 20px 44px rgba(15,23,42,0.08)',
-      }}
-    >
+<div
+  role="button"
+  tabIndex={0}
+  onClick={panelClickHandler}
+  onKeyDown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      panelClickHandler();
+    }
+  }}
+  className="w-full overflow-hidden rounded-[26px] border p-4 text-left transition-all duration-300 hover:shadow-xl hover:scale-[1.01] cursor-pointer active:scale-[0.99]"
+  style={{
+    borderColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)',
+    background: darkMode
+      ? `linear-gradient(145deg, ${hexToRgba('#0f172a', 0.96)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.18)} 100%)`
+      : `linear-gradient(145deg, rgba(255,255,255,0.98) 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
+    boxShadow: darkMode ? '0 20px 44px rgba(2,6,23,0.34)' : '0 20px 44px rgba(15,23,42,0.08)',
+  }}
+>
       <JourneyQuoteDisplay
         quote={journeyQuote}
         darkMode={darkMode}
