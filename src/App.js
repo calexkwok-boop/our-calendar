@@ -16503,6 +16503,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [darkMode, showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal, showJourneyWeightTrackerModal]);
 
   useEffect(() => {
+    if (!showRoundRobinPanel || typeof document === 'undefined') return undefined;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyOverscroll = document.body.style.overscrollBehavior;
+    const previousDocOverflow = document.documentElement.style.overflow;
+    const previousDocOverscroll = document.documentElement.style.overscrollBehavior;
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.overscrollBehavior = 'none';
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.overscrollBehavior = previousBodyOverscroll;
+      document.documentElement.style.overflow = previousDocOverflow;
+      document.documentElement.style.overscrollBehavior = previousDocOverscroll;
+    };
+  }, [showRoundRobinPanel]);
+
+  useEffect(() => {
     if (journeyRunSession?.status !== 'active') return undefined;
     const intervalId = window.setInterval(() => setJourneyRunNowMs(Date.now()), 1000);
     return () => window.clearInterval(intervalId);
@@ -22228,7 +22246,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 )} {showRoundRobinPanel && (
   <div
     className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
-    style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
+    style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))', touchAction: 'none', overscrollBehavior: 'none' }}
     onClick={() => setShowRoundRobinPanel(false)}
     onKeyDown={(e) => {
       if (e.key === 'Escape') setShowRoundRobinPanel(false);
@@ -22239,7 +22257,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   >
     <div
       className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
-      style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+      style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
       onClick={(e) => e.stopPropagation()}
     >
       <RoundRobinPanel
