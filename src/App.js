@@ -28321,8 +28321,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     ))}
 
     {!activeSubCalendar && showJourneyEntryModal && renderJourneyPortal((
-      <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
-        <div className="w-full sm:w-[26rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="fixed inset-0 z-[84] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        onClick={closeJourneyEntryModal}
+        style={{ touchAction: 'none', overscrollBehavior: 'none', backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+      >
+        <div
+          className="w-full sm:w-[26rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          onClick={(e) => e.stopPropagation()}
+          style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
+        >
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pick something to work toward</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Small progress adds up over time.</div>
           <div className="mt-4 space-y-2">
@@ -28335,8 +28343,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 style={{
                   borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.12),
                   background: template.id === 'custom'
-                    ? (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.96)')
-                    : (darkMode ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.09)} 0%, rgba(15,23,42,0.82) 100%)` : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)`),
+                    ? (darkMode ? 'rgba(15,23,42,0.88)' : 'rgba(255,255,255,0.96)')
+                    : (darkMode ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.09)} 0%, rgba(15,23,42,0.92) 100%)` : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)`),
                 }}
               >
                 <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatJourneyTemplateLabel(template)}</div>
@@ -28348,7 +28356,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <button
               type="button"
               onClick={closeJourneyEntryModal}
-              className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"
+              className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.08] px-4 py-3 text-sm font-medium text-gray-700 dark:text-slate-100"
             >
               Cancel
             </button>
@@ -28409,14 +28417,22 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     ))}
 
     {!activeSubCalendar && showJourneyGoalCreatedPrompt && createdJourneyGoal && renderJourneyPortal((
-      <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
-        <div className="w-full sm:w-[26rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="fixed inset-0 z-[84] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        onClick={closeJourneyGoalCreatedPrompt}
+        style={{ touchAction: 'none', overscrollBehavior: 'none', backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+      >
+        <div
+          className="w-full sm:w-[26rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          onClick={(e) => e.stopPropagation()}
+          style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
+        >
               <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
                 <span>Goal created!</span>
                 <span className="inline-flex animate-bounce">🎉</span>
               </div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{['run_walk', 'workout'].includes(getJourneyGoalType(createdJourneyGoal)) ? 'Start your first session?' : getJourneyGoalType(createdJourneyGoal) === 'lose_weight' ? 'Start your first check-in?' : 'Log your first update?'}</div>
-          <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.04] px-4 py-3">
+          <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-slate-900/80 px-4 py-3">
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{createdJourneyGoal.title}</div>
             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   {formatJourneyProgressText(createdJourneyGoal)}{createdJourneyGoal?.timeframe ? ` | ${createdJourneyGoal.timeframe}` : ''}
@@ -28445,7 +28461,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <button
               type="button"
               onClick={closeJourneyGoalCreatedPrompt}
-              className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"
+              className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.08] px-4 py-3 text-sm font-medium text-gray-700 dark:text-slate-100"
             >
               Later
             </button>
@@ -28455,8 +28471,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     ))}
 
     {!activeSubCalendar && showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && renderJourneyPortal((
-      <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyDeleteGoalPrompt}>
-        <div className="w-full sm:w-[26rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="fixed inset-0 z-[84] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        onClick={closeJourneyDeleteGoalPrompt}
+        style={{ touchAction: 'none', overscrollBehavior: 'none', backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+      >
+        <div
+          className="w-full sm:w-[26rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          onClick={(e) => e.stopPropagation()}
+          style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
+        >
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete goal?</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">This removes the goal and any Journey updates attached to it.</div>
           <div className="mt-4 rounded-2xl border border-rose-200/70 dark:border-rose-400/20 bg-rose-50/80 dark:bg-rose-500/10 px-4 py-3">
@@ -28469,7 +28493,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <button
               type="button"
               onClick={closeJourneyDeleteGoalPrompt}
-              className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"
+              className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.08] px-4 py-3 text-sm font-medium text-gray-700 dark:text-slate-100"
             >
               Keep goal
             </button>
@@ -28487,8 +28511,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     ))}
 
     {!activeSubCalendar && showJourneyLogModal && renderJourneyPortal((
-      <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyLogModal}>
-        <div className="w-full sm:w-[28rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="fixed inset-0 z-[84] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        onClick={closeJourneyLogModal}
+        style={{ touchAction: 'none', overscrollBehavior: 'none', backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+      >
+        <div
+          className="w-full sm:w-[28rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          onClick={(e) => e.stopPropagation()}
+          style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -28499,7 +28531,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             </div>
             {selectedJourneyLogGoal ? (
-              <div className="rounded-xl px-2.5 py-1 text-[11px] font-semibold" style={{ backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.18 : 0.12), color: activeLayerPageTheme.accent }}>
+              <div className="rounded-xl px-2.5 py-1 text-[11px] font-semibold" style={{ backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.16 : 0.12), color: activeLayerPageTheme.accent }}>
                 {formatJourneyProgressText(selectedJourneyLogGoal)}
               </div>
             ) : null}
@@ -28509,7 +28541,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <select
                 value={journeyLogDraft.goalId}
                 onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, goalId: e.target.value }))}
-                className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white"
+                className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white"
                 style={{ fontSize: '16px' }}
               >
                 {sortedJourneyGoals.filter((goal) => goal?.active !== false).map((goal) => (
@@ -28522,7 +28554,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, amount: e.target.value }))}
               placeholder={selectedJourneyLogGoal?.unit ? `Progress in ${selectedJourneyLogGoal.unit}` : 'Progress amount'}
               inputMode="decimal"
-              className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white"
+              className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white"
               style={{ fontSize: '16px' }}
             />
             <textarea
@@ -28530,7 +28562,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, note: e.target.value }))}
               placeholder="What moved forward today?"
               rows={3}
-              className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white"
+              className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white"
               style={{ fontSize: '16px' }}
             />
             <input
@@ -28585,7 +28617,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             ) : null}
           </div>
           <div className="mt-5 flex gap-2">
-            <button type="button" onClick={closeJourneyLogModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
+            <button type="button" onClick={closeJourneyLogModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.08] px-4 py-3 text-sm font-medium text-gray-700 dark:text-slate-100">Cancel</button>
             <button type="button" onClick={addJourneyLog} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Save update</button>
           </div>
         </div>
@@ -28593,13 +28625,21 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     ))}
 
     {!activeSubCalendar && showJourneyNoteModal && renderJourneyPortal((
-      <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={() => setShowJourneyNoteModal(false)}>
-        <div className="w-full sm:w-[28rem] rounded-[28px] bg-white dark:bg-slate-900 border border-white/10 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="fixed inset-0 z-[84] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        onClick={() => setShowJourneyNoteModal(false)}
+        style={{ touchAction: 'none', overscrollBehavior: 'none', backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+      >
+        <div
+          className="w-full sm:w-[28rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          onClick={(e) => e.stopPropagation()}
+          style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
+        >
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add note</div>
           <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Capture a quick thought or reflection.</div>
-          <textarea value={journeyNoteDraft} onChange={(e) => setJourneyNoteDraft(e.target.value)} placeholder="Write a quick note..." rows={5} className="mt-4 w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
+          <textarea value={journeyNoteDraft} onChange={(e) => setJourneyNoteDraft(e.target.value)} placeholder="Write a quick note..." rows={5} className="mt-4 w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
           <div className="mt-5 flex gap-2">
-            <button type="button" onClick={() => setShowJourneyNoteModal(false)} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
+            <button type="button" onClick={() => setShowJourneyNoteModal(false)} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.08] px-4 py-3 text-sm font-medium text-gray-700 dark:text-slate-100">Cancel</button>
             <button type="button" onClick={addJourneyNote} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Save note</button>
           </div>
         </div>
