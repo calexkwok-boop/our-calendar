@@ -1307,6 +1307,10 @@ function App() {
   const [eventSwipeDrag, setEventSwipeDrag] = useState({ id: null, offset: 0 });
   const eventSwipeStartXRef = useRef(0);
   const swipingEventKeyRef = useRef(null);
+  const [swipedJourneyEntryId, setSwipedJourneyEntryId] = useState(null);
+  const [journeyEntrySwipeDrag, setJourneyEntrySwipeDrag] = useState({ id: null, offset: 0 });
+  const journeyEntrySwipeStartXRef = useRef(0);
+  const swipingJourneyEntryIdRef = useRef(null);
   const [swipedLayerId, setSwipedLayerId] = useState(null);
   const [layerSwipeDrag, setLayerSwipeDrag] = useState({ id: null, offset: 0 });
   const layerSwipeStartXRef = useRef(0);
@@ -2675,6 +2679,61 @@ function App() {
     setSwipedEventKey(open ? eventKey : null);
     setEventSwipeDrag({ id: null, offset: 0 });
     swipingEventKeyRef.current = null;
+  };
+
+  const handleJourneyEntrySwipeStart = (e, entryId) => {
+    if (!entryId) return;
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    journeyEntrySwipeStartXRef.current = touch.clientX;
+    swipingJourneyEntryIdRef.current = entryId;
+    if (swipedJourneyEntryId && swipedJourneyEntryId !== entryId) setSwipedJourneyEntryId(null);
+  };
+
+  const handleJourneyEntrySwipeMove = (e) => {
+    const entryId = swipingJourneyEntryIdRef.current;
+    if (!entryId) return;
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - journeyEntrySwipeStartXRef.current;
+    const clamped = Math.max(-88, Math.min(0, deltaX));
+    setJourneyEntrySwipeDrag({ id: entryId, offset: clamped });
+  };
+
+  const handleJourneyEntrySwipeEnd = () => {
+    const entryId = swipingJourneyEntryIdRef.current;
+    if (!entryId) return;
+    const open = journeyEntrySwipeDrag.id === entryId && journeyEntrySwipeDrag.offset <= -44;
+    setSwipedJourneyEntryId(open ? entryId : null);
+    setJourneyEntrySwipeDrag({ id: null, offset: 0 });
+    swipingJourneyEntryIdRef.current = null;
+  };
+
+  const startJourneyEntrySwipeDrag = (e, entryId) => {
+    if (!entryId) return;
+    const clientX = e.clientX ?? e.touches?.[0]?.clientX;
+    if (typeof clientX !== 'number') return;
+    journeyEntrySwipeStartXRef.current = clientX;
+    swipingJourneyEntryIdRef.current = entryId;
+    if (swipedJourneyEntryId && swipedJourneyEntryId !== entryId) setSwipedJourneyEntryId(null);
+  };
+
+  const moveJourneyEntrySwipeDrag = (e) => {
+    const entryId = swipingJourneyEntryIdRef.current;
+    if (!entryId) return;
+    const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? journeyEntrySwipeStartXRef.current;
+    const deltaX = clientX - journeyEntrySwipeStartXRef.current;
+    const clamped = Math.max(-88, Math.min(0, deltaX));
+    setJourneyEntrySwipeDrag({ id: entryId, offset: clamped });
+  };
+
+  const endJourneyEntrySwipeDrag = () => {
+    const entryId = swipingJourneyEntryIdRef.current;
+    if (!entryId) return;
+    const open = journeyEntrySwipeDrag.id === entryId && journeyEntrySwipeDrag.offset <= -44;
+    setSwipedJourneyEntryId(open ? entryId : null);
+    setJourneyEntrySwipeDrag({ id: null, offset: 0 });
+    swipingJourneyEntryIdRef.current = null;
   };
 
   const openSubCalendar = async (sc) => {
@@ -16346,6 +16405,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         entries: (prev?.entries || []).filter((entry) => String(entry?.id || '') !== normalizedEntryId),
       };
     });
+    if (String(journeyEntryPhotoTargetId || '') === normalizedEntryId) setJourneyEntryPhotoTargetId('');
+    if (String(swipedJourneyEntryId || '') === normalizedEntryId) setSwipedJourneyEntryId(null);
+    if (String(journeyEntrySwipeDrag?.id || '') === normalizedEntryId) setJourneyEntrySwipeDrag({ id: null, offset: 0 });
   };
 
   const promptJourneyEntryPhotoUpload = (entryId) => {
@@ -26463,7 +26525,32 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       {(journeyState.entries || []).slice(0, 4).map((entry) => {
                         const entryGoal = journeyGoalById[String(entry?.goalId || '')] || null;
                         return (
-                          <div key={entry.id} className="rounded-2xl border border-white/10 bg-white/80 dark:bg-white/[0.03] px-3 py-3">
+                          <div key={entry.id} className="relative rounded-2xl overflow-hidden">
+                            <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${((journeyEntrySwipeDrag.id === entry.id ? journeyEntrySwipeDrag.offset : (swipedJourneyEntryId === entry.id ? -88 : 0)) < 0) ? 'bg-red-500' : 'bg-transparent'}`}>
+                              <button
+                                type="button"
+                                onClick={() => deleteJourneyEntry(entry.id)}
+                                className={`w-full h-full text-sm font-semibold transition-opacity ${((journeyEntrySwipeDrag.id === entry.id ? journeyEntrySwipeDrag.offset : (swipedJourneyEntryId === entry.id ? -88 : 0)) < 0) ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                            <div
+                              className="relative z-10 rounded-2xl border border-white/10 bg-white/80 dark:bg-white/[0.03] px-3 py-3"
+                              style={{
+                                transform: `translateX(${journeyEntrySwipeDrag.id === entry.id ? journeyEntrySwipeDrag.offset : (swipedJourneyEntryId === entry.id ? -88 : 0)}px)`,
+                                transition: journeyEntrySwipeDrag.id === entry.id ? 'none' : 'transform 180ms ease',
+                                touchAction: 'pan-y',
+                              }}
+                              onTouchStart={(e) => handleJourneyEntrySwipeStart(e, entry.id)}
+                              onTouchMove={handleJourneyEntrySwipeMove}
+                              onTouchEnd={handleJourneyEntrySwipeEnd}
+                              onTouchCancel={handleJourneyEntrySwipeEnd}
+                              onPointerDown={(e) => startJourneyEntrySwipeDrag(e, entry.id)}
+                              onPointerMove={moveJourneyEntrySwipeDrag}
+                              onPointerUp={endJourneyEntrySwipeDrag}
+                              onPointerCancel={endJourneyEntrySwipeDrag}
+                            >
                             <div className="flex items-center justify-between gap-3">
                               <div className="min-w-0 flex-1">
                                 <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -26495,14 +26582,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                         <Share2 size={12} />
                                         Share
                                       </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => deleteJourneyEntry(entry.id)}
-                                        className="inline-flex items-center gap-1.5 text-rose-500 transition hover:text-rose-600 dark:text-rose-300 dark:hover:text-rose-200"
-                                      >
-                                        <Trash2 size={12} />
-                                        Delete
-                                      </button>
                                     </div>
                                   </>
                                 ) : null}
@@ -26520,6 +26599,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               <div className="shrink-0 text-[11px] text-gray-400 dark:text-gray-500">
                                 {new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </div>
+                            </div>
                             </div>
                           </div>
                         );
@@ -27026,7 +27106,32 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   {(journeyState.entries || []).slice(0, 4).map((entry) => {
                     const entryGoal = journeyGoalById[String(entry?.goalId || '')] || null;
                     return (
-                      <div key={entry.id} className="rounded-2xl border border-white/10 bg-white/80 dark:bg-white/[0.03] px-3 py-3">
+                      <div key={entry.id} className="relative rounded-2xl overflow-hidden">
+                        <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${((journeyEntrySwipeDrag.id === entry.id ? journeyEntrySwipeDrag.offset : (swipedJourneyEntryId === entry.id ? -88 : 0)) < 0) ? 'bg-red-500' : 'bg-transparent'}`}>
+                          <button
+                            type="button"
+                            onClick={() => deleteJourneyEntry(entry.id)}
+                            className={`w-full h-full text-sm font-semibold transition-opacity ${((journeyEntrySwipeDrag.id === entry.id ? journeyEntrySwipeDrag.offset : (swipedJourneyEntryId === entry.id ? -88 : 0)) < 0) ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                        <div
+                          className="relative z-10 rounded-2xl border border-white/10 bg-white/80 dark:bg-white/[0.03] px-3 py-3"
+                          style={{
+                            transform: `translateX(${journeyEntrySwipeDrag.id === entry.id ? journeyEntrySwipeDrag.offset : (swipedJourneyEntryId === entry.id ? -88 : 0)}px)`,
+                            transition: journeyEntrySwipeDrag.id === entry.id ? 'none' : 'transform 180ms ease',
+                            touchAction: 'pan-y',
+                          }}
+                          onTouchStart={(e) => handleJourneyEntrySwipeStart(e, entry.id)}
+                          onTouchMove={handleJourneyEntrySwipeMove}
+                          onTouchEnd={handleJourneyEntrySwipeEnd}
+                          onTouchCancel={handleJourneyEntrySwipeEnd}
+                          onPointerDown={(e) => startJourneyEntrySwipeDrag(e, entry.id)}
+                          onPointerMove={moveJourneyEntrySwipeDrag}
+                          onPointerUp={endJourneyEntrySwipeDrag}
+                          onPointerCancel={endJourneyEntrySwipeDrag}
+                        >
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -27058,14 +27163,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                         <Share2 size={12} />
                                         Share
                                       </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => deleteJourneyEntry(entry.id)}
-                                        className="inline-flex items-center gap-1.5 text-rose-500 transition hover:text-rose-600 dark:text-rose-300 dark:hover:text-rose-200"
-                                      >
-                                        <Trash2 size={12} />
-                                        Delete
-                                      </button>
                                     </div>
                                   </>
                                 ) : null}
@@ -27083,6 +27180,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           <div className="shrink-0 text-[11px] text-gray-400 dark:text-gray-500">
                             {new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </div>
+                        </div>
                         </div>
                       </div>
                     );
