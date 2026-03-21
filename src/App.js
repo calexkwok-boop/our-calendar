@@ -27654,7 +27654,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {showJourneyScreen && (
+        {showJourneyScreen && renderJourneyPortal((
           <div
             className="fixed inset-0 z-[82] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-0 sm:pb-4"
             onClick={() => setShowJourneyScreen(false)}
@@ -27945,7 +27945,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             </div>
           </div>
-        )}
+        ))}
 
         {showJourneyEntryModal && (
         <div className="fixed inset-0 z-[84] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeJourneyEntryModal}>
