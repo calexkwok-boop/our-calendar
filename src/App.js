@@ -19214,6 +19214,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         style={{
           paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
           paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+          height: '100dvh',
+          minHeight: '100dvh',
         }}
       >
         <div
@@ -19377,6 +19379,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         style={{
           paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
           paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+          height: '100dvh',
+          minHeight: '100dvh',
         }}
       >
         <div
@@ -19545,6 +19549,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           style={{
             paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
             paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+            height: '100dvh',
+            minHeight: '100dvh',
           }}
         >
           <div
@@ -19681,7 +19687,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     ? createPortal(
         <div
           className="fixed inset-0 z-[81] pointer-events-none backdrop-blur-sm"
-          style={{ background: darkMode ? 'rgba(2, 6, 23, 0.44)' : 'rgba(15, 23, 42, 0.18)' }}
+          style={{
+            background: darkMode ? 'rgba(2, 6, 23, 0.44)' : 'rgba(15, 23, 42, 0.18)',
+            height: '100dvh',
+            minHeight: '100dvh',
+          }}
         />,
         document.body
       )
@@ -28059,7 +28069,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       <div
         className="fixed inset-0 z-[82] bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4"
         onClick={() => setShowJourneyScreen(false)}
-        style={{ touchAction: 'none', overscrollBehavior: 'none' }}
+        style={{ touchAction: 'none', overscrollBehavior: 'none', height: '100dvh', minHeight: '100dvh' }}
       >
         <div
           className="w-full sm:w-[34rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
