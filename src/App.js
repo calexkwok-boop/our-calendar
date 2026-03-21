@@ -19692,27 +19692,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       )
     : null;
 
-  const journeyBottomFadePortal = showAnyJourneyOverlay && typeof document !== 'undefined'
-    ? createPortal(
-        <div
-          className="fixed inset-x-0 bottom-0 z-[83] pointer-events-none"
-          style={{
-            height: 'min(28vh, 14rem)',
-            background: darkMode
-              ? 'linear-gradient(180deg, rgba(2, 6, 23, 0) 0%, rgba(2, 6, 23, 0.20) 30%, rgba(2, 6, 23, 0.46) 100%)'
-              : 'linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.08) 30%, rgba(15, 23, 42, 0.18) 100%)',
-          }}
-        />,
-        document.body
-      )
-    : null;
   const renderJourneyPortal = (node) => (typeof document !== 'undefined' ? createPortal(node, document.body) : null);
 
   return (
     <>
     <style>{shakeStyle}</style>
     {journeyBackdropPortal}
-    {journeyBottomFadePortal}
     {controlWidgetAddPanelPortal}
     {showAppPrompt && (
       <div className="fixed inset-0 z-[95] bg-black/45 flex items-center justify-center p-4">
