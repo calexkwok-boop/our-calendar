@@ -15739,22 +15739,42 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyTouchAction = document.body.style.touchAction;
     const previousBodyOverscroll = document.body.style.overscrollBehavior;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyTop = document.body.style.top;
+    const previousBodyLeft = document.body.style.left;
+    const previousBodyRight = document.body.style.right;
+    const previousBodyWidth = document.body.style.width;
     const previousDocOverflow = document.documentElement.style.overflow;
+    const previousDocTouchAction = document.documentElement.style.touchAction;
     const previousDocOverscroll = document.documentElement.style.overscrollBehavior;
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
     document.body.style.overscrollBehavior = 'none';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
     document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.touchAction = 'none';
     document.documentElement.style.overscrollBehavior = 'none';
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.body.style.touchAction = previousBodyTouchAction;
       document.body.style.overscrollBehavior = previousBodyOverscroll;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.left = previousBodyLeft;
+      document.body.style.right = previousBodyRight;
+      document.body.style.width = previousBodyWidth;
       document.documentElement.style.overflow = previousDocOverflow;
+      document.documentElement.style.touchAction = previousDocTouchAction;
       document.documentElement.style.overscrollBehavior = previousDocOverscroll;
+      window.scrollTo(0, scrollY);
     };
   }, [showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal]);
 
@@ -25626,10 +25646,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           <div
             className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-4"
             onClick={() => setShowJourneyScreen(false)}
+            style={{ touchAction: 'none', overscrollBehavior: 'none' }}
           >
             <div
               className="w-full sm:w-[34rem] max-h-[calc(100vh-1.5rem-env(safe-area-inset-top))] overflow-y-auto rounded-t-[32px] sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
+              style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
             >
               <div
                 className="p-5 sm:p-6 border-b border-gray-100 dark:border-white/10"
@@ -26140,10 +26162,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       <div
         className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-start sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] pb-4"
         onClick={() => setShowJourneyScreen(false)}
+        style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
         <div
           className="w-full sm:w-[34rem] max-h-[calc(100vh-1.5rem-env(safe-area-inset-top))] overflow-y-auto rounded-t-[32px] sm:rounded-[32px] border border-white/10 bg-white dark:bg-slate-950 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
+          style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
         >
           <div
             className="p-5 sm:p-6 border-b border-gray-100 dark:border-white/10"
