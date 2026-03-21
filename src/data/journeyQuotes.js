@@ -3,7 +3,6 @@ const JOURNEY_QUOTES = [
   { text: 'Show up today.', source: 'Unknown' },
   { text: 'Small steps compound.', source: 'Unknown' },
   { text: 'Progress over perfection.', source: 'Unknown' },
-  { text: 'Keep the promise you made to yourself.', source: 'Unknown' },
   { text: 'A steady pace still moves you forward.', source: 'Unknown' },
   { text: "Life isn't about finding yourself. Life is about creating yourself.", source: 'George Bernard Shaw' },
   { text: 'Doubt kills more dreams than failure ever will.', source: 'Suzy Kassem' },
