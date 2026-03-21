@@ -6,6 +6,7 @@ export default function JourneyPanel({
   darkMode,
   hexToRgba,
   journeyHomeCtaLabel,
+  journeyCoachLabel,
   journeyProgressText,
   journeyQuickPrompt,
   journeyQuote,
@@ -74,6 +75,12 @@ export default function JourneyPanel({
               />
             </div>
           </div>
+
+          {journeyCoachLabel ? (
+            <div className="mt-3 rounded-2xl border px-3 py-2 text-[11px] font-medium text-gray-600 dark:text-gray-300" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, 0.12), backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08) }}>
+              {journeyCoachLabel}
+            </div>
+          ) : null}
 
           <div className="mt-3.5 flex items-center">
             <button

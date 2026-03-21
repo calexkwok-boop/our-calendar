@@ -44,12 +44,12 @@ const storage = {
 
 // Keep the first Journey step opinionated so users can start quickly without facing a blank form.
 const JOURNEY_GOAL_TEMPLATES = [
-  { id: 'run', label: 'Run / walk', emoji: '🏃', title: 'Run 50 miles', target: '50', unit: 'miles', timeframe: 'This month', hint: 'Build consistency one outing at a time.' },
-  { id: 'workout', label: 'Work out', emoji: '💪', title: 'Work out 12 times', target: '12', unit: 'workouts', timeframe: 'This month', hint: 'Keep the bar low and the momentum high.' },
-  { id: 'lose-weight', label: 'Lose weight', emoji: '⚖️', title: 'Lose 5 pounds', target: '5', unit: 'Pounds', timeframe: 'this month', hint: 'Keep it steady and celebrate each small shift.' },
-  { id: 'save', label: 'Save money', emoji: '💰', title: 'Save $500', target: '500', unit: 'dollars', timeframe: 'This quarter', hint: 'Track one small win at a time.' },
-  { id: 'journal', label: 'Journal', emoji: '📓', title: 'Journal 10 days', target: '10', unit: 'days', timeframe: 'This month', hint: 'Capture the days you showed up.' },
-  { id: 'custom', label: 'Custom goal', emoji: '✨', title: '', target: '', unit: '', timeframe: '', hint: 'Start with your own measurable target.' },
+  { id: 'run', label: 'Run / walk', emoji: '🏃', goalType: 'run_walk', title: 'Run 50 miles', target: '50', unit: 'miles', timeframe: 'This month', hint: 'Build consistency one outing at a time.' },
+  { id: 'workout', label: 'Work out', emoji: '💪', goalType: 'workout', title: 'Work out 12 times', target: '12', unit: 'workouts', timeframe: 'This month', hint: 'Keep the bar low and the momentum high.' },
+  { id: 'lose-weight', label: 'Lose weight', emoji: '⚖️', goalType: 'lose_weight', title: 'Lose 5 pounds', target: '5', unit: 'Pounds', timeframe: 'this month', hint: 'Keep it steady and celebrate each small shift.' },
+  { id: 'save', label: 'Save money', emoji: '💰', goalType: 'save_money', title: 'Save $500', target: '500', unit: 'dollars', timeframe: 'This quarter', hint: 'Track one small win at a time.' },
+  { id: 'journal', label: 'Journal', emoji: '📓', goalType: 'journal', title: 'Journal 10 days', target: '10', unit: 'days', timeframe: 'This month', hint: 'Capture the days you showed up.' },
+  { id: 'custom', label: 'Custom goal', emoji: '✨', goalType: 'custom', title: '', target: '', unit: '', timeframe: '', hint: 'Start with your own measurable target.' },
 ];
 
 const createJourneyGoalDraft = (overrides = {}, pinned = true) => ({
@@ -186,6 +186,161 @@ const getJourneyGoalEmoji = (goal) => {
   if (/(save|\$|dollar|money|budget)/.test(combined)) return '💰';
   if (/(journal|write|writing|diary)/.test(combined)) return '📓';
   return '✨';
+};
+
+const getJourneyGoalType = (goal) => {
+  const explicitType = String(goal?.goalType || '').trim();
+  if (explicitType) return explicitType;
+  const title = String(goal?.title || '').toLowerCase();
+  const unit = String(goal?.unit || '').toLowerCase();
+  const combined = `${title} ${unit}`;
+  if (/(run|walk|mile)/.test(combined)) return 'run_walk';
+  if (/(work ?out|gym|exercise|fitness|workouts?)/.test(combined)) return 'workout';
+  if (/(lose weight|pound|lbs?|kg|kilogram)/.test(combined)) return 'lose_weight';
+  if (/(save|\$|dollar|money|budget)/.test(combined)) return 'save_money';
+  if (/(journal|write|writing|diary)/.test(combined)) return 'journal';
+  return 'custom';
+};
+
+const JOURNEY_RUN_WALK_TIPS = Object.freeze([
+  'Easy miles still count. A short walk keeps your streak alive.',
+  'Start slower than you think and let the pace come to you.',
+  'Consistency beats intensity. One more session moves the goal.',
+  'A recovery walk is progress, not a backup plan.',
+]);
+
+const buildJourneyRunSession = (goalId = '', sessionType = 'run') => ({
+  goalId: String(goalId || ''),
+  sessionType,
+  status: 'idle',
+  startedAt: null,
+  endedAt: null,
+  pausedAt: null,
+  pausedMs: 0,
+  elapsedMsSnapshot: 0,
+  distanceMiles: 0,
+  estimatedSteps: 0,
+  routePoints: [],
+  error: '',
+});
+
+const calculateJourneyRunElapsedMs = (session, nowMs = Date.now()) => {
+  if (!session?.startedAt) return Number(session?.elapsedMsSnapshot || 0);
+  const startedAtMs = Number(new Date(session.startedAt));
+  if (!Number.isFinite(startedAtMs)) return Number(session?.elapsedMsSnapshot || 0);
+  if (session.status === 'finished') return Number(session?.elapsedMsSnapshot || 0);
+  if (session.status === 'paused') {
+    const pausedAtMs = Number(session?.pausedAt || 0);
+    if (!Number.isFinite(pausedAtMs) || pausedAtMs <= 0) return Number(session?.elapsedMsSnapshot || 0);
+    return Math.max(0, pausedAtMs - startedAtMs - Number(session?.pausedMs || 0));
+  }
+  return Math.max(0, nowMs - startedAtMs - Number(session?.pausedMs || 0));
+};
+
+const formatJourneyDuration = (durationMs) => {
+  const totalSeconds = Math.max(0, Math.round(Number(durationMs || 0) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
+
+const formatJourneyMiles = (value) => {
+  const numeric = Number(value || 0);
+  if (!Number.isFinite(numeric)) return '0.0';
+  return numeric >= 10 ? numeric.toFixed(1) : numeric.toFixed(2);
+};
+
+const formatJourneyPace = (distanceMiles, durationMs) => {
+  const miles = Number(distanceMiles || 0);
+  const ms = Number(durationMs || 0);
+  if (!Number.isFinite(miles) || miles <= 0 || !Number.isFinite(ms) || ms <= 0) return '--';
+  const paceMinutes = (ms / 60000) / miles;
+  const wholeMinutes = Math.floor(paceMinutes);
+  const paceSeconds = Math.round((paceMinutes - wholeMinutes) * 60);
+  const normalizedMinutes = paceSeconds === 60 ? wholeMinutes + 1 : wholeMinutes;
+  const normalizedSeconds = paceSeconds === 60 ? 0 : paceSeconds;
+  return `${normalizedMinutes}:${String(normalizedSeconds).padStart(2, '0')}/mi`;
+};
+
+const calculateJourneyDistanceMiles = (points) => {
+  const routePoints = Array.isArray(points) ? points : [];
+  const toRadians = (value) => (value * Math.PI) / 180;
+  let totalMiles = 0;
+  for (let index = 1; index < routePoints.length; index += 1) {
+    const prev = routePoints[index - 1];
+    const next = routePoints[index];
+    const lat1 = Number(prev?.lat);
+    const lon1 = Number(prev?.lng);
+    const lat2 = Number(next?.lat);
+    const lon2 = Number(next?.lng);
+    if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) continue;
+    const latDistance = toRadians(lat2 - lat1);
+    const lonDistance = toRadians(lon2 - lon1);
+    const a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+      + Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const segmentMiles = 3958.8 * c;
+    if (Number.isFinite(segmentMiles) && segmentMiles > 0 && segmentMiles < 1) {
+      totalMiles += segmentMiles;
+    }
+  }
+  return totalMiles;
+};
+
+const estimateJourneyStepsFromMiles = (distanceMiles) => Math.max(0, Math.round(Number(distanceMiles || 0) * 2200));
+
+const buildJourneyRoutePreview = (points, width = 280, height = 164, padding = 18) => {
+  const routePoints = (Array.isArray(points) ? points : [])
+    .filter((point) => Number.isFinite(Number(point?.lat)) && Number.isFinite(Number(point?.lng)));
+  if (routePoints.length === 0) return { path: '', start: null, end: null };
+  const lats = routePoints.map((point) => Number(point.lat));
+  const lngs = routePoints.map((point) => Number(point.lng));
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const latRange = Math.max(maxLat - minLat, 0.0001);
+  const lngRange = Math.max(maxLng - minLng, 0.0001);
+  const toPoint = (point) => ({
+    x: padding + (((Number(point.lng) - minLng) / lngRange) * (width - (padding * 2))),
+    y: height - padding - (((Number(point.lat) - minLat) / latRange) * (height - (padding * 2))),
+  });
+  const normalizedPoints = routePoints.map(toPoint);
+  const [firstPoint] = normalizedPoints;
+  const lastPoint = normalizedPoints[normalizedPoints.length - 1];
+  const path = normalizedPoints.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
+  return { path, start: firstPoint, end: lastPoint };
+};
+
+const calculateJourneyGoalStreak = (entries, goalId) => {
+  const uniqueDays = new Set(
+    (Array.isArray(entries) ? entries : [])
+      .filter((entry) => String(entry?.goalId || '') === String(goalId || ''))
+      .map((entry) => String(entry?.createdAt || '').slice(0, 10))
+      .filter(Boolean)
+  );
+  let streak = 0;
+  const cursor = new Date();
+  while (true) {
+    const key = cursor.toISOString().slice(0, 10);
+    if (!uniqueDays.has(key)) {
+      if (streak === 0) {
+        cursor.setDate(cursor.getDate() - 1);
+        const yesterdayKey = cursor.toISOString().slice(0, 10);
+        if (uniqueDays.has(yesterdayKey)) {
+          streak += 1;
+          cursor.setDate(cursor.getDate() - 1);
+          continue;
+        }
+      }
+      break;
+    }
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
 };
 
 const generateUuid = () => uuidv4();
@@ -1116,10 +1271,13 @@ function App() {
   const [showJourneyGoalModal, setShowJourneyGoalModal] = useState(false);
   const [showJourneyLogModal, setShowJourneyLogModal] = useState(false);
   const [showJourneyNoteModal, setShowJourneyNoteModal] = useState(false);
+  const [showJourneyRunTrackerModal, setShowJourneyRunTrackerModal] = useState(false);
   const [journeyGoalDraft, setJourneyGoalDraft] = useState(createJourneyGoalDraft());
   const [journeyGoalError, setJourneyGoalError] = useState('');
   const [selectedJourneyGoalTemplateId, setSelectedJourneyGoalTemplateId] = useState('');
   const [journeyLogDraft, setJourneyLogDraft] = useState(buildJourneyLogDraft());
+  const [journeyRunSession, setJourneyRunSession] = useState(() => buildJourneyRunSession());
+  const [journeyRunNowMs, setJourneyRunNowMs] = useState(() => Date.now());
   const [journeyLogSavingPhoto, setJourneyLogSavingPhoto] = useState(false);
   const [journeyLogError, setJourneyLogError] = useState('');
   const [journeyNoteDraft, setJourneyNoteDraft] = useState('');
@@ -1128,6 +1286,7 @@ function App() {
   const [showJourneyDeleteGoalPrompt, setShowJourneyDeleteGoalPrompt] = useState(false);
   const [journeyGoalPendingDeleteId, setJourneyGoalPendingDeleteId] = useState('');
   const journeyLogPhotoInputRef = useRef(null);
+  const journeyRunWatchIdRef = useRef(null);
   const [swipedTripId, setSwipedTripId] = useState(null);
   const [tripSwipeDrag, setTripSwipeDrag] = useState({ id: null, offset: 0 });
   const tripSwipeStartXRef = useRef(0);
@@ -15688,8 +15847,28 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     && String(journeyGoalDraft?.unit || '').trim()
     && String(journeyGoalDraft?.timeframe || '').trim()
   );
+  const primaryJourneyGoalType = getJourneyGoalType(primaryJourneyGoal);
+  const primaryJourneyGoalEntries = (journeyState?.entries || []).filter((entry) => String(entry?.goalId || '') === String(primaryJourneyGoal?.id || ''));
+  const primaryJourneyWorkoutEntries = primaryJourneyGoalEntries.filter((entry) => entry?.type === 'workout');
+  const primaryJourneyWorkoutCount = primaryJourneyWorkoutEntries.length;
+  const primaryJourneyLatestWorkout = primaryJourneyWorkoutEntries[0] || null;
+  const primaryJourneyWeeklyDistance = primaryJourneyWorkoutEntries.reduce((sum, entry) => {
+    const createdAtMs = Number(new Date(entry?.createdAt || 0));
+    if (!Number.isFinite(createdAtMs) || (Date.now() - createdAtMs) > (7 * 24 * 60 * 60 * 1000)) return sum;
+    return sum + Number(entry?.distanceMiles || entry?.amount || 0);
+  }, 0);
+  const primaryJourneyStreak = calculateJourneyGoalStreak(journeyState?.entries || [], primaryJourneyGoal?.id);
+  const primaryJourneyTip = primaryJourneyGoal
+    ? JOURNEY_RUN_WALK_TIPS[((journeyDailyQuoteSeed + String(primaryJourneyGoal?.id || '').length) % JOURNEY_RUN_WALK_TIPS.length + JOURNEY_RUN_WALK_TIPS.length) % JOURNEY_RUN_WALK_TIPS.length]
+    : '';
   const journeySupportLabel = (() => {
     if (!primaryJourneyGoal) return 'Build one steady focus and keep it visible.';
+    if (primaryJourneyGoalType === 'run_walk') {
+      if (primaryJourneyLatestWorkout) {
+        return `Last ${primaryJourneyLatestWorkout?.workoutType === 'walk' ? 'walk' : 'run'}: ${formatJourneyMiles(primaryJourneyLatestWorkout?.distanceMiles || primaryJourneyLatestWorkout?.amount || 0)} mi in ${formatJourneyDuration(primaryJourneyLatestWorkout?.durationMs || 0)}.`;
+      }
+      return 'Turn this goal into real miles with a live run or walk tracker.';
+    }
     if (journeyUpdatedToday && journeyLatestEntry?.type === 'log' && normalizeJourneyNumber(journeyLatestEntry?.amount) > 0) {
       return `Nice work today: +${normalizeJourneyNumber(journeyLatestEntry.amount)}${primaryJourneyGoal?.unit ? ` ${primaryJourneyGoal.unit}` : ''}.`;
     }
@@ -15701,12 +15880,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     return 'Goal completed. Keep the momentum going.';
   })();
+  const journeyCoachLabel = (() => {
+    if (!primaryJourneyGoal) return '';
+    if (primaryJourneyGoalType === 'run_walk') {
+      if (primaryJourneyWorkoutCount === 0) return 'First run saved unlocks your weekly streak.';
+      if (primaryJourneyStreak >= 2) return `${primaryJourneyStreak}-day movement streak`;
+      if (primaryJourneyWeeklyDistance > 0) return `${formatJourneyMiles(primaryJourneyWeeklyDistance)} mi this week`;
+      return `${primaryJourneyWorkoutCount} session${primaryJourneyWorkoutCount === 1 ? '' : 's'} logged`;
+    }
+    return '';
+  })();
   const selectedJourneyLogGoal = journeyGoalById[String(journeyLogDraft?.goalId || '')] || primaryJourneyGoal || null;
+  const selectedJourneyRunGoal = journeyGoalById[String(journeyRunSession?.goalId || '')] || primaryJourneyGoal || null;
+  const journeyRunElapsedMs = calculateJourneyRunElapsedMs(journeyRunSession, journeyRunNowMs);
+  const journeyRunPaceLabel = formatJourneyPace(journeyRunSession?.distanceMiles || 0, journeyRunElapsedMs);
+  const journeyRunRoutePreview = buildJourneyRoutePreview(journeyRunSession?.routePoints || []);
   const createdJourneyGoal = journeyGoalById[String(journeyCreatedGoalId || '')] || null;
   const pendingDeleteJourneyGoal = journeyGoalById[String(journeyGoalPendingDeleteId || '')] || null;
   const journeyQuickPrompt = (() => {
     if (!primaryJourneyGoal) {
       return 'Start your one thing.';
+    }
+    if (primaryJourneyGoalType === 'run_walk') {
+      return primaryJourneyLoggedToday ? 'Recovery counts too. Start another session when you are ready.' : primaryJourneyTip;
     }
     if (primaryJourneyLoggedToday) {
       return 'Today is already in motion. Add a note, photo, or another small win.';
@@ -15715,6 +15911,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   })();
   const journeyHomeCtaLabel = !primaryJourneyGoal
     ? 'Set your first goal'
+    : primaryJourneyGoalType === 'run_walk'
+      ? (primaryJourneyWorkoutCount > 0 ? 'Start again' : 'Start')
     : primaryJourneyLoggedToday
       ? 'Add a quick update'
       : 'Log today';
@@ -15737,7 +15935,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, journeyState]);
 
   useEffect(() => {
-    const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal;
+    const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyRunTrackerModal;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
     const scrollY = window.scrollY || window.pageYOffset || 0;
     const previousBodyOverflow = document.body.style.overflow;
@@ -15776,7 +15974,69 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       document.documentElement.style.overscrollBehavior = previousDocOverscroll;
       window.scrollTo(0, scrollY);
     };
-  }, [showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal]);
+  }, [showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal]);
+
+  useEffect(() => {
+    if (journeyRunSession?.status !== 'active') return undefined;
+    const intervalId = window.setInterval(() => setJourneyRunNowMs(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [journeyRunSession?.status]);
+
+  useEffect(() => {
+    const isTrackingRun = showJourneyRunTrackerModal && journeyRunSession?.status === 'active';
+    if (!isTrackingRun) {
+      if (journeyRunWatchIdRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.clearWatch(journeyRunWatchIdRef.current);
+        journeyRunWatchIdRef.current = null;
+      }
+      return undefined;
+    }
+    if (!navigator?.geolocation) {
+      setJourneyRunSession((prev) => ({ ...prev, error: 'Location access is not available on this device.' }));
+      return undefined;
+    }
+    // GPS points drive the route preview, distance, and step estimate for the active session.
+    journeyRunWatchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const lat = Number(position?.coords?.latitude);
+        const lng = Number(position?.coords?.longitude);
+        const accuracy = Number(position?.coords?.accuracy || 0);
+        if (![lat, lng].every(Number.isFinite)) return;
+        setJourneyRunSession((prev) => {
+          const previousPoint = prev?.routePoints?.[prev.routePoints.length - 1] || null;
+          if (
+            previousPoint
+            && Math.abs(Number(previousPoint.lat) - lat) < 0.00001
+            && Math.abs(Number(previousPoint.lng) - lng) < 0.00001
+          ) {
+            return prev;
+          }
+          const nextRoutePoints = [...(prev?.routePoints || []), { lat, lng, accuracy, at: new Date().toISOString() }];
+          const distanceMiles = calculateJourneyDistanceMiles(nextRoutePoints);
+          return {
+            ...prev,
+            routePoints: nextRoutePoints,
+            distanceMiles,
+            estimatedSteps: estimateJourneyStepsFromMiles(distanceMiles),
+            error: '',
+          };
+        });
+      },
+      (error) => {
+        const nextMessage = error?.code === 1
+          ? 'Allow location access to map your route.'
+          : 'Could not track your route right now.';
+        setJourneyRunSession((prev) => ({ ...prev, error: nextMessage }));
+      },
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
+    );
+    return () => {
+      if (journeyRunWatchIdRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.clearWatch(journeyRunWatchIdRef.current);
+        journeyRunWatchIdRef.current = null;
+      }
+    };
+  }, [showJourneyRunTrackerModal, journeyRunSession?.status]);
 
   const openJourneyScreen = () => {
     deferJourneyOverlayOpen(() => setShowJourneyScreen(true));
@@ -15811,6 +16071,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setJourneyCreatedGoalId('');
   };
 
+  const closeJourneyRunTrackerModal = () => {
+    if (journeyRunSession?.status === 'active') return;
+    setShowJourneyRunTrackerModal(false);
+    setJourneyRunSession(buildJourneyRunSession());
+  };
+
   const closeJourneyDeleteGoalPrompt = () => {
     setShowJourneyDeleteGoalPrompt(false);
     setJourneyGoalPendingDeleteId('');
@@ -15823,12 +16089,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       target: template.target,
       unit: template.unit,
       timeframe: template.timeframe,
+      goalType: template.goalType,
     } : {}, sortedJourneyGoals.length === 0));
     setJourneyGoalError('');
     setSelectedJourneyGoalTemplateId(template?.id || '');
     setShowJourneyGoalCreatedPrompt(false);
     setJourneyCreatedGoalId('');
     deferJourneyOverlayOpen(() => setShowJourneyGoalModal(true));
+  };
+
+  const openJourneyRunTracker = (goal = primaryJourneyGoal) => {
+    if (!goal) return;
+    setShowJourneyEntryModal(false);
+    setShowJourneyLogModal(false);
+    setJourneyRunNowMs(Date.now());
+    setJourneyRunSession((prev) => (
+      prev?.goalId === String(goal?.id || '')
+        ? { ...buildJourneyRunSession(goal?.id, prev?.sessionType || 'run'), goalId: String(goal?.id || ''), sessionType: prev?.sessionType || 'run' }
+        : buildJourneyRunSession(goal?.id, 'run')
+    ));
+    deferJourneyOverlayOpen(() => setShowJourneyRunTrackerModal(true));
   };
 
   const openJourneyLogFlow = (goal = primaryJourneyGoal) => {
@@ -15867,6 +16147,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       target,
       unit,
       timeframe,
+      goalType: selectedJourneyGoalTemplate?.goalType || getJourneyGoalType({ title, unit }),
       current: 0,
       active: true,
       pinned: true,
@@ -15918,6 +16199,90 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       entries: [entry, ...(prev?.entries || [])].slice(0, 50),
     }));
     closeJourneyLogModal();
+  };
+
+  const startJourneyRunSession = () => {
+    const nowMs = Date.now();
+    setJourneyRunNowMs(nowMs);
+    setJourneyRunSession((prev) => {
+      const pausedAtMs = Number(prev?.pausedAt || 0);
+      const nextPausedMs = prev?.status === 'paused' && Number.isFinite(pausedAtMs)
+        ? Number(prev?.pausedMs || 0) + Math.max(0, nowMs - pausedAtMs)
+        : Number(prev?.pausedMs || 0);
+      return {
+        ...prev,
+        status: 'active',
+        startedAt: prev?.startedAt || new Date(nowMs).toISOString(),
+        endedAt: null,
+        pausedAt: null,
+        pausedMs: nextPausedMs,
+        elapsedMsSnapshot: prev?.startedAt ? Number(prev?.elapsedMsSnapshot || 0) : 0,
+        error: '',
+      };
+    });
+  };
+
+  const pauseJourneyRunSession = () => {
+    const nowMs = Date.now();
+    setJourneyRunSession((prev) => ({
+      ...prev,
+      status: 'paused',
+      pausedAt: nowMs,
+      elapsedMsSnapshot: calculateJourneyRunElapsedMs(prev, nowMs),
+    }));
+  };
+
+  const finishJourneyRunSession = () => {
+    const nowMs = Date.now();
+    setJourneyRunSession((prev) => ({
+      ...prev,
+      status: 'finished',
+      endedAt: new Date(nowMs).toISOString(),
+      pausedAt: null,
+      elapsedMsSnapshot: calculateJourneyRunElapsedMs(prev, nowMs),
+    }));
+  };
+
+  const saveJourneyRunSession = () => {
+    const sessionGoal = journeyGoalById[String(journeyRunSession?.goalId || '')] || primaryJourneyGoal || null;
+    const durationMs = calculateJourneyRunElapsedMs(journeyRunSession, journeyRunNowMs);
+    const distanceMiles = Number(journeyRunSession?.distanceMiles || 0);
+    const estimatedSteps = Number(journeyRunSession?.estimatedSteps || estimateJourneyStepsFromMiles(distanceMiles));
+    if (!sessionGoal || durationMs <= 0) {
+      setJourneyRunSession((prev) => ({ ...prev, error: 'Start a run or walk before saving it.' }));
+      return;
+    }
+    const now = new Date().toISOString();
+    const entry = {
+      id: `journey_workout_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      goalId: sessionGoal.id,
+      type: 'workout',
+      workoutType: journeyRunSession?.sessionType || 'run',
+      amount: distanceMiles,
+      distanceMiles,
+      estimatedSteps,
+      durationMs,
+      paceLabel: formatJourneyPace(distanceMiles, durationMs),
+      note: `${journeyRunSession?.sessionType === 'walk' ? 'Walked' : 'Ran'} ${formatJourneyMiles(distanceMiles)} mi`,
+      routePoints: (journeyRunSession?.routePoints || []).slice(-160),
+      createdAt: now,
+    };
+    setJourneyState((prev) => ({
+      ...prev,
+      goals: (prev?.goals || []).map((goal) => (
+        String(goal?.id || '') === String(sessionGoal.id)
+          ? {
+              ...goal,
+              current: normalizeJourneyNumber(goal?.current) + distanceMiles,
+              updatedAt: now,
+            }
+          : goal
+      )),
+      entries: [entry, ...(prev?.entries || [])].slice(0, 50),
+    }));
+    setShowJourneyRunTrackerModal(false);
+    setJourneyRunSession(buildJourneyRunSession());
+    setShowJourneyScreen(true);
   };
 
   const addJourneyNote = () => {
@@ -17930,6 +18295,158 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       document.body
     )
     : null;
+  const renderJourneyRunTrackerModal = () => (
+    <div
+      className="fixed inset-0 z-[83] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
+      onClick={() => {
+        if (journeyRunSession?.status !== 'active') closeJourneyRunTrackerModal();
+      }}
+    >
+      <div
+        className="w-full sm:w-[32rem] rounded-t-[32px] sm:rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Run / Walk</div>
+            <div className="mt-1 text-xl font-semibold text-gray-900 dark:text-gray-100">
+              {selectedJourneyRunGoal ? `${getJourneyGoalEmoji(selectedJourneyRunGoal)} ${selectedJourneyRunGoal.title}` : 'Start your session'}
+            </div>
+            <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {journeyRunSession?.status === 'finished'
+                ? 'Session ready to save to Journey.'
+                : journeyRunSession?.status === 'active'
+                  ? 'Tracking live route, distance, pace, and estimated steps.'
+                  : 'Choose run or walk, then hit Start.'}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={closeJourneyRunTrackerModal}
+            disabled={journeyRunSession?.status === 'active'}
+            className={`rounded-xl p-2 ${journeyRunSession?.status === 'active' ? 'opacity-40 cursor-not-allowed' : 'text-gray-500 hover:bg-black/5 dark:text-gray-400 dark:hover:bg-white/5'}`}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {['run', 'walk'].map((sessionType) => (
+            <button
+              key={sessionType}
+              type="button"
+              disabled={journeyRunSession?.status === 'active'}
+              onClick={() => setJourneyRunSession((prev) => ({ ...prev, sessionType }))}
+              className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-all ${journeyRunSession?.sessionType === sessionType ? 'text-white' : 'text-gray-700 dark:text-gray-200'} ${journeyRunSession?.status === 'active' ? 'cursor-not-allowed opacity-60' : ''}`}
+              style={journeyRunSession?.sessionType === sessionType
+                ? themeAccentButtonStyle
+                : { borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)', backgroundColor: darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.92)' }}
+            >
+              {sessionType === 'run' ? 'Run' : 'Walk'}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 rounded-[28px] border border-white/10 bg-gray-50/80 dark:bg-white/[0.03] p-4">
+          <div className="text-[11px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Live stats</div>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] px-4 py-4">
+              <div className="text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">Time</div>
+              <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{formatJourneyDuration(journeyRunElapsedMs)}</div>
+            </div>
+            <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] px-4 py-4">
+              <div className="text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">Distance</div>
+              <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{formatJourneyMiles(journeyRunSession?.distanceMiles || 0)}<span className="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400">mi</span></div>
+            </div>
+            <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] px-4 py-4">
+              <div className="text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">Pace</div>
+              <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{journeyRunPaceLabel}</div>
+            </div>
+            <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] px-4 py-4">
+              <div className="text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">Steps</div>
+              <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{Number(journeyRunSession?.estimatedSteps || 0).toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[28px] border border-white/10 bg-gray-50/80 dark:bg-white/[0.03] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Route map</div>
+            <div className="text-[11px] text-gray-500 dark:text-gray-400">
+              {journeyRunSession?.routePoints?.length > 1 ? `${journeyRunSession.routePoints.length} points tracked` : 'Waiting for route'}
+            </div>
+          </div>
+          <div className="mt-3 h-44 overflow-hidden rounded-[24px] border border-white/10 bg-slate-100 dark:bg-slate-900/80 relative">
+            <svg viewBox="0 0 280 164" className="w-full h-full">
+              <defs>
+                <linearGradient id="journeyRunRouteGradient" x1="0%" x2="100%" y1="0%" y2="100%">
+                  <stop offset="0%" stopColor={activeLayerPageTheme.accent} />
+                  <stop offset="100%" stopColor={hexToRgba(activeLayerPageTheme.accent, 0.7)} />
+                </linearGradient>
+              </defs>
+              <rect x="0" y="0" width="280" height="164" fill={darkMode ? '#0f172a' : '#f8fafc'} />
+              {[40, 92, 144, 196, 248].map((lineX) => <line key={`x-${lineX}`} x1={lineX} x2={lineX} y1="0" y2="164" stroke={darkMode ? 'rgba(148,163,184,0.08)' : 'rgba(148,163,184,0.18)'} />)}
+              {[38, 82, 126].map((lineY) => <line key={`y-${lineY}`} x1="0" x2="280" y1={lineY} y2={lineY} stroke={darkMode ? 'rgba(148,163,184,0.08)' : 'rgba(148,163,184,0.18)'} />)}
+              {journeyRunRoutePreview?.path ? (
+                <>
+                  <path d={journeyRunRoutePreview.path} fill="none" stroke="url(#journeyRunRouteGradient)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+                  {journeyRunRoutePreview.start ? <circle cx={journeyRunRoutePreview.start.x} cy={journeyRunRoutePreview.start.y} r="6" fill="#22c55e" stroke="#ffffff" strokeWidth="2" /> : null}
+                  {journeyRunRoutePreview.end ? <circle cx={journeyRunRoutePreview.end.x} cy={journeyRunRoutePreview.end.y} r="6" fill={activeLayerPageTheme.accent} stroke="#ffffff" strokeWidth="2" /> : null}
+                </>
+              ) : null}
+            </svg>
+            {!journeyRunRoutePreview?.path ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+                <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                <div className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-300">Route will draw live once location starts moving.</div>
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Keep the app open and allow location access for the cleanest path.</div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {journeyCoachLabel ? (
+          <div className="mt-4 rounded-2xl border px-4 py-3 text-sm" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16), backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.06), color: darkMode ? '#e5e7eb' : '#334155' }}>
+            <span className="font-semibold">Momentum:</span> {journeyCoachLabel}
+          </div>
+        ) : null}
+
+        {journeyRunSession?.error ? (
+          <div className="mt-4 rounded-2xl border border-rose-200/70 bg-rose-50/90 px-3 py-3 text-sm text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
+            {journeyRunSession.error}
+          </div>
+        ) : null}
+
+        <div className="mt-5 flex gap-2">
+          {journeyRunSession?.status === 'idle' && (
+            <>
+              <button type="button" onClick={closeJourneyRunTrackerModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
+              <button type="button" onClick={startJourneyRunSession} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>{journeyRunSession?.sessionType === 'walk' ? 'Start walk' : 'Start run'}</button>
+            </>
+          )}
+          {journeyRunSession?.status === 'active' && (
+            <>
+              <button type="button" onClick={pauseJourneyRunSession} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Pause</button>
+              <button type="button" onClick={finishJourneyRunSession} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Finish</button>
+            </>
+          )}
+          {journeyRunSession?.status === 'paused' && (
+            <>
+              <button type="button" onClick={closeJourneyRunTrackerModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Close</button>
+              <button type="button" onClick={startJourneyRunSession} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Resume</button>
+              <button type="button" onClick={finishJourneyRunSession} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Finish</button>
+            </>
+          )}
+          {journeyRunSession?.status === 'finished' && (
+            <>
+              <button type="button" onClick={closeJourneyRunTrackerModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Discard</button>
+              <button type="button" onClick={saveJourneyRunSession} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>{journeyRunSession?.sessionType === 'walk' ? 'Save walk' : 'Save run'}</button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -20746,12 +21263,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               darkMode={darkMode}
               hexToRgba={hexToRgba}
               journeyHomeCtaLabel={journeyHomeCtaLabel}
+              journeyCoachLabel={journeyCoachLabel}
               journeyProgressText={primaryJourneyProgressText}
               journeyQuickPrompt={journeyQuickPrompt}
               journeyQuote={journeyQuote}
               journeySupportLabel={journeySupportLabel}
               onClick={openJourneyScreen}
-              onCtaClick={primaryJourneyGoal ? (() => openJourneyLogFlow(primaryJourneyGoal)) : openJourneyScreen}
+              onCtaClick={primaryJourneyGoal ? (() => (primaryJourneyGoalType === 'run_walk' ? openJourneyRunTracker(primaryJourneyGoal) : openJourneyLogFlow(primaryJourneyGoal))) : openJourneyScreen}
               primaryJourneyGoal={primaryJourneyGoal}
               primaryJourneyGoalProgress={primaryJourneyGoalProgress}
               primaryJourneyLoggedToday={primaryJourneyLoggedToday}
@@ -25710,10 +26228,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         }}
                       />
                     </div>
+                    {journeyCoachLabel ? (
+                      <div className="mt-3 rounded-2xl border px-3 py-3 text-sm" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, 0.12), backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08), color: darkMode ? '#e5e7eb' : '#334155' }}>
+                        <span className="font-semibold">Coach tip:</span> {journeyQuickPrompt}
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{journeyCoachLabel}</div>
+                      </div>
+                    ) : null}
                     <div className="mt-4 space-y-3">
                       <div className="grid grid-cols-2 gap-2">
-                        <button type="button" onClick={() => openJourneyLogFlow(primaryJourneyGoal)} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
-                          {primaryJourneyLoggedToday ? 'Add update' : 'Log today'}
+                        <button type="button" onClick={() => (primaryJourneyGoalType === 'run_walk' ? openJourneyRunTracker(primaryJourneyGoal) : openJourneyLogFlow(primaryJourneyGoal))} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
+                          {primaryJourneyGoalType === 'run_walk' ? journeyHomeCtaLabel : (primaryJourneyLoggedToday ? 'Add update' : 'Log today')}
                         </button>
                         <button
                           type="button"
@@ -25733,8 +26257,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           onClick={() => openJourneyLogFlow(primaryJourneyGoal)}
                           className="inline-flex items-center gap-1.5 text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                         >
-                          <Camera size={14} />
-                          Photo
+                          {primaryJourneyGoalType === 'run_walk' ? <Clock size={14} /> : <Camera size={14} />}
+                          {primaryJourneyGoalType === 'run_walk' ? 'Manual log' : 'Photo'}
                         </button>
                         <button
                           type="button"
@@ -25832,10 +26356,17 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             <div className="flex items-center justify-between gap-3">
                               <div className="min-w-0 flex-1">
                                 <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                  {entry.type === 'log'
-                                    ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
-                                    : 'Added a note'}
+                                  {entry.type === 'workout'
+                                    ? `${entry.workoutType === 'walk' ? 'Walked' : 'Ran'} ${formatJourneyMiles(entry.distanceMiles || entry.amount || 0)} mi`
+                                    : entry.type === 'log'
+                                      ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
+                                      : 'Added a note'}
                                 </div>
+                                {entry.type === 'workout' ? (
+                                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    {formatJourneyDuration(entry.durationMs || 0)} • {entry.paceLabel || formatJourneyPace(entry.distanceMiles || entry.amount || 0, entry.durationMs || 0)} • {Number(entry.estimatedSteps || 0).toLocaleString()} steps
+                                  </div>
+                                ) : null}
                                 {entry.note ? (
                                   <div className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">{entry.note}</div>
                                 ) : null}
@@ -25943,7 +26474,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <span>Goal created!</span>
                 <span className="inline-flex animate-bounce">🎉</span>
               </div>
-              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Log your first update?</div>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{getJourneyGoalType(createdJourneyGoal) === 'run_walk' ? 'Start your first session?' : 'Log your first update?'}</div>
               <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.04] px-4 py-3">
                 <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{createdJourneyGoal.title}</div>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -25955,12 +26486,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   type="button"
                   onClick={() => {
                     closeJourneyGoalCreatedPrompt();
-                    openJourneyLogFlow(createdJourneyGoal);
+                    if (getJourneyGoalType(createdJourneyGoal) === 'run_walk') {
+                      openJourneyRunTracker(createdJourneyGoal);
+                    } else {
+                      openJourneyLogFlow(createdJourneyGoal);
+                    }
                   }}
                   className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white"
                   style={themeAccentButtonStyle}
                 >
-                  Log now
+                  {getJourneyGoalType(createdJourneyGoal) === 'run_walk' ? 'Start now' : 'Log now'}
                 </button>
                 <button
                   type="button"
@@ -26226,10 +26761,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     }}
                   />
                 </div>
+                {journeyCoachLabel ? (
+                  <div className="mt-3 rounded-2xl border px-3 py-3 text-sm" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, 0.12), backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08), color: darkMode ? '#e5e7eb' : '#334155' }}>
+                    <span className="font-semibold">Coach tip:</span> {journeyQuickPrompt}
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{journeyCoachLabel}</div>
+                  </div>
+                ) : null}
                 <div className="mt-4 space-y-3">
                   <div className="grid grid-cols-2 gap-2">
-                    <button type="button" onClick={() => openJourneyLogFlow(primaryJourneyGoal)} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
-                      {primaryJourneyLoggedToday ? 'Add update' : 'Log today'}
+                    <button type="button" onClick={() => (primaryJourneyGoalType === 'run_walk' ? openJourneyRunTracker(primaryJourneyGoal) : openJourneyLogFlow(primaryJourneyGoal))} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
+                      {primaryJourneyGoalType === 'run_walk' ? journeyHomeCtaLabel : (primaryJourneyLoggedToday ? 'Add update' : 'Log today')}
                     </button>
                     <button
                       type="button"
@@ -26249,8 +26790,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       onClick={() => openJourneyLogFlow(primaryJourneyGoal)}
                       className="inline-flex items-center gap-1.5 text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                     >
-                      <Camera size={14} />
-                      Photo
+                      {primaryJourneyGoalType === 'run_walk' ? <Clock size={14} /> : <Camera size={14} />}
+                      {primaryJourneyGoalType === 'run_walk' ? 'Manual log' : 'Photo'}
                     </button>
                     <button
                       type="button"
@@ -26348,10 +26889,17 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {entry.type === 'log'
-                                ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
-                                : 'Added a note'}
+                              {entry.type === 'workout'
+                                ? `${entry.workoutType === 'walk' ? 'Walked' : 'Ran'} ${formatJourneyMiles(entry.distanceMiles || entry.amount || 0)} mi`
+                                : entry.type === 'log'
+                                  ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
+                                  : 'Added a note'}
                             </div>
+                            {entry.type === 'workout' ? (
+                              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {formatJourneyDuration(entry.durationMs || 0)} • {entry.paceLabel || formatJourneyPace(entry.distanceMiles || entry.amount || 0, entry.durationMs || 0)} • {Number(entry.estimatedSteps || 0).toLocaleString()} steps
+                              </div>
+                            ) : null}
                             {entry.note ? (
                               <div className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">{entry.note}</div>
                             ) : null}
@@ -26459,7 +27007,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <span>Goal created!</span>
                 <span className="inline-flex animate-bounce">🎉</span>
               </div>
-          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Log your first update?</div>
+          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{getJourneyGoalType(createdJourneyGoal) === 'run_walk' ? 'Start your first session?' : 'Log your first update?'}</div>
           <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.04] px-4 py-3">
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{createdJourneyGoal.title}</div>
             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -26471,12 +27019,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               type="button"
               onClick={() => {
                 closeJourneyGoalCreatedPrompt();
-                openJourneyLogFlow(createdJourneyGoal);
+                if (getJourneyGoalType(createdJourneyGoal) === 'run_walk') {
+                  openJourneyRunTracker(createdJourneyGoal);
+                } else {
+                  openJourneyLogFlow(createdJourneyGoal);
+                }
               }}
               className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white"
               style={themeAccentButtonStyle}
             >
-              Log now
+              {getJourneyGoalType(createdJourneyGoal) === 'run_walk' ? 'Start now' : 'Log now'}
             </button>
             <button
               type="button"
@@ -26685,6 +27237,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         </div>
       </div>
     )}
+    {showJourneyRunTrackerModal && renderJourneyRunTrackerModal()}
     </div>
       <style>{`
         @media (max-width: 640px) {
