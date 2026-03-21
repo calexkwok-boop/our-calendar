@@ -10,7 +10,6 @@ import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
 import ScramblePanel from "./components/ScramblePanel";
 import PopupEventPanel from "./components/PopupEventPanel";
-import JourneyPanel from "./components/JourneyPanel";
 import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 
@@ -22646,23 +22645,121 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             </div>
 
-            <JourneyPanel
-              activeLayerPageTheme={activeLayerPageTheme}
-              darkMode={darkMode}
-              hexToRgba={hexToRgba}
-              journeyHomeCtaLabel={journeyHomeCtaLabel}
-              journeyCoachLabel={journeyCoachLabel}
-              journeyProgressText={primaryJourneyProgressText}
-              journeyQuickPrompt={journeyQuickPrompt}
-              journeyQuote={journeyQuote}
-              journeySupportLabel={journeySupportLabel}
+            <div
+              role="button"
+              tabIndex={0}
               onClick={openJourneyScreen}
-              onCtaClick={primaryJourneyGoal ? (() => (primaryJourneyGoalType === 'run_walk' ? openJourneyRunTracker(primaryJourneyGoal) : primaryJourneyGoalType === 'workout' ? openJourneyWorkoutTracker(primaryJourneyGoal) : primaryJourneyGoalType === 'lose_weight' ? openJourneyWeightTracker(primaryJourneyGoal) : openJourneyLogFlow(primaryJourneyGoal))) : openJourneyScreen}
-              primaryJourneyGoal={primaryJourneyGoal}
-              primaryJourneyGoalProgress={primaryJourneyGoalProgress}
-              primaryJourneyLoggedToday={primaryJourneyLoggedToday}
-              themeAccentButtonStyle={themeAccentButtonStyle}
-            />
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openJourneyScreen();
+                }
+              }}
+              className="glass-panel rounded-[28px] border border-white/50 dark:border-white/10 p-5 sm:p-6 cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99]"
+              style={{
+                background: darkMode
+                  ? `linear-gradient(145deg, ${hexToRgba('#0f172a', 0.96)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.18)} 100%)`
+                  : `linear-gradient(145deg, rgba(255,255,255,0.98) 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
+                boxShadow: darkMode ? '0 20px 44px rgba(2,6,23,0.34)' : '0 20px 44px rgba(15,23,42,0.08)',
+              }}
+            >
+              <JourneyQuoteDisplay
+                quote={journeyQuote}
+                darkMode={darkMode}
+                compact
+                className="mb-3 max-w-[18rem]"
+              />
+
+              <div className="min-w-0">
+                <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
+                <div className="mt-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 line-clamp-2">
+                  {journeyQuickPrompt ? (primaryJourneyGoal ? `Pro tip: ${journeyQuickPrompt}` : journeyQuickPrompt) : ''}
+                </div>
+                {primaryJourneyGoal ? (
+                  <>
+                    <div className="mt-3 text-[19px] font-bold text-gray-900 dark:text-gray-100 line-clamp-1 tracking-tight">
+                      {primaryJourneyGoal.title}
+                    </div>
+                    <div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+                      {primaryJourneyProgressText}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+
+              {primaryJourneyGoal ? (
+                <>
+                  <div className="mt-3.5">
+                    <div className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                      <span>{journeySupportLabel}</span>
+                      <span>{Math.round(primaryJourneyGoalProgress * 100)}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
+                      <div
+                        className="h-2 rounded-full transition-all duration-700 ease-out"
+                        style={{
+                          width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
+                          background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
+                          boxShadow: `0 0 12px ${hexToRgba(activeLayerPageTheme.accent, 0.4)}`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {journeyCoachLabel ? (
+                    <div
+                      className="mt-3 rounded-2xl border px-3 py-2.5 text-[11px] font-medium text-gray-600 dark:text-gray-300 backdrop-blur-sm"
+                      style={{
+                        borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, 0.12),
+                        backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08),
+                        boxShadow: `0 2px 8px ${hexToRgba(activeLayerPageTheme.accent, 0.08)}`,
+                      }}
+                    >
+                      {journeyCoachLabel}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-3.5 flex items-center">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (primaryJourneyGoalType === 'run_walk') openJourneyRunTracker(primaryJourneyGoal);
+                        else if (primaryJourneyGoalType === 'workout') openJourneyWorkoutTracker(primaryJourneyGoal);
+                        else if (primaryJourneyGoalType === 'lose_weight') openJourneyWeightTracker(primaryJourneyGoal);
+                        else openJourneyLogFlow(primaryJourneyGoal);
+                      }}
+                      className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all ${primaryJourneyLoggedToday ? 'border text-gray-700 dark:text-gray-200' : 'text-white'}`}
+                      style={primaryJourneyLoggedToday
+                        ? {
+                            borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16),
+                            backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08),
+                          }
+                        : themeAccentButtonStyle}
+                    >
+                      {journeyHomeCtaLabel}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-3.5 flex items-center">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openJourneyScreen();
+                    }}
+                    className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+                    style={{
+                      ...themeAccentButtonStyle,
+                      boxShadow: `0 4px 16px ${hexToRgba(activeLayerPageTheme.accent, 0.3)}`,
+                    }}
+                  >
+                    Set your first goal
+                  </button>
+                </div>
+              )}
+            </div>
 
             {overviewTodayEvents.length === 0 && homeTripsPreview.length === 0 && (
               <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-5">
