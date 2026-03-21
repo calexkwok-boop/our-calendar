@@ -16190,6 +16190,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const dateKey = String(event?.date || event?.dateKey || '').trim();
         const eventTs = toDateOnlyTs(dateKey);
         if (eventTs === null || eventTs < todayTs) return false;
+        const popupEventId = String(event?.id || '').trim();
+        const popupMeta = popupEventsByEventId[popupEventId] || null;
+        if (popupMeta) {
+          const joined = (popupSignupsByEventId[popupEventId] || []).some((row) => (
+            String(row?.userId || '').trim() === String(user?.id || '').trim()
+          ));
+          const createdByMe = String(popupMeta?.createdByUserId || '').trim() === String(user?.id || '').trim();
+          if (!joined && !createdByMe) return false;
+        }
         const holiday = getHolidayForDate(dateKey);
         const normalizedTitle = normalizeHolidayLikeTitle(event?.title);
         const holidayNames = getHolidayNameSet(holiday);
