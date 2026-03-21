@@ -28060,7 +28060,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
       </div>
     )}
-    {!activeSubCalendar && showJourneyScreen && renderJourneyPortal((
+    {false && !activeSubCalendar && showJourneyScreen && renderJourneyPortal((
       <div
         className="fixed inset-0 z-[82] bg-black/50 p-4 flex items-center justify-center"
         onClick={() => setShowJourneyScreen(false)}
