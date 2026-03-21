@@ -18314,7 +18314,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       }}
     >
       <div
-        className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-t-[32px] sm:rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+        className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
       >
