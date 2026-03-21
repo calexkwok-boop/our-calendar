@@ -252,11 +252,34 @@ const JOURNEY_WORKOUT_TIPS = Object.freeze([
   'Strength builds over weeks, not one session.',
 ]);
 
+const JOURNEY_WEIGHT_LOSS_TIPS = Object.freeze([
+  'Consistency beats restriction.',
+  'Daily walks help more than you think.',
+  'Protein helps you stay full longer.',
+  'Sleep affects hunger more than willpower does.',
+  'A healthy day still counts even if the scale stalls.',
+  'Focus on repeatable meals before perfect meals.',
+  'Hydration helps appetite and energy.',
+  'Don’t overreact to one weigh-in.',
+  'Small calorie wins stack up over time.',
+  'Build habits you can keep after the goal is reached.',
+  'Weekend consistency matters.',
+  'Make the healthy option the easy option.',
+]);
+
 const JOURNEY_WORKOUT_MODES = Object.freeze([
   { id: 'strength', label: 'Strength', emoji: '🏋️' },
   { id: 'cardio', label: 'Cardio', emoji: '🔥' },
   { id: 'mobility', label: 'Mobility', emoji: '🧘' },
   { id: 'recovery', label: 'Recovery', emoji: '🫶' },
+]);
+
+const JOURNEY_WEIGHT_CHECKIN_OPTIONS = Object.freeze([
+  { id: 'weigh_in', label: 'Weigh-in', emoji: '⚖️', hint: 'Update your weight and trend.' },
+  { id: 'nutrition', label: 'Nutrition win', emoji: '🥗', hint: 'Log one solid food choice.' },
+  { id: 'movement', label: 'Movement', emoji: '🚶', hint: 'Track a walk or active day.' },
+  { id: 'hydration', label: 'Hydration', emoji: '💧', hint: 'Give yourself credit for water.' },
+  { id: 'on_plan', label: 'Stayed on plan', emoji: '✅', hint: 'Mark a day you stayed consistent.' },
 ]);
 
 const buildJourneyRunSession = (goalId = '', sessionType = 'run') => ({
@@ -285,6 +308,14 @@ const buildJourneyWorkoutSession = (goalId = '', workoutType = 'strength') => ({
   elapsedMsSnapshot: 0,
   restSeconds: 60,
   restEndsAt: null,
+  note: '',
+  error: '',
+});
+
+const buildJourneyWeightCheckIn = (goalId = '', checkInType = 'weigh_in') => ({
+  goalId: String(goalId || ''),
+  checkInType,
+  currentWeight: '',
   note: '',
   error: '',
 });
@@ -327,6 +358,39 @@ const formatJourneyPace = (distanceMiles, durationMs) => {
   const normalizedMinutes = paceSeconds === 60 ? wholeMinutes + 1 : wholeMinutes;
   const normalizedSeconds = paceSeconds === 60 ? 0 : paceSeconds;
   return `${normalizedMinutes}:${String(normalizedSeconds).padStart(2, '0')}/mi`;
+};
+
+const formatJourneyWeight = (value) => {
+  const numeric = Number(value || 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) return '--';
+  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(1).replace(/\.0$/, '');
+};
+
+const getJourneyWeightMetrics = (goal, entries) => {
+  const goalId = String(goal?.id || '');
+  const weightEntries = (Array.isArray(entries) ? entries : [])
+    .filter((entry) => (
+      String(entry?.goalId || '') === goalId
+      && entry?.type === 'weight_checkin'
+      && entry?.checkInType === 'weigh_in'
+      && Number.isFinite(Number(entry?.currentWeight))
+      && Number(entry?.currentWeight) > 0
+    ))
+    .sort((a, b) => Number(new Date(a?.createdAt || 0)) - Number(new Date(b?.createdAt || 0)));
+  const latestWeightEntry = weightEntries.length > 0 ? weightEntries[weightEntries.length - 1] : null;
+  const firstWeightEntry = weightEntries.length > 0 ? weightEntries[0] : null;
+  const startingWeight = Number(firstWeightEntry?.currentWeight || goal?.startingWeight || 0);
+  const latestWeight = Number(latestWeightEntry?.currentWeight || goal?.latestWeight || 0);
+  const poundsLost = startingWeight > 0 && latestWeight > 0 ? Math.max(0, startingWeight - latestWeight) : Math.max(0, normalizeJourneyNumber(goal?.current));
+  const checkInCount = (Array.isArray(entries) ? entries : []).filter((entry) => String(entry?.goalId || '') === goalId && entry?.type === 'weight_checkin').length;
+  return {
+    startingWeight: startingWeight > 0 ? startingWeight : null,
+    latestWeight: latestWeight > 0 ? latestWeight : null,
+    poundsLost,
+    weighInCount: weightEntries.length,
+    checkInCount,
+    latestWeightEntry,
+  };
 };
 
 const calculateJourneyDistanceMiles = (points) => {
@@ -1338,6 +1402,7 @@ function App() {
   const [showJourneyNoteModal, setShowJourneyNoteModal] = useState(false);
   const [showJourneyRunTrackerModal, setShowJourneyRunTrackerModal] = useState(false);
   const [showJourneyWorkoutTrackerModal, setShowJourneyWorkoutTrackerModal] = useState(false);
+  const [showJourneyWeightTrackerModal, setShowJourneyWeightTrackerModal] = useState(false);
   const [journeyGoalDraft, setJourneyGoalDraft] = useState(createJourneyGoalDraft());
   const [journeyGoalError, setJourneyGoalError] = useState('');
   const [selectedJourneyGoalTemplateId, setSelectedJourneyGoalTemplateId] = useState('');
@@ -1346,6 +1411,7 @@ function App() {
   const [journeyRunNowMs, setJourneyRunNowMs] = useState(() => Date.now());
   const [journeyWorkoutSession, setJourneyWorkoutSession] = useState(() => buildJourneyWorkoutSession());
   const [journeyWorkoutNowMs, setJourneyWorkoutNowMs] = useState(() => Date.now());
+  const [journeyWeightCheckIn, setJourneyWeightCheckIn] = useState(() => buildJourneyWeightCheckIn());
   const [journeyLogSavingPhoto, setJourneyLogSavingPhoto] = useState(false);
   const [journeyLogError, setJourneyLogError] = useState('');
   const [journeyNoteDraft, setJourneyNoteDraft] = useState('');
@@ -4475,7 +4541,7 @@ function App() {
   const [themeMode, setThemeMode] = useState('auto');
   const [timeBasedDarkMode, setTimeBasedDarkMode] = useState(() => {
     const hour = new Date().getHours();
-    return hour >= 19 || hour < 7;
+    return hour >= 17 || hour < 5;
   });
   const darkMode = themeMode === 'auto' ? timeBasedDarkMode : themeMode === 'dark';
   const [showTipBanner, setShowTipBanner] = useState(() => localStorage.getItem('hideTipBanner') !== 'true');
@@ -7717,7 +7783,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const syncTimeBasedThemeMode = () => {
       const hour = new Date().getHours();
-      setTimeBasedDarkMode(hour >= 19 || hour < 7);
+      setTimeBasedDarkMode(hour >= 17 || hour < 5);
     };
     syncTimeBasedThemeMode();
     const intervalId = window.setInterval(syncTimeBasedThemeMode, 60000);
@@ -15979,6 +16045,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const primaryJourneyGoalType = getJourneyGoalType(primaryJourneyGoal);
   const primaryJourneyGoalEntries = (journeyState?.entries || []).filter((entry) => String(entry?.goalId || '') === String(primaryJourneyGoal?.id || ''));
   const primaryJourneyWorkoutEntries = primaryJourneyGoalEntries.filter((entry) => entry?.type === 'workout');
+  const primaryJourneyWeightMetrics = getJourneyWeightMetrics(primaryJourneyGoal, journeyState?.entries || []);
   const primaryJourneyWorkoutCount = primaryJourneyWorkoutEntries.length;
   const primaryJourneyLatestWorkout = primaryJourneyWorkoutEntries[0] || null;
   const primaryJourneyWeeklyDistance = primaryJourneyWorkoutEntries.reduce((sum, entry) => {
@@ -15991,6 +16058,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     ? (() => {
         if (primaryJourneyGoalType === 'workout') {
           return JOURNEY_WORKOUT_TIPS[((journeyDailyQuoteSeed + String(primaryJourneyGoal?.id || '').length) % JOURNEY_WORKOUT_TIPS.length + JOURNEY_WORKOUT_TIPS.length) % JOURNEY_WORKOUT_TIPS.length];
+        }
+        if (primaryJourneyGoalType === 'lose_weight') {
+          return JOURNEY_WEIGHT_LOSS_TIPS[((journeyDailyQuoteSeed + String(primaryJourneyGoal?.id || '').length) % JOURNEY_WEIGHT_LOSS_TIPS.length + JOURNEY_WEIGHT_LOSS_TIPS.length) % JOURNEY_WEIGHT_LOSS_TIPS.length];
         }
         return JOURNEY_RUN_WALK_TIPS[((journeyDailyQuoteSeed + String(primaryJourneyGoal?.id || '').length) % JOURNEY_RUN_WALK_TIPS.length + JOURNEY_RUN_WALK_TIPS.length) % JOURNEY_RUN_WALK_TIPS.length];
       })()
@@ -16009,6 +16079,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         return `Last ${lastWorkoutMode.toLowerCase()}: ${formatJourneyDuration(primaryJourneyLatestWorkout?.durationMs || 0)}${primaryJourneyLatestWorkout?.note ? ` • ${primaryJourneyLatestWorkout.note}` : ''}`;
       }
       return 'Start a workout session and let Journey count the consistency for you.';
+    }
+    if (primaryJourneyGoalType === 'lose_weight') {
+      if (primaryJourneyWeightMetrics.latestWeight) {
+        if (primaryJourneyWeightMetrics.poundsLost > 0) {
+          return `${formatJourneyWeight(primaryJourneyWeightMetrics.poundsLost)} lb down from ${formatJourneyWeight(primaryJourneyWeightMetrics.startingWeight)} lb.`;
+        }
+        return `Latest weigh-in: ${formatJourneyWeight(primaryJourneyWeightMetrics.latestWeight)} lb.`;
+      }
+      return 'Use check-ins to track your weight, meals, water, and consistency.';
     }
     if (journeyUpdatedToday && journeyLatestEntry?.type === 'log' && normalizeJourneyNumber(journeyLatestEntry?.amount) > 0) {
       return `Nice work today: +${normalizeJourneyNumber(journeyLatestEntry.amount)}${primaryJourneyGoal?.unit ? ` ${primaryJourneyGoal.unit}` : ''}.`;
@@ -16034,11 +16113,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (primaryJourneyStreak >= 2) return `${primaryJourneyStreak}-day training streak`;
       return `${primaryJourneyWorkoutCount} workout${primaryJourneyWorkoutCount === 1 ? '' : 's'} logged`;
     }
+    if (primaryJourneyGoalType === 'lose_weight') {
+      if (primaryJourneyWeightMetrics.checkInCount === 0) return '';
+      if (primaryJourneyStreak >= 2) return `${primaryJourneyStreak}-day consistency streak`;
+      if (primaryJourneyWeightMetrics.weighInCount > 0) return `${primaryJourneyWeightMetrics.weighInCount} weigh-in${primaryJourneyWeightMetrics.weighInCount === 1 ? '' : 's'} logged`;
+      return `${primaryJourneyWeightMetrics.checkInCount} check-in${primaryJourneyWeightMetrics.checkInCount === 1 ? '' : 's'} logged`;
+    }
     return '';
   })();
   const selectedJourneyLogGoal = journeyGoalById[String(journeyLogDraft?.goalId || '')] || primaryJourneyGoal || null;
   const selectedJourneyRunGoal = journeyGoalById[String(journeyRunSession?.goalId || '')] || primaryJourneyGoal || null;
   const selectedJourneyWorkoutGoal = journeyGoalById[String(journeyWorkoutSession?.goalId || '')] || primaryJourneyGoal || null;
+  const selectedJourneyWeightGoal = journeyGoalById[String(journeyWeightCheckIn?.goalId || '')] || primaryJourneyGoal || null;
+  const selectedJourneyWeightMetrics = getJourneyWeightMetrics(selectedJourneyWeightGoal, journeyState?.entries || []);
   const journeyRunElapsedMs = calculateJourneyRunElapsedMs(journeyRunSession, journeyRunNowMs);
   const journeyRunPaceLabel = formatJourneyPace(journeyRunSession?.distanceMiles || 0, journeyRunElapsedMs);
   const journeyRunRoutePreview = buildJourneyRoutePreview(journeyRunSession?.routePoints || []);
@@ -16056,6 +16143,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (primaryJourneyGoalType === 'workout') {
       return primaryJourneyLoggedToday ? 'A recovery session or stretch still keeps the streak honest.' : primaryJourneyTip;
     }
+    if (primaryJourneyGoalType === 'lose_weight') {
+      return primaryJourneyLoggedToday ? 'A solid choice today still counts. Keep stacking the basics.' : primaryJourneyTip;
+    }
     if (primaryJourneyLoggedToday) {
       return 'Today is already in motion. Add a note, photo, or another small win.';
     }
@@ -16067,6 +16157,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       ? (primaryJourneyWorkoutCount > 0 ? 'Start again' : 'Start')
     : primaryJourneyGoalType === 'workout'
       ? (primaryJourneyWorkoutCount > 0 ? 'Start workout' : 'Start workout')
+    : primaryJourneyGoalType === 'lose_weight'
+      ? 'Check in'
     : primaryJourneyLoggedToday
       ? 'Add a quick update'
       : 'Log today';
@@ -16089,7 +16181,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, journeyState]);
 
   useEffect(() => {
-    const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal;
+    const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal || showJourneyWeightTrackerModal;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
     const scrollY = window.scrollY || window.pageYOffset || 0;
     const journeyOverlayPageBg = 'transparent';
@@ -16135,7 +16227,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       document.documentElement.style.backgroundColor = previousDocBackground;
       window.scrollTo(0, scrollY);
     };
-  }, [darkMode, showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal]);
+  }, [darkMode, showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal, showJourneyWeightTrackerModal]);
 
   useEffect(() => {
     if (journeyRunSession?.status !== 'active') return undefined;
@@ -16250,6 +16342,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setJourneyWorkoutSession(buildJourneyWorkoutSession());
   };
 
+  const closeJourneyWeightTrackerModal = () => {
+    setShowJourneyWeightTrackerModal(false);
+    setJourneyWeightCheckIn(buildJourneyWeightCheckIn());
+  };
+
   const closeJourneyDeleteGoalPrompt = () => {
     setShowJourneyDeleteGoalPrompt(false);
     setJourneyGoalPendingDeleteId('');
@@ -16298,6 +16395,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         : buildJourneyWorkoutSession(goal?.id, 'strength')
     ));
     deferJourneyOverlayOpen(() => setShowJourneyWorkoutTrackerModal(true));
+  };
+
+  const openJourneyWeightTracker = (goal = primaryJourneyGoal) => {
+    if (!goal) return;
+    setShowJourneyEntryModal(false);
+    setShowJourneyLogModal(false);
+    setJourneyWeightCheckIn((prev) => (
+      prev?.goalId === String(goal?.id || '')
+        ? { ...buildJourneyWeightCheckIn(goal?.id, prev?.checkInType || 'weigh_in'), goalId: String(goal?.id || ''), checkInType: prev?.checkInType || 'weigh_in' }
+        : buildJourneyWeightCheckIn(goal?.id, 'weigh_in')
+    ));
+    deferJourneyOverlayOpen(() => setShowJourneyWeightTrackerModal(true));
   };
 
   const openJourneyLogFlow = (goal = primaryJourneyGoal) => {
@@ -16571,6 +16680,56 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setShowJourneyScreen(true);
   };
 
+  const saveJourneyWeightCheckIn = () => {
+    const sessionGoal = journeyGoalById[String(journeyWeightCheckIn?.goalId || '')] || primaryJourneyGoal || null;
+    const nextCheckInOption = JOURNEY_WEIGHT_CHECKIN_OPTIONS.find((option) => option.id === String(journeyWeightCheckIn?.checkInType || 'weigh_in')) || JOURNEY_WEIGHT_CHECKIN_OPTIONS[0];
+    const currentWeight = Number(journeyWeightCheckIn?.currentWeight || 0);
+    const note = String(journeyWeightCheckIn?.note || '').trim();
+    if (!sessionGoal) return;
+    if (nextCheckInOption.id === 'weigh_in' && (!Number.isFinite(currentWeight) || currentWeight <= 0)) {
+      setJourneyWeightCheckIn((prev) => ({ ...prev, error: 'Add your current weight to save this check-in.' }));
+      return;
+    }
+    if (nextCheckInOption.id !== 'weigh_in' && !note) {
+      setJourneyWeightCheckIn((prev) => ({ ...prev, error: 'Add a quick note so this check-in has context.' }));
+      return;
+    }
+    const now = new Date().toISOString();
+    const entry = {
+      id: `journey_weight_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      goalId: sessionGoal.id,
+      type: 'weight_checkin',
+      checkInType: nextCheckInOption.id,
+      amount: 0,
+      currentWeight: nextCheckInOption.id === 'weigh_in' ? currentWeight : null,
+      summaryLabel: nextCheckInOption.label,
+      note,
+      createdAt: now,
+    };
+    setJourneyState((prev) => {
+      const nextEntries = [entry, ...(prev?.entries || [])].slice(0, 50);
+      const nextMetrics = getJourneyWeightMetrics(sessionGoal, nextEntries);
+      return {
+        ...prev,
+        goals: (prev?.goals || []).map((goal) => (
+          String(goal?.id || '') === String(sessionGoal.id)
+            ? {
+                ...goal,
+                current: nextMetrics.poundsLost,
+                startingWeight: nextMetrics.startingWeight,
+                latestWeight: nextMetrics.latestWeight,
+                updatedAt: now,
+              }
+            : goal
+        )),
+        entries: nextEntries,
+      };
+    });
+    setShowJourneyWeightTrackerModal(false);
+    setJourneyWeightCheckIn(buildJourneyWeightCheckIn());
+    setShowJourneyScreen(true);
+  };
+
   const addJourneyNote = () => {
     const note = String(journeyNoteDraft || '').trim();
     if (!note) return;
@@ -16599,18 +16758,27 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (!targetEntry) return prev;
       const progressReduction = Math.max(0, normalizeJourneyNumber(targetEntry?.amount));
       const targetGoalId = String(targetEntry?.goalId || '');
+      const filteredEntries = (prev?.entries || []).filter((entry) => String(entry?.id || '') !== normalizedEntryId);
       return {
         ...prev,
         goals: (prev?.goals || []).map((goal) => (
           targetGoalId && String(goal?.id || '') === targetGoalId
             ? {
                 ...goal,
-                current: Math.max(0, normalizeJourneyNumber(goal?.current) - progressReduction),
+                current: getJourneyGoalType(goal) === 'lose_weight'
+                  ? getJourneyWeightMetrics(goal, filteredEntries).poundsLost
+                  : Math.max(0, normalizeJourneyNumber(goal?.current) - progressReduction),
+                startingWeight: getJourneyGoalType(goal) === 'lose_weight'
+                  ? getJourneyWeightMetrics(goal, filteredEntries).startingWeight
+                  : goal?.startingWeight,
+                latestWeight: getJourneyGoalType(goal) === 'lose_weight'
+                  ? getJourneyWeightMetrics(goal, filteredEntries).latestWeight
+                  : goal?.latestWeight,
                 updatedAt: new Date().toISOString(),
               }
             : goal
         )),
-        entries: (prev?.entries || []).filter((entry) => String(entry?.id || '') !== normalizedEntryId),
+        entries: filteredEntries,
       };
     });
     if (String(journeyEntryPhotoTargetId || '') === normalizedEntryId) setJourneyEntryPhotoTargetId('');
@@ -16650,6 +16818,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const entryGoal = journeyGoalById[String(entry?.goalId || '')] || null;
     const summary = entry?.type === 'workout'
       ? `${entry.workoutType === 'walk' ? 'Walked' : 'Ran'} ${formatJourneyMiles(entry.distanceMiles || entry.amount || 0)} miles in ${formatJourneyDuration(entry.durationMs || 0)}`
+      : entry?.type === 'weight_checkin'
+        ? (entry?.checkInType === 'weigh_in'
+          ? `Weighed in at ${formatJourneyWeight(entry?.currentWeight)} lb`
+          : `${entry?.summaryLabel || 'Weight check-in'}${entry?.note ? ` • ${entry.note}` : ''}`)
       : entry?.type === 'log'
         ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
         : String(entry?.note || 'Journey update').trim();
@@ -16662,7 +16834,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     try {
       if (navigator.share) {
         await navigator.share({
-          title: entryGoal?.title || 'Journey run',
+          title: entryGoal?.title || 'Journey update',
           text: shareText,
         });
         return;
@@ -16675,7 +16847,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       alert(shareText);
     } catch (error) {
       if (error?.name === 'AbortError') return;
-      alert('Could not share that run right now.');
+        alert('Could not share that update right now.');
     }
   };
 
@@ -16720,6 +16892,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     });
 
     if (String(journeyLogDraft?.goalId || '') === normalizedGoalId) closeJourneyLogModal();
+    if (String(journeyWeightCheckIn?.goalId || '') === normalizedGoalId) closeJourneyWeightTrackerModal();
     if (String(journeyCreatedGoalId || '') === normalizedGoalId) closeJourneyGoalCreatedPrompt();
     closeJourneyDeleteGoalPrompt();
   };
@@ -18989,6 +19162,133 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       </div>
     </div>
   );
+
+  const renderJourneyWeightTrackerModal = () => {
+    const selectedCheckInOption = JOURNEY_WEIGHT_CHECKIN_OPTIONS.find((option) => option.id === String(journeyWeightCheckIn?.checkInType || 'weigh_in')) || JOURNEY_WEIGHT_CHECKIN_OPTIONS[0];
+    return (
+      <div
+        className="fixed inset-x-0 top-0 z-[83] h-[100dvh] bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center"
+        onClick={closeJourneyWeightTrackerModal}
+        style={{
+          paddingTop: 'max(1rem, calc(env(safe-area-inset-top) + 0.75rem))',
+          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+        }}
+      >
+        <div
+          className="w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] overflow-y-auto rounded-[32px] bg-white dark:bg-slate-950 border border-white/10 p-5 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Weight loss</div>
+              <div className="mt-1 text-xl font-semibold text-gray-900 dark:text-gray-100">
+                {selectedJourneyWeightGoal ? `${getJourneyGoalEmoji(selectedJourneyWeightGoal)} ${selectedJourneyWeightGoal.title}` : 'Check in'}
+              </div>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Track a weigh-in or one healthy win that supports the goal.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={closeJourneyWeightTrackerModal}
+              className="rounded-xl p-2 text-gray-500 hover:bg-black/5 dark:text-gray-400 dark:hover:bg-white/5"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="mt-4 rounded-[28px] border border-white/10 bg-gray-50/80 dark:bg-white/[0.03] p-4">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Progress snapshot</div>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] px-4 py-4">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">Lost</div>
+                <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{formatJourneyWeight(selectedJourneyWeightMetrics.poundsLost)}<span className="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400">lb</span></div>
+              </div>
+              <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] px-4 py-4">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">Latest</div>
+                <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{formatJourneyWeight(selectedJourneyWeightMetrics.latestWeight)}<span className="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400">lb</span></div>
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+              {selectedJourneyWeightMetrics.startingWeight
+                ? `Started at ${formatJourneyWeight(selectedJourneyWeightMetrics.startingWeight)} lb. ${selectedJourneyWeightMetrics.checkInCount} total check-in${selectedJourneyWeightMetrics.checkInCount === 1 ? '' : 's'}.`
+                : 'Your first weigh-in sets the starting point for this goal.'}
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {JOURNEY_WEIGHT_CHECKIN_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setJourneyWeightCheckIn((prev) => ({ ...prev, checkInType: option.id, error: '' }))}
+                className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition-all ${journeyWeightCheckIn?.checkInType === option.id ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`}
+                style={journeyWeightCheckIn?.checkInType === option.id
+                  ? themeAccentButtonStyle
+                  : { borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)', backgroundColor: darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.92)' }}
+              >
+                <div className="flex items-center gap-2">
+                  <span>{option.emoji}</span>
+                  <span>{option.label}</span>
+                </div>
+                <div className={`mt-1 text-[11px] font-medium ${journeyWeightCheckIn?.checkInType === option.id ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>{option.hint}</div>
+              </button>
+            ))}
+          </div>
+
+          {selectedCheckInOption.id === 'weigh_in' ? (
+            <div className="mt-4 rounded-[28px] border border-white/10 bg-gray-50/80 dark:bg-white/[0.03] p-4">
+              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Current weight</div>
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.1"
+                  value={journeyWeightCheckIn?.currentWeight || ''}
+                  onChange={(e) => setJourneyWeightCheckIn((prev) => ({ ...prev, currentWeight: e.target.value, error: '' }))}
+                  placeholder={selectedJourneyWeightMetrics.latestWeight ? formatJourneyWeight(selectedJourneyWeightMetrics.latestWeight) : '165'}
+                  className="flex-1 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white"
+                  style={{ fontSize: '16px' }}
+                />
+                <div className="rounded-2xl border border-gray-200 dark:border-white/10 px-4 py-3 text-sm font-medium text-gray-500 dark:text-gray-300">lb</div>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mt-4 rounded-[28px] border border-white/10 bg-gray-50/80 dark:bg-white/[0.03] p-4">
+            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Quick note</div>
+            <textarea
+              value={journeyWeightCheckIn?.note || ''}
+              onChange={(e) => setJourneyWeightCheckIn((prev) => ({ ...prev, note: e.target.value, error: '' }))}
+              placeholder={selectedCheckInOption.id === 'weigh_in' ? 'Optional: how are you feeling today?' : 'What went well today?'}
+              rows={3}
+              className="mt-3 w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white"
+              style={{ fontSize: '16px' }}
+            />
+          </div>
+
+          {journeyQuickPrompt ? (
+            <div className="mt-4 rounded-2xl border px-4 py-3 text-sm" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16), backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.06), color: darkMode ? '#e5e7eb' : '#334155' }}>
+              <span className="font-semibold">Pro tip:</span> {journeyQuickPrompt}
+            </div>
+          ) : null}
+
+          {journeyWeightCheckIn?.error ? (
+            <div className="mt-4 rounded-2xl border border-rose-200/70 bg-rose-50/90 px-3 py-3 text-sm text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
+              {journeyWeightCheckIn.error}
+            </div>
+          ) : null}
+
+          <div className="mt-5 flex gap-2">
+            <button type="button" onClick={closeJourneyWeightTrackerModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Cancel</button>
+            <button type="button" onClick={saveJourneyWeightCheckIn} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Save check-in</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -21811,7 +22111,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               journeyQuote={journeyQuote}
               journeySupportLabel={journeySupportLabel}
               onClick={openJourneyScreen}
-              onCtaClick={primaryJourneyGoal ? (() => (primaryJourneyGoalType === 'run_walk' ? openJourneyRunTracker(primaryJourneyGoal) : primaryJourneyGoalType === 'workout' ? openJourneyWorkoutTracker(primaryJourneyGoal) : openJourneyLogFlow(primaryJourneyGoal))) : openJourneyScreen}
+              onCtaClick={primaryJourneyGoal ? (() => (primaryJourneyGoalType === 'run_walk' ? openJourneyRunTracker(primaryJourneyGoal) : primaryJourneyGoalType === 'workout' ? openJourneyWorkoutTracker(primaryJourneyGoal) : primaryJourneyGoalType === 'lose_weight' ? openJourneyWeightTracker(primaryJourneyGoal) : openJourneyLogFlow(primaryJourneyGoal))) : openJourneyScreen}
               primaryJourneyGoal={primaryJourneyGoal}
               primaryJourneyGoalProgress={primaryJourneyGoalProgress}
               primaryJourneyLoggedToday={primaryJourneyLoggedToday}
@@ -26777,8 +27077,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     </div>
                     <div className="mt-4 space-y-3">
                       <div className="grid grid-cols-2 gap-2">
-                        <button type="button" onClick={() => (primaryJourneyGoalType === 'run_walk' ? openJourneyRunTracker(primaryJourneyGoal) : primaryJourneyGoalType === 'workout' ? openJourneyWorkoutTracker(primaryJourneyGoal) : openJourneyLogFlow(primaryJourneyGoal))} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
-                          {(primaryJourneyGoalType === 'run_walk' || primaryJourneyGoalType === 'workout') ? journeyHomeCtaLabel : (primaryJourneyLoggedToday ? 'Add update' : 'Log today')}
+                        <button type="button" onClick={() => (primaryJourneyGoalType === 'run_walk' ? openJourneyRunTracker(primaryJourneyGoal) : primaryJourneyGoalType === 'workout' ? openJourneyWorkoutTracker(primaryJourneyGoal) : primaryJourneyGoalType === 'lose_weight' ? openJourneyWeightTracker(primaryJourneyGoal) : openJourneyLogFlow(primaryJourneyGoal))} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
+                          {(['run_walk', 'workout', 'lose_weight'].includes(primaryJourneyGoalType)) ? journeyHomeCtaLabel : (primaryJourneyLoggedToday ? 'Add update' : 'Log today')}
                         </button>
                         <button
                           type="button"
@@ -26926,6 +27226,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                     ? (entry.workoutCategory === 'workout'
                                       ? `${entry.summaryLabel || 'Workout'} session`
                                       : `${entry.workoutType === 'walk' ? 'Walked' : 'Ran'} ${formatJourneyMiles(entry.distanceMiles || entry.amount || 0)} mi`)
+                                    : entry.type === 'weight_checkin'
+                                      ? (entry.checkInType === 'weigh_in'
+                                        ? `Weighed in at ${formatJourneyWeight(entry.currentWeight)} lb`
+                                        : `${entry.summaryLabel || 'Weight check-in'}`)
                                     : entry.type === 'log'
                                       ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
                                       : 'Added a note'}
@@ -26956,6 +27260,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                       </button>
                                     </div>
                                   </>
+                                ) : null}
+                                {entry.type === 'weight_checkin' ? (
+                                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    {entry.checkInType === 'weigh_in'
+                                      ? (entry.note || 'Trend updated')
+                                      : (entry.note || 'Healthy choice logged')}
+                                  </div>
                                 ) : null}
                                 {entry.note ? (
                                   <div className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">{entry.note}</div>
@@ -27065,7 +27376,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <span>Goal created!</span>
                 <span className="inline-flex animate-bounce">🎉</span>
               </div>
-              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{['run_walk', 'workout'].includes(getJourneyGoalType(createdJourneyGoal)) ? 'Start your first session?' : 'Log your first update?'}</div>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{['run_walk', 'workout'].includes(getJourneyGoalType(createdJourneyGoal)) ? 'Start your first session?' : getJourneyGoalType(createdJourneyGoal) === 'lose_weight' ? 'Start your first check-in?' : 'Log your first update?'}</div>
               <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.04] px-4 py-3">
                 <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{createdJourneyGoal.title}</div>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -27081,6 +27392,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       openJourneyRunTracker(createdJourneyGoal);
                     } else if (getJourneyGoalType(createdJourneyGoal) === 'workout') {
                       openJourneyWorkoutTracker(createdJourneyGoal);
+                    } else if (getJourneyGoalType(createdJourneyGoal) === 'lose_weight') {
+                      openJourneyWeightTracker(createdJourneyGoal);
                     } else {
                       openJourneyLogFlow(createdJourneyGoal);
                     }
@@ -27088,7 +27401,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white"
                   style={themeAccentButtonStyle}
                 >
-                  {['run_walk', 'workout'].includes(getJourneyGoalType(createdJourneyGoal)) ? 'Start now' : 'Log now'}
+                  {['run_walk', 'workout'].includes(getJourneyGoalType(createdJourneyGoal)) ? 'Start now' : getJourneyGoalType(createdJourneyGoal) === 'lose_weight' ? 'Check in' : 'Log now'}
                 </button>
                 <button
                   type="button"
@@ -27361,8 +27674,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
                 <div className="mt-4 space-y-3">
                   <div className="grid grid-cols-2 gap-2">
-                    <button type="button" onClick={() => (primaryJourneyGoalType === 'run_walk' ? openJourneyRunTracker(primaryJourneyGoal) : primaryJourneyGoalType === 'workout' ? openJourneyWorkoutTracker(primaryJourneyGoal) : openJourneyLogFlow(primaryJourneyGoal))} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
-                      {(primaryJourneyGoalType === 'run_walk' || primaryJourneyGoalType === 'workout') ? journeyHomeCtaLabel : (primaryJourneyLoggedToday ? 'Add update' : 'Log today')}
+                    <button type="button" onClick={() => (primaryJourneyGoalType === 'run_walk' ? openJourneyRunTracker(primaryJourneyGoal) : primaryJourneyGoalType === 'workout' ? openJourneyWorkoutTracker(primaryJourneyGoal) : primaryJourneyGoalType === 'lose_weight' ? openJourneyWeightTracker(primaryJourneyGoal) : openJourneyLogFlow(primaryJourneyGoal))} className="rounded-2xl px-4 py-2.5 text-sm font-semibold text-white" style={themeAccentButtonStyle}>
+                      {(['run_walk', 'workout', 'lose_weight'].includes(primaryJourneyGoalType)) ? journeyHomeCtaLabel : (primaryJourneyLoggedToday ? 'Add update' : 'Log today')}
                     </button>
                     <button
                       type="button"
@@ -27510,6 +27823,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                 ? (entry.workoutCategory === 'workout'
                                   ? `${entry.summaryLabel || 'Workout'} session`
                                   : `${entry.workoutType === 'walk' ? 'Walked' : 'Ran'} ${formatJourneyMiles(entry.distanceMiles || entry.amount || 0)} mi`)
+                                : entry.type === 'weight_checkin'
+                                  ? (entry.checkInType === 'weigh_in'
+                                    ? `Weighed in at ${formatJourneyWeight(entry.currentWeight)} lb`
+                                    : `${entry.summaryLabel || 'Weight check-in'}`)
                                 : entry.type === 'log'
                                   ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
                                   : 'Added a note'}
@@ -27538,9 +27855,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                         <Share2 size={12} />
                                         Share
                                       </button>
-                                    </div>
-                                  </>
-                                ) : null}
+                                  </div>
+                                </>
+                              ) : null}
+                            {entry.type === 'weight_checkin' ? (
+                              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {entry.checkInType === 'weigh_in'
+                                  ? (entry.note || 'Trend updated')
+                                  : (entry.note || 'Healthy choice logged')}
+                              </div>
+                            ) : null}
                             {entry.note ? (
                               <div className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">{entry.note}</div>
                             ) : null}
@@ -27649,7 +27973,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <span>Goal created!</span>
                 <span className="inline-flex animate-bounce">🎉</span>
               </div>
-          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{['run_walk', 'workout'].includes(getJourneyGoalType(createdJourneyGoal)) ? 'Start your first session?' : 'Log your first update?'}</div>
+          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{['run_walk', 'workout'].includes(getJourneyGoalType(createdJourneyGoal)) ? 'Start your first session?' : getJourneyGoalType(createdJourneyGoal) === 'lose_weight' ? 'Start your first check-in?' : 'Log your first update?'}</div>
           <div className="mt-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.04] px-4 py-3">
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{createdJourneyGoal.title}</div>
             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -27665,6 +27989,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   openJourneyRunTracker(createdJourneyGoal);
                 } else if (getJourneyGoalType(createdJourneyGoal) === 'workout') {
                   openJourneyWorkoutTracker(createdJourneyGoal);
+                } else if (getJourneyGoalType(createdJourneyGoal) === 'lose_weight') {
+                  openJourneyWeightTracker(createdJourneyGoal);
                 } else {
                   openJourneyLogFlow(createdJourneyGoal);
                 }
@@ -27672,7 +27998,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white"
               style={themeAccentButtonStyle}
             >
-              {['run_walk', 'workout'].includes(getJourneyGoalType(createdJourneyGoal)) ? 'Start now' : 'Log now'}
+              {['run_walk', 'workout'].includes(getJourneyGoalType(createdJourneyGoal)) ? 'Start now' : getJourneyGoalType(createdJourneyGoal) === 'lose_weight' ? 'Check in' : 'Log now'}
             </button>
             <button
               type="button"
@@ -27837,6 +28163,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         </div>
       </div>
     )}
+    {showJourneyRunTrackerModal && renderJourneyRunTrackerModal()}
+    {showJourneyWorkoutTrackerModal && renderJourneyWorkoutTrackerModal()}
+    {showJourneyWeightTrackerModal && renderJourneyWeightTrackerModal()}
     <input
       ref={journeyEntryPhotoInputRef}
       type="file"
