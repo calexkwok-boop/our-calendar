@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shuffle, X, Zap, Sparkles } from 'lucide-react';
+import { Shuffle, X, Zap, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const T = {
   bg: '#0a0e1a',

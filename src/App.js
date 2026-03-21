@@ -18404,7 +18404,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       y: Math.max(2, Math.min(98, snap(slotY, yStep))),
     };
   };
-const parseManualRoundRobinRoster = (value) => {
+function parseManualRoundRobinRoster(value) {
   const seen = new Set();
   return String(value || '')
     .split(/\r?\n|,/)
@@ -18421,7 +18421,7 @@ const parseManualRoundRobinRoster = (value) => {
       userId: '',
       displayName: name,
     }));
-};
+}
   const buildRoundRobinSourceSignature = (participants) => (
     (Array.isArray(participants) ? participants : [])
       .map((participant, idx) => {
