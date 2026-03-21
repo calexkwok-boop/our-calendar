@@ -52,12 +52,16 @@ export default function JourneyPanel({
         <div className="mt-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 line-clamp-2">
           {journeyQuickPrompt ? (primaryJourneyGoal ? `Pro tip: ${journeyQuickPrompt}` : journeyQuickPrompt) : ''}
         </div>
-        {primaryJourneyGoal ? (
-          <>
-            <div className="mt-2.5 text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">{primaryJourneyGoal.title}</div>
-            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{journeyProgressText}</div>
-          </>
-        ) : null}
+{primaryJourneyGoal ? (
+  <>
+    <div className="mt-3 text-[19px] font-bold text-gray-900 dark:text-gray-100 line-clamp-1 tracking-tight">
+      {primaryJourneyGoal.title}
+    </div>
+    <div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+      {journeyProgressText}
+    </div>
+  </>
+) : null}
       </div>
 
       {primaryJourneyGoal ? (
