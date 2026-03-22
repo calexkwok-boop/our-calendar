@@ -604,7 +604,7 @@ function RoundRobinPanel({
       <div style={shell}>
         <div style={heroStyle}>
           <div style={heroBg} />
-          <div style={{ position: 'absolute', right: 42, top: '50%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', right: 8, top: '42%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
             <svg width="90" height="58" viewBox="0 0 90 58" fill="none">
               <rect x="1" y="1" width="88" height="56" rx="3" stroke="white" strokeWidth="2"/>
               <rect x="1" y="1" width="26" height="56" fill="white" fillOpacity="0.16"/>
@@ -615,16 +615,16 @@ function RoundRobinPanel({
               <line x1="27" y1="29" x2="63" y2="29" stroke="white" strokeWidth="1"/>
             </svg>
           </div>
-          <div style={{ position: 'relative', zIndex: 1, paddingTop: 6 }}>
-            <div style={badge}>
-              <div style={liveDot} />
-              Live
-            </div>
-            <div style={heroTitle}>Round Robin</div>
-            <div style={heroSub}>
-              Single Elimination. May the best team or player win!
-            </div>
+          <div style={badge}>
+            <div style={liveDot} />
+            Live
           </div>
+          <h3 style={heroTitle}>
+            Pickleball <span style={{ color: T.blue }}>Round Robin</span>
+          </h3>
+          <p style={heroSub}>
+            Single Elimination. May the best team or player win!
+          </p>
           <button
             type="button"
             aria-label="Close round robin panel"

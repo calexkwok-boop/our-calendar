@@ -781,15 +781,15 @@ function ScramblePanel({
               <line x1="27" y1="29" x2="63" y2="29" stroke="white" strokeWidth="1"/>
             </svg>
           </div>
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={badge}>
-              <div style={liveDot} />
-              Live
-            </div>
-            <div style={heroTitle}>Scramble</div>
-            <div style={heroSub}>
+          <div style={badge}>
+            <div style={liveDot} />
+            Live
+          </div>
+          <h3 style={heroTitle}>
+            Pickleball <span style={{ color: T.neon1 }}>Scramble</span>
+          </h3>
+          <div style={heroSub}>
               Pure randomness. Every round reshuffles the deck—no rankings, no strategy, just mayhem. 🎲
-            </div>
           </div>
           <button
             type="button"
