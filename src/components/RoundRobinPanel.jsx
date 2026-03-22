@@ -551,7 +551,23 @@ function RoundRobinPanel({
 
   const podium = useMemo(() => standings.slice(0, 3), [standings]);
 
+  useEffect(() => {
+    if (!Array.isArray(rounds) || rounds.length === 0) {
+      setExpandedRounds(new Set([0]));
+      return;
+    }
+    const firstIncompleteRoundIdx = rounds.findIndex((round) => (round.matches || []).some((match) => !match.completed));
+    if (firstIncompleteRoundIdx >= 0) {
+      setExpandedRounds(new Set([firstIncompleteRoundIdx]));
+      return;
+    }
+    setExpandedRounds(new Set());
+  }, [rounds]);
+
   const toggleRound = (idx) => {
+    const round = Array.isArray(rounds) ? rounds[idx] : null;
+    const isLocked = Boolean(round?.finalizedAt) || Boolean((round?.matches || []).length && (round.matches || []).every((match) => match.completed));
+    if (isLocked) return;
     const newSet = new Set(expandedRounds);
     if (newSet.has(idx)) newSet.delete(idx);
     else newSet.add(idx);

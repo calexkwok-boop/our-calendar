@@ -18976,6 +18976,7 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     const updatedRounds = (tournament.rounds || []).map((r) =>
       r.index !== roundIndex ? r : {
         ...r,
+        finalizedAt: r.matches.every((m) => (m.id === matchId ? true : m.completed)) ? new Date().toISOString() : r.finalizedAt || null,
         matches: r.matches.map((m) =>
           m.id !== matchId ? m : { ...m, completed: true }
         ),
