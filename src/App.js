@@ -1341,12 +1341,35 @@ const parseManualScrambleRoster = (value) => {
     }));
 };
 
+const normalizeStoredScrambleTournament = (tournament, fallbackEventId = '') => {
+  if (!tournament || typeof tournament !== 'object' || Array.isArray(tournament)) return null;
+  const participants = Array.isArray(tournament.participants) ? tournament.participants.filter((participant) => participant && typeof participant === 'object') : [];
+  const participantIds = Array.isArray(tournament.participantIds)
+    ? tournament.participantIds.map((id) => String(id || '')).filter(Boolean)
+    : participants.map((participant) => String(participant?.id || '')).filter(Boolean);
+  const rounds = Array.isArray(tournament.rounds)
+    ? tournament.rounds.filter((round) => round && typeof round === 'object' && !Array.isArray(round))
+    : [];
+  return {
+    ...tournament,
+    eventId: String(tournament.eventId || fallbackEventId || '').trim(),
+    participants,
+    participantIds,
+    rounds,
+    totalRounds: Math.max(1, parseInt(String(tournament.totalRounds || ''), 10) || 1),
+    courtCount: Math.max(1, parseInt(String(tournament.courtCount || ''), 10) || 1),
+    status: String(tournament.status || (tournament.completedAt ? 'completed' : 'active')),
+  };
+};
+
 const normalizeStoredScrambleMap = (value) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return Object.entries(value).reduce((acc, [eventId, tournament]) => {
     const id = String(eventId || '').trim();
-    if (!id || !tournament || typeof tournament !== 'object') return acc;
-    acc[id] = tournament;
+    if (!id) return acc;
+    const normalizedTournament = normalizeStoredScrambleTournament(tournament, id);
+    if (!normalizedTournament) return acc;
+    acc[id] = normalizedTournament;
     return acc;
   }, {});
 };
@@ -1435,7 +1458,8 @@ const deriveScrambleStandings = (tournament) => {
     return acc;
   }, {});
 
-  (tournament?.rounds || []).forEach((round) => {
+  const rounds = Array.isArray(tournament?.rounds) ? tournament.rounds : [];
+  rounds.forEach((round) => {
     if (!round?.finalizedAt) return;
     (round?.byeIds || []).forEach((playerId) => {
       const row = stats[String(playerId || '')];
@@ -18498,7 +18522,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const selectedScrambleSignups = selectedScrambleEvent?.signups || [];
   const scrambleTournamentKey = useManualScrambleRoster ? '__manual__' : String(selectedScrambleEventId || '');
   const scrambleTournament = scrambleTournamentKey ? (layerScrambles[scrambleTournamentKey] || null) : null;
-  const scrambleRounds = scrambleTournament?.rounds || [];
+  const scrambleRounds = Array.isArray(scrambleTournament?.rounds) ? scrambleTournament.rounds : [];
   const scrambleActiveRoundIndex = scrambleRounds.findIndex((round) => !round?.finalizedAt);
   const scrambleActiveRound = scrambleActiveRoundIndex >= 0 ? scrambleRounds[scrambleActiveRoundIndex] : null;
   const scrambleParticipantMap = (scrambleTournament?.participants || []).reduce((acc, participant) => {
