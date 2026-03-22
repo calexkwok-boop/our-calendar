@@ -949,14 +949,16 @@ function RoundRobinPanel({
               ) : null}
 
               <button
+                type="button"
                 onClick={startRoundRobinTournament}
-                disabled={!hasEnoughPlayers || (!useManualRoundRobinRoster && !selectedRoundRobinEventId)}
                 style={{
                   ...actionPrimary,
                   width: '100%',
                   marginTop: 14,
-                  opacity: !hasEnoughPlayers || (!useManualRoundRobinRoster && !selectedRoundRobinEventId) ? 0.45 : 1,
-                  cursor: !hasEnoughPlayers || (!useManualRoundRobinRoster && !selectedRoundRobinEventId) ? 'not-allowed' : 'pointer',
+                  opacity: useManualRoundRobinRoster
+                    ? (participants.length > 0 ? 1 : 0.7)
+                    : (selectedRoundRobinEventId ? 1 : 0.7),
+                  cursor: 'pointer',
                 }}
               >
                 <Target size={14} style={{ marginRight: 6, display: 'inline-block', verticalAlign: 'middle' }} />

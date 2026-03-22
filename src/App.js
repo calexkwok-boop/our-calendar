@@ -16555,7 +16555,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     document.documentElement.style.overflow = 'hidden';
     document.documentElement.style.touchAction = 'none';
     document.documentElement.style.overscrollBehavior = 'none';
+    const preventTouchMove = (event) => {
+      event.preventDefault();
+    };
+    document.addEventListener('touchmove', preventTouchMove, { passive: false });
     return () => {
+      document.removeEventListener('touchmove', preventTouchMove);
       document.body.style.overflow = previousBodyOverflow;
       document.body.style.touchAction = previousBodyTouchAction;
       document.body.style.overscrollBehavior = previousBodyOverscroll;
@@ -22363,6 +22368,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
     style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))', touchAction: 'none', overscrollBehavior: 'none' }}
     onClick={() => setShowRoundRobinPanel(false)}
+    onTouchMove={(e) => e.preventDefault()}
     onKeyDown={(e) => {
       if (e.key === 'Escape') setShowRoundRobinPanel(false);
     }}
@@ -22374,6 +22380,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
       style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
       onClick={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
     >
       <RoundRobinPanel
         onClose={() => setShowRoundRobinPanel(false)}
