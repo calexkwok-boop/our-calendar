@@ -617,9 +617,6 @@ const CelebrationPodium = ({ rows }) => {
     rotate: `${(idx % 2 === 0 ? 1 : -1) * (16 + idx * 5)}deg`,
   }));
   const podiumStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 12,
     background: `linear-gradient(135deg, ${T.neon1}10 0%, ${T.neon2}08 50%, ${T.neon3}10 100%)`,
     border: `2px solid ${T.neon1}40`,
     borderRadius: 16,
