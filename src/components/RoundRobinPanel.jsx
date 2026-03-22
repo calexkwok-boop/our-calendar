@@ -273,6 +273,85 @@ const emptyState = {
   lineHeight: 1.6,
 };
 
+const segRow = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: 8,
+  marginTop: 14,
+};
+
+const segBtnBase = {
+  ...tabBtnBase,
+  background: 'rgba(255,255,255,0.04)',
+  border: `1px solid ${T.border}`,
+  color: T.sub,
+};
+
+const segBtnActive = {
+  ...segBtnBase,
+  background: 'rgba(59,130,246,0.14)',
+  border: `1px solid rgba(59,130,246,0.28)`,
+  color: '#fff',
+};
+
+const fieldLabel = {
+  display: 'block',
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 9.5,
+  fontWeight: 700,
+  letterSpacing: '0.18em',
+  textTransform: 'uppercase',
+  color: T.muted,
+  marginBottom: 6,
+};
+
+const inputBase = {
+  width: '100%',
+  background: T.card,
+  border: `1px solid ${T.border}`,
+  borderRadius: 10,
+  color: T.text,
+  fontFamily: '"DM Sans", sans-serif',
+  fontSize: 13,
+  padding: '12px 13px',
+  outline: 'none',
+};
+
+const rosterCard = {
+  marginTop: 12,
+  background: 'rgba(255,255,255,0.03)',
+  border: `1px solid ${T.border}`,
+  borderRadius: 12,
+  padding: '12px 14px',
+};
+
+const rosterHeader = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 10,
+};
+
+const rosterTitleStyle = {
+  fontFamily: '"Syne", sans-serif',
+  fontSize: 12,
+  fontWeight: 700,
+  color: T.text,
+};
+
+const rosterCountBadge = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+  background: 'rgba(59,130,246,0.12)',
+  border: '1px solid rgba(59,130,246,0.22)',
+  borderRadius: 999,
+  padding: '3px 8px',
+  fontSize: 10,
+  fontWeight: 700,
+  color: T.blueText,
+};
+
 const matchCard = {
   background: T.card,
   border: `1px solid ${T.border}`,
@@ -465,10 +544,8 @@ const CelebrationPodium = ({ rows }) => {
     background: idx % 3 === 0 ? '#60a5fa' : idx % 3 === 1 ? '#2dd4bf' : '#f472b6',
     rotate: `${(idx % 2 === 0 ? 1 : -1) * (16 + idx * 5)}deg`,
   }));
+  const visualRows = [rows[1], rows[0], rows[2]];
   const podiumStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 10,
     background: `linear-gradient(145deg, rgba(59,130,246,0.08) 0%, rgba(20,184,166,0.06) 100%)`,
     border: `1px solid ${T.borderGlow}`,
     borderRadius: 12,
@@ -526,7 +603,7 @@ const CelebrationPodium = ({ rows }) => {
           />
         ))}
       </div>
-      <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+      <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, width: '100%' }}>
       {rows[1] && (
         <div style={slotBase}>
           <div style={iconRow}>🥈</div>
@@ -566,6 +643,14 @@ const CelebrationPodium = ({ rows }) => {
 function RoundRobinPanel({
   onClose,
   participants,
+  eligibleRoundRobinEvents,
+  selectedRoundRobinEventId,
+  setSelectedRoundRobinEventId,
+  useManualRoundRobinRoster,
+  setUseManualRoundRobinRoster,
+  manualRoundRobinRosterInput,
+  setManualRoundRobinRosterInput,
+  selectedRoundRobinEntry,
   teamsOf,
   setTeamsOf,
   startRoundRobinTournament,
@@ -587,6 +672,7 @@ function RoundRobinPanel({
   }, [rounds]);
 
   const podium = useMemo(() => standings.slice(0, 3), [standings]);
+  const hasEnoughPlayers = teamsOf === 1 ? participants.length >= 2 : participants.length >= 4;
 
   useEffect(() => {
     if (!Array.isArray(rounds) || rounds.length === 0) {
@@ -686,6 +772,49 @@ function RoundRobinPanel({
 
           {!rounds || rounds.length === 0 ? (
             <div style={{ padding: '14px 14px 0' }}>
+              <div style={segRow}>
+                <button
+                  onClick={() => setUseManualRoundRobinRoster(true)}
+                  style={useManualRoundRobinRoster ? segBtnActive : segBtnBase}
+                >
+                  Manual Roster
+                </button>
+                <button
+                  onClick={() => setUseManualRoundRobinRoster(false)}
+                  style={!useManualRoundRobinRoster ? segBtnActive : segBtnBase}
+                >
+                  Popup Event
+                </button>
+              </div>
+
+              <div style={{ marginTop: 12 }}>
+                <label style={fieldLabel}>
+                  {useManualRoundRobinRoster ? 'Player Names' : 'Select Event'}
+                </label>
+                {useManualRoundRobinRoster ? (
+                  <textarea
+                    value={manualRoundRobinRosterInput}
+                    onChange={(e) => setManualRoundRobinRosterInput(e.target.value)}
+                    placeholder="Enter one player per line"
+                    rows={4}
+                    style={{ ...inputBase, resize: 'none', minHeight: 104 }}
+                  />
+                ) : (
+                  <select
+                    value={selectedRoundRobinEventId}
+                    onChange={(e) => setSelectedRoundRobinEventId(e.target.value)}
+                    style={{ ...inputBase, minHeight: 44 }}
+                  >
+                    <option value="">-- Choose Event --</option>
+                    {(eligibleRoundRobinEvents || []).map((entry) => (
+                      <option key={entry.eventId} value={entry.eventId}>
+                        {(entry.event?.title || 'Popup event')} - {entry.signupCount} joined
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
               <div>
                 <label style={{ fontFamily: '"Syne", sans-serif', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: T.muted, marginBottom: 5, display: 'block' }}>
                   Team Size
@@ -706,7 +835,51 @@ function RoundRobinPanel({
                 </div>
               </div>
 
-              <button onClick={startRoundRobinTournament} style={{ ...actionPrimary, width: '100%', marginTop: 14 }}>
+              {useManualRoundRobinRoster ? (
+                <div style={rosterCard}>
+                  <div style={rosterHeader}>
+                    <div style={rosterTitleStyle}>Manual Roster</div>
+                    <span style={rosterCountBadge}>{participants.length} entered</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: T.sub, marginTop: 6 }}>
+                    {participants.length} players entered
+                    {hasEnoughPlayers ? '' : ` - needs at least ${teamsOf === 1 ? 2 : 4} players`}
+                  </div>
+                  {participants.length > 0 && (
+                    <div style={{ fontSize: 11, color: T.muted, marginTop: 8, lineHeight: 1.6 }}>
+                      {participants.map((row) => row.displayName).join(', ')}
+                    </div>
+                  )}
+                </div>
+              ) : selectedRoundRobinEntry ? (
+                <div style={rosterCard}>
+                  <div style={rosterHeader}>
+                    <div style={rosterTitleStyle}>{selectedRoundRobinEntry.event?.title || 'Popup Event'}</div>
+                    <span style={rosterCountBadge}>{selectedRoundRobinEntry.signupCount} joined</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: T.sub, marginTop: 6 }}>
+                    {selectedRoundRobinEntry.signupCount} players on the roster
+                    {hasEnoughPlayers ? '' : ` - needs at least ${teamsOf === 1 ? 2 : 4} players`}
+                  </div>
+                  {(selectedRoundRobinEntry.signups || []).length > 0 && (
+                    <div style={{ fontSize: 11, color: T.muted, marginTop: 8, lineHeight: 1.6 }}>
+                      {(selectedRoundRobinEntry.signups || []).map((row) => row.displayName || 'Member').join(', ')}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              <button
+                onClick={startRoundRobinTournament}
+                disabled={!hasEnoughPlayers || (!useManualRoundRobinRoster && !selectedRoundRobinEventId)}
+                style={{
+                  ...actionPrimary,
+                  width: '100%',
+                  marginTop: 14,
+                  opacity: !hasEnoughPlayers || (!useManualRoundRobinRoster && !selectedRoundRobinEventId) ? 0.45 : 1,
+                  cursor: !hasEnoughPlayers || (!useManualRoundRobinRoster && !selectedRoundRobinEventId) ? 'not-allowed' : 'pointer',
+                }}
+              >
                 <Target size={14} style={{ marginRight: 6, display: 'inline-block', verticalAlign: 'middle' }} />
                 Start Tournament
               </button>

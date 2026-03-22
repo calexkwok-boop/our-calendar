@@ -22309,6 +22309,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       <RoundRobinPanel
         onClose={() => setShowRoundRobinPanel(false)}
         participants={selectedRoundRobinParticipants}
+        eligibleRoundRobinEvents={eligibleRoundRobinEvents}
+        selectedRoundRobinEventId={selectedRoundRobinEventId}
+        setSelectedRoundRobinEventId={setSelectedRoundRobinEventId}
+        useManualRoundRobinRoster={useManualRoundRobinRoster}
+        setUseManualRoundRobinRoster={setUseManualRoundRobinRoster}
+        manualRoundRobinRosterInput={manualRoundRobinRosterInput}
+        setManualRoundRobinRosterInput={setManualRoundRobinRosterInput}
+        selectedRoundRobinEntry={selectedRoundRobinEntry}
         teamsOf={activeRoundRobinTeamsOf}
         setTeamsOf={setRoundRobinTeamsOf}
         rounds={activeRoundRobinRounds}
