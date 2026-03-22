@@ -63,6 +63,21 @@ const createJourneyGoalDraft = (overrides = {}, pinned = true) => ({
 
 const getJourneyStorageKey = (userId) => `journey-home-${String(userId || 'guest').trim() || 'guest'}`;
 
+const getPopupManualPlayersStorageKey = (eventId) => `popup-manual-players:${String(eventId || '').trim()}`;
+
+const readPopupManualPlayers = (eventId) => {
+  if (typeof window === 'undefined') return [];
+  const normalizedEventId = String(eventId || '').trim();
+  if (!normalizedEventId) return [];
+  try {
+    const raw = localStorage.getItem(getPopupManualPlayersStorageKey(normalizedEventId));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
 const createEmptyJourneyState = () => ({
   goals: [],
   entries: [],
@@ -18325,7 +18340,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   .map((eventId) => {
     const event = popupEventDetailsById[String(eventId || '')] || null;
     const signups = popupSignupsByEventId[String(eventId || '')] || [];
-    return { eventId: String(eventId || ''), event, signups, signupCount: signups.length };
+    const manualPlayers = readPopupManualPlayers(eventId);
+    const mergedSignups = [...signups];
+    manualPlayers.forEach((player, idx) => {
+      const manualName = String(player?.display_name || '').trim();
+      if (!manualName) return;
+      const duplicate = mergedSignups.some((entry) => String(entry?.displayName || '').trim().toLowerCase() === manualName.toLowerCase());
+      if (duplicate) return;
+      mergedSignups.push({
+        memberId: String(player?.id || `manual-${idx + 1}`),
+        userId: '',
+        displayName: manualName,
+        manual: true,
+        createdAt: String(player?.joined_at || ''),
+      });
+    });
+    return { eventId: String(eventId || ''), event, signups: mergedSignups, signupCount: mergedSignups.length };
   })
   .filter((entry) => entry.event && entry.signupCount >= 3)
   .sort((a, b) => {
@@ -18805,7 +18835,7 @@ function parseManualRoundRobinRoster(value) {
     if (participants.length < 3) { setRoundRobinError('Need at least 3 players.'); return; }
   } else {
     const entry = eligibleRoundRobinEvents.find((item) => String(item?.eventId || '') === normalizedEventId) || null;
-    if (!entry || entry.signupCount < 3) { setRoundRobinError('Need at least 3 signed-up players.'); return; }
+    if (!entry || entry.signupCount < 3) { setRoundRobinError('Need at least 3 players on the roster.'); return; }
     participants = (entry.signups || []).map((signup, idx) => ({
       id: String(
         signup?.memberId

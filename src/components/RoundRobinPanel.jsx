@@ -597,9 +597,9 @@ function RoundRobinPanel({
               <div style={liveDot} />
               Live
             </div>
-            <div style={heroTitle}>Single Elimination</div>
+            <div style={heroTitle}>Round Robin</div>
             <div style={heroSub}>
-              Everyone plays everyone. Fair matchups, full tournament bracket.
+              Single Elimination. May the best team or player win!
             </div>
           </div>
           <button
