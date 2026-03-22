@@ -22363,7 +22363,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         manualRoundRobinRosterInput={manualRoundRobinRosterInput}
         setManualRoundRobinRosterInput={setManualRoundRobinRosterInput}
         selectedRoundRobinEntry={selectedRoundRobinEntry}
-        currentUserLabel={String(currentUser || user?.email || user?.phone || '')}
+        currentUserId={String(user?.id || '')}
+        currentUserAliases={[
+          String(currentUser || ''),
+          String(user?.email || ''),
+          String(user?.phone || ''),
+          String(resolveHandleLikeLabel(String(currentUser || user?.email || user?.phone || 'Member'), String(user?.id || '')) || ''),
+        ]}
         currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
         teamsOf={activeRoundRobinTeamsOf}
         setTeamsOf={setRoundRobinTeamsOf}
@@ -22428,7 +22434,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         renderTeamName={renderScrambleTeamName}
         participantMap={scrambleParticipantMap}
         tournamentKey={scrambleTournamentKey}
-        currentUserLabel={String(currentUser || user?.email || user?.phone || '')}
+        currentUserId={String(user?.id || '')}
+        currentUserAliases={[
+          String(currentUser || ''),
+          String(user?.email || ''),
+          String(user?.phone || ''),
+          String(resolveHandleLikeLabel(String(currentUser || user?.email || user?.phone || 'Member'), String(user?.id || '')) || ''),
+        ]}
         currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
       />
     </div>

@@ -544,10 +544,15 @@ const getParticipantPhotoUrl = (participant) => String(
   || ''
 ).trim();
 
-function PodiumAvatar({ participant, label, fallbackPhotoUrl = '', currentUserLabel = '' }) {
+function PodiumAvatar({ participant, label, fallbackPhotoUrl = '', currentUserId = '', currentUserAliases = [] }) {
   const normalizedLabel = String(label || '').trim().toLowerCase();
-  const normalizedCurrentUserLabel = String(currentUserLabel || '').trim().toLowerCase();
-  const photoUrl = getParticipantPhotoUrl(participant) || (normalizedLabel && normalizedLabel === normalizedCurrentUserLabel ? String(fallbackPhotoUrl || '').trim() : '');
+  const normalizedAliases = (Array.isArray(currentUserAliases) ? currentUserAliases : [])
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean);
+  const matchesCurrentUser =
+    (String(participant?.userId || '').trim() && String(participant?.userId || '').trim() === String(currentUserId || '').trim())
+    || (normalizedLabel && normalizedAliases.includes(normalizedLabel));
+  const photoUrl = getParticipantPhotoUrl(participant) || (matchesCurrentUser ? String(fallbackPhotoUrl || '').trim() : '');
   if (photoUrl) {
     return (
       <img
@@ -655,7 +660,8 @@ const CelebrationPodium = ({ rows }) => {
               participant={rows[1].participant}
               label={rows[1].displayName}
               fallbackPhotoUrl={currentUserProfilePhotoUrl}
-              currentUserLabel={currentUserLabel}
+              currentUserId={currentUserId}
+              currentUserAliases={currentUserAliases}
             />
           </div>
           <div style={iconRow}>🥈</div>
@@ -672,7 +678,8 @@ const CelebrationPodium = ({ rows }) => {
               participant={rows[0].participant}
               label={rows[0].displayName}
               fallbackPhotoUrl={currentUserProfilePhotoUrl}
-              currentUserLabel={currentUserLabel}
+              currentUserId={currentUserId}
+              currentUserAliases={currentUserAliases}
             />
           </div>
           <div style={iconRow}>🏆</div>
@@ -689,7 +696,8 @@ const CelebrationPodium = ({ rows }) => {
               participant={rows[2].participant}
               label={rows[2].displayName}
               fallbackPhotoUrl={currentUserProfilePhotoUrl}
-              currentUserLabel={currentUserLabel}
+              currentUserId={currentUserId}
+              currentUserAliases={currentUserAliases}
             />
           </div>
           <div style={iconRow}>🥉</div>
@@ -719,7 +727,8 @@ function RoundRobinPanel({
   manualRoundRobinRosterInput,
   setManualRoundRobinRosterInput,
   selectedRoundRobinEntry,
-  currentUserLabel,
+  currentUserId,
+  currentUserAliases,
   currentUserProfilePhotoUrl,
   teamsOf,
   setTeamsOf,
