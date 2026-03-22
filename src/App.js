@@ -6503,6 +6503,12 @@ useEffect(() => {
     color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : '#ffffff',
     boxShadow: `0 4px 14px ${hexToRgba(activeLayerPageTheme.accent, 0.35)}`,
   };
+  const calendarViewTogglePillStyle = {
+    backgroundColor: darkMode ? 'rgba(17,24,39,0.82)' : 'rgba(255,255,255,0.88)',
+    borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.7)',
+    backdropFilter: 'blur(14px)',
+    boxShadow: darkMode ? '0 10px 24px rgba(0,0,0,0.28)' : '0 10px 24px rgba(15,23,42,0.12)',
+  };
   const themeAccentTextStyle = { color: isLightHexColor(activeLayerPageTheme.accent) ? '#111111' : activeLayerPageTheme.accent };
   const themeAccentSoftButtonStyle = {
     backgroundColor: themeAccentSoftBg,
@@ -16411,6 +16417,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     .sort((a, b) => toDateOnlyTs(getSubCalEndRaw(b)) - toDateOnlyTs(getSubCalEndRaw(a)));
   const greetingHour = new Date().getHours();
   const homeGreeting = greetingHour < 12 ? 'Good morning' : greetingHour < 18 ? 'Good afternoon' : 'Good evening';
+  const homeGreetingEmoji = greetingHour < 18 ? '☀️' : '🌙';
   const homeGreetingName = String(currentUser || user?.user_metadata?.handle || user?.user_metadata?.username || user?.email || 'there')
     .trim()
     .split('@')[0];
@@ -16451,6 +16458,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     && String(entry?.createdAt || '').slice(0, 10) === todayKey
   ));
   const primaryJourneyLoggedToday = primaryJourneyTodayEntries.length > 0;
+  const showCalendarViewToggle = bottomNavTab === 'home' && preferCalendarHome;
   const journeyLatestEntry = [...(journeyState?.entries || [])]
     .sort((a, b) => Number(new Date(b?.createdAt || 0)) - Number(new Date(a?.createdAt || 0)))[0] || null;
   const journeyUpdatedToday = Boolean(
@@ -17645,9 +17653,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const userKey = String(uid || '').trim();
     const layerKey = String(layerId || '').trim();
     if (!userKey) return [];
-    const scoped = layerKey ? `control-widgets-${userKey}-${layerKey}` : '';
-    const fallback = `control-widgets-${userKey}`;
-    return scoped ? [scoped, fallback] : [fallback];
+    const shared = `control-widgets-${userKey}`;
+    const legacyScoped = layerKey ? `control-widgets-${userKey}-${layerKey}` : '';
+    return legacyScoped ? [shared, legacyScoped] : [shared];
   }, [user?.id, activeLayerId]);
   const getControlWidgetStorageMapKey = React.useCallback((uid = user?.id) => {
     const userKey = String(uid || '').trim();
@@ -17742,58 +17750,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, activeLayerId, getControlWidgetStorageBases, getControlWidgetStorageMapKey]);
 
   useEffect(() => {
-    if (!user?.id || !activeLayerId || !controlWidgetPrefsReady) return;
+    if (!user?.id || !controlWidgetPrefsReady) return;
     const keyBases = getControlWidgetStorageBases(user.id, activeLayerId);
     try {
-      keyBases.forEach((base) => {
-        localStorage.setItem(`${base}-order`, JSON.stringify(controlWidgetOrder));
-        localStorage.setItem(`${base}-layout`, JSON.stringify(coverWidgetLayout));
-      });
-      const mapKey = getControlWidgetStorageMapKey(user.id);
-      if (mapKey) {
-        const layerKey = String(activeLayerId || '').trim();
-        let parsedMap = {};
-        try {
-          parsedMap = JSON.parse(localStorage.getItem(mapKey) || '{}') || {};
-        } catch {
-          parsedMap = {};
-        }
-        parsedMap[layerKey] = {
-          order: controlWidgetOrder,
-          layout: coverWidgetLayout,
-          updatedAt: new Date().toISOString(),
-        };
-        localStorage.setItem(mapKey, JSON.stringify(parsedMap));
-      }
+      const sharedBase = keyBases[0];
+      if (!sharedBase) return;
+      localStorage.setItem(`${sharedBase}-order`, JSON.stringify(controlWidgetOrder));
+      localStorage.setItem(`${sharedBase}-layout`, JSON.stringify(coverWidgetLayout));
     } catch {}
-  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases, getControlWidgetStorageMapKey]);
+  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases]);
 
   const flushControlWidgetPrefs = React.useCallback(() => {
-    if (!user?.id || !activeLayerId || !controlWidgetPrefsReady) return;
+    if (!user?.id || !controlWidgetPrefsReady) return;
     const keyBases = getControlWidgetStorageBases(user.id, activeLayerId);
     try {
-      keyBases.forEach((base) => {
-        localStorage.setItem(`${base}-order`, JSON.stringify(controlWidgetOrder));
-        localStorage.setItem(`${base}-layout`, JSON.stringify(coverWidgetLayout));
-      });
-      const mapKey = getControlWidgetStorageMapKey(user.id);
-      if (mapKey) {
-        const layerKey = String(activeLayerId || '').trim();
-        let parsedMap = {};
-        try {
-          parsedMap = JSON.parse(localStorage.getItem(mapKey) || '{}') || {};
-        } catch {
-          parsedMap = {};
-        }
-        parsedMap[layerKey] = {
-          order: controlWidgetOrder,
-          layout: coverWidgetLayout,
-          updatedAt: new Date().toISOString(),
-        };
-        localStorage.setItem(mapKey, JSON.stringify(parsedMap));
-      }
+      const sharedBase = keyBases[0];
+      if (!sharedBase) return;
+      localStorage.setItem(`${sharedBase}-order`, JSON.stringify(controlWidgetOrder));
+      localStorage.setItem(`${sharedBase}-layout`, JSON.stringify(coverWidgetLayout));
     } catch {}
-  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases, getControlWidgetStorageMapKey]);
+  }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases]);
 
   const getHeaderModuleStorageKey = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
     const userKey = String(uid || '').trim();
@@ -18360,7 +18336,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               className="flex-1 px-6 py-3 text-white rounded-xl hover:shadow-lg transition-all font-medium"
               style={themeAccentButtonStyle}
             >
-              Add Event
+              + Add Event
             </button>
             <button
               onClick={() => handleTimeSubmit(null)}
@@ -20349,6 +20325,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <WelcomeCover
                 userName={homeGreetingName || currentUserProfileLabel || null}
                 darkMode={darkMode}
+                accentColor={activeLayerPageTheme.accent}
+                backgroundFrom={activeLayerPageTheme.backgroundFrom}
+                backgroundVia={activeLayerPageTheme.backgroundVia}
+                backgroundTo={activeLayerPageTheme.backgroundTo}
               />
             </div>
           ) : null}
@@ -20399,14 +20379,65 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     {calendarTitle}
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); if (canEditActiveLayerTitle) openTitleStyleModal(); }}
-                  className={canEditActiveLayerTitle ? 'hover:opacity-80' : 'cursor-default'}
-                  style={activeLayerMonthYearTextStyle}
-                >
-                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </button>
+                <div className="flex flex-col items-end gap-1.5">
+                  <div
+                    className="flex items-center gap-1.5 rounded-2xl border px-2 py-1"
+                    style={calendarViewTogglePillStyle}
+                  >
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); calendarView === 'month' ? changeMonth(-1) : changeWeek(-1); }}
+                      className="p-1 rounded-lg transition-all hover:bg-white/10"
+                      aria-label="Previous period"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); if (canEditActiveLayerTitle) openTitleStyleModal(); }}
+                      className={`px-1 text-xs sm:text-sm font-semibold text-right ${canEditActiveLayerTitle ? 'hover:opacity-80' : 'cursor-default'}`}
+                      style={activeLayerMonthYearTextStyle}
+                    >
+                      {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); calendarView === 'month' ? changeMonth(1) : changeWeek(1); }}
+                      className="p-1 rounded-lg transition-all hover:bg-white/10"
+                      aria-label="Next period"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {showCalendarViewToggle && (
+                    <div
+                      className="flex rounded-2xl overflow-hidden border text-xs font-medium"
+                      style={calendarViewTogglePillStyle}
+                    >
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setCalendarView('month'); }}
+                        className={`px-3 py-1 transition-all ${calendarView === 'month' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-white/10'}`}
+                        style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
+                      >
+                        Month
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setCalendarView('week'); }}
+                        className={`px-3 py-1 transition-all ${calendarView === 'week' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-white/10'}`}
+                        style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
+                      >
+                        Week
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setCalendarView('agenda'); }}
+                        className={`px-3 py-1 transition-all ${calendarView === 'agenda' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-white/10'}`}
+                        style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
+                      >
+                        Agenda
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
             </div>
@@ -20543,31 +20574,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               >
                 <ChevronRight className="w-6 h-6" style={undefined} />
               </button>
-              {!(bottomNavTab === 'home' && !preferCalendarHome) && (
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-2 sm:bottom-3 z-20 flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium">
-                  <button
-                    onClick={() => setCalendarView('month')}
-                    className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                    style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
-                  >
-                    Month
-                  </button>
-                  <button
-                    onClick={() => setCalendarView('week')}
-                    className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                    style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
-                  >
-                    Week
-                  </button>
-                  <button
-                    onClick={() => setCalendarView('agenda')}
-                    className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                    style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
-                  >
-                    Agenda
-                  </button>
-                </div>
-              )}
             </>
           ) : (
             <div className="absolute inset-x-0 bottom-2 sm:bottom-3 flex items-center justify-between gap-2 px-2 sm:px-3">
@@ -20579,31 +20585,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <ChevronLeft className="w-6 h-6" style={undefined} />
               </button>
               <div className="flex flex-col items-center gap-1">
-                {!(bottomNavTab === 'home' && !preferCalendarHome) && (
-                  <div className="flex rounded-lg overflow-hidden border dark:border-gray-600 text-xs font-medium" style={undefined}>
-                    <button
-                      onClick={() => setCalendarView('month')}
-                      className={`px-2.5 py-0.5 transition-all ${calendarView === 'month' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                      style={calendarView === 'month' ? themeAccentButtonStyle : undefined}
-                    >
-                      Month
-                    </button>
-                    <button
-                      onClick={() => setCalendarView('week')}
-                      className={`px-2.5 py-0.5 transition-all ${calendarView === 'week' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                      style={calendarView === 'week' ? themeAccentButtonStyle : undefined}
-                    >
-                      Week
-                    </button>
-                    <button
-                      onClick={() => setCalendarView('agenda')}
-                      className={`px-2.5 py-0.5 transition-all ${calendarView === 'agenda' ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'}`}
-                      style={calendarView === 'agenda' ? themeAccentButtonStyle : undefined}
-                    >
-                      Agenda
-                    </button>
-                  </div>
-                )}
                 {calendarView !== 'month' && (
                   <h2 className="text-lg sm:text-xl font-semibold" style={activeLayerTitleTextStyle}>
                     {calendarView === 'week'
@@ -22935,20 +22916,36 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <div
               className="relative overflow-hidden rounded-[28px] border p-4 sm:p-5 shadow-xl transition-all duration-300"
               style={{
-                borderColor: darkMode ? 'rgba(168,85,247,0.28)' : 'rgba(196,181,253,0.7)',
+                borderColor: themeAccentBorder,
                 background: darkMode
-                  ? 'linear-gradient(135deg, rgba(88,28,135,0.34) 0%, rgba(30,41,59,0.9) 48%, rgba(124,58,237,0.18) 100%)'
-                  : 'linear-gradient(135deg, rgba(250,245,255,0.98) 0%, rgba(253,242,248,0.96) 52%, rgba(255,247,237,0.98) 100%)',
-                boxShadow: darkMode ? '0 20px 44px rgba(76,29,149,0.2)' : '0 20px 44px rgba(168,85,247,0.12)',
+                  ? `linear-gradient(135deg, ${hexToRgba(mixHexColors(activeLayerPageTheme.backgroundFrom, '#111827', 0.76), 0.94)} 0%, ${hexToRgba(mixHexColors(activeLayerPageTheme.backgroundVia, '#111827', 0.82), 0.96)} 52%, ${hexToRgba(mixHexColors(activeLayerPageTheme.backgroundTo, '#111827', 0.72), 0.9)} 100%)`
+                  : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.backgroundFrom, 0.96)} 0%, ${hexToRgba(activeLayerPageTheme.backgroundVia, 0.94)} 52%, ${hexToRgba(activeLayerPageTheme.backgroundTo, 0.96)} 100%)`,
+                boxShadow: darkMode
+                  ? `0 20px 44px ${hexToRgba(mixHexColors(activeLayerPageTheme.accent, '#000000', 0.72), 0.26)}`
+                  : `0 20px 44px ${hexToRgba(activeLayerPageTheme.accent, 0.14)}`,
               }}
             >
-              <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-purple-200/40 blur-3xl dark:bg-purple-500/14" />
-              <div className="pointer-events-none absolute bottom-0 left-0 h-24 w-24 rounded-full bg-orange-200/30 blur-2xl dark:bg-pink-500/10" />
+              <div
+                className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full blur-3xl"
+                style={{
+                  background: darkMode
+                    ? hexToRgba(activeLayerPageTheme.accent, 0.16)
+                    : hexToRgba(activeLayerPageTheme.accent, 0.18),
+                }}
+              />
+              <div
+                className="pointer-events-none absolute bottom-0 left-0 h-24 w-24 rounded-full blur-2xl"
+                style={{
+                  background: darkMode
+                    ? hexToRgba(activeLayerPageTheme.backgroundTo, 0.14)
+                    : hexToRgba(activeLayerPageTheme.backgroundTo, 0.2),
+                }}
+              />
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div>
                   <div className="text-xs uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400 mb-2">Today</div>
                   <h2 className="text-2xl sm:text-3xl font-semibold leading-tight" style={themeAccentHeadingStyle}>
-                    {homeGreeting}, {homeGreetingName}
+                    {homeGreeting}, {homeGreetingName} {homeGreetingEmoji}
                   </h2>
                   <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -23095,7 +23092,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
                     style={themeAccentEllieChipButtonStyle}
                   >
-                    Start trip
+                    + Start Trip
                   </button>
                 </div>
               </div>
@@ -23486,6 +23483,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   const isInSelection = date && selectedDates.some(d => isSameDay(d, date));
                   const hasUrgentEvent = dateEvents.some(e => e.isUrgent);
                   const hasHoliday = dateEvents.some(e => e.isHoliday);
+                  const eventCount = dateEvents.length;
                   const weatherData = showWeather && dateKey ? weather[dateKey] : null;
                   const dateTs = date ? toDateOnlyTs(date) : null;
 
@@ -23496,8 +23494,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
                         return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
                       });
-                  const hasSubCalendarRange = subTripsOnDate.length > 0;
-                  const hasSecondarySubCalendarRange = subTripsOnDate.length > 1;
+                  const tripCount = subTripsOnDate.length;
+                  const isInTrip = tripCount > 0;
 
                   return (
                     <div key={index} className="relative">
@@ -23525,24 +23523,31 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             : {}),
                         }}
                       >
-                        {hasSubCalendarRange && (
+                        {isInTrip && (
                           <div
-                            className="absolute bottom-0 left-0.5 right-0.5 h-1 rounded-t bg-gradient-to-r from-emerald-300 to-green-500 opacity-90"
-                            title={`${subTripsOnDate.length} sub-calendar range${subTripsOnDate.length > 1 ? 's' : ''}`}
-                          />
-                        )}
-                        {hasSecondarySubCalendarRange && (
-                          <div
-                            className="absolute top-1.5 right-0.5 bottom-1.5 w-1 rounded-l bg-gradient-to-b from-cyan-300 to-blue-500 opacity-90"
-                            title="Additional overlapping multi-day range"
-                          />
+                            className={`absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-xs font-bold ${
+                              isSelected || isInSelection ? 'bg-white/90 text-emerald-700' : 'bg-emerald-500 text-white'
+                            }`}
+                            title={`${tripCount} trip day${tripCount > 1 ? 's' : ''}`}
+                          >
+                            🗺️ {tripCount > 1 ? tripCount : ''}
+                          </div>
                         )}
                         <div className={`text-xs sm:text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
                           {date ? date.getDate() : ''}
                           {hasHoliday && !isSelected && !isInSelection && (
-                            <span className="absolute top-0.5 right-0.5 text-xs">🎉</span>
+                            <span className="absolute bottom-0.5 left-0.5 text-[10px]">🎉</span>
                           )}
                         </div>
+                        {eventCount > 0 && (
+                          <div
+                            className={`absolute top-1 right-1 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${
+                              isSelected || isInSelection ? 'bg-white text-gray-900' : 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                            }`}
+                          >
+                            {eventCount > 9 ? '9+' : eventCount}
+                          </div>
+                        )}
                         {weatherData && !isSelected && !isInSelection && (
                           <div className="flex flex-col items-center leading-none mt-0.5">
                             <span style={{ fontSize: weatherData.icon.length > 2 ? '0.5rem' : '0.85rem' }} className={`${weatherData.icon.length > 2 ? `font-bold ${weatherData.color}` : ''}`}>
@@ -23551,14 +23556,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
                               {weatherData.high}°/{weatherData.low}°
                             </span>
-                          </div>
-                        )}
-                        {dateEvents.length > 0 && (
-                          <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 flex gap-0.5">
-                            {hasHoliday && <div className={`w-1 h-1 rounded-full ${isSelected || isInSelection ? 'bg-white' : 'bg-red-400'}`} />}
-                            {[...new Set(dateEvents.filter(shouldShowCategoryDot).map(e => e.category || 'other'))].slice(0, 2).map((cat, i) => (
-                              <div key={i} className={`w-1 h-1 rounded-full ${isSelected || isInSelection ? 'bg-white' : categories[cat]?.color || 'bg-gray-500'}`} />
-                            ))}
                           </div>
                         )}
                       </button>
@@ -23583,8 +23580,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
                     return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
                   });
-                  const hasSubCalendarRange = subTripsOnDate.length > 0;
-                  const hasSecondarySubCalendarRange = subTripsOnDate.length > 1;
+                  const tripCount = subTripsOnDate.length;
+                  const isInTrip = tripCount > 0;
 
                   return (
                     <div
@@ -23603,17 +23600,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         ...(!isSelected && !isTodayDate ? { '--theme-hover-bg': themeAccentSofterBg } : {}),
                       }}
                       >
-                      {hasSubCalendarRange && (
+                      {isInTrip && (
                         <div
-                          className={`absolute bottom-0 left-1 right-1 h-1 rounded-t ${isSelected ? 'bg-white/70' : 'bg-gradient-to-r from-emerald-300 to-green-500 opacity-90'}`}
-                          title={`${subTripsOnDate.length} sub-calendar range${subTripsOnDate.length > 1 ? 's' : ''}`}
-                        />
-                      )}
-                      {hasSecondarySubCalendarRange && (
-                        <div
-                          className={`absolute top-1.5 right-0.5 bottom-1.5 w-1 rounded-l ${isSelected ? 'bg-white/60' : 'bg-gradient-to-b from-cyan-300 to-blue-500 opacity-90'}`}
-                          title="Additional overlapping multi-day range"
-                        />
+                          className={`absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                            isSelected ? 'bg-white/90 text-emerald-700' : 'bg-emerald-500 text-white'
+                          }`}
+                          title={`${tripCount} trip day${tripCount > 1 ? 's' : ''}`}
+                        >
+                          🗺️ {tripCount > 1 ? tripCount : ''}
+                        </div>
                       )}
                       {/* Date number */}
                       <div className={`text-xs font-bold mb-1 ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-200' : 'text-gray-700 dark:text-gray-200'}`}>

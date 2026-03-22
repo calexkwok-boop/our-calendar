@@ -122,11 +122,11 @@ const AddEventModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(env(safe-area-inset-top),0.75rem)] sm:pt-4 pb-0 sm:pb-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       <div
-        className="relative w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-lg max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100vh-2rem)] rounded-t-3xl rounded-b-none sm:rounded-3xl shadow-2xl overflow-hidden border border-white/40 dark:border-white/10 flex flex-col"
         style={{
           borderColor: themeAccentBorder,
           background: darkMode ? 'rgba(15, 23, 42, 0.98)' : '#ffffff',
@@ -145,7 +145,7 @@ const AddEventModal = ({
                 </div>
               </div>
               <h2 className="text-3xl font-bold tracking-tight" style={themeAccentHeadingStyle}>
-                Add Event
+                + Add Event
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                 When, where, and what you're doing
@@ -162,10 +162,11 @@ const AddEventModal = ({
         </div>
 
         <div
-          className="p-6 space-y-5 max-h-[calc(100vh-300px)] overflow-y-auto"
+          className="flex-1 min-h-0 p-6 space-y-5 overflow-y-auto"
           style={{
             WebkitOverflowScrolling: 'touch',
             overscrollBehaviorY: 'contain',
+            touchAction: 'pan-y',
           }}
         >
           <div>
@@ -393,7 +394,7 @@ const AddEventModal = ({
           </div>
         </div>
 
-        <div className="p-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
+        <div className="p-6 pt-4 flex gap-3 bg-transparent">
           <button
             onClick={validateAndSubmit}
             className="flex-1 px-5 py-3.5 rounded-xl text-white font-semibold transition-all duration-200 hover:shadow-lg active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { X, Calendar, MapPin, Plane, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Calendar, MapPin, Plane, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -174,11 +174,11 @@ const StartTripModal = ({
   const activePickerLabel = activePicker === 'start' ? 'Choose start date' : 'Choose end date';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(env(safe-area-inset-top),0.75rem)] sm:pt-4 pb-0 sm:pb-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       <div
-        className="relative w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100vh-2rem)] rounded-t-3xl rounded-b-none sm:rounded-3xl shadow-2xl overflow-hidden border border-white/40 dark:border-white/10 flex flex-col"
         style={{
           borderColor: themeAccentBorder,
           background: darkMode ? 'rgba(15, 23, 42, 0.98)' : '#ffffff',
@@ -213,7 +213,7 @@ const StartTripModal = ({
           </div>
         </div>
 
-        <div className="p-6 space-y-5 max-h-[calc(100vh-220px)] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}>
+        <div className="flex-1 min-h-0 p-6 space-y-5 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', touchAction: 'pan-y' }}>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
@@ -398,21 +398,6 @@ const StartTripModal = ({
             )}
           </div>
 
-          <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/10 border border-blue-200 dark:border-blue-800">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
-                What you can do
-              </span>
-            </div>
-            <ul className="space-y-1.5 text-xs text-blue-700 dark:text-blue-300">
-              <li>Add events specific to this trip</li>
-              <li>Share notes and checklists with travel buddies</li>
-              <li>Upload photos and create a trip album</li>
-              <li>Invite friends to collaborate on planning</li>
-            </ul>
-          </div>
-
           <button
             type="button"
             onClick={() => validateAndSubmit('invite')}
@@ -428,8 +413,8 @@ const StartTripModal = ({
                 <div className="text-sm font-semibold">
                   + Create & Invite Friends
                 </div>
-                <div className={`mt-1 text-xs ${hasEnoughDates ? 'text-white/85' : 'text-gray-400 dark:text-gray-500'}`}>
-                  Start the trip and jump straight into collaborator invites.
+                <div className={`mt-1 text-[11px] italic ${hasEnoughDates ? 'text-white/75' : 'text-gray-400 dark:text-gray-500'}`}>
+                  The best way to predict the future, is to create it together.
                 </div>
               </div>
               <div className={`shrink-0 rounded-xl px-3 py-2 text-xs font-semibold ${hasEnoughDates ? 'bg-white/15 text-white' : 'bg-gray-200 dark:bg-white/[0.04] text-gray-400 dark:text-gray-500'}`}>
@@ -439,7 +424,7 @@ const StartTripModal = ({
           </button>
         </div>
 
-        <div className="p-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
+        <div className="p-6 pt-4 flex gap-3 bg-transparent">
           <button
             onClick={() => validateAndSubmit('create')}
             disabled={!hasEnoughDates}
