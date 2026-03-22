@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown, Share2 } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown, Share2, Trophy } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
@@ -10,7 +10,12 @@ import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
 import ScramblePanel from "./components/ScramblePanel";
 import PopupEventPanel from "./components/PopupEventPanel";
+import AddEventModal from "./components/AddEventModal";
+import DateDetailsModal from "./components/DateDetailsModal";
+import StartTripModal from "./components/StartTripModal";
 import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
+import TrophyCase, { deriveJourneyTrophyCase } from "./components/TrophyCase";
+import WelcomeCover from "./components/WelcomeCover";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 
 // Initialize Supabase
@@ -114,7 +119,74 @@ const buildJourneyLogDraft = (goalId = '') => ({
   note: '',
   photoUrl: '',
   photoName: '',
+  entryDate: new Date().toISOString().slice(0, 10),
+  mood: '',
+  tagsText: '',
+  prompt: '',
 });
+
+const JOURNEY_JOURNAL_MOODS = Object.freeze([
+  { id: 'grateful', emoji: '🙏', label: 'Grateful' },
+  { id: 'calm', emoji: '😌', label: 'Calm' },
+  { id: 'happy', emoji: '🙂', label: 'Happy' },
+  { id: 'tired', emoji: '😴', label: 'Tired' },
+  { id: 'stressed', emoji: '😵', label: 'Stressed' },
+  { id: 'hopeful', emoji: '🌤️', label: 'Hopeful' },
+]);
+
+const JOURNEY_JOURNAL_PROMPTS = Object.freeze([
+  'What felt meaningful today?',
+  'What is taking up the most space in your mind right now?',
+  'What went better than expected today?',
+  'What do you want to remember about today a month from now?',
+  'What is one feeling you want to name honestly?',
+  'What would help tomorrow feel a little lighter?',
+]);
+const JOURNEY_JOURNAL_PROMPTS_PER_DAY = 4;
+
+const JOURNEY_JOURNAL_TAG_SUGGESTIONS = Object.freeze([
+  'gratitude',
+  'family',
+  'work',
+  'health',
+  'friends',
+  'stress',
+  'growth',
+  'win',
+]);
+
+const parseJourneyTags = (value) => {
+  const seen = new Set();
+  return String(value || '')
+    .split(',')
+    .map((tag) => String(tag || '').trim().toLowerCase())
+    .filter((tag) => {
+      if (!tag || seen.has(tag)) return false;
+      seen.add(tag);
+      return true;
+    });
+};
+
+const countJourneyJournalDays = (entries, goalId) => {
+  const normalizedGoalId = String(goalId || '').trim();
+  if (!normalizedGoalId) return 0;
+  return new Set(
+    (Array.isArray(entries) ? entries : [])
+      .filter((entry) => String(entry?.goalId || '').trim() === normalizedGoalId)
+      .filter((entry) => entry?.type === 'log' || entry?.type === 'note')
+      .map((entry) => String(entry?.entryDate || String(entry?.createdAt || '').slice(0, 10)).trim())
+      .filter(Boolean)
+  ).size;
+};
+
+const getJourneyJournalPromptRotation = (entryDateValue, prompts = JOURNEY_JOURNAL_PROMPTS, count = JOURNEY_JOURNAL_PROMPTS_PER_DAY) => {
+  const promptList = Array.isArray(prompts) ? prompts.filter(Boolean) : [];
+  if (promptList.length <= count) return promptList;
+  const dateKey = String(entryDateValue || new Date().toISOString().slice(0, 10)).trim();
+  const seed = Array.from(dateKey).reduce((total, char) => total + char.charCodeAt(0), 0);
+  const startIndex = seed % promptList.length;
+  return Array.from({ length: Math.min(count, promptList.length) }, (_, index) => promptList[(startIndex + index) % promptList.length]);
+};
 
 const readJourneyPhotoFile = (file) => new Promise((resolve, reject) => {
   if (!file) {
@@ -1049,6 +1121,61 @@ const GAUNTLET_PAIRING_PATTERNS = Object.freeze([
   Object.freeze([[0, 1], [2, 3]]),
 ]);
 
+const shuffleGauntletIds = (ids, seed) => {
+  const out = [...(ids || [])];
+  let state = Math.max(1, Number(seed) || 1);
+  const nextRand = () => {
+    state = (state * 1664525 + 1013904223) % 4294967296;
+    return state / 4294967296;
+  };
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(nextRand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+
+const getGauntletPartnerKey = (a, b) => {
+  const ids = [String(a || '').trim(), String(b || '').trim()].filter(Boolean).sort();
+  return ids.length === 2 ? ids.join('::') : '';
+};
+
+const buildGauntletPartnerHistory = (rounds) => {
+  const history = new Map();
+  (Array.isArray(rounds) ? rounds : []).forEach((round) => {
+    (round?.courts || []).forEach((court) => {
+      [[court?.teamA, court?.teamB]].flat().forEach((team) => {
+        const ids = Array.isArray(team) ? team.map((id) => String(id || '')).filter(Boolean) : [];
+        if (ids.length < 2) return;
+        for (let i = 0; i < ids.length; i += 1) {
+          for (let j = i + 1; j < ids.length; j += 1) {
+            const key = getGauntletPartnerKey(ids[i], ids[j]);
+            if (!key) continue;
+            history.set(key, (history.get(key) || 0) + 1);
+          }
+        }
+      });
+    });
+  });
+  return history;
+};
+
+const chooseGauntletPairingPattern = ({ group, partnerHistory, roundIndex = 0, courtIndex = 0 }) => {
+  const ids = Array.isArray(group) ? group.map((participant) => String(participant?.id || '')).filter(Boolean) : [];
+  if (ids.length !== 4) return GAUNTLET_PAIRING_PATTERNS[0];
+  const scoredPatterns = GAUNTLET_PAIRING_PATTERNS.map((pattern, patternIndex) => {
+    const teamAIds = pattern[0].map((playerIndex) => ids[playerIndex]).filter(Boolean);
+    const teamBIds = pattern[1].map((playerIndex) => ids[playerIndex]).filter(Boolean);
+    const score =
+      (partnerHistory.get(getGauntletPartnerKey(teamAIds[0], teamAIds[1])) || 0)
+      + (partnerHistory.get(getGauntletPartnerKey(teamBIds[0], teamBIds[1])) || 0);
+    const tiebreak = (patternIndex - ((roundIndex + courtIndex) % GAUNTLET_PAIRING_PATTERNS.length) + GAUNTLET_PAIRING_PATTERNS.length) % GAUNTLET_PAIRING_PATTERNS.length;
+    return { pattern, score, tiebreak };
+  });
+  scoredPatterns.sort((a, b) => a.score - b.score || a.tiebreak - b.tiebreak);
+  return scoredPatterns[0]?.pattern || GAUNTLET_PAIRING_PATTERNS[0];
+};
+
 const chunkIntoGauntletCourts = (participantIds, participantsById) => {
   const list = Array.isArray(participantIds) ? participantIds.map((id) => participantsById[String(id || '')]).filter(Boolean) : [];
   const courts = [];
@@ -1071,25 +1198,35 @@ const getGauntletByeIdsForOrder = (participantOrder, byeCount, byeCursor = 0) =>
   return ids;
 };
 
-const buildGauntletRoundFromOrder = ({ participantOrder, participantsById, roundIndex = 0, byeCursor = 0 }) => {
+const buildGauntletRoundFromOrder = ({ participantOrder, participantsById, roundIndex = 0, byeCursor = 0, existingRounds = [] }) => {
   const order = Array.isArray(participantOrder) ? participantOrder.map((id) => String(id || '')).filter(Boolean) : [];
   const byeCount = order.length % 4;
   const byeIds = getGauntletByeIdsForOrder(order, byeCount, byeCursor);
   const activeIds = order.filter((id) => !byeIds.includes(id));
   const courtGroups = chunkIntoGauntletCourts(activeIds, participantsById);
-  const pattern = GAUNTLET_PAIRING_PATTERNS[Math.abs(Number(roundIndex) || 0) % GAUNTLET_PAIRING_PATTERNS.length];
+  const partnerHistory = buildGauntletPartnerHistory(existingRounds);
   return {
     index: Math.max(1, Number(roundIndex || 0) + 1),
     createdAt: new Date().toISOString(),
     finalizedAt: null,
     byeIds,
     courts: (courtGroups || []).map((group, idx) => ({
-      courtNumber: idx + 1,
-      playerIds: group.map((participant) => String(participant?.id || '')).filter(Boolean),
-      teamA: pattern[0].map((playerIndex) => String(group[playerIndex]?.id || '')).filter(Boolean),
-      teamB: pattern[1].map((playerIndex) => String(group[playerIndex]?.id || '')).filter(Boolean),
-      scoreA: '',
-      scoreB: '',
+      ...(function () {
+        const pattern = chooseGauntletPairingPattern({
+          group,
+          partnerHistory,
+          roundIndex,
+          courtIndex: idx,
+        });
+        return {
+          courtNumber: idx + 1,
+          playerIds: group.map((participant) => String(participant?.id || '')).filter(Boolean),
+          teamA: pattern[0].map((playerIndex) => String(group[playerIndex]?.id || '')).filter(Boolean),
+          teamB: pattern[1].map((playerIndex) => String(group[playerIndex]?.id || '')).filter(Boolean),
+          scoreA: '',
+          scoreB: '',
+        };
+      })(),
     })),
   };
 };
@@ -1103,7 +1240,10 @@ const createGauntletTournament = ({ eventId, totalRounds, participants }) => {
     acc[id] = participant;
     return acc;
   }, {});
-  const participantOrder = safeParticipants.map((participant) => String(participant?.id || '')).filter(Boolean);
+  const participantOrder = shuffleGauntletIds(
+    safeParticipants.map((participant) => String(participant?.id || '')).filter(Boolean),
+    Date.now()
+  );
   return {
     eventId: String(eventId || ''),
     totalRounds: roundsTarget,
@@ -1118,6 +1258,7 @@ const createGauntletTournament = ({ eventId, totalRounds, participants }) => {
       participantsById,
       roundIndex: 0,
       byeCursor: 0,
+      existingRounds: [],
     })] : [],
   };
 };
@@ -1613,8 +1754,6 @@ function App() {
   const [showTitleStyleModal, setShowTitleStyleModal] = useState(false);
   const [titleNameDraft, setTitleNameDraft] = useState('');
   const [titleStyleDraft, setTitleStyleDraft] = useState(createDefaultLayerTitleStyle());
-  const titleSizeAutoSaveTimeoutRef = useRef(null);
-  const titleSizeAutoSaveSigRef = useRef('');
   const [showThemeMatchPrompt, setShowThemeMatchPrompt] = useState(false);
   const [pendingThemeMatchStyle, setPendingThemeMatchStyle] = useState(null);
   const [coverOpacityPreview, setCoverOpacityPreview] = useState(null);
@@ -1655,6 +1794,7 @@ function App() {
   const [showJourneyGoalModal, setShowJourneyGoalModal] = useState(false);
   const [showJourneyLogModal, setShowJourneyLogModal] = useState(false);
   const [showJourneyNoteModal, setShowJourneyNoteModal] = useState(false);
+  const [showJourneyTrophyCase, setShowJourneyTrophyCase] = useState(false);
   const [showJourneyRunTrackerModal, setShowJourneyRunTrackerModal] = useState(false);
   const [showJourneyWorkoutTrackerModal, setShowJourneyWorkoutTrackerModal] = useState(false);
   const [showJourneyWeightTrackerModal, setShowJourneyWeightTrackerModal] = useState(false);
@@ -1669,6 +1809,9 @@ function App() {
   const [journeyWeightCheckIn, setJourneyWeightCheckIn] = useState(() => buildJourneyWeightCheckIn());
   const [journeyLogSavingPhoto, setJourneyLogSavingPhoto] = useState(false);
   const [journeyLogError, setJourneyLogError] = useState('');
+  const [journeyJournalSearch, setJourneyJournalSearch] = useState('');
+  const [journeyJournalMoodFilter, setJourneyJournalMoodFilter] = useState('');
+  const [journeyJournalTagFilter, setJourneyJournalTagFilter] = useState('');
   const [journeyNoteDraft, setJourneyNoteDraft] = useState('');
   const [showJourneyGoalCreatedPrompt, setShowJourneyGoalCreatedPrompt] = useState(false);
   const [journeyCreatedGoalId, setJourneyCreatedGoalId] = useState('');
@@ -1914,6 +2057,15 @@ function App() {
     const orderList = Array.from(new Set((order || []).map((id) => String(id || '')).filter(Boolean)));
     return [...orderList.filter((id) => idList.includes(id)), ...idList.filter((id) => !orderList.includes(id))];
   };
+  const areStringArraysEqual = (a, b) => {
+    const left = Array.isArray(a) ? a : [];
+    const right = Array.isArray(b) ? b : [];
+    if (left.length !== right.length) return false;
+    for (let i = 0; i < left.length; i += 1) {
+      if (String(left[i] || '') !== String(right[i] || '')) return false;
+    }
+    return true;
+  };
   const reorderSortOrder = (ids, fromId, toId) => {
     const normalized = normalizeSortOrder(ids, ids);
     const source = String(fromId || '');
@@ -2023,6 +2175,28 @@ function App() {
     if (normalizedEmail) clauses.push(`email.eq."${normalizedEmail}"`);
     if (normalizedPhone) clauses.push(`phone.eq."${normalizedPhone}"`);
     return clauses.join(',');
+  };
+  const arePendingTripInvitesEqual = (a, b) => {
+    const left = Array.isArray(a) ? a : [];
+    const right = Array.isArray(b) ? b : [];
+    if (left.length !== right.length) return false;
+    for (let i = 0; i < left.length; i += 1) {
+      const current = left[i] || {};
+      const next = right[i] || {};
+      if (
+        String(current.subCalendarId || '') !== String(next.subCalendarId || '')
+        || String(current.tripName || '') !== String(next.tripName || '')
+        || String(current.layerId || '') !== String(next.layerId || '')
+        || String(current.ownerId || '') !== String(next.ownerId || '')
+        || String(current.startDate || '') !== String(next.startDate || '')
+        || String(current.endDate || '') !== String(next.endDate || '')
+        || String(current.invitedAt || '') !== String(next.invitedAt || '')
+        || String(current.identity || '') !== String(next.identity || '')
+      ) {
+        return false;
+      }
+    }
+    return true;
   };
   const getExpenseParticipants = () => {
     const seen = new Set();
@@ -2902,8 +3076,9 @@ function App() {
     } catch (e) { console.error(e); }
   };
 
-  const createSubCalendar = async () => {
+  const createSubCalendar = async (options = {}) => {
     if (!assertCanEditActiveLayer('create itineraries')) return;
+    const { openInviteAfterCreate = false } = options || {};
     console.log('createSubCalendar called', { name: newSubCalName, dates: selectedDates.length, user: user?.id });
     if (!newSubCalName.trim() || selectedDates.length < 2) {
       alert(selectedDates.length < 2 ? `Please select at least 2 dates first. Currently selected: ${selectedDates.length}` : 'Please enter a name.');
@@ -2934,10 +3109,14 @@ function App() {
       alert('Saved silently failed — check Supabase RLS policies. Run the SQL fix in the console.');
       return;
     }
-    setSubCalendars(prev => [...prev, newSC]);
+    const insertedSubCalendar = insertData[0] || newSC;
+    setSubCalendars(prev => [...prev, insertedSubCalendar]);
     setShowSubCalendarModal(false);
     setNewSubCalName('');
-    openSubCalendar(newSC);
+    await openSubCalendar(insertedSubCalendar);
+    if (openInviteAfterCreate) {
+      setShowSubCalInviteModal(true);
+    }
   };
 
   const deleteSubCalendar = async (id) => {
@@ -6123,18 +6302,15 @@ useEffect(() => {
     }
     if (!parsed || typeof parsed !== 'object') parsed = {};
     const mode = String(parsed?.mode || '').trim() === 'solid' ? 'solid' : 'gradient';
-    const showTitle = parsed?.showTitle !== false;
-    const titleScale = Math.max(0.75, Math.min(2.2, Number(parsed?.titleScale ?? DEFAULT_LAYER_TITLE_STYLE.titleScale)));
-    const monthYearScale = Math.max(0.75, Math.min(2.2, Number(parsed?.monthYearScale ?? DEFAULT_LAYER_TITLE_STYLE.monthYearScale)));
     return {
       mode,
       solidColor: normalizeHexColor(parsed?.solidColor, DEFAULT_LAYER_TITLE_STYLE.solidColor),
       gradientFrom: normalizeHexColor(parsed?.gradientFrom, DEFAULT_LAYER_TITLE_STYLE.gradientFrom),
       gradientVia: normalizeHexColor(parsed?.gradientVia, DEFAULT_LAYER_TITLE_STYLE.gradientVia),
       gradientTo: normalizeHexColor(parsed?.gradientTo, DEFAULT_LAYER_TITLE_STYLE.gradientTo),
-      showTitle,
-      titleScale: Number.isFinite(titleScale) ? titleScale : DEFAULT_LAYER_TITLE_STYLE.titleScale,
-      monthYearScale: Number.isFinite(monthYearScale) ? monthYearScale : DEFAULT_LAYER_TITLE_STYLE.monthYearScale,
+      showTitle: DEFAULT_LAYER_TITLE_STYLE.showTitle,
+      titleScale: DEFAULT_LAYER_TITLE_STYLE.titleScale,
+      monthYearScale: DEFAULT_LAYER_TITLE_STYLE.monthYearScale,
     };
   }
 
@@ -6271,7 +6447,10 @@ useEffect(() => {
     } catch {}
   };
 
-  const activeLayerTitleStyle = normalizeLayerTitleStyle(activeLayer?.title_style);
+  const activeLayerTitleStyle = useMemo(
+    () => normalizeLayerTitleStyle(activeLayer?.title_style),
+    [activeLayer?.title_style]
+  );
   const activeLayerTitleTextStyle = getLayerTitleDisplayStyle(activeLayerTitleStyle);
   const activeLayerTitleNameTextStyle = {
     ...activeLayerTitleTextStyle,
@@ -6284,11 +6463,15 @@ useEffect(() => {
     fontSize: `${getLayerTitleFontSizePx(activeLayerTitleStyle, 13, 'monthYearScale')}px`,
     lineHeight: 1.1,
   };
-  const activeLayerPageTheme = normalizeLayerPageTheme(activeLayer?.page_theme, activeLayerTitleStyle);
+  const activeLayerPageTheme = useMemo(
+    () => normalizeLayerPageTheme(activeLayer?.page_theme, activeLayerTitleStyle),
+    [activeLayer?.page_theme, activeLayerTitleStyle]
+  );
   const activeLayerNameKey = String(activeLayer?.name || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '');
   const useLegacyEllieMilesTheme = activeLayerNameKey === 'elliemiles';
+  const hasActiveLayerHeaderCover = Boolean(String(activeLayer?.header_bg_url || '').trim());
   const isCoverTapToRevealMode = !coverHeaderControlsVisible;
   const effectiveCoverOpacity = coverOpacityPreview == null
     ? activeLayerPageTheme.coverOpacity
@@ -7002,47 +7185,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const openTitleStyleModal = () => {
     if (!canEditActiveLayerTitle || !activeLayerId) return;
     setTitleNameDraft(String(calendarTitle || activeLayer?.name || '').trim());
-    const normalized = normalizeLayerTitleStyle(activeLayer?.title_style);
-    setTitleStyleDraft(normalized);
-    titleSizeAutoSaveSigRef.current = `${String(activeLayerId)}:${Number(normalized.titleScale || 1).toFixed(3)}:${Number(normalized.monthYearScale || 1).toFixed(3)}`;
-    if (titleSizeAutoSaveTimeoutRef.current) {
-      clearTimeout(titleSizeAutoSaveTimeoutRef.current);
-      titleSizeAutoSaveTimeoutRef.current = null;
-    }
+    setTitleStyleDraft(normalizeLayerTitleStyle(activeLayer?.title_style));
     setShowTitleStyleModal(true);
   };
-
-  const autoSaveTitleScaleSettings = React.useCallback(async (nextTitleScaleRaw, nextMonthYearScaleRaw) => {
-    const lid = String(activeLayerId || '').trim();
-    if (!lid || !user?.id || !canEditActiveLayerTitle) return;
-    const nextTitleScale = Math.max(0.75, Math.min(2.2, Number(nextTitleScaleRaw || 1)));
-    const nextMonthYearScale = Math.max(0.75, Math.min(2.2, Number(nextMonthYearScaleRaw || 1)));
-    const nextSig = `${lid}:${nextTitleScale.toFixed(3)}:${nextMonthYearScale.toFixed(3)}`;
-    if (nextSig === titleSizeAutoSaveSigRef.current) return;
-
-    const baseStyle = normalizeLayerTitleStyle(activeLayer?.title_style);
-    const normalizedStyle = normalizeLayerTitleStyle({
-      ...baseStyle,
-      titleScale: nextTitleScale,
-      monthYearScale: nextMonthYearScale,
-    });
-    titleSizeAutoSaveSigRef.current = nextSig;
-    writeStoredLayerTitleStyle(lid, normalizedStyle);
-    mergeLayerIntoState({ id: lid, title_style: normalizedStyle });
-
-    try {
-      const { error } = await supabase
-        .from('calendar_layers')
-        .update({ title_style: normalizedStyle })
-        .eq('id', lid)
-        .eq('owner_id', user.id);
-      if (error && !/column .*title_style|schema cache|42P01|does not exist/i.test(String(error?.message || ''))) {
-        console.error('Auto-save title scale failed:', error);
-      }
-    } catch (error) {
-      console.error('Auto-save title scale failed:', error);
-    }
-  }, [activeLayerId, user?.id, canEditActiveLayerTitle, activeLayer?.title_style]);
 
   const saveLayerPageTheme = async (themeInput, titleStyleInput = null) => {
     const lid = String(activeLayerId || '').trim();
@@ -7174,38 +7319,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (!showTitleStyleModal || !canEditActiveLayerTitle || !activeLayerId || !user?.id) return;
-    const nextTitleScale = Math.max(0.75, Math.min(2.2, Number(titleStyleDraft?.titleScale || 1)));
-    const nextMonthYearScale = Math.max(0.75, Math.min(2.2, Number(titleStyleDraft?.monthYearScale || 1)));
-    const lid = String(activeLayerId || '').trim();
-    const nextSig = `${lid}:${nextTitleScale.toFixed(3)}:${nextMonthYearScale.toFixed(3)}`;
-    if (nextSig === titleSizeAutoSaveSigRef.current) return;
-
-    if (titleSizeAutoSaveTimeoutRef.current) {
-      clearTimeout(titleSizeAutoSaveTimeoutRef.current);
-      titleSizeAutoSaveTimeoutRef.current = null;
-    }
-    titleSizeAutoSaveTimeoutRef.current = setTimeout(() => {
-      void autoSaveTitleScaleSettings(nextTitleScale, nextMonthYearScale);
-    }, 250);
-
-    return () => {
-      if (titleSizeAutoSaveTimeoutRef.current) {
-        clearTimeout(titleSizeAutoSaveTimeoutRef.current);
-        titleSizeAutoSaveTimeoutRef.current = null;
-      }
-    };
-  }, [
-    showTitleStyleModal,
-    canEditActiveLayerTitle,
-    activeLayerId,
-    user?.id,
-    titleStyleDraft?.titleScale,
-    titleStyleDraft?.monthYearScale,
-    autoSaveTitleScaleSettings,
-  ]);
 
   const saveLayerTitleStyle = async () => {
     const lid = String(activeLayerId || '').trim();
@@ -12906,12 +13019,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
   }, [user?.id, user?.email, user?.phone, layers]);
 
-  const loadPendingTripInvites = async () => {
+  const loadPendingTripInvites = React.useCallback(async () => {
     const myEmail = normalizeEmail(user?.email);
     const myPhone = normalizePhoneNumber(user?.phone);
     const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
     if (!memberRecipientFilter) {
-      setPendingTripInvites([]);
+      setPendingTripInvites((prev) => (prev.length ? [] : prev));
       return;
     }
     try {
@@ -12935,7 +13048,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           .limit(200);
         if (fallback.error) {
           console.error('loadPendingTripInvites failed:', fallback.error);
-          setPendingTripInvites([]);
+          setPendingTripInvites((prev) => (prev.length ? [] : prev));
           return;
         }
         rows = (fallback.data || []).filter((row) => {
@@ -12945,7 +13058,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
       const subCalIds = Array.from(new Set(rows.map(r => String(r?.sub_calendar_id || '')).filter(Boolean)));
       if (subCalIds.length === 0) {
-        setPendingTripInvites([]);
+        setPendingTripInvites((prev) => (prev.length ? [] : prev));
         return;
       }
       const { data: tripRows, error: tripErr } = await supabase
@@ -12972,12 +13085,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           };
         })
         .filter(Boolean);
-      setPendingTripInvites(pending);
+      setPendingTripInvites((prev) => (arePendingTripInvitesEqual(prev, pending) ? prev : pending));
     } catch (err) {
       console.error('loadPendingTripInvites exception:', err);
-      setPendingTripInvites([]);
+      setPendingTripInvites((prev) => (prev.length ? [] : prev));
     }
-  };
+  }, [user?.email, user?.phone, user?.id]);
 
   const acceptTripInvite = async (invite) => {
     if (!invite || !user?.id) return;
@@ -13083,7 +13196,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     if (!user?.email && !user?.phone) {
-      setPendingTripInvites([]);
+      setPendingTripInvites((prev) => (prev.length ? [] : prev));
       return;
     }
     loadPendingTripInvites();
@@ -13094,7 +13207,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
-  }, [user?.email, user?.phone, user?.id, layerRefreshToken, layers]);
+  }, [user?.email, user?.phone, user?.id, layerRefreshToken, loadPendingTripInvites]);
 
   // Check notification permission on load
   useEffect(() => {
@@ -16438,6 +16551,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return '';
   })();
   const selectedJourneyLogGoal = journeyGoalById[String(journeyLogDraft?.goalId || '')] || primaryJourneyGoal || null;
+  const selectedJourneyLogGoalType = getJourneyGoalType(selectedJourneyLogGoal);
+  const isSelectedJourneyLogJournal = selectedJourneyLogGoalType === 'journal';
+  const visibleJourneyJournalPrompts = useMemo(
+    () => getJourneyJournalPromptRotation(journeyLogDraft?.entryDate),
+    [journeyLogDraft?.entryDate]
+  );
   const selectedJourneyRunGoal = journeyGoalById[String(journeyRunSession?.goalId || '')] || primaryJourneyGoal || null;
   const selectedJourneyWorkoutGoal = journeyGoalById[String(journeyWorkoutSession?.goalId || '')] || primaryJourneyGoal || null;
   const selectedJourneyWeightGoal = journeyGoalById[String(journeyWeightCheckIn?.goalId || '')] || primaryJourneyGoal || null;
@@ -16478,6 +16597,27 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     : primaryJourneyLoggedToday
       ? 'Add a quick update'
       : 'Log today';
+  const primaryJourneyJournalGoalIds = sortedJourneyGoals
+    .filter((goal) => getJourneyGoalType(goal) === 'journal')
+    .map((goal) => String(goal?.id || ''))
+    .filter(Boolean);
+  const filteredJourneyJournalEntries = (journeyState?.entries || []).filter((entry) => primaryJourneyJournalGoalIds.includes(String(entry?.goalId || ''))).filter((entry) => {
+    const search = String(journeyJournalSearch || '').trim().toLowerCase();
+    const moodMatches = !journeyJournalMoodFilter || String(entry?.mood || '') === String(journeyJournalMoodFilter || '');
+    const tagMatches = !journeyJournalTagFilter || (Array.isArray(entry?.tags) && entry.tags.includes(journeyJournalTagFilter));
+    if (!search) return moodMatches && tagMatches;
+    const haystack = [
+      String(entry?.note || ''),
+      String(entry?.prompt || ''),
+      String((entry?.tags || []).join(' ')),
+      String(entry?.mood || ''),
+    ].join(' ').toLowerCase();
+    return moodMatches && tagMatches && haystack.includes(search);
+  });
+  const journeyTrophyCase = useMemo(
+    () => deriveJourneyTrophyCase({ goals: journeyState?.goals || [], entries: journeyState?.entries || [] }),
+    [journeyState?.goals, journeyState?.entries]
+  );
   const ownedLayerCalendars = layers.filter(layer => String(layer.owner_id) === String(user?.id));
   const uniqueVisibleLayers = Array.from(
     new Map((layers || []).map(layer => [String(layer?.id || ''), layer])).values()
@@ -16497,7 +16637,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, journeyState]);
 
   useEffect(() => {
-    const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal || showJourneyWeightTrackerModal;
+    const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyTrophyCase || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal || showJourneyWeightTrackerModal;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
     const scrollY = window.scrollY || window.pageYOffset || 0;
     const previousBodyOverflow = document.body.style.overflow;
@@ -16552,7 +16692,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       document.documentElement.style.backgroundImage = previousDocBackgroundImage;
       window.scrollTo(0, scrollY);
     };
-  }, [darkMode, showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal, showJourneyWeightTrackerModal]);
+  }, [darkMode, showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyTrophyCase, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal, showJourneyWeightTrackerModal]);
 
   useEffect(() => {
     if (!showRoundRobinPanel || typeof document === 'undefined') return undefined;
@@ -16849,12 +16989,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const addJourneyLog = () => {
     const goalToLog = journeyGoalById[String(journeyLogDraft?.goalId || '')] || primaryJourneyGoal || null;
-    const amount = Math.max(0, normalizeJourneyNumber(journeyLogDraft?.amount));
+    const isJournalGoal = getJourneyGoalType(goalToLog) === 'journal';
+    const amount = isJournalGoal ? 1 : Math.max(0, normalizeJourneyNumber(journeyLogDraft?.amount));
     const note = String(journeyLogDraft?.note || '').trim();
     const photoUrl = String(journeyLogDraft?.photoUrl || '');
     const photoName = String(journeyLogDraft?.photoName || '').trim();
-    if (!amount && !note && !photoUrl) {
-      setJourneyLogError('Add progress, a note, or a photo.');
+    const entryDate = String(journeyLogDraft?.entryDate || new Date().toISOString().slice(0, 10)).trim() || new Date().toISOString().slice(0, 10);
+    const mood = String(journeyLogDraft?.mood || '').trim();
+    const tags = parseJourneyTags(journeyLogDraft?.tagsText);
+    const prompt = String(journeyLogDraft?.prompt || '').trim();
+    if ((isJournalGoal && !note && !photoUrl) || (!isJournalGoal && !amount && !note && !photoUrl)) {
+      setJourneyLogError(isJournalGoal ? 'Write something or add a photo.' : 'Add progress, a note, or a photo.');
       return;
     }
     const now = new Date().toISOString();
@@ -16866,6 +17011,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       note,
       photoUrl,
       photoName,
+      entryDate,
+      mood,
+      tags,
+      prompt,
       createdAt: now,
     };
     setJourneyState((prev) => ({
@@ -16874,7 +17023,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         goalToLog && String(goal?.id || '') === String(goalToLog.id)
           ? {
               ...goal,
-              current: normalizeJourneyNumber(goal?.current) + amount,
+              current: getJourneyGoalType(goal) === 'journal'
+                ? countJourneyJournalDays([entry, ...(prev?.entries || [])], goal.id)
+                : normalizeJourneyNumber(goal?.current) + amount,
               updatedAt: now,
             }
           : goal
@@ -17152,7 +17303,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 ...goal,
                 current: getJourneyGoalType(goal) === 'lose_weight'
                   ? getJourneyWeightMetrics(goal, filteredEntries).poundsLost
-                  : Math.max(0, normalizeJourneyNumber(goal?.current) - progressReduction),
+                  : getJourneyGoalType(goal) === 'journal'
+                    ? countJourneyJournalDays(filteredEntries, goal.id)
+                    : Math.max(0, normalizeJourneyNumber(goal?.current) - progressReduction),
                 startingWeight: getJourneyGoalType(goal) === 'lose_weight'
                   ? getJourneyWeightMetrics(goal, filteredEntries).startingWeight
                   : goal?.startingWeight,
@@ -17208,7 +17361,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           ? `Weighed in at ${formatJourneyWeight(entry?.currentWeight)} lb`
           : `${entry?.summaryLabel || 'Weight check-in'}${entry?.note ? ` • ${entry.note}` : ''}`)
       : entry?.type === 'log'
-        ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
+        ? (getJourneyGoalType(entryGoal) === 'journal'
+          ? `${entry?.mood ? `${(JOURNEY_JOURNAL_MOODS.find((mood) => mood.id === entry.mood)?.label || entry.mood)} journal` : 'Journal entry'}${entry?.note ? `: ${entry.note}` : ''}`
+          : `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`)
         : String(entry?.note || 'Journey update').trim();
     const shareText = [
       entryGoal?.title ? `Journey goal: ${entryGoal.title}` : 'Journey update',
@@ -17329,14 +17484,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!eventsTabVisibleLayerIdsInitialized) {
       const savedVisibleLayerIds = readLocalSortOrderOrNull(getUpcomingEventsVisibleCalendarsLocalKey(user.id));
       if (savedVisibleLayerIds === null) {
-        setEventsTabVisibleLayerIds(ids);
+        setEventsTabVisibleLayerIds((prev) => (areStringArraysEqual(prev, ids) ? prev : ids));
       } else {
-        setEventsTabVisibleLayerIds(savedVisibleLayerIds.filter((id) => ids.includes(id)));
+        const nextVisibleIds = savedVisibleLayerIds.filter((id) => ids.includes(id));
+        setEventsTabVisibleLayerIds((prev) => (areStringArraysEqual(prev, nextVisibleIds) ? prev : nextVisibleIds));
       }
       setEventsTabVisibleLayerIdsInitialized(true);
       return;
     }
-    setEventsTabVisibleLayerIds((prev) => Array.from(new Set((prev || []).map(String).filter((id) => ids.includes(id)))));
+    setEventsTabVisibleLayerIds((prev) => {
+      const nextVisibleIds = Array.from(new Set((prev || []).map(String).filter((id) => ids.includes(id))));
+      return areStringArraysEqual(prev, nextVisibleIds) ? prev : nextVisibleIds;
+    });
   }, [user?.id, visibleLayerCalendars, eventsTabVisibleLayerIdsInitialized]);
 
   useEffect(() => {
@@ -17356,17 +17515,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     const ids = visibleLayerCalendars.map((layer) => String(layer?.id || ''));
-    setActiveCalendarSortOrder((prev) => normalizeSortOrder(ids, prev));
+    setActiveCalendarSortOrder((prev) => {
+      const nextOrder = normalizeSortOrder(ids, prev);
+      return areStringArraysEqual(prev, nextOrder) ? prev : nextOrder;
+    });
   }, [visibleLayerCalendars]);
 
   useEffect(() => {
     const ids = upcomingTrips.map((trip) => String(trip?.id || ''));
-    setUpcomingTripSortOrder((prev) => normalizeSortOrder(ids, prev));
+    setUpcomingTripSortOrder((prev) => {
+      const nextOrder = normalizeSortOrder(ids, prev);
+      return areStringArraysEqual(prev, nextOrder) ? prev : nextOrder;
+    });
   }, [upcomingTrips]);
 
   useEffect(() => {
     const ids = upcomingPopupEvents.map((event) => String(event?.id || ''));
-    setUpcomingPopupSortOrder((prev) => normalizeSortOrder(ids, prev));
+    setUpcomingPopupSortOrder((prev) => {
+      const nextOrder = normalizeSortOrder(ids, prev);
+      return areStringArraysEqual(prev, nextOrder) ? prev : nextOrder;
+    });
   }, [upcomingPopupEvents]);
 
   useEffect(() => {
@@ -18220,118 +18388,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   if (showHomeAddEventModal) {
     return (
-      <div className="min-h-screen w-full" style={{ background: 'rgba(17, 24, 39, 0.58)' }}>
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div
-            style={{
-              width: 'calc(100vw - 2rem)',
-              maxWidth: '28rem',
-              boxSizing: 'border-box',
-              borderColor: themeAccentBorder,
-              background: darkMode ? 'rgba(15, 23, 42, 0.96)' : '#ffffff',
-            }}
-            className="w-full rounded-[28px] border shadow-2xl p-5 sm:p-6"
-          >
-          <div className="flex items-start justify-between gap-3 mb-5">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-1.5">Plan ahead</div>
-              <h2 className="text-[2rem] font-semibold leading-none" style={themeAccentHeadingStyle}>
-                Add Event
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 max-w-sm leading-relaxed">
-                Pick the date, time, place, and what you&apos;re doing.
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setShowHomeAddEventModal(false);
-                resetHomeAddEventForm();
-              }}
-              className="w-10 h-10 rounded-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-white/[0.04] text-gray-500 dark:text-gray-300 flex items-center justify-center shrink-0"
-              aria-label="Close add event"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-[11px] uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400 mb-2">
-                What you&apos;re doing
-              </label>
-              <input
-                autoFocus
-                type="text"
-                value={homeAddEventForm.title}
-                onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, title: e.target.value }))}
-                placeholder="Dinner, workout, birthday, meeting..."
-                className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400 mb-2">
-                  Date
-                </label>
-                <input
-                  type="text"
-                  value={homeAddEventForm.date}
-                  onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, date: e.target.value }))}
-                  placeholder="YYYY-MM-DD"
-                  className="w-full min-w-0 h-12 px-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                  inputMode="numeric"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400 mb-2">
-                  Time
-                </label>
-                <input
-                  type="text"
-                  value={homeAddEventForm.time}
-                  onChange={(e) => setHomeAddEventForm((prev) => ({ ...prev, time: e.target.value }))}
-                  placeholder="3:30 PM or 15:30"
-                  className="w-full min-w-0 h-12 px-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400 mb-2">
-                Location
-              </label>
-              <PlacesAutocomplete
-                value={homeAddEventForm.location}
-                onSelect={(val) => setHomeAddEventForm((prev) => ({ ...prev, location: val || '' }))}
-                placeholder="Search for a place"
-                className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-3 mt-6">
-            <button
-              onClick={handleSubmitHomeAddEvent}
-              className="flex-1 px-4 py-3 rounded-2xl text-white font-medium transition-all hover:shadow-lg"
-              style={themeAccentButtonStyle}
-            >
-              Save event
-            </button>
-            <button
-              onClick={() => {
-                setShowHomeAddEventModal(false);
-                resetHomeAddEventForm();
-              }}
-              className="px-4 py-3 rounded-2xl transition-all"
-              style={themeAccentSoftButtonStyle}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-        </div>
-      </div>
+      <AddEventModal
+        isOpen={showHomeAddEventModal}
+        onClose={() => {
+          setShowHomeAddEventModal(false);
+          resetHomeAddEventForm();
+        }}
+        formData={homeAddEventForm}
+        setFormData={setHomeAddEventForm}
+        onSubmit={handleSubmitHomeAddEvent}
+        PlacesAutocomplete={PlacesAutocomplete}
+        darkMode={darkMode}
+        themeAccentButtonStyle={themeAccentButtonStyle}
+        themeAccentHeadingStyle={themeAccentHeadingStyle}
+        themeAccentBorder={themeAccentBorder}
+        themeAccentSoftButtonStyle={themeAccentSoftButtonStyle}
+      />
     );
   }
 
@@ -18375,11 +18447,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const unreadInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 0 : 1), 0);
   const readInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 1 : 0), 0);
-  const homeActivityItems = [
-    unreadInAppCount > 0 ? { label: 'Notifications', value: `${unreadInAppCount} unread` } : null,
-    filteredUpcomingUserTabEvents.length > 0 ? { label: 'Upcoming', value: `${filteredUpcomingUserTabEvents.length} planned` } : null,
-    activeTrips.length > 0 ? { label: 'Trips live', value: `${activeTrips.length} active` } : null,
-  ].filter(Boolean);
   const activeChatUnreadCount = Number(chatUnreadCounts[String(activeLayerId || '')] || 0);
   const activeControlWidgets = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
   const todayOverviewWidgetIds = ['notifications', 'theme', 'categories', 'notes'];
@@ -18697,6 +18764,17 @@ function parseManualRoundRobinRoster(value) {
         id: String(signup?.userId || `guest-${idx + 1}-${String(signup?.displayName || 'player').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`),
         userId: String(signup?.userId || ''),
         displayName: String(signup?.displayName || `Player ${idx + 1}`),
+        photoUrl: String(
+          signup?.photoUrl
+          || signup?.photo_url
+          || signup?.avatarUrl
+          || signup?.avatar_url
+          || ((String(signup?.userId || '') === String(user?.id || '') || String(signup?.displayName || '').trim().toLowerCase() === String(currentUser || '').trim().toLowerCase()) ? currentUserProfilePhotoUrl : '')
+          || ''
+        ),
+        photo_url: String(signup?.photo_url || signup?.photoUrl || ''),
+        avatarUrl: String(signup?.avatarUrl || signup?.avatar_url || ''),
+        avatar_url: String(signup?.avatar_url || signup?.avatarUrl || ''),
         seed: idx + 1,
       }));
     }
@@ -18758,6 +18836,7 @@ function parseManualRoundRobinRoster(value) {
           participantsById,
           roundIndex: rounds.length,
           byeCursor: Number(tournament?.byeCursor || 0),
+          existingRounds: rounds,
         });
         if (fallbackNextRound) {
           setLayerGauntlets((prev) => ({
@@ -18791,11 +18870,12 @@ function parseManualRoundRobinRoster(value) {
     const nextRound = shouldComplete || !nextParticipantOrder
       ? null
       : buildGauntletRoundFromOrder({
-        participantOrder: nextParticipantOrder,
-        participantsById,
-        roundIndex: roundIndex + 1,
-        byeCursor: nextByeCursor,
-      });
+          participantOrder: nextParticipantOrder,
+          participantsById,
+          roundIndex: roundIndex + 1,
+          byeCursor: nextByeCursor,
+          existingRounds: updatedRounds,
+        });
     const nextTournament = {
       ...tournament,
       participantOrder: nextParticipantOrder || tournament?.participantOrder || [],
@@ -20255,7 +20335,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             if (!coverHeaderControlsVisible) return;
             bumpCoverControlsInteraction();
           }}
-          style={activeLayer?.header_bg_url && effectiveCoverOpacity > 0.01
+          style={hasActiveLayerHeaderCover && effectiveCoverOpacity > 0.01
             ? {
               backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
               backgroundSize: 'cover',
@@ -20264,6 +20344,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             }
             : undefined}
         >
+          {!hasActiveLayerHeaderCover ? (
+            <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+              <WelcomeCover
+                userName={homeGreetingName || currentUserProfileLabel || null}
+                darkMode={darkMode}
+              />
+            </div>
+          ) : null}
           {bottomNavTab === 'home' && (
             <div className="absolute inset-0 z-[25] pointer-events-none">
 
@@ -22398,6 +22486,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 themeAccentHeadingStyle={themeAccentHeadingStyle}
                 updateGauntletCourtScore={updateGauntletCourtScore}
                 useManualGauntletRoster={useManualGauntletRoster}
+                currentUserId={String(user?.id || '')}
+                currentUserAliases={[
+                  String(currentUser || ''),
+                  String(user?.email || ''),
+                  String(user?.phone || ''),
+                  String(resolveHandleLikeLabel(String(currentUser || user?.email || user?.phone || 'Member'), String(user?.id || '')) || ''),
+                ]}
+                currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
               />
             </div>
           </div>
@@ -22606,14 +22702,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
 {selectedPopupEventPanelId && (
   <div
-    className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+    className="fixed inset-0 z-50 bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
     onClick={() => {
       setSelectedPopupEventPanelId(null);
       clearPopupQueryParam();
     }}
+    style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))', touchAction: 'none', overscrollBehavior: 'none' }}
   >
     <div
-      className="w-full max-w-lg max-h-[90vh] overflow-y-auto"
+      className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-lg sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+      style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
       onClick={(e) => e.stopPropagation()}
     >
       <PopupEventPanel
@@ -22827,122 +22925,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             </div>
 
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={openJourneyScreen}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  openJourneyScreen();
-                }
-              }}
-              className="glass-panel rounded-[28px] border border-white/50 dark:border-white/10 p-5 sm:p-6 cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99]"
-              style={{
-                background: darkMode
-                  ? `linear-gradient(145deg, ${hexToRgba('#0f172a', 0.96)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.18)} 100%)`
-                  : `linear-gradient(145deg, rgba(255,255,255,0.98) 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
-                boxShadow: darkMode ? '0 20px 44px rgba(2,6,23,0.34)' : '0 20px 44px rgba(15,23,42,0.08)',
-              }}
-            >
-              <JourneyQuoteDisplay
-                quote={journeyQuote}
-                darkMode={darkMode}
-                compact
-                className="mb-3 max-w-[18rem]"
-              />
-
-              <div className="min-w-0">
-                <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
-                <div className="mt-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 line-clamp-2">
-                  {journeyQuickPrompt ? (primaryJourneyGoal ? `Pro tip: ${journeyQuickPrompt}` : journeyQuickPrompt) : ''}
-                </div>
-                {primaryJourneyGoal ? (
-                  <>
-                    <div className="mt-3 text-[19px] font-bold text-gray-900 dark:text-gray-100 line-clamp-1 tracking-tight">
-                      {primaryJourneyGoal.title}
-                    </div>
-                    <div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-                      {primaryJourneyProgressText}
-                    </div>
-                  </>
-                ) : null}
-              </div>
-
-              {primaryJourneyGoal ? (
-                <>
-                  <div className="mt-3.5">
-                    <div className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                      <span>{journeySupportLabel}</span>
-                      <span>{Math.round(primaryJourneyGoalProgress * 100)}%</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
-                      <div
-                        className="h-2 rounded-full transition-all duration-700 ease-out"
-                        style={{
-                          width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
-                          background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
-                          boxShadow: `0 0 12px ${hexToRgba(activeLayerPageTheme.accent, 0.4)}`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {journeyCoachLabel ? (
-                    <div
-                      className="mt-3 rounded-2xl border px-3 py-2.5 text-[11px] font-medium text-gray-600 dark:text-gray-300 backdrop-blur-sm"
-                      style={{
-                        borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, 0.12),
-                        backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08),
-                        boxShadow: `0 2px 8px ${hexToRgba(activeLayerPageTheme.accent, 0.08)}`,
-                      }}
-                    >
-                      {journeyCoachLabel}
-                    </div>
-                  ) : null}
-
-                  <div className="mt-3.5 flex items-center">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (primaryJourneyGoalType === 'run_walk') openJourneyRunTracker(primaryJourneyGoal);
-                        else if (primaryJourneyGoalType === 'workout') openJourneyWorkoutTracker(primaryJourneyGoal);
-                        else if (primaryJourneyGoalType === 'lose_weight') openJourneyWeightTracker(primaryJourneyGoal);
-                        else openJourneyLogFlow(primaryJourneyGoal);
-                      }}
-                      className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all ${primaryJourneyLoggedToday ? 'border text-gray-700 dark:text-gray-200' : 'text-white'}`}
-                      style={primaryJourneyLoggedToday
-                        ? {
-                            borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16),
-                            backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08),
-                          }
-                        : themeAccentButtonStyle}
-                    >
-                      {journeyHomeCtaLabel}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="mt-3.5 flex items-center">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openJourneyScreen();
-                    }}
-                    className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-                    style={{
-                      ...themeAccentButtonStyle,
-                      boxShadow: `0 4px 16px ${hexToRgba(activeLayerPageTheme.accent, 0.3)}`,
-                    }}
-                  >
-                    Set your first goal
-                  </button>
-                </div>
-              )}
-            </div>
-
             {overviewTodayEvents.length === 0 && homeTripsPreview.length === 0 && (
               <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-5">
                 <div className="text-base font-semibold text-gray-900 dark:text-gray-100">A clean slate today</div>
@@ -22950,7 +22932,18 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             )}
 
-            <div className="glass-panel rounded-[28px] border border-white/50 dark:border-white/10 p-4 sm:p-5">
+            <div
+              className="relative overflow-hidden rounded-[28px] border p-4 sm:p-5 shadow-xl transition-all duration-300"
+              style={{
+                borderColor: darkMode ? 'rgba(168,85,247,0.28)' : 'rgba(196,181,253,0.7)',
+                background: darkMode
+                  ? 'linear-gradient(135deg, rgba(88,28,135,0.34) 0%, rgba(30,41,59,0.9) 48%, rgba(124,58,237,0.18) 100%)'
+                  : 'linear-gradient(135deg, rgba(250,245,255,0.98) 0%, rgba(253,242,248,0.96) 52%, rgba(255,247,237,0.98) 100%)',
+                boxShadow: darkMode ? '0 20px 44px rgba(76,29,149,0.2)' : '0 20px 44px rgba(168,85,247,0.12)',
+              }}
+            >
+              <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-purple-200/40 blur-3xl dark:bg-purple-500/14" />
+              <div className="pointer-events-none absolute bottom-0 left-0 h-24 w-24 rounded-full bg-orange-200/30 blur-2xl dark:bg-pink-500/10" />
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div>
                   <div className="text-xs uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400 mb-2">Today</div>
@@ -23133,22 +23126,113 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               )}
             </div>
 
-            {homeActivityItems.length > 0 && (
-              <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Bell className="w-4 h-4" style={themeAccentTextStyle} />
-                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Activity</div>
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={openJourneyScreen}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openJourneyScreen();
+                }
+              }}
+              className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-4 cursor-pointer transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="min-w-0">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Journey</h3>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {primaryJourneyGoal ? 'Keep your personal progress close, but secondary.' : 'A quieter place for goals and reflection.'}
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {homeActivityItems.map((item) => (
-                    <div key={item.label} className="rounded-2xl border border-white/30 dark:border-white/10 bg-white/60 dark:bg-white/[0.04] px-3 py-3">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">{item.label}</div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{item.value}</div>
-                    </div>
-                  ))}
+                <div className="shrink-0 text-[11px] font-medium" style={themeAccentTextStyle}>
+                  {primaryJourneyGoal ? `${Math.round(primaryJourneyGoalProgress * 100)}%` : 'Private'}
                 </div>
               </div>
-            )}
+
+              <div className="min-w-0">
+                {primaryJourneyGoal ? (
+                  <>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
+                      {primaryJourneyGoal.title}
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+                      {primaryJourneyProgressText}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Set a goal, journal, or track something meaningful.
+                  </div>
+                )}
+              </div>
+
+              {primaryJourneyGoal ? (
+                <>
+                  <div className="mt-3">
+                    <div className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                      <span>{journeySupportLabel}</span>
+                      <span>{Math.round(primaryJourneyGoalProgress * 100)}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
+                      <div
+                        className="h-2 rounded-full transition-all duration-700 ease-out"
+                        style={{
+                          width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
+                          background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
+                          boxShadow: `0 0 12px ${hexToRgba(activeLayerPageTheme.accent, 0.4)}`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {journeyCoachLabel ? (
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                      {journeyCoachLabel}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-3 flex items-center">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (primaryJourneyGoalType === 'run_walk') openJourneyRunTracker(primaryJourneyGoal);
+                        else if (primaryJourneyGoalType === 'workout') openJourneyWorkoutTracker(primaryJourneyGoal);
+                        else if (primaryJourneyGoalType === 'lose_weight') openJourneyWeightTracker(primaryJourneyGoal);
+                        else openJourneyLogFlow(primaryJourneyGoal);
+                      }}
+                      className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all ${primaryJourneyLoggedToday ? 'border text-gray-700 dark:text-gray-200' : 'text-white'}`}
+                      style={primaryJourneyLoggedToday
+                        ? {
+                            borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16),
+                            backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08),
+                          }
+                        : themeAccentButtonStyle}
+                    >
+                      {journeyHomeCtaLabel}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-3 flex items-center">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openJourneyScreen();
+                    }}
+                    className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+                    style={{
+                      ...themeAccentButtonStyle,
+                      boxShadow: `0 4px 16px ${hexToRgba(activeLayerPageTheme.accent, 0.3)}`,
+                    }}
+                  >
+                    Set your first goal
+                  </button>
+                </div>
+              )}
+            </div>
 
           </div>
         )}
@@ -23631,7 +23715,63 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
           )}
 
-          {showDateDetailModal && (
+          <DateDetailsModal
+            isOpen={showDateDetailModal}
+            onClose={() => setShowDateDetailModal(false)}
+            selectedDate={selectedDate}
+            selectedDates={selectedDates}
+            selectedEvents={selectedEvents}
+            popupEventsByEventId={popupEventsByEventId}
+            popupSignupsByEventId={popupSignupsByEventId}
+            user={user}
+            categories={categories}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            quickEntry={quickEntry}
+            setQuickEntry={setQuickEntry}
+            handleQuickAdd={handleQuickAdd}
+            popupEventMaxPeopleDraft={popupEventMaxPeopleDraft}
+            setPopupEventMaxPeopleDraft={setPopupEventMaxPeopleDraft}
+            isPrivate={isPrivate}
+            setIsPrivate={setIsPrivate}
+            isUrgent={isUrgent}
+            setIsUrgent={setIsUrgent}
+            recurrence={recurrence}
+            setRecurrence={setRecurrence}
+            joinPopupEvent={joinPopupEvent}
+            leavePopupEvent={leavePopupEvent}
+            setSelectedPopupEventPanelId={setSelectedPopupEventPanelId}
+            handleDeleteEvent={handleDeleteEvent}
+            handleUpdateEventField={handleUpdateEventField}
+            openRecurringDeletePrompt={openRecurringDeletePrompt}
+            eventSwipeDrag={eventSwipeDrag}
+            swipedEventKey={swipedEventKey}
+            handleEventSwipeStart={handleEventSwipeStart}
+            handleEventSwipeMove={handleEventSwipeMove}
+            handleEventSwipeEnd={handleEventSwipeEnd}
+            startEventSwipeDrag={startEventSwipeDrag}
+            moveEventSwipeDrag={moveEventSwipeDrag}
+            endEventSwipeDrag={endEventSwipeDrag}
+            formatTime={formatTime}
+            resolveHandleLikeLabel={resolveHandleLikeLabel}
+            getLayerForEvent={getLayerForEvent}
+            getEventRelationshipStatus={getEventRelationshipStatus}
+            setEventRelationshipStatus={setEventRelationshipStatus}
+            canDeleteEventInActiveLayer={canDeleteEventInActiveLayer}
+            getDateKey={getDateKey}
+            hexToRgba={hexToRgba}
+            mixHexColors={mixHexColors}
+            darkMode={darkMode}
+            themeAccentButtonStyle={themeAccentButtonStyle}
+            themeAccentHeadingStyle={themeAccentHeadingStyle}
+            POPUP_NO_MAX_SENTINEL={POPUP_NO_MAX_SENTINEL}
+            CATEGORY_GLASS={CATEGORY_GLASS}
+            editingEvent={editingEvent}
+            setEditingEvent={setEditingEvent}
+            PlacesAutocomplete={PlacesAutocomplete}
+            handleLocationLinkClick={handleLocationLinkClick}
+          />
+          {false && showDateDetailModal && (
           <div
             className="fixed inset-0 z-40 bg-black/50 p-4 flex items-center justify-center"
             onClick={() => setShowDateDetailModal(false)}
@@ -25078,91 +25218,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               }}
             />
             <div className="mt-3">
-              <button
-                type="button"
-                aria-pressed={titleStyleDraft?.showTitle !== false}
-                onClick={() => setTitleStyleDraft(prev => ({ ...prev, showTitle: prev?.showTitle === false }))}
-                className={`w-full text-left px-3 py-3 rounded-xl border transition-all ${
-                  titleStyleDraft?.showTitle === false
-                    ? 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/80 text-gray-500 dark:text-gray-300'
-                    : 'text-white shadow-sm'
-                }`}
-                style={titleStyleDraft?.showTitle === false ? undefined : themeAccentButtonStyle}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide opacity-90">
-                      Title Visibility
-                    </div>
-                    <div className={`text-xs mt-0.5 ${titleStyleDraft?.showTitle === false ? 'text-gray-500 dark:text-gray-400' : 'text-white/85'}`}>
-                      Hide the calendar title and keep only the month and year visible.
-                    </div>
-                  </div>
-                  <span className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${
-                    titleStyleDraft?.showTitle === false
-                      ? 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                      : 'bg-white/20 text-white'
-                  }`}>
-                    {titleStyleDraft?.showTitle === false ? 'Off' : 'On'}
-                  </span>
-                </div>
-              </button>
-            </div>
-            <div className="mt-3">
-              <div className="flex items-center justify-between gap-3 mb-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Title Size
-                </label>
-                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                  {Math.round(Number(titleStyleDraft?.titleScale || 1) * 100)}%
-                </span>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Title and month/year sizing now stay at the shared default for everyone.
               </div>
-              <input
-                type="range"
-                min="75"
-                max="220"
-                step="1"
-                value={Math.round(Number(titleStyleDraft?.titleScale || 1) * 100)}
-                onChange={(e) => {
-                  const nextScale = Math.max(0.75, Math.min(2.2, Number(e.target.value || 100) / 100));
-                  setTitleStyleDraft(prev => ({ ...prev, titleScale: nextScale }));
-                }}
-                className="w-full"
-                style={{ accentColor: activeLayerPageTheme.accent }}
-              />
               <div
-                className="mt-2 font-semibold truncate"
+                className="mt-2 font-semibold"
                 style={{
                   ...getLayerTitleDisplayStyle(titleStyleDraft),
                   fontSize: `${getLayerTitleFontSizePx(titleStyleDraft, 16)}px`,
                   lineHeight: 1.1,
                 }}
               >
-                {titleStyleDraft?.showTitle === false ? 'Title hidden' : (titleNameDraft || calendarTitle || activeLayer?.name || 'Calendar Title')}
+                {titleNameDraft || calendarTitle || activeLayer?.name || 'Calendar Title'}
               </div>
-            </div>
-            <div className="mt-3">
-              <div className="flex items-center justify-between gap-3 mb-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Month/Year Size
-                </label>
-                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                  {Math.round(Number(titleStyleDraft?.monthYearScale || 1) * 100)}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="75"
-                max="220"
-                step="1"
-                value={Math.round(Number(titleStyleDraft?.monthYearScale || 1) * 100)}
-                onChange={(e) => {
-                  const nextScale = Math.max(0.75, Math.min(2.2, Number(e.target.value || 100) / 100));
-                  setTitleStyleDraft(prev => ({ ...prev, monthYearScale: nextScale }));
-                }}
-                className="w-full"
-                style={{ accentColor: activeLayerPageTheme.accent }}
-              />
               <div
                 className="mt-2 font-semibold"
                 style={{
@@ -25579,7 +25647,22 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       </div>
     )}
 
-    {showSubCalendarModal && (
+    <StartTripModal
+      isOpen={showSubCalendarModal}
+      onClose={() => setShowSubCalendarModal(false)}
+      selectedDates={selectedDates}
+      setSelectedDates={setSelectedDates}
+      tripName={newSubCalName}
+      setTripName={setNewSubCalName}
+      onCreateTrip={() => createSubCalendar()}
+      onCreateTripAndInvite={() => createSubCalendar({ openInviteAfterCreate: true })}
+      darkMode={darkMode}
+      themeAccentButtonStyle={themeAccentButtonStyle}
+      themeAccentHeadingStyle={themeAccentHeadingStyle}
+      themeAccentBorder={themeAccentBorder}
+    />
+
+    {false && showSubCalendarModal && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm">
           <div className="flex items-center justify-between mb-4">
@@ -28278,6 +28361,39 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
 
           <div className="space-y-4 pb-6">
+            <div className="flex items-center justify-between gap-3 rounded-[24px] border border-gray-200/80 dark:border-white/10 bg-white/75 dark:bg-slate-900/65 px-4 py-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Trophy Case</div>
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {journeyTrophyCase.stats.newTrophies > 0
+                    ? `${journeyTrophyCase.stats.newTrophies} new ${journeyTrophyCase.stats.newTrophies === 1 ? 'trophy' : 'trophies'} earned`
+                    : `${journeyTrophyCase.earnedTrophies.length} earned so far`}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowJourneyTrophyCase(true)}
+                className="inline-flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-sm font-medium text-gray-700 transition hover:text-gray-900 dark:text-slate-100 dark:hover:text-white"
+                style={{
+                  borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)',
+                  backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.82)',
+                }}
+              >
+                <Trophy size={15} />
+                Open
+                {journeyTrophyCase.stats.newTrophies > 0 ? (
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]"
+                    style={{
+                      backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.22 : 0.14),
+                      color: activeLayerPageTheme.accent,
+                    }}
+                  >
+                    New
+                  </span>
+                ) : null}
+              </button>
+            </div>
             {primaryJourneyGoal ? (
               <div className="rounded-[28px] border border-gray-200/80 dark:border-white/10 bg-gray-50/90 dark:bg-slate-900/80 p-5">
                 <div className="flex items-start justify-between gap-3">
@@ -28417,10 +28533,46 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
             {(journeyState?.entries || []).length > 0 && (
               <div className="rounded-[28px] border border-gray-200/80 dark:border-white/10 bg-gray-50/80 dark:bg-slate-900/70 p-4">
-                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Recent</div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{primaryJourneyGoalType === 'journal' ? 'Journal history' : 'Recent'}</div>
+                {primaryJourneyGoalType === 'journal' ? (
+                  <div className="mt-3 space-y-2">
+                    <input
+                      value={journeyJournalSearch}
+                      onChange={(e) => setJourneyJournalSearch(e.target.value)}
+                      placeholder="Search entries"
+                      className="w-full rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 px-3 py-2.5 text-sm text-gray-900 dark:text-white"
+                      style={{ fontSize: '16px' }}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={journeyJournalMoodFilter}
+                        onChange={(e) => setJourneyJournalMoodFilter(e.target.value)}
+                        className="w-full rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 px-3 py-2.5 text-sm text-gray-900 dark:text-white"
+                        style={{ fontSize: '16px' }}
+                      >
+                        <option value="">All moods</option>
+                        {JOURNEY_JOURNAL_MOODS.map((mood) => (
+                          <option key={mood.id} value={mood.id}>{mood.emoji} {mood.label}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={journeyJournalTagFilter}
+                        onChange={(e) => setJourneyJournalTagFilter(e.target.value)}
+                        className="w-full rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 px-3 py-2.5 text-sm text-gray-900 dark:text-white"
+                        style={{ fontSize: '16px' }}
+                      >
+                        <option value="">All tags</option>
+                        {JOURNEY_JOURNAL_TAG_SUGGESTIONS.map((tag) => (
+                          <option key={tag} value={tag}>#{tag}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="mt-3 space-y-2">
-                  {(journeyState.entries || []).slice(0, 4).map((entry) => {
+                  {(primaryJourneyGoalType === 'journal' ? filteredJourneyJournalEntries : (journeyState.entries || [])).slice(0, primaryJourneyGoalType === 'journal' ? 8 : 4).map((entry) => {
                     const entryGoal = journeyGoalById[String(entry?.goalId || '')] || null;
+                    const entryMood = JOURNEY_JOURNAL_MOODS.find((mood) => mood.id === String(entry?.mood || '')) || null;
                     return (
                       <div key={entry.id} className="relative rounded-2xl overflow-hidden">
                         <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${((journeyEntrySwipeDrag.id === entry.id ? journeyEntrySwipeDrag.offset : (swipedJourneyEntryId === entry.id ? -88 : 0)) < 0) ? 'bg-red-500' : 'bg-transparent'}`}>
@@ -28460,7 +28612,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                     ? `Weighed in at ${formatJourneyWeight(entry.currentWeight)} lb`
                                     : `${entry.summaryLabel || 'Weight check-in'}`)
                                 : entry.type === 'log'
-                                  ? `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`
+                                  ? (getJourneyGoalType(entryGoal) === 'journal'
+                                    ? (entryMood ? `${entryMood.emoji} ${entryMood.label} journal` : 'Journal entry')
+                                    : `Logged ${normalizeJourneyNumber(entry.amount)}${entryGoal?.unit ? ` ${entryGoal.unit}` : ''}`)
                                   : 'Added a note'}
                             </div>
                             {entry.type === 'workout' ? (
@@ -28500,6 +28654,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             {entry.note ? (
                               <div className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">{entry.note}</div>
                             ) : null}
+                            {Array.isArray(entry?.tags) && entry.tags.length > 0 ? (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {entry.tags.slice(0, 4).map((tag) => (
+                                  <span key={`${entry.id}-${tag}`} className="rounded-full bg-gray-100 dark:bg-white/[0.08] px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                                    #{tag}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
                           {entry.photoUrl ? (
                             <img
@@ -28509,13 +28672,18 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             />
                           ) : null}
                           <div className="shrink-0 text-[11px] text-gray-400 dark:text-gray-500">
-                            {new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            {new Date(entry.entryDate || entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </div>
                         </div>
                         </div>
                       </div>
                     );
                   })}
+                  {primaryJourneyGoalType === 'journal' && filteredJourneyJournalEntries.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-gray-200/80 dark:border-white/10 px-4 py-5 text-center text-sm text-gray-500 dark:text-gray-400">
+                      No journal entries match those filters yet.
+                    </div>
+                  ) : null}
                 </div>
               </div>
             )}
@@ -28744,7 +28912,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             {sortedJourneyGoals.length > 1 && (
               <select
                 value={journeyLogDraft.goalId}
-                onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, goalId: e.target.value }))}
+                onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, goalId: e.target.value, prompt: '' }))}
                 className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white"
                 style={{ fontSize: '16px' }}
               >
@@ -28753,19 +28921,87 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 ))}
               </select>
             )}
-            <input
-              value={journeyLogDraft.amount}
-              onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, amount: e.target.value }))}
-              placeholder={selectedJourneyLogGoal?.unit ? `Progress in ${selectedJourneyLogGoal.unit}` : 'Progress amount'}
-              inputMode="decimal"
-              className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white"
-              style={{ fontSize: '16px' }}
-            />
+            {isSelectedJourneyLogJournal ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={journeyLogDraft.entryDate}
+                    onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, entryDate: e.target.value }))}
+                    className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white"
+                    style={{ fontSize: '16px' }}
+                  />
+                  <select
+                    value={journeyLogDraft.mood}
+                    onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, mood: e.target.value }))}
+                    className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white"
+                    style={{ fontSize: '16px' }}
+                  >
+                    <option value="">Select mood</option>
+                    {JOURNEY_JOURNAL_MOODS.map((mood) => (
+                      <option key={mood.id} value={mood.id}>{mood.emoji} {mood.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 p-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Prompt</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {visibleJourneyJournalPrompts.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => setJourneyLogDraft((prev) => ({ ...prev, prompt, note: prev.note || `${prompt}\n\n` }))}
+                        className={`rounded-full px-3 py-1.5 text-xs font-medium ${journeyLogDraft.prompt === prompt ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}
+                        style={journeyLogDraft.prompt === prompt ? themeAccentButtonStyle : { border: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)'}` }}
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <input
+                  value={journeyLogDraft.tagsText}
+                  onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, tagsText: e.target.value }))}
+                  placeholder="Tags, separated by commas"
+                  className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white"
+                  style={{ fontSize: '16px' }}
+                />
+                <div className="flex flex-wrap gap-2">
+                  {JOURNEY_JOURNAL_TAG_SUGGESTIONS.map((tag) => {
+                    const active = parseJourneyTags(journeyLogDraft.tagsText).includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          const nextTags = parseJourneyTags(journeyLogDraft.tagsText);
+                          const merged = active ? nextTags.filter((item) => item !== tag) : [...nextTags, tag];
+                          setJourneyLogDraft((prev) => ({ ...prev, tagsText: merged.join(', ') }));
+                        }}
+                        className={`rounded-full px-3 py-1.5 text-xs font-medium ${active ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}
+                        style={active ? themeAccentButtonStyle : { border: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)'}` }}
+                      >
+                        #{tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <input
+                value={journeyLogDraft.amount}
+                onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, amount: e.target.value }))}
+                placeholder={selectedJourneyLogGoal?.unit ? `Progress in ${selectedJourneyLogGoal.unit}` : 'Progress amount'}
+                inputMode="decimal"
+                className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white"
+                style={{ fontSize: '16px' }}
+              />
+            )}
             <textarea
               value={journeyLogDraft.note}
               onChange={(e) => setJourneyLogDraft((prev) => ({ ...prev, note: e.target.value }))}
-              placeholder="What moved forward today?"
-              rows={3}
+              placeholder={isSelectedJourneyLogJournal ? 'Write freely. What do you want to say about today?' : 'What moved forward today?'}
+              rows={isSelectedJourneyLogJournal ? 7 : 3}
               className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-3 text-sm text-gray-900 dark:text-white"
               style={{ fontSize: '16px' }}
             />
@@ -28849,6 +29085,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         </div>
       </div>
     ))}
+    {!activeSubCalendar && (
+      <TrophyCase
+        isOpen={showJourneyTrophyCase}
+        onClose={() => setShowJourneyTrophyCase(false)}
+        goals={journeyState?.goals || []}
+        entries={journeyState?.entries || []}
+        darkMode={darkMode}
+        accentColor={activeLayerPageTheme.accent}
+      />
+    )}
     {showJourneyRunTrackerModal && renderJourneyRunTrackerModal()}
     {showJourneyWorkoutTrackerModal && renderJourneyWorkoutTrackerModal()}
     {showJourneyWeightTrackerModal && renderJourneyWeightTrackerModal()}

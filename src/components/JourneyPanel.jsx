@@ -1,14 +1,9 @@
 import React from 'react';
-import JourneyQuoteDisplay from './JourneyQuoteDisplay';
 
 export default function JourneyPanel({
-  activeLayerPageTheme,
-  darkMode,
-  hexToRgba,
   journeyHomeCtaLabel,
   journeyCoachLabel,
   journeyProgressText,
-  journeyQuickPrompt,
   journeyQuote,
   journeySupportLabel,
   onClick,
@@ -16,123 +11,145 @@ export default function JourneyPanel({
   primaryJourneyGoal,
   primaryJourneyGoalProgress,
   primaryJourneyLoggedToday,
-  themeAccentButtonStyle,
 }) {
   const panelClickHandler = primaryJourneyGoal ? onClick : onCtaClick;
 
   return (
-<div
-  role="button"
-  tabIndex={0}
-  onClick={panelClickHandler}
-  onKeyDown={(e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      panelClickHandler();
-    }
-  }}
-  className="w-full overflow-hidden rounded-[26px] border p-4 text-left transition-all duration-300 hover:shadow-xl hover:scale-[1.01] cursor-pointer active:scale-[0.99]"
-  style={{
-    borderColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)',
-    background: darkMode
-      ? `linear-gradient(145deg, ${hexToRgba('#0f172a', 0.96)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.18)} 100%)`
-      : `linear-gradient(145deg, rgba(255,255,255,0.98) 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
-    boxShadow: darkMode ? '0 20px 44px rgba(2,6,23,0.34)' : '0 20px 44px rgba(15,23,42,0.08)',
-  }}
->
-      <JourneyQuoteDisplay
-        quote={journeyQuote}
-        darkMode={darkMode}
-        compact
-        className="mb-3 max-w-[18rem]"
-      />
+    <div className="col-span-full">
+      <div
+        className="
+          relative overflow-hidden
+          bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50
+          dark:from-purple-950/30 dark:via-pink-950/20 dark:to-orange-950/10
+          border-2 border-purple-200/50 dark:border-purple-500/30
+          rounded-3xl
+          p-6 sm:p-8
+          shadow-xl shadow-purple-500/10
+          hover:shadow-2xl hover:shadow-purple-500/20
+          transition-all duration-500
+          cursor-pointer
+          group
+        "
+        onClick={panelClickHandler}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            panelClickHandler();
+          }
+        }}
+      >
+        <div className="absolute -right-8 -top-8 w-32 h-32 bg-purple-200/30 dark:bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="min-w-0">
-        <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
-        <div className="mt-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 line-clamp-2">
-          {journeyQuickPrompt ? (primaryJourneyGoal ? `Pro tip: ${journeyQuickPrompt}` : journeyQuickPrompt) : ''}
-        </div>
-{primaryJourneyGoal ? (
-  <>
-    <div className="mt-3 text-[19px] font-bold text-gray-900 dark:text-gray-100 line-clamp-1 tracking-tight">
-      {primaryJourneyGoal.title}
-    </div>
-    <div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-      {journeyProgressText}
-    </div>
-  </>
-) : null}
-      </div>
-
-      {primaryJourneyGoal ? (
-        <>
-          <div className="mt-3.5">
-            <div className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-              <span>{journeySupportLabel}</span>
-              <span>{Math.round(primaryJourneyGoalProgress * 100)}%</span>
-            </div>
-            <div className="h-2 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
-             <div
-  className="h-2 rounded-full transition-all duration-700 ease-out"
-  style={{
-    width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
-    background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
-    boxShadow: `0 0 12px ${hexToRgba(activeLayerPageTheme.accent, 0.4)}`,
-           }}
-          />
-            </div>
+        <div className="relative z-10 mb-6">
+          <div className="text-xs uppercase tracking-widest text-purple-600 dark:text-purple-400 mb-3 font-semibold">
+            Today&apos;s Inspiration
           </div>
+          <blockquote className="text-xl sm:text-2xl font-serif italic text-gray-800 dark:text-gray-100 leading-relaxed">
+            &quot;{journeyQuote}&quot;
+          </blockquote>
+        </div>
 
-         {journeyCoachLabel ? (
-  <div 
-    className="mt-3 rounded-2xl border px-3 py-2.5 text-[11px] font-medium text-gray-600 dark:text-gray-300 backdrop-blur-sm" 
-    style={{ 
-      borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, 0.12), 
-      backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08),
-      boxShadow: `0 2px 8px ${hexToRgba(activeLayerPageTheme.accent, 0.08)}`
-    }}
-  >
-    💡 {journeyCoachLabel}
-  </div>
-) : null}
+        {primaryJourneyGoal ? (
+          <div className="relative z-10 space-y-4">
+            <div>
+              <div className="text-xs uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2">
+                Your Focus
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1 tracking-tight">
+                {primaryJourneyGoal.title}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {journeyProgressText}
+              </p>
+            </div>
 
-          <div className="mt-3.5 flex items-center">
+            <div>
+              <div className="flex items-center justify-between mb-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+                <span>{journeySupportLabel}</span>
+                <span className="text-base font-bold text-purple-600 dark:text-purple-400">
+                  {Math.round(primaryJourneyGoalProgress * 100)}%
+                </span>
+              </div>
+              <div className="h-3 bg-gray-200/50 dark:bg-black/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-purple-600 to-pink-500 transition-all duration-1000 ease-out relative overflow-hidden"
+                  style={{ width: `${Math.round(primaryJourneyGoalProgress * 100)}%` }}
+                >
+                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                </div>
+              </div>
+            </div>
+
+            {journeyCoachLabel ? (
+              <div
+                className="
+                  bg-white/60 dark:bg-black/20
+                  backdrop-blur-sm
+                  border border-purple-200/50 dark:border-purple-500/20
+                  rounded-2xl
+                  p-4
+                  flex items-start gap-3
+                "
+              >
+                <span className="text-2xl">💡</span>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {journeyCoachLabel}
+                </p>
+              </div>
+            ) : null}
+
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onCtaClick();
               }}
-              className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all ${primaryJourneyLoggedToday ? 'border text-gray-700 dark:text-gray-200' : 'text-white'}`}
-              style={primaryJourneyLoggedToday
-                ? {
-                    borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16),
-                    backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08),
-                  }
-                : themeAccentButtonStyle}
+              className={`
+                rounded-xl px-4 py-2.5 text-sm font-semibold
+                transition-all duration-200
+                ${primaryJourneyLoggedToday
+                  ? 'border-2 text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-white/10 border-purple-200 dark:border-purple-500/30'
+                  : 'text-white bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 shadow-md shadow-purple-500/25 hover:shadow-lg hover:shadow-purple-500/35'
+                }
+                active:scale-95
+              `}
             >
               {journeyHomeCtaLabel}
             </button>
           </div>
-        </>
-      ) : (
-<div className="mt-3.5 flex items-center">
-  <button
-    type="button"
-    onClick={(e) => {
-      e.stopPropagation();
-      onCtaClick();
-    }}
-    className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-    style={{
-      ...themeAccentButtonStyle,
-      boxShadow: `0 4px 16px ${hexToRgba(activeLayerPageTheme.accent, 0.3)}`
-    }}
-  >
-    ✨ Set your first goal
-  </button>
-</div>
-      )}
+        ) : (
+          <div className="relative z-10 text-center py-6">
+            <div className="text-4xl mb-4">✨</div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              Start Your Journey
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              One small step, can change everything.
+            </p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCtaClick();
+              }}
+              className="
+                px-6 py-3 rounded-2xl
+                bg-gradient-to-r from-purple-600 to-purple-500
+                hover:from-purple-700 hover:to-purple-600
+                text-white font-semibold
+                shadow-lg shadow-purple-500/25
+                hover:shadow-xl hover:shadow-purple-500/35
+                transition-all duration-200
+                active:scale-95
+              "
+            >
+              Set your first goal
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

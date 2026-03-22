@@ -523,8 +523,15 @@ const getParticipantPhotoUrl = (participant) => String(
   || ''
 ).trim();
 
-function PodiumAvatar({ participant, label }) {
-  const photoUrl = getParticipantPhotoUrl(participant);
+function PodiumAvatar({ participant, label, fallbackPhotoUrl = '', currentUserId = '', currentUserAliases = [] }) {
+  const normalizedLabel = String(label || '').trim().toLowerCase();
+  const normalizedAliases = (Array.isArray(currentUserAliases) ? currentUserAliases : [])
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean);
+  const matchesCurrentUser =
+    (String(participant?.userId || '').trim() && String(participant?.userId || '').trim() === String(currentUserId || '').trim())
+    || (normalizedLabel && normalizedAliases.includes(normalizedLabel));
+  const photoUrl = getParticipantPhotoUrl(participant) || (matchesCurrentUser ? String(fallbackPhotoUrl || '').trim() : '');
   if (photoUrl) {
     return <img src={photoUrl} alt={label} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${T.borderGlow}` }} />;
   }
@@ -535,7 +542,7 @@ function PodiumAvatar({ participant, label }) {
   );
 }
 
-function CelebrationPodium({ rows }) {
+function CelebrationPodium({ rows, currentUserId, currentUserAliases, currentUserProfilePhotoUrl }) {
   const pieces = Array.from({ length: 18 }, (_, idx) => ({
     id: idx,
     left: `${4 + ((idx * 11) % 92)}%`,
@@ -590,7 +597,13 @@ function CelebrationPodium({ rows }) {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-                  <PodiumAvatar participant={row.participant} label={row.name} />
+                  <PodiumAvatar
+                    participant={row.participant}
+                    label={row.name}
+                    fallbackPhotoUrl={currentUserProfilePhotoUrl}
+                    currentUserId={currentUserId}
+                    currentUserAliases={currentUserAliases}
+                  />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 2 }}>
                   <Trophy style={{ width: 16, height: 16, color: trophyTone, filter: `drop-shadow(0 0 8px ${trophyTone})` }} />
@@ -663,6 +676,9 @@ function GauntletPanel({
   startGauntletTournament,
   updateGauntletCourtScore,
   useManualGauntletRoster,
+  currentUserId,
+  currentUserAliases,
+  currentUserProfilePhotoUrl,
 }) {
   const selectedEntry =
     eligibleGauntletPopupEvents.find(
@@ -729,7 +745,7 @@ function GauntletPanel({
             Pickleball <span style={{ color: T.gold }}>Gauntlet</span>
           </h3>
           <p style={heroSub}>
-            King-of-the-court bracket with rotating byes, court movement, and live standings.
+            Winners up, losers down! Rotating byes, court movement, and live standings.
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 12 }}>
             {tournament && (
@@ -811,34 +827,36 @@ function GauntletPanel({
               )}
             </div>
 
-            <div style={stepper}>
-              <div style={stepperTop}>Games</div>
-              <div style={{ display: 'flex', alignItems: 'center', padding: '2px 4px 6px' }}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setGauntletDraftRounds((prev) =>
-                      String(Math.max(1, (parseInt(String(prev || '1'), 10) || 1) - 1))
-                    )
-                  }
-                  style={stepBtnStyle}
-                  aria-label="Decrease games"
-                >
-                  <ChevronLeft style={{ width: 16, height: 16 }} />
-                </button>
-                <div style={stepVal}>{roundsVal}</div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setGauntletDraftRounds((prev) =>
-                      String(Math.min(99, (parseInt(String(prev || '1'), 10) || 1) + 1))
-                    )
-                  }
-                  style={stepBtnStyle}
-                  aria-label="Increase games"
-                >
-                  <ChevronRight style={{ width: 16, height: 16 }} />
-                </button>
+            <div>
+              <label style={fieldLabel}>Games</label>
+              <div style={stepper}>
+                <div style={{ display: 'flex', alignItems: 'center', padding: '8px 4px' }}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setGauntletDraftRounds((prev) =>
+                        String(Math.max(1, (parseInt(String(prev || '1'), 10) || 1) - 1))
+                      )
+                    }
+                    style={stepBtnStyle}
+                    aria-label="Decrease games"
+                  >
+                    <ChevronLeft style={{ width: 16, height: 16 }} />
+                  </button>
+                  <div style={stepVal}>{roundsVal}</div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setGauntletDraftRounds((prev) =>
+                        String(Math.min(99, (parseInt(String(prev || '1'), 10) || 1) + 1))
+                      )
+                    }
+                    style={stepBtnStyle}
+                    aria-label="Increase games"
+                  >
+                    <ChevronRight style={{ width: 16, height: 16 }} />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1022,9 +1040,14 @@ function GauntletPanel({
               )}
 
                 <div style={{ display: 'grid', gap: 10 }}>
-                  {podium.length > 0 && (
-                    <CelebrationPodium rows={podium} />
-                  )}
+                {podium.length > 0 && (
+                  <CelebrationPodium
+                    rows={podium}
+                    currentUserId={currentUserId}
+                    currentUserAliases={currentUserAliases}
+                    currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
+                  />
+                )}
                   <div style={cardOuter}>
                     <div style={cardHeaderStyle}>Standings</div>
                   {tournamentStandings.length > 0 && (

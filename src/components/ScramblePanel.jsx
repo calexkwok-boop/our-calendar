@@ -901,7 +901,7 @@ function ScramblePanel({
             Pickleball <span style={{ color: T.neon1 }}>Scramble</span>
           </h3>
           <div style={heroSub}>
-              Pure randomness. Every round reshuffles the deck
+            Pure randomness. Every round reshuffles the deck.
           </div>
           <button
             type="button"
@@ -918,7 +918,7 @@ function ScramblePanel({
 
         <div style={{ padding: '0 14px 18px' }}>
           <div style={infoBar}>
-            🎲 Random pairings every round—stats tracked, but matchups are pure chaos. May the odds be ever in your favor!
+            Random pairings every round with the stats tracked. May the odds be ever in your favor!
           </div>
 
           <div style={{ marginTop: 14 }}>
@@ -1260,3 +1260,4 @@ function ScramblePanel({
 }
 
 export default ScramblePanel;
+

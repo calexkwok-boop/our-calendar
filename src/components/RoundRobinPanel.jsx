@@ -114,10 +114,6 @@ const shell = {
   color: T.text,
   boxShadow: '0 22px 48px rgba(0,0,0,0.32)',
   fontFamily: '"DM Sans", sans-serif',
-  display: 'flex',
-  flexDirection: 'column',
-  maxHeight: '100%',
-  minHeight: 0,
 };
 
 const heroStyle = {
@@ -744,6 +740,13 @@ function RoundRobinPanel({
 }) {
   const [activeTab, setActiveTab] = useState('matches');
   const [expandedRounds, setExpandedRounds] = useState(new Set([0]));
+  const setEquals = (left, right) => {
+    if (left.size !== right.size) return false;
+    for (const value of left) {
+      if (!right.has(value)) return false;
+    }
+    return true;
+  };
 
   const allDone = useMemo(() => {
     if (!Array.isArray(rounds) || rounds.length === 0) return false;
@@ -754,20 +757,18 @@ function RoundRobinPanel({
   const hasEnoughPlayers = teamsOf === 1 ? participants.length >= 2 : participants.length >= 4;
 
   useEffect(() => {
-    if (!Array.isArray(rounds) || rounds.length === 0) {
-      setExpandedRounds(new Set([0]));
-      return;
+    let nextExpandedRounds = new Set([0]);
+    if (Array.isArray(rounds) && rounds.length > 0) {
+      const firstIncompleteRoundIdx = rounds.findIndex((round) => (round.matches || []).some((match) => !match.completed));
+      nextExpandedRounds = firstIncompleteRoundIdx >= 0 ? new Set([firstIncompleteRoundIdx]) : new Set();
     }
-    const firstIncompleteRoundIdx = rounds.findIndex((round) => (round.matches || []).some((match) => !match.completed));
-    if (firstIncompleteRoundIdx >= 0) {
-      setExpandedRounds(new Set([firstIncompleteRoundIdx]));
-      return;
-    }
-    setExpandedRounds(new Set());
+    setExpandedRounds((prev) => (setEquals(prev, nextExpandedRounds) ? prev : nextExpandedRounds));
   }, [rounds]);
 
   useEffect(() => {
-    if (allDone) setActiveTab('standings');
+    if (allDone) {
+      setActiveTab((prev) => (prev === 'standings' ? prev : 'standings'));
+    }
   }, [allDone]);
 
   const toggleRound = (idx) => {
@@ -808,7 +809,7 @@ function RoundRobinPanel({
       <div style={shell}>
         <div style={heroStyle}>
           <div style={heroBg} />
-          <div style={{ position: 'absolute', right: 58, top: '46%', transform: 'translateY(-50%)', opacity: 0.16, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', right: 8, top: '42%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
             <svg width="90" height="58" viewBox="0 0 90 58" fill="none">
               <rect x="1" y="1" width="88" height="56" rx="3" stroke="white" strokeWidth="2"/>
               <rect x="1" y="1" width="26" height="56" fill="white" fillOpacity="0.16"/>
@@ -844,13 +845,13 @@ function RoundRobinPanel({
           </button>
         </div>
 
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '0 14px 18px' }}>
           <div style={infoBar}>
             🎯 Round robin ensures every team faces each other once. Perfect for balanced competition.
           </div>
 
           {!rounds || rounds.length === 0 ? (
-            <div style={{ padding: '14px 14px 0' }}>
+            <div style={{ marginTop: 14 }}>
               <div style={segRow}>
                 <button
                   onClick={() => setUseManualRoundRobinRoster(true)}
@@ -971,7 +972,7 @@ function RoundRobinPanel({
             </div>
           ) : (
             <>
-              <div style={tabRow}>
+              <div style={{ ...tabRow, marginTop: 14 }}>
                 <button onClick={() => setActiveTab('matches')} style={activeTab === 'matches' ? tabBtnActive : tabBtnBase}>
                   Matches
                 </button>
@@ -981,7 +982,7 @@ function RoundRobinPanel({
               </div>
 
               {activeTab === 'matches' && (
-                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px' }}>
+                <div style={{ marginTop: 14 }}>
                   {rounds.map((round, roundIdx) => {
                     const isExpanded = expandedRounds.has(roundIdx);
                     const allCompleted = (round.matches || []).every((m) => m.completed);
@@ -1096,7 +1097,7 @@ function RoundRobinPanel({
               )}
 
               {activeTab === 'standings' && (
-                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                <div style={{ marginTop: 14 }}>
                   {allDone && podium.length > 0 && (
                     <CelebrationPodium
                       rows={podium}
