@@ -584,7 +584,7 @@ function PodiumAvatar({ participant, label, fallbackPhotoUrl = '', currentUserId
   );
 }
 
-const CelebrationPodium = ({ rows }) => {
+const CelebrationPodium = ({ rows, currentUserId, currentUserAliases, currentUserProfilePhotoUrl }) => {
   const pieces = Array.from({ length: 18 }, (_, idx) => ({
     id: idx,
     left: `${4 + ((idx * 11) % 92)}%`,
@@ -1097,7 +1097,14 @@ function RoundRobinPanel({
 
               {activeTab === 'standings' && (
                 <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                  {allDone && podium.length > 0 && <CelebrationPodium rows={podium} />}
+                  {allDone && podium.length > 0 && (
+                    <CelebrationPodium
+                      rows={podium}
+                      currentUserId={currentUserId}
+                      currentUserAliases={currentUserAliases}
+                      currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
+                    />
+                  )}
                   
                   <div style={cardOuter}>
                     <div style={cardHeaderStyle}>Standings</div>

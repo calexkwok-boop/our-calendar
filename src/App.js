@@ -22382,7 +22382,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
     style={{ minHeight: '100dvh', paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))', touchAction: 'none', overscrollBehavior: 'none' }}
     onClick={() => setShowRoundRobinPanel(false)}
-    onTouchMove={(e) => e.preventDefault()}
     onKeyDown={(e) => {
       if (e.key === 'Escape') setShowRoundRobinPanel(false);
     }}
@@ -22395,7 +22394,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
       data-round-robin-scroll="true"
       onClick={(e) => e.stopPropagation()}
-      onTouchMove={(e) => e.stopPropagation()}
     >
       <RoundRobinPanel
         onClose={() => setShowRoundRobinPanel(false)}
