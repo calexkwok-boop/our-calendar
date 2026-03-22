@@ -16541,9 +16541,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const previousBodyLeft = document.body.style.left;
     const previousBodyRight = document.body.style.right;
     const previousBodyWidth = document.body.style.width;
+    const previousBodyBackground = document.body.style.background;
+    const previousBodyBackgroundColor = document.body.style.backgroundColor;
     const previousDocOverflow = document.documentElement.style.overflow;
     const previousDocTouchAction = document.documentElement.style.touchAction;
     const previousDocOverscroll = document.documentElement.style.overscrollBehavior;
+    const previousDocBackground = document.documentElement.style.background;
+    const previousDocBackgroundColor = document.documentElement.style.backgroundColor;
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
     document.body.style.overscrollBehavior = 'none';
@@ -16552,10 +16556,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     document.body.style.left = '0';
     document.body.style.right = '0';
     document.body.style.width = '100%';
+    document.body.style.background = '#0c0f16';
+    document.body.style.backgroundColor = '#0c0f16';
     document.documentElement.style.overflow = 'hidden';
     document.documentElement.style.touchAction = 'none';
     document.documentElement.style.overscrollBehavior = 'none';
+    document.documentElement.style.background = '#0c0f16';
+    document.documentElement.style.backgroundColor = '#0c0f16';
     const preventTouchMove = (event) => {
+      const target = event?.target;
+      if (target && typeof target.closest === 'function' && target.closest('[data-round-robin-scroll="true"]')) return;
       event.preventDefault();
     };
     document.addEventListener('touchmove', preventTouchMove, { passive: false });
@@ -16569,9 +16579,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       document.body.style.left = previousBodyLeft;
       document.body.style.right = previousBodyRight;
       document.body.style.width = previousBodyWidth;
+      document.body.style.background = previousBodyBackground;
+      document.body.style.backgroundColor = previousBodyBackgroundColor;
       document.documentElement.style.overflow = previousDocOverflow;
       document.documentElement.style.touchAction = previousDocTouchAction;
       document.documentElement.style.overscrollBehavior = previousDocOverscroll;
+      document.documentElement.style.background = previousDocBackground;
+      document.documentElement.style.backgroundColor = previousDocBackgroundColor;
       window.scrollTo(0, scrollY);
     };
   }, [showRoundRobinPanel]);
@@ -22366,7 +22380,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 )} {showRoundRobinPanel && (
   <div
     className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
-    style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))', touchAction: 'none', overscrollBehavior: 'none' }}
+    style={{ minHeight: '100dvh', paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))', touchAction: 'none', overscrollBehavior: 'none' }}
     onClick={() => setShowRoundRobinPanel(false)}
     onTouchMove={(e) => e.preventDefault()}
     onKeyDown={(e) => {
@@ -22379,6 +22393,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     <div
       className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
       style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
+      data-round-robin-scroll="true"
       onClick={(e) => e.stopPropagation()}
       onTouchMove={(e) => e.stopPropagation()}
     >
