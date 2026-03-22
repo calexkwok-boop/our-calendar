@@ -786,7 +786,7 @@ function ScramblePanel({
               <div style={liveDot} />
               Live
             </div>
-            <div style={heroTitle}>⚡ CHAOS MODE</div>
+            <div style={heroTitle}>Scramble</div>
             <div style={heroSub}>
               Pure randomness. Every round reshuffles the deck—no rankings, no strategy, just mayhem. 🎲
             </div>

@@ -466,6 +466,7 @@ const CelebrationPodium = ({ rows }) => {
     padding: 14,
     marginBottom: 10,
     margin: '0 14px 10px',
+    boxShadow: '0 0 40px rgba(59,130,246,0.16)',
   };
 
   const slotBase = {
@@ -475,6 +476,7 @@ const CelebrationPodium = ({ rows }) => {
   const iconRow = {
     fontSize: 32,
     marginBottom: 6,
+    filter: 'drop-shadow(0 0 8px rgba(59,130,246,0.45))',
   };
 
   const nameRow = {
@@ -482,6 +484,7 @@ const CelebrationPodium = ({ rows }) => {
     fontWeight: 700,
     color: T.text,
     marginBottom: 4,
+    textShadow: '0 0 10px rgba(59,130,246,0.35)',
   };
 
   const statRow = {
@@ -564,6 +567,10 @@ function RoundRobinPanel({
     setExpandedRounds(new Set());
   }, [rounds]);
 
+  useEffect(() => {
+    if (allDone) setActiveTab('standings');
+  }, [allDone]);
+
   const toggleRound = (idx) => {
     const round = Array.isArray(rounds) ? rounds[idx] : null;
     const isLocked = Boolean(round?.finalizedAt) || Boolean((round?.matches || []).length && (round.matches || []).every((match) => match.completed));
@@ -597,7 +604,7 @@ function RoundRobinPanel({
       <div style={shell}>
         <div style={heroStyle}>
           <div style={heroBg} />
-          <div style={{ position: 'absolute', right: 8, top: '42%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', right: 42, top: '50%', transform: 'translateY(-50%)', opacity: 0.22, pointerEvents: 'none' }}>
             <svg width="90" height="58" viewBox="0 0 90 58" fill="none">
               <rect x="1" y="1" width="88" height="56" rx="3" stroke="white" strokeWidth="2"/>
               <rect x="1" y="1" width="26" height="56" fill="white" fillOpacity="0.16"/>
@@ -608,7 +615,7 @@ function RoundRobinPanel({
               <line x1="27" y1="29" x2="63" y2="29" stroke="white" strokeWidth="1"/>
             </svg>
           </div>
-          <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ position: 'relative', zIndex: 1, paddingTop: 6 }}>
             <div style={badge}>
               <div style={liveDot} />
               Live
@@ -625,7 +632,7 @@ function RoundRobinPanel({
               event.stopPropagation();
               onClose();
             }}
-            style={closeBtn}
+            style={{ ...closeBtn, zIndex: 2 }}
           >
             <X size={14} />
           </button>

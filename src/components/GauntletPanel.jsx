@@ -593,12 +593,12 @@ function CelebrationPodium({ rows }) {
                   <PodiumAvatar participant={row.participant} label={row.name} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 2 }}>
-                  <Trophy style={{ width: 16, height: 16, color: trophyTone }} />
+                  <Trophy style={{ width: 16, height: 16, color: trophyTone, filter: `drop-shadow(0 0 8px ${trophyTone})` }} />
                 </div>
                 <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: trophyTone, fontFamily: '"Syne", sans-serif' }}>
                   {place === 1 ? '1st place' : place === 2 ? '2nd place' : '3rd place'}
                 </div>
-                <div style={{ marginTop: 4, fontSize: 13, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.name}</div>
+                <div style={{ marginTop: 4, fontSize: 13, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: `0 0 10px ${trophyTone}66` }}>{row.name}</div>
               </div>
             );
           })}
