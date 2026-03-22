@@ -559,6 +559,47 @@ const StatVal = ({ value, positive, negative, muted }) => {
   );
 };
 
+const getParticipantPhotoUrl = (participant) => String(
+  participant?.photoUrl
+  || participant?.photo_url
+  || participant?.avatarUrl
+  || participant?.avatar_url
+  || ''
+).trim();
+
+function PodiumAvatar({ participant, label }) {
+  const photoUrl = getParticipantPhotoUrl(participant);
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={label}
+        style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${T.neon1}55` }}
+      />
+    );
+  }
+  return (
+    <div
+      style={{
+        width: 46,
+        height: 46,
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 15,
+        fontWeight: 900,
+        background: `${T.neon1}18`,
+        color: T.neon1,
+        border: `2px solid ${T.neon1}55`,
+        margin: '0 auto',
+      }}
+    >
+      {String(label || '?').trim().charAt(0).toUpperCase() || '?'}
+    </div>
+  );
+}
+
 const CelebrationPodium = ({ rows }) => {
   const pieces = Array.from({ length: 18 }, (_, idx) => ({
     id: idx,
@@ -633,6 +674,9 @@ const CelebrationPodium = ({ rows }) => {
       <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
       {rows[1] && (
         <div style={slotBase}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            <PodiumAvatar participant={rows[1].participant} label={rows[1].name} />
+          </div>
           <div style={iconRow}>🥈</div>
           <div style={nameRow}>{rows[1].name}</div>
           <div style={statRow}>
@@ -642,6 +686,9 @@ const CelebrationPodium = ({ rows }) => {
       )}
       {rows[0] && (
         <div style={slotBase}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            <PodiumAvatar participant={rows[0].participant} label={rows[0].name} />
+          </div>
           <div style={iconRow}>🏆</div>
           <div style={nameRow}>{rows[0].name}</div>
           <div style={statRow}>
@@ -651,6 +698,9 @@ const CelebrationPodium = ({ rows }) => {
       )}
       {rows[2] && (
         <div style={slotBase}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            <PodiumAvatar participant={rows[2].participant} label={rows[2].name} />
+          </div>
           <div style={iconRow}>🥉</div>
           <div style={nameRow}>{rows[2].name}</div>
           <div style={statRow}>

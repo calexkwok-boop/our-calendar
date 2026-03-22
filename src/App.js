@@ -1470,6 +1470,7 @@ const deriveScrambleStandings = (tournament) => {
   return Object.values(stats)
     .map((row) => ({
       ...row,
+      participant: participants.find((participant) => String(participant?.id || '') === String(row.id || '')) || null,
       pointDiff: row.pointsFor - row.pointsAgainst,
       winPct: row.games > 0 ? row.wins / row.games : 0,
     }))
@@ -18370,7 +18371,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     : null;
   const selectedRoundRobinParticipants = useManualRoundRobinRoster
     ? manualRoundRobinParticipants
-    : ((selectedRoundRobinEntry?.signups || []).map((signup, idx) => ({
+      : ((selectedRoundRobinEntry?.signups || []).map((signup, idx) => ({
         id: String(
           signup?.memberId
           || signup?.signupId
@@ -18379,6 +18380,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         ),
         userId: String(signup?.userId || ''),
         displayName: String(signup?.displayName || `Player ${idx + 1}`),
+        photoUrl: String(signup?.photoUrl || signup?.photo_url || signup?.avatarUrl || signup?.avatar_url || ''),
+        photo_url: String(signup?.photo_url || signup?.photoUrl || ''),
+        avatarUrl: String(signup?.avatarUrl || signup?.avatar_url || ''),
+        avatar_url: String(signup?.avatar_url || signup?.avatarUrl || ''),
       })));
   const activeRoundRobinTournament = roundRobinTournamentKey ? (layerRoundRobins?.[roundRobinTournamentKey] || null) : null;
   const activeRoundRobinRounds = activeRoundRobinTournament?.rounds || [];
@@ -18754,6 +18759,10 @@ function parseManualRoundRobinRoster(value) {
         id: String(signup?.memberId || signup?.signupId || signup?.userId || `guest-${idx + 1}-${String(signup?.displayName || 'player').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`),
         userId: String(signup?.userId || ''),
         displayName: String(signup?.displayName || `Player ${idx + 1}`),
+        photoUrl: String(signup?.photoUrl || signup?.photo_url || signup?.avatarUrl || signup?.avatar_url || ''),
+        photo_url: String(signup?.photo_url || signup?.photoUrl || ''),
+        avatarUrl: String(signup?.avatarUrl || signup?.avatar_url || ''),
+        avatar_url: String(signup?.avatar_url || signup?.avatarUrl || ''),
         seed: idx + 1,
       }));
     }
