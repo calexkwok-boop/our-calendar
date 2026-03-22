@@ -22363,6 +22363,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         manualRoundRobinRosterInput={manualRoundRobinRosterInput}
         setManualRoundRobinRosterInput={setManualRoundRobinRosterInput}
         selectedRoundRobinEntry={selectedRoundRobinEntry}
+        currentUserLabel={String(currentUser || user?.email || user?.phone || '')}
+        currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
         teamsOf={activeRoundRobinTeamsOf}
         setTeamsOf={setRoundRobinTeamsOf}
         rounds={activeRoundRobinRounds}
@@ -22426,6 +22428,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         renderTeamName={renderScrambleTeamName}
         participantMap={scrambleParticipantMap}
         tournamentKey={scrambleTournamentKey}
+        currentUserLabel={String(currentUser || user?.email || user?.phone || '')}
+        currentUserProfilePhotoUrl={currentUserProfilePhotoUrl}
       />
     </div>
   </div>

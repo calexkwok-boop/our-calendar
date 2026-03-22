@@ -567,8 +567,10 @@ const getParticipantPhotoUrl = (participant) => String(
   || ''
 ).trim();
 
-function PodiumAvatar({ participant, label }) {
-  const photoUrl = getParticipantPhotoUrl(participant);
+function PodiumAvatar({ participant, label, fallbackPhotoUrl = '', currentUserLabel = '' }) {
+  const normalizedLabel = String(label || '').trim().toLowerCase();
+  const normalizedCurrentUserLabel = String(currentUserLabel || '').trim().toLowerCase();
+  const photoUrl = getParticipantPhotoUrl(participant) || (normalizedLabel && normalizedLabel === normalizedCurrentUserLabel ? String(fallbackPhotoUrl || '').trim() : '');
   if (photoUrl) {
     return (
       <img
@@ -675,7 +677,12 @@ const CelebrationPodium = ({ rows }) => {
       {rows[1] && (
         <div style={slotBase}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-            <PodiumAvatar participant={rows[1].participant} label={rows[1].name} />
+            <PodiumAvatar
+              participant={rows[1].participant}
+              label={rows[1].name}
+              fallbackPhotoUrl={currentUserProfilePhotoUrl}
+              currentUserLabel={currentUserLabel}
+            />
           </div>
           <div style={iconRow}>🥈</div>
           <div style={nameRow}>{rows[1].name}</div>
@@ -687,7 +694,12 @@ const CelebrationPodium = ({ rows }) => {
       {rows[0] && (
         <div style={slotBase}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-            <PodiumAvatar participant={rows[0].participant} label={rows[0].name} />
+            <PodiumAvatar
+              participant={rows[0].participant}
+              label={rows[0].name}
+              fallbackPhotoUrl={currentUserProfilePhotoUrl}
+              currentUserLabel={currentUserLabel}
+            />
           </div>
           <div style={iconRow}>🏆</div>
           <div style={nameRow}>{rows[0].name}</div>
@@ -699,7 +711,12 @@ const CelebrationPodium = ({ rows }) => {
       {rows[2] && (
         <div style={slotBase}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-            <PodiumAvatar participant={rows[2].participant} label={rows[2].name} />
+            <PodiumAvatar
+              participant={rows[2].participant}
+              label={rows[2].name}
+              fallbackPhotoUrl={currentUserProfilePhotoUrl}
+              currentUserLabel={currentUserLabel}
+            />
           </div>
           <div style={iconRow}>🥉</div>
           <div style={nameRow}>{rows[2].name}</div>
@@ -745,6 +762,8 @@ function ScramblePanel({
   renderTeamName,
   participantMap,
   tournamentKey,
+  currentUserLabel,
+  currentUserProfilePhotoUrl,
 }) {
   const signupCount = signups.length;
   const selectedEntry =
