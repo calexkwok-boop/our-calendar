@@ -121,10 +121,11 @@ const shell = {
 };
 
 const heroStyle = {
-  padding: '20px 22px 18px',
+  padding: '20px 22px 28px',
   borderBottom: `1px solid ${T.border}`,
   position: 'relative',
   overflow: 'hidden',
+  minHeight: 248,
 };
 
 const heroBg = {

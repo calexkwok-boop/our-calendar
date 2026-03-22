@@ -10304,6 +10304,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             ? resolveHandleLikeLabel(String(currentUser || user?.email || user?.phone || 'Member'), String(user?.id || ''))
             : (rawDisplayName || resolveHandleLikeLabel(String(row?.user_id || 'Member'), userId));
           const normalizedIsSelfAlias = userId === String(user?.id || '').trim() && selfAliasSet.has(displayName.trim().toLowerCase());
+          const resolvedPhotoUrl = normalizedIsSelfAlias ? String(currentUserProfilePhotoUrl || '') : '';
           if (normalizedIsSelfAlias) {
             if (!seenSelfAliasesByEvent.has(eventId)) seenSelfAliasesByEvent.set(eventId, new Set());
             const seen = seenSelfAliasesByEvent.get(eventId);
@@ -10317,6 +10318,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             memberId: String(row?.id || ''),
             userId,
             displayName,
+            photoUrl: resolvedPhotoUrl,
+            photo_url: resolvedPhotoUrl,
+            avatarUrl: resolvedPhotoUrl,
+            avatar_url: resolvedPhotoUrl,
             manual: userId === String(user?.id || '').trim() && !selfAliasSet.has(displayName.trim().toLowerCase()),
             createdAt: String(row?.joined_at || ''),
           });
@@ -10334,6 +10339,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             : (rawDisplayName || resolveHandleLikeLabel(String(row?.user_id || 'Member'), userId));
           const memberIdentities = memberIdentityByEvent.get(eventId) || new Set();
           const normalizedIsSelfAlias = userId === String(user?.id || '').trim() && selfAliasSet.has(displayName.trim().toLowerCase());
+          const resolvedPhotoUrl = normalizedIsSelfAlias ? String(currentUserProfilePhotoUrl || '') : '';
           const identityKey = normalizedIsSelfAlias ? `${userId}|self` : `${userId}|${displayName.trim().toLowerCase()}`;
           const hasSameSignup = Array.isArray(signupsMap[eventId]) && signupsMap[eventId].some((entry) => (
             String(entry?.userId || '') === userId && (
@@ -10347,6 +10353,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             signupId: String(row?.id || ''),
             userId,
             displayName,
+            photoUrl: resolvedPhotoUrl,
+            photo_url: resolvedPhotoUrl,
+            avatarUrl: resolvedPhotoUrl,
+            avatar_url: resolvedPhotoUrl,
             manual: false,
             createdAt: String(row?.created_at || ''),
           });
