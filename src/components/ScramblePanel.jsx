@@ -560,6 +560,14 @@ const StatVal = ({ value, positive, negative, muted }) => {
 };
 
 const CelebrationPodium = ({ rows }) => {
+  const pieces = Array.from({ length: 18 }, (_, idx) => ({
+    id: idx,
+    left: `${4 + ((idx * 11) % 92)}%`,
+    delay: `${(idx % 6) * 0.12}s`,
+    duration: `${3 + (idx % 4) * 0.35}s`,
+    background: idx % 3 === 0 ? T.neon1 : idx % 3 === 1 ? T.neon2 : T.neon3,
+    rotate: `${(idx % 2 === 0 ? 1 : -1) * (16 + idx * 5)}deg`,
+  }));
   const podiumStyle = {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
@@ -601,6 +609,28 @@ const CelebrationPodium = ({ rows }) => {
 
   return (
     <div style={podiumStyle}>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', borderRadius: 16 }}>
+        {pieces.map((piece) => (
+          <span
+            key={piece.id}
+            style={{
+              position: 'absolute',
+              top: -6,
+              left: piece.left,
+              width: 8,
+              height: 14,
+              borderRadius: 999,
+              background: piece.background,
+              opacity: 0,
+              transform: `rotate(${piece.rotate})`,
+              animation: `scramble-confetti-fall ${piece.duration} ease-in infinite`,
+              animationDelay: piece.delay,
+              boxShadow: '0 4px 10px rgba(0,0,0,0.18)',
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
       {rows[1] && (
         <div style={slotBase}>
           <div style={iconRow}>🥈</div>
@@ -628,6 +658,7 @@ const CelebrationPodium = ({ rows }) => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
@@ -706,6 +737,12 @@ function ScramblePanel({
               color: ${T.neon3};
               box-shadow: 0 0 20px ${T.neon3}60, inset 0 0 20px ${T.neon3}20;
             }
+          }
+
+          @keyframes scramble-confetti-fall {
+            0% { transform: translate3d(0,-18px,0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translate3d(0,150px,0) rotate(220deg); opacity: 0; }
           }
           
           @keyframes dot-spin {

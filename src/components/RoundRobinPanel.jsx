@@ -456,6 +456,14 @@ const StatVal = ({ value, positive, negative, muted }) => {
 };
 
 const CelebrationPodium = ({ rows }) => {
+  const pieces = Array.from({ length: 18 }, (_, idx) => ({
+    id: idx,
+    left: `${4 + ((idx * 11) % 92)}%`,
+    delay: `${(idx % 6) * 0.12}s`,
+    duration: `${3 + (idx % 4) * 0.35}s`,
+    background: idx % 3 === 0 ? '#60a5fa' : idx % 3 === 1 ? '#2dd4bf' : '#f472b6',
+    rotate: `${(idx % 2 === 0 ? 1 : -1) * (16 + idx * 5)}deg`,
+  }));
   const podiumStyle = {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
@@ -467,6 +475,8 @@ const CelebrationPodium = ({ rows }) => {
     marginBottom: 10,
     margin: '0 14px 10px',
     boxShadow: '0 0 40px rgba(59,130,246,0.16)',
+    position: 'relative',
+    overflow: 'hidden',
   };
 
   const slotBase = {
@@ -494,6 +504,28 @@ const CelebrationPodium = ({ rows }) => {
 
   return (
     <div style={podiumStyle}>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', borderRadius: 12 }}>
+        {pieces.map((piece) => (
+          <span
+            key={piece.id}
+            style={{
+              position: 'absolute',
+              top: -6,
+              left: piece.left,
+              width: 8,
+              height: 14,
+              borderRadius: 999,
+              background: piece.background,
+              opacity: 0,
+              transform: `rotate(${piece.rotate})`,
+              animation: `rr-confetti-fall ${piece.duration} ease-in infinite`,
+              animationDelay: piece.delay,
+              boxShadow: '0 4px 10px rgba(0,0,0,0.18)',
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
       {rows[1] && (
         <div style={slotBase}>
           <div style={iconRow}>🥈</div>
@@ -521,6 +553,7 @@ const CelebrationPodium = ({ rows }) => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
@@ -597,6 +630,11 @@ function RoundRobinPanel({
           @keyframes rr-pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.7; transform: scale(0.95); }
+          }
+          @keyframes rr-confetti-fall {
+            0% { transform: translate3d(0,-18px,0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translate3d(0,150px,0) rotate(220deg); opacity: 0; }
           }
         `}
       </style>
