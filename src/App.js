@@ -10304,7 +10304,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             ? resolveHandleLikeLabel(String(currentUser || user?.email || user?.phone || 'Member'), String(user?.id || ''))
             : (rawDisplayName || resolveHandleLikeLabel(String(row?.user_id || 'Member'), userId));
           const normalizedIsSelfAlias = userId === String(user?.id || '').trim() && selfAliasSet.has(displayName.trim().toLowerCase());
-          const resolvedPhotoUrl = normalizedIsSelfAlias ? String(currentUserProfilePhotoUrl || '') : '';
+          const isCurrentUserSignup = userId === String(user?.id || '').trim() || selfAliasSet.has(displayName.trim().toLowerCase());
+          const resolvedPhotoUrl = isCurrentUserSignup ? String(currentUserProfilePhotoUrl || '') : '';
           if (normalizedIsSelfAlias) {
             if (!seenSelfAliasesByEvent.has(eventId)) seenSelfAliasesByEvent.set(eventId, new Set());
             const seen = seenSelfAliasesByEvent.get(eventId);
@@ -10339,7 +10340,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             : (rawDisplayName || resolveHandleLikeLabel(String(row?.user_id || 'Member'), userId));
           const memberIdentities = memberIdentityByEvent.get(eventId) || new Set();
           const normalizedIsSelfAlias = userId === String(user?.id || '').trim() && selfAliasSet.has(displayName.trim().toLowerCase());
-          const resolvedPhotoUrl = normalizedIsSelfAlias ? String(currentUserProfilePhotoUrl || '') : '';
+          const isCurrentUserSignup = userId === String(user?.id || '').trim() || selfAliasSet.has(displayName.trim().toLowerCase());
+          const resolvedPhotoUrl = isCurrentUserSignup ? String(currentUserProfilePhotoUrl || '') : '';
           const identityKey = normalizedIsSelfAlias ? `${userId}|self` : `${userId}|${displayName.trim().toLowerCase()}`;
           const hasSameSignup = Array.isArray(signupsMap[eventId]) && signupsMap[eventId].some((entry) => (
             String(entry?.userId || '') === userId && (
@@ -18390,7 +18392,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         ),
         userId: String(signup?.userId || ''),
         displayName: String(signup?.displayName || `Player ${idx + 1}`),
-        photoUrl: String(signup?.photoUrl || signup?.photo_url || signup?.avatarUrl || signup?.avatar_url || ''),
+        photoUrl: String(
+          signup?.photoUrl
+          || signup?.photo_url
+          || signup?.avatarUrl
+          || signup?.avatar_url
+          || ((String(signup?.userId || '') === String(user?.id || '') || String(signup?.displayName || '').trim().toLowerCase() === String(currentUser || '').trim().toLowerCase()) ? currentUserProfilePhotoUrl : '')
+          || ''
+        ),
         photo_url: String(signup?.photo_url || signup?.photoUrl || ''),
         avatarUrl: String(signup?.avatarUrl || signup?.avatar_url || ''),
         avatar_url: String(signup?.avatar_url || signup?.avatarUrl || ''),
@@ -18769,7 +18778,14 @@ function parseManualRoundRobinRoster(value) {
         id: String(signup?.memberId || signup?.signupId || signup?.userId || `guest-${idx + 1}-${String(signup?.displayName || 'player').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}`),
         userId: String(signup?.userId || ''),
         displayName: String(signup?.displayName || `Player ${idx + 1}`),
-        photoUrl: String(signup?.photoUrl || signup?.photo_url || signup?.avatarUrl || signup?.avatar_url || ''),
+        photoUrl: String(
+          signup?.photoUrl
+          || signup?.photo_url
+          || signup?.avatarUrl
+          || signup?.avatar_url
+          || ((String(signup?.userId || '') === String(user?.id || '') || String(signup?.displayName || '').trim().toLowerCase() === String(currentUser || '').trim().toLowerCase()) ? currentUserProfilePhotoUrl : '')
+          || ''
+        ),
         photo_url: String(signup?.photo_url || signup?.photoUrl || ''),
         avatarUrl: String(signup?.avatarUrl || signup?.avatar_url || ''),
         avatar_url: String(signup?.avatar_url || signup?.avatarUrl || ''),
@@ -18879,6 +18895,17 @@ function parseManualRoundRobinRoster(value) {
       ),
       userId: String(signup?.userId || ''),
       displayName: String(signup?.displayName || `Player ${idx + 1}`),
+      photoUrl: String(
+        signup?.photoUrl
+        || signup?.photo_url
+        || signup?.avatarUrl
+        || signup?.avatar_url
+        || ((String(signup?.userId || '') === String(user?.id || '') || String(signup?.displayName || '').trim().toLowerCase() === String(currentUser || '').trim().toLowerCase()) ? currentUserProfilePhotoUrl : '')
+        || ''
+      ),
+      photo_url: String(signup?.photo_url || signup?.photoUrl || ''),
+      avatarUrl: String(signup?.avatarUrl || signup?.avatar_url || ''),
+      avatar_url: String(signup?.avatar_url || signup?.avatarUrl || ''),
     }));
   }
   const sourceSignature = buildRoundRobinSourceSignature(participants);
