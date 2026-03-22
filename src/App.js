@@ -18389,6 +18389,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     .map((eventId) => {
       const event = popupEventDetailsById[String(eventId || '')] || null;
       const signups = popupSignupsByEventId[String(eventId || '')] || [];
+      const manualPlayers = readPopupManualPlayers(eventId);
+      const mergedSignups = [...signups];
+      manualPlayers.forEach((player, idx) => {
+        const manualName = String(player?.display_name || '').trim();
+        if (!manualName) return;
+        const duplicate = mergedSignups.some((entry) => String(entry?.displayName || '').trim().toLowerCase() === manualName.toLowerCase());
+        if (duplicate) return;
+        mergedSignups.push({
+          memberId: String(player?.id || `manual-${idx + 1}`),
+          userId: '',
+          displayName: manualName,
+          manual: true,
+          createdAt: String(player?.joined_at || ''),
+        });
+      });
       return {
         id: String(eventId || ''),
         eventId: String(eventId || ''),
@@ -18397,8 +18412,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         date: String(event?.dateKey || event?.date || ''),
         time: String(event?.time || ''),
         location: String(event?.location || ''),
-        signups,
-        eligible: signups.length >= 4,
+        signups: mergedSignups,
+        eligible: mergedSignups.length >= 4,
       };
     })
     .filter((entry) => entry.title)
@@ -18732,7 +18747,7 @@ function parseManualRoundRobinRoster(value) {
       const entry = eligibleScramblePopupEvents.find((item) => String(item?.id || '') === normalizedEventId) || null;
       const signups = entry?.signups || [];
       if (!entry?.eligible) {
-        setScrambleError('Scramble play needs at least 4 joined players.');
+        setScrambleError('Scramble play needs at least 4 players on the roster.');
         return;
       }
       participants = signups.map((signup, idx) => ({
