@@ -169,14 +169,15 @@ const heroTitle = {
   letterSpacing: '-0.02em',
   color: '#fff',
   lineHeight: 1,
+  margin: 0,
 };
 
 const heroSub = {
   fontSize: 13,
   color: T.sub,
-  marginTop: 6,
+  margin: '6px 0 0',
   lineHeight: 1.5,
-  maxWidth: 420,
+  maxWidth: 'none',
 };
 
 const closeBtn = {
@@ -473,7 +474,7 @@ const CelebrationPodium = ({ rows }) => {
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
-    margin: '0 14px 10px',
+    margin: '0 0 10px',
     boxShadow: '0 0 40px rgba(59,130,246,0.16)',
     position: 'relative',
     overflow: 'hidden',
@@ -642,7 +643,7 @@ function RoundRobinPanel({
       <div style={shell}>
         <div style={heroStyle}>
           <div style={heroBg} />
-          <div style={{ position: 'absolute', right: 54, top: '48%', transform: 'translateY(-50%)', opacity: 0.18, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', right: 58, top: '46%', transform: 'translateY(-50%)', opacity: 0.16, pointerEvents: 'none' }}>
             <svg width="90" height="58" viewBox="0 0 90 58" fill="none">
               <rect x="1" y="1" width="88" height="56" rx="3" stroke="white" strokeWidth="2"/>
               <rect x="1" y="1" width="26" height="56" fill="white" fillOpacity="0.16"/>
@@ -653,7 +654,7 @@ function RoundRobinPanel({
               <line x1="27" y1="29" x2="63" y2="29" stroke="white" strokeWidth="1"/>
             </svg>
           </div>
-          <div style={{ position: 'relative', zIndex: 1, paddingRight: 120, maxWidth: '100%' }}>
+          <div style={{ position: 'relative', zIndex: 1, paddingRight: 96, maxWidth: '100%' }}>
             <div style={badge}>
               <div style={liveDot} />
               Live
