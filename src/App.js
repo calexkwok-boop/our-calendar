@@ -18481,7 +18481,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               className="flex-1 px-6 py-3 text-white rounded-xl hover:shadow-lg transition-all font-medium"
               style={themeAccentButtonStyle}
             >
-              + Add Event
+              + Add event
             </button>
             <button
               onClick={() => handleTimeSubmit(null)}
@@ -23095,7 +23095,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-3">Morning, afternoon, and evening at a glance.</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-3">Your morning, afternoon, and evening at a glance.</div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
@@ -23229,7 +23229,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Trips</h3>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Keep travel plans close, but secondary.</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400"></div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
