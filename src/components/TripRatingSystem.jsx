@@ -356,15 +356,22 @@ const EventRatingCard = ({ event, onRate, onAddPhoto, onAddVoiceNote, onAddTags,
             {/* Photos */}
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-2">
-                Add photos
+                Photos
               </div>
+              {Array.isArray(event.photos) && event.photos.length > 0 && (
+                <div className="mb-3 grid grid-cols-4 gap-2">
+                  {event.photos.slice(0, 8).map((url, idx) => (
+                    <img key={idx} src={url} alt="" className="w-full h-20 object-cover rounded-lg" />
+                  ))}
+                </div>
+              )}
               <button
                 onClick={() => onAddPhoto(event.id)}
                 className="w-full py-3 rounded-xl border-2 border-dashed border-purple-300 dark:border-purple-700 
                          text-purple-600 dark:text-purple-400 font-semibold 
                          hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all">
                 <Camera className="w-5 h-5 inline mr-2" />
-                Add photos from this experience
+                Add or manage photos for this experience
               </button>
             </div>
             

@@ -1,0 +1,121 @@
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const ensureFirebaseMessagingServiceWorker = async () => {
+    if (!('serviceWorker' in navigator)) return null;
+    try {
+      let registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+      if (!registration) {
+        registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      }
+
+      if (!registration?.active) {
+        await new Promise((resolve) => {
+          let resolved = false;
+          const done = () => {
+            if (resolved) return;
+            resolved = true;
+            resolve();
+          };
+          const timeout = setTimeout(done, 5000);
+          if (registration?.installing) {
+            registration.installing.addEventListener('statechange', () => {
+              if (registration.active) {
+                clearTimeout(timeout);
+                done();
+              }
+            });
+          } else {
+            clearTimeout(timeout);
+            done();
+          }
+        });
+      }
+
+      if (!registration?.active) {
+        await navigator.serviceWorker.ready;
+        registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+      }
+
+      return registration?.active ? registration : null;
+    } catch (err) {
+      console.error('Firebase service worker setup failed:', err);
+      return null;
+    }
+  };
+
+  const requestFcmToken = async () => {
+    try {
+      const messaging = await getMessagingIfSupported();
+      if (!messaging) return null;
+      const vapidKey = FCM_WEB_VAPID_PUBLIC_KEY || WEB_PUSH_VAPID_PUBLIC_KEY;
+      if (!vapidKey) return null;
+      const registration = await ensureFirebaseMessagingServiceWorker();
+      if (!registration) {
+        console.warn('FCM token skipped: firebase-messaging-sw.js is not active yet.');
+        return null;
+      }
+      const token = await getToken(messaging, {
+        vapidKey,
+        serviceWorkerRegistration: registration,
+      });
+      if (token) {
+        localStorage.setItem('fcm-token', token);
+        console.log('FCM token:', token);
+      }
+      return token || null;
+    } catch (err) {
+      console.error('Error getting FCM token:', err);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (!notificationsEnabled) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    requestFcmToken();
+  }, [user?.id, notificationsEnabled, notificationPermission]);
+
+  const formatPushNotificationContent = (payload) => {
+    const data = (payload?.data && typeof payload.data === 'object') ? payload.data : {};
+    const notification = (payload?.notification && typeof payload.notification === 'object') ? payload.notification : {};
+    const firstText = (...values) => {
+      for (const value of values) {
+        const text = String(value || '').trim();
+        if (text) return text;
+      }
+      return '';
+    };
+    const normalizedType = String(data?.type || notification?.type || 'update').trim().toLowerCase();
+    const genericTitleSet = new Set([
+      'calendar update',
+      'notification from our calendar',
+      'our calendar notification',
+      'our calendar',
+    ]);
+    const titleByType = {
+      invite: 'Calendar Invite',
+      event: 'Calendar Update',
+      list: 'List Update',
+      photo: 'Trip Photo',
+      expense: 'Expense Update',
+      reminder: 'Event Reminder',
+      update: 'Calendar Update',
+    };
+    const rawTitle = firstText(notification?.title, data?.title);
+    const fallbackTitle = titleByType[normalizedType] || 'Calendar Update';
+    const title = (!rawTitle || genericTitleSet.has(rawTitle.toLowerCase())) ? fallbackTitle : rawTitle;
+
+    let body = firstText(notification?.body, data?.body, data?.message, data?.summary, data?.text);
+    if (!body) {
+      const actor = firstText(data?.actor, data?.actorName, data?.createdBy);
+      const action = firstText(data?.action, 'updated');
+      const subject = firstText(data?.eventTitle, data?.itemTitle, data?.subject, data?.calendarName);
+      if (actor && subject) body = `${actor} ${action} "${subject}".`;
+      else if (subject) body = `Update: "${subject}".`;
+    }
+    if (!body) body = 'Open Our Calendar to see what changed.';

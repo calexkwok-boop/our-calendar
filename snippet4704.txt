@@ -1,0 +1,34 @@
+    const id = `sce_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const newEvent = {
+      id,
+      sub_calendar_id: activeSubCalendar.id,
+      date: getDateKey(date),
+      title: title.trim(),
+      time: time || null,
+      end_time: endTime || null,
+      notes: null,
+      category: 'other',
+      created_by: currentUser,
+      user_id: user.id,
+      reactions: null,
+      location: location || null,
+    };
+    const { data, error } = await supabase
+      .from('sub_calendar_events')
+      .insert(newEvent)
+      .select('id')
+      .maybeSingle();
+    if (error || !data?.id) {
+      console.error('Error adding sub_calendar_event:', error);
+      alert(`Could not save trip event: ${error?.message || 'No row was inserted.'}`);
+      return;
+    }
+    const dateKey = getDateKey(date);
+    setSubCalendarEvents(prev => ({
+      ...prev,
+      [dateKey]: [...(prev[dateKey] || []), {
+        id, title: newEvent.title, time: newEvent.time,
+        endTime: newEvent.end_time, notes: null, date: dateKey,
+        category: 'other', createdBy: currentUser, userId: user.id, reactions: {},
+        location: location || null,
+      }]

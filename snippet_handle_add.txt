@@ -1,0 +1,101 @@
+    setSubCalNotes(prev => prev.map(n => n.id === noteId ? { ...n, checklist } : n));
+  };
+
+  const addSubCalEvent = async (date, title, time, endTime, location = null) => {
+    if (!assertCanEditSubCalendar('add itinerary events')) return;
+    if (!title?.trim() || !activeSubCalendar) { console.log('addSubCalEvent bail: no title or no activeSubCalendar', {title, activeSubCalendar}); return; }
+    if (!user?.id) { console.log('addSubCalEvent bail: no user'); return; }
+    const id = `sce_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const newEvent = {
+      id,
+      sub_calendar_id: activeSubCalendar.id,
+      date: getDateKey(date),
+      title: title.trim(),
+      time: time || null,
+            end_time: endTime || null,
+      notes: null,
+      category: subCalNewEventForm?.category || 'other',
+      created_by: currentUser,
+      user_id: user.id,
+      reactions: null,
+      location: location || null,
+    };
+    const { data, error } = await supabase
+      .from('sub_calendar_events')
+      .insert(newEvent)
+      .select('id')
+      .maybeSingle();
+    if (error || !data?.id) {
+      console.error('Error adding sub_calendar_event:', error);
+      alert(`Could not save trip event: ${error?.message || 'No row was inserted.'}`);
+      return;
+    }
+    const dateKey = getDateKey(date);
+    setSubCalendarEvents(prev => ({
+      ...prev,
+      [dateKey]: [...(prev[dateKey] || []), {
+                id, title: newEvent.title, time: newEvent.time,
+        endTime: newEvent.end_time, notes: null, date: dateKey,
+        category: subCalNewEventForm?.category || 'other', createdBy: currentUser, userId: user.id, reactions: {},
+        location: location || null,
+      }]
+    }));
+  };
+
+  const updateSubCalEvent = async (eventId, updates) => {
+    if (!assertCanEditSubCalendar('edit itinerary events')) return;
+    const dbUpdates = {};
+    if (updates.title !== undefined) dbUpdates.title = updates.title;
+    if (updates.time !== undefined) dbUpdates.time = updates.time;
+    if (updates.endTime !== undefined) dbUpdates.end_time = updates.endTime;
+    if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+    if (updates.location !== undefined) dbUpdates.location = updates.location;
+    if (updates.category !== undefined) dbUpdates.category = updates.category;
+    if (updates.reactions !== undefined) dbUpdates.reactions = JSON.stringify(updates.reactions);
+    const { data, error } = await supabase
+      .from('sub_calendar_events')
+      .update(dbUpdates)
+      .eq('id', eventId)
+      .select('id')
+      .maybeSingle();
+    if (error || !data?.id) {
+      console.error('Error updating sub_calendar_event:', error);
+      alert(`Could not save trip event changes: ${error?.message || 'No row was updated.'}`);
+      return;
+    }
+    setSubCalendarEvents(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(dateKey => {
+        updated[dateKey] = updated[dateKey].map(e =>
+          e.id === eventId ? { ...e, ...updates } : e
+        );
+      });
+      return updated;
+    });
+  };
+
+  const deleteSubCalEvent = async (eventId, dateKey) => {
+    if (!assertCanEditSubCalendar('delete itinerary events')) return;
+    const { data, error } = await supabase
+      .from('sub_calendar_events')
+      .delete()
+      .select('id')
+      .eq('id', eventId);
+    if (error) {
+      console.error('Error deleting sub-calendar event:', error);
+      alert(`Could not delete trip event: ${error.message}`);
+      return;
+    }
+    if (!data || data.length === 0) {
+      alert('Could not delete trip event (no rows affected). Check DB permissions.');
+      return;
+    }
+    setSubCalendarEvents(prev => ({
+      ...prev,
+      [dateKey]: (prev[dateKey] || []).filter(e => e.id !== eventId)
+    }));
+  };
+
+  const handleSubCalReact = (event, emoji) => {
+    const currentReactions = event.reactions || {};
+    const currentUsers = currentReactions[emoji] || [];

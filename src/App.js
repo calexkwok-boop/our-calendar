@@ -12,6 +12,7 @@ import ScramblePanel from "./components/ScramblePanel";
 import PopupEventPanel from "./components/PopupEventPanel";
 import AddEventModal from "./components/AddEventModal";
 import DateDetailsModal from "./components/DateDetailsModal";
+import SmartAddPlan, { SmartAddPlanCompact } from "./components/SmartAddPlan";
 import StartTripModal from "./components/StartTripModal";
 import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
 import TrophyCase, { deriveJourneyTrophyCase } from "./components/TrophyCase";
@@ -1895,7 +1896,7 @@ function App() {
   const [subCalSelectedDate, setSubCalSelectedDate] = useState(null);
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
   const [subCalAddingSlot, setSubCalAddingSlot] = useState(null); // hour number being added to
-  const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', startTime: '', endTime: '', location: '' });
+  const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', startTime: '', endTime: '', location: '', category: 'other' });
   const [subCalTab, setSubCalTab] = useState('itinerary'); // 'itinerary' | 'expenses' | 'photos' | 'chat'
   const [shareMyLocation, setShareMyLocation] = useState(() => localStorage.getItem('subcal-share-location') === 'true');
   const [memberLocations, setMemberLocations] = useState({});
@@ -4691,9 +4692,9 @@ function App() {
       date: getDateKey(date),
       title: title.trim(),
       time: time || null,
-      end_time: endTime || null,
+            end_time: endTime || null,
       notes: null,
-      category: 'other',
+      category: subCalNewEventForm?.category || 'other',
       created_by: currentUser,
       user_id: user.id,
       reactions: null,
@@ -4713,9 +4714,9 @@ function App() {
     setSubCalendarEvents(prev => ({
       ...prev,
       [dateKey]: [...(prev[dateKey] || []), {
-        id, title: newEvent.title, time: newEvent.time,
+                id, title: newEvent.title, time: newEvent.time,
         endTime: newEvent.end_time, notes: null, date: dateKey,
-        category: 'other', createdBy: currentUser, userId: user.id, reactions: {},
+        category: subCalNewEventForm?.category || 'other', createdBy: currentUser, userId: user.id, reactions: {},
         location: location || null,
       }]
     }));
@@ -26819,14 +26820,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           }
                           await addSubCalEvent(subCalSelectedDate, subCalNewEventForm.title, timeStr, endTimeStr, subCalNewEventForm.location || null);
                           setSubCalAddingSlot(null);
-                          setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '' });
+                          setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '', category: 'other' });
                         }}
                         className="flex-1 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 px-3 py-2 text-sm font-medium text-white"
                       >
                         Add plan
                       </button>
                       <button
-                        onClick={() => { setSubCalAddingSlot(null); setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '' }); }}
+                        onClick={() => { setSubCalAddingSlot(null); setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '', category: 'other' }); }}
                         className="rounded-2xl bg-gray-100 px-3 py-2 text-sm text-gray-600 dark:bg-white/10 dark:text-gray-300"
                       >
                         Cancel
@@ -26991,12 +26992,76 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                             {daySummary.firstTime && <span>Starts {daySummary.firstTime}</span>}
                           </div>
                         </div>
-                        <button
-                          onClick={() => handleStartAddPlan(9)}
-                          className="shrink-0 rounded-full bg-purple-500/10 px-3 py-2 text-sm font-medium text-purple-700 dark:text-purple-300"
-                        >
-                          + Add plan
-                        </button>
+                                                <SmartAddPlan
+      timeSlot={(() => {
+        const preferred = [9, 14, 19];
+        const dk = getDateKey(subCalSelectedDate);
+        const taken = new Set(((subCalendarEvents[dk] || [])
+          .map(e => String(e.time || '').slice(0, 2))
+          .filter(Boolean)
+          .map(h => parseInt(h, 10))));
+        const open = preferred.find(h => !taken.has(h));
+        return open ?? new Date().getHours();
+      })()}
+      customSuggestions={(() => {
+        const slot = (() => {
+          const preferred = [9, 14, 19];
+          const dk = getDateKey(subCalSelectedDate);
+          const taken = new Set(((subCalendarEvents[dk] || [])
+            .map(e => String(e.time || '').slice(0, 2))
+            .filter(Boolean)
+            .map(h => parseInt(h, 10))));
+          const open = preferred.find(h => !taken.has(h));
+          return open ?? new Date().getHours();
+        })();
+        const timeOfDay = (h => (h >= 6 && h < 11) ? 'morning' : (h >= 11 && h < 17) ? 'afternoon' : (h >= 17 && h < 24) ? 'evening' : 'night')(slot);
+        const byTod = {
+          morning: [
+            { category: 'restaurant', icon: '☕', label: 'Breakfast', description: 'Quick add with smart defaults', gradient: 'from-orange-500 to-amber-500' },
+            { category: 'activity', icon: '🏃', label: 'Morning Activity', description: 'Sightseeing, tour, or exercise', gradient: 'from-blue-500 to-cyan-500' },
+          ],
+          afternoon: [
+            { category: 'restaurant', icon: '🍝', label: 'Lunch', description: 'Quick add with smart defaults', gradient: 'from-orange-500 to-red-500' },
+            { category: 'activity', icon: '🏛️', label: 'Sightseeing', description: 'Museums, landmarks, or tours', gradient: 'from-blue-500 to-purple-500' },
+          ],
+          evening: [
+            { category: 'restaurant', icon: '🍷', label: 'Dinner', description: 'Quick add with smart defaults', gradient: 'from-orange-500 to-red-600' },
+            { category: 'activity', icon: '🎭', label: 'Evening Activity', description: 'Shows, bars, or nightlife', gradient: 'from-purple-500 to-pink-500' },
+          ],
+          night: [
+            { category: 'restaurant', icon: '🌙', label: 'Late Night Bite', description: 'Quick add with smart defaults', gradient: 'from-indigo-500 to-purple-600' },
+            { category: 'activity', icon: '🎵', label: 'Nightlife', description: 'Bars, clubs, or live music', gradient: 'from-purple-500 to-pink-500' },
+          ],
+        };
+        const base = byTod[timeOfDay] || byTod.afternoon;
+        return [
+          ...base,
+          { category: 'hotel', icon: '🏨', label: 'Hotel', description: 'Check-in/out', gradient: 'from-green-500 to-emerald-500' },
+          { category: 'transport', icon: '🚗', label: 'Transport', description: 'Flight / train / drive', gradient: 'from-purple-500 to-indigo-500' },
+          { category: 'shopping', icon: '🛍️', label: 'Shopping', description: 'Markets and malls', gradient: 'from-pink-500 to-rose-500' },
+        ];
+      })()}
+      onAddPlan={(category, defaults) => {
+        const slot = (() => {
+          const preferred = [9, 14, 19];
+          const dk = getDateKey(subCalSelectedDate);
+          const taken = new Set(((subCalendarEvents[dk] || [])
+            .map(e => String(e.time || '').slice(0, 2))
+            .filter(Boolean)
+            .map(h => parseInt(h, 10))));
+          const open = preferred.find(h => !taken.has(h));
+          return open ?? new Date().getHours();
+        })();
+        setSubCalAddingSlot(slot);
+        setSubCalNewEventForm({
+          title: defaults.title,
+          startTime: defaults.startTime,
+          endTime: defaults.endTime,
+          location: '',
+          category,
+        });
+      }}
+    />
                       </div>
                     </div>
 
@@ -27009,12 +27074,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               {section.events.length > 0 ? `${section.events.length} ${section.events.length === 1 ? 'plan' : 'plans'}` : 'Nothing locked in yet'}
                             </div>
                           </div>
-                          <button
-                            onClick={() => handleStartAddPlan(section.slotValue)}
-                            className="rounded-full border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 dark:border-purple-500/20 dark:bg-purple-500/10 dark:text-purple-300"
-                          >
-                            + Add plan
-                          </button>
+                          <SmartAddPlanCompact
+      timeSlot={section.slotValue}
+      onAddPlan={(category, defaults) => {
+        setSubCalAddingSlot(section.slotValue);
+        setSubCalNewEventForm({
+          title: defaults.title,
+          startTime: defaults.startTime,
+          endTime: defaults.endTime,
+          location: '',
+          category,
+        });
+      }}
+    />
                         </div>
 
                         {subCalAddingSlot === section.slotValue && renderSectionAddForm(section.slotValue)}
@@ -27298,12 +27370,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                                   }
                                   await addSubCalEvent(subCalSelectedDate, subCalNewEventForm.title, timeStr, endTimeStr, subCalNewEventForm.location || null);
                                   setSubCalAddingSlot(null);
-                                  setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '' });
+                                  setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '', category: 'other' });
                                 }}
                                 className="flex-1 py-1.5 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg text-xs font-medium"
                               >Add Event</button>
                               <button
-                                onClick={() => { setSubCalAddingSlot(null); setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '' }); }}
+                                onClick={() => { setSubCalAddingSlot(null); setSubCalNewEventForm({ title: '', startTime: '', endTime: '', location: '', category: 'other' }); }}
                                 className="px-3 py-1.5 bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-lg text-xs"
                               >Cancel</button>
                             </div>
@@ -27730,8 +27802,22 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           {/* Ratings tab */}
   {subCalTab === 'ratings' && (() => {
     const trip = activeSubCalendar || {};
+    const photosByEventId = (tripPhotos || []).reduce((acc, p) => {
+      const evId = String(p?.event_id || '').trim();
+      if (!evId) return acc;
+      if (!acc[evId]) acc[evId] = [];
+      const url = String(p?.url || '').trim();
+      if (url) acc[evId].push(url);
+      return acc;
+    }, {});
     const allEvents = Object.entries(subCalendarEvents || {}).flatMap(([dk, arr]) => (
-      (arr || []).map(ev => ({ ...ev, date: dk, rating: Number(subCalEventRatings[ev.id] || 0), tags: subCalEventTagsMap[ev.id] || [] }))
+      (arr || []).map(ev => ({
+        ...ev,
+        date: dk,
+        rating: Number(subCalEventRatings[ev.id] || 0),
+        tags: subCalEventTagsMap[ev.id] || [],
+        photos: photosByEventId[String(ev.id || '')] || [],
+      }))
     ));
     const onRateEvent = (eventId, rating) => {
       setSubCalEventRatings(prev => {

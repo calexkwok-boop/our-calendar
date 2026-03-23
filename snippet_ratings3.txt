@@ -1,0 +1,361 @@
+      'blackfriday',
+      'dayafterthanksgiving',
+      'daylightsavingtime',
+      'daylightsavingtimebegins',
+      'daylightsavingtimeends',
+      'daylightsavingstime',
+      'daylightsavingstimebegins',
+      'daylightsavingstimeends',
+      'dstbegins',
+      'dstends',
+      'springforward',
+      'fallback',
+    ].some((token) => t.includes(token));
+  };
+
+  const importEventKeyOf = (row) => {
+    const dateKey = String(row?.date || '');
+    const timeKey = String(row?.time || '');
+    const titleNorm = normalizeHolidayLikeTitle(row?.title);
+    const locationKey = String(row?.location || '').trim().toLowerCase();
+    const recurrenceKey = String(row?.recurrence || 'once');
+    const allDayLike = !timeKey || timeKey === '00:00' || timeKey === '00:00:00';
+    if (allDayLike && titleNorm && isLikelyHolidayTitle(titleNorm)) {
+      return [dateKey, 'holiday', titleNorm].join('|');
+    }
+    return [dateKey, timeKey, titleNorm, locationKey, recurrenceKey].join('|');
+  };
+
+  const persistImportedEvents = async (candidateEvents) => {
+    if (!assertCanEditActiveLayer('import events into this calendar')) {
+      return { insertedCount: 0, duplicateCount: 0 };
+    }
+    const incoming = Array.isArray(candidateEvents) ? candidateEvents : [];
+    if (!activeLayerId || !user?.id || incoming.length === 0) {
+      return { insertedCount: 0, duplicateCount: 0 };
+    }
+
+    const existingKeys = new Set();
+    Object.values(events || {}).forEach((rows) => {
+      (rows || []).forEach((row) => existingKeys.add(importEventKeyOf(row)));
+    });
+
+    // Defensive check from DB too, so imports remain append-only even if local state is stale.
+    const { data: existingRows } = await supabase
+      .from('events')
+      .select('date,time,title,location,recurrence')
+      .eq('layer_id', activeLayerId);
+    (existingRows || []).forEach((row) => {
+      existingKeys.add(importEventKeyOf({
+        date: row?.date,
+        time: row?.time,
+        title: row?.title,
+        location: row?.location,
+        recurrence: row?.recurrence || 'once',
+      }));
+    });
+
+    const eventsToInsert = [];
+    let duplicateCount = 0;
+    incoming.forEach((row) => {
+      const key = importEventKeyOf(row);
+      if (existingKeys.has(key)) {
+        duplicateCount += 1;
+        return;
+      }
+      existingKeys.add(key);
+      eventsToInsert.push(row);
+    });
+
+    if (eventsToInsert.length === 0) {
+      return { insertedCount: 0, duplicateCount };
+    }
+
+    const asDbRows = eventsToInsert.map((event) => ({
+      id: event.id,
+      date: event.date,
+      title: event.title,
+      time: event.time,
+      category: event.category || 'other',
+      is_private: Boolean(event.isPrivate),
+      is_private_for: event.isPrivate ? (event.createdBy || null) : null,
+      is_urgent: Boolean(event.isUrgent),
+      is_multi_day: Boolean(event.isMultiDay),
+      multi_day_id: event.multiDayId || null,
+      is_annual: Boolean(event.isAnnual),
+      annual_month: event.annualMonth || null,
+      annual_day: event.annualDay || null,
+      recurrence: event.recurrence || 'once',
+      exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
+      reactions: event.reactions ? JSON.stringify(event.reactions) : null,
+      location: event.location || null,
+      created_by: event.createdBy || currentUser || user?.email || user?.phone || 'User',
+      created_at: event.createdAt || new Date().toISOString(),
+      moderation_status: String(event?.moderationStatus || defaultModerationStatusForNewEvent),
+      moderated_by: event?.moderatedBy || null,
+      moderated_at: event?.moderatedAt || null,
+      moderation_reason: event?.moderationReason || null,
+      user_id: user.id,
+      layer_id: activeLayerId,
+      calendar_id: activeLayerId,
+    }));
+
+    for (let i = 0; i < asDbRows.length; i += 250) {
+      const chunk = asDbRows.slice(i, i + 250);
+      let { error } = await supabase.from('events').insert(chunk);
+      if (error && /column .*moderation_status|column .*moderated_|schema cache/i.test(String(error.message || ''))) {
+        const fallbackChunk = chunk.map((row) => {
+          const next = { ...row };
+          delete next.moderation_status;
+          delete next.moderated_by;
+          delete next.moderated_at;
+          delete next.moderation_reason;
+          return next;
+        });
+        const fallback = await supabase.from('events').insert(fallbackChunk);
+        error = fallback.error || null;
+      }
+      if (error) throw new Error(error.message || 'Failed to save imported events.');
+    }
+
+    setEvents((prev) => {
+      const next = { ...(prev || {}) };
+      eventsToInsert.forEach((event) => {
+        const dateKey = String(event.date || '');
+        if (!dateKey) return;
+        const dateRows = next[dateKey] || [];
+        next[dateKey] = [...dateRows, event].sort((a, b) => {
+          if (!a.time) return 1;
+          if (!b.time) return -1;
+          return String(a.time).localeCompare(String(b.time));
+        });
+      });
+      return next;
+    });
+
+    return { insertedCount: eventsToInsert.length, duplicateCount };
+  };
+
+  const normalizeHolidayTitleForCleanup = (value) => normalizeHolidayLikeTitle(value);
+
+  const cleanupDuplicateHolidayEventsForCurrentUserLayer = async () => {
+    if (!activeLayerId || !user?.id) return 0;
+    const { data: rows, error } = await supabase
+      .from('events')
+      .select('id,date,time,title,created_at')
+      .eq('layer_id', activeLayerId)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true })
+      .limit(5000);
+    if (error) {
+      console.error('Holiday duplicate cleanup failed to load rows:', error);
+      return 0;
+    }
+
+    const firstByKey = new Map();
+    const deleteIds = [];
+    (rows || []).forEach((row) => {
+      const dateKey = String(row?.date || '').trim();
+      const timeKey = String(row?.time || '').trim();
+      const allDayLike = !timeKey || timeKey === '00:00' || timeKey === '00:00:00';
+      const titleNorm = normalizeHolidayTitleForCleanup(row?.title);
+      if (!dateKey || !allDayLike || !titleNorm || !isLikelyHolidayTitle(titleNorm)) return;
+      const key = `${dateKey}|${titleNorm}`;
+      if (!firstByKey.has(key)) {
+        firstByKey.set(key, String(row.id));
+      } else {
+        deleteIds.push(String(row.id));
+      }
+    });
+    if (deleteIds.length === 0) return 0;
+
+    const deleted = new Set();
+    for (let i = 0; i < deleteIds.length; i += 200) {
+      const chunk = deleteIds.slice(i, i + 200);
+      const { data: removedRows, error: deleteError } = await supabase
+        .from('events')
+        .delete()
+        .select('id')
+        .eq('layer_id', activeLayerId)
+        .eq('user_id', user.id)
+        .in('id', chunk);
+      if (deleteError) {
+        console.error('Holiday duplicate cleanup delete failed:', deleteError);
+        continue;
+      }
+      (removedRows || []).forEach((row) => deleted.add(String(row?.id || '')));
+    }
+
+    if (deleted.size > 0) {
+      setEvents((prev) => {
+        const next = {};
+        Object.entries(prev || {}).forEach(([dk, list]) => {
+          const filtered = (list || []).filter((event) => !deleted.has(String(event?.id || '')));
+          if (filtered.length > 0) next[dk] = filtered;
+        });
+        return next;
+      });
+    }
+
+    return deleted.size;
+  };
+
+  const triggerGoogleCalendarOAuthImport = async () => {
+    localStorage.setItem(GOOGLE_IMPORT_PENDING_KEY, 'true');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+        scopes: `openid email profile ${GOOGLE_CALENDAR_READ_SCOPE} ${GOOGLE_CONTACTS_READ_SCOPE}`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+          include_granted_scopes: 'true',
+        },
+      },
+    });
+    if (error) {
+      localStorage.removeItem(GOOGLE_IMPORT_PENDING_KEY);
+      throw new Error(error.message || 'Could not connect Google Calendar.');
+    }
+  };
+
+  const buildBirthdayTitle = (name) => {
+    const base = String(name || '').trim() || 'Contact';
+    return base.endsWith('s') ? `${base}' birthday` : `${base}'s birthday`;
+  };
+
+  const fetchGoogleContactBirthdays = async (providerToken) => {
+    const headers = { Authorization: `Bearer ${providerToken}` };
+    let pageToken = '';
+    const rows = [];
+    for (let page = 0; page < 8; page += 1) {
+      const params = new URLSearchParams({
+        personFields: 'names,birthdays',
+        pageSize: '1000',
+      });
+      if (pageToken) params.set('pageToken', pageToken);
+      const resp = await fetch(`https://people.googleapis.com/v1/people/me/connections?${params.toString()}`, {
+        headers,
+      });
+      // Missing People API enablement or scope should not break calendar import.
+      if (resp.status === 403 || resp.status === 404) return rows;
+      if (!resp.ok) {
+        let message = `Google Contacts request failed (${resp.status}).`;
+        try {
+          const errData = await resp.json();
+          const errMsg = String(errData?.error?.message || '').trim();
+          if (errMsg) message = errMsg;
+        } catch {}
+        throw new Error(message);
+      }
+      const json = await resp.json();
+      const people = Array.isArray(json?.connections) ? json.connections : [];
+      rows.push(...people);
+      pageToken = String(json?.nextPageToken || '').trim();
+      if (!pageToken || rows.length >= 7000) break;
+    }
+    return rows;
+  };
+
+  const importGoogleCalendarEvents = async ({ allowReconnect = true } = {}) => {
+    if (!activeLayerId || !user?.id) return;
+    setIsImportingCalendar(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const providerToken = String(sessionData?.session?.provider_token || '').trim();
+      if (!providerToken) {
+        if (!allowReconnect) {
+          throw new Error('Google auth token is missing. Please reconnect and try again.');
+        }
+        await triggerGoogleCalendarOAuthImport();
+        return;
+      }
+
+      const authHeaders = { Authorization: `Bearer ${providerToken}` };
+      const calendarListResp = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=freeBusyReader&showHidden=true', {
+        headers: authHeaders,
+      });
+
+      if ((calendarListResp.status === 401 || calendarListResp.status === 403) && allowReconnect) {
+        await triggerGoogleCalendarOAuthImport();
+        return;
+      }
+      if (!calendarListResp.ok) {
+        let message = `Google Calendar list request failed (${calendarListResp.status}).`;
+        try {
+          const errData = await calendarListResp.json();
+          const errMsg = String(errData?.error?.message || '').trim();
+          if (errMsg) message = errMsg;
+        } catch {}
+        throw new Error(message);
+      }
+
+      const calendarListJson = await calendarListResp.json();
+      const calendars = Array.isArray(calendarListJson?.items) ? calendarListJson.items : [];
+      const readableCalendars = calendars.filter((c) => {
+        const calId = String(c?.id || '').trim();
+        const accessRole = String(c?.accessRole || '').toLowerCase();
+        return Boolean(calId) && ['owner', 'writer', 'reader', 'freebusyreader'].includes(accessRole);
+      });
+      const isHolidayCalendar = (c) => {
+        const id = String(c?.id || '').trim().toLowerCase();
+        const summary = String(c?.summary || c?.summaryOverride || '').trim().toLowerCase();
+        return id.includes('#holiday@group.v.calendar.google.com') || summary.includes('holiday');
+      };
+      const importableCalendars = readableCalendars.filter((c) => !isHolidayCalendar(c));
+      const knownBirthdayCalendarIds = [
+        'addressbook#contacts@group.v.calendar.google.com',
+        'contacts@group.v.calendar.google.com',
+      ];
+      const calendarCandidatesMap = new Map();
+      importableCalendars.forEach((c) => {
+        const id = String(c?.id || '').trim();
+        if (!id) return;
+        calendarCandidatesMap.set(id, {
+          id,
+          summary: String(c?.summary || c?.summaryOverride || '').trim() || id,
+        });
+      });
+      knownBirthdayCalendarIds.forEach((id) => {
+        if (!calendarCandidatesMap.has(id)) {
+          calendarCandidatesMap.set(id, { id, summary: 'Birthdays' });
+        }
+      });
+      const calendarCandidates = Array.from(calendarCandidatesMap.values());
+      if (calendarCandidates.length === 0) {
+        throw new Error('No readable Google calendars were found for this account.');
+      }
+
+      const googleEvents = [];
+      let calendarBirthdayEventCount = 0;
+      for (const cal of calendarCandidates) {
+        const targetCalendarId = String(cal?.id || '').trim();
+        let pageToken = '';
+        for (let page = 0; page < 6; page += 1) {
+          const params = new URLSearchParams({
+            showDeleted: 'false',
+            singleEvents: 'true',
+            orderBy: 'startTime',
+            maxResults: '2500',
+            timeMin: new Date(Date.now() - (365 * 24 * 60 * 60 * 1000)).toISOString(),
+            timeMax: new Date(Date.now() + (365 * 2 * 24 * 60 * 60 * 1000)).toISOString(),
+          });
+          // Include birthdays explicitly; some Google accounts omit them unless requested.
+          params.append('eventTypes', 'default');
+          params.append('eventTypes', 'birthday');
+          if (pageToken) params.set('pageToken', pageToken);
+          const eventsResp = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCalendarId)}/events?${params.toString()}`, {
+            headers: authHeaders,
+          });
+          if (!eventsResp.ok) {
+            // Some known fallback IDs may not exist for a given account; skip quietly.
+            if ([403, 404].includes(eventsResp.status)) break;
+            let message = `Google Calendar events request failed (${eventsResp.status}).`;
+            try {
+              const errData = await eventsResp.json();
+              const errMsg = String(errData?.error?.message || '').trim();
+              if (errMsg) message = errMsg;
+            } catch {}
+            throw new Error(message);
+          }

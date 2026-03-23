@@ -1,0 +1,51 @@
+                            <span>{daySummary.count} {daySummary.count === 1 ? 'plan' : 'plans'}</span>
+                            {daySummary.firstTime && <span>Starts {daySummary.firstTime}</span>}
+                          </div>
+                        </div>
+                        <SmartAddPlan
+      timeSlot={9}
+      onAddPlan={(category, defaults) => {
+        setSubCalAddingSlot(9);
+        setSubCalNewEventForm({
+          title: defaults.title,
+          startTime: defaults.startTime,
+          endTime: defaults.endTime,
+          location: '',
+          category,
+        });
+      }}
+    />
+                      </div>
+                    </div>
+
+                    {groupedSections.filter((section) => section.key !== 'anytime').map((section) => (
+                      <div key={section.key} className="rounded-[28px] border border-white/10 bg-white/72 p-4 shadow-sm dark:bg-slate-900/68">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-lg font-semibold text-gray-900 dark:text-white">{section.label}</div>
+                            <div className="text-sm text-gray-400 dark:text-gray-500">
+                              {section.events.length > 0 ? `${section.events.length} ${section.events.length === 1 ? 'plan' : 'plans'}` : 'Nothing locked in yet'}
+                            </div>
+                          </div>
+                          <SmartAddPlanCompact
+      timeSlot={section.slotValue}
+      onAddPlan={(category, defaults) => {
+        setSubCalAddingSlot(section.slotValue);
+        setSubCalNewEventForm({
+          title: defaults.title,
+          startTime: defaults.startTime,
+          endTime: defaults.endTime,
+          location: '',
+          category,
+        });
+      }}
+    />
+                        </div>
+
+                        {subCalAddingSlot === section.slotValue && renderSectionAddForm(section.slotValue)}
+
+                        <div className="mt-4 space-y-3">
+                          {section.events.length > 0 ? (
+                            section.events.map(renderPlanCard)
+                          ) : (
+                            <div className={`rounded-3xl bg-gradient-to-br ${section.accent} border border-white/5 px-4 py-5`}>
