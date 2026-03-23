@@ -160,7 +160,7 @@ const segBtnActive = {
 
 const formGrid = {
   display: 'grid',
-  gridTemplateColumns: 'minmax(0,1fr) 90px 130px',
+  gridTemplateColumns: '1fr 1fr',
   gap: 10,
   alignItems: 'start',
 };
@@ -973,15 +973,6 @@ function ScramblePanel({
             )}
 
             <div style={{ marginTop: 12, ...formGrid }}>
-              <div>
-                <label style={fieldLabel}>Game name</label>
-                <input
-                  type="text"
-                  value={tournamentKey}
-                  disabled
-                  style={{ ...inputBase, opacity: 0.6 }}
-                />
-              </div>
               <div>
                 <label style={fieldLabel}>Courts</label>
                 <div style={stepper}>
