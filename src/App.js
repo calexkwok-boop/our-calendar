@@ -23327,13 +23327,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   openJourneyScreen();
                 }
               }}
-              className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-4 cursor-pointer transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+              className="relative glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-4 cursor-pointer transition-all hover:bg-white/90 dark:hover:bg-white/[0.08] overflow-hidden"
               style={{
                 background: darkMode
                   ? 'linear-gradient(135deg, rgba(251,191,36,0.08) 0%, rgba(245,158,11,0.06) 100%)'
                   : 'linear-gradient(135deg, #fff7ed 0%, #fffbeb 45%, #fef3c7 100%)',
               }}
             >
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Journey</h3>
