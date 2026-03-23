@@ -1,0 +1,146 @@
+﻿
+> src\App.js:28881:        className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center 
+px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+  src\App.js:28882:        onClick={() => setShowJourneyScreen(false)}
+  src\App.js:28883:        style={{
+  src\App.js:28884:          touchAction: 'none',
+  src\App.js:28885:          overscrollBehavior: 'none',
+  src\App.js:28886:          backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined,
+  src\App.js:28887:          minHeight: '100dvh',
+  src\App.js:28888:        }}
+  src\App.js:28889:      >
+  src\App.js:28890:        <div
+  src\App.js:28891:          className="bg-white dark:bg-slate-950 rounded-t-[28px] rounded-b-none sm:rounded-2xl 
+shadow-2xl p-6 w-full max-w-2xl max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto 
+border-t border-transparent dark:border-white/10"
+  src\App.js:28892:          onClick={(e) => e.stopPropagation()}
+  src\App.js:28893:          style={{
+  src\App.js:28894:            touchAction: 'pan-y',
+  src\App.js:28895:            overscrollBehaviorY: 'contain',
+  src\App.js:28896:            WebkitOverflowScrolling: 'touch',
+  src\App.js:28897:            backgroundClip: 'padding-box',
+  src\App.js:28898:            clipPath: 'inset(0 round 28px 28px 0 0)',
+  src\App.js:28899:            boxShadow: darkMode
+  src\App.js:28900:              ? '0 24px 60px rgba(2, 6, 23, 0.62)'
+  src\App.js:28901:              : undefined,
+  src\App.js:28902:            borderBottom: darkMode ? '1px solid rgb(2, 6, 23)' : undefined,
+  src\App.js:28903:            marginBottom: darkMode ? '-1px' : undefined,
+  src\App.js:28904:          }}
+  src\App.js:28905:        >
+  src\App.js:28906:          <div
+  src\App.js:28907:            className="mb-4"
+  src\App.js:28908:            style={{
+  src\App.js:28909:              background: darkMode
+  src\App.js:28910:                ? `linear-gradient(180deg, ${hexToRgba('#0f172a', 0.98)} 0%, 
+${hexToRgba(activeLayerPageTheme.accent, 0.16)} 100%)`
+  src\App.js:28911:                : `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, 
+${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
+  src\App.js:28912:              marginLeft: '-1.5rem',
+  src\App.js:28913:              marginRight: '-1.5rem',
+  src\App.js:28914:              marginTop: '-1.5rem',
+  src\App.js:28915:              padding: '1.5rem',
+  src\App.js:28916:            }}
+  src\App.js:28917:          >
+  src\App.js:28918:            <div className="flex items-start justify-between gap-4">
+  src\App.js:28919:              <div>
+  src\App.js:28920:                <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 
+dark:text-gray-400">Journey</div>
+  src\App.js:28921:                <JourneyQuoteDisplay
+  src\App.js:28922:                  quote={journeyQuote}
+  src\App.js:28923:                  darkMode={darkMode}
+  src\App.js:28924:                  className="mt-2 max-w-[24rem]"
+  src\App.js:28925:                />
+  src\App.js:28926:                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+  src\App.js:28927:                  {primaryJourneyGoal ? 'Your personal progress layer.' : 'One small step, can 
+change everything.'}
+  src\App.js:28928:                </div>
+  src\App.js:28929:              </div>
+  src\App.js:28930:              <button
+  src\App.js:28931:                type="button"
+  src\App.js:28932:                onClick={() => setShowJourneyScreen(false)}
+  src\App.js:28933:                className="rounded-xl p-2 text-gray-500 hover:bg-black/5 dark:text-slate-300 
+dark:hover:bg-white/10"
+  src\App.js:28934:              >
+  src\App.js:28935:                <X className="w-5 h-5" />
+  src\App.js:28936:              </button>
+  src\App.js:28937:            </div>
+  src\App.js:28938:          </div>
+  src\App.js:28939:
+  src\App.js:28940:          <div className="space-y-4 pb-6">
+  src\App.js:28941:            <div className="flex items-center justify-between gap-3 rounded-[24px] border 
+border-gray-200/80 dark:border-white/10 bg-white/75 dark:bg-slate-900/65 px-4 py-3">
+  src\App.js:28942:              <div className="min-w-0">
+  src\App.js:28943:                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Trophy 
+Case</div>
+  src\App.js:28944:                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+  src\App.js:28945:                  {journeyTrophyCase.stats.newTrophies > 0
+  src\App.js:28946:                    ? `${journeyTrophyCase.stats.newTrophies} new 
+${journeyTrophyCase.stats.newTrophies === 1 ? 'trophy' : 'trophies'} earned`
+  src\App.js:28947:                    : `${journeyTrophyCase.earnedTrophies.length} earned so far`}
+  src\App.js:28948:                </div>
+  src\App.js:28949:              </div>
+  src\App.js:28950:              <button
+  src\App.js:28951:                type="button"
+  src\App.js:28952:                onClick={() => setShowJourneyTrophyCase(true)}
+  src\App.js:28953:                className="inline-flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 
+text-sm font-medium text-gray-700 transition hover:text-gray-900 dark:text-slate-100 dark:hover:text-white"
+  src\App.js:28954:                style={{
+  src\App.js:28955:                  borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)',
+  src\App.js:28956:                  backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.82)',
+  src\App.js:28957:                }}
+  src\App.js:28958:              >
+  src\App.js:28959:                <Trophy size={15} />
+  src\App.js:28960:                Open
+  src\App.js:28961:                {journeyTrophyCase.stats.newTrophies > 0 ? (
+  src\App.js:28962:                  <span
+  src\App.js:28963:                    className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase 
+tracking-[0.16em]"
+  src\App.js:28964:                    style={{
+  src\App.js:28965:                      backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.22 : 
+0.14),
+  src\App.js:28966:                      color: activeLayerPageTheme.accent,
+  src\App.js:28967:                    }}
+  src\App.js:28968:                  >
+  src\App.js:28969:                    New
+  src\App.js:28970:                  </span>
+  src\App.js:28971:                ) : null}
+  src\App.js:28972:              </button>
+  src\App.js:28973:            </div>
+  src\App.js:28974:            {primaryJourneyGoal ? (
+  src\App.js:28975:              <div className="rounded-[28px] border border-gray-200/80 dark:border-white/10 
+bg-gray-50/90 dark:bg-slate-900/80 p-5">
+  src\App.js:28976:                <div className="flex items-start justify-between gap-3">
+  src\App.js:28977:                  <div>
+  src\App.js:28978:                    <div className="text-sm font-semibold text-gray-900 
+dark:text-gray-100">{getJourneyGoalEmoji(primaryJourneyGoal)} {primaryJourneyGoal.title}</div>
+  src\App.js:28979:                    <div className="mt-1 text-sm text-gray-500 
+dark:text-gray-400">{journeySupportLabel}</div>
+  src\App.js:28980:                  </div>
+  src\App.js:28981:                  {primaryJourneyGoal?.pinned ? (
+  src\App.js:28982:                    <div className="rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ 
+backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.22 : 0.12), color: activeLayerPageTheme.accent }}>
+  src\App.js:28983:                      Pinned
+  src\App.js:28984:                    </div>
+  src\App.js:28985:                  ) : null}
+  src\App.js:28986:                </div>
+  src\App.js:28987:                <div className="mt-4 flex items-center justify-between text-xs font-medium 
+text-gray-500 dark:text-gray-400">
+  src\App.js:28988:                  <span>{primaryJourneyProgressText}</span>
+  src\App.js:28989:                  <span>{Math.round(primaryJourneyGoalProgress * 100)}%</span>
+  src\App.js:28990:                </div>
+  src\App.js:28991:                <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-black/8 
+dark:bg-white/10">
+  src\App.js:28992:                  <div
+  src\App.js:28993:                    className="h-full rounded-full"
+  src\App.js:28994:                    style={{
+  src\App.js:28995:                      width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, 
+Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
+  src\App.js:28996:                      background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, 
+${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
+  src\App.js:28997:                    }}
+  src\App.js:28998:                  />
+  src\App.js:28999:                </div>
+  src\App.js:29000:                <div className="mt-4 space-y-3">
+  src\App.js:29001:                  <div className="grid grid-cols-2 gap-2">
+
+

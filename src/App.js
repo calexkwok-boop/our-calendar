@@ -19733,7 +19733,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
       >
         <div
-          className="bg-white dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10 p-5 w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
+          className="relative overflow-hidden bg-white dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10 p-5 w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px 32px 0 0)' }}
         >
@@ -19893,7 +19893,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
       >
         <div
-          className="bg-white dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10 p-5 w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
+          className="relative overflow-hidden bg-white dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10 p-5 w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px 32px 0 0)' }}
         >
@@ -20058,7 +20058,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
         >
           <div
-            className="bg-white dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10 p-5 w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
+            className="relative overflow-hidden bg-white dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10 p-5 w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
             style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px 32px 0 0)' }}
           >
@@ -28888,7 +28888,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         }}
       >
         <div
-          className="bg-white dark:bg-slate-950 rounded-t-[28px] rounded-b-none sm:rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          className="relative overflow-hidden bg-white dark:bg-slate-950 rounded-t-[28px] rounded-b-none sm:rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
           onClick={(e) => e.stopPropagation()}
           style={{
             touchAction: 'pan-y',
@@ -28903,6 +28903,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             marginBottom: darkMode ? '-1px' : undefined,
           }}
         >
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
           <div
             className="mb-4"
             style={{
