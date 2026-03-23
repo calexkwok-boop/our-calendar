@@ -18,7 +18,6 @@ const TRAVEL_QUOTES = [
   { text: 'Live your life by a compass, not a clock.', source: 'Stephen R. Covey' },
   { text: 'The gladdest moment in human life is a departure into unknown lands.', source: 'Sir Richard Burton' },
   { text: 'Oh, the places you’ll go!', source: 'Dr. Seuss' },
-  { text: 'Where you lead, I will follow — down any road, no matter how far.', source: 'Carole King' },
   { text: 'Wander often, wonder always.', source: 'Anonymous' },
 ];
 

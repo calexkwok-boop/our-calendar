@@ -1522,34 +1522,79 @@ const normalizeStoredScrambleMap = (value) => {
   }, {});
 };
 
-const shuffleScrambleIds = (ids, seed) => {
+const shuffleScrambleIds = (ids) => {
   const out = [...(ids || [])];
-  let state = Math.max(1, Number(seed) || 1);
-  const nextRand = () => {
-    state = (state * 1664525 + 1013904223) % 4294967296;
-    return state / 4294967296;
-  };
-  for (let i = out.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(nextRand() * (i + 1));
+  const n = out.length;
+  const getRandIndex = (() => {
+    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+      const buf = new Uint32Array(1);
+      return (max) => {
+        window.crypto.getRandomValues(buf);
+        // Avoid bias for small max by modulo; acceptable here for UI randomness
+        return buf[0] % (max + 1);
+      };
+    }
+    return (max) => Math.floor(Math.random() * (max + 1));
+  })();
+  for (let i = n - 1; i > 0; i -= 1) {
+    const j = getRandIndex(i);
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
 };
 
-const buildScrambleRound = ({ participantIds, roundIndex, courtCount }) => {
-  const shuffledIds = shuffleScrambleIds(participantIds, roundIndex + 1);
+const buildScrambleRound = ({ participantIds, roundIndex, courtCount, existingRounds = [] }) => {
+  const shuffledIds = shuffleScrambleIds(participantIds);
   const maxCourtCount = Math.max(1, Number(courtCount || 1));
   const activeCount = Math.min(shuffledIds.length - (shuffledIds.length % 4), maxCourtCount * 4);
   const activeIds = shuffledIds.slice(0, activeCount);
   const byeIds = shuffledIds.slice(activeCount);
+
+  // Build partner history to reduce repeat pairings
+  const makeKey = (a, b) => {
+    const ids = [String(a || '').trim(), String(b || '').trim()].filter(Boolean).sort();
+    return ids.length === 2 ? ids.join('::') : '';
+  };
+  const partnerHistory = new Map();
+  (Array.isArray(existingRounds) ? existingRounds : []).forEach((round) => {
+    (round?.courts || []).forEach((court) => {
+      [[...(court?.teamA || [])], [...(court?.teamB || [])]].forEach((team) => {
+        const ids = (Array.isArray(team) ? team : []).map((id) => String(id || '')).filter(Boolean);
+        if (ids.length < 2) return;
+        const key = makeKey(ids[0], ids[1]);
+        if (!key) return;
+        partnerHistory.set(key, (partnerHistory.get(key) || 0) + 1);
+      });
+    });
+  });
+
+  const patterns = [
+    [[0, 1], [2, 3]],
+    [[0, 2], [1, 3]],
+    [[0, 3], [1, 2]],
+  ];
+  const choosePattern = (groupIds, rndSeed = 0) => {
+    const scored = patterns.map((pattern, idx) => {
+      const teamA = pattern[0].map((pi) => groupIds[pi]).filter(Boolean);
+      const teamB = pattern[1].map((pi) => groupIds[pi]).filter(Boolean);
+      const score = (partnerHistory.get(makeKey(teamA[0], teamA[1])) || 0) + (partnerHistory.get(makeKey(teamB[0], teamB[1])) || 0);
+      // Tiebreaker rotates by idx and a little randomness
+      const tiebreak = (idx - (rndSeed % patterns.length) + patterns.length) % patterns.length;
+      return { pattern, score, tiebreak };
+    });
+    scored.sort((a, b) => a.score - b.score || a.tiebreak - b.tiebreak);
+    return scored[0]?.pattern || patterns[0];
+  };
+
   const courts = [];
   for (let i = 0; i < activeIds.length; i += 4) {
     const batch = activeIds.slice(i, i + 4);
     if (batch.length < 4) break;
+    const pattern = choosePattern(batch, i / 4 + Number(roundIndex || 0));
     courts.push({
       courtNumber: courts.length + 1,
-      teamA: [batch[0], batch[1]],
-      teamB: [batch[2], batch[3]],
+      teamA: pattern[0].map((pi) => batch[pi]),
+      teamB: pattern[1].map((pi) => batch[pi]),
       scoreA: '',
       scoreB: '',
     });
@@ -1576,7 +1621,7 @@ const createScrambleTournament = ({ eventId, totalRounds, courtCount, participan
     status: 'active',
     participants: safeParticipants,
     participantIds,
-    rounds: participantIds.length >= 4 ? [buildScrambleRound({ participantIds, roundIndex: 0, courtCount: normalizedCourtCount })] : [],
+    rounds: participantIds.length >= 4 ? [buildScrambleRound({ participantIds, roundIndex: 0, courtCount: normalizedCourtCount, existingRounds: [] })] : [],
   };
 };
 
@@ -19118,6 +19163,7 @@ function parseManualRoundRobinRoster(value) {
           participantIds: tournament?.participantIds || [],
           roundIndex: roundIndex + 1,
           courtCount: tournament?.courtCount || scrambleCourtCount,
+          existingRounds: updatedRounds,
         });
     setLayerScrambles((prev) => ({
       ...(prev || {}),
@@ -23103,7 +23149,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
                     style={themeAccentEllieChipButtonStyle}
                   >
-                    Add event
+                    + Add event
                   </button>
                 </div>
               </div>
