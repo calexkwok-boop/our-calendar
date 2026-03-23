@@ -116,16 +116,6 @@ const closeBtn = {
   color: T.sub,
 };
 
-const infoBar = {
-  margin: '14px 14px 0',
-  background: 'rgba(255,214,0,0.05)',
-  border: '1px solid rgba(255,214,0,0.13)',
-  borderRadius: 10,
-  padding: '9px 13px',
-  fontSize: 11.5,
-  color: 'rgba(255,230,100,0.75)',
-  lineHeight: 1.5,
-};
 
 const segRow = {
   display: 'grid',
@@ -764,10 +754,6 @@ function GauntletPanel({
           </button>
         </div>
 
-        <div style={infoBar}>
-          Bracket is saved on-device for the active layer. When player count is not divisible by 4,
-          byes rotate automatically and do not count as wins or losses.
-        </div>
 
         <div style={{ padding: 14 }}>
           <div style={segRow}>

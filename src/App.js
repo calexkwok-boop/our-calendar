@@ -26799,21 +26799,21 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {/* Softer segmented tab bar */}
         <div className="px-4 pt-3">
-          <div className="flex rounded-2xl bg-white/60 p-1 dark:bg-white/[0.04]">
+          <div className="flex gap-2 overflow-x-auto whitespace-nowrap rounded-2xl bg-white/60 p-1 dark:bg-white/[0.04]">
           <button
             onClick={() => setSubCalTab('itinerary')}
-            className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all ${subCalTab === 'itinerary' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+            className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${subCalTab === 'itinerary' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >Itinerary</button>
           <button
             onClick={() => setSubCalTab('photos')}
-            className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'photos' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+            className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'photos' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >
             Photos
             {tripPhotos.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{tripPhotos.length}</span>}
             </button>
   <button
     onClick={() => setSubCalTab('ratings')}
-    className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'ratings' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+    className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'ratings' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
   >
     Ratings
     {(() => {
@@ -26842,7 +26842,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   <button
     onClick={() => setSubCalTab('chat')}
 
-            className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'chat' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+            className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'chat' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >
             Chat
             {Number(tripChatUnreadCounts?.[String(activeSubCalendar?.id || '')] || 0) > 0 && (
@@ -26853,7 +26853,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </button>
           <button
             onClick={() => setSubCalTab('expenses')}
-            className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all ${subCalTab === 'expenses' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+            className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${subCalTab === 'expenses' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >Expenses</button>
           </div>
         </div>

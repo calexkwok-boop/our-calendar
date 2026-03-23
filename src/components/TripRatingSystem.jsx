@@ -339,15 +339,21 @@ const VoiceNoteRecorder = ({ onSave, darkMode }) => {
 // ============================================================================
 
 const EventRatingCard = ({ event, onRate,   onAddPhoto, onAddVoiceNote,
-  onAddTags, onAddReview, darkMode, groupRatings = [], currentUserId, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating, defaultExpanded = false }) => {
+  onAddTags, onAddReview, darkMode, groupRatings = [], currentUserId, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating, defaultExpanded = false, deferPersistOnStar = false }) => {
   const [expanded, setExpanded] = useState(!!defaultExpanded);
   const [rating, setRating] = useState(event.rating || 0);
   const [selectedTags, setSelectedTags] = useState(event.tags || []);
   const [pendingFormRating, setPendingFormRating] = useState(null);
+  const [ratingCommitted, setRatingCommitted] = useState(!deferPersistOnStar && Number(event.rating || 0) > 0);
+  const quickSectionRef = useRef(null);
   
   const handleRate = (newRating) => {
     setRating(newRating);
-    onRate(event.id, newRating);
+    // If we are deferring persistence (e.g., Unrated from this trip), don't persist yet
+    if (!deferPersistOnStar) {
+      onRate(event.id, newRating);
+      setRatingCommitted(true);
+    }
     // Open full rating card (modal) with prefilled stars
     setExpanded(true);
     setPendingFormRating(Number(newRating));
@@ -405,13 +411,22 @@ const EventRatingCard = ({ event, onRate,   onAddPhoto, onAddVoiceNote,
                 openFormRating={pendingFormRating}
                 onAfterSubmit={() => {
                   setPendingFormRating(null);
+                  // Keep the card open and guide user to Quick notes/photos
+                  setExpanded(true);
+                  try {
+                    setTimeout(() => {
+                      if (quickSectionRef?.current && typeof quickSectionRef.current.scrollIntoView === 'function') {
+                        quickSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }, 0);
+                  } catch {}
                 }}
                 darkMode={darkMode}
               />
             </div>
 
             {/* Quick tags */}
-            <div>
+            <div ref={quickSectionRef}>
               <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-2">
                 Quick notes (optional)
               </div>
@@ -447,7 +462,14 @@ const EventRatingCard = ({ event, onRate,   onAddPhoto, onAddVoiceNote,
             {/* Save/collapse */}
             <div className="pt-2">
               <button
-                onClick={() => setExpanded(false)}
+                onClick={() => {
+                  // If rating wasn't persisted yet (deferred flow), persist now on Save
+                  if (!ratingCommitted && typeof onRate === 'function') {
+                    onRate(event.id, rating);
+                    setRatingCommitted(true);
+                  }
+                  setExpanded(false);
+                }}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:shadow-md transition-all">
                 Save
               </button>
@@ -548,7 +570,7 @@ const DailyRecapView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
                   .filter(e => (!e.rating || e.rating === 0) && new Date(e.date).toDateString() !== today)
                   .sort((a, b) => new Date(a.date) - new Date(b.date))
                   .map(event => (
-                    <EventRatingCard
+                    <EventRatingCard deferPersistOnStar
                       key={event.id}
                       event={event}
                       onRate={onRateEvent}
