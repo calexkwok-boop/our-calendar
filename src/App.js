@@ -23711,18 +23711,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           ...(!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent
                             ? { '--theme-hover-bg': themeAccentSofterBg }
                             : {}),
+                          ...(isInTrip && !isSelected && !isInSelection
+                            ? (darkMode
+                                ? { backgroundImage: 'linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(45,212,191,0.12) 100%)', boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.35)' }
+                                : { backgroundImage: 'linear-gradient(135deg, #e0f2fe 0%, #ccfbf1 100%)', boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.35)' }
+                              )
+                            : {}),
                         }}
                       >
-                        {isInTrip && (
-                          <div
-                            className={`absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-xs font-bold ${
-                              isSelected || isInSelection ? 'bg-white/90 text-emerald-700' : 'bg-emerald-500 text-white'
-                            }`}
-                            title={`${tripCount} trip day${tripCount > 1 ? 's' : ''}`}
-                          >
-                            🗺️ {tripCount > 1 ? tripCount : ''}
-                          </div>
-                        )}
+
                         <div className={`text-xs sm:text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
                           {date ? date.getDate() : ''}
                           {hasHoliday && !isSelected && !isInSelection && (
@@ -23731,9 +23728,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         </div>
                         {eventCount > 0 && (
                           <div
-                            className={`absolute top-1 right-1 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${
-                              isSelected || isInSelection ? 'bg-white text-gray-900' : 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                            }`}
+                            className={`absolute top-1 right-1 text-[10px] font-semibold ${
+                              isSelected || isInSelection ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'
+                            } pointer-events-none`}
                           >
                             {eventCount > 9 ? '9+' : eventCount}
                           </div>
@@ -23788,18 +23785,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         ...(isSelected && !useLegacyEllieMilesTheme ? themeSelectedSurfaceStyle : {}),
                         ...(!isSelected && isTodayDate && !useLegacyEllieMilesTheme ? { ...themeTodaySurfaceStyle, boxShadow: `inset 0 0 0 2px ${themeAccentBorder}` } : {}),
                         ...(!isSelected && !isTodayDate ? { '--theme-hover-bg': themeAccentSofterBg } : {}),
+                        ...(isInTrip && !isSelected
+                          ? (darkMode
+                              ? { backgroundImage: 'linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(45,212,191,0.12) 100%)', boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.35)' }
+                              : { backgroundImage: 'linear-gradient(135deg, #e0f2fe 0%, #ccfbf1 100%)', boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.35)' }
+                            )
+                          : {}),
                       }}
                       >
-                      {isInTrip && (
-                        <div
-                          className={`absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
-                            isSelected ? 'bg-white/90 text-emerald-700' : 'bg-emerald-500 text-white'
-                          }`}
-                          title={`${tripCount} trip day${tripCount > 1 ? 's' : ''}`}
-                        >
-                          🗺️ {tripCount > 1 ? tripCount : ''}
-                        </div>
-                      )}
+
                       {/* Date number */}
                       <div className={`text-xs font-bold mb-1 ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-200' : 'text-gray-700 dark:text-gray-200'}`}>
                         {date.getDate()}

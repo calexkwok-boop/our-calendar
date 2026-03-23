@@ -1,0 +1,200 @@
+                    ? []
+                    : subCalendars.filter(sc => {
+                        const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
+                        const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
+                        return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
+                      });
+                  const tripCount = subTripsOnDate.length;
+                  const isInTrip = tripCount > 0;
+
+                  return (
+                    <div key={index} className="relative">
+                      <button
+                        onClick={() => handleDateTap(date)}
+                        disabled={!date}
+                        className={`
+                          w-full aspect-square rounded-lg p-1 transition-all duration-200 relative select-none
+                          ${!date ? 'invisible' : 'bg-white dark:bg-gray-700'}
+                          ${hasUrgentEvent && !isSelected && !isInSelection ? 'ring-2 ring-red-500 shadow-lg shadow-red-200' : ''}
+                          ${isInSelection ? `text-white shadow-lg scale-105 ring-2 ${useLegacyEllieMilesTheme ? 'bg-gradient-to-br from-purple-400 to-indigo-400 ring-purple-300' : ''}` : ''}
+                          ${isSelected && !isInSelection ? `text-white shadow-lg scale-105 ${useLegacyEllieMilesTheme ? 'bg-gradient-to-br from-purple-500 to-indigo-500' : ''}` : ''}
+                          ${!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent ? `${useLegacyEllieMilesTheme ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : 'ring-2'}` : ''}
+                          ${!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent ? 'text-gray-700 dark:text-gray-100 dark:hover:bg-gray-600' : ''}
+                          ${hasUrgentEvent && !isSelected && !isInSelection ? 'bg-red-50 dark:bg-red-900/30' : ''}
+                        `}
+                        style={{
+                          zIndex: 10,
+                          ...(isInSelection || isSelected) && !useLegacyEllieMilesTheme ? themeSelectedSurfaceStyle : {},
+                          ...(!isInSelection && !isSelected && isTodayDate && !hasUrgentEvent && !useLegacyEllieMilesTheme
+                            ? { ...themeTodaySurfaceStyle, borderWidth: 0, boxShadow: `inset 0 0 0 2px ${themeAccentBorder}` }
+                            : {}),
+                          ...(!isInSelection && !isSelected && !isTodayDate && !hasUrgentEvent
+                            ? { '--theme-hover-bg': themeAccentSofterBg }
+                            : {}),
+                        }}
+                      >
+                        {isInTrip && (
+                          <div
+                            className={`absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-xs font-bold ${
+                              isSelected || isInSelection ? 'bg-white/90 text-emerald-700' : 'bg-emerald-500 text-white'
+                            }`}
+                            title={`${tripCount} trip day${tripCount > 1 ? 's' : ''}`}
+                          >
+                            🗺️ {tripCount > 1 ? tripCount : ''}
+                          </div>
+                        )}
+                        <div className={`text-xs sm:text-sm font-medium ${hasUrgentEvent && !isSelected && !isInSelection ? 'text-red-700 dark:text-red-400' : ''}`}>
+                          {date ? date.getDate() : ''}
+                          {hasHoliday && !isSelected && !isInSelection && (
+                            <span className="absolute bottom-0.5 left-0.5 text-[10px]">🎉</span>
+                          )}
+                        </div>
+                        {eventCount > 0 && (
+                          <div
+                            className={`absolute top-1 right-1 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${
+                              isSelected || isInSelection ? 'bg-white text-gray-900' : 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                            }`}
+                          >
+                            {eventCount > 9 ? '9+' : eventCount}
+                          </div>
+                        )}
+                        {weatherData && !isSelected && !isInSelection && (
+                          <div className="flex flex-col items-center leading-none mt-0.5">
+                            <span style={{ fontSize: weatherData.icon.length > 2 ? '0.5rem' : '0.85rem' }} className={`${weatherData.icon.length > 2 ? `font-bold ${weatherData.color}` : ''}`}>
+                              {weatherData.icon}
+                            </span>
+                            <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                              {weatherData.high}°/{weatherData.low}°
+                            </span>
+                          </div>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : calendarView === 'week' ? (
+              /* -- WEEK VIEW -- */
+              <div className="grid grid-cols-7 gap-1">
+                {getWeekDays(currentDate).map((date, index) => {
+                  const dateKey = getDateKey(date);
+                  const dateEvents = getEventsForDate(date);
+                  const isSelected = isSameDay(date, selectedDate);
+                  const isTodayDate = isToday(date);
+                  const hasUrgentEvent = dateEvents.some(e => e.isUrgent);
+                  const hasHoliday = dateEvents.some(e => e.isHoliday);
+                  const weatherData = showWeather ? weather[dateKey] : null;
+                  const dateTs = toDateOnlyTs(date);
+                  const subTripsOnDate = subCalendars.filter(sc => {
+                    const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
+                    const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
+                    return startTs !== null && endTs !== null && dateTs >= startTs && dateTs <= endTs;
+                  });
+                  const tripCount = subTripsOnDate.length;
+                  const isInTrip = tripCount > 0;
+
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => handleDateTap(date)}
+                      className={`
+                        min-h-24 rounded-lg p-1.5 cursor-pointer transition-all duration-200 flex flex-col gap-1 relative
+                        ${isSelected ? `text-white shadow-lg ring-2 ${useLegacyEllieMilesTheme ? 'bg-gradient-to-br from-purple-500 to-indigo-500 ring-purple-300' : ''}` : ''}
+                        ${!isSelected && isTodayDate ? `${useLegacyEllieMilesTheme ? 'bg-gradient-to-br from-rose-100 to-purple-100 dark:from-rose-900/50 dark:to-purple-900/50 ring-2 ring-purple-400' : 'ring-2'}` : ''}
+                        ${!isSelected && !isTodayDate ? 'bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600' : ''}
+                        ${hasUrgentEvent && !isSelected ? 'ring-2 ring-red-500' : ''}
+                      `}
+                      style={{
+                        ...(isSelected && !useLegacyEllieMilesTheme ? themeSelectedSurfaceStyle : {}),
+                        ...(!isSelected && isTodayDate && !useLegacyEllieMilesTheme ? { ...themeTodaySurfaceStyle, boxShadow: `inset 0 0 0 2px ${themeAccentBorder}` } : {}),
+                        ...(!isSelected && !isTodayDate ? { '--theme-hover-bg': themeAccentSofterBg } : {}),
+                      }}
+                      >
+                      {isInTrip && (
+                        <div
+                          className={`absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                            isSelected ? 'bg-white/90 text-emerald-700' : 'bg-emerald-500 text-white'
+                          }`}
+                          title={`${tripCount} trip day${tripCount > 1 ? 's' : ''}`}
+                        >
+                          🗺️ {tripCount > 1 ? tripCount : ''}
+                        </div>
+                      )}
+                      {/* Date number */}
+                      <div className={`text-xs font-bold mb-1 ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-200' : 'text-gray-700 dark:text-gray-200'}`}>
+                        {date.getDate()}
+                        {hasHoliday && <span className="ml-1">🎉</span>}
+                      </div>
+
+                      {/* Weather */}
+                      {weatherData && !isSelected && (
+                        <div className="flex items-center gap-0.5 mb-1">
+                          <span style={{ fontSize: '0.7rem' }}>{weatherData.icon.length > 2 ? <span className={`text-xs font-bold ${weatherData.color}`}>{weatherData.icon}</span> : weatherData.icon}</span>
+                          <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{weatherData.high}°/{weatherData.low}°</span>
+                        </div>
+                      )}
+
+                      {/* Events */}
+                      <div className="flex flex-col gap-1 overflow-hidden">
+                        {dateEvents.slice(0, 4).map(event => {
+                          const cat = categories[event.category || 'other'] || categories.other;
+                          if (event.isHoliday) return (
+                            <div key={event.id} className="text-xs px-1.5 py-1 rounded-md bg-red-500 text-white truncate font-medium shadow-sm">
+                              🎉 {event.title}
+                            </div>
+                          );
+                          return (
+                            <div
+                              key={event.id}
+                              className={`text-xs px-1.5 py-1 rounded-md truncate font-medium shadow-sm
+                                ${isSelected ? 'bg-white/25 text-white' : `${cat.color} text-white`}
+                                ${event.isUrgent ? 'ring-1 ring-red-300' : ''}
+                              `}
+                            >
+                              {event.time && <span className="opacity-80 mr-1">{formatTime(event.time)}</span>}
+                              {event.isPrivate && '🔒 '}
+                              {event.title}
+                            </div>
+                          );
+                        })}
+                        {dateEvents.length > 4 && (
+                          <div className={`text-xs font-medium ${isSelected ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'}`}>
+                            +{dateEvents.length - 4} more
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* -- AGENDA VIEW -- */
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                {agendaItems.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">No agenda items in this range.</div>
+                ) : (
+                  (() => {
+                    let lastDateKey = '';
+                    return agendaItems.map((event) => {
+                      const dk = String(event?.date || event?.dateKey || '');
+                      const showHeader = dk !== lastDateKey;
+                      lastDateKey = dk;
+                      const category = categories[event.category || 'other'] || categories.other;
+                      const dateObj = new Date(`${dk}T00:00:00`);
+                      return (
+                        <div key={`${event.id}-${dk}-${event.time || 'all-day'}`}>
+                          {showHeader && (
+                            <div className="sticky top-0 z-10 -mx-1 px-2 py-1 rounded-lg bg-gray-100/95 dark:bg-gray-800/95 backdrop-blur border text-xs font-semibold mb-1" style={{ borderColor: themeAccentBorder, color: activeLayerPageTheme.accent }}>
+                              {Number.isNaN(dateObj.getTime())
+                                ? dk
+                                : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                            </div>
+                          )}
+                          <button
+                            onClick={() => openAgendaItem(event)}
+                            className={`w-full text-left rounded-xl border p-2.5 mb-1 transition-all hover:shadow ${event.isHoliday ? 'bg-red-50 dark:bg-red-900/25 border-red-200 dark:border-red-800' : `${category.lightBg} dark:bg-gray-700 ${category.border}`}`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  {!event.isHoliday && <span className={`w-2 h-2 rounded-full shrink-0 ${category.color}`} />}
