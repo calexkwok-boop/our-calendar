@@ -23233,12 +23233,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setShowSubCalendarModal(true)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-                    style={themeAccentEllieChipButtonStyle}
-                  >
-                    + Start Trip
-                  </button>
+                          onClick={() => setShowSubCalendarModal(true)}
+      className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:shadow-lg hover:shadow-blue-500/25"
+    >
+      + Start Trip
+    </button>
                 </div>
               </div>
               {homeTripsPreview.length === 0 ? (
