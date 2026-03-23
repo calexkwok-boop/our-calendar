@@ -45,6 +45,11 @@ const TripRatingSystem = ({
   darkMode = false,
 }) => {
   const [activeView, setActiveView] = useState('recap'); // recap, highlights, stats, badges
+
+  // If a focusEventId is provided (coming back from photo flow), auto-switch to Reviews view
+  useEffect(() => {
+    if (focusEventId) setActiveView('reviews');
+  }, [focusEventId]);
   
   return (
     <div className="trip-rating-system">

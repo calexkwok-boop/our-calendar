@@ -4098,9 +4098,11 @@ function App() {
       if (error) throw error;
       setTripPhotos(prev => prev.map(p => selectedPhotoIds.includes(p.id) ? { ...p, event_id: String(photoEventId || '') || null } : p));
       closePhotoSelectionMode();
+      // Return to Ratings, focusing the event you just attached to
+      setRatingsFocusEventId(String(photoEventId || ''));
+      setSubCalTab('ratings');
       setPhotoEventId(null);
       setPhotoUploadMessage('Attached to event.');
-      setSubCalTab('ratings');
     } catch (err) {
       console.error('attach photos failed', err);
       alert('Failed to attach photos to event.');
@@ -4133,6 +4135,10 @@ function App() {
     if (successCount > 1) {
       setPhotoUploadError(false);
       setPhotoUploadMessage(`Uploaded ${successCount} photos.`);
+    }
+    if (String(photoEventId || '')) {
+      setRatingsFocusEventId(String(photoEventId || ''));
+      setSubCalTab('ratings');
     }
     setPhotoEventId(null);
     setPhotoDate(null);
