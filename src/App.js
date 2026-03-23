@@ -17,7 +17,11 @@ import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
 import TrophyCase, { deriveJourneyTrophyCase } from "./components/TrophyCase";
 import WelcomeCover from "./components/WelcomeCover";
 import ExploreTab from "./components/ExploreTab";
+import TripsTab from "./components/TripsTab";
+import TripRatingSystem from "./components/TripRatingSystem";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
+
+
 
 
 // Initialize Supabase
@@ -1876,8 +1880,11 @@ function App() {
   const [subCalWeatherExpanded, setSubCalWeatherExpanded] = useState(false);
   const weatherAutocompleteRef = useRef(null);
   const [draggedNoteId, setDraggedNoteId] = useState(null);
-  const [subCalendarEvents, setSubCalendarEvents] = useState({});
+    const [subCalendarEvents, setSubCalendarEvents] = useState({});
+  const [subCalEventRatings, setSubCalEventRatings] = useState({});
+  const [subCalEventTagsMap, setSubCalEventTagsMap] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
+
   const [newSubCalName, setNewSubCalName] = useState('');
   const [subCalInviteEmail, setSubCalInviteEmail] = useState('');
   const [subCalMembers, setSubCalMembers] = useState([]);
@@ -2873,7 +2880,7 @@ function App() {
           if (sharedIdentity && (sharedIdentity === myEmail || sharedIdentity === myPhone) && ownerId) {
             const ownerLabel = String(sharedOwnerLabels?.[ownerId] || '').trim().toLowerCase();
             if (ownerLabel.includes('@')) {
-              addMember(ownerLabel, { status: 'accepted', source: 'layer_share_owner', removable: false });
+              const ownerEmailGuard = String(ownerId || '') === String(user?.id || '') ? normalizeEmail(user?.email) : ''; const isTrueOwnerEmail = ownerEmailGuard && normalizeEmail(ownerLabel) === ownerEmailGuard; addMember(ownerLabel, { status: 'accepted', source: 'layer_share_owner', removable: !isTrueOwnerEmail });
             }
           }
         });
@@ -2888,7 +2895,7 @@ function App() {
           const createdBy = String(row?.created_by || '').trim();
           if (createdBy) addMember(createdBy, { status: 'accepted', source: 'layer_events', removable: true });
           const ownerLabel = String(sharedOwnerLabels?.[String(row?.user_id || '')] || '').trim();
-          if (ownerLabel) addMember(ownerLabel, { status: 'accepted', source: 'layer_events_owner', removable: false });
+          if (ownerLabel) addMember(ownerLabel, { status: 'accepted', source: 'layer_events_owner', removable: true });
         });
       }
 
@@ -3323,8 +3330,18 @@ function App() {
       setSubCalWeatherLocation('');
       setSubCalWeatherInput('');
     }
-    setSubCalTab('itinerary');
-    setTripChatDraft('');
+      setSubCalTab('itinerary');
+  // Load per-trip ratings/tags from localStorage
+  try {
+    const ratingsRaw = localStorage.getItem(`subcal-ratings-${sc.id}`);
+    setSubCalEventRatings(ratingsRaw ? JSON.parse(ratingsRaw) : {});
+  } catch { setSubCalEventRatings({}); }
+  try {
+    const tagsRaw = localStorage.getItem(`subcal-tags-${sc.id}`);
+    setSubCalEventTagsMap(tagsRaw ? JSON.parse(tagsRaw) : {});
+  } catch { setSubCalEventTagsMap({}); }
+  setTripChatDraft('');
+
     setTripChatMessages([]);
     setTripChatUnreadCounts((prev) => ({ ...prev, [String(sc?.id || '')]: 0 }));
     setTripPhotos([]);
@@ -24527,7 +24544,32 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </>
             )}
 
-            {bottomNavTab === 'trips' && (() => {
+            {bottomNavTab === 'trips' && (
+              <TripsTab
+                activeTrips={activeTrips}
+                upcomingTrips={orderedUpcomingTrips}
+                archivedTrips={archivedTrips}
+                user={user}
+                openSubCalendar={openSubCalendar}
+                deleteSubCalendar={deleteSubCalendar}
+                setBottomNavTab={setBottomNavTab}
+                setShowSubCalendarModal={setShowSubCalendarModal}
+                getSubCalStartRaw={getSubCalStartRaw}
+                getSubCalEndRaw={getSubCalEndRaw}
+                getTripCoverPhoto={(subCalId) => {
+                  const cover = (tripPhotos || []).find((p) => String(p?.sub_calendar_id || '') === String(subCalId) && p?.is_cover);
+                  return cover?.url || null;
+                }}
+                getTripMemberCount={(subCalId) => {
+                  const members = (subCalMembers || []).filter((m) => String(m?.sub_calendar_id || '') === String(subCalId));
+                  return Math.max(1, members.length);
+                }}
+                darkMode={darkMode}
+                themeAccentButtonStyle={themeAccentButtonStyle}
+                themeAccentHeadingStyle={themeAccentHeadingStyle}
+              />
+            )}
+            {bottomNavTab === 'trips' && false && (() => {
               try {
                 return (
               <>
@@ -26642,9 +26684,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           >
             Photos
             {tripPhotos.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{tripPhotos.length}</span>}
-          </button>
-          <button
-            onClick={() => setSubCalTab('chat')}
+            </button>
+  <button
+    onClick={() => setSubCalTab('ratings')}
+    className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'ratings' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+  >Ratings</button>
+  <button
+    onClick={() => setSubCalTab('chat')}
+
             className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'chat' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >
             Chat
@@ -27680,8 +27727,60 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {/* Chat tab */}
-        {subCalTab === 'chat' && (
+          {/* Ratings tab */}
+  {subCalTab === 'ratings' && (() => {
+    const trip = activeSubCalendar || {};
+    const allEvents = Object.entries(subCalendarEvents || {}).flatMap(([dk, arr]) => (
+      (arr || []).map(ev => ({ ...ev, date: dk, rating: Number(subCalEventRatings[ev.id] || 0), tags: subCalEventTagsMap[ev.id] || [] }))
+    ));
+    const onRateEvent = (eventId, rating) => {
+      setSubCalEventRatings(prev => {
+        const next = { ...(prev || {}), [eventId]: Number(rating) };
+        try { if (activeSubCalendar?.id) localStorage.setItem(`subcal-ratings-${activeSubCalendar.id}`, JSON.stringify(next)); } catch {}
+        return next;
+      });
+    };
+    const onAddTags = (eventId, tags) => {
+      setSubCalEventTagsMap(prev => {
+        const next = { ...(prev || {}), [eventId]: Array.isArray(tags) ? tags : [] };
+        try { if (activeSubCalendar?.id) localStorage.setItem(`subcal-tags-${activeSubCalendar.id}`, JSON.stringify(next)); } catch {}
+        return next;
+      });
+    };
+    const onAddPhoto = (eventId) => {
+      setSubCalTab('photos');
+    };
+    const onAddVoiceNote = (eventId, audioBlob) => {
+      console.log('Voice note saved for event', eventId, audioBlob?.size);
+      alert('Saved voice note for this event');
+    };
+    const onShareHighlights = () => {
+      try { prepareTripHighlightsForExplore(); } catch (e) { console.error(e); }
+    };
+    const userStats = { totalTrips: subCalendars?.length || 0 };
+    const leaderboard = [];
+    return (
+      <div className="px-4 py-4">
+        <TripRatingSystem
+          trip={trip}
+          events={allEvents}
+          user={user}
+          onRateEvent={onRateEvent}
+          onAddPhoto={onAddPhoto}
+          onAddVoiceNote={onAddVoiceNote}
+          onAddTags={onAddTags}
+          onShareHighlights={onShareHighlights}
+          userStats={userStats}
+          leaderboard={leaderboard}
+          darkMode={darkMode}
+        />
+      </div>
+    );
+  })()}
+
+  {/* Chat tab */}
+  {subCalTab === 'chat' && (
+
           <div className="px-4 py-4">
             <div className="rounded-[28px] border border-gray-200/80 bg-white/90 shadow-sm dark:border-white/10 dark:bg-slate-900/75">
               <div className="border-b border-gray-100 px-4 py-3 dark:border-white/10">
