@@ -1,6 +1,8 @@
 // TripsTab.jsx - Redesigned Trips Tab with visual cards and better UX
 import React, { useState } from 'react';
 import { MapPin, Calendar, Users, ChevronRight, Image, Heart, Trash2, MoreVertical, Plus } from 'lucide-react';
+import JourneyQuoteDisplay from './JourneyQuoteDisplay';
+import TRAVEL_QUOTES from '../data/travelQuotes';
 
 const TripsTab = ({
   // Data
@@ -27,6 +29,15 @@ const TripsTab = ({
   themeAccentHeadingStyle,
 }) => {
   const [expandedSection, setExpandedSection] = useState('active'); // active, upcoming, past
+  
+  // Daily rotating travel quote (similar to Journey)
+  const travelToday = new Date();
+  const travelDailyQuoteSeed = (
+    travelToday.getFullYear() * 10000 + (travelToday.getMonth() + 1) * 100 + travelToday.getDate()
+  );
+  const tripsQuote = TRAVEL_QUOTES[
+    ((travelDailyQuoteSeed % TRAVEL_QUOTES.length) + TRAVEL_QUOTES.length) % TRAVEL_QUOTES.length
+  ] || null;
   
   // Calculate trip duration
   const getTripDuration = (trip) => {
@@ -231,9 +242,12 @@ const TripsTab = ({
           <h2 className="text-3xl font-bold tracking-tight" style={themeAccentHeadingStyle}>
             Your Trips
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Plan, organize, and remember your adventures
-          </p>
+          <JourneyQuoteDisplay
+            quote={tripsQuote}
+            darkMode={darkMode}
+            compact
+            className="mt-1 max-w-xl"
+          />
         </div>
         <button
           onClick={() => setShowSubCalendarModal(true)}
