@@ -38,6 +38,9 @@ const TripRatingSystem = ({
   userStats = {},
   leaderboard = [],
   
+  // UX
+  focusEventId = null,
+  
   // Theme
   darkMode = false,
 }) => {
@@ -79,6 +82,7 @@ const TripRatingSystem = ({
           onDeleteGroupRating={onDeleteGroupRating}
           currentUserId={user?.id}
           darkMode={darkMode}
+          focusEventId={focusEventId}
         />
       )}
       
@@ -96,6 +100,7 @@ const TripRatingSystem = ({
           onDeleteGroupRating={onDeleteGroupRating}
           currentUserId={user?.id}
           darkMode={darkMode}
+          focusEventId={focusEventId}
         />
       )}
 
@@ -329,8 +334,8 @@ const VoiceNoteRecorder = ({ onSave, darkMode }) => {
 // ============================================================================
 
 const EventRatingCard = ({ event, onRate,   onAddPhoto, onAddVoiceNote,
-  onAddTags, onAddReview, darkMode, groupRatings = [], currentUserId, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating }) => {
-  const [expanded, setExpanded] = useState(false);
+  onAddTags, onAddReview, darkMode, groupRatings = [], currentUserId, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating, defaultExpanded = false }) => {
+  const [expanded, setExpanded] = useState(!!defaultExpanded);
   const [rating, setRating] = useState(event.rating || 0);
   const [selectedTags, setSelectedTags] = useState(event.tags || []);
   const [pendingFormRating, setPendingFormRating] = useState(null);
@@ -433,6 +438,15 @@ const EventRatingCard = ({ event, onRate,   onAddPhoto, onAddVoiceNote,
                 Add or manage photos for this experience
               </button>
             </div>
+            
+            {/* Save/collapse */}
+            <div className="pt-2">
+              <button
+                onClick={() => setExpanded(false)}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:shadow-md transition-all">
+                Save
+              </button>
+            </div>
           </div>
         )}
         
@@ -453,7 +467,7 @@ const EventRatingCard = ({ event, onRate,   onAddPhoto, onAddVoiceNote,
 // ============================================================================
 
 const DailyRecapView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
-  onAddTags, onAddReview, groupRatingsByEventId = {}, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating, currentUserId, darkMode }) => {
+  onAddTags, onAddReview, groupRatingsByEventId = {}, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating, currentUserId, darkMode, focusEventId = null }) => {
   const today = new Date().toDateString();
   const todaysEvents = events.filter(e => new Date(e.date).toDateString() === today);
   const unratedEvents = todaysEvents.filter(e => !e.rating || e.rating === 0);
@@ -507,6 +521,7 @@ const DailyRecapView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
               onUpdateGroupRating={onUpdateGroupRating}
               onDeleteGroupRating={onDeleteGroupRating}
               darkMode={darkMode}
+              defaultExpanded={String(event.id || '') === String(focusEventId || '')}
             />
           ))}
         </div>
@@ -533,15 +548,16 @@ const DailyRecapView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
                       event={event}
                       onRate={onRateEvent}
                       onAddPhoto={onAddPhoto}
-                                    onAddVoiceNote={onAddVoiceNote}
-              onAddTags={onAddTags}
-              onAddReview={onAddReview}
-              groupRatings={groupRatingsByEventId[String(event.id || '')] || []}
-              currentUserId={currentUserId}
-              onAddGroupRating={onAddGroupRating}
-              onUpdateGroupRating={onUpdateGroupRating}
-              onDeleteGroupRating={onDeleteGroupRating}
-              darkMode={darkMode}
+                      onAddVoiceNote={onAddVoiceNote}
+                      onAddTags={onAddTags}
+                      onAddReview={onAddReview}
+                      groupRatings={groupRatingsByEventId[String(event.id || '')] || []}
+                      currentUserId={currentUserId}
+                      onAddGroupRating={onAddGroupRating}
+                      onUpdateGroupRating={onUpdateGroupRating}
+                      onDeleteGroupRating={onDeleteGroupRating}
+                      darkMode={darkMode}
+                      defaultExpanded={String(event.id || '') === String(focusEventId || '')}
                     />
                   ))}
               </div>
@@ -572,7 +588,7 @@ const DailyRecapView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
 // ============================================================================
 
 const ReviewsListView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
-  onAddTags, onAddReview, groupRatingsByEventId = {}, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating, currentUserId, darkMode }) => {
+  onAddTags, onAddReview, groupRatingsByEventId = {}, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating, currentUserId, darkMode, focusEventId = null }) => {
   const ratedEvents = (events || [])
     .filter(e => e && Number(e.rating || 0) > 0)
     .sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -585,21 +601,22 @@ const ReviewsListView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
         </div>
       ) : (
         ratedEvents.map(event => (
-          <EventRatingCard
-            key={event.id}
-            event={event}
-            onRate={onRateEvent}
-            onAddPhoto={onAddPhoto}
-            onAddVoiceNote={onAddVoiceNote}
-            onAddTags={onAddTags}
-            onAddReview={onAddReview}
-            groupRatings={groupRatingsByEventId[String(event.id || '')] || []}
-            currentUserId={currentUserId}
-            onAddGroupRating={onAddGroupRating}
-            onUpdateGroupRating={onUpdateGroupRating}
-            onDeleteGroupRating={onDeleteGroupRating}
-            darkMode={darkMode}
-          />
+                              <EventRatingCard
+                      key={event.id}
+                      event={event}
+                      onRate={onRateEvent}
+                      onAddPhoto={onAddPhoto}
+                      onAddVoiceNote={onAddVoiceNote}
+                      onAddTags={onAddTags}
+                      onAddReview={onAddReview}
+                      groupRatings={groupRatingsByEventId[String(event.id || '')] || []}
+                      currentUserId={currentUserId}
+                      onAddGroupRating={onAddGroupRating}
+                      onUpdateGroupRating={onUpdateGroupRating}
+                      onDeleteGroupRating={onDeleteGroupRating}
+                      darkMode={darkMode}
+                      defaultExpanded={String(event.id || '') === String(focusEventId || '')}
+                    />
         ))
       )}
     </div>

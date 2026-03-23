@@ -1903,6 +1903,7 @@ function App() {
   const [subCalAddingSlot, setSubCalAddingSlot] = useState(null); // hour number being added to
   const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', startTime: '', endTime: '', location: '', category: 'other' });
   const [subCalTab, setSubCalTab] = useState('itinerary'); // 'itinerary' | 'expenses' | 'photos' | 'chat'
+  const [ratingsFocusEventId, setRatingsFocusEventId] = useState(null);
 
   // Load group ratings for active trip when viewing Ratings tab (depends on subCalTab)
   useEffect(() => {
@@ -4099,6 +4100,7 @@ function App() {
       closePhotoSelectionMode();
       setPhotoEventId(null);
       setPhotoUploadMessage('Attached to event.');
+      setSubCalTab('ratings');
     } catch (err) {
       console.error('attach photos failed', err);
       alert('Failed to attach photos to event.');
@@ -27994,6 +27996,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     const onAddPhoto = (eventId) => {
       try {
         setPhotoEventId(String(eventId || ''));
+        setRatingsFocusEventId(String(eventId || ''));
         setIsPhotoSelectionMode(true);
         setSelectedPhotoIds([]);
       } catch {}
@@ -28122,6 +28125,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           onDeleteGroupRating={onDeleteGroupRating}
           userStats={userStats}
           leaderboard={leaderboard}
+          focusEventId={ratingsFocusEventId}
           darkMode={darkMode}
         />
       </div>
