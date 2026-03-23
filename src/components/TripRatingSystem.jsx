@@ -1,6 +1,13 @@
 // TripRatingSystem.jsx - Complete rating and review system for trips
+
+
+
+
+
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Star, Camera, Mic, X, Sparkles, TrendingUp, Award, Flame, Share2, Check } from 'lucide-react';
+import { Star, Camera, Sparkles, TrendingUp, Award, Flame, Share2 } from 'lucide-react';
+import GroupRatingDisplay from './GroupRatingDisplay';
 
 // ============================================================================
 // MAIN COMPONENT
@@ -19,7 +26,13 @@ const TripRatingSystem = ({
   onAddPhoto,
   onAddVoiceNote,
   onAddTags,
+  onAddReview,
   onShareHighlights,
+  // Group ratings
+  groupRatingsByEventId = {},
+  onAddGroupRating,
+  onUpdateGroupRating,
+  onDeleteGroupRating,
   
   // Stats
   userStats = {},
@@ -36,6 +49,9 @@ const TripRatingSystem = ({
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
         <TabButton active={activeView === 'recap'} onClick={() => setActiveView('recap')}>
           📝 Daily Recap
+        </TabButton>
+        <TabButton active={activeView === 'reviews'} onClick={() => setActiveView('reviews')}>
+          🗒 Reviews
         </TabButton>
         <TabButton active={activeView === 'highlights'} onClick={() => setActiveView('highlights')}>
           ✨ Highlights
@@ -56,10 +72,33 @@ const TripRatingSystem = ({
           onAddPhoto={onAddPhoto}
           onAddVoiceNote={onAddVoiceNote}
           onAddTags={onAddTags}
+          onAddReview={onAddReview}
+          groupRatingsByEventId={groupRatingsByEventId}
+          onAddGroupRating={onAddGroupRating}
+          onUpdateGroupRating={onUpdateGroupRating}
+          onDeleteGroupRating={onDeleteGroupRating}
+          currentUserId={user?.id}
           darkMode={darkMode}
         />
       )}
       
+      {activeView === 'reviews' && (
+        <ReviewsListView
+          events={events}
+          onRateEvent={onRateEvent}
+          onAddPhoto={onAddPhoto}
+          onAddVoiceNote={onAddVoiceNote}
+          onAddTags={onAddTags}
+          onAddReview={onAddReview}
+          groupRatingsByEventId={groupRatingsByEventId}
+          onAddGroupRating={onAddGroupRating}
+          onUpdateGroupRating={onUpdateGroupRating}
+          onDeleteGroupRating={onDeleteGroupRating}
+          currentUserId={user?.id}
+          darkMode={darkMode}
+        />
+      )}
+
       {activeView === 'highlights' && (
         <TripHighlightsView 
           trip={trip}
@@ -186,6 +225,7 @@ const QuickTagsSelector = ({ selectedTags = [], onToggleTag, category = 'restaur
   );
 };
 
+/* Voice note removed
 const VoiceNoteRecorder = ({ onSave, darkMode }) => {
   const [recording, setRecording] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -241,61 +281,66 @@ const VoiceNoteRecorder = ({ onSave, darkMode }) => {
     setDuration(0);
   };
   
-  return (
-    <div className="space-y-3">
-      {!audioBlob ? (
-        <button
-          onClick={recording ? stopRecording : startRecording}
-          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all ${
-            recording
-              ? 'bg-red-500 text-white animate-pulse'
-              : 'bg-gradient-to-r from-red-500 to-pink-500 text-white hover:shadow-lg'
-          }`}>
-          {recording ? (
-            <>
-              <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
-              Recording... {duration}s
-            </>
-          ) : (
-            <>
-              <Mic className="w-5 h-5" />
-              Quick voice note
-            </>
-          )}
-        </button>
-      ) : (
-        <div className="flex gap-2">
-          <button
-            onClick={saveRecording}
-            className="flex-1 px-4 py-3 rounded-xl bg-green-500 text-white font-semibold hover:bg-green-600 transition-all">
-            <Check className="w-5 h-5 inline mr-2" />
-            Save ({duration}s)
-          </button>
-          <button
-            onClick={cancelRecording}
-            className="px-4 py-3 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  return null;
 };
+*/
 
 // ============================================================================
 // EVENT RATING CARD
 // ============================================================================
 
-const EventRatingCard = ({ event, onRate, onAddPhoto, onAddVoiceNote, onAddTags, darkMode }) => {
+const EventRatingCard = ({ event, onRate,   onAddPhoto, onAddVoiceNote,
+  onAddTags, onAddReview, darkMode, groupRatings = [], currentUserId, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating }) => {
   const [expanded, setExpanded] = useState(false);
   const [rating, setRating] = useState(event.rating || 0);
   const [selectedTags, setSelectedTags] = useState(event.tags || []);
-  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [pendingFormRating, setPendingFormRating] = useState(null);
   
   const handleRate = (newRating) => {
     setRating(newRating);
     onRate(event.id, newRating);
-    if (!expanded) setExpanded(true);
+    // Open full rating card (modal) with prefilled stars
+    setExpanded(true);
+    setPendingFormRating(Number(newRating));
   };
   
   const handleToggleTag = (tagId) => {
@@ -306,10 +351,7 @@ const EventRatingCard = ({ event, onRate, onAddPhoto, onAddVoiceNote, onAddTags,
     onAddTags(event.id, newTags);
   };
   
-  const handleSaveVoiceNote = (audioBlob) => {
-    onAddVoiceNote(event.id, audioBlob);
-    setShowVoiceRecorder(false);
-  };
+
   
   return (
     <div className={`rounded-2xl border overflow-hidden transition-all ${
@@ -341,6 +383,23 @@ const EventRatingCard = ({ event, onRate, onAddPhoto, onAddVoiceNote, onAddTags,
         {/* Expanded content */}
         {expanded && (
           <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            {/* Group rating summary */}
+            <div>
+              <GroupRatingDisplay
+                event={event}
+                ratings={groupRatings}
+                currentUserId={currentUserId}
+                onAddRating={(data) => onAddGroupRating && onAddGroupRating(event.id, data)}
+                onUpdateRating={(ratingId, updates) => onUpdateGroupRating && onUpdateGroupRating(event.id, ratingId, updates)}
+                onDeleteRating={(ratingId) => onDeleteGroupRating && onDeleteGroupRating(event.id, ratingId)}
+                openFormRating={pendingFormRating}
+                onAfterSubmit={() => {
+                  setPendingFormRating(null);
+                }}
+                darkMode={darkMode}
+              />
+            </div>
+
             {/* Quick tags */}
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-2">
@@ -361,7 +420,7 @@ const EventRatingCard = ({ event, onRate, onAddPhoto, onAddVoiceNote, onAddTags,
               {Array.isArray(event.photos) && event.photos.length > 0 && (
                 <div className="mb-3 grid grid-cols-4 gap-2">
                   {event.photos.slice(0, 8).map((url, idx) => (
-                    <img key={idx} src={url} alt="" className="w-full h-20 object-cover rounded-lg" />
+                    <img key={idx} src={url} alt="" className="w-full h-24 object-contain rounded-lg bg-gray-100 dark:bg-gray-700" />
                   ))}
                 </div>
               )}
@@ -374,24 +433,6 @@ const EventRatingCard = ({ event, onRate, onAddPhoto, onAddVoiceNote, onAddTags,
                 Add or manage photos for this experience
               </button>
             </div>
-            
-            {/* Voice note */}
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-2">
-                Voice note (unique!)
-              </div>
-              {!showVoiceRecorder ? (
-                <button
-                  onClick={() => setShowVoiceRecorder(true)}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 
-                           text-white font-semibold hover:shadow-lg transition-all">
-                  <Mic className="w-5 h-5 inline mr-2" />
-                  Record your thoughts
-                </button>
-              ) : (
-                <VoiceNoteRecorder onSave={handleSaveVoiceNote} darkMode={darkMode} />
-              )}
-            </div>
           </div>
         )}
         
@@ -399,7 +440,7 @@ const EventRatingCard = ({ event, onRate, onAddPhoto, onAddVoiceNote, onAddTags,
           <button
             onClick={() => setExpanded(true)}
             className="mt-3 text-xs text-purple-600 dark:text-purple-400 font-semibold hover:underline">
-            + Add photos, notes, or voice recording
+            + Add photos or quick notes
           </button>
         )}
       </div>
@@ -411,7 +452,8 @@ const EventRatingCard = ({ event, onRate, onAddPhoto, onAddVoiceNote, onAddTags,
 // DAILY RECAP VIEW
 // ============================================================================
 
-const DailyRecapView = ({ events, onRateEvent, onAddPhoto, onAddVoiceNote, onAddTags, darkMode }) => {
+const DailyRecapView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
+  onAddTags, onAddReview, groupRatingsByEventId = {}, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating, currentUserId, darkMode }) => {
   const today = new Date().toDateString();
   const todaysEvents = events.filter(e => new Date(e.date).toDateString() === today);
   const unratedEvents = todaysEvents.filter(e => !e.rating || e.rating === 0);
@@ -458,6 +500,12 @@ const DailyRecapView = ({ events, onRateEvent, onAddPhoto, onAddVoiceNote, onAdd
               onAddPhoto={onAddPhoto}
               onAddVoiceNote={onAddVoiceNote}
               onAddTags={onAddTags}
+              onAddReview={onAddReview}
+              groupRatings={groupRatingsByEventId[String(event.id || '')] || []}
+              currentUserId={currentUserId}
+              onAddGroupRating={onAddGroupRating}
+              onUpdateGroupRating={onUpdateGroupRating}
+              onDeleteGroupRating={onDeleteGroupRating}
               darkMode={darkMode}
             />
           ))}
@@ -485,9 +533,15 @@ const DailyRecapView = ({ events, onRateEvent, onAddPhoto, onAddVoiceNote, onAdd
                       event={event}
                       onRate={onRateEvent}
                       onAddPhoto={onAddPhoto}
-                      onAddVoiceNote={onAddVoiceNote}
-                      onAddTags={onAddTags}
-                      darkMode={darkMode}
+                                    onAddVoiceNote={onAddVoiceNote}
+              onAddTags={onAddTags}
+              onAddReview={onAddReview}
+              groupRatings={groupRatingsByEventId[String(event.id || '')] || []}
+              currentUserId={currentUserId}
+              onAddGroupRating={onAddGroupRating}
+              onUpdateGroupRating={onUpdateGroupRating}
+              onDeleteGroupRating={onDeleteGroupRating}
+              darkMode={darkMode}
                     />
                   ))}
               </div>
@@ -508,6 +562,45 @@ const DailyRecapView = ({ events, onRateEvent, onAddPhoto, onAddVoiceNote, onAdd
             You documented everything from today. Amazing!
           </p>
         </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
+// REVIEWS LIST VIEW
+// ============================================================================
+
+const ReviewsListView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
+  onAddTags, onAddReview, groupRatingsByEventId = {}, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating, currentUserId, darkMode }) => {
+  const ratedEvents = (events || [])
+    .filter(e => e && Number(e.rating || 0) > 0)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  return (
+    <div className="space-y-3">
+      {ratedEvents.length === 0 ? (
+        <div className="text-center py-16">
+          <div className="text-6xl mb-3">🗒️</div>
+          <div className="text-gray-600 dark:text-gray-400">No reviews yet. Rate something from Daily Recap and it will appear here.</div>
+        </div>
+      ) : (
+        ratedEvents.map(event => (
+          <EventRatingCard
+            key={event.id}
+            event={event}
+            onRate={onRateEvent}
+            onAddPhoto={onAddPhoto}
+            onAddVoiceNote={onAddVoiceNote}
+            onAddTags={onAddTags}
+            onAddReview={onAddReview}
+            groupRatings={groupRatingsByEventId[String(event.id || '')] || []}
+            currentUserId={currentUserId}
+            onAddGroupRating={onAddGroupRating}
+            onUpdateGroupRating={onUpdateGroupRating}
+            onDeleteGroupRating={onDeleteGroupRating}
+            darkMode={darkMode}
+          />
+        ))
       )}
     </div>
   );
@@ -950,10 +1043,10 @@ export default TripRatingSystem;
 export {
   StarRating,
   QuickTagsSelector,
-  VoiceNoteRecorder,
   EventRatingCard,
   DailyRecapView,
   TripHighlightsView,
+  ReviewsListView,
   TripStatsView,
   BadgesView,
 };

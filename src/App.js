@@ -1664,6 +1664,7 @@ function App() {
   const [suggestedTime, setSuggestedTime] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [smartLeavePrompt, setSmartLeavePrompt] = useState(null);
+  const seenReviewPromptEventIdsRef = useRef(new Set());
   const [editingEvent, setEditingEvent] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('other');
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
@@ -1884,7 +1885,11 @@ function App() {
     const [subCalendarEvents, setSubCalendarEvents] = useState({});
   const [subCalEventRatings, setSubCalEventRatings] = useState({});
   const [subCalEventTagsMap, setSubCalEventTagsMap] = useState({});
+  const [subCalEventReviews, setSubCalEventReviews] = useState({});
+  const [subCalEventGroupRatings, setSubCalEventGroupRatings] = useState({});
   const [showSubCalendarModal, setShowSubCalendarModal] = useState(false);
+  
+    /* moved group ratings loader below subCalTab initialization */
 
   const [newSubCalName, setNewSubCalName] = useState('');
   const [subCalInviteEmail, setSubCalInviteEmail] = useState('');
@@ -1898,6 +1903,46 @@ function App() {
   const [subCalAddingSlot, setSubCalAddingSlot] = useState(null); // hour number being added to
   const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', startTime: '', endTime: '', location: '', category: 'other' });
   const [subCalTab, setSubCalTab] = useState('itinerary'); // 'itinerary' | 'expenses' | 'photos' | 'chat'
+
+  // Load group ratings for active trip when viewing Ratings tab (depends on subCalTab)
+  useEffect(() => {
+    if (!activeSubCalendar?.id || subCalTab !== 'ratings') return;
+    let canceled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('event_ratings')
+          .select('*')
+          .eq('sub_calendar_id', activeSubCalendar.id)
+          .limit(2000);
+        if (error) { console.error('Failed to load event_ratings', error); return; }
+        if (canceled) return;
+        const byEvent = {};
+        (data || []).forEach((row) => {
+          const eid = String(row?.event_id || '').trim();
+          if (!eid) return;
+          if (!byEvent[eid]) byEvent[eid] = [];
+          byEvent[eid].push({
+            id: row.id,
+            userId: row.user_id,
+            userName: '',
+            userAvatar: null,
+            rating: Number(row.rating || 0),
+            reviewText: String(row.review_text || ''),
+            photos: Array.isArray(row.photos) ? row.photos : [],
+            isPublic: row.is_public !== false,
+            wouldReturn: typeof row.would_return === 'boolean' ? row.would_return : null,
+            createdAt: row.created_at,
+          });
+        });
+        setSubCalEventGroupRatings(byEvent);
+      } catch (err) {
+        console.error('Error loading group ratings', err);
+      }
+    })();
+    return () => { canceled = true; };
+  }, [activeSubCalendar?.id, subCalTab]);
+
   const [shareMyLocation, setShareMyLocation] = useState(() => localStorage.getItem('subcal-share-location') === 'true');
   const [memberLocations, setMemberLocations] = useState({});
   const subCalLocationChannelRef = useRef(null);
@@ -3332,7 +3377,7 @@ function App() {
       setSubCalWeatherInput('');
     }
       setSubCalTab('itinerary');
-  // Load per-trip ratings/tags from localStorage
+  // Load per-trip ratings/tags/reviews from localStorage
   try {
     const ratingsRaw = localStorage.getItem(`subcal-ratings-${sc.id}`);
     setSubCalEventRatings(ratingsRaw ? JSON.parse(ratingsRaw) : {});
@@ -3341,7 +3386,13 @@ function App() {
     const tagsRaw = localStorage.getItem(`subcal-tags-${sc.id}`);
     setSubCalEventTagsMap(tagsRaw ? JSON.parse(tagsRaw) : {});
   } catch { setSubCalEventTagsMap({}); }
+  try {
+    const reviewsRaw = localStorage.getItem(`subcal-reviews-${sc.id}`);
+    setSubCalEventReviews(reviewsRaw ? JSON.parse(reviewsRaw) : {});
+  } catch { setSubCalEventReviews({}); }
   setTripChatDraft('');
+  // Reset group ratings mapping when switching trips; they will be reloaded
+  setSubCalEventGroupRatings({});
 
     setTripChatMessages([]);
     setTripChatUnreadCounts((prev) => ({ ...prev, [String(sc?.id || '')]: 0 }));
@@ -4033,6 +4084,25 @@ function App() {
     setPhotoUploadError(false);
     setPhotoUploadMessage(`Deleted ${deletedCount} photo${deletedCount === 1 ? '' : 's'}.`);
     closePhotoSelectionMode();
+  };
+
+  const linkSelectedPhotosToEvent = async () => {
+    const selected = tripPhotos.filter(p => selectedPhotoIds.includes(p.id));
+    if (selected.length === 0 || !photoEventId) return;
+    try {
+      const { error } = await supabase
+        .from('trip_photos')
+        .update({ event_id: String(photoEventId || '') || null })
+        .in('id', selected.map(p => p.id));
+      if (error) throw error;
+      setTripPhotos(prev => prev.map(p => selectedPhotoIds.includes(p.id) ? { ...p, event_id: String(photoEventId || '') || null } : p));
+      closePhotoSelectionMode();
+      setPhotoEventId(null);
+      setPhotoUploadMessage('Attached to event.');
+    } catch (err) {
+      console.error('attach photos failed', err);
+      alert('Failed to attach photos to event.');
+    }
   };
 
   const handleTripPhotoFilesSelected = async (files, clearInput) => {
@@ -13830,6 +13900,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }, 120);
     };
 
+    if (type === 'review' || key.startsWith('review:')) {
+      const targetSubCalId = String(target?.subCalId || '').trim();
+      if (targetSubCalId) {
+        const sc = (subCalendars || []).find((s) => String(s.id || '') === targetSubCalId);
+        if (sc) setActiveSubCalendar(sc);
+      }
+      setBottomNavTab('home');
+      setSubCalTab('ratings');
+      return;
+    }
+
     if (key.startsWith('events:')) {
       const parts = key.split(':');
       const eventId = String(parts[1] || target?.eventId || '').trim();
@@ -14170,6 +14251,42 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     openLocationActionChooser(smartLeavePrompt.destination);
     setSmartLeavePrompt(null);
   };
+
+  // Prompt to rate ended events (in-trip)
+  useEffect(() => {
+    if (!activeSubCalendar?.id) return;
+    const todayKey = getDateKey(new Date());
+    const toMin = (t) => {
+      const parts = String(t || '').split(':');
+      const H = Number(parts[0]);
+      const M = Number(parts[1] || 0);
+      return Number.isNaN(H) ? null : (H * 60 + M);
+    };
+    const check = () => {
+      const rows = (subCalendarEvents?.[todayKey] || []);
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      rows.forEach((ev) => {
+        const rated = Number(subCalEventRatings?.[ev.id] || 0) > 0;
+        const endMin = (toMin(ev?.endTime) ?? toMin(ev?.time));
+        if (!rated && endMin !== null && nowMin >= endMin) {
+          const key = `review:${ev.id}:${activeSubCalendar.id}:${todayKey}`;
+          if (!seenReviewPromptEventIdsRef.current.has(key)) {
+            seenReviewPromptEventIdsRef.current.add(key);
+            addInAppNotification({
+              key,
+              type: 'review',
+              message: `How was ${ev.title}? Tap to rate it.`,
+              target: { panel: 'ratings', subCalId: activeSubCalendar.id, eventId: ev.id },
+            });
+          }
+        }
+      });
+    };
+    check();
+    const id = setInterval(check, 60000);
+    return () => clearInterval(id);
+  }, [activeSubCalendar?.id, subCalendarEvents, subCalEventRatings]);
 
   // Check for upcoming events and send notifications
   useEffect(() => {
@@ -26689,7 +26806,31 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   <button
     onClick={() => setSubCalTab('ratings')}
     className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'ratings' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-  >Ratings</button>
+  >
+    Ratings
+    {(() => {
+      try {
+        const todayKey = getDateKey(new Date());
+        const rows = (subCalendarEvents?.[todayKey] || []);
+        const toMin = (t) => {
+          const parts = String(t || '').split(':');
+          const H = Number(parts[0]);
+          const M = Number(parts[1] || 0);
+          return Number.isNaN(H) ? null : (H * 60 + M);
+        };
+        const now = new Date();
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        const count = rows.filter((ev) => {
+          const rated = Number(subCalEventRatings?.[ev.id] || 0) > 0;
+          const endMin = (toMin(ev?.endTime) ?? toMin(ev?.time));
+          return !rated && endMin !== null && nowMin >= endMin;
+        }).length;
+        return count > 0 ? (
+          <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 text-xs rounded-full">{count}</span>
+        ) : null;
+      } catch { return null; }
+    })()}
+  </button>
   <button
     onClick={() => setSubCalTab('chat')}
 
@@ -27531,6 +27672,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
                     {selectedPhotoIds.length} selected
                   </span>
+                  {photoEventId && (
+                    <button
+                      onClick={linkSelectedPhotosToEvent}
+                      disabled={selectedPhotoIds.length === 0}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-white disabled:opacity-40"
+                    >
+                      Attach to event
+                    </button>
+                  )}
                   <button
                     onClick={saveSelectedPhotosToDevice}
                     disabled={selectedPhotoIds.length === 0}
@@ -27816,6 +27966,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         date: dk,
         rating: Number(subCalEventRatings[ev.id] || 0),
         tags: subCalEventTagsMap[ev.id] || [],
+        review: String(subCalEventReviews[ev.id] || ''),
         photos: photosByEventId[String(ev.id || '')] || [],
       }))
     ));
@@ -27833,7 +27984,19 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         return next;
       });
     };
+    const onAddReview = (eventId, text) => {
+      setSubCalEventReviews(prev => {
+        const next = { ...(prev || {}), [eventId]: String(text || '').slice(0, 500) };
+        try { if (activeSubCalendar?.id) localStorage.setItem(`subcal-reviews-${activeSubCalendar.id}`, JSON.stringify(next)); } catch {}
+        return next;
+      });
+    };
     const onAddPhoto = (eventId) => {
+      try {
+        setPhotoEventId(String(eventId || ''));
+        setIsPhotoSelectionMode(true);
+        setSelectedPhotoIds([]);
+      } catch {}
       setSubCalTab('photos');
     };
     const onAddVoiceNote = (eventId, audioBlob) => {
@@ -27842,6 +28005,102 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     };
     const onShareHighlights = () => {
       try { prepareTripHighlightsForExplore(); } catch (e) { console.error(e); }
+    };
+
+    // Group ratings actions
+    const onAddGroupRating = async (eventId, data) => {
+      if (!activeSubCalendar?.id || !user?.id) return;
+      const payload = {
+        sub_calendar_id: activeSubCalendar.id,
+        event_id: eventId,
+        user_id: user.id,
+        rating: Number(data?.rating || 0),
+        review_text: String(data?.reviewText || '').trim() || null,
+        is_public: data?.isPublic !== false,
+        would_return: typeof data?.wouldReturn === 'boolean' ? data.wouldReturn : null,
+        photos: Array.isArray(data?.photos) ? data.photos : [],
+      };
+      const { data: row, error } = await supabase
+        .from('event_ratings')
+        .insert(payload)
+        .select('*')
+        .maybeSingle();
+      if (error) {
+        console.error('add rating failed', error);
+        // Try update existing if unique constraint
+        const { data: existing } = await supabase
+          .from('event_ratings')
+          .select('id')
+          .eq('event_id', eventId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (existing?.id) {
+          await onUpdateGroupRating(eventId, existing.id, data);
+        }
+        return;
+      }
+      setSubCalEventGroupRatings(prev => {
+        const key = String(eventId || '');
+        const arr = [...(prev?.[key] || [])];
+        arr.push({
+          id: row.id,
+          userId: row.user_id,
+          userName: user?.user_metadata?.full_name || user?.email || 'You',
+          userAvatar: user?.user_metadata?.avatar_url || null,
+          rating: Number(row.rating || 0),
+          reviewText: String(row.review_text || ''),
+          isPublic: row.is_public !== false,
+          wouldReturn: typeof row.would_return === 'boolean' ? row.would_return : null,
+          photos: Array.isArray(row.photos) ? row.photos : [],
+          createdAt: row.created_at,
+        });
+        return { ...(prev || {}), [key]: arr };
+      });
+    };
+    const onUpdateGroupRating = async (eventId, ratingId, updates) => {
+      if (!ratingId) return;
+      const patch = {};
+      if (updates?.rating !== undefined) patch.rating = Number(updates.rating || 0);
+      if (updates?.reviewText !== undefined) patch.review_text = String(updates.reviewText || '').trim() || null;
+      if (updates?.isPublic !== undefined) patch.is_public = !!updates.isPublic;
+      if (updates?.wouldReturn !== undefined) patch.would_return = typeof updates.wouldReturn === 'boolean' ? updates.wouldReturn : null;
+      if (updates?.photos !== undefined) patch.photos = Array.isArray(updates.photos) ? updates.photos : [];
+      const { data: row, error } = await supabase
+        .from('event_ratings')
+        .update(patch)
+        .eq('id', ratingId)
+        .select('*')
+        .maybeSingle();
+      if (error) { console.error('update rating failed', error); return; }
+      setSubCalEventGroupRatings(prev => {
+        const key = String(eventId || '');
+        const arr = [...(prev?.[key] || [])];
+        const idx = arr.findIndex(r => r.id === ratingId);
+        if (idx >= 0) {
+          arr[idx] = {
+            ...arr[idx],
+            rating: Number(row.rating || 0),
+            reviewText: String(row.review_text || ''),
+            isPublic: row.is_public !== false,
+            wouldReturn: typeof row.would_return === 'boolean' ? row.would_return : null,
+            photos: Array.isArray(row.photos) ? row.photos : [],
+          };
+        }
+        return { ...(prev || {}), [key]: arr };
+      });
+    };
+    const onDeleteGroupRating = async (eventId, ratingId) => {
+      if (!ratingId) return;
+      const { error } = await supabase
+        .from('event_ratings')
+        .delete()
+        .eq('id', ratingId);
+      if (error) { console.error('delete rating failed', error); return; }
+      setSubCalEventGroupRatings(prev => {
+        const key = String(eventId || '');
+        const arr = (prev?.[key] || []).filter(r => r.id !== ratingId);
+        return { ...(prev || {}), [key]: arr };
+      });
     };
     const userStats = { totalTrips: subCalendars?.length || 0 };
     const leaderboard = [];
@@ -27855,7 +28114,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           onAddPhoto={onAddPhoto}
           onAddVoiceNote={onAddVoiceNote}
           onAddTags={onAddTags}
+          onAddReview={onAddReview}
           onShareHighlights={onShareHighlights}
+          groupRatingsByEventId={subCalEventGroupRatings}
+          onAddGroupRating={onAddGroupRating}
+          onUpdateGroupRating={onUpdateGroupRating}
+          onDeleteGroupRating={onDeleteGroupRating}
           userStats={userStats}
           leaderboard={leaderboard}
           darkMode={darkMode}
