@@ -16,7 +16,9 @@ import StartTripModal from "./components/StartTripModal";
 import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
 import TrophyCase, { deriveJourneyTrophyCase } from "./components/TrophyCase";
 import WelcomeCover from "./components/WelcomeCover";
+import ExploreTab from "./components/ExploreTab";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
+
 
 // Initialize Supabase
 const supabase = createClient(
@@ -24666,6 +24668,51 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             })()}
 
             {bottomNavTab === 'explore' && (
+              <ExploreTab
+                publicCalendars={publicCalendars}
+                user={user}
+                layers={layers}
+                exploreSearch={exploreSearch}
+                setExploreSearch={setExploreSearch}
+                exploreSortBy={exploreSortBy}
+                setExploreSortBy={setExploreSortBy}
+                loadPublicCalendars={loadPublicCalendars}
+                joinPublicCalendar={(layerId) => {
+                  const lid = String(layerId || '').trim();
+                  const row = (publicCalendars || []).find((r) => String(r?.id || '') === lid)
+                    || (layers || []).find((r) => String(r?.id || '') === lid)
+                    || { id: lid };
+                  return joinPublicCalendar(row);
+                }}
+                leavePublicCalendar={leavePublicCalendarById}
+                handlePublicCalendarVote={handlePublicCalendarVote}
+                exploreLoading={exploreLoading}
+                exploreError={exploreError}
+                                exploreVoteBusyByLayer={exploreVoteBusyByLayer}
+                darkMode={darkMode}
+                categories={categories}
+                onOpenCalendar={(layerId) => {
+                  const lid = String(layerId || '').trim();
+                  if (!lid) return;
+                  setActiveLayerId(lid);
+                  if (user?.id) localStorage.setItem(`active-layer-${user.id}`, lid);
+                  setBottomNavTab('home');
+                }}
+                onEditCalendar={(layerId) => {
+                  const lid = String(layerId || '').trim();
+                  if (!lid) return;
+                  const row = (publicCalendars || []).find((r) => String(r?.id || '') === lid)
+                    || (layers || []).find((r) => String(r?.id || '') === lid)
+                    || null;
+                  if (row) openPublishLayerModal(row);
+                }}
+              />
+
+
+            )}
+            {/* legacy explore UI disabled below */}
+            {bottomNavTab === 'explore' && false && (
+
               <>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Explore Calendars</h3>
