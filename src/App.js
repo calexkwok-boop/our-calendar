@@ -22628,8 +22628,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <div
               className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
               style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
-              onClick={(e) => e.stopPropagation()}
-            >
+                  onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
               <GauntletPanel
                 activeLayerPageTheme={activeLayerPageTheme}
                 darkMode={darkMode}
@@ -22685,8 +22686,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
       style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
       data-round-robin-scroll="true"
-      onClick={(e) => e.stopPropagation()}
-    >
+          onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
       <RoundRobinPanel
         onClose={() => setShowRoundRobinPanel(false)}
         participants={selectedRoundRobinParticipants}
@@ -22735,8 +22737,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     <div
       className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
       style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
-      onClick={(e) => e.stopPropagation()}
-    >
+          onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
       <ScramblePanel
         onClose={() => setShowScramblePanel(false)}
         eligibleScramblePopupEvents={eligibleScramblePopupEvents}
@@ -22789,8 +22792,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     <div
       className="w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden"
       style={{ background: darkMode ? '#1f2937' : '#fff' }}
-      onClick={(e) => e.stopPropagation()}
-    >
+          onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
       {/* Calendar switcher section */}
       <div className="p-4 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-3">
@@ -22884,8 +22888,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     <div
       className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-lg sm:max-h-[90vh] overflow-y-auto overscroll-contain"
       style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
-      onClick={(e) => e.stopPropagation()}
-    >
+          onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
       <PopupEventPanel
         activeLayerPageTheme={activeLayerPageTheme}
         darkMode={darkMode}
@@ -23334,7 +23339,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   : 'linear-gradient(135deg, #fff7ed 0%, #fffbeb 45%, #fef3c7 100%)',
               }}
             >
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
+
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Journey</h3>
@@ -25771,8 +25776,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       >
         <div
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md"
-          onClick={(e) => e.stopPropagation()}
-        >
+              onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Report Calendar</h3>
@@ -25864,8 +25870,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       >
         <div
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm"
-          onClick={(e) => e.stopPropagation()}
-        >
+              onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
           <div className="flex items-center gap-2 mb-2">
             <Camera className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">Scan Appointment</h3>
@@ -25962,8 +25969,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       >
         <div
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm"
-          onClick={(e) => e.stopPropagation()}
-        >
+              onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
@@ -26027,8 +26035,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       >
         <div
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md max-h-[80vh] overflow-y-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
+              onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg font-bold text-yellow-700 dark:text-yellow-300">Reminders & Notes</h3>
@@ -26159,8 +26168,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       >
         <div
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm"
-          onClick={(e) => e.stopPropagation()}
-        >
+              onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Trip Background Photo</h3>
@@ -28288,9 +28298,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               onClick={() => setShowSubCalLocationSheet(false)}
             >
               <div
-                className="w-full sm:w-[28rem] bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
+                className="relative w-full sm:w-[28rem] bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold text-gray-800 dark:text-white">Trip Live Location</div>
@@ -28370,9 +28381,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onClick={dismissSmartLeavePrompt}
           >
             <div
-              className="w-full sm:w-[28rem] bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
+              className="relative w-full sm:w-[28rem] bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
               <div className="text-sm font-semibold text-gray-800 dark:text-white">Leave now?</div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 {smartLeavePrompt.title} at {smartLeavePrompt.eventTime}
@@ -28422,9 +28434,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onClick={() => setLocationActionTarget('')}
           >
             <div
-              className="w-full sm:w-[26rem] bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-2xl"
-              onClick={e => e.stopPropagation()}
-            >
+              className="relative w-full sm:w-[26rem] bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden"
+                  onClick={e => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
               <div className="text-sm font-semibold text-gray-800 dark:text-white">Open location with</div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{locationActionTarget}</div>
               <div className="mt-3 space-y-2">
@@ -28545,7 +28558,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {false && showJourneyEntryModal && (
         <div className="fixed inset-0 z-40 bg-black/50 p-4 flex items-center justify-center" onClick={closeJourneyEntryModal}>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto"     onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pick something to work toward</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Small progress adds up over time.</div>
               <div className="mt-4 space-y-2">
@@ -28582,7 +28597,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {false && showJourneyGoalModal && (
         <div className="fixed inset-0 z-40 bg-black/50 p-4 flex items-center justify-center" onClick={closeJourneyGoalModal}>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-lg max-h-[90vh] overflow-y-auto"     onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {selectedJourneyGoalTemplate?.hint || 'Keep it measurable, simple, and easy to log.'}
@@ -28621,7 +28638,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {false && showJourneyGoalCreatedPrompt && createdJourneyGoal && (
         <div className="fixed inset-0 z-40 bg-black/50 p-4 flex items-center justify-center" onClick={closeJourneyGoalCreatedPrompt}>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto"     onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
               <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
                 <span>Goal created!</span>
                 <span className="inline-flex animate-bounce">🎉</span>
@@ -28667,7 +28686,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {false && showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && (
         <div className="fixed inset-0 z-40 bg-black/50 p-4 flex items-center justify-center" onClick={closeJourneyDeleteGoalPrompt}>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto"     onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete goal?</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">This removes the goal and any Journey updates attached to it.</div>
               <div className="mt-4 rounded-2xl border border-rose-200/70 dark:border-rose-400/20 bg-rose-50/80 dark:bg-rose-500/10 px-4 py-3">
@@ -28699,7 +28720,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {false && showJourneyLogModal && (
         <div className="fixed inset-0 z-40 bg-black/50 p-4 flex items-center justify-center" onClick={closeJourneyLogModal}>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-lg max-h-[90vh] overflow-y-auto"     onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -28805,7 +28828,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         {false && showJourneyNoteModal && (
         <div className="fixed inset-0 z-40 bg-black/50 p-4 flex items-center justify-center" onClick={() => setShowJourneyNoteModal(false)}>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-lg max-h-[90vh] overflow-y-auto"     onClick={(e) => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add note</div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Capture a quick thought or reflection.</div>
               <textarea value={journeyNoteDraft} onChange={(e) => setJourneyNoteDraft(e.target.value)} placeholder="Write a quick note..." rows={5} className="mt-4 w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-3 text-sm text-gray-900 dark:text-white" style={{ fontSize: '16px' }} />
@@ -28840,7 +28865,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               className="max-w-full max-h-[80vh] rounded-xl object-contain"
               onClick={e => e.stopPropagation()}
             />
-            <div className="mt-3 text-center" onClick={e => e.stopPropagation()}>
+            <div className="mt-3 text-center"     onClick={e => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
               {lightboxPhoto.caption && <p className="text-white text-sm mb-1">{lightboxPhoto.caption}</p>}
               <p className="text-gray-400 text-xs">👤 {lightboxPhoto.uploaded_by} · {lightboxPhoto.date ? new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</p>
             </div>
@@ -29666,9 +29693,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         onClick={() => setLocationActionTarget('')}
       >
         <div
-          className="w-full sm:w-[26rem] bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-2xl"
-          onClick={e => e.stopPropagation()}
-        >
+          className="relative w-full sm:w-[26rem] bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden"
+              onClick={e => e.stopPropagation()}
+  >
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
           <div className="text-sm font-semibold text-gray-800 dark:text-white">Open location with</div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{locationActionTarget}</div>
           <div className="mt-3 space-y-2">
