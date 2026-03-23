@@ -230,6 +230,10 @@ const startBtnStyle = {
   textTransform: 'uppercase',
   color: '#0d0f14',
   cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  lineHeight: 1,
 };
 
 const rosterCard = {
