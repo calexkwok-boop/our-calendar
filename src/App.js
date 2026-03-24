@@ -24052,7 +24052,7 @@ transform: translateY(0);
             calendarView: 'month',
       setCalendarView: () => {},
       onAddEvent: () => { setSelectedDate(new Date()); setShowDateDetailModal(true); },
-      onStartTrip: () => { setShowSubCalendarModal(true); },
+
       onEventClick: (event) => {
         const eventId = String(event?.id || '');
         const isPopup = (typeof popupEventsByEventId !== 'undefined' && popupEventsByEventId && popupEventsByEventId[eventId]);
