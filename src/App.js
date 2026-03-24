@@ -23492,7 +23492,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     <div className={`${bottomNavTab !== 'home' ? 'hidden' : ''} relative overflow-hidden rounded-3xl shadow-2xl p-4 sm:p-6 ${calendarView === 'agenda' ? 'bg-gray-50 dark:bg-gray-900' : 'bg-gradient-to-br from-white via-purple-50/20 to-pink-50/20 dark:from-gray-900 dark:via-purple-900/5 dark:to-pink-900/5'}`} >
             <div className="relative z-10">
 
-{preferCalendarHome && (
+{false && (
 
 <div className="mb-6">
 {/* Hero card with gradient and personality */}
@@ -24034,7 +24034,46 @@ transform: translateY(0);
           </div>
           )}
 
-          <DateDetailsModal
+          {bottomNavTab === 'home' && (
+  React.createElement(
+    require('./components/UnifiedCalendarView').default,
+    {
+      currentDate: (selectedDate || new Date()),
+      setCurrentDate: setSelectedDate,
+      selectedDate: selectedDate,
+      setSelectedDate: setSelectedDate,
+      events: { [getDateKey(new Date())]: getEventsForDate(new Date()) },
+      getEventsForDate: getEventsForDate,
+      subCalendars: (typeof activeTrips !== 'undefined' ? activeTrips : []),
+      openSubCalendar: openSubCalendar,
+      weather: {},
+      showWeather: true,
+      categories: categories,
+            calendarView: 'month',
+      setCalendarView: () => {},
+      onAddEvent: () => { setSelectedDate(new Date()); setShowDateDetailModal(true); },
+      onEventClick: (event) => {
+        const eventId = String(event?.id || '');
+        const isPopup = (typeof popupEventsByEventId !== 'undefined' && popupEventsByEventId && popupEventsByEventId[eventId]);
+        if (isPopup) {
+          setSelectedPopupEventPanelId(eventId);
+        } else {
+          if (typeof openUserTabEvent === 'function') openUserTabEvent(event);
+        }
+      },
+      formatTime: formatTime,
+      getDateKey: getDateKey,
+      isSameDay: isSameDay,
+      isToday: isToday,
+      getDaysInMonth: getDaysInMonth,
+      darkMode: darkMode,
+      activeLayerPageTheme: activeLayerPageTheme,
+      user: user,
+    }
+  )
+)}
+
+<DateDetailsModal
             isOpen={showDateDetailModal}
             onClose={() => setShowDateDetailModal(false)}
     setIsPopupEventDraft={setIsPopupEventDraft}
