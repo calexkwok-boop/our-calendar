@@ -91,7 +91,7 @@ const UnifiedCalendarView = ({
         />
       )}
       
-      {/* Month navigation & view toggle — hidden per design */}
+      {/* Header with navigation + view toggle */}
       <CalendarHeader
         currentDate={currentDate}
         setCurrentDate={setCurrentDate}
@@ -100,24 +100,55 @@ const UnifiedCalendarView = ({
         darkMode={darkMode}
       />
       
-      {/* Day headers */}
-      <DayHeaders darkMode={darkMode} />
-      
-      {/* Calendar Grid */}
-      <CalendarGrid
-        currentDate={currentDate}
-        selectedDate={selectedDate}
-        setSelectedDate={setSelectedDate}
-        getDaysInMonth={getDaysInMonth}
-        getEventsForDate={getEventsForDate}
-        getDateKey={getDateKey}
-        isSameDay={isSameDay}
-        isToday={isToday}
-        weather={weather}
-        showWeather={showWeather}
-        subCalendars={subCalendars}
-        darkMode={darkMode}
-      />
+      {/* Calendar content by view */}
+      {localCalendarView === 'month' && (
+        <>
+          <DayHeaders darkMode={darkMode} />
+          <CalendarGrid
+            currentDate={currentDate}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            getDaysInMonth={getDaysInMonth}
+            getEventsForDate={getEventsForDate}
+            getDateKey={getDateKey}
+            isSameDay={isSameDay}
+            isToday={isToday}
+            weather={weather}
+            showWeather={showWeather}
+            subCalendars={subCalendars}
+            darkMode={darkMode}
+          />
+        </>
+      )}
+
+      {localCalendarView === 'week' && (
+        <>
+          <WeekHeaders currentDate={currentDate} darkMode={darkMode} />
+          <WeekGrid
+            currentDate={currentDate}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            getEventsForDate={getEventsForDate}
+            getDateKey={getDateKey}
+            isSameDay={isSameDay}
+            isToday={isToday}
+            subCalendars={subCalendars}
+            darkMode={darkMode}
+          />
+        </>
+      )}
+
+      {localCalendarView === 'agenda' && (
+        <AgendaList
+          startDate={currentDate}
+          days={30}
+          getEventsForDate={getEventsForDate}
+          getDateKey={getDateKey}
+          onEventClick={onEventClick}
+          formatTime={formatTime}
+          darkMode={darkMode}
+        />
+      )}
       
       {/* Selected date details */}
       {selectedDate && (
@@ -287,15 +318,17 @@ const ActiveTripsBanner = ({ trips, openSubCalendar, darkMode }) => (
 // ============================================================================
 
 const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendarView, darkMode }) => {
-  const goToPrevMonth = () => {
+  const goToPrev = () => {
     const newDate = new Date(currentDate);
-    newDate.setMonth(newDate.getMonth() - 1);
+    if (calendarView === 'week') newDate.setDate(newDate.getDate() - 7);
+    else newDate.setMonth(newDate.getMonth() - 1);
     setCurrentDate(newDate);
   };
   
-  const goToNextMonth = () => {
+  const goToNext = () => {
     const newDate = new Date(currentDate);
-    newDate.setMonth(newDate.getMonth() + 1);
+    if (calendarView === 'week') newDate.setDate(newDate.getDate() + 7);
+    else newDate.setMonth(newDate.getMonth() + 1);
     setCurrentDate(newDate);
   };
   
@@ -305,10 +338,10 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
   
   return (
     <div className="mb-4 flex items-center justify-between">
-      {/* Month navigation */}
+      {/* Month/Week navigation */}
       <div className="flex items-center gap-3">
         <button
-          onClick={goToPrevMonth}
+          onClick={goToPrev}
           className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
           <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
         </button>
@@ -322,7 +355,7 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
         </div>
         
         <button
-          onClick={goToNextMonth}
+          onClick={goToNext}
           className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
           <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
         </button>
@@ -351,7 +384,7 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
 };
 
 // ============================================================================
-// DAY HEADERS
+// DAY HEADERS (Month view)
 // ============================================================================
 
 const DayHeaders = ({ darkMode }) => {
@@ -372,6 +405,176 @@ const DayHeaders = ({ darkMode }) => {
           {day}
         </div>
       ))}
+    </div>
+  );
+};
+
+// ============================================================================
+// WEEK HEADERS (Week view)
+// ============================================================================
+
+const WeekHeaders = ({ currentDate, darkMode }) => {
+  const startOfWeek = (() => {
+    const d = new Date(currentDate);
+    const day = d.getDay();
+    d.setDate(d.getDate() - day);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  })();
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(startOfWeek);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+  const todayStr = new Date().toDateString();
+  return (
+    <div className="grid grid-cols-7 gap-2 sm:gap-3 mb-4">
+      {days.map((d, idx) => {
+        const isToday = d.toDateString() === todayStr;
+        return (
+          <div
+            key={idx}
+            className={`text-center text-xs sm:text-sm font-bold py-2 rounded-2xl transition-all ${
+              isToday
+                ? 'bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 scale-105'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            {d.toLocaleDateString('en-US', { weekday: 'short' })}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// ============================================================================
+// WEEK GRID (Week view)
+// ============================================================================
+
+const WeekGrid = ({
+  currentDate,
+  selectedDate,
+  setSelectedDate,
+  getEventsForDate,
+  getDateKey,
+  isSameDay,
+  isToday,
+  subCalendars,
+  darkMode,
+}) => {
+  const startOfWeek = (() => {
+    const d = new Date(currentDate);
+    const day = d.getDay();
+    d.setDate(d.getDate() - day);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  })();
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(startOfWeek);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+
+  return (
+    <div className="grid grid-cols-7 gap-2 sm:gap-3 mb-6">
+      {days.map((date, index) => {
+        const dateEvents = getEventsForDate(date) || [];
+        const isSelected = isSameDay(date, selectedDate);
+        const isTodayDate = isToday(date);
+        const eventCount = dateEvents.length;
+        const dateKey = getDateKey(date);
+
+        return (
+          <button
+            key={index}
+            onClick={() => setSelectedDate(date)}
+            className={`
+              group relative w-full aspect-square rounded-3xl p-2 transition-all duration-300 select-none
+              ${isSelected 
+                ? 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white shadow-2xl scale-110 ring-4 ring-purple-200 dark:ring-purple-800 z-20' 
+                : isTodayDate
+                  ? 'bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 ring-2 ring-purple-400 dark:ring-purple-600 shadow-lg'
+                  : 'bg-white/90 dark:bg-gray-800/90 hover:bg-gray-50 dark:hover:bg-gray-750 hover:shadow-md'
+              }
+              hover:scale-105 active:scale-95
+            `}
+          >
+            <div className={`text-sm sm:text-base font-bold mb-1 ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-200'}`}>
+              {date.getDate()}
+            </div>
+            {eventCount > 0 && !isSelected && (
+              <div className="absolute bottom-1.5 left-1/2 transform -translate-x-1/2">
+                <div className="px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] font-bold shadow-md">
+                  {eventCount > 9 ? '9+' : eventCount}
+                </div>
+              </div>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+// ============================================================================
+// AGENDA LIST (Agenda view)
+// ============================================================================
+
+const AgendaList = ({ startDate, days = 30, getEventsForDate, getDateKey, onEventClick, formatTime, darkMode }) => {
+  const list = [];
+  const base = new Date(startDate);
+  base.setHours(0, 0, 0, 0);
+  for (let i = 0; i < days; i += 1) {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
+    const ev = getEventsForDate(d) || [];
+    list.push({ date: d, events: ev });
+  }
+
+  let lastHeader = '';
+  return (
+    <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+      {list.every(row => row.events.length === 0) ? (
+        <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">No agenda items in this range.</div>
+      ) : (
+        list.map((row, idx) => {
+          const dk = getDateKey(row.date);
+          const showHeader = dk !== lastHeader;
+          lastHeader = dk;
+          return (
+            <div key={dk + ':' + idx}>
+              {showHeader && (
+                <div className="sticky top-0 z-10 -mx-1 px-2 py-1 rounded-lg bg-gray-100/95 dark:bg-gray-800/95 backdrop-blur border text-xs font-semibold mb-1">
+                  {row.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                </div>
+              )}
+              {row.events.map((event) => (
+                <button
+                  key={String(event.id) + ':' + dk}
+                  onClick={() => onEventClick && onEventClick(event)}
+                  className="w-full text-left rounded-xl border p-2.5 mb-1 transition-all hover:shadow bg-white/90 dark:bg-gray-800/90 border-gray-200 dark:border-gray-700"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full shrink-0 bg-purple-500" />
+                        <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{event.title}</span>
+                      </div>
+                      {event.location && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">Location: {event.location}</div>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                      {event.time ? formatTime(event.time) : 'All day'}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          );
+        })
+      )}
     </div>
   );
 };

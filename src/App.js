@@ -20618,7 +20618,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     {calendarTitle}
                   </button>
                 )}
-                <div className="flex flex-col items-end gap-1.5">
+                <div className="hidden">
                   <div
                     className="flex items-center gap-1.5 rounded-2xl border px-2 py-1"
                     style={calendarViewTogglePillStyle}
