@@ -9207,12 +9207,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const [year, month, day] = dateKey.split('-').map((part) => Number(part));
     const nextSelectedDate = new Date(year, (month || 1) - 1, day || 1);
     const eventId = generateUuid();
-    const newEvent = {
+        const newEvent = {
       id: eventId,
       title,
       time,
       date: dateKey,
-      category: 'other',
+      category: isPopupEventDraft ? 'popup_event' : 'other',
       description: null,
       isPrivate: false,
       isUrgent: false,
@@ -9238,7 +9238,33 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return String(a.time).localeCompare(String(b.time));
     });
 
-    await saveEvents(nextEvents, { immediate: true });
+        await saveEvents(nextEvents, { immediate: true });
+
+    // If marked as pop-up, also create the popup metadata rows now
+    if (isPopupEventDraft) {
+      const maxPeople = Math.max(1, parseInt(String(popupEventMaxPeopleDraft || '').trim(), 10) || 1);
+      await createPopupEventRows([{
+        layer_id: activeLayerId,
+        event_id: eventId,
+        max_people: maxPeople,
+        created_by_user_id: user?.id || null,
+        created_by_name: currentUser || user?.email || user?.phone || 'Member',
+        created_at: new Date().toISOString(),
+      }]);
+      // Best-effort details row (ignore if table/columns are missing)
+      supabase.from('popup_event_details').insert({
+        id: eventId,
+        calendar_id: activeLayerId,
+        created_by: user?.id || null,
+        title,
+        date: dateKey,
+        time,
+        max_players: maxPeople,
+        is_public: !isPrivate,
+        status: 'open',
+      }).then(({ error }) => { if (error) console.error('popup_event_details insert error (home add):', error); });
+    }
+
     setSelectedDate(nextSelectedDate);
     setSelectedDates([]);
     setShowHomeAddEventModal(false);
@@ -10520,24 +10546,45 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       .select('layer_id,event_id,max_people,created_by_user_id,created_by_name,created_at')
       .in('layer_id', visibleLayerIds);
 
-    if (popupEventsErr) {
-      if (popupEventsErr.code === '42P01') {
-        setPopupFeatureAvailable(false);
+          if (popupEventsErr) {
+        // Fallback: if popup_events is missing or errored, try deriving from popup_event_details
+        if (popupEventsErr.code === '42P01') {
+          setPopupFeatureAvailable(false);
+        }
+        try {
+          const { data: detailRows } = await supabase
+            .from('popup_event_details')
+            .select('id,calendar_id,max_players,created_by,date')
+            .in('calendar_id', visibleLayerIds);
+          const fallbackEventsMap = {};
+          (detailRows || []).forEach((row) => {
+            const eventId = String(row?.id || '').trim();
+            if (!eventId) return;
+            fallbackEventsMap[eventId] = {
+              eventId,
+              layerId: String(row?.calendar_id || '').trim(),
+              maxPeople: Number(row?.max_players || 10) || 10,
+              createdByUserId: String(row?.created_by || '').trim() || null,
+              createdByName: null,
+              createdAt: null,
+              dateKey: String(row?.date || '').trim() || null,
+            };
+          });
+          setPopupEventsByEventId(fallbackEventsMap);
+        } catch {
+          setPopupEventsByEventId({});
+        }
+        setPopupSignupsByEventId({});
+        setUserTabPopupEvents([]);
+        return;
       }
-      setPopupEventsByEventId({});
-      setPopupSignupsByEventId({});
-      setUserTabPopupEvents([]);
-      return;
-    }
 
-    const eventIds = (popupEventsRows || [])
-      .map((row) => String(row?.event_id || '').trim())
-      .filter((eventId) => isUuid(eventId));
+      const eventIds = (popupEventsRows || [])
+    .map((row) => String(row?.event_id || '').trim());
     const eventsMap = {};
-    (popupEventsRows || []).forEach((row) => {
-      const eventId = String(row?.event_id || '').trim();
-      if (!isUuid(eventId)) return;
-      eventsMap[eventId] = {
+      (popupEventsRows || []).forEach((row) => {
+    const eventId = String(row?.event_id || '').trim();
+    eventsMap[eventId] = {
         eventId,
         layerId: String(row?.layer_id || '').trim(),
         maxPeople: Math.max(1, Number(row?.max_people || 1)),
@@ -15952,9 +15999,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         created_by_user_id: user?.id || null,
         created_by_name: currentUser || user?.email || user?.phone || 'Member',
         created_at: new Date().toISOString(),
-      })));
+            })  ));
+      try { await supabase.from('events').update({ category: 'popup_event' }).in('id', createdEventIds).eq('layer_id', activeLayerId); } catch (e) { console.warn('events category update failed (popup):', e?.message || e); }
 
-      for (const eventId of createdEventIds) {
+       for (const eventId of createdEventIds) {
         const eventDate = pendingEvent.datesToAdd.find((_, i) => createdEventIds[i] === eventId);
         const dateKey = eventDate ? getDateKey(eventDate) : '';
         supabase.from('popup_event_details').insert({
@@ -18702,7 +18750,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         photo_url: String(signup?.photo_url || signup?.photoUrl || ''),
         avatarUrl: String(signup?.avatarUrl || signup?.avatar_url || ''),
         avatar_url: String(signup?.avatar_url || signup?.avatarUrl || ''),
-      })));
+            })));
   const activeRoundRobinTournament = roundRobinTournamentKey ? (layerRoundRobins?.[roundRobinTournamentKey] || null) : null;
   const activeRoundRobinRounds = activeRoundRobinTournament?.rounds || [];
   const activeRoundRobinStandings = deriveRoundRobinStandings(activeRoundRobinTournament);
@@ -23502,7 +23550,7 @@ Nothing planned today
 Take some time for yourself or start planning something amazing!
 </p>
 <button
-onClick={() => { handleAddButtonClick(); setPreferCalendarHome(false); }}
+onClick={() => { setSelectedDate(new Date()); setShowDateDetailModal(true); setPreferCalendarHome(false); }}
 className="px-6 py-3 rounded-2xl text-white font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300" style={themeAccentButtonStyle}>
 Add Something Fun
 </button>
@@ -23941,7 +23989,11 @@ transform: translateY(0);
                       const dk = String(event?.date || event?.dateKey || '');
                       const showHeader = dk !== lastDateKey;
                       lastDateKey = dk;
-                      const category = categories[event.category || 'other'] || categories.other;
+
+                      const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                      const popupCard = (userTabPopupEvents || []).find((row) => String(row?.id || '') === String(event?.id || '')) || null;
+                      const isPopupEvent = Boolean(popupMeta || popupCard) || event.category === 'popup_event';
+                      const category = categories[isPopupEvent ? 'popup_event' : (event.category || 'other')] || categories.other;
                       const dateObj = new Date(`${dk}T00:00:00`);
                       return (
                         <div key={`${event.id}-${dk}-${event.time || 'all-day'}`}>
@@ -23985,6 +24037,7 @@ transform: translateY(0);
           <DateDetailsModal
             isOpen={showDateDetailModal}
             onClose={() => setShowDateDetailModal(false)}
+    setIsPopupEventDraft={setIsPopupEventDraft}
             selectedDate={selectedDate}
             selectedDates={selectedDates}
             selectedEvents={selectedEvents}

@@ -32,6 +32,7 @@ const DateDetailsModal = ({
   // Pop-up event settings
   popupEventMaxPeopleDraft,
   setPopupEventMaxPeopleDraft,
+  setIsPopupEventDraft,
   
   // Settings
   isPrivate,
@@ -266,6 +267,7 @@ const DateDetailsModal = ({
               
               <button
                 onClick={() => {
+                  try { setIsPopupEventDraft?.(true); } catch {}
                   handleQuickAdd();
                   setQuickEntry('');
                   setEventCreationMode('quick'); // Reset after creating popup

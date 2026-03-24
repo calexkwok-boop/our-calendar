@@ -151,6 +151,18 @@ const CreateEventForm = ({ accent, darkMode, btnStyle, border, softBg, supabase,
         description: form.description.trim() || null, status: 'open',
       }).select().single();
       if (err) throw err;
+      // Ensure summary row exists in popup_events for cross-panel features (capacity bar, home cards, etc.)
+      try {
+        await supabase
+          .from('popup_events')
+          .upsert({
+            layer_id: calendarId,
+            event_id: data.id,
+            max_people: Number(form.max_players) || 10,
+            created_by_user_id: user.id,
+            created_by_name: effectiveDisplayName || 'Host',
+          }, { onConflict: 'event_id' });
+      } catch {}
       await supabase.from('popup_event_members').insert({ event_id: data.id, user_id: user.id, display_name: effectiveDisplayName || 'Host', role: 'host' });
       onCreated(data);
     } catch (e) { setError(e.message || 'Could not create event.'); }
@@ -1052,12 +1064,20 @@ export default function PopupEventPanel({
     setCapacityBusy(true);
     setCapacityError('');
     try {
-      const [detailResult, summaryResult] = await Promise.all([
-        supabase.from('popup_event_details').update({ max_players: nextMax }).eq('id', event.id),
-        supabase.from('popup_events').update({ max_people: nextMax }).eq('event_id', event.id),
-      ]);
+      const detailResult = await supabase.from('popup_event_details').update({ max_players: nextMax }).eq('id', event.id);
       if (detailResult.error) throw detailResult.error;
-      if (summaryResult.error) throw summaryResult.error;
+      // Ensure popup_events has the summary row and keep it in sync
+      try {
+        await supabase
+          .from('popup_events')
+          .upsert({
+            layer_id: event.calendar_id || calendarId,
+            event_id: event.id,
+            max_people: nextMax,
+            created_by_user_id: event.created_by || user?.id,
+            created_by_name: (members.find((m) => m.role === 'host')?.display_name) || (displayName || 'Host'),
+          }, { onConflict: 'event_id' });
+      } catch {}
       setEvent((prev) => prev ? { ...prev, max_players: nextMax } : prev);
       setEditingCapacity(false);
       await loadEvent(event.id);
