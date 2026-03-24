@@ -1,0 +1,20 @@
+﻿
+> <div className="flex items-center gap-3 mb-6">
+  <span className="text-5xl">
+  {(() => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Ã¢Ëœâ‚¬Ã¯Â¸Â';
+  if (hour < 17) return 'Ã°Å¸Å’Â¤Ã¯Â¸Â';
+  if (hour < 20) return 'Ã°Å¸Å’â€ ';
+  return 'Ã°Å¸Å’â„¢';
+  })()}
+  </span>
+  <div>
+  <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 
+dark:to-pink-400 bg-clip-text text-transparent">
+  {(() => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning!';
+  if (hour < 17) return 'Good afternoon!';
+
+

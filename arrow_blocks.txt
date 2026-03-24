@@ -1,0 +1,6 @@
+﻿
+> <div className="text-purple-400 text-xl group-hover:translate-x-1 transition-transform">
+  Ã¢â€ â€™
+  </div>
+
+

@@ -1,0 +1,8 @@
+﻿
+> <div className="mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-gray-800/80 
+backdrop-blur-sm shadow-md">
+  <span className="text-2xl">Ã°Å¸â€œâ€¦</span>
+  <span className="font-semibold text-gray-900 dark:text-white">
+  {overviewTodayEvents.length} {overviewTodayEvents.length === 1 ? 'thing' : 'things'} today
+
+
