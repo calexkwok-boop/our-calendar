@@ -23441,11 +23441,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
         <div className="grid grid-cols-1 gap-4">
           {(showHomeCalendarOverview || preferCalendarHome) && (
-                    <div className={`${bottomNavTab !== 'home' ? 'hidden' : ''} relative overflow-hidden rounded-3xl shadow-2xl p-4 sm:p-6 ${calendarView === 'agenda' ? 'bg-gray-50 dark:bg-gray-900' : 'bg-gradient-to-br from-white via-purple-50/20 to-pink-50/20 dark:from-gray-900 dark:via-purple-900/5 dark:to-pink-900/5'}`} >
-            <div className="relative z-10">
-
+          <div className={`${bottomNavTab !== 'home' ? 'hidden' : ''} relative overflow-hidden rounded-3xl shadow-2xl p-4 sm:p-6 ${
+  calendarView === 'agenda' 
+  ? 'bg-gray-50 dark:bg-gray-900'    : 'bg-gradient-to-br from-white via-purple-50/20 to-pink-50/20 dark:from-gray-900 dark:via-purple-900/5 dark:to-pink-900/5' `}>
 {preferCalendarHome && (
-
 <div className="mb-6">
 {/* Hero card with gradient and personality */}
 <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 p-6 sm:p-8 shadow-xl border border-white/50 dark:border-purple-800/30">
@@ -23458,10 +23457,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 <span className="text-5xl">
 {(() => {
 const hour = new Date().getHours();
-if (hour < 12) return '\u2600\uFE0F';
-if (hour < 17) return '\uD83C\uDF24\uFE0F';
-if (hour < 20) return '\uD83C\uDF06';
-return '\uD83C\uDF19';
+if (hour < 12) return 'â˜€ï¸';
+if (hour < 17) return 'ðŸŒ¤ï¸';
+if (hour < 20) return 'ðŸŒ†';
+return 'ðŸŒ™';
 })()}
 </span>
 <div>
@@ -23487,7 +23486,7 @@ return 'Good night!';
 <span className="text-5xl">ðŸŒ¸</span>
 </div>
 <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-400 flex items-center justify-center shadow-lg">
-<span className="text-lg">{'\u2728'}</span>
+<span className="text-lg">âœ¨</span>
 </div>
 </div>
 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
@@ -23506,7 +23505,7 @@ Add Something Fun
 <>
 {/* Event count badge */}
 <div className="mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-md">
-<span className="text-2xl">{'\u2728'}</span>
+<span className="text-2xl">ðŸ“…</span>
 <span className="font-semibold text-gray-900 dark:text-white">
 {overviewTodayEvents.length} {overviewTodayEvents.length === 1 ? 'thing' : 'things'} today
 </span>
@@ -23521,6 +23520,86 @@ const effectiveCategoryKey = isPopupEvent ? 'popup_event' : (event.category || '
 const category = categories[effectiveCategoryKey] || categories.other;
 return (
 <button
+key={`${event.id}-${event.date}`}
+type="button"
+onClick={() => { openUserTabEvent(event, popupMeta || popupCard); }}
+className="group w-full flex items-center gap-4 p-4 rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300 text-left border border-gray-100 dark:border-gray-700"
+style={{
+animation: `fadeInUp 0.4s ease-out ${idx * 0.1}s both`
+}}
+>
+{/* Time badge */}
+<div className="flex flex-col items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/40 dark:to-pink-900/40 shrink-0">
+{event.time ? (
+<>
+<span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+{formatTime(event.time).split(' ')[0]}
+</span>
+<span className="text-[10px] text-purple-500">
+{formatTime(event.time).split(' ')[1]}
+</span>
+</>
+) : (
+<span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+All day
+</span>
+)}
+</div>
+{/* Event info */}
+<div className="flex-1 min-w-0">
+<div className="font-semibold text-base text-gray-900 dark:text-white mb-1">
+{event.title}
+</div>
+{event.location && (
+<div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+<MapPin className="w-3.5 h-3.5 shrink-0" />
+<span className="truncate">{event.location}</span>
+</div>
+)}
+<div className="mt-1 flex flex-wrap items-center gap-1">
+{isPopupEvent && (
+<span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+Pop-up
+</span>
+)}
+</div>
+</div>
+{/* Arrow with hover effect */}
+<div className="text-purple-400 text-xl group-hover:translate-x-1 transition-transform">
+â†’
+</div>
+</button>
+);
+})}
+{overviewTodayEvents.length > 3 && (
+<button 
+onClick={() => {
+setSelectedDate(new Date());
+setPreferCalendarHome(false);
+}}
+className="w-full py-3 text-center text-sm font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors">
+See {overviewTodayEvents.length - 3} more â†’
+</button>
+)}
+</div>
+</>
+)}
+</div>
+</div>
+<style jsx>{`
+@keyframes fadeInUp {
+from {
+opacity: 0;
+transform: translateY(20px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
+}
+`}</style>
+</div>
+)}
 key={`${event.id}-${event.date}`}
 type="button"
 onClick={() => { openUserTabEvent(event, popupMeta || popupCard); }}
@@ -23600,7 +23679,6 @@ transform: translateY(0);
 </div>
 )}
 
-            </div>
             {/* Active sub-calendar banner */}
             {(() => {
               const today = getDateKey(new Date());
@@ -23640,14 +23718,14 @@ transform: translateY(0);
                           className="relative z-10 w-full flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 hover:shadow-md transition-all text-left cursor-pointer"
                           style={{ transform: `translateX(${rowOffset}px)`, transition: tripSwipeDrag.id === sc.id ? 'none' : 'transform 180ms ease' }}
                         >
-                          <span className="text-xl">🧳</span>
+                          <span className="text-xl">{'\uD83E\uDDF3'}</span>
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-sm text-green-800 dark:text-green-300">{sc.name}</div>
                             <div className="text-xs text-green-600 dark:text-green-400">
-                              Happening now · {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              Happening now {'\u00B7'} {new Date(sc.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {'\u2013'} {new Date(sc.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </div>
                           </div>
-                          <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open →</span>
+                          <span className="text-xs text-green-600 dark:text-green-400 font-medium shrink-0">Open {'\u00BB'}</span>
                         </div>
                       </div>
                     );
@@ -24850,7 +24928,7 @@ transform: translateY(0);
                           >
                             <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} – {getSubCalEndRaw(sc)}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} {'\u2013'} {getSubCalEndRaw(sc)}</div>
                             </div>
                             <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                           </div>
@@ -24887,7 +24965,7 @@ transform: translateY(0);
                           >
                             <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} – {getSubCalEndRaw(sc)}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} {'\u2013'} {getSubCalEndRaw(sc)}</div>
                             </div>
                             <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                           </div>
@@ -24905,7 +24983,7 @@ transform: translateY(0);
                   )}
                   {archivedTrips.length === 0 && activeTrips.length === 0 && upcomingTrips.length === 0 ? (
                     <div className="text-center py-10">
-                      <div className="text-4xl mb-3">🧳</div>
+                      <div className="text-4xl mb-3">{'\uD83E\uDDF3'}</div>
                       <div className="text-sm font-semibold text-gray-500 dark:text-gray-400">No trips yet</div>
                     </div>
                   ) : archivedTrips.length === 0 ? (
@@ -24933,7 +25011,7 @@ transform: translateY(0);
                           >
                             <div className="min-w-0">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{sc.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} – {getSubCalEndRaw(sc)}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{getSubCalStartRaw(sc)} {'\u2013'} {getSubCalEndRaw(sc)}</div>
                             </div>
                             <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                           </div>
@@ -26636,7 +26714,7 @@ transform: translateY(0);
               >{activeSubCalendar.name}</div>
             )}
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {new Date(activeSubCalendar.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {'\u2013'} {new Date(activeSubCalendar.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </div>
           </div>
           <div className="flex items-center gap-2">
