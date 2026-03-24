@@ -23456,10 +23456,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 <span className="text-5xl">
 {(() => {
 const hour = new Date().getHours();
-if (hour < 12) return 'â˜€ï¸';
-if (hour < 17) return 'ðŸŒ¤ï¸';
-if (hour < 20) return 'ðŸŒ†';
-return 'ðŸŒ™';
+if (hour < 12) return '\u2600\uFE0F';
+if (hour < 17) return '\uD83C\uDF24\uFE0F';
+if (hour < 20) return '\uD83C\uDF06';
+return '\uD83C\uDF19';
 })()}
 </span>
 <div>
@@ -23485,7 +23485,7 @@ return 'Good night!';
 <span className="text-5xl">ðŸŒ¸</span>
 </div>
 <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-400 flex items-center justify-center shadow-lg">
-<span className="text-lg">âœ¨</span>
+<span className="text-lg">{'\u2728'}</span>
 </div>
 </div>
 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
@@ -23504,7 +23504,7 @@ Add Something Fun
 <>
 {/* Event count badge */}
 <div className="mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-md">
-<span className="text-2xl">ðŸ“…</span>
+<span className="text-2xl">{'\u2728'}</span>
 <span className="font-semibold text-gray-900 dark:text-white">
 {overviewTodayEvents.length} {overviewTodayEvents.length === 1 ? 'thing' : 'things'} today
 </span>
@@ -23564,9 +23564,7 @@ Pop-up
 </div>
 </div>
 {/* Arrow with hover effect */}
-<div className="text-purple-400 text-xl group-hover:translate-x-1 transition-transform">
-â†’
-</div>
+<div className="text-purple-400 text-xl group-hover:translate-x-1 transition-transform">{'\u00BB'}</div>
 </button>
 );
 })}
@@ -23577,7 +23575,7 @@ setSelectedDate(new Date());
 setPreferCalendarHome(false);
 }}
 className="w-full py-3 text-center text-sm font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors">
-See {overviewTodayEvents.length - 3} more â†’
+See {overviewTodayEvents.length - 3} more {'\u00BB'}
 </button>
 )}
 </div>
