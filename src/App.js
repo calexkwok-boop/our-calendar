@@ -23448,10 +23448,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
 <div className="mb-6">
 {/* Hero card with gradient and personality */}
-<div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 p-6 sm:p-8 shadow-xl border border-white/50 dark:border-purple-800/30">
+<div className="relative overflow-hidden rounded-3xl p-6 sm:p-8 shadow-xl border" style={{
+  background: darkMode
+    ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.09)} 0%, rgba(15,23,42,0.85) 100%)`
+    : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.96) 100%)`,
+  borderColor: darkMode ? 'rgba(255,255,255,0.10)' : hexToRgba(activeLayerPageTheme.accent, 0.15),
+}}>
 {/* Decorative blur elements */}
-<div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-200/20 to-pink-200/20 rounded-full blur-3xl" />
-<div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-purple-200/20 to-blue-200/20 rounded-full blur-2xl" />
+<div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${hexToRgba(activeLayerPageTheme.accent, 0.20)} 0%, transparent 65%)` }} />
+<div className="absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl" style={{ background: `radial-gradient(circle, ${hexToRgba(activeLayerPageTheme.accent, 0.14)} 0%, transparent 65%)` }} />
 <div className="relative z-10">
 {/* Time-based greeting */}
 <div className="flex items-center gap-3 mb-6">
@@ -23465,7 +23470,7 @@ return '\uD83C\uDF19';
 })()}
 </span>
 <div>
-<h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+<h2 className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent" style={themeAccentHeadingStyle}>
 {(() => {
 const hour = new Date().getHours();
 if (hour < 12) return 'Good morning!';
@@ -23498,7 +23503,7 @@ Take some time for yourself or start planning something amazing!
 </p>
 <button
 onClick={() => { handleAddButtonClick(); setPreferCalendarHome(false); }}
-className="px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
+className="px-6 py-3 rounded-2xl text-white font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300" style={themeAccentButtonStyle}>
 Add Something Fun
 </button>
 </div>
