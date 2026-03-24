@@ -23488,7 +23488,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         <div className="grid grid-cols-1 gap-4">
-          {(showHomeCalendarOverview || preferCalendarHome) && (
+          {false && (showHomeCalendarOverview || preferCalendarHome) && (
                     <div className={`${bottomNavTab !== 'home' ? 'hidden' : ''} relative overflow-hidden rounded-3xl shadow-2xl p-4 sm:p-6 ${calendarView === 'agenda' ? 'bg-gray-50 dark:bg-gray-900' : 'bg-gradient-to-br from-white via-purple-50/20 to-pink-50/20 dark:from-gray-900 dark:via-purple-900/5 dark:to-pink-900/5'}`} >
             <div className="relative z-10">
 
@@ -24052,6 +24052,7 @@ transform: translateY(0);
             calendarView: 'month',
       setCalendarView: () => {},
       onAddEvent: () => { setSelectedDate(new Date()); setShowDateDetailModal(true); },
+      onStartTrip: () => { setShowSubCalendarModal(true); },
       onEventClick: (event) => {
         const eventId = String(event?.id || '');
         const isPopup = (typeof popupEventsByEventId !== 'undefined' && popupEventsByEventId && popupEventsByEventId[eventId]);

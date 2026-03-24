@@ -35,6 +35,7 @@ const UnifiedCalendarView = ({
   // Actions
   onAddEvent, // () => void
   onEventClick, // (event) => void
+  onStartTrip, // () => void
   
   // Helpers
   formatTime, // (time) => string
@@ -68,6 +69,8 @@ const UnifiedCalendarView = ({
   // Selected date events
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
   const isSelectedToday = selectedDate && isSameDay(selectedDate, new Date());
+  // Local view state for header toggle (UI only on Home)
+  const [localCalendarView, setLocalCalendarView] = useState('month');
   
   return (
     <div className="unified-calendar-view">
@@ -89,15 +92,13 @@ const UnifiedCalendarView = ({
       )}
       
       {/* Month navigation & view toggle — hidden per design */}
-      {false && (
-        <CalendarHeader
-          currentDate={currentDate}
-          setCurrentDate={setCurrentDate}
-          calendarView={calendarView}
-          setCalendarView={setCalendarView}
-          darkMode={darkMode}
-        />
-      )}
+      <CalendarHeader
+        currentDate={currentDate}
+        setCurrentDate={setCurrentDate}
+        calendarView={localCalendarView}
+        setCalendarView={setLocalCalendarView}
+        darkMode={darkMode}
+      />
       
       {/* Day headers */}
       <DayHeaders darkMode={darkMode} />
@@ -131,6 +132,22 @@ const UnifiedCalendarView = ({
           categories={categories}
           darkMode={darkMode}
         />
+      )}
+
+      {/* Trips starter (under Today's schedule) */}
+      {typeof onStartTrip === 'function' && (
+        <div className="mt-4 rounded-3xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-5 shadow-xl border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Trips</h3>
+            <button
+              onClick={onStartTrip}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:shadow-lg hover:shadow-blue-500/25"
+            >
+              + Start Trip
+            </button>
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Plan a new trip from your selected dates.</div>
+        </div>
       )}
     </div>
   );
