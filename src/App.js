@@ -23735,7 +23735,7 @@ transform: translateY(0);
               </div>
             )}
 
-            {calendarView === 'agenda' && (
+            {false && calendarView === 'agenda' && (
               <div
                 className="mb-3 rounded-xl border p-2.5 space-y-2"
                 style={{
@@ -23783,9 +23783,9 @@ transform: translateY(0);
               </div>
             )}
 
-            {/* Day headers */}
-            {calendarView !== 'agenda' && (
-            <div className="grid grid-cols-7 gap-1 sm:gap-1.5 mb-1.5">
+                          {/* Day headers — disabled in favor of UnifiedCalendarView */}
+              {false && calendarView !== 'agenda' && (
+              <div className="grid grid-cols-7 gap-1 sm:gap-1.5 mb-1.5">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                 <div
                   key={day}
@@ -23798,9 +23798,9 @@ transform: translateY(0);
             </div>
             )}
 
-            {calendarView === 'month' ? (
-              /* -- MONTH VIEW -- */
-              <div className="grid grid-cols-7 gap-1">
+            {false && calendarView === 'month' ? (
+    /* -- MONTH VIEW -- */
+    <div className="grid grid-cols-7 gap-1">
                 {getDaysInMonth(currentDate).map((date, index) => {
                   const dateKey = date ? getDateKey(date) : null;
                   const dateEvents = getEventsForDate(date);
@@ -23886,9 +23886,9 @@ transform: translateY(0);
                   );
                 })}
               </div>
-            ) : calendarView === 'week' ? (
-              /* -- WEEK VIEW -- */
-              <div className="grid grid-cols-7 gap-1">
+            ) : false && calendarView === 'week' ? (
+                /* -- WEEK VIEW -- */
+                <div className="grid grid-cols-7 gap-1">
                 {getWeekDays(currentDate).map((date, index) => {
                   const dateKey = getDateKey(date);
                   const dateEvents = getEventsForDate(date);

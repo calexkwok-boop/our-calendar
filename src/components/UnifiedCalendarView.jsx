@@ -88,14 +88,16 @@ const UnifiedCalendarView = ({
         />
       )}
       
-      {/* Month navigation & view toggle */}
-      <CalendarHeader
-        currentDate={currentDate}
-        setCurrentDate={setCurrentDate}
-        calendarView={calendarView}
-        setCalendarView={setCalendarView}
-        darkMode={darkMode}
-      />
+      {/* Month navigation & view toggle — hidden per design */}
+      {false && (
+        <CalendarHeader
+          currentDate={currentDate}
+          setCurrentDate={setCurrentDate}
+          calendarView={calendarView}
+          setCalendarView={setCalendarView}
+          darkMode={darkMode}
+        />
+      )}
       
       {/* Day headers */}
       <DayHeaders darkMode={darkMode} />
