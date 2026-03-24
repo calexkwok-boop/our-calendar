@@ -504,8 +504,8 @@ const WeekGrid = ({
               {date.getDate()}
             </div>
             {eventCount > 0 && !isSelected && (
-              <div className="absolute bottom-1.5 left-1/2 transform -translate-x-1/2">
-                <div className="px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] font-bold shadow-md">
+              <div className="absolute bottom-1 sm:bottom-1.5 left-1/2 transform -translate-x-1/2">
+                <div className="px-1.5 sm:px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[9px] sm:text-[10px] font-bold shadow-md">
                   {eventCount > 9 ? '9+' : eventCount}
                 </div>
               </div>
@@ -679,8 +679,8 @@ const CalendarGrid = ({
             
             {/* Event count badge */}
             {eventCount > 0 && !isSelected && (
-              <div className="absolute bottom-1.5 left-1/2 transform -translate-x-1/2">
-                <div className="px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] font-bold shadow-md">
+              <div className="absolute bottom-1 sm:bottom-1.5 left-1/2 transform -translate-x-1/2">
+                <div className="px-1.5 sm:px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[9px] sm:text-[10px] font-bold shadow-md">
                   {eventCount > 9 ? '9+' : eventCount}
                 </div>
               </div>
