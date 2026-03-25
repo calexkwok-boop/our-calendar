@@ -18510,9 +18510,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   if (showTimePrompt && pendingEvent) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div
-          style={{ width: 'calc(100vw - 2rem)', maxWidth: '28rem', boxSizing: 'border-box', borderColor: themeAccentBorder }}
-          className="w-full glass-panel rounded-2xl border p-5"
+                <div
+          style={{ width: 'calc(100vw - 2rem)', maxWidth: '28rem', boxSizing: 'border-box', borderColor: themeAccentBorder, background: darkMode ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.18)} 0%, rgba(15,23,42,0.92) 100%)` : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)` }}
+          className="w-full rounded-3xl border p-6 shadow-2xl backdrop-blur-sm"
         >
           <h2 className="text-2xl font-bold mb-4" style={themeAccentHeadingStyle}>
             What time?
@@ -18526,32 +18526,61 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               </span>
             )}
           </p>
-          <div className="min-w-0" style={{ display: 'grid', gridTemplateColumns: '1fr' }}>
-            <input
-              type="text"
-              id="timeInput"
-              placeholder="e.g. 3:00 PM or 15:00"
-              defaultValue={suggestedTime || ''}
-              style={{ boxSizing: 'border-box', minWidth: 0, borderColor: themeAccentBorder }}
-              className="block w-full min-w-0 max-w-full px-4 py-3 border-2 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 rounded-xl focus:outline-none mb-4"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  const val = e.target.value;
-                  // parse "3pm", "3:30pm", "15:00" etc into HH:MM
-                  const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
-                  if (match) {
-                    let h = parseInt(match[1]);
-                    const m = match[2] ? parseInt(match[2]) : 0;
-                    const period = match[3]?.toLowerCase();
-                    if (period === 'pm' && h < 12) h += 12;
-                    if (period === 'am' && h === 12) h = 0;
-                    handleTimeSubmit(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
-                  } else {
-                    handleTimeSubmit(null);
+                    <div className="min-w-0">
+            <div className="relative mb-4">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🕒</span>
+              <input
+                type="text"
+                id="timeInput"
+                placeholder="e.g. 3:00 PM or 15:00"
+                defaultValue={suggestedTime || ''}
+                style={{ boxSizing: 'border-box', minWidth: 0, borderColor: themeAccentBorder }}
+                className="block w-full min-w-0 max-w-full pl-9 pr-3 py-3 border-2 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 rounded-xl focus:outline-none"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = e.target.value;
+                    const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                    if (match) {
+                      let h = parseInt(match[1]);
+                      const m = match[2] ? parseInt(match[2]) : 0;
+                      const period = match[3]?.toLowerCase();
+                      if (period === 'pm' && h < 12) h += 12;
+                      if (period === 'am' && h === 12) h = 0;
+                      handleTimeSubmit(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+                    } else {
+                      handleTimeSubmit(null);
+                    }
                   }
-                }
-              }}
-            />
+                }}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {['9:00 AM','12:00 PM','6:00 PM'].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => {
+                    const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+                    if (m) {
+                      let h = parseInt(m[1]); const mm = parseInt(m[2]); const p = m[3]?.toLowerCase();
+                      if (p === 'pm' && h < 12) h += 12; if (p === 'am' && h === 12) h = 0;
+                      handleTimeSubmit(`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`);
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  style={themeAccentSoftSurfaceStyle}
+                  type="button"
+                >
+                  {t}
+                </button>
+              ))}
+              <button
+                onClick={() => handleTimeSubmit(null)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                type="button"
+              >
+                No time
+              </button>
+            </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <button
@@ -18583,14 +18612,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             >
               Skip Time
             </button>
-            <button
+                        <button
               onClick={() => {
                 setShowTimePrompt(false);
                 setPendingEvent(null);
                 setSuggestedTime('');
                 setQuickEntry(pendingEvent.title);
               }}
-              className="flex-1 px-6 py-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-200 dark:hover:bg-red-800 transition-all"
+              className="flex-1 px-6 py-3 rounded-xl transition-all bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
             >
               Cancel
             </button>
