@@ -225,12 +225,12 @@ const DateDetailsModal = ({
                 type="text"
                 value={quickEntry}
                 onChange={(e) => setQuickEntry(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleQuickAdd();
-                    setQuickEntry('');
-                  }
-                }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleQuickAdd({ isPopupEvent: true });
+                      setQuickEntry('');
+                    }
+                  }}
                 placeholder="Friday night run club"
                 className="w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-800 dark:text-white text-base focus:ring-2 focus:border-transparent transition-all"
                 style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35) }}
@@ -280,7 +280,7 @@ const DateDetailsModal = ({
               <button
                 onClick={() => {
                   try { setIsPopupEventDraft?.(true); } catch {}
-                  handleQuickAdd();
+                  handleQuickAdd({ isPopupEvent: true });
                   setQuickEntry('');
                   setEventCreationMode('quick'); // Reset after creating popup
                 }}
@@ -623,7 +623,11 @@ const DateDetailsModal = ({
                             />
                             {/* Add rest of your edit form fields */}
                             <button
-                              onClick={() => setEditingEvent(null)}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingEvent(null);
+                              }}
                               className="w-full px-3 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl text-sm font-medium"
                             >
                               Done
@@ -719,7 +723,13 @@ const DateDetailsModal = ({
                             </div>
                             
                             <button
-                              onClick={() => setEditingEvent(event.id)}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingEvent(event.id);
+                              }}
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onTouchStart={(e) => e.stopPropagation()}
                               className="p-1.5 rounded-lg hover:bg-white/20 dark:hover:bg-black/20 transition-all"
                               aria-label="Edit event"
                             >

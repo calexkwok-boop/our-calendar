@@ -15007,16 +15007,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
   };
 
-  const handleQuickAdd = () => {
+  const handleQuickAdd = (options = {}) => {
     if (!quickEntry.trim()) return;
     const title = quickEntry.trim();
     const datesToAdd = selectedDates.length > 1 ? selectedDates : [selectedDate];
     const parsedMax = Math.max(1, parseInt(String(popupEventMaxPeopleDraft || '').trim(), 10) || 1);
+    const shouldCreatePopupEvent = typeof options?.isPopupEvent === 'boolean'
+      ? options.isPopupEvent
+      : Boolean(isPopupEventDraft);
     setPendingEvent({
       title,
       datesToAdd,
       isMultiDay: selectedDates.length > 1,
-      isPopupEvent: Boolean(isPopupEventDraft),
+      isPopupEvent: shouldCreatePopupEvent,
       popupMaxPeople: parsedMax,
     });
     setShowTimePrompt(true);
