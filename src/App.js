@@ -1882,7 +1882,9 @@ function App() {
   const [swipedEventKey, setSwipedEventKey] = useState(null);
   const [eventSwipeDrag, setEventSwipeDrag] = useState({ id: null, offset: 0 });
   const eventSwipeStartXRef = useRef(0);
+  const eventSwipeStartYRef = useRef(0);
   const swipingEventKeyRef = useRef(null);
+  const eventSwipeAxisLockRef = useRef(null);
   const [swipedJourneyEntryId, setSwipedJourneyEntryId] = useState(null);
   const [journeyEntrySwipeDrag, setJourneyEntrySwipeDrag] = useState({ id: null, offset: 0 });
   const journeyEntrySwipeStartXRef = useRef(0);
@@ -3291,7 +3293,9 @@ function App() {
     const touch = e.touches?.[0];
     if (!touch) return;
     eventSwipeStartXRef.current = touch.clientX;
+    eventSwipeStartYRef.current = touch.clientY;
     swipingEventKeyRef.current = eventKey;
+    eventSwipeAxisLockRef.current = null;
     if (swipedEventKey && swipedEventKey !== eventKey) setSwipedEventKey(null);
   };
 
@@ -3300,7 +3304,15 @@ function App() {
     if (!eventKey) return;
     const touch = e.touches?.[0];
     if (!touch) return;
+    const deltaY = touch.clientY - eventSwipeStartYRef.current;
     const deltaX = touch.clientX - eventSwipeStartXRef.current;
+    const absDeltaX = Math.abs(deltaX);
+    const absDeltaY = Math.abs(deltaY);
+    if (!eventSwipeAxisLockRef.current && (absDeltaX > 6 || absDeltaY > 6)) {
+      eventSwipeAxisLockRef.current = absDeltaX > absDeltaY ? 'x' : 'y';
+    }
+    if (eventSwipeAxisLockRef.current === 'y') return;
+    if (typeof e.preventDefault === 'function') e.preventDefault();
     const clamped = Math.max(-88, Math.min(0, deltaX));
     setEventSwipeDrag({ id: eventKey, offset: clamped });
   };
@@ -3312,14 +3324,18 @@ function App() {
     setSwipedEventKey(open ? eventKey : null);
     setEventSwipeDrag({ id: null, offset: 0 });
     swipingEventKeyRef.current = null;
+    eventSwipeAxisLockRef.current = null;
   };
 
   const startEventSwipeDrag = (e, eventKey, canSwipeAction) => {
     if (!canSwipeAction) return;
     const clientX = e.clientX ?? e.touches?.[0]?.clientX;
+    const clientY = e.clientY ?? e.touches?.[0]?.clientY;
     if (typeof clientX !== 'number') return;
     eventSwipeStartXRef.current = clientX;
+    eventSwipeStartYRef.current = typeof clientY === 'number' ? clientY : 0;
     swipingEventKeyRef.current = eventKey;
+    eventSwipeAxisLockRef.current = null;
     if (swipedEventKey && swipedEventKey !== eventKey) setSwipedEventKey(null);
   };
 
@@ -3327,7 +3343,15 @@ function App() {
     const eventKey = swipingEventKeyRef.current;
     if (!eventKey) return;
     const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? eventSwipeStartXRef.current;
+    const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? eventSwipeStartYRef.current;
     const deltaX = clientX - eventSwipeStartXRef.current;
+    const deltaY = clientY - eventSwipeStartYRef.current;
+    const absDeltaX = Math.abs(deltaX);
+    const absDeltaY = Math.abs(deltaY);
+    if (!eventSwipeAxisLockRef.current && (absDeltaX > 6 || absDeltaY > 6)) {
+      eventSwipeAxisLockRef.current = absDeltaX > absDeltaY ? 'x' : 'y';
+    }
+    if (eventSwipeAxisLockRef.current === 'y') return;
     const clamped = Math.max(-88, Math.min(0, deltaX));
     setEventSwipeDrag({ id: eventKey, offset: clamped });
   };
@@ -3339,6 +3363,7 @@ function App() {
     setSwipedEventKey(open ? eventKey : null);
     setEventSwipeDrag({ id: null, offset: 0 });
     swipingEventKeyRef.current = null;
+    eventSwipeAxisLockRef.current = null;
   };
 
   const handleJourneyEntrySwipeStart = (e, entryId) => {
