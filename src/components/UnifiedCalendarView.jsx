@@ -1,6 +1,6 @@
 // UnifiedCalendarView.jsx - One beautiful page for everything
 import React, { useState, useEffect } from 'react';
-import { MapPin, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Plus } from 'lucide-react';
 
 // ============================================================================
 // MAIN COMPONENT
@@ -339,13 +339,7 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
   return (
     <div className="mb-4 flex items-center justify-between">
       {/* Month/Week navigation */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={goToPrev}
-          className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-          <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        </button>
-        
+      <div className="flex items-center justify-center">
         <div className="min-w-[140px] text-center">
           <button
             onClick={goToToday}
@@ -353,12 +347,6 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
             {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </button>
         </div>
-        
-        <button
-          onClick={goToNext}
-          className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-          <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        </button>
       </div>
       
       {/* View toggle */}
@@ -484,6 +472,9 @@ const WeekGrid = ({
         const isTodayDate = isToday(date);
         const eventCount = dateEvents.length;
         const dateKey = getDateKey(date);
+        const todayMid = new Date(); todayMid.setHours(0,0,0,0);
+        const dateMid = new Date(date); dateMid.setHours(0,0,0,0);
+        const showBadge = eventCount > 0 && !isSelected && dateMid.getTime() >= todayMid.getTime();
 
         return (
           <button
@@ -503,9 +494,9 @@ const WeekGrid = ({
             <div className={`text-sm sm:text-base font-bold mb-1 ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-200'}`}>
               {date.getDate()}
             </div>
-            {eventCount > 0 && !isSelected && (
-              <div className="absolute bottom-1 sm:bottom-1.5 left-1/2 transform -translate-x-1/2">
-                <div className="px-1.5 sm:px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[9px] sm:text-[10px] font-bold shadow-md">
+            {showBadge && (
+              <div className="absolute bottom-0.5 sm:bottom-1 left-1/2 transform -translate-x-1/2">
+                <div className="px-1 sm:px-1.5 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[7px] sm:text-[9px] font-bold shadow-md">
                   {eventCount > 9 ? '9+' : eventCount}
                 </div>
               </div>
@@ -602,6 +593,7 @@ const CalendarGrid = ({
     const d = typeof date === 'string' ? new Date(date + 'T00:00:00') : new Date(date);
     return d.getTime();
   };
+  const todayTs = toDateOnlyTs(new Date());
   
   return (
     <div className="grid grid-cols-7 gap-2 sm:gap-3 mb-6">
@@ -617,6 +609,7 @@ const CalendarGrid = ({
         const eventCount = dateEvents.length;
         const weatherData = showWeather && weather[dateKey];
         const dateTs = toDateOnlyTs(date);
+        const showBadge = eventCount > 0 && !isSelected && dateTs >= todayTs;
         
         // Check if date is in any trip
         const tripsOnDate = subCalendars.filter(sc => {
@@ -678,9 +671,9 @@ const CalendarGrid = ({
             )}
             
             {/* Event count badge */}
-            {eventCount > 0 && !isSelected && (
-              <div className="absolute bottom-1 sm:bottom-1.5 left-1/2 transform -translate-x-1/2">
-                <div className="px-1.5 sm:px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[9px] sm:text-[10px] font-bold shadow-md">
+            {showBadge && (
+              <div className="absolute bottom-0.5 sm:bottom-1 left-1/2 transform -translate-x-1/2">
+                <div className="px-1 sm:px-1.5 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[7px] sm:text-[9px] font-bold shadow-md">
                   {eventCount > 9 ? '9+' : eventCount}
                 </div>
               </div>
