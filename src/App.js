@@ -24137,7 +24137,7 @@ transform: translateY(0);
       categories: categories,
             calendarView: 'month',
       setCalendarView: () => {},
-      onAddEvent: () => { setSelectedDate(new Date()); setShowDateDetailModal(true); },
+      onAddEvent: () => { if (!selectedDate) setSelectedDate(new Date()); setShowDateDetailModal(true); },
 
       onEventClick: (event) => {
         const eventId = String(event?.id || '');
