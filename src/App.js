@@ -18511,7 +18511,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div
-          style={{ width: 'calc(100vw - 2rem)', maxWidth: '28rem', boxSizing: 'border-box', borderColor: themeAccentBorder, background: darkMode ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.18)} 0%, rgba(15,23,42,0.92) 100%)` : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)` }}
+          style={{ width: 'calc(100vw - 2rem)', maxWidth: '28rem', boxSizing: 'border-box', borderColor: (darkMode ? 'rgba(255,255,255,0.10)' : hexToRgba(activeLayerPageTheme.accent, 0.16)), background: darkMode ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.14)} 0%, rgba(2,6,23,0.96) 100%)` : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.06)} 0%, rgba(255,255,255,0.98) 100%)` }}
           className="w-full rounded-3xl border p-6 shadow-2xl backdrop-blur-sm"
         >
           <h2 className="text-2xl font-bold mb-4" style={themeAccentHeadingStyle}>
@@ -18535,7 +18535,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 placeholder="e.g. 3:00 PM or 15:00"
                 defaultValue={suggestedTime || ''}
                 style={{ boxSizing: 'border-box', minWidth: 0, borderColor: themeAccentBorder }}
-                className="block w-full min-w-0 max-w-full pl-9 pr-3 py-3 border-2 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 rounded-xl focus:outline-none"
+                className="block w-full min-w-0 max-w-full pl-9 pr-3 py-3 border-2 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 rounded-xl focus:outline-none"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     const val = e.target.value;
@@ -18566,8 +18566,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                       handleTimeSubmit(`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`);
                     }
                   }}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={themeAccentSoftSurfaceStyle}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  style={darkMode ? { backgroundColor: hexToRgba(activeLayerPageTheme.accent, 0.16), borderColor: 'rgba(255,255,255,0.10)', color: activeLayerPageTheme.accent } : { ...themeAccentSoftSurfaceStyle, borderColor: hexToRgba(activeLayerPageTheme.accent, 0.16) }}
                   type="button"
                 >
                   {t}
@@ -18607,8 +18607,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             </button>
             <button
               onClick={() => handleTimeSubmit(null)}
-              className="flex-1 px-6 py-3 rounded-xl transition-all"
-              style={themeAccentSoftButtonStyle}
+              className="flex-1 px-6 py-3 rounded-xl transition-all border"
+                style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : hexToRgba(activeLayerPageTheme.accent, 0.06), borderColor: darkMode ? hexToRgba(activeLayerPageTheme.accent, 0.35) : hexToRgba(activeLayerPageTheme.accent, 0.25), color: activeLayerPageTheme.accent }}
             >
               Skip Time
             </button>
