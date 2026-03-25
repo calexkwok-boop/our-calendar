@@ -25428,7 +25428,7 @@ transform: translateY(0);
             </div>
           )}
 
-          <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
+          <div className="grid grid-cols-5 gap-1.5 p-1.5 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
             <button
               onClick={() => { setBottomNavTab('home'); setShowDateDetailModal(false); }}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'home' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
@@ -25449,6 +25449,13 @@ transform: translateY(0);
               style={bottomNavTab === 'trips' ? bottomNavActiveTabStyle : undefined}
             >
               Trips
+                        </button>
+            <button
+              onClick={() => { setShowDateDetailModal(false); setShowJourneyScreen(true); }}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${showJourneyScreen ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              style={showJourneyScreen ? bottomNavActiveTabStyle : undefined}
+            >
+              Journey
             </button>
             <button
               onClick={() => { setBottomNavTab('explore'); setShowDateDetailModal(false); }}

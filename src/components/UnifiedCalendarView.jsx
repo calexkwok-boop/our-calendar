@@ -716,11 +716,6 @@ const SelectedDateDetails = ({
   categories,
   darkMode,
 }) => {
-  // Don't show if no events and not today
-  if (events.length === 0 && !isSelectedToday) {
-    return null;
-  }
-  
   return (
     <div 
       id="todays-events"
@@ -739,7 +734,7 @@ const SelectedDateDetails = ({
         </h3>
         {!isSelectedToday && (
           <button
-            onClick={() => setSelectedDate(null)}
+            onClick={() => setSelectedDate(new Date())}
             className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
             Close
           </button>
