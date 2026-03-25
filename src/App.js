@@ -12,6 +12,7 @@ import ScramblePanel from "./components/ScramblePanel";
 import PopupEventPanel from "./components/PopupEventPanel";
 import AddEventModal from "./components/AddEventModal";
 import DateDetailsModal from "./components/DateDetailsModal";
+import WhatTimeModal from "./components/WhatTimeModal";
 import SmartAddPlan, { SmartAddPlanCompact } from "./components/SmartAddPlan";
 import StartTripModal from "./components/StartTripModal";
 import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
@@ -18508,6 +18509,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }
 
   if (showTimePrompt && pendingEvent) {
+    return (
+      <WhatTimeModal
+        isOpen={showTimePrompt}
+        pendingEvent={pendingEvent}
+        recurrence={recurrence}
+        suggestedTime={suggestedTime}
+        darkMode={darkMode}
+        accent={activeLayerPageTheme.accent}
+        onSubmit={handleTimeSubmit}
+        onCancel={() => {
+          setShowTimePrompt(false);
+          setPendingEvent(null);
+          setSuggestedTime('');
+          setQuickEntry(pendingEvent.title);
+        }}
+      />
+    );
+  }
+
+  if (false && showTimePrompt && pendingEvent) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div
