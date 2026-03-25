@@ -20797,9 +20797,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
           </div>
           </div>
-          {false && showHomeCalendarWidgets && (
-            <div className="absolute inset-x-4 sm:inset-x-5 bottom-3 sm:bottom-4 z-20 pointer-events-none">
-              <div className="flex items-center justify-end gap-1.5 pointer-events-auto">
+          {bottomNavTab === 'home' && (
+            <div className="absolute inset-x-4 sm:inset-x-5 bottom-1 sm:bottom-2 z-20 pointer-events-none">
+              <div className="flex items-center justify-center gap-1.5 pointer-events-auto">
                 {activeControlWidgets.map((widgetId) => {
                   const meta = getControlWidgetMeta(widgetId);
                   return (
