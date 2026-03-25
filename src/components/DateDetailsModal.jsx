@@ -189,11 +189,10 @@ const DateDetailsModal = ({
                            focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all"
                 autoFocus
               />
-              <input
-                type="text"
+              <PlacesAutocomplete
                 value={quickLocation}
-                onChange={(e) => setQuickLocation(e.target.value)}
-                placeholder="Location (optional)"
+                onSelect={(val) => setQuickLocation(val || '')}
+                placeholder="📍 Location (optional)"
                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 
                            mt-2 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 text-base
                            focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all"
@@ -615,7 +614,6 @@ const DateDetailsModal = ({
                         )}
                         
                         {editingEvent === event.id ? (
-                          // Edit mode (keep your existing edit form)
                           <div className="space-y-2">
                             <input
                               type="text"
@@ -624,7 +622,101 @@ const DateDetailsModal = ({
                               className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
                               autoFocus
                             />
-                            {/* Add rest of your edit form fields */}
+                            <input
+                              type="text"
+                              defaultValue={event.time || ''}
+                              placeholder="e.g. 3:00 PM"
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                if (!val) {
+                                  handleUpdateEventField(event.date, event.id, { time: null });
+                                  return;
+                                }
+                                const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                                if (match) {
+                                  let h = parseInt(match[1], 10);
+                                  const m = match[2] ? parseInt(match[2], 10) : 0;
+                                  const period = match[3]?.toLowerCase();
+                                  if (period === 'pm' && h < 12) h += 12;
+                                  if (period === 'am' && h === 12) h = 0;
+                                  handleUpdateEventField(event.date, event.id, {
+                                    time: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+                                  });
+                                }
+                              }}
+                              className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
+                            />
+                            <PlacesAutocomplete
+                              value={event.location || ''}
+                              onSelect={(val) => {
+                                if ((val || '') !== (event.location || '')) {
+                                  handleUpdateEventField(event.date, event.id, { location: val || null });
+                                }
+                              }}
+                              placeholder="📍 Add location (optional)"
+                              className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
+                            />
+                            <textarea
+                              defaultValue={event.description || ''}
+                              onBlur={(e) => handleUpdateEventField(event.date, event.id, { description: e.target.value })}
+                              placeholder="Add description"
+                              rows={3}
+                              className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm resize-none"
+                            />
+                            <select
+                              defaultValue={event.category || 'other'}
+                              onChange={(e) => handleUpdateEventField(event.date, event.id, { category: e.target.value })}
+                              className="w-full px-2 py-1 border-2 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm"
+                            >
+                              {Object.entries(categories).map(([key, cat]) => (
+                                <option key={key} value={key}>{cat.label}</option>
+                              ))}
+                            </select>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUpdateEventField(event.date, event.id, { isPrivate: !event.isPrivate });
+                                }}
+                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                                  event.isPrivate
+                                    ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md'
+                                    : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                                }`}
+                              >
+                                <Lock className="w-3 h-3" />
+                                {event.isPrivate ? 'Private' : 'Shared'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUpdateEventField(event.date, event.id, { isUrgent: !event.isUrgent });
+                                }}
+                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                                  event.isUrgent
+                                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md'
+                                    : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                                }`}
+                              >
+                                <AlertTriangle className="w-3 h-3" />
+                                {event.isUrgent ? 'Urgent' : 'Normal'}
+                              </button>
+                            </div>
+                            <label className="flex items-center gap-2 text-sm dark:text-gray-300">
+                              <input
+                                type="checkbox"
+                                defaultChecked={event.isAnnual}
+                                onChange={(e) => handleUpdateEventField(event.date, event.id, {
+                                  isAnnual: e.target.checked,
+                                  annualMonth: e.target.checked ? (new Date(event.date + 'T00:00:00').getMonth() + 1) : null,
+                                  annualDay: e.target.checked ? new Date(event.date + 'T00:00:00').getDate() : null,
+                                })}
+                                className="rounded"
+                              />
+                              🎂 Annual (repeats every year)
+                            </label>
                             <button
                               type="button"
                               onClick={(e) => {
