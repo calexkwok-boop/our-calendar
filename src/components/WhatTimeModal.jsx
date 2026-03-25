@@ -56,9 +56,9 @@ const WhatTimeModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm p-0 sm:items-center sm:p-4 overflow-hidden">
       <div
-        className="w-full max-w-md overflow-hidden rounded-3xl shadow-2xl bg-white dark:bg-gray-900 border border-transparent dark:border-white/10"
+        className="w-full max-w-md overflow-hidden rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl border-t border-transparent dark:border-white/10"
         style={{
           animation: 'what-time-fade-in 0.28s ease-out',
           boxShadow: darkMode
@@ -92,7 +92,7 @@ const WhatTimeModal = ({
           </div>
         </div>
 
-        <div className="relative z-10 bg-white px-6 py-6 dark:bg-gray-900">
+        <div className="relative z-10 bg-white px-6 py-6 dark:bg-slate-950">
           <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
             {pendingEvent.isMultiDay
               ? "Multi-day events don't need a time"
