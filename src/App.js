@@ -28544,7 +28544,70 @@ transform: translateY(0);
         return { ...(prev || {}), [key]: arr };
       });
     };
-    const userStats = { totalTrips: subCalendars?.length || 0 };
+    const getTripReviewStreak = (eventsWithStats = []) => {
+      const uniqueDays = new Set(
+        (eventsWithStats || [])
+          .filter((event) => Boolean(event?._isDocumented))
+          .map((event) => String(event?.date || '').slice(0, 10))
+          .filter(Boolean)
+      );
+      let streak = 0;
+      const cursor = new Date();
+      while (true) {
+        const key = cursor.toISOString().slice(0, 10);
+        if (!uniqueDays.has(key)) {
+          if (streak === 0) {
+            cursor.setDate(cursor.getDate() - 1);
+            const yesterdayKey = cursor.toISOString().slice(0, 10);
+            if (uniqueDays.has(yesterdayKey)) {
+              streak += 1;
+              cursor.setDate(cursor.getDate() - 1);
+              continue;
+            }
+          }
+          break;
+        }
+        streak += 1;
+        cursor.setDate(cursor.getDate() - 1);
+      }
+      return streak;
+    };
+    const eventsWithBadgeStats = allEvents.map((event) => {
+      const eventId = String(event?.id || '');
+      const yourGroupRating = (subCalEventGroupRatings?.[eventId] || []).find(
+        (ratingRow) => String(ratingRow?.userId || '') === String(user?.id || '')
+      ) || null;
+      const localRating = Number(event?.rating || 0);
+      const localReview = String(event?.review || '').trim();
+      const localPhotos = Array.isArray(event?.photos) ? event.photos : [];
+      const groupRatingValue = Number(yourGroupRating?.rating || 0);
+      const groupReview = String(yourGroupRating?.reviewText || '').trim();
+      const groupPhotos = Array.isArray(yourGroupRating?.photos) ? yourGroupRating.photos : [];
+      const mergedPhotoCount = Math.max(localPhotos.length, groupPhotos.length);
+      const isDocumented = Boolean(
+        localRating > 0 ||
+        groupRatingValue > 0 ||
+        localReview ||
+        groupReview ||
+        mergedPhotoCount > 0
+      );
+      return {
+        ...event,
+        _badgePhotoCount: mergedPhotoCount,
+        _isDocumented: isDocumented,
+      };
+    });
+    const documentedEvents = eventsWithBadgeStats.filter((event) => event._isDocumented);
+    const userStats = {
+      totalTrips: subCalendars?.length || 0,
+      totalReviews: documentedEvents.length,
+      restaurantReviews: documentedEvents.filter((event) => event?.category === 'restaurant').length,
+      activityReviews: documentedEvents.filter((event) => event?.category === 'activity').length,
+      totalPhotos: eventsWithBadgeStats.reduce((sum, event) => sum + Number(event?._badgePhotoCount || 0), 0),
+      streak: getTripReviewStreak(eventsWithBadgeStats),
+      completedTrips: allEvents.length > 0 && documentedEvents.length >= allEvents.length ? 1 : 0,
+      voiceNotes: 0,
+    };
     const leaderboard = [];
     return (
       <div className="px-4 py-4">
