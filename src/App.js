@@ -20261,20 +20261,44 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {controlWidgetAddPanelPortal}
     {showAppPrompt && (
       <div className="fixed inset-0 z-[95] bg-black/45 flex items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-2xl border border-purple-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-2xl">
-          <h3 className={`text-lg font-semibold bg-clip-text text-transparent ${appPromptData.tone === 'warning' ? 'bg-gradient-to-r from-purple-600 to-indigo-600' : 'bg-gradient-to-r from-slate-700 to-slate-500 dark:from-slate-100 dark:to-slate-300'}`}>
+        <div className="w-full max-w-md rounded-2xl border bg-white dark:bg-gray-800 p-5 shadow-2xl" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.10)' : hexToRgba(activeLayerPageTheme.accent, 0.16) }}>
+          <h3 className={`text-lg font-semibold bg-clip-text text-transparent`}
+            style={{ backgroundImage: appPromptData.tone === 'warning'
+              ? `linear-gradient(90deg, ${hexToRgba(activeLayerPageTheme.accent, 1)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.66)} 100%)`
+              : (darkMode
+                  ? 'linear-gradient(90deg, #e5e7eb 0%, #cbd5e1 100%)'
+                  : 'linear-gradient(90deg, #334155 0%, #64748b 100%)')
+            }}
+          >
             {appPromptData.heading || 'Scheduling Conflict'}
           </h3>
           <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">{appPromptData.title}</p>
-          <div className={`mt-3 rounded-xl border p-3 space-y-1.5 ${appPromptData.tone === 'warning' ? 'bg-purple-50 dark:bg-gray-700/70 border-purple-100 dark:border-gray-600' : 'bg-slate-50 dark:bg-gray-700/70 border-slate-200 dark:border-gray-600'}`}>
+          <div className={`mt-3 rounded-xl border p-3 space-y-1.5`}
+            style={appPromptData.tone === 'warning'
+              ? {
+                  background: darkMode ? hexToRgba(activeLayerPageTheme.accent, 0.12) : hexToRgba(activeLayerPageTheme.accent, 0.06),
+                  borderColor: darkMode ? 'rgba(255,255,255,0.10)' : hexToRgba(activeLayerPageTheme.accent, 0.16),
+                }
+              : {
+                  background: darkMode ? 'rgba(255,255,255,0.06)' : '#f8fafc',
+                  borderColor: darkMode ? 'rgba(255,255,255,0.10)' : '#e2e8f0',
+                }
+            }
+          >
             {(appPromptData.lines || []).map((line, idx) => (
               <div key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-200">{line}</div>
             ))}
           </div>
           <div className={`mt-4 grid grid-cols-1 ${appPromptData.showCancel !== false ? 'sm:grid-cols-2' : ''} gap-2`}>
-            <button
+                        <button
               onClick={() => closeAppPrompt(true)}
-              className={`px-4 py-2 rounded-xl text-white text-sm font-semibold hover:shadow-lg transition-all ${appPromptData.tone === 'warning' ? 'bg-gradient-to-br from-purple-500 to-indigo-500' : 'bg-gradient-to-br from-slate-700 to-slate-500 dark:from-slate-500 dark:to-slate-400'}`}
+              className={`px-4 py-2 rounded-xl text-white text-sm font-semibold hover:shadow-lg transition-all`}
+              style={appPromptData.tone === 'warning'
+                ? themeAccentButtonStyle
+                : (darkMode
+                    ? { background: 'linear-gradient(135deg, #475569 0%, #64748b 100%)', color: '#fff' }
+                    : { background: 'linear-gradient(135deg, #334155 0%, #64748b 100%)', color: '#fff' })
+              }
             >
               {appPromptData.confirmLabel || 'Save Anyway'}
             </button>
