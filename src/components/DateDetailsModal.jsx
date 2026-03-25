@@ -92,6 +92,7 @@ const DateDetailsModal = ({
 }) => {
   const [eventCreationMode, setEventCreationMode] = useState('quick'); // 'quick' | 'popup'
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [quickLocation, setQuickLocation] = useState('');
   const accent = (themeAccentButtonStyle && themeAccentButtonStyle.backgroundColor) || '#a855f7';
   
   if (!isOpen) return null;
@@ -170,8 +171,16 @@ const DateDetailsModal = ({
                 onChange={(e) => setQuickEntry(e.target.value)}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
-                    handleQuickAdd();
-                    setEventCreationMode('quick'); // Reset to quick mode after adding
+                    const base = String(quickEntry || '').trim();
+                    const loc = String(quickLocation || '').trim();
+                    const combined = loc ? `${base} @ ${loc}` : base;
+                    setQuickEntry(combined);
+                    setTimeout(() => {
+                      handleQuickAdd();
+                      setQuickEntry('');
+                      setQuickLocation('');
+                      setEventCreationMode('quick');
+                    }, 0);
                   }
                 }}
                 placeholder={selectedDates.length > 1 ? "Vacation in Mexico" : "Team lunch 12:30pm"}
@@ -180,10 +189,26 @@ const DateDetailsModal = ({
                            focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all"
                 autoFocus
               />
+              <input
+                type="text"
+                value={quickLocation}
+                onChange={(e) => setQuickLocation(e.target.value)}
+                placeholder="Location (optional)"
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 
+                           mt-2 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 text-base
+                           focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all"
+              />
               <button
                 onClick={() => {
-                  handleQuickAdd();
-                  setQuickEntry('');
+                  const base = String(quickEntry || '').trim();
+                  const loc = String(quickLocation || '').trim();
+                  const combined = loc ? `${base} @ ${loc}` : base;
+                  setQuickEntry(combined);
+                  setTimeout(() => {
+                    handleQuickAdd();
+                    setQuickEntry('');
+                    setQuickLocation('');
+                  }, 0);
                 }}
                 className="w-full py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98]"
                 style={themeAccentButtonStyle}
@@ -272,6 +297,107 @@ const DateDetailsModal = ({
             </div>
           )}
           
+          {/* Settings & Features (moved before today's events) */}
+          <div>
+            <button
+              onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+              className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 
+                         text-gray-700 dark:text-gray-300 text-sm font-semibold
+                         flex items-center justify-between hover:bg-gray-200 dark:hover:bg-gray-600
+                         transition-all"
+            >
+              <span className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Settings & Filters
+              </span>
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+                showAdvancedSettings ? 'rotate-180' : ''
+              }`} />
+            </button>
+            {showAdvancedSettings && (
+              <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl space-y-4 border border-gray-200 dark:border-gray-700">
+                {/* Default Category */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block uppercase tracking-wider">
+                    Default Category
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(categories).filter(([key]) => key !== 'popup_event').map(([key, cat]) => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedCategory(key)}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                          selectedCategory === key
+                            ? `${cat.color} text-white shadow-sm scale-[1.02]`
+                            : `${cat.lightBg} ${cat.text} hover:shadow-sm hover:scale-[1.01]`
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Private & Urgent */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block uppercase tracking-wider">
+                    Event Properties
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setIsPrivate(!isPrivate)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+                        isPrivate
+                          ? 'bg-purple-600 text-white shadow-sm'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      <Lock className="w-4 h-4" />
+                      {isPrivate ? 'Private' : 'Shared'}
+                    </button>
+                    <button
+                      onClick={() => setIsUrgent(!isUrgent)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+                        isUrgent
+                          ? 'bg-red-500 text-white shadow-sm'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                      {isUrgent ? 'Urgent' : 'Normal'}
+                    </button>
+                  </div>
+                </div>
+                {/* Recurrence */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block uppercase tracking-wider flex items-center gap-1.5">
+                    <Repeat className="w-3.5 h-3.5" />
+                    Default Recurrence
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'once', label: 'One-time' },
+                      { value: 'weekly', label: 'Weekly' },
+                      { value: 'monthly', label: 'Monthly' },
+                      { value: 'annual', label: 'Annual' },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setRecurrence(opt.value)}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          recurrence === opt.value
+                            ? 'bg-purple-600 text-white shadow-sm scale-[1.02]'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 hover:scale-[1.01]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Divider */}
           {selectedEvents.length > 0 && (
             <div className="border-t border-gray-200 dark:border-gray-700" />
@@ -611,110 +737,7 @@ const DateDetailsModal = ({
             )}
           </div>
           
-          {/* Advanced Settings (Collapsed) */}
-          <div>
-            <button
-              onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-              className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 
-                         text-gray-700 dark:text-gray-300 text-sm font-semibold
-                         flex items-center justify-between hover:bg-gray-200 dark:hover:bg-gray-600
-                         transition-all"
-            >
-              <span className="flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Settings & Filters
-              </span>
-              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-                showAdvancedSettings ? 'rotate-180' : ''
-              }`} />
-            </button>
-            
-            {showAdvancedSettings && (
-              <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl space-y-4 border border-gray-200 dark:border-gray-700">
-                {/* Default Category */}
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block uppercase tracking-wider">
-                    Default Category
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(categories).filter(([key]) => key !== 'popup_event').map(([key, cat]) => (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedCategory(key)}
-                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                          selectedCategory === key
-                            ? `${cat.color} text-white shadow-sm scale-[1.02]`
-                            : `${cat.lightBg} ${cat.text} hover:shadow-sm hover:scale-[1.01]`
-                        }`}
-                      >
-                        {cat.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Private & Urgent */}
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block uppercase tracking-wider">
-                    Event Properties
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setIsPrivate(!isPrivate)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all ${
-                        isPrivate
-                          ? 'bg-purple-600 text-white shadow-sm'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      <Lock className="w-4 h-4" />
-                      {isPrivate ? 'Private' : 'Shared'}
-                    </button>
-                    
-                    <button
-                      onClick={() => setIsUrgent(!isUrgent)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all ${
-                        isUrgent
-                          ? 'bg-red-500 text-white shadow-sm'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      <AlertTriangle className="w-4 h-4" />
-                      {isUrgent ? 'Urgent' : 'Normal'}
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Recurrence */}
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block uppercase tracking-wider flex items-center gap-1.5">
-                    <Repeat className="w-3.5 h-3.5" />
-                    Default Recurrence
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { value: 'once', label: 'One-time' },
-                      { value: 'weekly', label: 'Weekly' },
-                      { value: 'monthly', label: 'Monthly' },
-                      { value: 'annual', label: 'Annual' },
-                    ].map(opt => (
-                      <button
-                        key={opt.value}
-                        onClick={() => setRecurrence(opt.value)}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                          recurrence === opt.value
-                            ? 'bg-purple-600 text-white shadow-sm scale-[1.02]'
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 hover:scale-[1.01]'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+
         </div>
       </div>
     </div>
