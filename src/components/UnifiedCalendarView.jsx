@@ -1,6 +1,23 @@
 // UnifiedCalendarView.jsx - One beautiful page for everything
 import React, { useState, useEffect } from 'react';
 import { MapPin, Plus } from 'lucide-react';
+import Agenda from './Agenda';
+
+// simple color helper
+const hexToRgba = (hex, alpha = 1) => {
+  try {
+    const h = String(hex || '').replace('#', '');
+    const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+    const intv = parseInt(n, 16);
+    const r = (intv >> 16) & 255;
+    const g = (intv >> 8) & 255;
+    const b = intv & 255;
+    const a = Math.max(0, Math.min(1, Number(alpha)));
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  } catch {
+    return 'rgba(168,85,247,1)';
+  }
+};
 
 // ============================================================================
 // MAIN COMPONENT
@@ -72,7 +89,60 @@ const UnifiedCalendarView = ({
   const isSelectedToday = selectedDate && isSameDay(selectedDate, new Date());
   // Local view state for header toggle (UI only on Home)
   const [localCalendarView, setLocalCalendarView] = useState('month');
+
+  // Agenda view local state
+  const [agendaRangeDays, setAgendaRangeDays] = useState(30);
+  const [agendaSearchQuery, setAgendaSearchQuery] = useState('');
+
+  // Helpers used by Agenda component
+  const toDateOnlyTs = (date) => {
+    if (!date) return null;
+    const d = typeof date === 'string' ? new Date(date + 'T00:00:00') : new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+  const getSubCalStartRaw = (sc) => sc?.start_date;
+  const getSubCalEndRaw = (sc) => sc?.end_date;
+
+  // Build agenda items for the selected range and apply search filter
+  const agendaItems = (() => {
+    const days = Math.max(1, Math.min(365, Number(agendaRangeDays || 30)));
+    const query = String(agendaSearchQuery || '').trim().toLowerCase();
+    const out = [];
+    const base = new Date(currentDate);
+    base.setHours(0,0,0,0);
+    for (let i = 0; i < days; i += 1) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      const evts = getEventsForDate ? (getEventsForDate(d) || []) : [];
+      evts.forEach((e) => {
+        if (!query) {
+          out.push({ ...e, date: getDateKey(d) });
+        } else {
+          const title = String(e?.title || '').toLowerCase();
+          const location = String(e?.location || '').toLowerCase();
+          const catKey = String(e?.category || 'other');
+          const cat = categories[catKey] || {};
+          const catLabel = String(cat.label || cat.name || '').toLowerCase();
+          const hay = `${title} ${location} ${catLabel}`;
+          if (hay.includes(query)) out.push({ ...e, date: getDateKey(d) });
+        }
+      });
+    }
+    // sort by date, then time
+    out.sort((a, b) => {
+      const aTs = toDateOnlyTs(a?.date || a?.dateKey || '') || 0;
+      const bTs = toDateOnlyTs(b?.date || b?.dateKey || '') || 0;
+      if (aTs !== bTs) return aTs - bTs;
+      if (!a?.time) return 1;
+      if (!b?.time) return -1;
+      return String(a.time).localeCompare(String(b.time));
+    });
+    return out;
+  })();
   
+  const accent = activeLayerPageTheme?.accent || '#a855f7';
+
   return (
     <div className="unified-calendar-view">
       {/* Persistent Header - Always visible */}
@@ -83,6 +153,7 @@ const UnifiedCalendarView = ({
         darkMode={darkMode}
         user={user}
         userName={externalUserName}
+        accent={accent}
       />
       
       {/* Active trips banner (if multiple) */}
@@ -101,32 +172,34 @@ const UnifiedCalendarView = ({
         calendarView={localCalendarView}
         setCalendarView={setLocalCalendarView}
         darkMode={darkMode}
+        accent={accent}
       />
       
       {/* Calendar content by view */}
       {localCalendarView === 'month' && (
         <>
-          <DayHeaders darkMode={darkMode} />
-          <CalendarGrid
-            currentDate={currentDate}
-            selectedDate={selectedDate}
-            setSelectedDate={setSelectedDate}
-            getDaysInMonth={getDaysInMonth}
-            getEventsForDate={getEventsForDate}
-            getDateKey={getDateKey}
-            isSameDay={isSameDay}
-            isToday={isToday}
-            weather={weather}
-            showWeather={showWeather}
-            subCalendars={subCalendars}
-            darkMode={darkMode}
-          />
+          <DayHeaders darkMode={darkMode} accent={accent} />
+                <CalendarGrid
+        currentDate={currentDate}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        getDaysInMonth={getDaysInMonth}
+        getEventsForDate={getEventsForDate}
+        getDateKey={getDateKey}
+        isSameDay={isSameDay}
+        isToday={isToday}
+        weather={weather}
+        showWeather={showWeather}
+        subCalendars={subCalendars}
+        darkMode={darkMode}
+        accent={accent}
+      />
         </>
       )}
 
       {localCalendarView === 'week' && (
         <>
-          <WeekHeaders currentDate={currentDate} darkMode={darkMode} />
+          <WeekHeaders currentDate={currentDate} darkMode={darkMode} accent={accent} />
           <WeekGrid
             currentDate={currentDate}
             selectedDate={selectedDate}
@@ -137,18 +210,27 @@ const UnifiedCalendarView = ({
             isToday={isToday}
             subCalendars={subCalendars}
             darkMode={darkMode}
+            accent={accent}
           />
         </>
       )}
 
       {localCalendarView === 'agenda' && (
-        <AgendaList
-          startDate={currentDate}
-          days={30}
-          getEventsForDate={getEventsForDate}
+        <Agenda
+          agendaRangeDays={agendaRangeDays}
+          setAgendaRangeDays={setAgendaRangeDays}
+          agendaSearchQuery={agendaSearchQuery}
+          setAgendaSearchQuery={setAgendaSearchQuery}
+          agendaItems={agendaItems}
+          categories={categories}
           getDateKey={getDateKey}
+          toDateOnlyTs={toDateOnlyTs}
+          subCalendars={subCalendars}
+          getSubCalStartRaw={getSubCalStartRaw}
+          getSubCalEndRaw={getSubCalEndRaw}
           onEventClick={onEventClick}
           formatTime={formatTime}
+          activeLayerPageTheme={activeLayerPageTheme}
           darkMode={darkMode}
         />
       )}
@@ -165,6 +247,7 @@ const UnifiedCalendarView = ({
           formatTime={formatTime}
           categories={categories}
           darkMode={darkMode}
+          accent={accent}
         />
       )}
 
@@ -191,7 +274,7 @@ const UnifiedCalendarView = ({
 // GREETING HEADER
 // ============================================================================
 
-const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, darkMode, user, userName }) => {
+const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, darkMode, user, userName, accent }) => {
   const getTimeBasedEmoji = () => {
     const hour = new Date().getHours();
     if (hour < 12) return '☀️';
@@ -219,7 +302,15 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, darkMode, u
   };
   
   return (
-    <div className="mb-6 rounded-3xl bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-orange-900/20 p-5 shadow-lg border border-white/50 dark:border-purple-800/30">
+    <div
+      className="mb-6 rounded-3xl p-5 shadow-lg border"
+      style={{
+        background: darkMode
+          ? `linear-gradient(135deg, ${hexToRgba(accent, 0.18)} 0%, rgba(15,23,42,0.85) 100%)`
+          : `linear-gradient(135deg, ${hexToRgba(accent, 0.08)} 0%, rgba(255,255,255,0.96) 100%)`,
+        borderColor: darkMode ? 'rgba(255,255,255,0.10)' : hexToRgba(accent, 0.15),
+      }}
+    >
       <div className="flex items-center justify-between">
         {/* Left: Greeting */}
         <div className="flex items-center gap-3">
@@ -227,7 +318,7 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, darkMode, u
             {getTimeBasedEmoji()}
           </span>
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+            <h2 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${hexToRgba(accent, 1)} 0%, ${hexToRgba(accent, 0.66)} 100%)` }}>
               {`${getTimeBasedGreeting()} ${getDisplayName()}!`}
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -330,7 +421,7 @@ const ActiveTripsBanner = ({ trips, openSubCalendar, darkMode }) => (
 // CALENDAR HEADER (navigation + view toggle)
 // ============================================================================
 
-const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendarView, darkMode }) => {
+const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendarView, darkMode, accent }) => {
   const goToPrev = () => {
     const newDate = new Date(currentDate);
     if (calendarView === 'week') newDate.setDate(newDate.getDate() - 7);
@@ -363,7 +454,7 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
       </div>
       
       {/* View toggle */}
-      <div className="inline-flex items-center gap-1 p-1 rounded-2xl bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/40 dark:to-pink-900/40 shadow-inner">
+      <div className="inline-flex items-center gap-1 p-1 rounded-2xl shadow-inner" style={{ background: darkMode ? hexToRgba(accent, 0.18) : hexToRgba(accent, 0.12) }}>
         {['month', 'week', 'agenda'].map(view => (
           <button
             key={view}
@@ -371,10 +462,11 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
             className={`
               px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300
               ${calendarView === view
-                ? 'bg-white dark:bg-gray-800 shadow-md scale-105 text-purple-600 dark:text-purple-400'
-                : 'text-gray-600 dark:text-gray-400 hover:text-purple-500'
+                ? 'bg-white dark:bg-gray-800 shadow-md scale-105'
+                : 'text-gray-600 dark:text-gray-400'
               }
             `}
+                      style={calendarView === view ? { color: accent } : { color: darkMode ? '#9ca3af' : '#4b5563' }}
           >
             {view.charAt(0).toUpperCase() + view.slice(1)}
           </button>
@@ -388,7 +480,7 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
 // DAY HEADERS (Month view)
 // ============================================================================
 
-const DayHeaders = ({ darkMode }) => {
+const DayHeaders = ({ darkMode, accent }) => {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const todayIdx = new Date().getDay();
   
@@ -397,11 +489,8 @@ const DayHeaders = ({ darkMode }) => {
       {days.map((day, idx) => (
         <div 
           key={day}
-          className={`text-center text-xs sm:text-sm font-bold py-2 rounded-2xl transition-all ${
-            idx === todayIdx
-              ? 'bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 scale-105'
-              : 'text-gray-500 dark:text-gray-400'
-          }`}
+          className="text-center text-xs sm:text-sm font-bold py-2 rounded-2xl transition-all"
+          style={idx === todayIdx ? { background: darkMode ? hexToRgba(accent, 0.18) : hexToRgba(accent, 0.12), color: darkMode ? hexToRgba(accent, 0.9) : accent, transform: 'scale(1.05)' } : { color: darkMode ? '#9ca3af' : '#6b7280' }}
         >
           {day}
         </div>
@@ -414,7 +503,7 @@ const DayHeaders = ({ darkMode }) => {
 // WEEK HEADERS (Week view)
 // ============================================================================
 
-const WeekHeaders = ({ currentDate, darkMode }) => {
+const WeekHeaders = ({ currentDate, darkMode, accent }) => {
   const startOfWeek = (() => {
     const d = new Date(currentDate);
     const day = d.getDay();
@@ -435,11 +524,8 @@ const WeekHeaders = ({ currentDate, darkMode }) => {
         return (
           <div
             key={idx}
-            className={`text-center text-xs sm:text-sm font-bold py-2 rounded-2xl transition-all ${
-              isToday
-                ? 'bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 scale-105'
-                : 'text-gray-500 dark:text-gray-400'
-            }`}
+            className="text-center text-xs sm:text-sm font-bold py-2 rounded-2xl transition-all"
+            style={isToday ? { background: darkMode ? hexToRgba(accent, 0.18) : hexToRgba(accent, 0.12), color: darkMode ? hexToRgba(accent, 0.9) : accent, transform: 'scale(1.05)' } : { color: darkMode ? '#9ca3af' : '#6b7280' }}
           >
             {d.toLocaleDateString('en-US', { weekday: 'short' })}
           </div>
@@ -463,6 +549,7 @@ const WeekGrid = ({
   isToday,
   subCalendars,
   darkMode,
+  accent,
 }) => {
   const startOfWeek = (() => {
     const d = new Date(currentDate);
@@ -504,12 +591,12 @@ const WeekGrid = ({
               hover:scale-105 active:scale-95
             `}
           >
-            <div className={`text-sm sm:text-base font-bold mb-1 ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-200'}`}>
+            <div className="text-sm sm:text-base font-bold mb-1" style={{ color: isSelected ? '#fff' : isTodayDate ? (darkMode ? hexToRgba(accent, 0.9) : accent) : (darkMode ? '#e5e7eb' : '#374151') }}>
               {date.getDate()}
             </div>
             {showBadge && (
               <div className="absolute bottom-0.5 sm:bottom-1 left-1/2 transform -translate-x-1/2">
-                <div className="px-1 sm:px-1.5 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[7px] sm:text-[9px] font-bold shadow-md">
+                <div className="px-1 sm:px-1.5 py-0.5 rounded-full text-white text-[7px] sm:text-[9px] font-bold shadow-md" style={{ background: `linear-gradient(90deg, ${hexToRgba(accent, 0.95)} 0%, ${hexToRgba(accent, 0.75)} 100%)` }}>
                   {eventCount > 9 ? '9+' : eventCount}
                 </div>
               </div>
@@ -600,6 +687,7 @@ const CalendarGrid = ({
   showWeather,
   subCalendars,
   darkMode,
+  accent,
 }) => {
   const toDateOnlyTs = (date) => {
     if (!date) return null;
@@ -639,15 +727,26 @@ const CalendarGrid = ({
             className={`
               group relative w-full aspect-square rounded-3xl p-2 transition-all duration-300 select-none
               ${isSelected 
-                ? 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white shadow-2xl scale-110 ring-4 ring-purple-200 dark:ring-purple-800 z-20' 
+                ? 'text-white shadow-2xl scale-110 z-20'
                 : isTodayDate
-                  ? 'bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 ring-2 ring-purple-400 dark:ring-purple-600 shadow-lg'
+                  ? 'shadow-lg'
                   : isInTrip
                     ? 'bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 hover:shadow-md'
                     : 'bg-white/90 dark:bg-gray-800/90 hover:bg-gray-50 dark:hover:bg-gray-750 hover:shadow-md'
               }
               hover:scale-105 active:scale-95
             `}
+          style={{
+            background: isSelected
+              ? `linear-gradient(135deg, ${hexToRgba(accent, 0.95)} 0%, ${hexToRgba(accent, 0.75)} 100%)`
+              : isTodayDate
+                ? (darkMode ? hexToRgba(accent, 0.18) : hexToRgba(accent, 0.12))
+                : isInTrip
+                  ? (darkMode ? 'linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(29,78,216,0.12) 100%)' : 'linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%)')
+                  : (darkMode ? 'rgba(31,41,55,0.9)' : 'rgba(255,255,255,0.9)'),
+            outline: !isSelected && isTodayDate ? `2px solid ${hexToRgba(accent, 0.5)}` : undefined,
+            outlineOffset: 0,
+          }}
           >
             {/* Trip badge */}
             {isInTrip && !isSelected && (
@@ -666,10 +765,7 @@ const CalendarGrid = ({
             )}
             
             {/* Date number */}
-            <div className={`
-              text-sm sm:text-base font-bold mb-1
-              ${isSelected ? 'text-white' : isTodayDate ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-200'}
-            `}>
+            <div className="text-sm sm:text-base font-bold mb-1" style={{ color: isSelected ? '#fff' : isTodayDate ? (darkMode ? hexToRgba(accent, 0.9) : accent) : (darkMode ? '#e5e7eb' : '#374151') }}>
               {date.getDate()}
             </div>
             
@@ -686,14 +782,13 @@ const CalendarGrid = ({
             {/* Event count badge */}
             {showBadge && (
               <div className="absolute bottom-0.5 sm:bottom-1 left-1/2 transform -translate-x-1/2">
-                <div className="px-1 sm:px-1.5 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[7px] sm:text-[9px] font-bold shadow-md">
+                <div className="px-1 sm:px-1.5 py-0.5 rounded-full text-white text-[7px] sm:text-[9px] font-bold shadow-md" style={{ background: `linear-gradient(90deg, ${hexToRgba(accent, 0.95)} 0%, ${hexToRgba(accent, 0.75)} 100%)` }}>
                   {eventCount > 9 ? '9+' : eventCount}
                 </div>
               </div>
             )}
             
-            {/* Hover glow */}
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/0 to-pink-500/0 group-hover:from-purple-500/10 group-hover:to-pink-500/10 transition-all duration-300 pointer-events-none" />
+            {/* Hover glow removed; accent theming handled by backgrounds */}
           </button>
         );
       })}
@@ -715,13 +810,16 @@ const SelectedDateDetails = ({
   formatTime,
   categories,
   darkMode,
+  accent,
 }) => {
   return (
     <div 
       id="todays-events"
-      className="mt-6 rounded-3xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-5 shadow-xl border border-gray-100 dark:border-gray-700"
+      className="mt-6 rounded-3xl backdrop-blur-sm p-5 shadow-xl border"
       style={{
-        animation: 'fadeInUp 0.4s ease-out'
+        animation: 'fadeInUp 0.4s ease-out',
+        background: darkMode ? 'rgba(31,41,55,0.9)' : 'rgba(255,255,255,0.92)',
+        borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(accent, 0.2)
       }}
     >
       {/* Header */}
@@ -756,7 +854,7 @@ const SelectedDateDetails = ({
                 }}
               >
                 {/* Time badge */}
-                <div className="flex flex-col items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/40 dark:to-pink-900/40 shrink-0">
+                <div className="flex flex-col items-center justify-center w-16 h-16 rounded-2xl shrink-0" style={{ background: darkMode ? `linear-gradient(135deg, ${hexToRgba(accent, 0.22)} 0%, ${hexToRgba(accent, 0.08)} 100%)` : `linear-gradient(135deg, ${hexToRgba(accent, 0.14)} 0%, ${hexToRgba(accent, 0.05)} 100%)` }}>
                   {event.time ? (
                     <>
                       <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
@@ -787,7 +885,7 @@ const SelectedDateDetails = ({
                 </div>
                 
                 {/* Arrow */}
-                <div className="text-purple-400 text-xl group-hover:translate-x-1 transition-transform">
+                <div className="text-xl group-hover:translate-x-1 transition-transform" style={{ color: hexToRgba(accent, 0.7) }}>
                   →
                 </div>
               </button>
@@ -803,7 +901,8 @@ const SelectedDateDetails = ({
       {/* Add event button */}
       <button
         onClick={onAddEvent}
-        className="w-full py-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-2">
+        className="w-full py-3 rounded-2xl text-white font-semibold hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-2"
+        style={{ background: `linear-gradient(90deg, ${hexToRgba(accent, 0.95)} 0%, ${hexToRgba(accent, 0.75)} 100%)` }}>
         <Plus className="w-5 h-5" />
         <span>Add Event</span>
       </button>
