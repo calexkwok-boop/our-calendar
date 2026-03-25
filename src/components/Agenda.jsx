@@ -243,9 +243,9 @@ export default function Agenda({
                   {/* Swipeable row container */}
                   <div className="relative rounded-2xl overflow-hidden">
                     {/* Delete action area */}
-                    <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${'bg-red-500'}`}>
+                    <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors z-20 ${'bg-red-500'}`}>
                       <button
-                        onClick={() => {
+                                              onClick={(e) => { e.stopPropagation();
                           const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
                           if (isRepeating) {
                             openRecurringDeletePrompt({ dateKey: dk, event });
@@ -265,7 +265,7 @@ export default function Agenda({
                       onTouchEnd={onSwipeEnd}
                       onTouchCancel={onSwipeEnd}
                       onClick={() => onEventClick && onEventClick(event)}
-                      className="group w-full text-left rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border"
+                      className="group relative z-10 w-full text-left rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border"
                       style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(17,24,39,0.12)', transform: `translateX(${eventSwipeDrag.id === `${dk}:${event.id}` ? eventSwipeDrag.offset : (swipedEventKey === `${dk}:${event.id}` ? -88 : 0)}px)`, touchAction: 'pan-y' }}
                     >
                     <div className="flex items-center gap-4">

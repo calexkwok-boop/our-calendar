@@ -575,9 +575,9 @@ const DateDetailsModal = ({
                 return (
                   <div key={event.id} className={`relative rounded-2xl overflow-hidden ${event.isVirtualAnnual ? 'border-dashed' : ''}`}>
                     {canDeleteThisEvent && (
-                      <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
+                      <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors z-20 ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
                         <button
-                          onClick={() => {
+                          onClick={(e) => { e.stopPropagation();
                             const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
                             if (isRepeating) {
                               openRecurringDeletePrompt({ dateKey: selectedDateKey, event });
