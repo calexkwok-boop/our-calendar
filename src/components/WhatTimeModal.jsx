@@ -56,9 +56,9 @@ const WhatTimeModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm p-0 sm:items-center sm:p-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-black/50 px-3 pb-3 pt-8 backdrop-blur-sm sm:items-center sm:p-4">
       <div
-        className="w-full max-w-md overflow-hidden rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl border-t border-transparent dark:border-white/10"
+        className="max-h-[calc(100vh-2.75rem)] w-full max-w-md overflow-hidden rounded-t-[28px] rounded-b-none border-t border-transparent bg-white shadow-2xl dark:bg-slate-950 dark:border-white/10 sm:max-h-[90vh] sm:rounded-[28px]"
         style={{
           animation: 'what-time-fade-in 0.28s ease-out',
           boxShadow: darkMode
