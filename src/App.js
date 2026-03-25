@@ -24112,7 +24112,9 @@ transform: translateY(0);
                       {/* Events */}
                       <div className="flex flex-col gap-1 overflow-hidden">
                         {dateEvents.slice(0, 4).map(event => {
-                          const cat = categories[event.category || 'other'] || categories.other;
+                          const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                          const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
+                          const cat = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
                           if (event.isHoliday) return (
                             <div key={event.id} className="text-xs px-1.5 py-1 rounded-md bg-red-500 text-white truncate font-medium shadow-sm">
                               🎉 {event.title}
