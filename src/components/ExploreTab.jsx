@@ -30,8 +30,29 @@ const ExploreTab = ({
   // Theme
   darkMode,
   categories = {},
+  activeLayerPageTheme = {},
+  themeAccentButtonStyle = {},
 }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  // Simple color helper
+  const hexToRgba = (hex, alpha = 1) => {
+    try {
+      const h = String(hex || '').replace('#', '');
+      const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+      const intv = parseInt(n, 16);
+      const r = (intv >> 16) & 255;
+      const g = (intv >> 8) & 255;
+      const b = intv & 255;
+      const a = Math.max(0, Math.min(1, Number(alpha)));
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
+    } catch {
+      return 'rgba(168,85,247,1)';
+    }
+  };
+
+  const accent = (themeAccentButtonStyle && themeAccentButtonStyle.backgroundColor) || activeLayerPageTheme?.accent || '#a855f7';
   
   // Filter calendars
   const filteredCalendars = publicCalendars.filter(cal => {
@@ -86,7 +107,7 @@ const ExploreTab = ({
       <div className="mb-8">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <h2 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${accent} 0%, ${hexToRgba(accent, 0.7)} 100%)` }}>
               Discover Calendars
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -96,10 +117,9 @@ const ExploreTab = ({
           <button
             onClick={loadPublicCalendars}
             disabled={exploreLoading}
-            className="px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 
-                       text-purple-700 dark:text-purple-300 text-sm font-semibold
-                       hover:bg-purple-100 dark:hover:bg-purple-900/30
-                       disabled:opacity-50 transition-all">
+            className="px-3 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 transition-all"
+            style={{ backgroundColor: darkMode ? hexToRgba(accent, 0.2) : hexToRgba(accent, 0.08), color: darkMode ? hexToRgba(accent, 0.9) : accent }}
+          >
             {exploreLoading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
@@ -111,13 +131,16 @@ const ExploreTab = ({
             type="text"
             value={exploreSearch}
             onChange={(e) => setExploreSearch(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             placeholder="Search calendars, tags, or descriptions..."
             className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-200 
                        dark:border-gray-700 bg-white dark:bg-gray-800 
                        text-base text-gray-900 dark:text-white
                        placeholder:text-gray-400
-                       focus:ring-2 focus:ring-purple-400 focus:border-transparent
+                       focus:outline-none
                        transition-all"
+            style={{ boxShadow: searchFocused ? `0 0 0 3px ${hexToRgba(accent, 0.35)}` : undefined, borderColor: searchFocused ? 'transparent' : undefined }}
           />
         </div>
       </div>
@@ -129,12 +152,9 @@ const ExploreTab = ({
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold 
-                         transition-all duration-200 whitespace-nowrap
-                         ${selectedCategory === cat.id
-                           ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25'
-                           : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700'
-                         }`}>
+              className="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-gray-700"
+              style={selectedCategory === cat.id ? { backgroundImage: `linear-gradient(90deg, ${accent} 0%, ${hexToRgba(accent, 0.85)} 100%)`, color: '#fff', boxShadow: `0 8px 20px ${hexToRgba(accent, 0.25)}`, borderColor: 'transparent' } : undefined}
+            >
               <span className="mr-1.5">{cat.icon}</span>
               {cat.label}
             </button>
@@ -150,12 +170,9 @@ const ExploreTab = ({
             <button
               key={option.value}
               onClick={() => setExploreSortBy(option.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold 
-                         flex items-center gap-1.5 transition-all
-                         ${exploreSortBy === option.value
-                           ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                         }`}>
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+              style={exploreSortBy === option.value ? { backgroundColor: darkMode ? hexToRgba(accent, 0.22) : hexToRgba(accent, 0.12), color: accent } : undefined}
+            >
               {option.icon}
               {option.label}
             </button>
@@ -202,9 +219,8 @@ const ExploreTab = ({
               setExploreSearch('');
               setSelectedCategory('all');
             }}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 
-                       text-white font-semibold hover:shadow-lg hover:shadow-purple-500/25 
-                       transition-all">
+            className="px-6 py-3 rounded-xl text-white font-semibold hover:shadow-lg transition-all"
+            style={{ backgroundImage: `linear-gradient(90deg, ${accent} 0%, ${hexToRgba(accent, 0.85)} 100%)`, boxShadow: `0 6px 18px ${hexToRgba(accent, 0.25)}` }}>
             Clear Filters
           </button>
         </div>
@@ -354,11 +370,9 @@ const ExploreTab = ({
                           e.stopPropagation();
                           joinPublicCalendar(layerId);
                         }}
-                        className="px-4 py-2 rounded-xl 
-                                   bg-gradient-to-r from-purple-600 to-pink-600 
-                                   text-white text-sm font-semibold
-                                   hover:shadow-lg hover:shadow-purple-500/25
-                                   transition-all">
+                        className="px-4 py-2 rounded-xl text-white text-sm font-semibold hover:shadow-lg transition-all"
+                        style={{ backgroundImage: `linear-gradient(90deg, ${accent} 0%, ${hexToRgba(accent, 0.85)} 100%)`, boxShadow: `0 6px 18px ${hexToRgba(accent, 0.25)}` }}
+                      >
                         Join
                       </button>
                     )}

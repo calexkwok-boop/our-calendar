@@ -25113,6 +25113,8 @@ transform: translateY(0);
                                 exploreVoteBusyByLayer={exploreVoteBusyByLayer}
                 darkMode={darkMode}
                 categories={categories}
+                activeLayerPageTheme={activeLayerPageTheme}
+                themeAccentButtonStyle={themeAccentButtonStyle}
                 onOpenCalendar={(layerId) => {
                   const lid = String(layerId || '').trim();
                   if (!lid) return;

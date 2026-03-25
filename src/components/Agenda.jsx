@@ -55,16 +55,17 @@ export default function Agenda({
             style={{ background: darkMode ? hexToRgba((activeLayerPageTheme && activeLayerPageTheme.accent) || '#a855f7', 0.18) : hexToRgba((activeLayerPageTheme && activeLayerPageTheme.accent) || '#a855f7', 0.12) }}
           >
             {[7, 30, 90].map((days) => (
-              <button
+                            <button
                 key={days}
                 onClick={() => setAgendaRangeDays(days)}
                 className={`
                   px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300
                   ${agendaRangeDays === days
-                    ? 'bg-white dark:bg-gray-800 shadow-md scale-105 text-purple-600 dark:text-purple-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-purple-500'
+                    ? 'bg-white dark:bg-gray-800 shadow-md scale-105'
+                    : 'text-gray-600 dark:text-gray-400'
                   }
                 `}
+                style={agendaRangeDays === days ? { color: (activeLayerPageTheme && activeLayerPageTheme.accent) || '#a855f7' } : undefined}
               >
                 {days === 7 ? 'Week' : days === 30 ? 'Month' : '3 Months'}
               </button>
@@ -83,8 +84,8 @@ export default function Agenda({
               value={agendaSearchQuery}
               onChange={(e) => setAgendaSearchQuery(e.target.value)}
               placeholder="Search by title, location, or category..."
-              className="w-full px-4 py-3 rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-              style={{ fontSize: '16px' }}
+              className="w-full px-4 py-3 rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none transition-all"
+              style={{ fontSize: '16px', boxShadow: `0 0 0 3px ${hexToRgba((activeLayerPageTheme && activeLayerPageTheme.accent) || '#a855f7', 0.0)}` }}
             />
             {agendaSearchQuery && (
               <button

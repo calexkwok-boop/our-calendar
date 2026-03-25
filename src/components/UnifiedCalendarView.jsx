@@ -583,13 +583,25 @@ const WeekGrid = ({
             className={`
               group relative w-full aspect-square rounded-3xl p-2 transition-all duration-300 select-none
               ${isSelected 
-                ? 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white shadow-2xl scale-110 ring-4 ring-purple-200 dark:ring-purple-800 z-20' 
+                ? 'text-white z-20' 
                 : isTodayDate
-                  ? 'bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 ring-2 ring-purple-400 dark:ring-purple-600 shadow-lg'
+                  ? ''
                   : 'bg-white/90 dark:bg-gray-800/90 hover:bg-gray-50 dark:hover:bg-gray-750 hover:shadow-md'
               }
               hover:scale-105 active:scale-95
             `}
+          style={{
+            background: isSelected
+              ? `linear-gradient(135deg, ${hexToRgba(accent, 0.95)} 0%, ${hexToRgba(accent, 0.75)} 100%)`
+              : isTodayDate
+                ? (darkMode ? hexToRgba(accent, 0.18) : hexToRgba(accent, 0.12))
+                : (darkMode ? 'rgba(31,41,55,0.9)' : 'rgba(255,255,255,0.9)'),
+            boxShadow: isSelected
+              ? `0 12px 28px rgba(0,0,0,0.25), 0 0 0 4px ${hexToRgba(accent, darkMode ? 0.4 : 0.3)}`
+              : isTodayDate
+                ? `0 0 0 2px ${hexToRgba(accent, darkMode ? 0.5 : 0.35)}`
+                : undefined,
+          }}
           >
             <div className="text-sm sm:text-base font-bold mb-1" style={{ color: isSelected ? '#fff' : isTodayDate ? (darkMode ? hexToRgba(accent, 0.9) : accent) : (darkMode ? '#e5e7eb' : '#374151') }}>
               {date.getDate()}
@@ -857,15 +869,15 @@ const SelectedDateDetails = ({
                 <div className="flex flex-col items-center justify-center w-16 h-16 rounded-2xl shrink-0" style={{ background: darkMode ? `linear-gradient(135deg, ${hexToRgba(accent, 0.22)} 0%, ${hexToRgba(accent, 0.08)} 100%)` : `linear-gradient(135deg, ${hexToRgba(accent, 0.14)} 0%, ${hexToRgba(accent, 0.05)} 100%)` }}>
                   {event.time ? (
                     <>
-                      <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                                                  <span className="text-xs font-bold" style={{ color: accent }}>
                         {formatTime(event.time).split(' ')[0]}
                       </span>
-                      <span className="text-[10px] text-purple-500">
+                                                  <span className="text-[10px]" style={{ color: hexToRgba(accent, 0.7) }}>
                         {formatTime(event.time).split(' ')[1]}
                       </span>
                     </>
                   ) : (
-                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                    <span className="text-xs font-bold" style={{ color: accent }}>
                       All day
                     </span>
                   )}

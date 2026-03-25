@@ -92,6 +92,7 @@ const DateDetailsModal = ({
 }) => {
   const [eventCreationMode, setEventCreationMode] = useState('quick'); // 'quick' | 'popup'
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const accent = (themeAccentButtonStyle && themeAccentButtonStyle.backgroundColor) || '#a855f7';
   
   if (!isOpen) return null;
   
@@ -146,25 +147,15 @@ const DateDetailsModal = ({
           <div className="flex gap-2">
             <button
               onClick={() => setEventCreationMode('quick')}
-              className={`
-                flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200
-                ${eventCreationMode === 'quick'
-                  ? 'bg-purple-600 text-white shadow-md hover:bg-purple-700'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }
-              `}
+              className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200"
+              style={eventCreationMode === 'quick' ? (themeAccentButtonStyle || { backgroundColor: accent, color: '#fff' }) : undefined}
             >
               Quick Event
             </button>
             <button
               onClick={() => setEventCreationMode('popup')}
-              className={`
-                flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200
-                ${eventCreationMode === 'popup'
-                  ? 'bg-rose-500 text-white shadow-md hover:bg-rose-600'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }
-              `}
+              className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200"
+              style={eventCreationMode === 'popup' ? (themeAccentButtonStyle || { backgroundColor: accent, color: '#fff' }) : undefined}
             >
               🎉 Pop-up Event
             </button>
@@ -194,9 +185,8 @@ const DateDetailsModal = ({
                   handleQuickAdd();
                   setQuickEntry('');
                 }}
-                className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-700 
-                           text-white font-semibold shadow-md hover:shadow-lg 
-                           transition-all duration-200 active:scale-[0.98]"
+                className="w-full py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98]"
+                style={themeAccentButtonStyle}
               >
                 Add Event
               </button>
@@ -205,7 +195,7 @@ const DateDetailsModal = ({
           
           {/* Pop-up Event Form */}
           {eventCreationMode === 'popup' && (
-            <div className="space-y-3 p-4 bg-rose-50 dark:bg-rose-900/20 rounded-xl border-2 border-rose-200 dark:border-rose-700">
+            <div className="space-y-3 p-4 rounded-xl border-2" style={{ background: darkMode ? hexToRgba(accent, 0.12) : hexToRgba(accent, 0.06), borderColor: darkMode ? hexToRgba(accent, 0.4) : hexToRgba(accent, 0.3) }}>
               <input
                 type="text"
                 value={quickEntry}
@@ -217,9 +207,8 @@ const DateDetailsModal = ({
                   }
                 }}
                 placeholder="Friday night run club"
-                className="w-full px-4 py-3 rounded-xl border-2 border-rose-300 dark:border-rose-600
-                           bg-white dark:bg-gray-800 dark:text-white text-base
-                           focus:ring-2 focus:ring-rose-400 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-800 dark:text-white text-base focus:ring-2 focus:border-transparent transition-all"
+                style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35) }}
                 autoFocus
               />
               
@@ -234,9 +223,8 @@ const DateDetailsModal = ({
                     value={popupEventMaxPeopleDraft}
                     onChange={(e) => setPopupEventMaxPeopleDraft(e.target.value)}
                     placeholder="20"
-                    className="w-full px-3 py-2 rounded-lg border-2 border-rose-300 dark:border-rose-600
-                               bg-white dark:bg-gray-800 dark:text-white text-sm
-                               focus:ring-2 focus:ring-rose-400"
+                    className="w-full px-3 py-2 rounded-lg border-2 bg-white dark:bg-gray-800 dark:text-white text-sm focus:ring-2"
+                               style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35) }}
                   />
                 </div>
                 
@@ -247,9 +235,8 @@ const DateDetailsModal = ({
                   <input
                     type="text"
                     placeholder="6:00 PM"
-                    className="w-full px-3 py-2 rounded-lg border-2 border-rose-300 dark:border-rose-600
-                               bg-white dark:bg-gray-800 dark:text-white text-sm
-                               focus:ring-2 focus:ring-rose-400"
+                    className="w-full px-3 py-2 rounded-lg border-2 bg-white dark:bg-gray-800 dark:text-white text-sm focus:ring-2"
+                               style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35) }}
                     onBlur={(e) => {
                       // You can handle time parsing here if needed
                       const val = e.target.value.trim();
@@ -272,9 +259,8 @@ const DateDetailsModal = ({
                   setQuickEntry('');
                   setEventCreationMode('quick'); // Reset after creating popup
                 }}
-                className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 
-                           text-white font-semibold shadow-md hover:shadow-lg 
-                           transition-all duration-200 active:scale-[0.98]"
+                className="w-full py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98]"
+                style={themeAccentButtonStyle}
               >
                 Create Pop-up Event
               </button>
@@ -391,11 +377,8 @@ const DateDetailsModal = ({
                               e.stopPropagation();
                               leavePopupEvent(event.id);
                             }}
-                            className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 
-                                       border-2 border-rose-300 dark:border-rose-600 
-                                       text-rose-700 dark:text-rose-300 
-                                       text-sm font-semibold hover:bg-rose-50 dark:hover:bg-rose-900/30 
-                                       transition-all whitespace-nowrap"
+                            className="px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap bg-white dark:bg-gray-800 border-2"
+                            style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35), color: accent }}
                           >
                             ✓ Joined
                           </button>
@@ -414,9 +397,8 @@ const DateDetailsModal = ({
                               e.stopPropagation();
                               joinPopupEvent(event.id, { dateKey: event.date });
                             }}
-                            className="px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 
-                                       text-white text-sm font-semibold shadow-sm hover:shadow 
-                                       transition-all whitespace-nowrap active:scale-95"
+                            className="px-4 py-2 rounded-lg text-white text-sm font-semibold shadow-sm hover:shadow transition-all whitespace-nowrap active:scale-95"
+                            style={themeAccentButtonStyle}
                           >
                             Join
                           </button>
@@ -572,9 +554,9 @@ const DateDetailsModal = ({
                               
                               {/* Public event actions */}
                               {isPublicRegularEvent && (
-                                <div className="mt-2 p-2 rounded-lg border border-sky-200 dark:border-sky-700 bg-sky-50 dark:bg-sky-900/20">
+                                <div className="mt-2 p-2 rounded-lg border" style={{ borderColor: darkMode ? hexToRgba(accent, 0.4) : hexToRgba(accent, 0.25), background: darkMode ? hexToRgba(accent, 0.12) : hexToRgba(accent, 0.06) }}>
                                   <div className="flex items-center justify-between gap-2">
-                                    <div className="text-xs font-semibold text-sky-700 dark:text-sky-300">
+                                    <div className="text-xs font-semibold" style={{ color: accent }}>
                                       {eventRelationshipStatus === 'hosting' ? 'Hosting' : 
                                        eventRelationshipStatus === 'going' ? 'Going' : 
                                        eventRelationshipStatus === 'interested' ? 'Saved' : 'Public event'}
@@ -586,7 +568,8 @@ const DateDetailsModal = ({
                                             e.stopPropagation();
                                             setEventRelationshipStatus(event, 'going');
                                           }}
-                                          className="px-2 py-1 text-xs rounded-md border border-sky-300 dark:border-sky-700 bg-white dark:bg-gray-800 text-sky-700 dark:text-sky-300"
+                                          className="px-2 py-1 text-xs rounded-md border bg-white dark:bg-gray-800"
+                                          style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35), color: accent }}
                                         >
                                           Join
                                         </button>
@@ -597,7 +580,8 @@ const DateDetailsModal = ({
                                             e.stopPropagation();
                                             setEventRelationshipStatus(event, 'none');
                                           }}
-                                          className="px-2 py-1 text-xs rounded-md border border-sky-300 dark:border-sky-700 bg-white dark:bg-gray-800 text-sky-700 dark:text-sky-300"
+                                          className="px-2 py-1 text-xs rounded-md border bg-white dark:bg-gray-800"
+                                          style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35), color: accent }}
                                         >
                                           Leave
                                         </button>
