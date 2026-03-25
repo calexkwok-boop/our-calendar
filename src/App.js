@@ -24179,6 +24179,7 @@ transform: translateY(0);
       setSelectedDate: setSelectedDate,
       events: { [getDateKey(new Date())]: getEventsForDate(new Date()) },
       getEventsForDate: getEventsForDate,
+      popupEventsByEventId: popupEventsByEventId,
       subCalendars: (typeof activeTrips !== 'undefined' ? activeTrips : []),
       openSubCalendar: openSubCalendar,
             weather: weather,

@@ -33,6 +33,7 @@ const UnifiedCalendarView = ({
   // Events
   events = {}, // { 'YYYY-MM-DD': [events] }
   getEventsForDate, // (date) => Event[]
+  popupEventsByEventId = {},
   
   // Trips/Sub-calendars
   subCalendars = [], // Active trips
@@ -255,6 +256,7 @@ const UnifiedCalendarView = ({
           isSelectedToday={isSelectedToday}
           onAddEvent={() => onAddEvent?.(selectedDate)}
           onEventClick={onEventClick}
+          popupEventsByEventId={popupEventsByEventId}
           handleDeleteEvent={handleDeleteEvent}
           openRecurringDeletePrompt={openRecurringDeletePrompt}
           formatTime={formatTime}
@@ -842,6 +844,7 @@ const SelectedDateDetails = ({
   isSelectedToday,
   onAddEvent,
   onEventClick,
+  popupEventsByEventId,
   handleDeleteEvent,
   openRecurringDeletePrompt,
   formatTime,
@@ -891,7 +894,9 @@ const SelectedDateDetails = ({
       {events.length > 0 ? (
         <div className="space-y-3 mb-4">
           {events.map((event, idx) => {
-            const category = categories[event.category || 'other'] || categories.other;
+            const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+            const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
+            const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
             const canDeleteThisEvent = canDeleteEventInActiveLayer?.(event);
             const eventSwipeKey = `${String(event.date || selectedDateKey || '')}:${String(event.id || '')}`;
             const rowOffset = eventSwipeDrag?.id === eventSwipeKey ? eventSwipeDrag.offset : (swipedEventKey === eventSwipeKey ? -88 : 0);
