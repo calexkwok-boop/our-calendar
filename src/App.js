@@ -20797,28 +20797,61 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
           </div>
           </div>
+          {false && showHomeCalendarWidgets && (
+            <div className="absolute inset-x-4 sm:inset-x-5 bottom-3 sm:bottom-4 z-20 pointer-events-none">
+              <div className="flex items-center justify-end gap-1.5 pointer-events-auto">
+                {activeControlWidgets.map((widgetId) => {
+                  const meta = getControlWidgetMeta(widgetId);
+                  return (
+                    <button
+                      key={`header-toolbar-${widgetId}`}
+                      onClick={() => handleControlWidgetClick(widgetId)}
+                      disabled={meta.disabled}
+                      title={meta.label}
+                      className={`relative shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border transition-all overflow-visible ${meta.active ? 'border-transparent text-white shadow-sm' : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 backdrop-blur-sm'} ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      style={meta.active ? themeAccentButtonStyle : undefined}
+                    >
+                      <span className="flex items-center justify-center">{meta.icon}</span>
+                      {meta.badge ? (
+                        <span className="absolute -top-1 -right-1 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
+                          {meta.badge}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setShowControlWidgetAddPanel(true)}
+                  className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-gray-400 dark:hover:border-gray-400 transition-all"
+                  title="Add widgets"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
           {isCoverTapToRevealMode ? (
             <>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-                className="absolute left-3 sm:left-4 bottom-2 sm:bottom-3 z-20 p-2 rounded-xl transition-all duration-200"
+                className="hidden"
                 style={undefined}
               >
                 <ChevronLeft className="w-6 h-6" style={undefined} />
               </button>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-                className="absolute right-3 sm:right-4 bottom-2 sm:bottom-3 z-20 p-2 rounded-xl transition-all duration-200"
+                className="hidden"
                 style={undefined}
               >
                 <ChevronRight className="w-6 h-6" style={undefined} />
               </button>
             </>
           ) : (
-            <div className="absolute inset-x-0 bottom-2 sm:bottom-3 flex items-center justify-between gap-2 px-2 sm:px-3">
+            <div className="absolute inset-x-0 bottom-2 sm:bottom-3 flex items-center justify-center gap-2 px-2 sm:px-3">
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(-1) : changeWeek(-1)}
-                className="p-2 rounded-xl transition-all duration-200"
+                className="hidden"
                 style={undefined}
               >
                 <ChevronLeft className="w-6 h-6" style={undefined} />
@@ -20840,7 +20873,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
               <button
                 onClick={() => calendarView === 'month' ? changeMonth(1) : changeWeek(1)}
-                className="p-2 rounded-xl transition-all duration-200"
+                className="hidden"
                 style={undefined}
               >
                 <ChevronRight className="w-6 h-6" style={undefined} />
@@ -24068,8 +24101,9 @@ transform: translateY(0);
       isToday: isToday,
       getDaysInMonth: getDaysInMonth,
       darkMode: darkMode,
-      activeLayerPageTheme: activeLayerPageTheme,
+            activeLayerPageTheme: activeLayerPageTheme,
       user: user,
+      userName: currentUser,
     }
   )
 )}
@@ -25357,7 +25391,7 @@ transform: translateY(0);
         <div className="max-w-6xl mx-auto pointer-events-auto">
 
           {/* Widget toolbar — shown on home tab */}
-          {showHomeCalendarWidgets && (
+          {false && showHomeCalendarWidgets && (
             <div className="flex items-center gap-1.5 mb-1.5 px-1 pt-1 pr-2 overflow-x-auto overflow-y-visible">
               {activeControlWidgets.map((widgetId) => {
                 const meta = getControlWidgetMeta(widgetId);

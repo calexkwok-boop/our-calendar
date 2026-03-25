@@ -50,6 +50,7 @@ const UnifiedCalendarView = ({
   
   // User
   user,
+  userName: externalUserName,
 }) => {
   // Auto-select today on mount
   useEffect(() => {
@@ -80,6 +81,8 @@ const UnifiedCalendarView = ({
         activeTrips={activeTrips}
         openSubCalendar={openSubCalendar}
         darkMode={darkMode}
+        user={user}
+        userName={externalUserName}
       />
       
       {/* Active trips banner (if multiple) */}
@@ -188,7 +191,7 @@ const UnifiedCalendarView = ({
 // GREETING HEADER
 // ============================================================================
 
-const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, darkMode }) => {
+const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, darkMode, user, userName }) => {
   const getTimeBasedEmoji = () => {
     const hour = new Date().getHours();
     if (hour < 12) return '☀️';
@@ -199,10 +202,20 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, darkMode })
   
   const getTimeBasedGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning!';
-    if (hour < 17) return 'Good afternoon!';
-    if (hour < 20) return 'Good evening!';
-    return 'Good night!';
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    if (hour < 20) return 'Good evening';
+    return 'Good night';
+  };
+  
+  const getDisplayName = () => {
+    const rawFirst = userName || '';
+    const meta = user?.user_metadata || {};
+    const rawFallback = meta.handle || meta.username || user?.display_name || user?.full_name || user?.name || user?.email || '';
+    const raw = String(rawFirst || rawFallback).trim();
+    if (!raw) return 'there';
+    if (raw.includes('@')) return raw.split('@')[0];
+    return raw;
   };
   
   return (
@@ -215,7 +228,7 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, darkMode })
           </span>
           <div>
             <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-              {getTimeBasedGreeting()}
+              {`${getTimeBasedGreeting()} ${getDisplayName()}!`}
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}

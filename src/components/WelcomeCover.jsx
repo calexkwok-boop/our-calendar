@@ -35,7 +35,7 @@ export const WelcomeCover = ({
     
     // Weekend messages
     if (dayOfWeek === 0) return "Happy Sunday. Recharge and reset.";
-    if (dayOfWeek === 6) return "It's Saturday. Enjoy your weekend.";
+    if (dayOfWeek === 6) return "It's Saturday. Enjoy your weekend!";
     
     // Weekday time-based messages
     if (hour < 12) {
@@ -88,10 +88,7 @@ export const WelcomeCover = ({
           {tagline}
         </h1>
         
-        {/* Supporting line */}
-        <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 max-w-md font-medium">
-          {userName ? `${userName}, your day is ready when you are.` : 'Your day is ready when you are.'}
-        </p>
+
       </div>
       
       {/* Bottom fade */}
