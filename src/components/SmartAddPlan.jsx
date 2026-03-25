@@ -49,7 +49,7 @@ const SmartAddPlan = ({
   };
   
   return (
-    <div className="smart-add-plan relative" ref={menuRef}>
+    <div className="smart-add-plan relative" ref={menuRef} style={{ overflow: 'visible' }}>
       {/* Main button */}
       <button
         onClick={() => setShowMenu(!showMenu)}
@@ -68,7 +68,7 @@ const SmartAddPlan = ({
       
       {/* Dropdown menu */}
       {showMenu && (
-        <div className="absolute top-full mt-2 left-0 right-0 min-w-[280px] z-50
+        <div className="absolute top-full mt-2 right-0 left-auto min-w-[280px] max-w-[min(92vw,420px)] z-50
                       bg-white dark:bg-gray-800 rounded-2xl shadow-2xl 
                       border border-gray-200 dark:border-gray-700 
                       overflow-hidden animate-fadeIn">
