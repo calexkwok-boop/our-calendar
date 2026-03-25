@@ -23,6 +23,7 @@ export default function Agenda({
   setAgendaSearchQuery,
   agendaItems = [],
   categories = {},
+  popupEventsByEventId = {},
   getDateKey,
   toDateOnlyTs,
   subCalendars = [],
@@ -170,7 +171,9 @@ export default function Agenda({
               const dk = String(event?.date || event?.dateKey || '');
               const showHeader = dk !== lastDateKey;
               lastDateKey = dk;
-              const category = categories[event.category || 'other'] || categories.other;
+              const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+              const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
+              const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
               const dateObj = new Date(`${dk}T00:00:00`);
               const isToday = dk === getDateKey(new Date());
               const isTomorrow = (() => {

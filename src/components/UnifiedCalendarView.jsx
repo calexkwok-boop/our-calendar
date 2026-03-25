@@ -248,6 +248,7 @@ const UnifiedCalendarView = ({
           setAgendaSearchQuery={setAgendaSearchQuery}
           agendaItems={agendaItems}
           categories={categories}
+          popupEventsByEventId={popupEventsByEventId}
           getDateKey={getDateKey}
           toDateOnlyTs={toDateOnlyTs}
           subCalendars={subCalendars}

@@ -1812,6 +1812,7 @@ function App() {
   const [pendingThemeMatchStyle, setPendingThemeMatchStyle] = useState(null);
   const [coverOpacityPreview, setCoverOpacityPreview] = useState(null);
   const [coverHeaderControlsVisible, setCoverHeaderControlsVisible] = useState(true);
+  const [coverHeaderControlsInteractionAt, setCoverHeaderControlsInteractionAt] = useState(() => Date.now());
   const coverOpacityPreviewValueRef = useRef(null);
   const coverOpacityPreviewRafRef = useRef(null);
   const [user, setUser] = useState(null);
@@ -5606,6 +5607,7 @@ function App() {
     if (!coverHeaderControlsVisible) {
       setCoverHeaderControlsVisible(true);
     }
+    setCoverHeaderControlsInteractionAt(Date.now());
   }, [coverHeaderControlsVisible]);
   const closeHomeWidgetWindows = React.useCallback(() => {
     setShowControlWidgetAddPanel(false);
@@ -5654,6 +5656,15 @@ function App() {
   ]);
   const showHomeCalendarWidgets = bottomNavTab === 'home' && preferCalendarHome;
   const hasOpenWidgetWindow = showControlWidgetAddPanel || Object.values(widgetCardOpenById).some(Boolean);
+  useEffect(() => {
+    if (!showHomeCalendarWidgets) return;
+    if (!coverHeaderControlsVisible) return;
+    if (hasOpenWidgetWindow) return;
+    const timeoutId = window.setTimeout(() => {
+      setCoverHeaderControlsVisible(false);
+    }, 5000);
+    return () => window.clearTimeout(timeoutId);
+  }, [showHomeCalendarWidgets, coverHeaderControlsVisible, hasOpenWidgetWindow, coverHeaderControlsInteractionAt]);
   const getLayerNotesStorageKey = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
     const userKey = String(uid || '').trim();
     const layerKey = String(layerId || '').trim();
@@ -19632,6 +19643,7 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     };
   };
   const handleControlWidgetClick = (widgetId) => {
+    bumpCoverControlsInteraction();
     const id = String(widgetId || '').trim();
     if (id === 'notifications') {
       setShowNotificationSettings((prev) => !prev);
@@ -20815,10 +20827,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           )}
           {isCoverTapToRevealMode ? (
             <>
-              <button
-                type="button"
-                onClick={() => {
-                  setCoverHeaderControlsVisible(true);
+                <button
+                  type="button"
+                  onClick={() => {
+                  bumpCoverControlsInteraction();
                 }}
                 className="absolute inset-0 z-10 rounded-2xl"
                 aria-label="Show cover controls"
@@ -20913,7 +20925,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
               <div className="flex justify-end pointer-events-auto">
                 <button
-                  onClick={() => setShowControlWidgetAddPanel(true)}
+                  onClick={() => {
+                    bumpCoverControlsInteraction();
+                    setShowControlWidgetAddPanel(true);
+                  }}
                   onPointerDown={bumpCoverControlsInteraction}
                   className={`shrink-0 mb-0.5 px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
                     showControlWidgetAddPanel
