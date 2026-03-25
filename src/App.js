@@ -24137,7 +24137,11 @@ transform: translateY(0);
       categories: categories,
             calendarView: 'month',
       setCalendarView: () => {},
-      onAddEvent: () => { if (!selectedDate) setSelectedDate(new Date()); setShowDateDetailModal(true); },
+      onAddEvent: (date) => {
+        const targetDate = date ? new Date(date) : (selectedDate ? new Date(selectedDate) : new Date());
+        setSelectedDate(targetDate);
+        setShowDateDetailModal(true);
+      },
 
       onEventClick: (event) => {
         const eventId = String(event?.id || '');
@@ -24148,11 +24152,22 @@ transform: translateY(0);
           if (typeof openUserTabEvent === 'function') openUserTabEvent(event);
         }
       },
+      handleDeleteEvent: handleDeleteEvent,
+      openRecurringDeletePrompt: openRecurringDeletePrompt,
       formatTime: formatTime,
       getDateKey: getDateKey,
       isSameDay: isSameDay,
       isToday: isToday,
       getDaysInMonth: getDaysInMonth,
+      canDeleteEventInActiveLayer: canDeleteEventInActiveLayer,
+      eventSwipeDrag: eventSwipeDrag,
+      swipedEventKey: swipedEventKey,
+      handleEventSwipeStart: handleEventSwipeStart,
+      handleEventSwipeMove: handleEventSwipeMove,
+      handleEventSwipeEnd: handleEventSwipeEnd,
+      startEventSwipeDrag: startEventSwipeDrag,
+      moveEventSwipeDrag: moveEventSwipeDrag,
+      endEventSwipeDrag: endEventSwipeDrag,
       darkMode: darkMode,
             activeLayerPageTheme: activeLayerPageTheme,
       user: user,

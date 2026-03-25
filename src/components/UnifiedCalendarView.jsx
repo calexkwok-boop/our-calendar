@@ -1,6 +1,6 @@
 // UnifiedCalendarView.jsx - One beautiful page for everything
 import React, { useState, useEffect } from 'react';
-import { MapPin, Plus } from 'lucide-react';
+import { MapPin, Plus, Trash2 } from 'lucide-react';
 import Agenda from './Agenda';
 
 // simple color helper
@@ -50,9 +50,11 @@ const UnifiedCalendarView = ({
   setCalendarView,
   
   // Actions
-  onAddEvent, // () => void
+  onAddEvent, // (date?: Date) => void
   onEventClick, // (event) => void
   onStartTrip, // () => void
+  handleDeleteEvent, // (dateKey, eventId, ...) => void
+  openRecurringDeletePrompt, // ({ dateKey, event }) => void
   
   // Helpers
   formatTime, // (time) => string
@@ -60,6 +62,15 @@ const UnifiedCalendarView = ({
   isSameDay, // (date1, date2) => boolean
   isToday, // (date) => boolean
   getDaysInMonth, // (date) => Date[]
+  canDeleteEventInActiveLayer, // (event) => boolean
+  eventSwipeDrag, // { id, offset }
+  swipedEventKey, // string | null
+  handleEventSwipeStart, // (e, eventKey, canSwipeAction) => void
+  handleEventSwipeMove, // (e) => void
+  handleEventSwipeEnd, // () => void
+  startEventSwipeDrag, // (e, eventKey, canSwipeAction) => void
+  moveEventSwipeDrag, // (e) => void
+  endEventSwipeDrag, // () => void
   
   // Theme
   darkMode = false,
@@ -242,10 +253,22 @@ const UnifiedCalendarView = ({
           setSelectedDate={setSelectedDate}
           events={selectedDateEvents}
           isSelectedToday={isSelectedToday}
-          onAddEvent={onAddEvent}
+          onAddEvent={() => onAddEvent?.(selectedDate)}
           onEventClick={onEventClick}
+          handleDeleteEvent={handleDeleteEvent}
+          openRecurringDeletePrompt={openRecurringDeletePrompt}
           formatTime={formatTime}
+          getDateKey={getDateKey}
           categories={categories}
+          canDeleteEventInActiveLayer={canDeleteEventInActiveLayer}
+          eventSwipeDrag={eventSwipeDrag}
+          swipedEventKey={swipedEventKey}
+          handleEventSwipeStart={handleEventSwipeStart}
+          handleEventSwipeMove={handleEventSwipeMove}
+          handleEventSwipeEnd={handleEventSwipeEnd}
+          startEventSwipeDrag={startEventSwipeDrag}
+          moveEventSwipeDrag={moveEventSwipeDrag}
+          endEventSwipeDrag={endEventSwipeDrag}
           darkMode={darkMode}
           accent={accent}
         />
@@ -819,11 +842,24 @@ const SelectedDateDetails = ({
   isSelectedToday,
   onAddEvent,
   onEventClick,
+  handleDeleteEvent,
+  openRecurringDeletePrompt,
   formatTime,
+  getDateKey,
   categories,
+  canDeleteEventInActiveLayer,
+  eventSwipeDrag,
+  swipedEventKey,
+  handleEventSwipeStart,
+  handleEventSwipeMove,
+  handleEventSwipeEnd,
+  startEventSwipeDrag,
+  moveEventSwipeDrag,
+  endEventSwipeDrag,
   darkMode,
   accent,
 }) => {
+  const selectedDateKey = getDateKey(selectedDate);
   return (
     <div 
       id="todays-events"
@@ -856,14 +892,53 @@ const SelectedDateDetails = ({
         <div className="space-y-3 mb-4">
           {events.map((event, idx) => {
             const category = categories[event.category || 'other'] || categories.other;
+            const canDeleteThisEvent = canDeleteEventInActiveLayer?.(event);
+            const eventSwipeKey = `${String(event.date || selectedDateKey || '')}:${String(event.id || '')}`;
+            const rowOffset = eventSwipeDrag?.id === eventSwipeKey ? eventSwipeDrag.offset : (swipedEventKey === eventSwipeKey ? -88 : 0);
+            const isDeleteRevealed = rowOffset < 0;
+            const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
             return (
-              <button
+              <div
                 key={event.id}
+                className="relative overflow-hidden rounded-2xl"
+                style={{ animation: `fadeInUp 0.4s ease-out ${idx * 0.1}s both` }}
+              >
+                {canDeleteThisEvent && (
+                  <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isRepeating) {
+                          openRecurringDeletePrompt?.({ dateKey: selectedDateKey, event });
+                        } else {
+                          handleDeleteEvent?.(selectedDateKey, event.id, false, false, false);
+                        }
+                      }}
+                      className={`w-full h-full flex items-center justify-center gap-1 text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  </div>
+                )}
+              <button
+                type="button"
                 onClick={() => onEventClick(event)}
-                className="group w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-white dark:from-gray-900/50 dark:to-gray-800/50 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 text-left border border-gray-200 dark:border-gray-700"
+                className="group relative z-10 w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-white dark:from-gray-900/50 dark:to-gray-800/50 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 text-left border border-gray-200 dark:border-gray-700"
                 style={{
-                  animation: `fadeInUp 0.4s ease-out ${idx * 0.1}s both`
+                  transform: `translateX(${rowOffset}px)`,
+                  transition: eventSwipeDrag?.id === eventSwipeKey ? 'none' : 'transform 180ms ease',
+                  touchAction: 'pan-y'
                 }}
+                onTouchStart={(e) => handleEventSwipeStart?.(e, eventSwipeKey, canDeleteThisEvent)}
+                onTouchMove={handleEventSwipeMove}
+                onTouchEnd={handleEventSwipeEnd}
+                onTouchCancel={handleEventSwipeEnd}
+                onPointerDown={(e) => startEventSwipeDrag?.(e, eventSwipeKey, canDeleteThisEvent)}
+                onPointerMove={moveEventSwipeDrag}
+                onPointerUp={endEventSwipeDrag}
+                onPointerCancel={endEventSwipeDrag}
               >
                 {/* Time badge */}
                 <div className="flex flex-col items-center justify-center w-16 h-16 rounded-2xl shrink-0" style={{ background: darkMode ? `linear-gradient(135deg, ${hexToRgba(accent, 0.22)} 0%, ${hexToRgba(accent, 0.08)} 100%)` : `linear-gradient(135deg, ${hexToRgba(accent, 0.14)} 0%, ${hexToRgba(accent, 0.05)} 100%)` }}>
@@ -885,6 +960,11 @@ const SelectedDateDetails = ({
                 
                 {/* Event info */}
                 <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${category?.color || 'bg-gray-500'} text-white`}>
+                      {category?.label || 'Other'}
+                    </span>
+                  </div>
                   <div className="font-semibold text-base text-gray-900 dark:text-white mb-1">
                     {event.title}
                   </div>
@@ -901,6 +981,7 @@ const SelectedDateDetails = ({
                   →
                 </div>
               </button>
+              </div>
             );
           })}
         </div>
@@ -912,7 +993,7 @@ const SelectedDateDetails = ({
       
       {/* Add event button */}
       <button
-        onClick={onAddEvent}
+        onClick={() => onAddEvent?.(selectedDate)}
         className="w-full py-3 rounded-2xl text-white font-semibold hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-2"
         style={{ background: `linear-gradient(90deg, ${hexToRgba(accent, 0.95)} 0%, ${hexToRgba(accent, 0.75)} 100%)` }}>
         <Plus className="w-5 h-5" />
