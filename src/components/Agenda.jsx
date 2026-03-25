@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { X, MapPin } from 'lucide-react';
 
 const hexToRgba = (hex, alpha = 1) => {
@@ -32,7 +32,38 @@ export default function Agenda({
   formatTime,
   activeLayerPageTheme = { accent: '#a855f7' },
   darkMode = false,
+  // Optional delete/swipe support
+  canDeleteEventInActiveLayer = () => false,
+  handleDeleteEvent = () => {},
+  openRecurringDeletePrompt = () => {},
 }) {
+  const [swipedEventKey, setSwipedEventKey] = useState(null);
+  const [eventSwipeDrag, setEventSwipeDrag] = useState({ id: null, offset: 0 });
+  const swipeStartXRef = useRef(0);
+  const swipingKeyRef = useRef(null);
+
+  const onSwipeStart = (e, key, canSwipe) => {
+    if (!canSwipe) return;
+    const touch = e.touches?.[0];
+    swipeStartXRef.current = touch?.clientX ?? 0;
+    swipingKeyRef.current = key;
+    if (swipedEventKey && swipedEventKey !== key) setSwipedEventKey(null);
+  };
+  const onSwipeMove = (e) => {
+    const key = swipingKeyRef.current; if (!key) return;
+    const touch = e.touches?.[0]; if (!touch) return;
+    const deltaX = touch.clientX - swipeStartXRef.current;
+    const clamped = Math.max(-88, Math.min(0, deltaX));
+    setEventSwipeDrag({ id: key, offset: clamped });
+  };
+  const onSwipeEnd = () => {
+    const key = swipingKeyRef.current; if (!key) return;
+    const open = eventSwipeDrag.id === key && eventSwipeDrag.offset <= -44;
+    setSwipedEventKey(open ? key : null);
+    setEventSwipeDrag({ id: null, offset: 0 });
+    swipingKeyRef.current = null;
+  };
+
   return (
     <div className="space-y-4">
       {/* Controls - warm gradient container */}
@@ -209,11 +240,34 @@ export default function Agenda({
                     </div>
                   )}
                   
-                  {/* Event card */}
-                  <button
-                    onClick={() => onEventClick && onEventClick(event)}
-                    className="group w-full text-left rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(17,24,39,0.12)' }}
-                  >
+                  {/* Swipeable row container */}
+                  <div className="relative rounded-2xl overflow-hidden">
+                    {/* Delete action area */}
+                    <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${'bg-red-500'}`}>
+                      <button
+                        onClick={() => {
+                          const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
+                          if (isRepeating) {
+                            openRecurringDeletePrompt({ dateKey: dk, event });
+                          } else {
+                            handleDeleteEvent(dk, event.id, false, false, false);
+                          }
+                        }}
+                        className="w-full h-full text-sm font-semibold text-white"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    {/* Event card */}
+                    <button
+                      onTouchStart={(e) => onSwipeStart(e, `${dk}:${event.id}`, canDeleteEventInActiveLayer(event))}
+                      onTouchMove={onSwipeMove}
+                      onTouchEnd={onSwipeEnd}
+                      onTouchCancel={onSwipeEnd}
+                      onClick={() => onEventClick && onEventClick(event)}
+                      className="group w-full text-left rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border"
+                      style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(17,24,39,0.12)', transform: `translateX(${eventSwipeDrag.id === `${dk}:${event.id}` ? eventSwipeDrag.offset : (swipedEventKey === `${dk}:${event.id}` ? -88 : 0)}px)`, touchAction: 'pan-y' }}
+                    >
                     <div className="flex items-center gap-4">
                       {/* Time badge */}
                       <div className="flex flex-col items-center justify-center w-16 h-16 rounded-2xl shrink-0" style={{ background: darkMode ? `linear-gradient(135deg, ${hexToRgba((activeLayerPageTheme && activeLayerPageTheme.accent) || '#a855f7', 0.22)} 0%, ${hexToRgba((activeLayerPageTheme && activeLayerPageTheme.accent) || '#a855f7', 0.08)} 100%)` : `linear-gradient(135deg, ${hexToRgba((activeLayerPageTheme && activeLayerPageTheme.accent) || '#a855f7', 0.14)} 0%, ${hexToRgba((activeLayerPageTheme && activeLayerPageTheme.accent) || '#a855f7', 0.05)} 100%)` }}>
@@ -284,6 +338,7 @@ export default function Agenda({
                       </div>
                     </div>
                   </button>
+                  </div>
                 </div>
               );
             });

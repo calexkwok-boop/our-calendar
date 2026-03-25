@@ -3307,7 +3307,7 @@ function App() {
   const handleEventSwipeEnd = () => {
     const eventKey = swipingEventKeyRef.current;
     if (!eventKey) return;
-    const open = eventSwipeDrag.id === eventKey && eventSwipeDrag.offset <= -44;
+    const open = eventSwipeDrag.id === eventKey && eventSwipeDrag.offset <= -36;
     setSwipedEventKey(open ? eventKey : null);
     setEventSwipeDrag({ id: null, offset: 0 });
     swipingEventKeyRef.current = null;
@@ -3334,7 +3334,7 @@ function App() {
   const endEventSwipeDrag = () => {
     const eventKey = swipingEventKeyRef.current;
     if (!eventKey) return;
-    const open = eventSwipeDrag.id === eventKey && eventSwipeDrag.offset <= -44;
+    const open = eventSwipeDrag.id === eventKey && eventSwipeDrag.offset <= -36;
     setSwipedEventKey(open ? eventKey : null);
     setEventSwipeDrag({ id: null, offset: 0 });
     swipingEventKeyRef.current = null;
