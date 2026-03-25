@@ -374,12 +374,16 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, onScrollToT
         <div className="flex flex-col items-end gap-2">
           {/* Event count */}
           {todayEvents.length > 0 && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-md">
+            <button
+              type="button"
+              onClick={() => onScrollToTodaySchedule?.()}
+              className="flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 shadow-md backdrop-blur-sm transition-all hover:shadow-lg dark:bg-gray-800/80"
+            >
               <span className="text-lg">📅</span>
               <span className="text-sm font-semibold text-gray-900 dark:text-white">
                 {todayEvents.length} {todayEvents.length === 1 ? 'today' : 'today'}
               </span>
-            </div>
+            </button>
           )}
           
           {/* Active trip (first one) */}
