@@ -81,6 +81,18 @@ const UnifiedCalendarView = ({
   user,
   userName: externalUserName,
 }) => {
+  const scrollToSelectedDateDetails = () => {
+    window.requestAnimationFrame(() => {
+      const details = document.getElementById('todays-events');
+      details?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const handleSelectDate = (date) => {
+    setSelectedDate(date);
+    scrollToSelectedDateDetails();
+  };
+
   // Auto-select today on mount
   useEffect(() => {
     if (!selectedDate) {
@@ -162,6 +174,7 @@ const UnifiedCalendarView = ({
         todayEvents={todayEvents}
         activeTrips={activeTrips}
         openSubCalendar={openSubCalendar}
+        onScrollToTodaySchedule={scrollToSelectedDateDetails}
         darkMode={darkMode}
         user={user}
         userName={externalUserName}
@@ -191,10 +204,10 @@ const UnifiedCalendarView = ({
       {localCalendarView === 'month' && (
         <>
           <DayHeaders darkMode={darkMode} accent={accent} />
-                <CalendarGrid
+        <CalendarGrid
         currentDate={currentDate}
         selectedDate={selectedDate}
-        setSelectedDate={setSelectedDate}
+        setSelectedDate={handleSelectDate}
         getDaysInMonth={getDaysInMonth}
         getEventsForDate={getEventsForDate}
         getDateKey={getDateKey}
@@ -215,7 +228,7 @@ const UnifiedCalendarView = ({
           <WeekGrid
             currentDate={currentDate}
             selectedDate={selectedDate}
-            setSelectedDate={setSelectedDate}
+            setSelectedDate={handleSelectDate}
             getEventsForDate={getEventsForDate}
             getDateKey={getDateKey}
             isSameDay={isSameDay}
@@ -299,7 +312,7 @@ const UnifiedCalendarView = ({
 // GREETING HEADER
 // ============================================================================
 
-const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, darkMode, user, userName, accent }) => {
+const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, onScrollToTodaySchedule, darkMode, user, userName, accent }) => {
   const getTimeBasedEmoji = () => {
     const hour = new Date().getHours();
     if (hour < 12) return '☀️';
@@ -346,9 +359,13 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, darkMode, u
             <h2 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${hexToRgba(accent, 1)} 0%, ${hexToRgba(accent, 0.66)} 100%)` }}>
               {`${getTimeBasedGreeting()} ${getDisplayName()}!`}
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <button
+              type="button"
+              onClick={() => onScrollToTodaySchedule?.()}
+              className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </p>
+            </button>
           </div>
         </div>
         

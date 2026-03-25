@@ -18017,6 +18017,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, activeLayerId, getControlWidgetStorageBases, getControlWidgetStorageMapKey]);
 
   useEffect(() => {
+    if (!user?.id || !activeLayerId) {
+      setShowWeather(true);
+      return;
+    }
+    const keyBases = getControlWidgetStorageBases(user.id, activeLayerId);
+    try {
+      const raw = keyBases
+        .map((base) => localStorage.getItem(`${base}-weather-visible`))
+        .find((value) => value !== null);
+      if (raw === null) {
+        setShowWeather(true);
+        return;
+      }
+      setShowWeather(raw === 'true');
+    } catch {
+      setShowWeather(true);
+    }
+  }, [user?.id, activeLayerId, getControlWidgetStorageBases]);
+
+  useEffect(() => {
     if (!user?.id || !controlWidgetPrefsReady) return;
     const keyBases = getControlWidgetStorageBases(user.id, activeLayerId);
     try {
@@ -18026,6 +18046,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       localStorage.setItem(`${sharedBase}-layout`, JSON.stringify(coverWidgetLayout));
     } catch {}
   }, [user?.id, activeLayerId, controlWidgetOrder, coverWidgetLayout, controlWidgetPrefsReady, getControlWidgetStorageBases]);
+
+  useEffect(() => {
+    if (!user?.id || !activeLayerId) return;
+    const keyBases = getControlWidgetStorageBases(user.id, activeLayerId);
+    try {
+      const sharedBase = keyBases[0];
+      if (!sharedBase) return;
+      localStorage.setItem(`${sharedBase}-weather-visible`, showWeather ? 'true' : 'false');
+    } catch {}
+  }, [user?.id, activeLayerId, showWeather, getControlWidgetStorageBases]);
 
   const flushControlWidgetPrefs = React.useCallback(() => {
     if (!user?.id || !controlWidgetPrefsReady) return;

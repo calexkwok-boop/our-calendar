@@ -575,8 +575,9 @@ const DateDetailsModal = ({
                 return (
                   <div key={event.id} className={`relative rounded-2xl overflow-hidden ${event.isVirtualAnnual ? 'border-dashed' : ''}`}>
                     {canDeleteThisEvent && (
-                      <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors z-20 ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
+                      <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors z-20 ${isDeleteRevealed ? 'bg-red-500 pointer-events-auto' : 'bg-transparent pointer-events-none'}`}>
                         <button
+                          type="button"
                           onClick={(e) => { e.stopPropagation();
                             const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
                             if (isRepeating) {
@@ -585,7 +586,9 @@ const DateDetailsModal = ({
                               handleDeleteEvent(selectedDateKey, event.id, false, false, false);
                             }
                           }}
-                          className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100 pointer-events-auto' : 'text-transparent opacity-0 pointer-events-none'}`}
                         >
                           Delete
                         </button>
@@ -730,7 +733,7 @@ const DateDetailsModal = ({
                               }}
                               onPointerDown={(e) => e.stopPropagation()}
                               onTouchStart={(e) => e.stopPropagation()}
-                              className="p-1.5 rounded-lg hover:bg-white/20 dark:hover:bg-black/20 transition-all"
+                              className="relative z-20 p-1.5 rounded-lg hover:bg-white/20 dark:hover:bg-black/20 transition-all"
                               aria-label="Edit event"
                             >
                               <svg className="w-4 h-4" style={{ color: eventCardIconTone }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
