@@ -64,7 +64,7 @@ const WhatTimeModal = ({
       />
 
       <div
-        className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] w-full max-w-md flex-col overflow-hidden rounded-t-3xl rounded-b-none border border-white/40 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950 sm:max-h-[calc(100vh-2rem)] sm:rounded-3xl"
+        className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] w-full max-w-md flex-col overflow-hidden rounded-t-3xl rounded-b-none border-t border-transparent bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950 sm:max-h-[calc(100vh-2rem)] sm:rounded-3xl sm:border sm:border-white/40 sm:dark:border-white/10"
         onClick={(e) => e.stopPropagation()}
         style={{
           animation: 'what-time-fade-in 0.28s ease-out',
