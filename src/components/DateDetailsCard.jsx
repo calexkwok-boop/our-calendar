@@ -1,6 +1,6 @@
 // DateDetailsModal.jsx - Redesigned with improved UX
 import React, { useState } from 'react';
-import { X, Lock, AlertTriangle, Repeat, Settings, ChevronDown, Clock, User, Users, UserRound } from 'lucide-react';
+import { X, Lock, AlertTriangle, Repeat, Settings, ChevronDown, Clock, User, Users } from 'lucide-react';
 
 const DateDetailsModal = ({
   // Visibility
@@ -151,7 +151,7 @@ const DateDetailsModal = ({
               className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2"
               style={eventCreationMode === 'me' ? (themeAccentButtonStyle || { backgroundColor: accent, color: '#fff' }) : undefined}
             >
-              <UserRound className="w-4 h-4" />
+                      <User className="w-4 h-4" />
               Me Event
             </button>
             <button
