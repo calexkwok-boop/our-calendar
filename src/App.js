@@ -2028,6 +2028,8 @@ function App() {
   const [photoDate, setPhotoDate] = useState(null);
   const [tripPhotoUploadTarget, setTripPhotoUploadTarget] = useState('gallery');
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
+  const [tripPhotoReactionsById, setTripPhotoReactionsById] = useState({});
+  const [tripPhotoReactionPickerId, setTripPhotoReactionPickerId] = useState(null);
   const [locationActionTarget, setLocationActionTarget] = useState('');
   const photoInputRef = useRef(null);
   const photoDeleteHoldTimerRef = useRef(null);
@@ -2035,6 +2037,7 @@ function App() {
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
 
   const REACTION_EMOJIS = ['??', '??', '??', '??', '??', '??', '??', '??', '??'];
+  const getTripPhotoReactionsLocalKey = (subCalId) => `subcal-trip-photo-reactions-${String(subCalId || '').trim()}`;
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
@@ -3803,6 +3806,31 @@ function App() {
     loadMergedTripPhotos(activeSubCalendar, deletedPhotoIds);
   }, [activeSubCalendar?.id, deletedPhotoIds]);
 
+  useEffect(() => {
+    const subCalId = String(activeSubCalendar?.id || '').trim();
+    if (!subCalId) {
+      setTripPhotoReactionsById({});
+      setTripPhotoReactionPickerId(null);
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(getTripPhotoReactionsLocalKey(subCalId));
+      const parsed = raw ? JSON.parse(raw) : {};
+      setTripPhotoReactionsById(parsed && typeof parsed === 'object' ? parsed : {});
+    } catch {
+      setTripPhotoReactionsById({});
+    }
+    setTripPhotoReactionPickerId(null);
+  }, [activeSubCalendar?.id]);
+
+  useEffect(() => {
+    const subCalId = String(activeSubCalendar?.id || '').trim();
+    if (!subCalId) return;
+    try {
+      localStorage.setItem(getTripPhotoReactionsLocalKey(subCalId), JSON.stringify(tripPhotoReactionsById || {}));
+    } catch {}
+  }, [activeSubCalendar?.id, tripPhotoReactionsById]);
+
   const uploadTripPhoto = async (file, caption, eventId, date) => {
     if (!file) return null;
     if (!activeSubCalendar) {
@@ -4015,6 +4043,37 @@ function App() {
     }
   };
 
+  const toggleTripPhotoReaction = (photo, emoji) => {
+    const photoId = String(photo?.id || '').trim();
+    const emojiKey = String(emoji || '').trim();
+    const actorId = String(user?.id || currentUser || 'guest').trim();
+    const actorLabel = String(currentUser || user?.email || 'You').trim();
+    if (!photoId || !emojiKey || !actorId) return;
+    setTripPhotoReactionsById((prev) => {
+      const current = (prev && typeof prev === 'object') ? prev : {};
+      const photoReactions = current[photoId] && typeof current[photoId] === 'object' ? current[photoId] : {};
+      const currentUsers = Array.isArray(photoReactions[emojiKey]) ? photoReactions[emojiKey] : [];
+      const alreadyReacted = currentUsers.some((entry) => String(entry?.id || '') === actorId);
+      const nextUsers = alreadyReacted
+        ? currentUsers.filter((entry) => String(entry?.id || '') !== actorId)
+        : [...currentUsers, { id: actorId, label: actorLabel }];
+      const nextPhotoReactions = { ...photoReactions };
+      if (nextUsers.length > 0) nextPhotoReactions[emojiKey] = nextUsers;
+      else delete nextPhotoReactions[emojiKey];
+      const next = { ...current };
+      if (Object.keys(nextPhotoReactions).length > 0) next[photoId] = nextPhotoReactions;
+      else delete next[photoId];
+      return next;
+    });
+    setTripPhotoReactionPickerId(null);
+  };
+
+  const openTripPhotoReactionPicker = (photo) => {
+    const photoId = String(photo?.id || '').trim();
+    if (!photoId || isPhotoSelectionMode || photoDeleteMode) return;
+    setTripPhotoReactionPickerId((prev) => (prev === photoId ? null : photoId));
+  };
+
   const saveSinglePhotoToDevice = async (photo) => {
     if (!photo?.url) return;
     try {
@@ -4076,16 +4135,36 @@ function App() {
     if (prev.id === photo.id && now - prev.at < 300) {
       clearPhotoTapTimer();
       photoTapRef.current = { id: null, at: 0, timer: null };
-      setLightboxPhoto(photo);
+      openTripPhotoReactionPicker(photo);
       return;
     }
-    photoTapRef.current = { id: photo.id, at: now, timer: null };
+    clearPhotoTapTimer();
+    const timer = setTimeout(() => {
+      setLightboxPhoto(photo);
+      photoTapRef.current = { id: null, at: 0, timer: null };
+    }, 240);
+    photoTapRef.current = { id: photo.id, at: now, timer };
   };
 
   useEffect(() => () => {
     clearPhotoReactionHold();
     clearPhotoTapTimer();
   }, []);
+
+  useEffect(() => {
+    if (!tripPhotoReactionPickerId) return;
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.trip-photo-reaction-picker')) {
+        setTripPhotoReactionPickerId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [tripPhotoReactionPickerId]);
 
   const toggleSelectedPhoto = (photoId) => {
     setSelectedPhotoIds(prev => prev.includes(photoId) ? prev.filter(id => id !== photoId) : [...prev, photoId]);
@@ -28256,6 +28335,9 @@ transform: translateY(0);
                       <div className="grid grid-cols-3 gap-1.5">
                         {photos.map(photo => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
+                          const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
+                          const hasPhotoReactions = Object.keys(photoReactions).length > 0;
+                          const isPhotoReactionPickerOpen = tripPhotoReactionPickerId === String(photo.id || '');
                           return (
                           <div
                             key={photo.id}
@@ -28295,6 +28377,37 @@ transform: translateY(0);
                             <div className="absolute bottom-1 left-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                               <span className="bg-black/50 text-white px-1.5 py-0.5 rounded-full text-xs">{photo.uploaded_by}</span>
                             </div>
+                            {!isPhotoSelectionMode && !photoDeleteMode && hasPhotoReactions && (
+                              <div className="absolute left-1.5 right-1.5 bottom-1.5 flex flex-wrap gap-1 pointer-events-none">
+                                {Object.entries(photoReactions).map(([emoji, users]) => (
+                                  <span
+                                    key={emoji}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/55 text-white text-[10px]"
+                                    title={(users || []).map((entry) => entry?.label || 'Someone').join(', ')}
+                                  >
+                                    <span>{emoji}</span>
+                                    <span>{Array.isArray(users) ? users.length : 0}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {!isPhotoSelectionMode && !photoDeleteMode && isPhotoReactionPickerOpen && (
+                              <div className="trip-photo-reaction-picker absolute left-1/2 -translate-x-1/2 bottom-3 z-20 flex gap-1 p-1.5 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-600">
+                                {REACTION_EMOJIS.map((emoji) => (
+                                  <button
+                                    key={`${photo.id}-${emoji}`}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleTripPhotoReaction(photo, emoji);
+                                    }}
+                                    className="text-base hover:scale-125 transition-transform p-1"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )})}
                         {/* Add more photos to this day */}
@@ -28338,6 +28451,8 @@ transform: translateY(0);
                       <div className="space-y-4">
                         {photos.map(photo => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
+                          const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
+                          const isPhotoReactionPickerOpen = tripPhotoReactionPickerId === String(photo.id || '');
                           return (
                           <div key={photo.id} className={`relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'}`}>
                             <img
@@ -28366,10 +28481,41 @@ transform: translateY(0);
                             <div className="px-3 py-2 flex items-start justify-between gap-2">
                               <div>
                                 {photo.caption && <p className="text-sm text-gray-800 dark:text-gray-200 mb-0.5">{photo.caption}</p>}
+                                {!isPhotoSelectionMode && !photoDeleteMode && Object.keys(photoReactions).length > 0 && (
+                                  <div className="flex flex-wrap items-center gap-1 mt-1">
+                                    {Object.entries(photoReactions).map(([emoji, users]) => (
+                                      <span
+                                        key={emoji}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                                        title={(users || []).map((entry) => entry?.label || 'Someone').join(', ')}
+                                      >
+                                        <span>{emoji}</span>
+                                        <span>{Array.isArray(users) ? users.length : 0}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                                 <p className="text-xs text-gray-400 dark:text-gray-500">👤 {photo.uploaded_by}</p>
                               </div>
                               {!isPhotoSelectionMode && photoDeleteMode && <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Delete mode</span>}
                             </div>
+                            {!isPhotoSelectionMode && !photoDeleteMode && isPhotoReactionPickerOpen && (
+                              <div className="trip-photo-reaction-picker absolute left-3 right-3 bottom-3 z-20 flex justify-center gap-1 p-1.5 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-600">
+                                {REACTION_EMOJIS.map((emoji) => (
+                                  <button
+                                    key={`${photo.id}-${emoji}`}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleTripPhotoReaction(photo, emoji);
+                                    }}
+                                    className="text-base hover:scale-125 transition-transform p-1"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                             {!isPhotoSelectionMode && photoDeleteMode && (
                               <button
                                 onClick={() => deleteTripPhoto(photo)}
