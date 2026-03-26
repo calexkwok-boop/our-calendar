@@ -28103,13 +28103,18 @@ transform: translateY(0);
             <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3">
               <button
                 onClick={() => photoInputRef.current?.click()}
-                disabled={uploadingPhoto || isPhotoSelectionMode || photoDeleteMode}
+                disabled={uploadingPhoto || photoDeleteMode}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-xl text-sm font-medium shadow hover:shadow-lg transition-all disabled:opacity-50"
               >
                 {uploadingPhoto ? 'Uploading…' : 'Add Photos'}
               </button>
               {isPhotoSelectionMode ? (
                 <>
+                  {photoEventId && (
+                    <span className="text-xs text-purple-600 dark:text-purple-300 font-medium">
+                      Uploads attach to this event
+                    </span>
+                  )}
                   <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
                     {selectedPhotoIds.length} selected
                   </span>

@@ -56,25 +56,27 @@ const WhatTimeModal = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
-      onClick={() => onCancel?.()}
-      style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
-    >
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(env(safe-area-inset-top),0.75rem)] sm:pt-4 pb-0 sm:pb-4">
       <div
-        className="relative w-full max-w-md overflow-hidden rounded-t-[32px] rounded-b-none border-t border-transparent bg-white shadow-2xl dark:bg-slate-950 dark:border-white/10 sm:rounded-[32px]"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={() => onCancel?.()}
+        style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+      />
+
+      <div
+        className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] w-full max-w-md flex-col overflow-hidden rounded-t-3xl rounded-b-none border border-white/40 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950 sm:max-h-[calc(100vh-2rem)] sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
         style={{
           animation: 'what-time-fade-in 0.28s ease-out',
           WebkitOverflowScrolling: 'touch',
           overscrollBehaviorY: 'contain',
-          clipPath: 'inset(0 round 32px 32px 0 0)',
-          maxHeight: 'calc(100dvh - env(safe-area-inset-top) - 0.75rem)',
           boxShadow: darkMode
             ? '0 28px 80px rgba(0,0,0,0.55)'
             : '0 28px 80px rgba(15,23,42,0.22)',
         }}
       >
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500" />
+
         <div
           className="relative overflow-hidden px-6 py-8"
           style={{
@@ -101,7 +103,14 @@ const WhatTimeModal = ({
           </div>
         </div>
 
-        <div className="relative z-10 bg-white px-6 py-6 dark:bg-slate-950">
+        <div
+          className="relative z-10 flex-1 overflow-y-auto bg-white px-6 py-6 dark:bg-slate-950"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehaviorY: 'contain',
+            touchAction: 'pan-y',
+          }}
+        >
           <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
             {pendingEvent.isMultiDay
               ? "Multi-day events don't need a time"

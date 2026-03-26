@@ -9,6 +9,22 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Star, Camera, Sparkles, TrendingUp, Award, Flame, Share2 } from 'lucide-react';
 import GroupRatingDisplay from './GroupRatingDisplay';
 
+const getViewerGroupRating = (eventId, groupRatingsByEventId = {}, currentUserId = '') => (
+  (groupRatingsByEventId[String(eventId || '')] || []).find(
+    (rating) => String(rating?.userId || '') === String(currentUserId || '')
+  ) || null
+);
+
+const getEffectiveViewerRatingValue = (event, groupRatingsByEventId = {}, currentUserId = '') => {
+  const localRating = Number(event?.rating || 0);
+  if (localRating > 0) return localRating;
+  return Number(getViewerGroupRating(event?.id, groupRatingsByEventId, currentUserId)?.rating || 0);
+};
+
+const isEventReviewedByViewer = (event, groupRatingsByEventId = {}, currentUserId = '') => (
+  getEffectiveViewerRatingValue(event, groupRatingsByEventId, currentUserId) > 0
+);
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -113,6 +129,8 @@ const TripRatingSystem = ({
         <TripHighlightsView 
           trip={trip}
           events={events}
+          groupRatingsByEventId={groupRatingsByEventId}
+          currentUserId={user?.id}
           onShare={onShareHighlights}
           darkMode={darkMode}
         />
@@ -122,6 +140,8 @@ const TripRatingSystem = ({
         <TripStatsView 
           trip={trip}
           events={events}
+          groupRatingsByEventId={groupRatingsByEventId}
+          currentUserId={user?.id}
           userStats={userStats}
           leaderboard={leaderboard}
           darkMode={darkMode}
@@ -497,7 +517,7 @@ const DailyRecapView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
   onAddTags, onAddReview, groupRatingsByEventId = {}, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating, currentUserId, darkMode, focusEventId = null }) => {
   const today = new Date().toDateString();
   const todaysEvents = events.filter(e => new Date(e.date).toDateString() === today);
-  const unratedEvents = todaysEvents.filter(e => !e.rating || e.rating === 0);
+  const unratedEvents = todaysEvents.filter((event) => !isEventReviewedByViewer(event, groupRatingsByEventId, currentUserId));
   const completionPercent = todaysEvents.length > 0
     ? Math.round(((todaysEvents.length - unratedEvents.length) / todaysEvents.length) * 100)
     : 0;
@@ -560,14 +580,14 @@ const DailyRecapView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
               No events today. Enjoy your free time!
             </p>
           </div>
-          {events.filter(e => (!e.rating || e.rating === 0) && new Date(e.date).toDateString() !== today).length > 0 && (
+          {events.filter((event) => !isEventReviewedByViewer(event, groupRatingsByEventId, currentUserId) && new Date(event.date).toDateString() !== today).length > 0 && (
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-2">
                 Unrated from this trip
               </div>
               <div className="space-y-3">
                 {events
-                  .filter(e => (!e.rating || e.rating === 0) && new Date(e.date).toDateString() !== today)
+                  .filter((event) => !isEventReviewedByViewer(event, groupRatingsByEventId, currentUserId) && new Date(event.date).toDateString() !== today)
                   .sort((a, b) => new Date(a.date) - new Date(b.date))
                   .map(event => (
                     <EventRatingCard deferPersistOnStar
@@ -617,7 +637,7 @@ const DailyRecapView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
 const ReviewsListView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
   onAddTags, onAddReview, groupRatingsByEventId = {}, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating, currentUserId, darkMode, focusEventId = null }) => {
   const ratedEvents = (events || [])
-    .filter(e => e && Number(e.rating || 0) > 0)
+    .filter((event) => event && isEventReviewedByViewer(event, groupRatingsByEventId, currentUserId))
     .sort((a, b) => new Date(b.date) - new Date(a.date));
   return (
     <div className="space-y-3">
@@ -654,8 +674,13 @@ const ReviewsListView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
 // TRIP HIGHLIGHTS VIEW
 // ============================================================================
 
-const TripHighlightsView = ({ trip, events, onShare, darkMode }) => {
-  const ratedEvents = events.filter(e => e.rating && e.rating > 0);
+const TripHighlightsView = ({ trip, events, groupRatingsByEventId = {}, currentUserId, onShare, darkMode }) => {
+  const ratedEvents = (events || [])
+    .filter((event) => isEventReviewedByViewer(event, groupRatingsByEventId, currentUserId))
+    .map((event) => ({
+      ...event,
+      rating: getEffectiveViewerRatingValue(event, groupRatingsByEventId, currentUserId),
+    }));
   const avgRating = ratedEvents.length > 0
     ? ratedEvents.reduce((sum, e) => sum + e.rating, 0) / ratedEvents.length
     : 0;
@@ -773,8 +798,13 @@ const BestOfCard = ({ icon, title, event, darkMode }) => (
 // STATS VIEW
 // ============================================================================
 
-const TripStatsView = ({ trip, events, userStats, leaderboard, darkMode }) => {
-  const ratedEvents = events.filter(e => e.rating && e.rating > 0);
+const TripStatsView = ({ trip, events, groupRatingsByEventId = {}, currentUserId, userStats, leaderboard, darkMode }) => {
+  const ratedEvents = (events || [])
+    .filter((event) => isEventReviewedByViewer(event, groupRatingsByEventId, currentUserId))
+    .map((event) => ({
+      ...event,
+      rating: getEffectiveViewerRatingValue(event, groupRatingsByEventId, currentUserId),
+    }));
   const avgRating = ratedEvents.length > 0
     ? ratedEvents.reduce((sum, e) => sum + e.rating, 0) / ratedEvents.length
     : 0;
