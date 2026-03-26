@@ -56,15 +56,13 @@ const WhatTimeModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4 bg-black/60 backdrop-blur-sm"
+      onClick={() => onCancel?.()}
+      style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+    >
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={() => onCancel?.()}
-        style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
-      />
-
-      <div
-        className="relative w-full sm:w-[26rem] max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] rounded-t-[28px] rounded-b-none sm:rounded-[28px] overflow-hidden border-t border-transparent dark:border-white/10 bg-white dark:bg-slate-950 shadow-2xl flex flex-col"
+        className="relative w-full sm:w-[26rem] max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem)] sm:max-h-[90vh] rounded-t-[28px] rounded-b-none sm:rounded-[28px] overflow-hidden border-t border-transparent dark:border-white/10 bg-white dark:bg-slate-950 shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
         style={{
           animation: 'what-time-fade-in 0.28s ease-out',
