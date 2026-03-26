@@ -56,7 +56,7 @@ const WhatTimeModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(env(safe-area-inset-top),0.75rem)] sm:pt-4 pb-0 sm:pb-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4">
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={() => onCancel?.()}
@@ -64,15 +64,10 @@ const WhatTimeModal = ({
       />
 
       <div
-        className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] w-full max-w-md flex-col overflow-hidden rounded-t-3xl rounded-b-none border-t border-transparent bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950 sm:max-h-[calc(100vh-2rem)] sm:rounded-3xl sm:border sm:border-white/40 sm:dark:border-white/10"
+        className="relative w-full sm:w-[26rem] max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] rounded-t-[28px] rounded-b-none sm:rounded-[28px] overflow-hidden border-t border-transparent dark:border-white/10 bg-white dark:bg-slate-950 shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
         style={{
           animation: 'what-time-fade-in 0.28s ease-out',
-          WebkitOverflowScrolling: 'touch',
-          overscrollBehaviorY: 'contain',
-          boxShadow: darkMode
-            ? '0 28px 80px rgba(0,0,0,0.55)'
-            : '0 28px 80px rgba(15,23,42,0.22)',
         }}
       >
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500" />
@@ -104,7 +99,7 @@ const WhatTimeModal = ({
         </div>
 
         <div
-          className="relative z-10 flex-1 overflow-y-auto bg-white px-6 py-6 dark:bg-slate-950"
+          className="relative z-10 flex-1 min-h-0 overflow-y-auto px-6 py-6"
           style={{
             WebkitOverflowScrolling: 'touch',
             overscrollBehaviorY: 'contain',

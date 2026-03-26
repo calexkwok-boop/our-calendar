@@ -28608,7 +28608,7 @@ transform: translateY(0);
       totalReviews: documentedEvents.length,
       restaurantReviews: documentedEvents.filter((event) => event?.category === 'restaurant').length,
       activityReviews: documentedEvents.filter((event) => event?.category === 'activity').length,
-      totalPhotos: eventsWithBadgeStats.reduce((sum, event) => sum + Number(event?._badgePhotoCount || 0), 0),
+      totalPhotos: (tripPhotos || []).length,
       streak: getTripReviewStreak(eventsWithBadgeStats),
       completedTrips: allEvents.length > 0 && documentedEvents.length >= allEvents.length ? 1 : 0,
       voiceNotes: 0,
