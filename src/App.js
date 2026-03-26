@@ -11,7 +11,7 @@ import RoundRobinPanel from "./components/RoundRobinPanel";
 import ScramblePanel from "./components/ScramblePanel";
 import PopupEventPanel from "./components/PopupEventPanel";
 import AddEventModal from "./components/AddEventModal";
-import DateDetailsModal from "./components/DateDetailsModal";
+import DateDetailsCard from "./components/DateDetailsCard";
 import WhatTimeModal from "./components/WhatTimeModal";
 import SmartAddPlan, { SmartAddPlanCompact } from "./components/SmartAddPlan";
 import StartTripModal from "./components/StartTripModal";
@@ -24273,7 +24273,7 @@ transform: translateY(0);
   )
 )}
 
-<DateDetailsModal
+<DateDetailsCard
             isOpen={showDateDetailModal}
             onClose={() => setShowDateDetailModal(false)}
     setIsPopupEventDraft={setIsPopupEventDraft}
