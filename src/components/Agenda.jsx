@@ -245,31 +245,43 @@ export default function Agenda({
                   
                   {/* Swipeable row container */}
                   <div className="relative rounded-2xl overflow-hidden">
-                    {/* Delete action area */}
-                    <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors z-20 ${'bg-red-500'}`}>
-                      <button
-                                              onClick={(e) => { e.stopPropagation();
-                          const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
-                          if (isRepeating) {
-                            openRecurringDeletePrompt({ dateKey: dk, event });
-                          } else {
-                            handleDeleteEvent(dk, event.id, false, false, false);
-                          }
-                        }}
-                        className="w-full h-full text-sm font-semibold text-white"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                    {(() => {
+                      const eventSwipeKey = `${dk}:${event.id}`;
+                      const canDeleteThisEvent = canDeleteEventInActiveLayer(event);
+                      const rowOffset = eventSwipeDrag.id === eventSwipeKey
+                        ? eventSwipeDrag.offset
+                        : (swipedEventKey === eventSwipeKey ? -88 : 0);
+                      const isDeleteRevealed = rowOffset < 0;
+                      return (
+                        <>
+                          {/* Delete action area */}
+                          {canDeleteThisEvent && (
+                            <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors z-20 ${isDeleteRevealed ? 'bg-red-500 pointer-events-auto' : 'bg-transparent pointer-events-none'}`}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
+                                  if (isRepeating) {
+                                    openRecurringDeletePrompt({ dateKey: dk, event });
+                                  } else {
+                                    handleDeleteEvent(dk, event.id, false, false, false);
+                                  }
+                                }}
+                                className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100 pointer-events-auto' : 'text-transparent opacity-0 pointer-events-none'}`}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
                     {/* Event card */}
-                    <button
-                      onTouchStart={(e) => onSwipeStart(e, `${dk}:${event.id}`, canDeleteEventInActiveLayer(event))}
+                          <button
+                      onTouchStart={(e) => onSwipeStart(e, eventSwipeKey, canDeleteThisEvent)}
                       onTouchMove={onSwipeMove}
                       onTouchEnd={onSwipeEnd}
                       onTouchCancel={onSwipeEnd}
                       onClick={() => onEventClick && onEventClick(event)}
                       className="group relative z-10 w-full text-left rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border"
-                      style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(17,24,39,0.12)', transform: `translateX(${eventSwipeDrag.id === `${dk}:${event.id}` ? eventSwipeDrag.offset : (swipedEventKey === `${dk}:${event.id}` ? -88 : 0)}px)`, touchAction: 'pan-y' }}
+                      style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(17,24,39,0.12)', transform: `translateX(${rowOffset}px)`, touchAction: 'pan-y' }}
                     >
                     <div className="flex items-center gap-4">
                       {/* Time badge */}
@@ -340,7 +352,10 @@ export default function Agenda({
                         →
                       </div>
                     </div>
-                  </button>
+                    </button>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               );
