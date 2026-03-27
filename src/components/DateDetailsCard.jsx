@@ -172,11 +172,13 @@ const DateDetailsModal = ({
   };
 
   const createWeEvent = async () => {
-    const title = String(quickEntry || '').trim();
-    if (!title) return;
+    const base = String(quickEntry || '').trim();
+    if (!base) return;
+    const loc = String(quickLocation || '').trim();
+    const combined = loc ? `${base} @ ${loc}` : base;
     try { setIsPopupEventDraft?.(true); } catch {}
     const didCreate = await handleQuickAdd({
-      titleOverride: title,
+      titleOverride: combined,
       time: weEventTime || null,
       directCreate: true,
       isPopupEvent: true,
@@ -378,7 +380,14 @@ const DateDetailsModal = ({
                 style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35) }}
                 autoFocus
               />
-              
+              <PlacesAutocomplete
+                value={quickLocation}
+                onSelect={(val) => setQuickLocation(val || '')}
+                placeholder="📍 Location (optional)"
+                className="w-full px-4 py-3 rounded-xl border-2 bg-white dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 text-base focus:ring-2 focus:border-transparent transition-all"
+                style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35) }}
+              />
+               
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-rose-700 dark:text-rose-300 mb-1.5 block">
