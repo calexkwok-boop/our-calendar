@@ -14,32 +14,28 @@ const PHOTO_TREATMENTS = Object.freeze({
     shellClassName: 'p-0',
     imageClassName: 'w-full h-full object-cover animate-ken-burns',
     imageStyle: { filter: 'saturate(1.08) contrast(1.06) brightness(0.96)' },
-    overlayClassName: 'absolute inset-0 bg-gradient-to-b from-slate-950/10 via-slate-950/20 to-slate-950/75',
-    label: 'Scenic',
+    overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.04),rgba(15,23,42,0.12)_45%,rgba(15,23,42,0.52)_100%)]',
   },
   food: {
     layout: 'postcard',
     shellClassName: 'px-6 py-10 sm:px-10',
     imageClassName: 'h-full w-full rounded-[2rem] object-cover shadow-[0_30px_80px_rgba(0,0,0,0.28)]',
     imageStyle: { filter: 'sepia(0.08) saturate(1.14) contrast(1.02) brightness(1.02)' },
-    overlayClassName: 'absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.20),transparent_32%),linear-gradient(180deg,rgba(15,23,42,0.12),rgba(15,23,42,0.78))]',
-    label: 'Taste',
+    overlayClassName: 'absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.20),transparent_32%),linear-gradient(180deg,rgba(15,23,42,0.05),rgba(15,23,42,0.18)_45%,rgba(15,23,42,0.46)_100%)]',
   },
   nightlife: {
     layout: 'editorial',
     shellClassName: 'px-5 py-8 sm:px-8',
     imageClassName: 'h-full w-full rounded-[2.25rem] object-cover shadow-[0_26px_80px_rgba(15,23,42,0.42)]',
     imageStyle: { filter: 'contrast(1.12) saturate(1.18) brightness(0.9) hue-rotate(-6deg)' },
-    overlayClassName: 'absolute inset-0 bg-[linear-gradient(135deg,rgba(88,28,135,0.28),rgba(15,23,42,0.82))]',
-    label: 'After Dark',
+    overlayClassName: 'absolute inset-0 bg-[linear-gradient(135deg,rgba(88,28,135,0.18),rgba(15,23,42,0.58))]',
   },
   reflective: {
     layout: 'polaroid',
     shellClassName: 'px-6 py-10 sm:px-10',
     imageClassName: 'h-full w-full rounded-[1.75rem] object-cover shadow-[0_24px_60px_rgba(0,0,0,0.24)]',
     imageStyle: { filter: 'contrast(0.96) saturate(0.92) brightness(1.03)' },
-    overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(15,23,42,0.72))]',
-    label: 'Reflect',
+    overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(15,23,42,0.42))]',
   },
 });
 
@@ -452,7 +448,7 @@ function TitleSlide({ highlight }) {
         className="absolute inset-0 scale-110 bg-cover bg-center blur-sm"
         style={{ backgroundImage: `url(${highlight.background})` }}
       />
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.12),rgba(15,23,42,0.36))]" />
       <div className="relative z-10 px-8 text-center text-white">
         <div className="mb-4 text-6xl animate-pulse">+</div>
         <h1 className="mb-3 text-5xl font-bold animate-fade-in">{highlight.title}</h1>
@@ -470,7 +466,7 @@ function PhotoHighlightSlide({ highlight }) {
     <div className="absolute inset-0 overflow-hidden">
       <div
         className="absolute inset-0 scale-110 bg-cover bg-center blur-2xl"
-        style={{ backgroundImage: `url(${highlight.photo})`, filter: 'saturate(1.05) brightness(0.8)' }}
+        style={{ backgroundImage: `url(${highlight.photo})`, filter: 'saturate(1.12) brightness(0.96) contrast(1.02)' }}
       />
       <div className={treatment.overlayClassName} />
       <div className={`relative z-10 flex h-full w-full items-center justify-center ${treatment.shellClassName}`}>
@@ -485,10 +481,7 @@ function PhotoHighlightSlide({ highlight }) {
       </div>
       <div className="absolute inset-x-0 bottom-0 z-10 px-7 pb-10 pt-20 text-white">
         <div className="mx-auto max-w-xl">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <span className="rounded-full bg-white/14 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] backdrop-blur-md">
-              {treatment.label}
-            </span>
+          <div className="mb-3 flex items-center justify-end gap-3">
             <RatingStars rating={highlight.rating} sizeClassName="text-xl" />
           </div>
           <h2 className="text-3xl font-bold leading-tight sm:text-4xl">{highlight.caption}</h2>
@@ -497,7 +490,7 @@ function PhotoHighlightSlide({ highlight }) {
           ) : null}
         </div>
       </div>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_52%,rgba(0,0,0,0.14)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_58%,rgba(15,23,42,0.08)_100%)]" />
     </div>
   );
 }
@@ -511,11 +504,6 @@ function TextHighlightSlide({ highlight }) {
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),transparent_28%),linear-gradient(180deg,rgba(15,23,42,0.12),rgba(15,23,42,0.38))]" />
       <div className="relative z-10 mx-auto max-w-2xl rounded-[2rem] border border-white/15 bg-white/10 px-8 py-10 text-center text-white backdrop-blur-md">
-        <div className="mb-4 flex items-center justify-center gap-2">
-          <span className="rounded-full bg-white/14 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
-            {treatment.label}
-          </span>
-        </div>
         <RatingStars rating={highlight.rating} justifyClassName="justify-center" sizeClassName="text-2xl" />
         <h2 className="mt-5 text-4xl font-bold leading-tight">{highlight.title}</h2>
         {highlight.location ? (
@@ -650,7 +638,6 @@ const getPhotoTreatment = ({ event, rating, photoIndex = 0 }) => {
   if (mood === 'food' && rating >= 4.5) {
     return {
       ...base,
-      label: 'Favorite meal',
       imageStyle: { ...base.imageStyle, filter: 'sepia(0.1) saturate(1.2) contrast(1.02) brightness(1.03)' },
     };
   }
@@ -660,15 +647,15 @@ const getPhotoTreatment = ({ event, rating, photoIndex = 0 }) => {
 const getTextTreatment = ({ event }) => {
   const mood = inferVisualMood(event);
   if (mood === 'nightlife') {
-    return { label: 'After Dark', background: 'linear-gradient(135deg, #581c87 0%, #0f172a 100%)' };
+    return { background: 'linear-gradient(135deg, #581c87 0%, #0f172a 100%)' };
   }
   if (mood === 'food') {
-    return { label: 'Taste', background: 'linear-gradient(135deg, #f97316 0%, #be185d 100%)' };
+    return { background: 'linear-gradient(135deg, #f97316 0%, #be185d 100%)' };
   }
   if (mood === 'reflective') {
-    return { label: 'Reflect', background: 'linear-gradient(135deg, #334155 0%, #0f172a 100%)' };
+    return { background: 'linear-gradient(135deg, #334155 0%, #0f172a 100%)' };
   }
-  return { label: 'Postcard', background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' };
+  return { background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' };
 };
 
 const getPhotoFrameClassName = (layout) => {
