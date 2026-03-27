@@ -1,5 +1,13 @@
 import React from 'react';
 
+const getRenderableText = (value) => {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') {
+    return String(value.text || value.label || value.title || '').trim();
+  }
+  return '';
+};
+
 export default function JourneyPanel({
   journeyHomeCtaLabel,
   journeyCoachLabel,
@@ -13,6 +21,11 @@ export default function JourneyPanel({
   primaryJourneyLoggedToday,
 }) {
   const panelClickHandler = primaryJourneyGoal ? onClick : onCtaClick;
+  const quoteText = getRenderableText(journeyQuote);
+  const quoteSource = journeyQuote && typeof journeyQuote === 'object'
+    ? String(journeyQuote.source || '').trim()
+    : '';
+  const coachText = getRenderableText(journeyCoachLabel);
 
   return (
     <div className="col-span-full">
@@ -47,8 +60,13 @@ export default function JourneyPanel({
             Today&apos;s Inspiration
           </div>
           <blockquote className="text-xl sm:text-2xl font-serif italic text-gray-800 dark:text-gray-100 leading-relaxed">
-            &quot;{journeyQuote}&quot;
+            &quot;{quoteText}&quot;
           </blockquote>
+          {quoteSource ? (
+            <div className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+              {quoteSource}
+            </div>
+          ) : null}
         </div>
 
         {primaryJourneyGoal ? (
@@ -82,7 +100,7 @@ export default function JourneyPanel({
               </div>
             </div>
 
-            {journeyCoachLabel ? (
+            {coachText ? (
               <div
                 className="
                   bg-white/60 dark:bg-black/20
@@ -95,7 +113,7 @@ export default function JourneyPanel({
               >
                 <span className="text-2xl">💡</span>
                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                  {journeyCoachLabel}
+                  {coachText}
                 </p>
               </div>
             ) : null}
