@@ -947,6 +947,7 @@ const SelectedDateDetails = ({
             const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
             const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
             const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
+            const categoryLabel = popupMeta ? 'We Event' : (category?.label || 'Other');
             const canDeleteThisEvent = canDeleteEventInActiveLayer?.(event);
             const eventSwipeKey = `${String(event.date || selectedDateKey || '')}:${String(event.id || '')}`;
             const rowOffset = eventSwipeDrag?.id === eventSwipeKey ? eventSwipeDrag.offset : (swipedEventKey === eventSwipeKey ? -88 : 0);
@@ -1017,7 +1018,7 @@ const SelectedDateDetails = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${category?.color || 'bg-gray-500'} text-white`}>
-                      {category?.label || 'Other'}
+                      {categoryLabel}
                     </span>
                   </div>
                   <div className="font-semibold text-base text-gray-900 dark:text-white mb-1">

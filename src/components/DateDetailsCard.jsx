@@ -500,11 +500,6 @@ const DateDetailsModal = ({
               >
                 Create We Event
               </button>
-              
-              <p className="text-xs text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
-                <span className="font-semibold">✓</span>
-                Joinable shared event with first-come, first-served signups
-              </p>
             </div>
           )}
           
@@ -1094,10 +1089,6 @@ const DateDetailsModal = ({
                   touchAction: 'pan-y',
                 }}
               >
-                <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                  Add email addresses for a quick invite, or copy a share link for anyone to join.
-                </p>
-
                 <div className="mb-4">
                   <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">
                     Invite by Email
@@ -1195,4 +1186,5 @@ const DateDetailsModal = ({
 };
 
 export default DateDetailsModal;
+
 
