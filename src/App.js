@@ -15122,23 +15122,145 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
   };
 
-  const handleQuickAdd = (options = {}) => {
-    if (!quickEntry.trim()) return;
-    const title = quickEntry.trim();
+  const submitPendingEvent = async (pendingEventDraft, time, options = {}) => {
+    const reopenTimePromptOnConflict = Boolean(options?.reopenTimePromptOnConflict);
+    if (!assertCanEditActiveLayer('add events to this calendar')) return false;
+    if (!pendingEventDraft) return false;
+    if (!pendingEventDraft.isMultiDay && time) {
+      const proposedDates = pendingEventDraft.datesToAdd || [];
+      const allConflicts = [];
+      for (const date of proposedDates) {
+        const dk = getDateKey(date);
+        const found = await findSchedulingConflicts({ dateKey: dk, time, ignoreEventId: null });
+        found.forEach((item) => allConflicts.push(item));
+      }
+      if (allConflicts.length > 0) {
+        const unique = Array.from(new Map(allConflicts.map((row) => [String(row.id), row])).values())
+          .sort((a, b) => a.deltaMs - b.deltaMs)
+          .slice(0, 4);
+        const lines = unique
+          .map((row) => `• ${row.title} (${row.layerName}) at ${formatConflictDateTime(row.date, row.time)}`)
+          .filter(Boolean);
+        if (reopenTimePromptOnConflict) {
+          setShowTimePrompt(false);
+        }
+        const ok = await openConflictPrompt({
+          title: `"${pendingEventDraft.title}" is within ${SCHEDULING_CONFLICT_WINDOW_HOURS} hours of:`,
+          lines,
+        });
+        if (!ok) {
+          if (reopenTimePromptOnConflict) {
+            setShowTimePrompt(true);
+          }
+          return false;
+        }
+      }
+    }
+    const updatedEvents = { ...events };
+    const multiDayId = pendingEventDraft.isMultiDay ? Date.now().toString() : null;
+    const createdEventIds = [];
+    pendingEventDraft.datesToAdd.forEach(date => {
+      const dateKey = getDateKey(date);
+      const eventId = pendingEventDraft.isPopupEvent ? generateUuid() : `${Date.now()}-${Math.random()}`;
+      const newEvent = {
+        id: eventId,
+        title: pendingEventDraft.title,
+        time: pendingEventDraft.isMultiDay ? null : (time || null),
+        date: dateKey,
+        category: pendingEventDraft.isPopupEvent ? 'popup_event' : selectedCategory,
+        description: String(pendingEventDraft.description || '').trim(),
+        isPrivate: isPrivate,
+        isUrgent: isUrgent,
+        isAnnual: recurrence === 'annual',
+        recurrence: recurrence,
+        annualMonth: recurrence === 'annual' ? (date.getMonth() + 1) : null,
+        annualDay: recurrence === 'annual' ? date.getDate() : null,
+        createdBy: currentUser,
+        createdAt: new Date().toISOString(),
+        isMultiDay: pendingEventDraft.isMultiDay,
+        multiDayId,
+        userId: user?.id || null,
+        moderationStatus: defaultModerationStatusForNewEvent,
+      };
+      createdEventIds.push(eventId);
+      const dateEvents = updatedEvents[dateKey] || [];
+      updatedEvents[dateKey] = [...dateEvents, newEvent].sort((a, b) => {
+        if (!a.time) return 1;
+        if (!b.time) return -1;
+        return a.time.localeCompare(b.time);
+      });
+    });
+    saveEvents(updatedEvents);
+    if (pendingEventDraft.isPopupEvent) {
+      const maxPeople = Math.max(1, Number(pendingEventDraft.popupMaxPeople || 1));
+      await createPopupEventRows(createdEventIds.map((eventId) => ({
+        layer_id: activeLayerId,
+        event_id: eventId,
+        max_people: maxPeople,
+        created_by_user_id: user?.id || null,
+        created_by_name: currentUser || user?.email || user?.phone || 'Member',
+        created_at: new Date().toISOString(),
+            })  ));
+      try { await supabase.from('events').update({ category: 'popup_event' }).in('id', createdEventIds).eq('layer_id', activeLayerId); } catch (e) { console.warn('events category update failed (popup):', e?.message || e); }
+
+       for (const eventId of createdEventIds) {
+        const eventDate = pendingEventDraft.datesToAdd.find((_, i) => createdEventIds[i] === eventId);
+        const dateKey = eventDate ? getDateKey(eventDate) : '';
+        supabase.from('popup_event_details').insert({
+          id: eventId,
+          calendar_id: activeLayerId,
+          created_by: user.id,
+          title: pendingEventDraft.title,
+          date: dateKey,
+          time: pendingEventDraft.isMultiDay ? null : (time || null),
+          max_players: maxPeople,
+          is_public: !isPrivate,
+          status: 'open',
+        }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
+
+        supabase.from('popup_event_members').insert({
+          event_id: eventId,
+          user_id: user.id,
+          display_name: resolveHandleLikeLabel(currentUser || user?.email || user?.phone || 'Host', user?.id),
+          role: 'host',
+        }).then(() => {});
+      }
+    }
+    setSelectedDates([]);
+    setRecurrence('once');
+    setSuggestedTime('');
+    setIsPopupEventDraft(false);
+    setPopupEventMaxPeopleDraft('10');
+    return true;
+  };
+
+  const handleQuickAdd = async (options = {}) => {
+    const title = String(options?.titleOverride ?? quickEntry).trim();
+    if (!title) return false;
     const datesToAdd = selectedDates.length > 1 ? selectedDates : [selectedDate];
     const parsedMax = Math.max(1, parseInt(String(popupEventMaxPeopleDraft || '').trim(), 10) || 1);
     const shouldCreatePopupEvent = typeof options?.isPopupEvent === 'boolean'
       ? options.isPopupEvent
       : Boolean(isPopupEventDraft);
-    setPendingEvent({
+    const nextPendingEvent = {
       title,
       datesToAdd,
       isMultiDay: selectedDates.length > 1,
       isPopupEvent: shouldCreatePopupEvent,
       popupMaxPeople: parsedMax,
-    });
+      description: String(options?.description || '').trim(),
+    };
+    if (options?.directCreate) {
+      const didCreate = await submitPendingEvent(nextPendingEvent, options?.time || null);
+      if (didCreate) {
+        setQuickEntry('');
+      }
+      return didCreate;
+    }
+    setPendingEvent(nextPendingEvent);
     setShowTimePrompt(true);
     setQuickEntry('');
+    return true;
   };
 
 
@@ -16045,8 +16167,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [isLoading, showAuth, showUserSetup, user?.id, activeLayerId]);
 
   const handleTimeSubmit = async (time) => {
-    if (!assertCanEditActiveLayer('add events to this calendar')) return;
     if (!pendingEvent) return;
+    const didCreate = await submitPendingEvent(pendingEvent, time, { reopenTimePromptOnConflict: true });
+    if (!didCreate) return;
+    setShowTimePrompt(false);
+    setPendingEvent(null);
+    return;
     if (!pendingEvent.isMultiDay && time) {
       const proposedDates = pendingEvent.datesToAdd || [];
       const allConflicts = [];

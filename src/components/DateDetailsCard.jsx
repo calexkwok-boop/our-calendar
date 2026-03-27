@@ -2,6 +2,54 @@
 import React, { useState } from 'react';
 import { X, Lock, AlertTriangle, Repeat, Settings, ChevronDown, Clock, User, Users } from 'lucide-react';
 
+const SMART_TIME_GROUPS = [
+  {
+    keywords: ['morning', 'breakfast', 'brunch', 'coffee', 'cafe', 'early', 'sunrise'],
+    buttons: [
+      { label: '7:00 AM', value: '07:00' },
+      { label: '8:00 AM', value: '08:00' },
+      { label: '9:00 AM', value: '09:00' },
+    ],
+  },
+  {
+    keywords: ['lunch', 'afternoon', 'noon', 'midday'],
+    buttons: [
+      { label: '12:00 PM', value: '12:00' },
+      { label: '12:30 PM', value: '12:30' },
+      { label: '1:00 PM', value: '13:00' },
+    ],
+  },
+  {
+    keywords: ['evening', 'dinner', 'supper', 'night', 'happy hour'],
+    buttons: [
+      { label: '6:00 PM', value: '18:00' },
+      { label: '6:30 PM', value: '18:30' },
+      { label: '7:00 PM', value: '19:00' },
+    ],
+  },
+  {
+    keywords: ['late', 'midnight', 'after party', 'afterparty'],
+    buttons: [
+      { label: '10:30 PM', value: '22:30' },
+      { label: '11:30 PM', value: '23:30' },
+      { label: '12:00 AM', value: '00:00' },
+    ],
+  },
+];
+
+const getSmartTimeSuggestions = (value) => {
+  const text = String(value || '').trim().toLowerCase();
+  if (!text) return [];
+  const matched = SMART_TIME_GROUPS.filter((group) =>
+    group.keywords.some((keyword) => text.includes(keyword))
+  );
+  return Array.from(
+    new Map(
+      matched.flatMap((group) => group.buttons).map((button) => [button.value, button])
+    ).values()
+  );
+};
+
 const DateDetailsModal = ({
   // Visibility
   isOpen,
@@ -93,11 +141,50 @@ const DateDetailsModal = ({
   const [eventCreationMode, setEventCreationMode] = useState(null); // null | 'me' | 'we'
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [quickLocation, setQuickLocation] = useState('');
+  const [meEventTime, setMeEventTime] = useState('');
+  const [weEventTime, setWeEventTime] = useState('');
   const accent = (themeAccentButtonStyle && themeAccentButtonStyle.backgroundColor) || '#a855f7';
+  const meEventSmartTimes = getSmartTimeSuggestions(quickEntry);
   
   if (!isOpen) return null;
   
   const selectedDateKey = getDateKey(selectedDate);
+  const resetCreationFields = () => {
+    setQuickEntry('');
+    setQuickLocation('');
+    setMeEventTime('');
+    setWeEventTime('');
+  };
+
+  const createMeEvent = async () => {
+    const base = String(quickEntry || '').trim();
+    if (!base) return;
+    const loc = String(quickLocation || '').trim();
+    const combined = loc ? `${base} @ ${loc}` : base;
+    const didCreate = await handleQuickAdd({
+      titleOverride: combined,
+      time: meEventTime || null,
+      directCreate: true,
+    });
+    if (!didCreate) return;
+    resetCreationFields();
+    setEventCreationMode(null);
+  };
+
+  const createWeEvent = async () => {
+    const title = String(quickEntry || '').trim();
+    if (!title) return;
+    try { setIsPopupEventDraft?.(true); } catch {}
+    const didCreate = await handleQuickAdd({
+      titleOverride: title,
+      time: weEventTime || null,
+      directCreate: true,
+      isPopupEvent: true,
+    });
+    if (!didCreate) return;
+    resetCreationFields();
+    setEventCreationMode(null);
+  };
   
   return (
     <div
@@ -170,8 +257,7 @@ const DateDetailsModal = ({
               <button
                 onClick={() => {
                   setEventCreationMode(null);
-                  setQuickEntry('');
-                  setQuickLocation('');
+                  resetCreationFields();
                 }}
                 className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1.5 -ml-1"
               >
@@ -184,18 +270,10 @@ const DateDetailsModal = ({
                 type="text"
                 value={quickEntry}
                 onChange={(e) => setQuickEntry(e.target.value)}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    const base = String(quickEntry || '').trim();
-                    const loc = String(quickLocation || '').trim();
-                    const combined = loc ? `${base} @ ${loc}` : base;
-                    setQuickEntry(combined);
-                    setTimeout(() => {
-                      handleQuickAdd();
-                      setQuickEntry('');
-                      setQuickLocation('');
-                      setEventCreationMode(null);
-                    }, 0);
+                    e.preventDefault();
+                    createMeEvent();
                   }
                 }}
                 placeholder={selectedDates.length > 1 ? "Vacation in Mexico" : "Dinner, workout, coffee..."}
@@ -212,18 +290,44 @@ const DateDetailsModal = ({
                            mt-2 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 text-base
                            focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all"
               />
+              <div className="rounded-xl border-2 border-gray-200 dark:border-gray-600 p-3 dark:bg-gray-700/40">
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" />
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={meEventTime}
+                  onChange={(e) => setMeEventTime(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-base focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all"
+                />
+                {meEventSmartTimes.length > 0 && (
+                  <div className="mt-3">
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                      Smart times for this event
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {meEventSmartTimes.map((button) => (
+                        <button
+                          key={button.value}
+                          type="button"
+                          onClick={() => setMeEventTime(button.value)}
+                          className={`px-3 py-2 rounded-full text-sm font-medium transition-all border ${
+                            meEventTime === button.value
+                              ? 'text-white shadow-sm'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600'
+                          }`}
+                          style={meEventTime === button.value ? (themeAccentButtonStyle || { backgroundColor: accent, color: '#fff' }) : undefined}
+                        >
+                          {button.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               <button
-                onClick={() => {
-                  const base = String(quickEntry || '').trim();
-                  const loc = String(quickLocation || '').trim();
-                  const combined = loc ? `${base} @ ${loc}` : base;
-                  setQuickEntry(combined);
-                  setTimeout(() => {
-                    handleQuickAdd();
-                    setQuickEntry('');
-                    setQuickLocation('');
-                  }, 0);
-                }}
+                onClick={createMeEvent}
                 className="w-full py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98]"
                 style={themeAccentButtonStyle}
               >
@@ -238,8 +342,7 @@ const DateDetailsModal = ({
               <button
                 onClick={() => {
                   setEventCreationMode(null);
-                  setQuickEntry('');
-                  setQuickLocation('');
+                  resetCreationFields();
                 }}
                 className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1.5 -ml-1"
               >
@@ -252,11 +355,10 @@ const DateDetailsModal = ({
                 type="text"
                 value={quickEntry}
                 onChange={(e) => setQuickEntry(e.target.value)}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      handleQuickAdd({ isPopupEvent: true });
-                      setQuickEntry('');
-                      setEventCreationMode(null);
+                      e.preventDefault();
+                      createWeEvent();
                     }
                   }}
                 placeholder="Friday night run club"
@@ -286,32 +388,17 @@ const DateDetailsModal = ({
                     Time (optional)
                   </label>
                   <input
-                    type="text"
-                    placeholder="6:00 PM"
+                    type="time"
+                    value={weEventTime}
+                    onChange={(e) => setWeEventTime(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border-2 bg-white dark:bg-gray-800 dark:text-white text-sm focus:ring-2"
                                style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35) }}
-                    onBlur={(e) => {
-                      // You can handle time parsing here if needed
-                      const val = e.target.value.trim();
-                      if (val) {
-                        // Append time to quickEntry if there's a value
-                        const currentEntry = quickEntry.trim();
-                        if (!currentEntry.includes(val)) {
-                          setQuickEntry(currentEntry + (currentEntry ? ' ' : '') + val);
-                        }
-                      }
-                    }}
                   />
                 </div>
               </div>
               
               <button
-                onClick={() => {
-                  try { setIsPopupEventDraft?.(true); } catch {}
-                  handleQuickAdd({ isPopupEvent: true });
-                  setQuickEntry('');
-                  setEventCreationMode(null);
-                }}
+                onClick={createWeEvent}
                 className="w-full py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98]"
                 style={themeAccentButtonStyle}
               >
