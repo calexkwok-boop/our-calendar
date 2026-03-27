@@ -30294,7 +30294,7 @@ transform: translateY(0);
         </div>
       </div>
     ))}
-    {!activeSubCalendar && (
+    {!activeSubCalendar && showJourneyTrophyCase && renderJourneyPortal((
       <TrophyCase
         isOpen={showJourneyTrophyCase}
         onClose={() => setShowJourneyTrophyCase(false)}
@@ -30303,7 +30303,7 @@ transform: translateY(0);
         darkMode={darkMode}
         accentColor={activeLayerPageTheme.accent}
       />
-    )}
+    ))}
     {showJourneyRunTrackerModal && renderJourneyRunTrackerModal()}
     {showJourneyWorkoutTrackerModal && renderJourneyWorkoutTrackerModal()}
     {showJourneyWeightTrackerModal && renderJourneyWeightTrackerModal()}

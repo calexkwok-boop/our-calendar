@@ -407,7 +407,7 @@ export function deriveJourneyTrophyCase({ goals = [], entries = [], now = Date.n
 const overlayStyle = {
   position: 'fixed',
   inset: 0,
-  zIndex: 80,
+  zIndex: 96,
   background: 'rgba(15, 23, 42, 0.58)',
   backdropFilter: 'blur(10px)',
   padding: 16,
@@ -416,7 +416,7 @@ const overlayStyle = {
 
 const modalStyle = {
   width: '100%',
-  maxWidth: 880,
+  maxWidth: 720,
   margin: '0 auto',
   borderRadius: 28,
   overflow: 'hidden',
