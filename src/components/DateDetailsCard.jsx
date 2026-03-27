@@ -1,6 +1,6 @@
 // DateDetailsModal.jsx - Redesigned with improved UX
 import React, { useState } from 'react';
-import { X, Lock, AlertTriangle, Repeat, Settings, ChevronDown, Clock, User, Users } from 'lucide-react';
+import { X, Lock, AlertTriangle, Repeat, Settings, ChevronDown, Clock, User, Users, Mail, Link2, Copy, Check } from 'lucide-react';
 
 const SMART_TIME_GROUPS = [
   {
@@ -48,6 +48,24 @@ const getSmartTimeSuggestions = (value) => {
       matched.flatMap((group) => group.buttons).map((button) => [button.value, button])
     ).values()
   );
+};
+
+const parseTimeInput = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return null;
+  const match = normalized.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+  if (!match) return null;
+
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2] ? parseInt(match[2], 10) : 0;
+  const period = match[3]?.toLowerCase();
+
+  if (minutes < 0 || minutes > 59 || hours < 0 || hours > 23) return null;
+  if (period === 'pm' && hours < 12) hours += 12;
+  if (period === 'am' && hours === 12) hours = 0;
+  if (!period && hours > 23) return null;
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
 const DateDetailsModal = ({
@@ -143,6 +161,10 @@ const DateDetailsModal = ({
   const [quickLocation, setQuickLocation] = useState('');
   const [meEventTime, setMeEventTime] = useState('');
   const [weEventTime, setWeEventTime] = useState('');
+  const [inviteCardEvent, setInviteCardEvent] = useState(null);
+  const [inviteEmailInput, setInviteEmailInput] = useState('');
+  const [inviteEmails, setInviteEmails] = useState([]);
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   const accent = (themeAccentButtonStyle && themeAccentButtonStyle.backgroundColor) || '#a855f7';
   const meEventSmartTimes = getSmartTimeSuggestions(quickEntry);
   
@@ -154,6 +176,22 @@ const DateDetailsModal = ({
     setQuickLocation('');
     setMeEventTime('');
     setWeEventTime('');
+  };
+  const resetInviteCard = () => {
+    setInviteCardEvent(null);
+    setInviteEmailInput('');
+    setInviteEmails([]);
+    setInviteLinkCopied(false);
+  };
+  const parseEmailTokens = (value) => String(value || '')
+    .split(/[,\s;\n]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+  const addInviteEmails = (value) => {
+    const nextEmails = parseEmailTokens(value).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+    if (nextEmails.length === 0) return;
+    setInviteEmails((prev) => Array.from(new Set([...prev, ...nextEmails])));
+    setInviteEmailInput('');
   };
 
   const createMeEvent = async () => {
@@ -177,15 +215,50 @@ const DateDetailsModal = ({
     const loc = String(quickLocation || '').trim();
     const combined = loc ? `${base} @ ${loc}` : base;
     try { setIsPopupEventDraft?.(true); } catch {}
-    const didCreate = await handleQuickAdd({
+    const result = await handleQuickAdd({
       titleOverride: combined,
-      time: weEventTime || null,
+      time: parseTimeInput(weEventTime) || null,
       directCreate: true,
       isPopupEvent: true,
     });
-    if (!didCreate) return;
+    if (!result?.ok) return;
+    const createdEventId = Array.isArray(result?.createdEventIds) ? result.createdEventIds[0] : null;
     resetCreationFields();
     setEventCreationMode(null);
+    if (createdEventId) {
+      const shareLink = typeof window !== 'undefined' ? `${window.location.origin}?popup=${createdEventId}` : '';
+      setInviteCardEvent({
+        id: createdEventId,
+        title: combined,
+        time: weEventTime || null,
+        shareLink,
+      });
+    }
+  };
+  const handleCopyInviteLink = async () => {
+    if (!inviteCardEvent?.shareLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteCardEvent.shareLink);
+      setInviteLinkCopied(true);
+      window.setTimeout(() => setInviteLinkCopied(false), 2000);
+    } catch {}
+  };
+  const handleEmailInvites = () => {
+    const pendingEmails = inviteEmailInput.trim() ? [...inviteEmails, ...parseEmailTokens(inviteEmailInput)] : inviteEmails;
+    const validEmails = Array.from(new Set(pendingEmails.filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))));
+    const subject = encodeURIComponent(`Join my We Event: ${inviteCardEvent?.title || 'We Event'}`);
+    const body = encodeURIComponent([
+      `Join my We Event${inviteCardEvent?.title ? `: ${inviteCardEvent.title}` : ''}`,
+      inviteCardEvent?.time ? `Time: ${inviteCardEvent.time}` : '',
+      inviteCardEvent?.shareLink || '',
+    ].filter(Boolean).join('\n'));
+    const recipients = encodeURIComponent(validEmails.join(','));
+    if (typeof window !== 'undefined') {
+      window.location.href = `mailto:${recipients}?subject=${subject}&body=${body}`;
+    }
+    if (inviteEmailInput.trim()) {
+      addInviteEmails(inviteEmailInput);
+    }
   };
   
   return (
@@ -409,11 +482,13 @@ const DateDetailsModal = ({
                     Time (optional)
                   </label>
                   <input
-                    type="time"
+                    type="text"
                     value={weEventTime}
                     onChange={(e) => setWeEventTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border-2 bg-white dark:bg-gray-800 dark:text-white text-sm focus:ring-2 appearance-none [color-scheme:dark] dark:[color-scheme:dark]"
-                                style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35) }}
+                    placeholder="6:00 PM"
+                    inputMode="numeric"
+                    className="w-full px-3 py-2 rounded-lg border-2 bg-white dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 text-sm focus:ring-2"
+                    style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35), fontSize: '16px' }}
                   />
                 </div>
               </div>
@@ -981,6 +1056,139 @@ const DateDetailsModal = ({
           
 
         </div>
+
+        {inviteCardEvent ? (
+          <div
+            className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4 bg-black/60 backdrop-blur-sm"
+            onClick={resetInviteCard}
+            style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+          >
+            <div
+              className="relative w-full min-h-[72dvh] sm:min-h-0 sm:w-[26rem] max-h-[calc(100dvh-env(safe-area-inset-top))] sm:max-h-[90vh] rounded-t-[28px] rounded-b-none sm:rounded-[28px] overflow-hidden border-t border-transparent dark:border-white/10 bg-white dark:bg-slate-950 shadow-2xl flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500" />
+              <div
+                className="relative overflow-hidden px-6 py-8"
+                style={{
+                  background: `linear-gradient(135deg, ${accent} 0%, #ec4899 52%, #fb923c 100%)`,
+                }}
+              >
+                <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-white/20 blur-2xl" />
+                <div className="absolute bottom-0 left-0 h-24 w-24 rounded-full bg-white/10 blur-xl" />
+
+                <div className="relative z-10">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 text-2xl font-semibold text-white backdrop-blur-sm">
+                    <Mail className="w-8 h-8" />
+                  </div>
+                  <h2 className="mb-2 text-3xl font-bold text-white">Invite people</h2>
+                  <p className="text-lg text-white/90">{inviteCardEvent.title}</p>
+                </div>
+              </div>
+
+              <div
+                className="relative z-10 flex-1 min-h-0 overflow-y-auto px-6 py-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] sm:pb-6"
+                style={{
+                  WebkitOverflowScrolling: 'touch',
+                  overscrollBehaviorY: 'contain',
+                  touchAction: 'pan-y',
+                }}
+              >
+                <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                  Add email addresses for a quick invite, or copy a share link for anyone to join.
+                </p>
+
+                <div className="mb-4">
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                    Invite by Email
+                  </label>
+                  <div className="rounded-2xl border-2 border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                    <input
+                      type="text"
+                      value={inviteEmailInput}
+                      onChange={(e) => setInviteEmailInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
+                          e.preventDefault();
+                          addInviteEmails(inviteEmailInput);
+                        }
+                      }}
+                      onBlur={() => addInviteEmails(inviteEmailInput)}
+                      placeholder="Add email addresses"
+                      className="w-full bg-transparent text-base text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-500"
+                      style={{ fontSize: '16px' }}
+                    />
+                    {inviteEmails.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {inviteEmails.map((email) => (
+                          <button
+                            key={email}
+                            type="button"
+                            onClick={() => setInviteEmails((prev) => prev.filter((item) => item !== email))}
+                            className="rounded-full bg-gray-200 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200"
+                          >
+                            {email} ×
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                    Share Link
+                  </label>
+                  <div className="flex items-center gap-2 rounded-2xl border-2 border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                    <Link2 className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" />
+                    <div className="min-w-0 flex-1 truncate text-sm text-gray-700 dark:text-gray-200">
+                      {inviteCardEvent.shareLink}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyInviteLink}
+                      className="inline-flex items-center gap-1 rounded-xl bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-white/10"
+                    >
+                      {inviteLinkCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      {inviteLinkCopied ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={handleEmailInvites}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-xl active:scale-95"
+                    style={{
+                      background: `linear-gradient(135deg, ${accent} 0%, #ec4899 100%)`,
+                    }}
+                  >
+                    <Mail className="h-5 w-5" />
+                    <span>Email Invites</span>
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyInviteLink}
+                      className="rounded-2xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      Copy Link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetInviteCard}
+                      className="rounded-2xl bg-red-100 px-4 py-3 text-sm font-semibold text-red-700 transition-all hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

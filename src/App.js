@@ -15231,7 +15231,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setSuggestedTime('');
     setIsPopupEventDraft(false);
     setPopupEventMaxPeopleDraft('10');
-    return true;
+    return {
+      ok: true,
+      createdEventIds,
+      pendingEvent: pendingEventDraft,
+      time: pendingEventDraft.isMultiDay ? null : (time || null),
+    };
   };
 
   const handleQuickAdd = async (options = {}) => {
@@ -15251,11 +15256,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       description: String(options?.description || '').trim(),
     };
     if (options?.directCreate) {
-      const didCreate = await submitPendingEvent(nextPendingEvent, options?.time || null);
-      if (didCreate) {
+      const result = await submitPendingEvent(nextPendingEvent, options?.time || null);
+      if (result?.ok) {
         setQuickEntry('');
       }
-      return didCreate;
+      return result;
     }
     setPendingEvent(nextPendingEvent);
     setShowTimePrompt(true);
@@ -16168,8 +16173,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const handleTimeSubmit = async (time) => {
     if (!pendingEvent) return;
-    const didCreate = await submitPendingEvent(pendingEvent, time, { reopenTimePromptOnConflict: true });
-    if (!didCreate) return;
+    const result = await submitPendingEvent(pendingEvent, time, { reopenTimePromptOnConflict: true });
+    if (!result?.ok) return;
     setShowTimePrompt(false);
     setPendingEvent(null);
     return;
