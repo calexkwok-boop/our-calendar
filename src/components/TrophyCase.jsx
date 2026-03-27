@@ -404,34 +404,6 @@ export function deriveJourneyTrophyCase({ goals = [], entries = [], now = Date.n
   };
 }
 
-const overlayStyle = {
-  position: 'fixed',
-  inset: 0,
-  zIndex: 96,
-  background: 'rgba(15, 23, 42, 0.58)',
-  backdropFilter: 'blur(10px)',
-  padding: 16,
-  overflowY: 'auto',
-};
-
-const modalStyle = {
-  width: '100%',
-  maxWidth: 720,
-  margin: '0 auto',
-  borderRadius: 28,
-  overflow: 'hidden',
-  border: '1px solid rgba(148, 163, 184, 0.18)',
-  background: 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 100%)',
-  boxShadow: '0 28px 80px rgba(15,23,42,0.22)',
-};
-
-const darkModalStyle = {
-  ...modalStyle,
-  border: '1px solid rgba(255,255,255,0.08)',
-  background: 'linear-gradient(180deg, rgba(15,23,42,0.98) 0%, rgba(17,24,39,0.98) 100%)',
-  boxShadow: '0 30px 80px rgba(2,6,23,0.55)',
-};
-
 const getCategoryColor = (category, accentColor) => {
   if (category === 'Consistency') return '#f97316';
   if (category === 'Reflection') return '#0ea5e9';
@@ -542,16 +514,36 @@ export default function TrophyCase({
 
   if (!isOpen) return null;
 
-  const surfaceStyle = darkMode ? darkModalStyle : modalStyle;
   const { earnedTrophies, lockedTrophies, stats } = trophyCase;
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[86] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+      onClick={onClose}
+      style={{
+        touchAction: 'none',
+        overscrollBehavior: 'none',
+        backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : 'rgba(15, 23, 42, 0.58)',
+        minHeight: '100dvh',
+      }}
+    >
       <div
-        style={surfaceStyle}
-        className="my-4"
+        className="relative overflow-hidden bg-white dark:bg-slate-950 rounded-t-[28px] rounded-b-none sm:rounded-2xl shadow-2xl p-0 w-full max-w-xl max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
         onClick={(event) => event.stopPropagation()}
+        style={{
+          touchAction: 'pan-y',
+          overscrollBehaviorY: 'contain',
+          WebkitOverflowScrolling: 'touch',
+          backgroundClip: 'padding-box',
+          clipPath: 'inset(0 round 28px 28px 0 0)',
+          boxShadow: darkMode
+            ? '0 24px 60px rgba(2, 6, 23, 0.62)'
+            : '0 28px 80px rgba(15,23,42,0.22)',
+          borderBottom: darkMode ? '1px solid rgb(2, 6, 23)' : undefined,
+          marginBottom: darkMode ? '-1px' : undefined,
+        }}
       >
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
         <div
           className="relative border-b px-5 py-5 sm:px-6"
           style={{

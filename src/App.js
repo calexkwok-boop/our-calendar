@@ -21,6 +21,7 @@ import WelcomeCover from "./components/WelcomeCover";
 import ExploreTab from "./components/ExploreTab";
 import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
+import TripHighlightReel from "./components/TripHighlightReel";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
 
 
@@ -26812,93 +26813,29 @@ transform: translateY(0);
     )}
 
     {showTripHighlightsModal && activeSubCalendar && (
-      <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex flex-col">
-        <div
-          className="flex items-center justify-between px-4 py-3 text-white"
-          style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}
-        >
-          <div>
-            <div className="text-sm font-semibold">Create Trip Highlights</div>
-            <div className="text-xs text-white/70">{activeSubCalendar.name}</div>
-          </div>
-          <button
-            onClick={() => setShowTripHighlightsModal(false)}
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto snap-y snap-mandatory px-4 pb-24 space-y-4">
-          {(tripHighlightsSlides || []).map((slide, index) => {
-            const hasImage = Boolean(slide?.image);
-            return (
-              <div
-                key={`${slide?.type || 'slide'}-${index}`}
-                className="snap-start min-h-[72vh] rounded-[2rem] overflow-hidden border border-white/10 bg-gradient-to-b from-purple-600 via-fuchsia-500 to-orange-400 shadow-2xl relative"
-              >
-                {hasImage && (
-                  <img
-                    src={slide.image}
-                    alt={slide.title || 'Trip highlight'}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                )}
-                <div className={`absolute inset-0 ${hasImage ? 'bg-gradient-to-b from-black/15 via-black/35 to-black/80' : 'bg-gradient-to-b from-purple-600 via-fuchsia-500 to-orange-400'}`} />
-                <div className="relative z-10 h-full flex flex-col justify-end p-6 text-white">
-                  {slide?.tag && (
-                    <span className="self-start mb-3 px-3 py-1 rounded-full bg-white/15 backdrop-blur text-[11px] font-semibold uppercase tracking-[0.18em]">
-                      {slide.tag}
-                    </span>
-                  )}
-                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-white/70 mb-2">{slide?.subtitle}</div>
-                  <div className="text-3xl sm:text-4xl font-bold leading-tight mb-2">{slide?.title}</div>
-                  {slide?.meta && <div className="text-sm text-white/80 mb-3">{slide.meta}</div>}
-                  {slide?.caption && <div className="text-sm sm:text-base text-white/90 max-w-md">{slide.caption}</div>}
-                  {Array.isArray(slide?.bullets) && slide.bullets.filter(Boolean).length > 0 && (
-                    <div className="mt-4 space-y-2">
-                      {slide.bullets.filter(Boolean).slice(0, 3).map((bullet, bulletIdx) => (
-                        <div key={bulletIdx} className="text-sm text-white/90 flex items-start gap-2">
-                          <span className="mt-1 w-1.5 h-1.5 rounded-full bg-white/80 shrink-0" />
-                          <span>{bullet}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div
-          className="px-4 pb-4 pt-3 grid grid-cols-1 gap-3 sm:grid-cols-4"
-          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-        >
-          <button
-            onClick={shareTripHighlightsWithFriends}
-            className="px-4 py-3 rounded-2xl bg-white text-gray-900 text-sm font-semibold"
-          >
-            Share with Friends
-          </button>
-          <button
-            onClick={prepareTripHighlightsForExplore}
-            className="px-4 py-3 rounded-2xl bg-white/15 text-white text-sm font-semibold"
-          >
-            Publish to Explore
-          </button>
-          <button
-            onClick={saveTripHighlightsToDevice}
-            className="px-4 py-3 rounded-2xl bg-white/15 text-white text-sm font-semibold"
-          >
-            Save to Photos
-          </button>
-          <button
-            onClick={() => setShowTripHighlightsModal(false)}
-            className="px-4 py-3 rounded-2xl bg-white/10 text-white text-sm font-medium"
-          >
-            Close
-          </button>
-        </div>
-      </div>
+      <TripHighlightReel
+        trip={{
+          ...activeSubCalendar,
+          startDate: getSubCalStartRaw(activeSubCalendar),
+          endDate: getSubCalEndRaw(activeSubCalendar),
+        }}
+        events={Object.entries(subCalendarEvents || {}).flatMap(([dk, arr]) => (
+          (arr || []).map((ev) => ({
+            ...ev,
+            date: dk,
+            rating: Number(subCalEventRatings[ev.id] || 0),
+            tags: subCalEventTagsMap[ev.id] || [],
+            review: String(subCalEventReviews[ev.id] || ''),
+            photos: (tripPhotos || []).filter((photo) => String(photo?.event_id || '') === String(ev?.id || '')),
+          }))
+        ))}
+        groupRatingsByEventId={subCalEventGroupRatings}
+        currentUserId={user?.id}
+        onClose={() => setShowTripHighlightsModal(false)}
+        onShare={shareTripHighlightsWithFriends}
+        onPublish={prepareTripHighlightsForExplore}
+        onSave={saveTripHighlightsToDevice}
+      />
     )}
 
     {/* -- Sub-Calendar Full View -- */}
