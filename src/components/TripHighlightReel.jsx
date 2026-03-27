@@ -63,96 +63,11 @@ export default function TripHighlightReel({
   const musicMenuRef = useRef(null);
 
   useEffect(() => {
-    const scored = [];
-
-    events.forEach((event) => {
-      const rating = getEffectiveRating(event, groupRatingsByEventId, currentUserId);
-      if (rating < 3) return;
-
-      let score = rating * 20;
-      const photos = normalizeEventPhotos(event.photos);
-      if (photos.length > 0) {
-        score += Math.min(photos.length, 5) * 5;
-        score += photos.filter((photo) => photo.hasPeople).length * 3;
-      }
-
-      const tags = Array.isArray(event.tags) ? event.tags : [];
-      if (tags.some((tag) => ['must_try', 'instagram', 'romantic', 'amazing_view', 'unforgettable'].includes(tag))) {
-        score += 15;
-      }
-      if (String(event.review || '').trim().length > 50) score += 10;
-      if (Array.isArray(event.voiceNotes) && event.voiceNotes.length > 0) score += 8;
-      if ((groupRatingsByEventId[String(event?.id || '')] || []).length > 1) score += 10;
-
-      const hour = event.time ? parseInt(String(event.time).split(':')[0], 10) : 12;
-      if (hour >= 6 && hour < 10) score += 3;
-      if (hour >= 18 && hour < 22) score += 5;
-
-      scored.push({
-        event,
-        score,
-        rating,
-        photos: photos.slice(0, 3),
-      });
-    });
-
-    scored.sort((a, b) => b.score - a.score);
-    const selected = [];
-    const selectedCountsByDate = {};
-
-    scored.forEach((item) => {
-      if (selected.length >= 15) return;
-      const eventDate = String(item?.event?.date || '');
-      const countForDate = Number(selectedCountsByDate[eventDate] || 0);
-      if (countForDate >= 3) return;
-      selected.push(item);
-      selectedCountsByDate[eventDate] = countForDate + 1;
-    });
-
-    const slides = [
-      {
-        type: 'title',
-        title: String(trip?.name || 'Trip').trim() || 'Trip',
-        subtitle: formatTripDates(trip?.startDate || trip?.start_date || trip?.start, trip?.endDate || trip?.end_date || trip?.end),
-        background: selected[0]?.photos[0]?.url || '',
-      },
-    ];
-
-    selected.forEach((item) => {
-      if (item.photos.length > 0) {
-        item.photos.forEach((photo, photoIndex) => {
-          slides.push({
-            type: 'photo',
-            photo: photo.url,
-            caption: item.event.title,
-            rating: item.rating,
-            date: item.event.date,
-            location: item.event.location,
-            treatment: getPhotoTreatment({ event: item.event, rating: item.rating, photoIndex }),
-          });
-        });
-      } else {
-        slides.push({
-          type: 'text',
-          title: item.event.title,
-          rating: item.rating,
-          date: item.event.date,
-          location: item.event.location,
-          review: item.event.review,
-          treatment: getTextTreatment({ event: item.event, rating: item.rating }),
-        });
-      }
-    });
-
-    slides.push({
-      type: 'stats',
-      totalEvents: events.length,
-      topRated: selected[0]?.event?.title || 'Top moment',
-      totalPhotos: events.reduce((sum, event) => sum + normalizeEventPhotos(event.photos).length, 0),
-      avgRating: scored.length > 0 ? (scored.reduce((sum, item) => sum + item.rating, 0) / scored.length).toFixed(1) : '0.0',
-    });
-
+    const normalizedMoments = buildScoredMoments(events, groupRatingsByEventId, currentUserId);
+    const slides = buildPremiumSlides(trip, normalizedMoments, events);
     setHighlights(slides);
+    setCurrentSlide(0);
+    setIsPlaying(false);
   }, [events, groupRatingsByEventId, currentUserId, trip]);
 
   useEffect(() => {
@@ -393,8 +308,10 @@ export default function TripHighlightReel({
 
       <div className="relative flex-1 overflow-hidden">
         {currentHighlight.type === 'title' && <TitleSlide highlight={currentHighlight} />}
+        {currentHighlight.type === 'chapter' && <ChapterSlide highlight={currentHighlight} />}
         {currentHighlight.type === 'photo' && <PhotoHighlightSlide highlight={currentHighlight} />}
         {currentHighlight.type === 'text' && <TextHighlightSlide highlight={currentHighlight} />}
+        {currentHighlight.type === 'spotlight' && <SpotlightSlide highlight={currentHighlight} />}
         {currentHighlight.type === 'stats' && <StatsHighlightSlide highlight={currentHighlight} />}
       </div>
 
@@ -458,6 +375,28 @@ function TitleSlide({ highlight }) {
   );
 }
 
+function ChapterSlide({ highlight }) {
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center px-6 py-12"
+      style={{ background: highlight.background || 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' }}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),transparent_26%),linear-gradient(180deg,rgba(15,23,42,0.12),rgba(15,23,42,0.42))]" />
+      <div className="relative z-10 mx-auto max-w-2xl text-center text-white">
+        {highlight.eyebrow ? (
+          <div className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+            {highlight.eyebrow}
+          </div>
+        ) : null}
+        <h2 className="text-5xl font-bold leading-none sm:text-6xl">{highlight.title}</h2>
+        {highlight.subtitle ? (
+          <p className="mx-auto mt-5 max-w-xl text-lg text-white/84 sm:text-xl">{highlight.subtitle}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function PhotoHighlightSlide({ highlight }) {
   const treatment = highlight?.treatment || PHOTO_TREATMENTS.scenic;
   const frameClassName = getPhotoFrameClassName(treatment.layout);
@@ -481,10 +420,18 @@ function PhotoHighlightSlide({ highlight }) {
       </div>
       <div className="absolute inset-x-0 bottom-0 z-10 px-7 pb-10 pt-20 text-white">
         <div className="mx-auto max-w-xl">
+          {highlight.eyebrow ? (
+            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-white/72">
+              {highlight.eyebrow}
+            </div>
+          ) : null}
           <div className="mb-3 flex items-center justify-end gap-3">
             <RatingStars rating={highlight.rating} sizeClassName="text-xl" />
           </div>
           <h2 className="text-3xl font-bold leading-tight sm:text-4xl">{highlight.caption}</h2>
+          {highlight.subcopy ? (
+            <p className="mt-3 max-w-lg text-sm leading-relaxed text-white/82 sm:text-base">{highlight.subcopy}</p>
+          ) : null}
           {highlight.location ? (
             <p className="mt-2 text-base text-white/85 sm:text-lg">{highlight.location}</p>
           ) : null}
@@ -504,8 +451,16 @@ function TextHighlightSlide({ highlight }) {
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),transparent_28%),linear-gradient(180deg,rgba(15,23,42,0.12),rgba(15,23,42,0.38))]" />
       <div className="relative z-10 mx-auto max-w-2xl rounded-[2rem] border border-white/15 bg-white/10 px-8 py-10 text-center text-white backdrop-blur-md">
+        {highlight.eyebrow ? (
+          <div className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-white/70">
+            {highlight.eyebrow}
+          </div>
+        ) : null}
         <RatingStars rating={highlight.rating} justifyClassName="justify-center" sizeClassName="text-2xl" />
         <h2 className="mt-5 text-4xl font-bold leading-tight">{highlight.title}</h2>
+        {highlight.subcopy ? (
+          <p className="mt-4 text-base leading-relaxed text-white/82 sm:text-lg">{highlight.subcopy}</p>
+        ) : null}
         {highlight.location ? (
           <p className="mt-4 text-xl text-white/88">{highlight.location}</p>
         ) : null}
@@ -517,17 +472,50 @@ function TextHighlightSlide({ highlight }) {
   );
 }
 
+function SpotlightSlide({ highlight }) {
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center px-6 py-12"
+      style={{ background: highlight.background || 'linear-gradient(135deg, #be185d 0%, #7c2d12 100%)' }}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_26%),linear-gradient(180deg,rgba(15,23,42,0.1),rgba(15,23,42,0.36))]" />
+      <div className="relative z-10 mx-auto max-w-2xl rounded-[2.5rem] border border-white/15 bg-white/10 px-8 py-10 text-center text-white shadow-[0_24px_70px_rgba(15,23,42,0.26)] backdrop-blur-md">
+        {highlight.eyebrow ? (
+          <div className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+            {highlight.eyebrow}
+          </div>
+        ) : null}
+        <h2 className="text-4xl font-bold leading-tight sm:text-5xl">{highlight.title}</h2>
+        {highlight.caption ? (
+          <p className="mt-4 text-lg text-white/88 sm:text-xl">{highlight.caption}</p>
+        ) : null}
+        {highlight.subcopy ? (
+          <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-white/78 sm:text-base">
+            {highlight.subcopy}
+          </p>
+        ) : null}
+        {highlight.location ? (
+          <p className="mt-5 text-sm uppercase tracking-[0.18em] text-white/62">{highlight.location}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function StatsHighlightSlide({ highlight }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-600 px-8">
+    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-fuchsia-900 px-8">
       <div className="text-center text-white">
-        <div className="mb-6 text-6xl">#</div>
-        <h2 className="mb-8 text-4xl font-bold">Trip Complete!</h2>
+        <div className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-white/65">Wrapped</div>
+        <h2 className="mb-3 text-4xl font-bold sm:text-5xl">Worth replaying.</h2>
+        <p className="mx-auto mb-8 max-w-xl text-base text-white/78 sm:text-lg">
+          A few of the moments that made this one memorable.
+        </p>
         <div className="grid max-w-lg grid-cols-2 gap-6">
-          <StatBubble icon="Events" value={highlight.totalEvents} label="Events" />
+          <StatBubble icon="Days Away" value={highlight.totalDays} label="Days Away" />
           <StatBubble icon="Photos" value={highlight.totalPhotos} label="Photos" />
           <StatBubble icon="Rating" value={highlight.avgRating} label="Avg Rating" />
-          <StatBubble icon="Top" value={highlight.topRated} label="Top Rated" small />
+          <StatBubble icon="Top" value={highlight.topRated} label="Top Moment" small />
         </div>
       </div>
     </div>
@@ -558,6 +546,199 @@ function RatingStars({ rating, justifyClassName = 'justify-start', sizeClassName
     </div>
   );
 }
+
+const buildScoredMoments = (events, groupRatingsByEventId, currentUserId) => (
+  (Array.isArray(events) ? events : [])
+    .map((event) => {
+      const rating = getEffectiveRating(event, groupRatingsByEventId, currentUserId);
+      const photos = normalizeEventPhotos(event?.photos || event?.photoUrls || []);
+      const review = String(event?.review || '').trim();
+      const mood = inferVisualMood(event);
+      const title = String(event?.title || '').toLowerCase();
+      const location = String(event?.location || '').toLowerCase();
+      const haystack = `${title} ${location} ${review.toLowerCase()}`;
+      let score = rating * 3;
+      score += photos.length * 1.5;
+      if (review) score += 2;
+      if (mood === 'food' || mood === 'nightlife') score += 1.5;
+      if (/(sunset|sunrise|view|beach|rooftop|favorite|best|must)/.test(haystack)) score += 1.5;
+      return { event, rating, photos, review, mood, score };
+    })
+    .sort((a, b) => b.score - a.score)
+);
+
+const buildPremiumSlides = (trip, moments, events) => {
+  const safeMoments = Array.isArray(moments) ? moments.filter(Boolean) : [];
+  const coverPhoto = safeMoments.find((moment) => moment.photos[0]?.url)?.photos[0]?.url
+    || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200';
+  const topMoments = safeMoments.slice(0, 8);
+  const scenicMoment = topMoments.find((moment) => moment.mood === 'scenic');
+  const foodMoment = topMoments.find((moment) => moment.mood === 'food');
+  const nightlifeMoment = topMoments.find((moment) => moment.mood === 'nightlife');
+  const favoriteMoment = topMoments[0];
+
+  const slides = [
+    {
+      type: 'title',
+      title: trip?.title || 'Trip Highlights',
+      subtitle: formatTripDates(trip?.startDate, trip?.endDate),
+      background: coverPhoto,
+    },
+  ];
+
+  if (scenicMoment) {
+    slides.push({
+      type: 'chapter',
+      eyebrow: 'Opening Scene',
+      title: buildChapterTitle(scenicMoment),
+      subtitle: buildChapterCaption(scenicMoment),
+      background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+    });
+  }
+
+  topMoments.forEach((moment, index) => {
+    const primaryPhoto = moment.photos[0]?.url;
+    const copy = buildEventCopy(moment, index);
+    if (primaryPhoto) {
+      slides.push({
+        type: 'photo',
+        photo: primaryPhoto,
+        caption: copy.title,
+        subcopy: copy.subcopy,
+        eyebrow: copy.eyebrow,
+        location: moment.event?.location || '',
+        rating: moment.rating,
+        treatment: getPhotoTreatment({ event: moment.event, rating: moment.rating, photoIndex: index }),
+      });
+    } else {
+      slides.push({
+        type: 'text',
+        title: copy.title,
+        subcopy: copy.subcopy,
+        eyebrow: copy.eyebrow,
+        location: moment.event?.location || '',
+        review: moment.review,
+        rating: moment.rating,
+        treatment: getTextTreatment({ event: moment.event }),
+      });
+    }
+
+    if (index === 1 && foodMoment) {
+      slides.push({
+        type: 'spotlight',
+        eyebrow: 'Best Meal',
+        title: buildSpotlightTitle(foodMoment),
+        caption: buildSpotlightCaption(foodMoment),
+        subcopy: foodMoment.review || 'The kind of stop you plan the next trip around.',
+        location: foodMoment.event?.location || '',
+        background: 'linear-gradient(135deg, #f97316 0%, #be185d 100%)',
+      });
+    }
+
+    if (index === 3 && nightlifeMoment) {
+      slides.push({
+        type: 'chapter',
+        eyebrow: 'After Hours',
+        title: buildChapterTitle(nightlifeMoment),
+        subtitle: buildChapterCaption(nightlifeMoment),
+        background: 'linear-gradient(135deg, #581c87 0%, #0f172a 100%)',
+      });
+    }
+  });
+
+  if (favoriteMoment) {
+    slides.push({
+      type: 'spotlight',
+      eyebrow: 'Favorite Moment',
+      title: buildSpotlightTitle(favoriteMoment),
+      caption: 'The one worth replaying first.',
+      subcopy: favoriteMoment.review || 'A memory that still holds up after the trip is over.',
+      location: favoriteMoment.event?.location || '',
+      background: 'linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)',
+    });
+  }
+
+  const totalPhotos = safeMoments.reduce((sum, moment) => sum + moment.photos.length, 0);
+  const ratings = safeMoments.map((moment) => Number(moment.rating || 0)).filter((rating) => rating > 0);
+  const avgRating = ratings.length ? (ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1) : '4.8';
+  const topRated = favoriteMoment?.event?.title || 'Best memory';
+
+  slides.push({
+    type: 'stats',
+    totalDays: estimateTripDays(trip, events),
+    totalPhotos,
+    avgRating,
+    topRated,
+  });
+
+  return slides;
+};
+
+const buildEventCopy = (moment, index) => {
+  const eventTitle = String(moment?.event?.title || 'A standout stop').trim();
+  if (moment.mood === 'food') {
+    return {
+      eyebrow: index === 0 ? 'Best Of The Trip' : 'Worth Ordering Again',
+      title: eventTitle,
+      subcopy: moment.review || 'One of those meals that becomes part of the trip story.',
+    };
+  }
+  if (moment.mood === 'nightlife') {
+    return {
+      eyebrow: 'After Dark',
+      title: eventTitle,
+      subcopy: moment.review || 'The night that kept the trip going a little longer.',
+    };
+  }
+  if (moment.mood === 'reflective') {
+    return {
+      eyebrow: 'Quiet Favorite',
+      title: eventTitle,
+      subcopy: moment.review || 'A slower moment that still made the reel.',
+    };
+  }
+  return {
+    eyebrow: index === 0 ? 'Core Memory' : 'Postcard Moment',
+    title: eventTitle,
+    subcopy: moment.review || 'A frame that deserved its own spot in the recap.',
+  };
+};
+
+const buildChapterTitle = (moment) => {
+  if (moment.mood === 'nightlife') return 'When the city woke up';
+  if (moment.mood === 'food') return 'The stops we kept talking about';
+  if (moment.mood === 'reflective') return 'The quieter side of the trip';
+  return 'The views that set the tone';
+};
+
+const buildChapterCaption = (moment) => (
+  moment?.event?.location
+    ? `Centered around ${moment.event.location}.`
+    : 'The scenes that made the trip feel bigger than the itinerary.'
+);
+
+const buildSpotlightTitle = (moment) => String(moment?.event?.title || 'Favorite Moment').trim();
+
+const buildSpotlightCaption = (moment) => {
+  if (moment.mood === 'food') return 'The reservation we would make again immediately.';
+  if (moment.mood === 'nightlife') return 'The night that earned a replay.';
+  if (moment.mood === 'reflective') return 'A slower moment that still stole the spotlight.';
+  return 'One of the moments that defined the whole trip.';
+};
+
+const estimateTripDays = (trip, events) => {
+  const start = new Date(trip?.startDate);
+  const end = new Date(trip?.endDate);
+  if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+    return Math.max(1, Math.round((end - start) / 86400000) + 1);
+  }
+  const uniqueDates = new Set(
+    (Array.isArray(events) ? events : [])
+      .map((event) => String(event?.date || '').trim())
+      .filter(Boolean)
+  );
+  return Math.max(1, uniqueDates.size || 1);
+};
 
 const getEffectiveRating = (event, groupRatingsByEventId, currentUserId) => {
   const localRating = Number(event?.rating || 0);
