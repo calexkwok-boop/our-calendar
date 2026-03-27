@@ -2036,8 +2036,11 @@ function App() {
   const photoDeleteHoldTimerRef = useRef(null);
   const photoTapRef = useRef({ id: null, at: 0, timer: null });
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
+  const photoTouchRef = useRef({ id: null, x: 0, y: 0 });
+  const photoClickSuppressRef = useRef({ id: null, until: 0 });
 
   const REACTION_EMOJIS = ['😍', '🔥', '👏', '😂', '🥹', '🤩', '💯', '🙌', '❤️'];
+  const PHOTO_REACTION_EMOJIS = ['😍', '❤️', '🥹', '😂', '🔥', '👏', '🙌', '🤩', '💯', '✨', '🎉', '😭', '😮', '😎', '🥰', '🙏', '💖', '📸'];
   const getTripPhotoReactionsLocalKey = (subCalId) => `subcal-trip-photo-reactions-${String(subCalId || '').trim()}`;
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
@@ -4053,6 +4056,11 @@ function App() {
     }
   };
 
+  const resetPhotoTapState = () => {
+    clearPhotoTapTimer();
+    photoTapRef.current = { id: null, at: 0, timer: null };
+  };
+
   const toggleTripPhotoReaction = (photo, emoji) => {
     const photoId = String(photo?.id || '').trim();
     const emojiKey = String(emoji || '').trim();
@@ -4082,6 +4090,12 @@ function App() {
     const photoId = String(photo?.id || '').trim();
     if (!photoId || isPhotoSelectionMode || photoDeleteMode) return;
     setTripPhotoReactionPickerId((prev) => (prev === photoId ? null : photoId));
+  };
+
+  const handlePhotoDoubleTap = (photo) => {
+    if (!photo || isPhotoSelectionMode || photoDeleteMode) return;
+    resetPhotoTapState();
+    openTripPhotoReactionPicker(photo);
   };
 
   const saveSinglePhotoToDevice = async (photo) => {
@@ -4131,8 +4145,9 @@ function App() {
     }, 550);
   };
 
-  const handlePhotoTap = (photo) => {
+  const handlePhotoTap = (photo, options = {}) => {
     if (!photo) return;
+    const source = String(options?.source || 'click');
     if (isPhotoSelectionMode) {
       toggleSelectedPhoto(photo.id);
       return;
@@ -4141,24 +4156,50 @@ function App() {
     const suppress = photoHoldSuppressRef.current;
     if (suppress.id === photo.id && Date.now() < suppress.until) return;
     const now = Date.now();
+    const clickSuppress = photoClickSuppressRef.current;
+    if (source === 'click' && clickSuppress.id === photo.id && now < clickSuppress.until) return;
     const prev = photoTapRef.current;
-    if (prev.id === photo.id && now - prev.at < 300) {
-      clearPhotoTapTimer();
-      photoTapRef.current = { id: null, at: 0, timer: null };
-      openTripPhotoReactionPicker(photo);
+    if (prev.id === photo.id && now - prev.at < 380) {
+      handlePhotoDoubleTap(photo);
       return;
     }
-    clearPhotoTapTimer();
+    resetPhotoTapState();
     const timer = setTimeout(() => {
       setLightboxPhoto(photo);
       photoTapRef.current = { id: null, at: 0, timer: null };
-    }, 240);
+    }, 280);
     photoTapRef.current = { id: photo.id, at: now, timer };
+  };
+
+  const handlePhotoTouchStart = (photo, event) => {
+    startPhotoHoldAction(photo);
+    const touch = event?.touches?.[0];
+    photoTouchRef.current = {
+      id: String(photo?.id || ''),
+      x: Number(touch?.clientX || 0),
+      y: Number(touch?.clientY || 0),
+    };
+  };
+
+  const handlePhotoTouchEnd = (photo, event) => {
+    clearPhotoReactionHold();
+    const touch = event?.changedTouches?.[0];
+    const start = photoTouchRef.current;
+    const moved = String(start?.id || '') === String(photo?.id || '')
+      && touch
+      && Math.hypot(
+        Number(touch?.clientX || 0) - Number(start?.x || 0),
+        Number(touch?.clientY || 0) - Number(start?.y || 0),
+      ) > 12;
+    photoTouchRef.current = { id: null, x: 0, y: 0 };
+    if (moved || isPhotoSelectionMode || photoDeleteMode) return;
+    photoClickSuppressRef.current = { id: String(photo?.id || ''), until: Date.now() + 500 };
+    handlePhotoTap(photo, { source: 'touch' });
   };
 
   useEffect(() => () => {
     clearPhotoReactionHold();
-    clearPhotoTapTimer();
+    resetPhotoTapState();
   }, []);
 
   useEffect(() => {
@@ -4178,6 +4219,14 @@ function App() {
 
   const toggleSelectedPhoto = (photoId) => {
     setSelectedPhotoIds(prev => prev.includes(photoId) ? prev.filter(id => id !== photoId) : [...prev, photoId]);
+  };
+
+  const selectAllTripPhotos = () => {
+    setSelectedPhotoIds((tripPhotos || []).map((photo) => String(photo?.id || '')).filter(Boolean));
+  };
+
+  const clearSelectedTripPhotos = () => {
+    setSelectedPhotoIds([]);
   };
 
   const closePhotoSelectionMode = () => {
@@ -18270,7 +18319,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!userKey) return [];
     const shared = `control-widgets-${userKey}`;
     const legacyScoped = layerKey ? `control-widgets-${userKey}-${layerKey}` : '';
-    return legacyScoped ? [shared, legacyScoped] : [shared];
+    return legacyScoped ? [legacyScoped, shared] : [shared];
   }, [user?.id, activeLayerId]);
   const getControlWidgetStorageMapKey = React.useCallback((uid = user?.id) => {
     const userKey = String(uid || '').trim();
@@ -26843,6 +26892,7 @@ transform: translateY(0);
           startDate: getSubCalStartRaw(activeSubCalendar),
           endDate: getSubCalEndRaw(activeSubCalendar),
         }}
+        tripPhotos={tripPhotos}
         events={Object.entries(subCalendarEvents || {}).flatMap(([dk, arr]) => (
           (arr || []).map((ev) => ({
             ...ev,
@@ -28308,6 +28358,13 @@ transform: translateY(0);
                   <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
                     {selectedPhotoIds.length} selected
                   </span>
+                  <button
+                    onClick={selectedPhotoIds.length === tripPhotos.length ? clearSelectedTripPhotos : selectAllTripPhotos}
+                    disabled={tripPhotos.length === 0}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 disabled:opacity-40"
+                  >
+                    {selectedPhotoIds.length === tripPhotos.length ? 'Clear All' : 'Select All'}
+                  </button>
                   {photoEventId && (
                     <button
                       onClick={linkSelectedPhotosToEvent}
@@ -28454,17 +28511,26 @@ transform: translateY(0);
                             key={photo.id}
                             className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer ${isSelectedPhoto ? 'ring-2 ring-purple-500' : ''}`}
                             onClick={() => handlePhotoTap(photo)}
+                            onDoubleClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handlePhotoDoubleTap(photo);
+                            }}
                             onMouseDown={() => startPhotoHoldAction(photo)}
                             onMouseUp={clearPhotoReactionHold}
                             onMouseLeave={clearPhotoReactionHold}
-                            onTouchStart={() => startPhotoHoldAction(photo)}
-                            onTouchEnd={clearPhotoReactionHold}
+                            onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
+                            onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
                             onTouchCancel={clearPhotoReactionHold}
                           >
                             <img
                               src={photo.url}
                               alt={photo.caption || ''}
                               className="w-full h-full object-cover"
+                              loading="lazy"
+                              decoding="async"
+                              sizes="(max-width: 640px) 33vw, 20vw"
+                              draggable={false}
                               onError={() => { markPhotoDeleted(photo.id); }}
                             />
                             {isPhotoSelectionMode && (
@@ -28503,8 +28569,9 @@ transform: translateY(0);
                               </div>
                             )}
                             {!isPhotoSelectionMode && !photoDeleteMode && isPhotoReactionPickerOpen && (
-                              <div className="trip-photo-reaction-picker absolute left-1/2 bottom-3 z-20 flex -translate-x-1/2 gap-1.5 rounded-[22px] border border-white/15 bg-black/72 p-2 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-                                {REACTION_EMOJIS.map((emoji) => (
+                              <div className="trip-photo-reaction-picker absolute left-2 right-2 bottom-3 z-20 overflow-x-auto rounded-[22px] border border-white/15 bg-black/72 p-2 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+                                <div className="flex w-max min-w-full items-center gap-1.5 pr-1">
+                                {PHOTO_REACTION_EMOJIS.map((emoji) => (
                                   <button
                                     key={`${photo.id}-${emoji}`}
                                     type="button"
@@ -28517,6 +28584,7 @@ transform: translateY(0);
                                     {emoji}
                                   </button>
                                 ))}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -28565,18 +28633,30 @@ transform: translateY(0);
                           const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
                           const isPhotoReactionPickerOpen = tripPhotoReactionPickerId === String(photo.id || '');
                           return (
-                          <div key={photo.id} className={`relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'}`}>
+                          <div
+                            key={photo.id}
+                            className={`relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'}`}
+                            onDoubleClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handlePhotoDoubleTap(photo);
+                            }}
+                          >
                             <img
                               src={photo.url}
                               alt={photo.caption || ''}
                               className="w-full max-h-72 object-cover cursor-pointer"
+                              loading="lazy"
+                              decoding="async"
+                              sizes="(max-width: 640px) 100vw, 720px"
+                              draggable={false}
                               onError={() => { markPhotoDeleted(photo.id); }}
                               onClick={() => handlePhotoTap(photo)}
                               onMouseDown={() => startPhotoHoldAction(photo)}
                               onMouseUp={clearPhotoReactionHold}
                               onMouseLeave={clearPhotoReactionHold}
-                              onTouchStart={() => startPhotoHoldAction(photo)}
-                              onTouchEnd={clearPhotoReactionHold}
+                              onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
+                              onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
                               onTouchCancel={clearPhotoReactionHold}
                             />
                             {isPhotoSelectionMode && (
@@ -28611,8 +28691,9 @@ transform: translateY(0);
                               {!isPhotoSelectionMode && photoDeleteMode && <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Delete mode</span>}
                             </div>
                             {!isPhotoSelectionMode && !photoDeleteMode && isPhotoReactionPickerOpen && (
-                              <div className="trip-photo-reaction-picker absolute left-3 right-3 bottom-3 z-20 flex justify-center gap-1.5 rounded-[22px] border border-white/15 bg-black/72 p-2 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-                                {REACTION_EMOJIS.map((emoji) => (
+                              <div className="trip-photo-reaction-picker absolute left-3 right-3 bottom-3 z-20 overflow-x-auto rounded-[22px] border border-white/15 bg-black/72 p-2 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+                                <div className="flex w-max min-w-full items-center gap-1.5 pr-1">
+                                {PHOTO_REACTION_EMOJIS.map((emoji) => (
                                   <button
                                     key={`${photo.id}-${emoji}`}
                                     type="button"
@@ -28625,6 +28706,7 @@ transform: translateY(0);
                                     {emoji}
                                   </button>
                                 ))}
+                                </div>
                               </div>
                             )}
                             {!isPhotoSelectionMode && photoDeleteMode && (

@@ -41,6 +41,7 @@ const PHOTO_TREATMENTS = Object.freeze({
 
 export default function TripHighlightReel({
   trip,
+  tripPhotos = [],
   events = [],
   groupRatingsByEventId = {},
   currentUserId,
@@ -64,11 +65,11 @@ export default function TripHighlightReel({
 
   useEffect(() => {
     const normalizedMoments = buildScoredMoments(events, groupRatingsByEventId, currentUserId);
-    const slides = buildPremiumSlides(trip, normalizedMoments, events);
+    const slides = buildPremiumSlides(trip, normalizedMoments, events, tripPhotos);
     setHighlights(slides);
     setCurrentSlide(0);
     setIsPlaying(false);
-  }, [events, groupRatingsByEventId, currentUserId, trip]);
+  }, [events, groupRatingsByEventId, currentUserId, trip, tripPhotos]);
 
   useEffect(() => {
     const nextTrackId = pickDefaultTrackId(events, groupRatingsByEventId, currentUserId);
@@ -425,9 +426,11 @@ function PhotoHighlightSlide({ highlight }) {
               {highlight.eyebrow}
             </div>
           ) : null}
-          <div className="mb-3 flex items-center justify-end gap-3">
-            <RatingStars rating={highlight.rating} sizeClassName="text-xl" />
-          </div>
+          {Number(highlight.rating || 0) > 0 ? (
+            <div className="mb-3 flex items-center justify-end gap-3">
+              <RatingStars rating={highlight.rating} sizeClassName="text-xl" />
+            </div>
+          ) : null}
           <h2 className="text-3xl font-bold leading-tight sm:text-4xl">{highlight.caption}</h2>
           {highlight.subcopy ? (
             <p className="mt-3 max-w-lg text-sm leading-relaxed text-white/82 sm:text-base">{highlight.subcopy}</p>
@@ -456,8 +459,10 @@ function TextHighlightSlide({ highlight }) {
             {highlight.eyebrow}
           </div>
         ) : null}
-        <RatingStars rating={highlight.rating} justifyClassName="justify-center" sizeClassName="text-2xl" />
-        <h2 className="mt-5 text-4xl font-bold leading-tight">{highlight.title}</h2>
+        {Number(highlight.rating || 0) > 0 ? (
+          <RatingStars rating={highlight.rating} justifyClassName="justify-center" sizeClassName="text-2xl" />
+        ) : null}
+        <h2 className={`${Number(highlight.rating || 0) > 0 ? 'mt-5' : ''} text-4xl font-bold leading-tight`}>{highlight.title}</h2>
         {highlight.subcopy ? (
           <p className="mt-4 text-base leading-relaxed text-white/82 sm:text-lg">{highlight.subcopy}</p>
         ) : null}
@@ -567,11 +572,14 @@ const buildScoredMoments = (events, groupRatingsByEventId, currentUserId) => (
     .sort((a, b) => b.score - a.score)
 );
 
-const buildPremiumSlides = (trip, moments, events) => {
+const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   const safeMoments = Array.isArray(moments) ? moments.filter(Boolean) : [];
-  const coverPhoto = safeMoments.find((moment) => moment.photos[0]?.url)?.photos[0]?.url
+  const memoryMoments = buildMemoryMoments(tripPhotos);
+  const coverPhoto = memoryMoments[0]?.photo?.url
+    || safeMoments.find((moment) => moment.photos[0]?.url)?.photos[0]?.url
     || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200';
-  const topMoments = safeMoments.slice(0, 8);
+  const topMoments = safeMoments.slice(0, 6);
+  const topMemoryMoments = memoryMoments.slice(0, 4);
   const scenicMoment = topMoments.find((moment) => moment.mood === 'scenic');
   const foodMoment = topMoments.find((moment) => moment.mood === 'food');
   const nightlifeMoment = topMoments.find((moment) => moment.mood === 'nightlife');
@@ -586,7 +594,15 @@ const buildPremiumSlides = (trip, moments, events) => {
     },
   ];
 
-  if (scenicMoment) {
+  if (topMemoryMoments.length > 0) {
+    slides.push({
+      type: 'chapter',
+      eyebrow: 'The Real Story',
+      title: 'The moments between the plans',
+      subtitle: 'The photos that mattered even when nothing was on the itinerary.',
+      background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)',
+    });
+  } else if (scenicMoment) {
     slides.push({
       type: 'chapter',
       eyebrow: 'Opening Scene',
@@ -596,7 +612,42 @@ const buildPremiumSlides = (trip, moments, events) => {
     });
   }
 
-  topMoments.forEach((moment, index) => {
+  const eventSlides = topMoments.map((moment, index) => ({ kind: 'event', moment, index }));
+  const memorySlides = topMemoryMoments.map((memory, index) => ({ kind: 'memory', memory, index }));
+  const mixedSlides = [];
+  const maxCount = Math.max(eventSlides.length, memorySlides.length);
+  for (let index = 0; index < maxCount; index += 1) {
+    if (memorySlides[index]) mixedSlides.push(memorySlides[index]);
+    if (eventSlides[index]) mixedSlides.push(eventSlides[index]);
+  }
+
+  mixedSlides.forEach((entry) => {
+    if (entry.kind === 'memory') {
+      const { memory, index } = entry;
+      slides.push({
+        type: 'photo',
+        photo: memory.photo.url,
+        caption: memory.title,
+        subcopy: memory.subcopy,
+        eyebrow: memory.eyebrow,
+        location: memory.meta,
+        rating: 0,
+        treatment: getMemoryPhotoTreatment(index),
+      });
+      if (index === 1 && topMemoryMoments.length >= 3) {
+        slides.push({
+          type: 'spotlight',
+          eyebrow: 'Little Moments',
+          title: 'Some of the best parts were never scheduled',
+          caption: 'The reel should remember the in-between moments too.',
+          subcopy: 'Family photos, candid stops, and the quiet parts of the trip deserve as much space as the itinerary.',
+          background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+        });
+      }
+      return;
+    }
+
+    const { moment, index } = entry;
     const primaryPhoto = moment.photos[0]?.url;
     const copy = buildEventCopy(moment, index);
     if (primaryPhoto) {
@@ -646,7 +697,17 @@ const buildPremiumSlides = (trip, moments, events) => {
     }
   });
 
-  if (favoriteMoment) {
+  if (topMemoryMoments[0]) {
+    slides.push({
+      type: 'spotlight',
+      eyebrow: 'Favorite Photo',
+      title: topMemoryMoments[0].title,
+      caption: 'The kind of memory you keep coming back to.',
+      subcopy: topMemoryMoments[0].subcopy,
+      location: topMemoryMoments[0].meta,
+      background: 'linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%)',
+    });
+  } else if (favoriteMoment) {
     slides.push({
       type: 'spotlight',
       eyebrow: 'Favorite Moment',
@@ -658,10 +719,12 @@ const buildPremiumSlides = (trip, moments, events) => {
     });
   }
 
-  const totalPhotos = safeMoments.reduce((sum, moment) => sum + moment.photos.length, 0);
+  const totalPhotos = Array.isArray(tripPhotos) && tripPhotos.length > 0
+    ? tripPhotos.length
+    : safeMoments.reduce((sum, moment) => sum + moment.photos.length, 0);
   const ratings = safeMoments.map((moment) => Number(moment.rating || 0)).filter((rating) => rating > 0);
   const avgRating = ratings.length ? (ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1) : '4.8';
-  const topRated = favoriteMoment?.event?.title || 'Best memory';
+  const topRated = topMemoryMoments[0]?.title || favoriteMoment?.event?.title || 'Best memory';
 
   slides.push({
     type: 'stats',
@@ -673,6 +736,80 @@ const buildPremiumSlides = (trip, moments, events) => {
 
   return slides;
 };
+
+const buildMemoryMoments = (tripPhotos) => (
+  normalizeTripAlbumPhotos(tripPhotos)
+    .filter((photo) => !String(photo?.event_id || '').trim())
+    .map((photo, index) => {
+      const score = (photo?.hasPeople ? 5 : 0)
+        + (photo?.is_cover ? 3 : 0)
+        + (photo?.date ? 1.2 : 0)
+        + Math.max(0, 4 - index * 0.08);
+      return {
+        photo,
+        score,
+        title: buildMemoryTitle(photo, index),
+        subcopy: buildMemorySubcopy(photo, index),
+        eyebrow: buildMemoryEyebrow(photo, index),
+        meta: formatMemoryMeta(photo),
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+);
+
+const buildMemoryTitle = (photo, index) => {
+  if (photo?.hasPeople) {
+    if (index === 0) return 'Just us';
+    if (index === 1) return 'The kind of photo you keep';
+    return 'One of the moments that mattered most';
+  }
+  if (photo?.date) return 'A favorite from the in-between';
+  return 'A memory worth keeping in the reel';
+};
+
+const buildMemorySubcopy = (photo, index) => {
+  if (photo?.hasPeople) {
+    return index === 0
+      ? 'Not everything important happened at a reservation or on the itinerary.'
+      : 'Some of the best parts of a trip are the photos that happen in the middle of everything else.';
+  }
+  return 'The reel should hold onto the quiet, unscheduled parts too.';
+};
+
+const buildMemoryEyebrow = (photo, index) => {
+  if (photo?.hasPeople) return index === 0 ? 'Family Moment' : 'Memory Moment';
+  return 'In Between';
+};
+
+const formatMemoryMeta = (photo) => {
+  const dateValue = String(photo?.date || '').trim();
+  if (!dateValue) return '';
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+const getMemoryPhotoTreatment = (index = 0) => {
+  const variants = [PHOTO_TREATMENTS.reflective, PHOTO_TREATMENTS.scenic, PHOTO_TREATMENTS.food];
+  return variants[index % variants.length] || PHOTO_TREATMENTS.reflective;
+};
+
+const normalizeTripAlbumPhotos = (photos) => (
+  (Array.isArray(photos) ? photos : [])
+    .map((photo, index) => {
+      if (!photo || typeof photo !== 'object') return null;
+      const url = String(photo.url || photo.src || photo.photoUrl || '').trim();
+      if (!url) return null;
+      return {
+        ...photo,
+        id: String(photo.id || `trip-photo-${index}`),
+        url,
+        hasPeople: Boolean(photo.hasPeople),
+        date: String(photo.date || photo.created_at || photo.createdAt || '').trim(),
+      };
+    })
+    .filter(Boolean)
+);
 
 const buildEventCopy = (moment, index) => {
   const eventTitle = String(moment?.event?.title || 'A standout stop').trim();
