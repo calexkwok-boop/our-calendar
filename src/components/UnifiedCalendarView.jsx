@@ -313,6 +313,8 @@ const UnifiedCalendarView = ({
           primaryJourneyGoal={primaryJourneyGoal}
           primaryJourneyGoalProgress={primaryJourneyGoalProgress}
           primaryJourneyLoggedToday={primaryJourneyLoggedToday}
+          accent={accent}
+          darkMode={darkMode}
         />
       </div>
 

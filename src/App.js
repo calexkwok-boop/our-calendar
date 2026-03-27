@@ -17437,7 +17437,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   const handleHomeJourneyCardCta = () => {
     if (!primaryJourneyGoal) {
-      openJourneyGoalFlow();
+      openJourneyEntryFlow();
       return;
     }
     if (primaryJourneyGoalType === 'run_walk') {
