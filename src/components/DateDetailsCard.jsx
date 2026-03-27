@@ -290,8 +290,14 @@ const DateDetailsModal = ({
                            mt-2 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 text-base
                            focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all"
               />
-              <div className="rounded-xl border-2 border-gray-200 dark:border-gray-600 p-3 dark:bg-gray-700/40">
-                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block uppercase tracking-wider flex items-center gap-1.5">
+              <div
+                className="rounded-2xl border-2 p-4 transition-all"
+                style={{
+                  borderColor: darkMode ? hexToRgba(accent, 0.38) : hexToRgba(accent, 0.2),
+                  background: darkMode ? hexToRgba(accent, 0.08) : hexToRgba(accent, 0.04),
+                }}
+              >
+                <label className="text-xs font-semibold mb-2 block uppercase tracking-wider flex items-center gap-1.5" style={{ color: darkMode ? hexToRgba(accent, 0.92) : accent }}>
                   <Clock className="w-3.5 h-3.5" />
                   Time
                 </label>
@@ -299,7 +305,13 @@ const DateDetailsModal = ({
                   type="time"
                   value={meEventTime}
                   onChange={(e) => setMeEventTime(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-base focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 rounded-2xl border text-base transition-all appearance-none [color-scheme:dark] dark:[color-scheme:dark]"
+                  style={{
+                    borderColor: darkMode ? hexToRgba(accent, 0.34) : hexToRgba(accent, 0.18),
+                    background: darkMode ? 'rgba(17,24,39,0.84)' : 'rgba(255,255,255,0.96)',
+                    color: darkMode ? '#ffffff' : '#111827',
+                    boxShadow: `inset 0 1px 0 ${hexToRgba(accent, darkMode ? 0.08 : 0.06)}`,
+                  }}
                 />
                 {meEventSmartTimes.length > 0 && (
                   <div className="mt-3">
