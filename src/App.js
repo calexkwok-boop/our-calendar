@@ -3490,10 +3490,19 @@ function App() {
     const photoDateKeys = Array.from(new Set(
       (loadedPhotos || []).map((photo) => String(photo?.date || '').trim()).filter(Boolean)
     )).sort();
-    const firstDateKey = itineraryDateKeys[0]
-      || photoDateKeys[0]
-      || sc.start_date;
-    setSubCalSelectedDate(new Date(`${firstDateKey}T00:00:00`));
+    const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
+    const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
+    const todayWithinTrip = startTs !== null && endTs !== null && todayTs !== null
+      && todayTs >= startTs
+      && todayTs <= endTs;
+    const selectedDateKey = todayWithinTrip
+      ? todayKey
+      : (
+        itineraryDateKeys[0]
+        || photoDateKeys[0]
+        || getSubCalStartRaw(sc)
+      );
+    setSubCalSelectedDate(new Date(`${selectedDateKey}T00:00:00`));
   };
 
   const inviteToSubCalendar = async (recipientOverride) => {
