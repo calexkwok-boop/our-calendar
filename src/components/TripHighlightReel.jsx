@@ -1,6 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Download, Share2, Sparkles, Music, X } from 'lucide-react';
 
+const HIGHLIGHT_REEL_TRACKS = Object.freeze([
+  {
+    id: 'cinematic-sunrise',
+    label: 'Cinematic',
+    vibe: 'scenic',
+    file: '/music/highlight-cinematic.mp3',
+  },
+  {
+    id: 'city-lights',
+    label: 'Upbeat',
+    vibe: 'nightlife',
+    file: '/music/highlight-upbeat.mp3',
+  },
+  {
+    id: 'golden-hour',
+    label: 'Chill',
+    vibe: 'food',
+    file: '/music/highlight-chill.mp3',
+  },
+  {
+    id: 'soft-postcard',
+    label: 'Reflective',
+    vibe: 'reflective',
+    file: '/music/highlight-reflective.mp3',
+  },
+]);
+
 // ============================================================================
 // SMART HIGHLIGHT REEL GENERATOR
 // ============================================================================
@@ -20,9 +47,13 @@ const TripHighlightReel = ({
   const [highlights, setHighlights] = useState([]);
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showMusicMenu, setShowMusicMenu] = useState(false);
+  const [selectedTrackId, setSelectedTrackId] = useState(HIGHLIGHT_REEL_TRACKS[0].id);
+  const [audioAvailable, setAudioAvailable] = useState(true);
   const intervalRef = useRef(null);
   const audioRef = useRef(null);
   const shareMenuRef = useRef(null);
+  const musicMenuRef = useRef(null);
 
   // ============================================================================
   // SMART CONTENT SELECTION ALGORITHM
@@ -164,6 +195,12 @@ const TripHighlightReel = ({
     generateHighlights();
   }, [events, groupRatingsByEventId, currentUserId, trip]);
 
+  useEffect(() => {
+    const nextTrackId = pickDefaultTrackId(events, groupRatingsByEventId, currentUserId);
+    setSelectedTrackId(nextTrackId);
+    setAudioAvailable(true);
+  }, [events, groupRatingsByEventId, currentUserId]);
+
   // ============================================================================
   // PLAYBACK CONTROLS
   // ============================================================================
@@ -191,14 +228,23 @@ const TripHighlightReel = ({
       }
     };
   }, [isPlaying, highlights.length]);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    audioRef.current.pause();
+    audioRef.current.load();
+    if (isPlaying && musicEnabled && audioAvailable) {
+      audioRef.current.play().catch(() => {});
+    }
+  }, [selectedTrackId, isPlaying, musicEnabled, audioAvailable]);
   
   const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-    
-    // Control background music
-    if (!isPlaying && musicEnabled && audioRef.current) {
-      audioRef.current.play();
-    } else if (audioRef.current) {
+    const nextPlaying = !isPlaying;
+    setIsPlaying(nextPlaying);
+    if (!audioRef.current) return;
+    if (nextPlaying && musicEnabled && audioAvailable) {
+      audioRef.current.play().catch(() => {});
+    } else {
       audioRef.current.pause();
     }
   };
@@ -213,6 +259,7 @@ const TripHighlightReel = ({
   
   const handleDownload = () => {
     setShowShareMenu(false);
+    setShowMusicMenu(false);
     if (onSave) {
       onSave(highlights);
       return;
@@ -222,6 +269,7 @@ const TripHighlightReel = ({
   
   const handleShare = () => {
     setShowShareMenu(false);
+    setShowMusicMenu(false);
     if (onShare) {
       onShare(highlights);
     }
@@ -229,7 +277,27 @@ const TripHighlightReel = ({
 
   const handlePublish = () => {
     setShowShareMenu(false);
+    setShowMusicMenu(false);
     if (onPublish) onPublish(highlights);
+  };
+
+  const handleToggleMusicEnabled = () => {
+    const nextEnabled = !musicEnabled;
+    setMusicEnabled(nextEnabled);
+    if (!audioRef.current) return;
+    if (!nextEnabled) {
+      audioRef.current.pause();
+      return;
+    }
+    if (isPlaying && audioAvailable) {
+      audioRef.current.play().catch(() => {});
+    }
+  };
+
+  const handleSelectTrack = (trackId) => {
+    setSelectedTrackId(trackId);
+    setAudioAvailable(true);
+    setShowMusicMenu(false);
   };
 
   useEffect(() => {
@@ -247,6 +315,21 @@ const TripHighlightReel = ({
     };
   }, [showShareMenu]);
 
+  useEffect(() => {
+    if (!showMusicMenu) return undefined;
+    const handleClickOutside = (event) => {
+      if (!musicMenuRef.current?.contains(event.target)) {
+        setShowMusicMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showMusicMenu]);
+
   if (highlights.length === 0) {
     return (
       <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
@@ -259,13 +342,18 @@ const TripHighlightReel = ({
   }
 
   const currentHighlight = highlights[currentSlide];
+  const selectedTrack = HIGHLIGHT_REEL_TRACKS.find((track) => track.id === selectedTrackId) || HIGHLIGHT_REEL_TRACKS[0];
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
       {/* Hidden audio element for background music */}
-      <audio ref={audioRef} loop>
+      <audio
+        ref={audioRef}
+        loop
+        onError={() => setAudioAvailable(false)}
+      >
         {/* In production, load from music library */}
-        <source src="/music/highlight-reel.mp3" type="audio/mpeg" />
+        <source src={selectedTrack.file} type="audio/mpeg" />
       </audio>
       
       {/* Top controls */}
@@ -282,13 +370,48 @@ const TripHighlightReel = ({
           </button>
           
           <div className="flex gap-2">
-            <button
-              onClick={() => setMusicEnabled(!musicEnabled)}
+          <button
+              onClick={handleToggleMusicEnabled}
               className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/30 transition-colors"
             >
               <Music className={`w-5 h-5 ${musicEnabled ? '' : 'opacity-50'}`} />
             </button>
-            
+
+            <div className="relative" ref={musicMenuRef}>
+              <button
+                onClick={() => setShowMusicMenu((prev) => !prev)}
+                className="min-w-[5.5rem] h-10 rounded-full bg-white/20 px-3 backdrop-blur-md flex items-center justify-center text-xs font-semibold tracking-[0.14em] uppercase text-white hover:bg-white/30 transition-colors"
+              >
+                {selectedTrack.label}
+              </button>
+              {showMusicMenu ? (
+                <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-white/15 bg-black/75 backdrop-blur-xl shadow-2xl">
+                  <div className="border-b border-white/10 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+                    Soundtrack
+                  </div>
+                  {HIGHLIGHT_REEL_TRACKS.map((track) => {
+                    const active = track.id === selectedTrackId;
+                    return (
+                      <button
+                        key={track.id}
+                        type="button"
+                        onClick={() => handleSelectTrack(track.id)}
+                        className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-colors ${active ? 'bg-white/12 text-white' : 'text-white hover:bg-white/10'}`}
+                      >
+                        <span>{track.label}</span>
+                        <span className="text-[11px] uppercase tracking-[0.16em] text-white/55">{track.vibe}</span>
+                      </button>
+                    );
+                  })}
+                  {!audioAvailable ? (
+                    <div className="border-t border-white/10 px-4 py-3 text-xs text-white/65">
+                      Add the matching mp3 files in `public/music` to enable playback.
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+             
             <button
               onClick={handleDownload}
               className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/30 transition-colors"
@@ -325,6 +448,12 @@ const TripHighlightReel = ({
               ) : null}
             </div>
           </div>
+        </div>
+
+        <div className="mt-3 text-center text-[11px] uppercase tracking-[0.18em] text-white/60">
+          {musicEnabled
+            ? (audioAvailable ? `Soundtrack: ${selectedTrack.label}` : `Soundtrack ready: ${selectedTrack.label}`)
+            : 'Soundtrack muted'}
         </div>
       </div>
       
@@ -434,30 +563,32 @@ const TripHighlightReel = ({
       
       {/* Bottom controls */}
       <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/60 to-transparent">
-        <div className="flex items-center justify-center gap-4">
-          <button
-            onClick={handlePrev}
-            disabled={currentSlide === 0}
-            className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/30 transition-colors disabled:opacity-30"
-          >
-            ◀
-          </button>
-          
-          <button
-            onClick={handlePlayPause}
-            className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-purple-600 hover:bg-gray-100 transition-colors shadow-lg"
-          >
-            {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
-          </button>
-          
-          <button
-            onClick={handleNext}
-            disabled={currentSlide === highlights.length - 1}
-            className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/30 transition-colors disabled:opacity-30"
-          >
-            ▶
-          </button>
-        </div>
+        {isPlaying ? null : (
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={handlePrev}
+              disabled={currentSlide === 0}
+              className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/30 transition-colors disabled:opacity-30"
+            >
+              ◀
+            </button>
+            
+            <button
+              onClick={handlePlayPause}
+              className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-purple-600 hover:bg-gray-100 transition-colors shadow-lg"
+            >
+              <Play className="w-8 h-8 ml-1" />
+            </button>
+            
+            <button
+              onClick={handleNext}
+              disabled={currentSlide === highlights.length - 1}
+              className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/30 transition-colors disabled:opacity-30"
+            >
+              ▶
+            </button>
+          </div>
+        )}
         
         <div className="text-center text-white text-sm mt-3 opacity-75">
           {currentSlide + 1} / {highlights.length}
@@ -509,6 +640,41 @@ const normalizeEventPhotos = (photos) => (
     })
     .filter(Boolean)
 );
+
+const pickDefaultTrackId = (events, groupRatingsByEventId, currentUserId) => {
+  const safeEvents = Array.isArray(events) ? events : [];
+  const scores = {
+    scenic: 0,
+    nightlife: 0,
+    food: 0,
+    reflective: 0,
+  };
+
+  safeEvents.forEach((event) => {
+    const title = String(event?.title || '').toLowerCase();
+    const location = String(event?.location || '').toLowerCase();
+    const review = String(event?.review || '').toLowerCase();
+    const tags = Array.isArray(event?.tags) ? event.tags.map((tag) => String(tag || '').toLowerCase()) : [];
+    const haystack = [title, location, review, tags.join(' ')].join(' ');
+    const rating = getEffectiveRating(event, groupRatingsByEventId, currentUserId);
+
+    if (/(sunset|sunrise|view|beach|coast|mountain|lake|hike|museum|landmark|scenic)/.test(haystack)) {
+      scores.scenic += 2 + rating * 0.2;
+    }
+    if (/(bar|club|cocktail|night|dance|party|dj|late)/.test(haystack)) {
+      scores.nightlife += 2 + rating * 0.2;
+    }
+    if (/(food|restaurant|breakfast|brunch|lunch|dinner|coffee|cafe|dessert|bakery)/.test(haystack)) {
+      scores.food += 2 + rating * 0.2;
+    }
+    if (/(spa|quiet|journal|walk|park|morning|reflect|temple|cathedral)/.test(haystack)) {
+      scores.reflective += 2 + rating * 0.2;
+    }
+  });
+
+  const topVibe = Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] || 'scenic';
+  return HIGHLIGHT_REEL_TRACKS.find((track) => track.vibe === topVibe)?.id || HIGHLIGHT_REEL_TRACKS[0].id;
+};
 
 const formatTripDates = (startDate, endDate) => {
   const start = new Date(startDate);
