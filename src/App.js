@@ -2037,7 +2037,7 @@ function App() {
   const photoTapRef = useRef({ id: null, at: 0, timer: null });
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
 
-  const REACTION_EMOJIS = ['??', '??', '??', '??', '??', '??', '??', '??', '??'];
+  const REACTION_EMOJIS = ['😍', '🔥', '👏', '😂', '🥹', '🤩', '💯', '🙌', '❤️'];
   const getTripPhotoReactionsLocalKey = (subCalId) => `subcal-trip-photo-reactions-${String(subCalId || '').trim()}`;
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
@@ -28458,8 +28458,8 @@ transform: translateY(0);
                               </div>
                             )}
                             {photo.caption && (
-                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <p className="text-white text-xs truncate">{photo.caption}</p>
+                              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-2">
+                                <p className="truncate text-xs text-white drop-shadow">{photo.caption}</p>
                               </div>
                             )}
                             {!isPhotoSelectionMode && photoDeleteMode && (
@@ -28470,8 +28470,8 @@ transform: translateY(0);
                                 <X className="w-3.5 h-3.5" />
                               </button>
                             )}
-                            <div className="absolute bottom-1 left-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                              <span className="bg-black/50 text-white px-1.5 py-0.5 rounded-full text-xs">{photo.uploaded_by}</span>
+                            <div className="pointer-events-none absolute left-1.5 top-1.5 text-xs opacity-90">
+                              <span className="rounded-full bg-black/45 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">{photo.uploaded_by}</span>
                             </div>
                             {!isPhotoSelectionMode && !photoDeleteMode && hasPhotoReactions && (
                               <div className="absolute left-1.5 right-1.5 bottom-1.5 flex flex-wrap gap-1 pointer-events-none">
@@ -28488,7 +28488,7 @@ transform: translateY(0);
                               </div>
                             )}
                             {!isPhotoSelectionMode && !photoDeleteMode && isPhotoReactionPickerOpen && (
-                              <div className="trip-photo-reaction-picker absolute left-1/2 -translate-x-1/2 bottom-3 z-20 flex gap-1 p-1.5 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-600">
+                              <div className="trip-photo-reaction-picker absolute left-1/2 bottom-3 z-20 flex -translate-x-1/2 gap-1.5 rounded-[22px] border border-white/15 bg-black/72 p-2 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
                                 {REACTION_EMOJIS.map((emoji) => (
                                   <button
                                     key={`${photo.id}-${emoji}`}
@@ -28497,7 +28497,7 @@ transform: translateY(0);
                                       e.stopPropagation();
                                       toggleTripPhotoReaction(photo, emoji);
                                     }}
-                                    className="text-base hover:scale-125 transition-transform p-1"
+                                    className="flex h-9 w-9 items-center justify-center rounded-full p-0 text-xl transition-transform hover:scale-110 hover:bg-white/10"
                                   >
                                     {emoji}
                                   </button>
@@ -28591,12 +28591,12 @@ transform: translateY(0);
                                     ))}
                                   </div>
                                 )}
-                                <p className="text-xs text-gray-400 dark:text-gray-500">👤 {photo.uploaded_by}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500">Uploaded by {photo.uploaded_by}</p>
                               </div>
                               {!isPhotoSelectionMode && photoDeleteMode && <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Delete mode</span>}
                             </div>
                             {!isPhotoSelectionMode && !photoDeleteMode && isPhotoReactionPickerOpen && (
-                              <div className="trip-photo-reaction-picker absolute left-3 right-3 bottom-3 z-20 flex justify-center gap-1 p-1.5 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-600">
+                              <div className="trip-photo-reaction-picker absolute left-3 right-3 bottom-3 z-20 flex justify-center gap-1.5 rounded-[22px] border border-white/15 bg-black/72 p-2 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
                                 {REACTION_EMOJIS.map((emoji) => (
                                   <button
                                     key={`${photo.id}-${emoji}`}
@@ -28605,7 +28605,7 @@ transform: translateY(0);
                                       e.stopPropagation();
                                       toggleTripPhotoReaction(photo, emoji);
                                     }}
-                                    className="text-base hover:scale-125 transition-transform p-1"
+                                    className="flex h-9 w-9 items-center justify-center rounded-full p-0 text-xl transition-transform hover:scale-110 hover:bg-white/10"
                                   >
                                     {emoji}
                                   </button>
@@ -30541,3 +30541,4 @@ const shakeStyle = `
 `;
 
 export default App;
+
