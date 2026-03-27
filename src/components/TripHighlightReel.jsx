@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Download, Share2, Sparkles, Music, X, Upload } from 'lucide-react';
+import { Play, Pause, Download, Share2, Sparkles, Music, X } from 'lucide-react';
 
 // ============================================================================
 // SMART HIGHLIGHT REEL GENERATOR
@@ -19,8 +19,10 @@ const TripHighlightReel = ({
   const [currentSlide, setCurrentSlide] = useState(0);
   const [highlights, setHighlights] = useState([]);
   const [musicEnabled, setMusicEnabled] = useState(true);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const intervalRef = useRef(null);
   const audioRef = useRef(null);
+  const shareMenuRef = useRef(null);
 
   // ============================================================================
   // SMART CONTENT SELECTION ALGORITHM
@@ -210,6 +212,7 @@ const TripHighlightReel = ({
   };
   
   const handleDownload = () => {
+    setShowShareMenu(false);
     if (onSave) {
       onSave(highlights);
       return;
@@ -218,14 +221,31 @@ const TripHighlightReel = ({
   };
   
   const handleShare = () => {
+    setShowShareMenu(false);
     if (onShare) {
       onShare(highlights);
     }
   };
 
   const handlePublish = () => {
+    setShowShareMenu(false);
     if (onPublish) onPublish(highlights);
   };
+
+  useEffect(() => {
+    if (!showShareMenu) return undefined;
+    const handleClickOutside = (event) => {
+      if (!shareMenuRef.current?.contains(event.target)) {
+        setShowShareMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showShareMenu]);
 
   if (highlights.length === 0) {
     return (
@@ -249,7 +269,10 @@ const TripHighlightReel = ({
       </audio>
       
       {/* Top controls */}
-      <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/60 to-transparent">
+      <div
+        className="absolute top-0 left-0 right-0 z-10 px-4 pb-4 pt-6 bg-gradient-to-b from-black/60 to-transparent"
+        style={{ paddingTop: 'max(1.25rem, calc(env(safe-area-inset-top) + 1rem))' }}
+      >
         <div className="flex items-center justify-between">
           <button
             onClick={onClose}
@@ -273,12 +296,34 @@ const TripHighlightReel = ({
               <Download className="w-5 h-5" />
             </button>
             
-            <button
-              onClick={handleShare}
-              className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/30 transition-colors"
-            >
-              <Share2 className="w-5 h-5" />
-            </button>
+            <div className="relative" ref={shareMenuRef}>
+              <button
+                onClick={() => setShowShareMenu((prev) => !prev)}
+                className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+              >
+                <Share2 className="w-5 h-5" />
+              </button>
+              {showShareMenu ? (
+                <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-2xl border border-white/15 bg-black/75 backdrop-blur-xl shadow-2xl">
+                  <button
+                    type="button"
+                    onClick={handleShare}
+                    className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-white transition-colors hover:bg-white/10"
+                  >
+                    <span>Share with Friends</span>
+                    <Share2 className="h-4 w-4 opacity-80" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePublish}
+                    className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-white transition-colors hover:bg-white/10"
+                  >
+                    <span>Publish to Explore</span>
+                    <Sparkles className="h-4 w-4 opacity-80" />
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -414,30 +459,6 @@ const TripHighlightReel = ({
           </button>
         </div>
         
-        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <button
-            type="button"
-            onClick={handleShare}
-            className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-100"
-          >
-            Share with Friends
-          </button>
-          <button
-            type="button"
-            onClick={handlePublish}
-            className="rounded-2xl bg-white/15 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/20"
-          >
-            Publish to Explore
-          </button>
-          <button
-            type="button"
-            onClick={handleDownload}
-            className="rounded-2xl bg-white/15 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/20"
-          >
-            Save to Photos
-          </button>
-        </div>
-
         <div className="text-center text-white text-sm mt-3 opacity-75">
           {currentSlide + 1} / {highlights.length}
         </div>
