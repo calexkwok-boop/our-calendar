@@ -412,8 +412,8 @@ const DateDetailsModal = ({
                     type="time"
                     value={weEventTime}
                     onChange={(e) => setWeEventTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border-2 bg-white dark:bg-gray-800 dark:text-white text-sm focus:ring-2"
-                               style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35) }}
+                    className="w-full px-3 py-2 rounded-lg border-2 bg-white dark:bg-gray-800 dark:text-white text-sm focus:ring-2 appearance-none [color-scheme:dark] dark:[color-scheme:dark]"
+                                style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35) }}
                   />
                 </div>
               </div>
