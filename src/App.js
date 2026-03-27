@@ -5255,7 +5255,7 @@ function App() {
   const CHAT_POPUP_PREFIX = '[popup-v1]';
   const CHAT_DELETED_PREFIX = '[deleted-v1]';
   const CHAT_MESSAGE_PREFIX = '[msg-v1]';
-  const CHAT_REACTION_EMOJIS = ['??', '??', '??', '??', '??', '??', '??', '?', '??', '??', '??', '??', '??', '??', '??', '??', '??', '??', '??', '??', '??', '?', '??', '??', '??', '??', '??', '??'];
+  const CHAT_REACTION_EMOJIS = ['❤️', '🔥', '👏', '😂', '😍', '🥹', '🤩', '👍', '👎', '🙌', '💯', '🎉', '✨', '🙏', '🤝', '😮', '😢', '😡', '🤔', '👀', '💀', '👌', '😎', '🥳', '😴', '🍾', '🚀', '🫶'];
   const POPUP_NO_MAX_SENTINEL = 1000000;
 
   const parseDateFromText = (text) => {
