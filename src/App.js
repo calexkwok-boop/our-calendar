@@ -22805,24 +22805,42 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         {showListPanel && (
           <div
             ref={listPanelRef}
-            className={`glass-panel rounded-2xl p-4 sm:p-5 mb-6 border dark:border-gray-700 transition-all ${
+            className={`glass-panel relative overflow-hidden rounded-[28px] p-4 sm:p-5 mb-6 border dark:border-gray-700 transition-all shadow-[0_24px_60px_rgba(15,23,42,0.14)] ${
               listPanelAttention ? 'ring-2' : ''
             }`}
-            style={listPanelAttention ? { borderColor: themeAccentBorder, boxShadow: `0 0 0 2px ${themeAccentBorder}` } : { borderColor: themeAccentBorder }}
+            style={listPanelAttention ? { borderColor: themeAccentBorder, boxShadow: `0 0 0 2px ${themeAccentBorder}, 0 24px 60px rgba(15,23,42,0.14)` } : { borderColor: themeAccentBorder }}
           >
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+              <div className="absolute -top-20 right-[-3.5rem] h-40 w-40 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.28 : 0.18)} 0%, transparent 70%)` }} />
+              <div className="absolute -bottom-16 left-[-2.5rem] h-32 w-32 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${hexToRgba(activeLayerPageTheme.backgroundTo, darkMode ? 0.24 : 0.12)} 0%, transparent 70%)` }} />
+            </div>
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
-                <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Shared Lists</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Clean space for groceries, reminders, and quick to-dos.</p>
+                <div className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ borderColor: themeAccentBorder, backgroundColor: darkMode ? hexToRgba(activeLayerPageTheme.accent, 0.12) : hexToRgba(activeLayerPageTheme.accent, 0.08), color: activeLayerPageTheme.accent }}>
+                  <span>Lists</span>
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: activeLayerPageTheme.accent }} />
+                  <span>{sharedListGroups.length}</span>
+                </div>
+                <h3 className="mt-3 text-lg sm:text-[1.35rem] font-semibold" style={themeAccentHeadingStyle}>Shared Lists</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Clean space for groceries, reminders, and quick to-dos.</p>
               </div>
-              <button onClick={() => setShowListPanel(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <button
+                onClick={() => setShowListPanel(false)}
+                className="rounded-full border p-2 transition-colors hover:bg-white/70 dark:hover:bg-white/10"
+                style={{ borderColor: darkMode ? 'rgba(255,255,255,0.1)' : hexToRgba(activeLayerPageTheme.accent, 0.16) }}
+              >
                 <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
 
             <div
-              className="p-3 rounded-xl border mb-3 bg-gray-100 dark:bg-gray-700/70"
-              style={{ borderColor: themeAccentBorder }}
+              className="mb-4 rounded-[24px] border p-3.5 backdrop-blur-sm"
+              style={{
+                borderColor: darkMode ? 'rgba(255,255,255,0.1)' : hexToRgba(activeLayerPageTheme.accent, 0.18),
+                background: darkMode
+                  ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 0%, rgba(15,23,42,0.82) 100%)`
+                  : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)`,
+              }}
             >
               <div className="flex flex-col sm:flex-row gap-2">
                 <input
@@ -22830,13 +22848,17 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   value={newSharedListTitle}
                   onChange={(e) => setNewSharedListTitle(e.target.value)}
                   placeholder="Create new list title"
-                  className="flex-1 px-3 py-2 text-base sm:text-sm border dark:bg-gray-800 dark:text-white rounded-lg focus:ring-1"
-                  style={{ fontSize: '16px', borderColor: themeAccentBorder }}
+                  className="flex-1 rounded-2xl border px-3.5 py-2.5 text-base sm:text-sm dark:text-white focus:ring-1"
+                  style={{
+                    fontSize: '16px',
+                    borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16),
+                    backgroundColor: darkMode ? 'rgba(15,23,42,0.86)' : 'rgba(255,255,255,0.9)',
+                  }}
                   onKeyPress={(e) => e.key === 'Enter' && createSharedList()}
                 />
                 <button
                   onClick={createSharedList}
-                  className="px-3 py-2 text-sm text-white rounded-lg hover:shadow-lg transition-all"
+                  className="px-4 py-2.5 text-sm text-white rounded-2xl hover:shadow-lg transition-all font-semibold"
                   style={themeAccentButtonStyle}
                   title="Create list"
                 >
@@ -22848,7 +22870,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-2">
               {sharedListGroups.map(group => (
                 editingListGroupId === group.id ? (
-                  <div key={group.id} className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-full border bg-white dark:bg-gray-700" style={{ borderColor: themeAccentBorder }}>
+                  <div key={group.id} className="shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-full border bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm" style={{ borderColor: themeAccentBorder }}>
                     <input
                       autoFocus
                       value={editingListGroupTitle}
@@ -22858,7 +22880,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         if (e.key === 'Escape') cancelEditingListGroup();
                       }}
                       onBlur={submitEditingListGroup}
-                      className="w-36 px-2 py-1 text-base sm:text-xs border rounded-md bg-white dark:bg-gray-800 dark:text-white"
+                      className="w-36 px-2 py-1 text-base sm:text-xs border rounded-xl bg-white dark:bg-gray-800 dark:text-white"
                       style={{ fontSize: '16px', borderColor: themeAccentBorder }}
                     />
                     <button
@@ -22877,10 +22899,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       setSelectedSharedListId(group.id);
                       cancelEditingListGroup();
                     }}
-                    className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-medium border transition-all ${
                       selectedSharedListId === group.id
                         ? 'text-white border-transparent'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                        : 'bg-white/75 dark:bg-slate-800/80 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 backdrop-blur-sm'
                     }`}
                     style={selectedSharedListId === group.id ? themeAccentButtonStyle : undefined}
                   >
@@ -22894,7 +22916,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   if (selected) startEditingListGroup(selected);
                 }}
                 disabled={!selectedSharedListId}
-                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800 disabled:opacity-50"
+                className="shrink-0 px-3.5 py-2 rounded-full text-xs font-medium bg-blue-50/90 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800 disabled:opacity-50"
                 title="Rename selected list"
               >
                 Rename
@@ -22902,32 +22924,36 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <button
                 onClick={() => deleteSharedList(selectedSharedListId)}
                 disabled={!selectedSharedListId}
-                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 disabled:opacity-50"
+                className="shrink-0 px-3.5 py-2 rounded-full text-xs font-medium bg-red-50/90 dark:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 disabled:opacity-50"
                 title="Delete selected list"
               >
                 Delete
               </button>
             </div>
             {selectedSharedListGroup && (
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3 px-1">
+              <p className="mb-3 px-1 text-[11px] text-gray-500 dark:text-gray-400">
                 {selectedSharedListGroup.title}: {totalSharedListItems} item{totalSharedListItems === 1 ? '' : 's'} · {completedSharedListCount} done
               </p>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-2 mb-3">
+            <div className="mb-4 flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={newListItemText}
                 onChange={(e) => setNewListItemText(e.target.value)}
                 placeholder="Add an item..."
-                className="flex-1 px-3 py-2 text-base sm:text-sm border dark:bg-gray-700 dark:text-white rounded-lg focus:ring-1"
-                style={{ fontSize: '16px', borderColor: themeAccentBorder }}
+                className="flex-1 rounded-2xl border px-3.5 py-2.5 text-base sm:text-sm dark:text-white focus:ring-1"
+                style={{
+                  fontSize: '16px',
+                  borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16),
+                  backgroundColor: darkMode ? 'rgba(15,23,42,0.7)' : 'rgba(255,255,255,0.85)',
+                }}
                 onKeyPress={(e) => e.key === 'Enter' && addSharedListItem()}
                 disabled={!selectedSharedListId}
               />
               <button
                 onClick={addSharedListItem}
-                className="px-3 py-2 text-sm rounded-lg transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 text-sm rounded-2xl transition-colors disabled:opacity-50 font-semibold"
                 style={themeAccentButtonStyle}
                 title="Add item"
                 disabled={!selectedSharedListId || !newListItemText.trim()}
@@ -22941,7 +22967,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </div>
             )}
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {sharedListGroups.length === 0 && (
                 <p className="text-sm text-gray-400 dark:text-gray-500 italic">Create a list above, then add items below.</p>
               )}
@@ -22952,13 +22978,22 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <p className="text-sm text-gray-400 dark:text-gray-500 italic">No items yet. Add your first one above.</p>
               )}
               {incompleteSharedListItems.map(item => (
-                <div key={item.id} className="flex items-center gap-2.5 p-2.5 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600">
+                <div
+                  key={item.id}
+                  className="flex items-center gap-2.5 rounded-[20px] border px-3 py-3 backdrop-blur-sm transition-all"
+                  style={{
+                    borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, 0.1),
+                    background: darkMode
+                      ? 'rgba(15,23,42,0.74)'
+                      : 'rgba(255,255,255,0.82)',
+                  }}
+                >
                   <button
                     onClick={() => toggleSharedListItem(item)}
-                    className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
+                    className={`h-5 w-5 rounded-full border flex items-center justify-center text-[11px] transition-all ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500 bg-white/70 dark:bg-slate-800/70'}`}
                     title={item.done ? 'Mark incomplete' : 'Mark complete'}
                   >
-                    {item.done ? '?' : ''}
+                    {item.done ? '✓' : ''}
                   </button>
                   {editingListItemId === item.id ? (
                     <input
@@ -22970,7 +23005,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         if (e.key === 'Enter') saveSharedListItemText(item);
                         if (e.key === 'Escape') { setEditingListItemId(null); setEditingListText(''); }
                       }}
-                      className="flex-1 text-sm px-2 py-1 border dark:bg-gray-800 dark:text-white rounded-md focus:ring-1"
+                      className="flex-1 text-sm px-2 py-1.5 border dark:bg-gray-800 dark:text-white rounded-xl focus:ring-1"
                       style={{ borderColor: themeAccentBorder }}
                     />
                   ) : (
@@ -22981,7 +23016,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   {editingListItemId !== item.id && (
                     <button
                       onClick={() => startEditingListItem(item)}
-                      className="p-1 rounded-lg"
+                      className="rounded-xl p-1.5"
                       style={themeAccentSoftButtonStyle}
                       title="Edit item"
                     >
@@ -22990,7 +23025,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   )}
                   <button
                     onClick={() => removeSharedListItem(item.id)}
-                    className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"
+                    className="rounded-xl p-1.5 hover:bg-red-100 dark:hover:bg-red-900"
                     title="Delete item"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-red-500" />
@@ -22998,19 +23033,28 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
               ))}
               {completedSharedListItems.length > 0 && (
-                <div className="pt-2">
-                  <div className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    Completed ({completedSharedListItems.length})
-                  </div>
-                  <div className="space-y-1.5">
+                  <div className="pt-2">
+                    <div className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Completed ({completedSharedListItems.length})
+                    </div>
+                  <div className="space-y-2">
                     {completedSharedListItems.map(item => (
-                      <div key={item.id} className="flex items-center gap-2.5 p-2.5 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600">
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-2.5 rounded-[20px] border px-3 py-3 opacity-85 backdrop-blur-sm"
+                        style={{
+                          borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, 0.08),
+                          background: darkMode
+                            ? 'rgba(15,23,42,0.56)'
+                            : 'rgba(248,250,252,0.9)',
+                        }}
+                      >
                         <button
                           onClick={() => toggleSharedListItem(item)}
-                          className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
+                          className={`h-5 w-5 rounded-full border flex items-center justify-center text-[11px] ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
                           title={item.done ? 'Mark incomplete' : 'Mark complete'}
                         >
-                          {item.done ? '?' : ''}
+                          {item.done ? '✓' : ''}
                         </button>
                         {editingListItemId === item.id ? (
                           <input
@@ -23022,7 +23066,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               if (e.key === 'Enter') saveSharedListItemText(item);
                               if (e.key === 'Escape') { setEditingListItemId(null); setEditingListText(''); }
                             }}
-                            className="flex-1 text-sm px-2 py-1 border dark:bg-gray-800 dark:text-white rounded-md focus:ring-1"
+                            className="flex-1 text-sm px-2 py-1.5 border dark:bg-gray-800 dark:text-white rounded-xl focus:ring-1"
                             style={{ borderColor: themeAccentBorder }}
                           />
                         ) : (
@@ -23033,7 +23077,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         {editingListItemId !== item.id && (
                           <button
                             onClick={() => startEditingListItem(item)}
-                            className="p-1 rounded-lg"
+                            className="rounded-xl p-1.5"
                             style={themeAccentSoftButtonStyle}
                             title="Edit item"
                           >
@@ -23042,7 +23086,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         )}
                         <button
                           onClick={() => removeSharedListItem(item.id)}
-                          className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg"
+                          className="rounded-xl p-1.5 hover:bg-red-100 dark:hover:bg-red-900"
                           title="Delete item"
                         >
                           <Trash2 className="w-3.5 h-3.5 text-red-500" />
