@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Plus, Trash2 } from 'lucide-react';
 import Agenda from './Agenda';
+import JourneyPanel from './JourneyPanel';
 
 // simple color helper
 const hexToRgba = (hex, alpha = 1) => {
@@ -80,6 +81,16 @@ const UnifiedCalendarView = ({
   // User
   user,
   userName: externalUserName,
+  primaryJourneyGoal = null,
+  primaryJourneyGoalProgress = 0,
+  primaryJourneyProgressText = '',
+  journeySupportLabel = '',
+  journeyCoachLabel = '',
+  journeyQuote = '',
+  journeyHomeCtaLabel = 'Open Journey',
+  primaryJourneyLoggedToday = false,
+  onOpenJourney,
+  onJourneyCtaClick,
 }) => {
   const scrollToSelectedDateDetails = () => {
     window.requestAnimationFrame(() => {
@@ -289,6 +300,21 @@ const UnifiedCalendarView = ({
           accent={accent}
         />
       )}
+
+      <div className="mt-4">
+        <JourneyPanel
+          journeyHomeCtaLabel={journeyHomeCtaLabel}
+          journeyCoachLabel={journeyCoachLabel}
+          journeyProgressText={primaryJourneyProgressText}
+          journeyQuote={journeyQuote}
+          journeySupportLabel={journeySupportLabel}
+          onClick={onOpenJourney}
+          onCtaClick={onJourneyCtaClick}
+          primaryJourneyGoal={primaryJourneyGoal}
+          primaryJourneyGoalProgress={primaryJourneyGoalProgress}
+          primaryJourneyLoggedToday={primaryJourneyLoggedToday}
+        />
+      </div>
 
       {/* Trips starter (under Today's schedule) */}
       {typeof onStartTrip === 'function' && (

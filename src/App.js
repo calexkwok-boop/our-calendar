@@ -17307,6 +17307,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     deferJourneyOverlayOpen(() => setShowJourneyLogModal(true));
   };
 
+  const handleHomeJourneyCardCta = () => {
+    if (!primaryJourneyGoal) {
+      openJourneyGoalFlow();
+      return;
+    }
+    if (primaryJourneyGoalType === 'run_walk') {
+      openJourneyRunTracker(primaryJourneyGoal);
+      return;
+    }
+    if (primaryJourneyGoalType === 'workout') {
+      openJourneyWorkoutTracker(primaryJourneyGoal);
+      return;
+    }
+    if (primaryJourneyGoalType === 'lose_weight') {
+      openJourneyWeightTracker(primaryJourneyGoal);
+      return;
+    }
+    openJourneyLogFlow(primaryJourneyGoal);
+  };
+
   const addJourneyGoal = () => {
     const title = String(journeyGoalDraft?.title || '').trim();
     const target = Math.max(0, normalizeJourneyNumber(journeyGoalDraft?.target));
@@ -23629,120 +23649,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               )}
             </div>
 
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={openJourneyScreen}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  openJourneyScreen();
-                }
-              }}
-              className="relative glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-4 cursor-pointer transition-all hover:bg-white/90 dark:hover:bg-white/[0.08] overflow-hidden"
-              style={{
-                background: darkMode
-                  ? 'linear-gradient(135deg, rgba(251,191,36,0.08) 0%, rgba(245,158,11,0.06) 100%)'
-                  : 'linear-gradient(135deg, #fff7ed 0%, #fffbeb 45%, #fef3c7 100%)',
-              }}
-            >
-
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="min-w-0">
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Journey</h3>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {primaryJourneyGoal ? 'Keep your personal progress close, but secondary.' : 'A quieter place for goals and reflection.'}
-                  </div>
-                </div>
-                <div className="shrink-0 text-[11px] font-medium" style={themeAccentTextStyle}>
-                  {primaryJourneyGoal ? `${Math.round(primaryJourneyGoalProgress * 100)}%` : 'Private'}
-                </div>
-              </div>
-
-              <div className="min-w-0">
-                {primaryJourneyGoal ? (
-                  <>
-                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
-                      {primaryJourneyGoal.title}
-                    </div>
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-                      {primaryJourneyProgressText}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Set a goal, journal, or track something meaningful.
-                  </div>
-                )}
-              </div>
-
-              {primaryJourneyGoal ? (
-                <>
-                  <div className="mt-3">
-                    <div className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                      <span>{journeySupportLabel}</span>
-                      <span>{Math.round(primaryJourneyGoalProgress * 100)}%</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
-                      <div
-                        className="h-2 rounded-full transition-all duration-700 ease-out"
-                        style={{
-                          width: `${primaryJourneyGoalProgress > 0 ? Math.max(6, Math.round(primaryJourneyGoalProgress * 100)) : 0}%`,
-                          background: `linear-gradient(90deg, ${activeLayerPageTheme.accent} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.72)} 100%)`,
-                          boxShadow: `0 0 12px ${hexToRgba(activeLayerPageTheme.accent, 0.4)}`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {journeyCoachLabel ? (
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                      {journeyCoachLabel}
-                    </div>
-                  ) : null}
-
-                  <div className="mt-3 flex items-center">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (primaryJourneyGoalType === 'run_walk') openJourneyRunTracker(primaryJourneyGoal);
-                        else if (primaryJourneyGoalType === 'workout') openJourneyWorkoutTracker(primaryJourneyGoal);
-                        else if (primaryJourneyGoalType === 'lose_weight') openJourneyWeightTracker(primaryJourneyGoal);
-                        else openJourneyLogFlow(primaryJourneyGoal);
-                      }}
-                      className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all ${primaryJourneyLoggedToday ? 'border text-gray-700 dark:text-gray-200' : 'text-white'}`}
-                      style={primaryJourneyLoggedToday
-                        ? {
-                            borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16),
-                            backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : hexToRgba(activeLayerPageTheme.accent, 0.08),
-                          }
-                        : themeAccentButtonStyle}
-                    >
-                      {journeyHomeCtaLabel}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="mt-3 flex items-center">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openJourneyScreen();
-                    }}
-                    className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-                    style={{
-                      ...themeAccentButtonStyle,
-                      boxShadow: `0 4px 16px ${hexToRgba(activeLayerPageTheme.accent, 0.3)}`,
-                    }}
-                  >
-                    Set your first goal
-                  </button>
-                </div>
-              )}
-            </div>
-
           </div>
         )}
 
@@ -24348,6 +24254,16 @@ transform: translateY(0);
             activeLayerPageTheme: activeLayerPageTheme,
       user: user,
       userName: currentUser,
+      primaryJourneyGoal: primaryJourneyGoal,
+      primaryJourneyGoalProgress: primaryJourneyGoalProgress,
+      primaryJourneyProgressText: primaryJourneyProgressText,
+      journeySupportLabel: journeySupportLabel,
+      journeyCoachLabel: journeyCoachLabel,
+      journeyQuote: journeyQuote,
+      journeyHomeCtaLabel: journeyHomeCtaLabel,
+      primaryJourneyLoggedToday: primaryJourneyLoggedToday,
+      onOpenJourney: openJourneyScreen,
+      onJourneyCtaClick: handleHomeJourneyCardCta,
     }
   )
 )}
@@ -25674,7 +25590,7 @@ transform: translateY(0);
             </div>
           )}
 
-          <div className="grid grid-cols-5 gap-1.5 p-1.5 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
+          <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
             <button
               onClick={() => { setBottomNavTab('home'); setShowDateDetailModal(false); }}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'home' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
@@ -25696,13 +25612,6 @@ transform: translateY(0);
             >
               Trips
                         </button>
-            <button
-              onClick={() => { setShowDateDetailModal(false); setShowJourneyScreen(true); }}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${showJourneyScreen ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-              style={showJourneyScreen ? bottomNavActiveTabStyle : undefined}
-            >
-              Journey
-            </button>
             <button
               onClick={() => { setBottomNavTab('explore'); setShowDateDetailModal(false); }}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'explore' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
