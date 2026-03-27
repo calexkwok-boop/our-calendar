@@ -16173,6 +16173,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setShowTimePrompt(false);
     setPendingEvent(null);
     return;
+    /*
     if (!pendingEvent.isMultiDay && time) {
       const proposedDates = pendingEvent.datesToAdd || [];
       const allConflicts = [];
@@ -16277,6 +16278,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setPendingEvent(null);
     setIsPopupEventDraft(false);
     setPopupEventMaxPeopleDraft('10');
+    */
   };
 
   const deleteEventsByIds = async (eventIds, options = {}) => {
