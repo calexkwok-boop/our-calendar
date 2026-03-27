@@ -24634,6 +24634,7 @@ transform: translateY(0);
                   const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
                   const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
                   const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
+                  const categoryLabel = popupMeta ? 'We Event' : (category?.label || 'Other');
                   const categoryGlass = CATEGORY_GLASS[effectiveCategoryKey] || CATEGORY_GLASS.other;
                   const eventCardStyle = darkMode
                     ? {
@@ -24828,7 +24829,7 @@ transform: translateY(0);
                           <div className="flex-1 pr-6">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${category.color} text-white`}>
-                                {category.label}
+                                {categoryLabel}
                               </span>
                               {event.isUrgent && (
                                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white animate-pulse flex items-center gap-1">
