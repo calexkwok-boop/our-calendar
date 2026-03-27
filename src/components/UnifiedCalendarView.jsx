@@ -948,6 +948,7 @@ const SelectedDateDetails = ({
             const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
             const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
             const categoryLabel = popupMeta ? 'We Event' : (category?.label || 'Other');
+            const isWeEvent = Boolean(popupMeta);
             const canDeleteThisEvent = canDeleteEventInActiveLayer?.(event);
             const eventSwipeKey = `${String(event.date || selectedDateKey || '')}:${String(event.id || '')}`;
             const rowOffset = eventSwipeDrag?.id === eventSwipeKey ? eventSwipeDrag.offset : (swipedEventKey === eventSwipeKey ? -88 : 0);
@@ -981,8 +982,17 @@ const SelectedDateDetails = ({
               <button
                 type="button"
                 onClick={() => onEventClick(event)}
-                className="group relative z-10 w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-white dark:from-gray-900/50 dark:to-gray-800/50 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 text-left border border-gray-200 dark:border-gray-700"
+                className={`group relative z-10 w-full flex items-center gap-4 p-4 rounded-2xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 text-left border ${isWeEvent ? '' : 'bg-gradient-to-r from-gray-50 to-white dark:from-gray-900/50 dark:to-gray-800/50 border-gray-200 dark:border-gray-700'}`}
                 style={{
+                  ...(isWeEvent ? {
+                    borderColor: darkMode ? 'rgba(251,113,133,0.7)' : 'rgba(244,63,94,0.38)',
+                    background: darkMode
+                      ? 'linear-gradient(135deg, rgba(127,29,29,0.26) 0%, rgba(69,10,10,0.14) 100%)'
+                      : 'linear-gradient(135deg, rgba(255,241,242,0.96) 0%, rgba(255,228,230,0.90) 100%)',
+                    boxShadow: darkMode
+                      ? '0 12px 28px rgba(127,29,29,0.22)'
+                      : '0 12px 30px rgba(244,63,94,0.10)',
+                  } : {}),
                   transform: `translateX(${rowOffset}px)`,
                   transition: eventSwipeDrag?.id === eventSwipeKey ? 'none' : 'transform 180ms ease',
                   touchAction: 'pan-y'

@@ -311,7 +311,13 @@ const DateDetailsModal = ({
             <button
               onClick={() => setEventCreationMode('me')}
               className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2"
-              style={eventCreationMode === 'me' ? (themeAccentButtonStyle || { backgroundColor: accent, color: '#fff' }) : undefined}
+              style={eventCreationMode === 'me'
+                ? (themeAccentButtonStyle || { backgroundColor: accent, color: '#fff' })
+                : {
+                    color: darkMode ? '#f8fafc' : '#111827',
+                    backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.82)',
+                    border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : hexToRgba(accent, 0.12)}`,
+                  }}
             >
                       <User className="w-4 h-4" />
               Me Event
@@ -319,7 +325,13 @@ const DateDetailsModal = ({
             <button
               onClick={() => setEventCreationMode('we')}
               className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2"
-              style={eventCreationMode === 'we' ? (themeAccentButtonStyle || { backgroundColor: accent, color: '#fff' }) : undefined}
+              style={eventCreationMode === 'we'
+                ? (themeAccentButtonStyle || { backgroundColor: accent, color: '#fff' })
+                : {
+                    color: darkMode ? '#f8fafc' : '#111827',
+                    backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.82)',
+                    border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : hexToRgba(accent, 0.12)}`,
+                  }}
             >
               <Users className="w-4 h-4" />
               We Event

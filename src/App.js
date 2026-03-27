@@ -24740,19 +24740,34 @@ transform: translateY(0);
                   const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
                   const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
                   const categoryLabel = popupMeta ? 'We Event' : (category?.label || 'Other');
+                  const isWeEvent = Boolean(popupMeta);
                   const categoryGlass = CATEGORY_GLASS[effectiveCategoryKey] || CATEGORY_GLASS.other;
-                  const eventCardStyle = darkMode
-                    ? {
-                      background: `linear-gradient(135deg, ${hexToRgba(mixHexColors(categoryGlass.from, '#111827', 0.86), 0.96)} 0%, ${hexToRgba(mixHexColors(categoryGlass.to, '#111827', 0.9), 0.98)} 100%)`,
-                      backdropFilter: 'blur(18px)',
-                      borderColor: event.isVirtualAnnual ? '#7c3aed' : hexToRgba(mixHexColors(categoryGlass.from, '#94a3b8', 0.55), 0.42),
-                      boxShadow: `0 14px 34px ${hexToRgba('#020617', 0.34)}`,
-                    }
-                    : {
-                      background: `linear-gradient(130deg, ${categoryGlass.from}e0 0%, ${categoryGlass.to}f0 100%)`,
-                      backdropFilter: 'blur(16px)',
-                      borderColor: event.isVirtualAnnual ? '#c4b5fd' : 'rgba(255,255,255,0.5)',
-                    };
+                  const eventCardStyle = isWeEvent
+                    ? (darkMode
+                      ? {
+                        background: 'linear-gradient(135deg, rgba(127,29,29,0.30) 0%, rgba(69,10,10,0.18) 100%)',
+                        backdropFilter: 'blur(18px)',
+                        borderColor: 'rgba(251,113,133,0.75)',
+                        boxShadow: '0 14px 34px rgba(127,29,29,0.24)',
+                      }
+                      : {
+                        background: 'linear-gradient(130deg, rgba(255,241,242,0.98) 0%, rgba(255,228,230,0.92) 100%)',
+                        backdropFilter: 'blur(16px)',
+                        borderColor: 'rgba(244,63,94,0.42)',
+                        boxShadow: '0 12px 30px rgba(244,63,94,0.10)',
+                      })
+                    : (darkMode
+                      ? {
+                        background: `linear-gradient(135deg, ${hexToRgba(mixHexColors(categoryGlass.from, '#111827', 0.86), 0.96)} 0%, ${hexToRgba(mixHexColors(categoryGlass.to, '#111827', 0.9), 0.98)} 100%)`,
+                        backdropFilter: 'blur(18px)',
+                        borderColor: event.isVirtualAnnual ? '#7c3aed' : hexToRgba(mixHexColors(categoryGlass.from, '#94a3b8', 0.55), 0.42),
+                        boxShadow: `0 14px 34px ${hexToRgba('#020617', 0.34)}`,
+                      }
+                      : {
+                        background: `linear-gradient(130deg, ${categoryGlass.from}e0 0%, ${categoryGlass.to}f0 100%)`,
+                        backdropFilter: 'blur(16px)',
+                        borderColor: event.isVirtualAnnual ? '#c4b5fd' : 'rgba(255,255,255,0.5)',
+                      });
                   const eventCardTitleStyle = { color: darkMode ? '#f8fafc' : '#111827' };
                   const eventCardBodyStyle = { color: darkMode ? '#cbd5e1' : '#4b5563' };
                   const eventCardMetaStyle = { color: darkMode ? '#94a3b8' : '#6b7280' };
