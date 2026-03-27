@@ -12112,6 +12112,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id]);
 
   useEffect(() => {
+    if (!activeSubCalendar?.id || typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      if (String(params.get('trip') || '').trim() !== String(activeSubCalendar.id || '').trim()) return;
+      if (String(params.get('tripHighlights') || '').trim() !== '1') return;
+      openTripHighlights();
+      params.delete('tripHighlights');
+      const queryString = params.toString();
+      const nextUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ''}${window.location.hash || ''}`;
+      window.history.replaceState({}, '', nextUrl);
+    } catch {}
+  }, [activeSubCalendar?.id, tripPhotos, subCalendarEvents]);
+
+  useEffect(() => {
     loadUserTabTrips();
     loadUserTabEvents();
   }, [layers, layerRefreshToken, user?.id]);
@@ -16723,6 +16737,87 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const slides = buildTripHighlights(activeSubCalendar, tripPhotos, itineraryItems);
     setTripHighlightsSlides(slides);
     setShowTripHighlightsModal(true);
+  };
+  const shareTripHighlightsWithFriends = async () => {
+    const tripId = String(activeSubCalendar?.id || '').trim();
+    const tripName = String(activeSubCalendar?.name || 'Trip').trim() || 'Trip';
+    if (!tripId || typeof window === 'undefined') return;
+    const shareUrl = `${window.location.origin}?trip=${encodeURIComponent(tripId)}&tripHighlights=1`;
+    const shareText = `Take a look at my ${tripName} trip highlights reel.`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${tripName} Trip Highlights`,
+          text: shareText,
+          url: shareUrl,
+        });
+        return;
+      }
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        alert('Trip highlights link copied.');
+        return;
+      }
+      alert(shareUrl);
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      alert('Could not share trip highlights right now.');
+    }
+  };
+  const saveTripHighlightsToDevice = async () => {
+    const highlightImages = Array.from(new Set(
+      (tripHighlightsSlides || [])
+        .map((slide) => String(slide?.image || '').trim())
+        .filter(Boolean)
+    ));
+    if (highlightImages.length === 0) {
+      alert('Add a few trip photos first so there is something to save.');
+      return;
+    }
+    try {
+      const files = [];
+      for (let i = 0; i < highlightImages.length; i += 1) {
+        const imageUrl = highlightImages[i];
+        const res = await fetch(imageUrl);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const extFromType = blob.type?.split('/')[1] || 'jpg';
+        const safeTripName = String(activeSubCalendar?.name || 'trip-highlights')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') || 'trip-highlights';
+        files.push(new File([blob], `${safeTripName}-highlight-${i + 1}.${extFromType}`, { type: blob.type || 'image/jpeg' }));
+      }
+      if (files.length === 0) {
+        alert('Could not prepare the highlight photos to save.');
+        return;
+      }
+      if (navigator.share && navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share({
+          files,
+          title: `${String(activeSubCalendar?.name || 'Trip').trim()} Trip Highlights`,
+          text: 'Save trip highlights',
+        });
+        return;
+      }
+      files.forEach((file, idx) => {
+        const url = URL.createObjectURL(file);
+        setTimeout(() => {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = file.name || `trip-highlight-${idx + 1}.jpg`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }, idx * 120);
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      console.error('Save trip highlights failed:', error);
+      alert('Could not save trip highlights right now.');
+    }
   };
   const prepareTripHighlightsForExplore = () => {
     if (!activeSubCalendar?.layer_id) return;
@@ -26723,7 +26818,7 @@ transform: translateY(0);
           style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}
         >
           <div>
-            <div className="text-sm font-semibold">Trip Highlights</div>
+            <div className="text-sm font-semibold">Create Trip Highlights</div>
             <div className="text-xs text-white/70">{activeSubCalendar.name}</div>
           </div>
           <button
@@ -26775,20 +26870,32 @@ transform: translateY(0);
           })}
         </div>
         <div
-          className="px-4 pb-4 pt-3 flex items-center gap-3"
+          className="px-4 pb-4 pt-3 grid grid-cols-1 gap-3 sm:grid-cols-4"
           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
           <button
-            onClick={() => setShowTripHighlightsModal(false)}
-            className="flex-1 px-4 py-3 rounded-2xl bg-white/10 text-white text-sm font-medium"
+            onClick={shareTripHighlightsWithFriends}
+            className="px-4 py-3 rounded-2xl bg-white text-gray-900 text-sm font-semibold"
           >
-            Close
+            Share with Friends
           </button>
           <button
             onClick={prepareTripHighlightsForExplore}
-            className="flex-1 px-4 py-3 rounded-2xl bg-white text-gray-900 text-sm font-semibold"
+            className="px-4 py-3 rounded-2xl bg-white/15 text-white text-sm font-semibold"
           >
-            Prepare for Explore
+            Publish to Explore
+          </button>
+          <button
+            onClick={saveTripHighlightsToDevice}
+            className="px-4 py-3 rounded-2xl bg-white/15 text-white text-sm font-semibold"
+          >
+            Save to Photos
+          </button>
+          <button
+            onClick={() => setShowTripHighlightsModal(false)}
+            className="px-4 py-3 rounded-2xl bg-white/10 text-white text-sm font-medium"
+          >
+            Close
           </button>
         </div>
       </div>
@@ -28640,7 +28747,7 @@ transform: translateY(0);
       alert('Saved voice note for this event');
     };
     const onShareHighlights = () => {
-      try { prepareTripHighlightsForExplore(); } catch (e) { console.error(e); }
+      try { openTripHighlights(); } catch (e) { console.error(e); }
     };
 
     // Group ratings actions

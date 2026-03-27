@@ -748,7 +748,7 @@ const TripHighlightsView = ({ trip, events, groupRatingsByEventId = {}, currentU
                  text-white font-bold text-lg hover:shadow-xl transition-all
                  flex items-center justify-center gap-2">
         <Share2 className="w-5 h-5" />
-        Share Trip Highlights
+        Create Trip Highlights
       </button>
     </div>
   );
