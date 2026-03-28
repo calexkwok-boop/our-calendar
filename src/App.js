@@ -1881,6 +1881,10 @@ function App() {
   const [tripSwipeDrag, setTripSwipeDrag] = useState({ id: null, offset: 0 });
   const tripSwipeStartXRef = useRef(0);
   const swipingTripIdRef = useRef(null);
+  const [swipedSharedListItemId, setSwipedSharedListItemId] = useState(null);
+  const [sharedListItemSwipeDrag, setSharedListItemSwipeDrag] = useState({ id: null, offset: 0 });
+  const sharedListItemSwipeStartXRef = useRef(0);
+  const swipingSharedListItemIdRef = useRef(null);
   const [swipedEventKey, setSwipedEventKey] = useState(null);
   const [eventSwipeDrag, setEventSwipeDrag] = useState({ id: null, offset: 0 });
   const eventSwipeStartXRef = useRef(0);
@@ -3390,6 +3394,61 @@ function App() {
     setSwipedTripId(open ? tripId : null);
     setTripSwipeDrag({ id: null, offset: 0 });
     swipingTripIdRef.current = null;
+  };
+
+  const handleSharedListItemSwipeStart = (e, itemId, canSwipeAction) => {
+    if (!canSwipeAction) return;
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    sharedListItemSwipeStartXRef.current = touch.clientX;
+    swipingSharedListItemIdRef.current = itemId;
+    if (swipedSharedListItemId && swipedSharedListItemId !== itemId) setSwipedSharedListItemId(null);
+  };
+
+  const handleSharedListItemSwipeMove = (e) => {
+    const itemId = swipingSharedListItemIdRef.current;
+    if (!itemId) return;
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - sharedListItemSwipeStartXRef.current;
+    const clamped = Math.max(-88, Math.min(0, deltaX));
+    setSharedListItemSwipeDrag({ id: itemId, offset: clamped });
+  };
+
+  const handleSharedListItemSwipeEnd = () => {
+    const itemId = swipingSharedListItemIdRef.current;
+    if (!itemId) return;
+    const open = sharedListItemSwipeDrag.id === itemId && sharedListItemSwipeDrag.offset <= -44;
+    setSwipedSharedListItemId(open ? itemId : null);
+    setSharedListItemSwipeDrag({ id: null, offset: 0 });
+    swipingSharedListItemIdRef.current = null;
+  };
+
+  const startSharedListItemSwipeDrag = (e, itemId, canSwipeAction) => {
+    if (!canSwipeAction) return;
+    const clientX = e.clientX ?? e.touches?.[0]?.clientX;
+    if (typeof clientX !== 'number') return;
+    sharedListItemSwipeStartXRef.current = clientX;
+    swipingSharedListItemIdRef.current = itemId;
+    if (swipedSharedListItemId && swipedSharedListItemId !== itemId) setSwipedSharedListItemId(null);
+  };
+
+  const moveSharedListItemSwipeDrag = (e) => {
+    const itemId = swipingSharedListItemIdRef.current;
+    if (!itemId) return;
+    const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? sharedListItemSwipeStartXRef.current;
+    const deltaX = clientX - sharedListItemSwipeStartXRef.current;
+    const clamped = Math.max(-88, Math.min(0, deltaX));
+    setSharedListItemSwipeDrag({ id: itemId, offset: clamped });
+  };
+
+  const endSharedListItemSwipeDrag = () => {
+    const itemId = swipingSharedListItemIdRef.current;
+    if (!itemId) return;
+    const open = sharedListItemSwipeDrag.id === itemId && sharedListItemSwipeDrag.offset <= -44;
+    setSwipedSharedListItemId(open ? itemId : null);
+    setSharedListItemSwipeDrag({ id: null, offset: 0 });
+    swipingSharedListItemIdRef.current = null;
   };
 
   const handleEventSwipeStart = (e, eventKey, canSwipeAction) => {
@@ -10549,6 +10608,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const created = data || payload;
     setSharedListGroups(prev => [...prev, created]);
     setSelectedSharedListId(created.id);
+    setSwipedSharedListItemId(null);
+    setSharedListItemSwipeDrag({ id: null, offset: 0 });
+    swipingSharedListItemIdRef.current = null;
     setNewSharedListTitle('');
     setSharedListItems([]);
   };
@@ -10585,6 +10647,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const remaining = sharedListGroups.filter(g => g.id !== listId);
     setSharedListGroups(remaining);
     setSelectedSharedListId(remaining.length > 0 ? remaining[0].id : null);
+    setSwipedSharedListItemId(null);
+    setSharedListItemSwipeDrag({ id: null, offset: 0 });
+    swipingSharedListItemIdRef.current = null;
     if (remaining.length === 0) setSharedListItems([]);
   };
 
@@ -10827,6 +10892,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     setListError('');
     setSharedListItems(prev => prev.filter(i => i.id !== itemId));
+    if (String(swipedSharedListItemId || '') === String(itemId || '')) {
+      setSwipedSharedListItemId(null);
+      setSharedListItemSwipeDrag({ id: null, offset: 0 });
+      swipingSharedListItemIdRef.current = null;
+    }
   };
 
   const startEditingListItem = (item) => {
@@ -20364,6 +20434,80 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const completedSharedListItems = sharedListItems.filter(item => item.done);
   const totalSharedListItems = sharedListItems.length;
   const completedSharedListCount = completedSharedListItems.length;
+  const renderSharedListRow = (item, { completed = false } = {}) => {
+    const canSwipeDelete = canEditActiveLayer;
+    const rowOffset = sharedListItemSwipeDrag.id === item.id ? sharedListItemSwipeDrag.offset : (swipedSharedListItemId === item.id ? -88 : 0);
+    return (
+      <div key={item.id} className="relative overflow-hidden rounded-[20px]">
+        <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${rowOffset < 0 ? 'bg-red-500' : 'bg-transparent'}`}>
+          <button
+            onClick={() => removeSharedListItem(item.id)}
+            className={`w-full h-full text-sm font-semibold transition-opacity ${rowOffset < 0 ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+            type="button"
+            title="Delete item"
+          >
+            Delete
+          </button>
+        </div>
+        <div
+          className={`flex items-center gap-2.5 rounded-[20px] border px-3 py-3 backdrop-blur-sm ${completed ? 'opacity-85' : 'transition-all'}`}
+          style={{
+            borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, completed ? 0.08 : 0.1),
+            background: darkMode
+              ? (completed ? 'rgba(15,23,42,0.56)' : 'rgba(15,23,42,0.74)')
+              : (completed ? 'rgba(248,250,252,0.9)' : 'rgba(255,255,255,0.82)'),
+            transform: `translateX(${rowOffset}px)`,
+            transition: sharedListItemSwipeDrag.id === item.id ? 'none' : 'transform 180ms ease',
+            touchAction: 'pan-y',
+          }}
+          onTouchStart={(e) => handleSharedListItemSwipeStart(e, item.id, canSwipeDelete)}
+          onTouchMove={handleSharedListItemSwipeMove}
+          onTouchEnd={handleSharedListItemSwipeEnd}
+          onTouchCancel={handleSharedListItemSwipeEnd}
+          onPointerDown={(e) => startSharedListItemSwipeDrag(e, item.id, canSwipeDelete)}
+          onPointerMove={moveSharedListItemSwipeDrag}
+          onPointerUp={endSharedListItemSwipeDrag}
+          onPointerCancel={endSharedListItemSwipeDrag}
+        >
+          <button
+            onClick={() => toggleSharedListItem(item)}
+            className={`h-5 w-5 rounded-full border flex items-center justify-center text-[11px] transition-all ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500 bg-white/70 dark:bg-slate-800/70'}`}
+            title={item.done ? 'Mark incomplete' : 'Mark complete'}
+          >
+            {item.done ? '✓' : ''}
+          </button>
+          {editingListItemId === item.id ? (
+            <input
+              autoFocus
+              value={editingListText}
+              onChange={(e) => setEditingListText(e.target.value)}
+              onBlur={() => saveSharedListItemText(item)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') saveSharedListItemText(item);
+                if (e.key === 'Escape') { setEditingListItemId(null); setEditingListText(''); }
+              }}
+              className="flex-1 text-sm px-2 py-1.5 border dark:bg-gray-800 dark:text-white rounded-xl focus:ring-1"
+              style={{ borderColor: themeAccentBorder }}
+            />
+          ) : (
+            <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>
+              {item.text}
+            </span>
+          )}
+          {editingListItemId !== item.id && (
+            <button
+              onClick={() => startEditingListItem(item)}
+              className="rounded-xl p-1.5"
+              style={themeAccentSoftButtonStyle}
+              title="Edit item"
+            >
+              <Edit2 className="w-3.5 h-3.5" style={themeAccentTextStyle} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
   const controlWidgetAddPanelPortal = showControlWidgetAddPanel && bottomNavTab === 'home' && typeof document !== 'undefined'
     ? createPortal(
       <div
@@ -23079,6 +23223,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   <button
                     key={group.id}
                     onClick={() => {
+                      setSwipedSharedListItemId(null);
+                      setSharedListItemSwipeDrag({ id: null, offset: 0 });
+                      swipingSharedListItemIdRef.current = null;
                       setSelectedSharedListId(group.id);
                       cancelEditingListGroup();
                     }}
@@ -23160,7 +23307,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               {selectedSharedListId && totalSharedListItems === 0 && (
                 <p className="text-sm text-gray-400 dark:text-gray-500 italic">No items yet. Add your first one above.</p>
               )}
-              {incompleteSharedListItems.map(item => (
+              {false && incompleteSharedListItems.map(item => (
                 <div
                   key={item.id}
                   className="flex items-center gap-2.5 rounded-[20px] border px-3 py-3 backdrop-blur-sm transition-all"
@@ -23215,13 +23362,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   </button>
                 </div>
               ))}
+              {incompleteSharedListItems.map(item => renderSharedListRow(item))}
               {completedSharedListItems.length > 0 && (
                   <div className="pt-2">
                     <div className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                       Completed ({completedSharedListItems.length})
                     </div>
                   <div className="space-y-2">
-                    {completedSharedListItems.map(item => (
+                    {false && completedSharedListItems.map(item => (
                       <div
                         key={item.id}
                         className="flex items-center gap-2.5 rounded-[20px] border px-3 py-3 opacity-85 backdrop-blur-sm"
@@ -23276,6 +23424,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         </button>
                       </div>
                     ))}
+                    {completedSharedListItems.map(item => renderSharedListRow(item, { completed: true }))}
                   </div>
                 </div>
               )}
