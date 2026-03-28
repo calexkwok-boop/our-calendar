@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Music, Play, Share2, Sparkles, X } from 'lucide-react';
 
 const HIGHLIGHT_REEL_TRACKS = Object.freeze([
@@ -52,7 +52,6 @@ export default function TripHighlightReel({
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [highlights, setHighlights] = useState([]);
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showMusicMenu, setShowMusicMenu] = useState(false);
@@ -63,18 +62,21 @@ export default function TripHighlightReel({
   const shareMenuRef = useRef(null);
   const musicMenuRef = useRef(null);
 
-  useEffect(() => {
+  const highlights = useMemo(() => {
     try {
       const normalizedMoments = buildScoredMoments(events, groupRatingsByEventId, currentUserId);
       const slides = buildPremiumSlides(trip, normalizedMoments, events, tripPhotos);
-      setHighlights(Array.isArray(slides) && slides.length > 0 ? slides : buildFallbackSlides(trip, events, tripPhotos));
+      return Array.isArray(slides) && slides.length > 0 ? slides : buildFallbackSlides(trip, events, tripPhotos);
     } catch (error) {
       console.error('Trip highlight reel generation failed:', error);
-      setHighlights(buildFallbackSlides(trip, events, tripPhotos));
+      return buildFallbackSlides(trip, events, tripPhotos);
     }
+  }, [events, groupRatingsByEventId, currentUserId, trip, tripPhotos]);
+
+  useEffect(() => {
     setCurrentSlide(0);
     setIsPlaying(false);
-  }, [events, groupRatingsByEventId, currentUserId, trip, tripPhotos]);
+  }, [highlights]);
 
   useEffect(() => {
     const nextTrackId = pickDefaultTrackId(events, groupRatingsByEventId, currentUserId);
