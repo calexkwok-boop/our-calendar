@@ -3969,6 +3969,7 @@ function App() {
       }
       const tripLayerId = String(tripRow?.layer_id || tripRow?.calendar_id || '').trim();
       if (!isOwner && tripLayerId) {
+        let shareChanged = false;
         const shareRecipientFilter = buildShareRecipientFilter(user.id, meEmail, mePhone);
         let existingShare = null;
         if (shareRecipientFilter) {
@@ -3993,6 +3994,8 @@ function App() {
               .eq('id', existingShare.id);
             if (updateShareErr && !/duplicate key|already exists|unique constraint/i.test(String(updateShareErr.message || ''))) {
               console.error('Trip link share upgrade failed:', updateShareErr);
+            } else if (!updateShareErr) {
+              shareChanged = true;
             }
           }
         } else {
@@ -4020,7 +4023,17 @@ function App() {
           }
           if (insertShareErr && !/duplicate key|already exists|unique constraint|23505/i.test(String(insertShareErr.message || ''))) {
             console.error('Trip link share insert failed:', insertShareErr);
+          } else if (!insertShareErr) {
+            shareChanged = true;
           }
+        }
+        if (shareChanged) {
+          try {
+            await loadLayersForUser(user.id, user.email, user.phone);
+          } catch (shareRefreshErr) {
+            console.error('Trip link layer refresh failed:', shareRefreshErr);
+          }
+          setLayerRefreshToken((prev) => prev + 1);
         }
       }
       setSubCalendars((prev) => {
@@ -13048,6 +13061,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         || (sharedRecipient && (sharedRecipient === myEmail || sharedRecipient === myPhone))
       );
     };
+    const refreshTripCrewForSharedAccessRow = async (row) => {
+      const rowLayerId = String(row?.layer_id || row?.calendar_id || '').trim();
+      if (!rowLayerId) return;
+      if (rowLayerId === String(activeLayerId || '').trim()) {
+        setLayerRefreshToken((prev) => prev + 1);
+      }
+      const activeTripLayerId = String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || '').trim();
+      if (!activeSubCalendar?.id || !activeTripLayerId || activeTripLayerId !== rowLayerId) return;
+      await syncSubCalendarMembersFromLayer(activeSubCalendar);
+      await loadSubCalendarMembers(activeSubCalendar.id);
+    };
 
     const updatesChannel = supabase
       .channel(`in-app-updates-${me}`)
@@ -13121,6 +13145,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'shared_access' }, async ({ new: row }) => {
         if (!row) return;
+        await refreshTripCrewForSharedAccessRow(row);
         const rowId = String(row.id || '').trim();
         if (rowId && dismissedCalendarInviteIdsRef.current.has(rowId)) return;
         const sharedWithId = String(row.shared_with_id || '');
@@ -13152,6 +13177,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'shared_access' }, async (payload) => {
         const row = payload?.new || null;
         const oldRow = payload?.old || null;
+        if (row) await refreshTripCrewForSharedAccessRow(row);
         if (!row || !shareRowTargetsMe(row)) return;
         if (String(row.owner_id || '') === me) return;
         const oldBanned = oldRow?.is_banned === true;
@@ -13194,6 +13220,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'shared_access' }, async (payload) => {
         const row = payload?.old || null;
+        if (row) await refreshTripCrewForSharedAccessRow(row);
         if (!row || !shareRowTargetsMe(row)) return;
         if (String(row.owner_id || '') === me) return;
         if (String(row?.banned_reason || '').trim().toLowerCase() === 'kicked') return;
@@ -13211,7 +13238,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return () => {
       updatesChannel.unsubscribe();
     };
-  }, [user?.id, user?.email, user?.phone, currentUser, subCalendars, layers]);
+  }, [user?.id, user?.email, user?.phone, currentUser, subCalendars, layers, activeLayerId, activeSubCalendar]);
 
   useEffect(() => {
     if (!user?.id) {
