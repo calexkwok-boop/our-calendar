@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Clock, Lock, Repeat, User } from 'lucide-react';
 
 const DEFAULT_PARTNER = { name: 'Calendar Partner', avatar: '👤' };
 
@@ -90,15 +91,46 @@ const baseInputClassName = 'w-full rounded-xl border px-4 py-3.5 text-base trans
 export default function DateDetailsCardEnhanced({
   isOpen = false,
   selectedDate,
+  selectedEvents = [],
+  popupEventsByEventId = {},
+  popupSignupsByEventId = {},
+  user,
   onClose,
   onSaveEvent,
   handleQuickAdd,
+  handleDeleteEvent,
+  handleUpdateEventField,
+  openRecurringDeletePrompt,
+  eventSwipeDrag = { id: null, offset: 0 },
+  swipedEventKey = null,
+  handleEventSwipeStart,
+  handleEventSwipeMove,
+  handleEventSwipeEnd,
+  startEventSwipeDrag,
+  moveEventSwipeDrag,
+  endEventSwipeDrag,
+  formatTime = (value) => value,
+  resolveHandleLikeLabel = (value) => value,
+  getLayerForEvent = () => null,
+  getEventRelationshipStatus = () => 'none',
+  setEventRelationshipStatus,
+  canDeleteEventInActiveLayer = () => false,
+  getDateKey = (date) => String(date || ''),
+  hexToRgba = () => 'rgba(255,255,255,0.2)',
+  mixHexColors = (left) => left,
   setIsPopupEventDraft,
   popupEventMaxPeopleDraft,
   setPopupEventMaxPeopleDraft,
   categories = {},
   darkMode = false,
   themeAccentButtonStyle,
+  themeAccentHeadingStyle,
+  POPUP_NO_MAX_SENTINEL = 999999,
+  CATEGORY_GLASS = {},
+  editingEvent,
+  setEditingEvent,
+  PlacesAutocomplete,
+  handleLocationLinkClick = () => {},
   calendarPartner = DEFAULT_PARTNER,
 }) {
   const [eventType, setEventType] = useState(null);
@@ -115,6 +147,8 @@ export default function DateDetailsCardEnhanced({
     () => WE_EVENT_TEMPLATES.find((template) => template.id === weEventCategory) || null,
     [weEventCategory]
   );
+  const accent = (themeAccentButtonStyle && themeAccentButtonStyle.backgroundColor) || '#a855f7';
+  const selectedDateKey = getDateKey(selectedDate);
 
   useEffect(() => {
     if (!isOpen) {
@@ -553,6 +587,383 @@ export default function DateDetailsCardEnhanced({
                 </button>
               </>
             )}
+
+            {selectedEvents.length > 0 ? (
+              <div className={darkMode ? 'border-t border-white/10' : 'border-t border-gray-200'} />
+            ) : null}
+
+            <div className="space-y-3">
+              {selectedEvents.length === 0 ? (
+                <div className="py-12 text-center">
+                  <div className="mb-3 text-5xl">📅</div>
+                  <p className={`mb-1 font-medium ${mutedText}`}>No events yet</p>
+                  <p className={`text-sm ${mutedText}`}>Add your first event above</p>
+                </div>
+              ) : (
+                selectedEvents.map((event) => {
+                  const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                  const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
+                  const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other || { label: 'Other', color: 'bg-gray-500' };
+                  const categoryGlass = CATEGORY_GLASS[effectiveCategoryKey] || CATEGORY_GLASS.other || { from: '#f3f4f6', to: '#fafafa', accent: 'linear-gradient(180deg,#9ca3af,#6b7280)' };
+                  const popupSignups = popupMeta ? (popupSignupsByEventId[String(event.id || '')] || []) : [];
+                  const popupJoined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
+                  const popupNoMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
+                  const popupFull = popupMeta ? (!popupNoMax && popupSignups.length >= Number(popupMeta.maxPeople || 1)) : false;
+                  const eventLayer = getLayerForEvent(event);
+                  const isPublicRegularEvent = Boolean(eventLayer?.is_public) && !popupMeta;
+                  const eventRelationshipStatus = getEventRelationshipStatus(event);
+                  const canDeleteThisEvent = canDeleteEventInActiveLayer(event);
+                  const eventSwipeKey = `${String(event.date || selectedDateKey || '')}:${String(event.id || '')}`;
+                  const rowOffset = eventSwipeDrag.id === eventSwipeKey ? eventSwipeDrag.offset : (swipedEventKey === eventSwipeKey ? -88 : 0);
+                  const isDeleteRevealed = rowOffset < 0;
+
+                  if (popupMeta) {
+                    return (
+                      <div
+                        key={event.id}
+                        className="cursor-pointer rounded-2xl border-2 border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:border-rose-700 dark:from-rose-900/20 dark:to-pink-900/10"
+                      >
+                        <div className="mb-3 flex items-start justify-between">
+                          <div className="flex-1 pr-4">
+                            <div className="mb-1 flex items-center gap-2">
+                              <span className="text-xl">🎉</span>
+                              <h4 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{event.title}</h4>
+                            </div>
+                            <div className={`flex items-center gap-2 text-sm ${mutedText}`}>
+                              {event.time ? (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3.5 w-3.5" />
+                                  {formatTime(event.time)}
+                                </span>
+                              ) : null}
+                              <span className="flex items-center gap-1">
+                                <User className="h-3.5 w-3.5" />
+                                {popupSignups.length}{popupNoMax ? ' joined' : `/${popupMeta.maxPeople} spots`}
+                              </span>
+                            </div>
+                            {event.location ? (
+                              <button
+                                type="button"
+                                className="mt-1 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400"
+                                onClick={(clickEvent) => {
+                                  clickEvent.stopPropagation();
+                                  handleLocationLinkClick(clickEvent, event.location);
+                                }}
+                              >
+                                📍 {event.location}
+                              </button>
+                            ) : null}
+                          </div>
+
+                          {popupJoined ? (
+                            <button
+                              type="button"
+                              className="whitespace-nowrap rounded-lg border-2 bg-white px-4 py-2 text-sm font-semibold transition-all dark:bg-gray-800"
+                              style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35), color: accent }}
+                            >
+                              ✓ Joined
+                            </button>
+                          ) : popupFull ? (
+                            <button type="button" disabled className="whitespace-nowrap rounded-lg bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-500 opacity-60 dark:bg-gray-700 dark:text-gray-500">
+                              Full
+                            </button>
+                          ) : (
+                            <button type="button" className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all" style={themeAccentButtonStyle}>
+                              Join
+                            </button>
+                          )}
+                        </div>
+
+                        {popupSignups.length > 0 ? (
+                          <div className="flex flex-wrap items-center gap-1.5 border-t border-rose-200/50 pt-2 dark:border-rose-700/50">
+                            {popupSignups.slice(0, 4).map((signup) => (
+                              <span key={signup.userId} className="rounded-full border border-rose-200 bg-white px-2.5 py-1 text-xs font-medium text-rose-700 dark:border-rose-600 dark:bg-gray-800 dark:text-rose-300">
+                                {signup.displayName || 'Member'}
+                              </span>
+                            ))}
+                            {popupSignups.length > 4 ? (
+                              <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">+{popupSignups.length - 4} more</span>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  }
+
+                  const eventCardStyle = darkMode
+                    ? {
+                        background: `linear-gradient(135deg, ${hexToRgba(mixHexColors(categoryGlass.from, '#111827', 0.86), 0.96)} 0%, ${hexToRgba(mixHexColors(categoryGlass.to, '#111827', 0.9), 0.98)} 100%)`,
+                        backdropFilter: 'blur(18px)',
+                        borderColor: event.isVirtualAnnual ? '#7c3aed' : hexToRgba(mixHexColors(categoryGlass.from, '#94a3b8', 0.55), 0.42),
+                        boxShadow: `0 14px 34px ${hexToRgba('#020617', 0.34)}`,
+                      }
+                    : {
+                        background: `linear-gradient(130deg, ${categoryGlass.from}e0 0%, ${categoryGlass.to}f0 100%)`,
+                        backdropFilter: 'blur(16px)',
+                        borderColor: event.isVirtualAnnual ? '#c4b5fd' : 'rgba(255,255,255,0.5)',
+                      };
+                  const eventCardTitleStyle = { color: darkMode ? '#f8fafc' : '#111827' };
+                  const eventCardBodyStyle = { color: darkMode ? '#cbd5e1' : '#4b5563' };
+                  const eventCardMetaStyle = { color: darkMode ? '#94a3b8' : '#6b7280' };
+                  const eventCardIconTone = darkMode ? '#fcd34d' : '#d97706';
+
+                  return (
+                    <div key={event.id} className={`relative overflow-hidden rounded-2xl ${event.isVirtualAnnual ? 'border-dashed' : ''}`}>
+                      {canDeleteThisEvent ? (
+                        <div className={`absolute inset-y-0 right-0 z-20 flex w-[88px] items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500 pointer-events-auto' : 'bg-transparent pointer-events-none'}`}>
+                          <button
+                            type="button"
+                            onClick={(clickEvent) => {
+                              clickEvent.stopPropagation();
+                              const isRepeating = event.isVirtualAnnual || event.isVirtualRecurrence || (event.recurrence && event.recurrence !== 'once');
+                              if (isRepeating) openRecurringDeletePrompt({ dateKey: selectedDateKey, event });
+                              else handleDeleteEvent(selectedDateKey, event.id, false, false, false);
+                            }}
+                            onPointerDown={(clickEvent) => clickEvent.stopPropagation()}
+                            onTouchStart={(clickEvent) => clickEvent.stopPropagation()}
+                            className={`h-full w-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'pointer-events-auto text-white opacity-100' : 'pointer-events-none text-transparent opacity-0'}`}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ) : null}
+
+                      <div
+                        className={`relative z-10 overflow-hidden rounded-2xl border border-white/50 shadow-lg transition-all hover:-translate-y-0.5 ${event.isVirtualAnnual ? 'border-dashed' : ''}`}
+                        style={{ ...eventCardStyle, transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease', touchAction: 'pan-y' }}
+                        onTouchStart={(touchEvent) => handleEventSwipeStart?.(touchEvent, eventSwipeKey, canDeleteThisEvent)}
+                        onTouchMove={handleEventSwipeMove}
+                        onTouchEnd={handleEventSwipeEnd}
+                        onTouchCancel={handleEventSwipeEnd}
+                        onPointerDown={(pointerEvent) => startEventSwipeDrag?.(pointerEvent, eventSwipeKey, canDeleteThisEvent)}
+                        onPointerMove={moveEventSwipeDrag}
+                        onPointerUp={endEventSwipeDrag}
+                        onPointerCancel={endEventSwipeDrag}
+                      >
+                        <div className="absolute bottom-0 left-0 top-0 w-1 rounded-l-2xl" style={{ background: categoryGlass.accent }} />
+                        <div className="py-3 pl-4 pr-3">
+                          {event.isPrivate ? (
+                            <div className="absolute right-2 top-2">
+                              <Lock className="h-3 w-3" style={{ color: eventCardIconTone }} />
+                            </div>
+                          ) : null}
+
+                          {editingEvent === event.id ? (
+                            <div className="space-y-2">
+                              <input
+                                type="text"
+                                defaultValue={event.title}
+                                onBlur={(blurEvent) => handleUpdateEventField(event.date, event.id, { title: blurEvent.target.value })}
+                                className="w-full rounded-lg border-2 border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                autoFocus
+                              />
+                              <input
+                                type="text"
+                                defaultValue={event.time || ''}
+                                placeholder="e.g. 3:00 PM"
+                                onBlur={(blurEvent) => {
+                                  const val = blurEvent.target.value.trim();
+                                  if (!val) {
+                                    handleUpdateEventField(event.date, event.id, { time: null });
+                                    return;
+                                  }
+                                  const match = val.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+                                  if (!match) return;
+                                  let hours = parseInt(match[1], 10);
+                                  const minutes = match[2] ? parseInt(match[2], 10) : 0;
+                                  const period = match[3]?.toLowerCase();
+                                  if (period === 'pm' && hours < 12) hours += 12;
+                                  if (period === 'am' && hours === 12) hours = 0;
+                                  handleUpdateEventField(event.date, event.id, {
+                                    time: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
+                                  });
+                                }}
+                                className="w-full rounded-lg border-2 border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                              />
+                              {PlacesAutocomplete ? (
+                                <PlacesAutocomplete
+                                  value={event.location || ''}
+                                  onSelect={(value) => {
+                                    if ((value || '') !== (event.location || '')) {
+                                      handleUpdateEventField(event.date, event.id, { location: value || null });
+                                    }
+                                  }}
+                                  placeholder="📍 Add location (optional)"
+                                  className="w-full rounded-lg border-2 border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                />
+                              ) : null}
+                              <textarea
+                                defaultValue={event.description || ''}
+                                onBlur={(blurEvent) => handleUpdateEventField(event.date, event.id, { description: blurEvent.target.value })}
+                                placeholder="Add description"
+                                rows={3}
+                                className="w-full resize-none rounded-lg border-2 border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                              />
+                              <select
+                                defaultValue={event.category || 'other'}
+                                onChange={(changeEvent) => handleUpdateEventField(event.date, event.id, { category: changeEvent.target.value })}
+                                className="w-full rounded-lg border-2 border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                              >
+                                {Object.entries(categories).map(([key, cat]) => (
+                                  <option key={key} value={key}>{cat.label}</option>
+                                ))}
+                              </select>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={(clickEvent) => {
+                                    clickEvent.stopPropagation();
+                                    handleUpdateEventField(event.date, event.id, { isPrivate: !event.isPrivate });
+                                  }}
+                                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-all ${event.isPrivate ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'}`}
+                                >
+                                  <Lock className="h-3 w-3" />
+                                  {event.isPrivate ? 'Private' : 'Shared'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(clickEvent) => {
+                                    clickEvent.stopPropagation();
+                                    handleUpdateEventField(event.date, event.id, { isUrgent: !event.isUrgent });
+                                  }}
+                                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-all ${event.isUrgent ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'}`}
+                                >
+                                  <AlertTriangle className="h-3 w-3" />
+                                  {event.isUrgent ? 'Urgent' : 'Normal'}
+                                </button>
+                              </div>
+                              <label className="flex items-center gap-2 text-sm dark:text-gray-300">
+                                <input
+                                  type="checkbox"
+                                  defaultChecked={event.isAnnual}
+                                  onChange={(changeEvent) => handleUpdateEventField(event.date, event.id, {
+                                    isAnnual: changeEvent.target.checked,
+                                    annualMonth: changeEvent.target.checked ? (new Date(`${event.date}T00:00:00`).getMonth() + 1) : null,
+                                    annualDay: changeEvent.target.checked ? new Date(`${event.date}T00:00:00`).getDate() : null,
+                                  })}
+                                  className="rounded"
+                                />
+                                🎂 Annual (repeats every year)
+                              </label>
+                              <button
+                                type="button"
+                                onClick={(clickEvent) => {
+                                  clickEvent.stopPropagation();
+                                  setEditingEvent?.(null);
+                                }}
+                                className="w-full rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 px-3 py-2 text-sm font-medium text-white"
+                              >
+                                Done
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 pr-6">
+                                <div className="mb-1 flex flex-wrap items-center gap-2">
+                                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium text-white ${category.color}`}>{effectiveCategoryKey === 'popup_event' ? 'We Event' : category.label}</span>
+                                  {event.isUrgent ? (
+                                    <span className="flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white animate-pulse">
+                                      <AlertTriangle className="h-3 w-3" />
+                                      Urgent
+                                    </span>
+                                  ) : null}
+                                  {(event.isAnnual || (event.recurrence && event.recurrence !== 'once')) ? (
+                                    <span className="flex items-center gap-1 rounded-full bg-violet-500 px-2 py-0.5 text-xs font-medium text-white">
+                                      <Repeat className="h-3 w-3" />
+                                      {event.recurrence === 'weekly' ? 'Weekly' : event.recurrence === 'monthly' ? 'Monthly' : 'Annual'}
+                                    </span>
+                                  ) : null}
+                                  {event.time ? (
+                                    <div className="flex items-center gap-1 text-sm font-medium" style={eventCardBodyStyle}>
+                                      <Clock className="h-3 w-3" />
+                                      {formatTime(event.time)}
+                                    </div>
+                                  ) : null}
+                                </div>
+                                <div className="mb-1 font-medium" style={eventCardTitleStyle}>{event.title}</div>
+                                {event.location ? (
+                                  <button
+                                    type="button"
+                                    className="mb-1 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400"
+                                    onClick={(clickEvent) => handleLocationLinkClick(clickEvent, event.location)}
+                                  >
+                                    📍 {event.location}
+                                  </button>
+                                ) : null}
+                                {event.description ? (
+                                  <div className="mb-1 whitespace-pre-wrap text-sm" style={eventCardBodyStyle}>
+                                    {event.description}
+                                  </div>
+                                ) : null}
+                                {event.createdBy ? (
+                                  <div className="flex items-center gap-1 text-xs" style={eventCardMetaStyle}>
+                                    <User className="h-3 w-3" />
+                                    {resolveHandleLikeLabel(event.createdBy, event.userId)}
+                                  </div>
+                                ) : null}
+                                {isPublicRegularEvent ? (
+                                  <div className="mt-2 rounded-lg border p-2" style={{ borderColor: darkMode ? hexToRgba(accent, 0.4) : hexToRgba(accent, 0.25), background: darkMode ? hexToRgba(accent, 0.12) : hexToRgba(accent, 0.06) }}>
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="text-xs font-semibold" style={{ color: accent }}>
+                                        {eventRelationshipStatus === 'hosting' ? 'Hosting' : eventRelationshipStatus === 'going' ? 'Going' : eventRelationshipStatus === 'interested' ? 'Saved' : 'Public event'}
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        {eventRelationshipStatus !== 'hosting' && eventRelationshipStatus !== 'going' ? (
+                                          <button
+                                            type="button"
+                                            onClick={(clickEvent) => {
+                                              clickEvent.stopPropagation();
+                                              setEventRelationshipStatus?.(event, 'going');
+                                            }}
+                                            className="rounded-md border bg-white px-2 py-1 text-xs dark:bg-gray-800"
+                                            style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35), color: accent }}
+                                          >
+                                            Join
+                                          </button>
+                                        ) : null}
+                                        {eventRelationshipStatus === 'going' ? (
+                                          <button
+                                            type="button"
+                                            onClick={(clickEvent) => {
+                                              clickEvent.stopPropagation();
+                                              setEventRelationshipStatus?.(event, 'none');
+                                            }}
+                                            className="rounded-md border bg-white px-2 py-1 text-xs dark:bg-gray-800"
+                                            style={{ borderColor: darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.35), color: accent }}
+                                          >
+                                            Leave
+                                          </button>
+                                        ) : null}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={(clickEvent) => {
+                                  clickEvent.stopPropagation();
+                                  setEditingEvent?.(event.id);
+                                }}
+                                onPointerDown={(clickEvent) => clickEvent.stopPropagation()}
+                                onTouchStart={(clickEvent) => clickEvent.stopPropagation()}
+                                className="relative z-20 rounded-lg p-1.5 transition-all hover:bg-white/20 dark:hover:bg-black/20"
+                                aria-label="Edit event"
+                              >
+                                <svg className="h-4 w-4" style={{ color: eventCardIconTone }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       </div>
