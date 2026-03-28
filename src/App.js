@@ -4035,6 +4035,30 @@ function App() {
           }
           setLayerRefreshToken((prev) => prev + 1);
         }
+        if (shareRecipientFilter) {
+          try {
+            let sharedWithMeQuery = supabase
+              .from('shared_access')
+              .select('*')
+              .eq('layer_id', tripLayerId)
+              .or(shareRecipientFilter);
+            const { data: sharedWithMeRows, error: sharedWithMeErr } = await sharedWithMeQuery;
+            if (sharedWithMeErr) {
+              console.error('Trip link shared calendar refresh failed:', sharedWithMeErr);
+            } else if (Array.isArray(sharedWithMeRows) && sharedWithMeRows.length > 0) {
+              setSharedCalendars((prev) => {
+                const mergedShares = new Map((prev || []).map((row) => [String(row?.id || `${row?.layer_id || ''}:${row?.shared_with_id || row?.shared_with_email || row?.shared_with_phone || ''}`), row]));
+                sharedWithMeRows.forEach((row) => {
+                  const key = String(row?.id || `${row?.layer_id || ''}:${row?.shared_with_id || row?.shared_with_email || row?.shared_with_phone || ''}`);
+                  if (key) mergedShares.set(key, row);
+                });
+                return Array.from(mergedShares.values());
+              });
+            }
+          } catch (sharedRefreshErr) {
+            console.error('Trip link shared calendar state refresh exception:', sharedRefreshErr);
+          }
+        }
       }
       setSubCalendars((prev) => {
         const next = new Map((prev || []).map((sc) => [String(sc?.id || ''), sc]));
