@@ -17,9 +17,6 @@ export const resolveEventCardCategory = (event) => {
     .filter(Boolean)
     .join(' ');
 
-  if (/(pickleball|tennis|basketball|soccer|golf|volleyball|softball|baseball|run|match|game|practice|workout|sports?)/.test(text)) {
-    return 'sports';
-  }
   if (/(birthday|house party|holiday party|potluck|dance party|game night|party)/.test(text)) {
     return 'party';
   }
@@ -31,6 +28,9 @@ export const resolveEventCardCategory = (event) => {
   }
   if (/(coffee|brunch|drinks|dinner|movie|bbq|hangout|get together|lunch)/.test(text)) {
     return 'hangout';
+  }
+  if (/(pickleball|tennis|basketball|soccer|golf|volleyball|softball|baseball|run|match|practice|workout|sports?)/.test(text)) {
+    return 'sports';
   }
   return 'custom';
 };
