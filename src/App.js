@@ -3483,6 +3483,7 @@ function App() {
     setDeletedPhotosNoteId(null);
     await loadGlobalVenmoHandles();
     await loadGlobalCashAppHandles();
+    await ensureCurrentUserTripMembership(sc);
     await loadSubCalendarEditAccess(sc);
     await syncSubCalendarMembersFromLayer(sc);
     const loadedEvents = await loadMergedSubCalendarEvents(sc);
@@ -3506,6 +3507,83 @@ function App() {
         || getSubCalStartRaw(sc)
       );
     setSubCalSelectedDate(new Date(`${selectedDateKey}T00:00:00`));
+  };
+
+  const ensureCurrentUserTripMembership = async (subCal) => {
+    try {
+      const subCalId = String(subCal?.id || '').trim();
+      const layerId = String(subCal?.layer_id || subCal?.calendar_id || '').trim();
+      const userId = String(user?.id || '').trim();
+      const myEmail = normalizeEmail(user?.email);
+      const myPhone = normalizePhoneNumber(user?.phone);
+      if (!subCalId || !layerId || !userId || (!myEmail && !myPhone)) return false;
+      if (String(subCal?.owner_id || '') === userId) return true;
+
+      const shareRecipientFilter = buildShareRecipientFilter(userId, myEmail, myPhone);
+      if (!shareRecipientFilter) return false;
+      const { data: sharedRow, error: sharedErr } = await supabase
+        .from('shared_access')
+        .select('id')
+        .eq('layer_id', layerId)
+        .or(shareRecipientFilter)
+        .maybeSingle();
+      if (sharedErr || !sharedRow?.id) return false;
+
+      const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
+      if (!memberRecipientFilter) return false;
+      const { data: existingMember, error: memberErr } = await supabase
+        .from('sub_calendar_members')
+        .select('id,status')
+        .eq('sub_calendar_id', subCalId)
+        .or(memberRecipientFilter)
+        .maybeSingle();
+      if (memberErr && !/multiple/i.test(String(memberErr.message || ''))) {
+        console.error('Trip membership lookup failed:', memberErr);
+        return false;
+      }
+
+      if (existingMember?.id) {
+        if (String(existingMember?.status || '').toLowerCase() !== 'accepted') {
+          await supabase
+            .from('sub_calendar_members')
+            .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+            .eq('id', existingMember.id);
+        }
+        return true;
+      }
+
+      const nowIso = new Date().toISOString();
+      const payload = {
+        sub_calendar_id: subCalId,
+        email: myEmail || null,
+        phone: myPhone || null,
+        added_by: String(subCal?.owner_id || '') || userId,
+        status: 'accepted',
+        invited_at: nowIso,
+        accepted_at: nowIso,
+        created_at: nowIso,
+      };
+      let insertErr = (await supabase.from('sub_calendar_members').insert(payload)).error;
+      if (insertErr && /column .*created_at|schema cache/i.test(String(insertErr.message || ''))) {
+        insertErr = (await supabase.from('sub_calendar_members').insert({
+          sub_calendar_id: subCalId,
+          email: myEmail || null,
+          phone: myPhone || null,
+          added_by: String(subCal?.owner_id || '') || userId,
+          status: 'accepted',
+          invited_at: nowIso,
+          accepted_at: nowIso,
+        })).error;
+      }
+      if (insertErr && !/duplicate key|already exists|unique constraint/i.test(String(insertErr.message || ''))) {
+        console.error('Trip membership insert failed:', insertErr);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('ensureCurrentUserTripMembership exception:', error);
+      return false;
+    }
   };
 
   const inviteToSubCalendar = async (recipientOverride) => {
