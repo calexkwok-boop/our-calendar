@@ -39,13 +39,15 @@ export default function JourneyPanel({
 }) {
   const panelClickHandler = primaryJourneyGoal ? onClick : onCtaClick;
   const quoteText = getRenderableText(journeyQuote);
-  const quoteSource = journeyQuote && typeof journeyQuote === 'object'
-    ? String(journeyQuote.source || '').trim()
-    : '';
+  const quoteSource =
+    journeyQuote && typeof journeyQuote === 'object'
+      ? String(journeyQuote.source || '').trim()
+      : '';
   const coachText = getRenderableText(journeyCoachLabel);
   const journeyAccent = '#f59e0b';
   const journeyAccentStrong = '#f97316';
   const journeyAccentSoft = '#fcd34d';
+
   const panelStyle = darkMode
     ? {
         background: `linear-gradient(135deg, ${hexToRgba(journeyAccentStrong, 0.26)} 0%, rgba(17,24,39,0.96) 46%, ${hexToRgba(journeyAccent, 0.16)} 100%)`,
@@ -57,23 +59,35 @@ export default function JourneyPanel({
         borderColor: hexToRgba(journeyAccent, 0.24),
         boxShadow: `0 14px 34px ${hexToRgba(journeyAccentStrong, 0.12)}`,
       };
+
   const glowStyle = {
     background: hexToRgba(journeyAccentStrong, darkMode ? 0.18 : 0.24),
   };
-  const accentTextStyle = { color: darkMode ? hexToRgba(journeyAccentSoft, 0.96) : journeyAccentStrong };
+
+  const accentTextStyle = {
+    color: darkMode ? hexToRgba(journeyAccentSoft, 0.96) : journeyAccentStrong,
+  };
+
   const progressBarStyle = {
     width: `${Math.round(primaryJourneyGoalProgress * 100)}%`,
     background: `linear-gradient(90deg, ${hexToRgba(journeyAccentStrong, 1)} 0%, ${hexToRgba(journeyAccentSoft, 0.96)} 100%)`,
   };
+
   const coachCardStyle = {
     borderColor: hexToRgba(journeyAccent, darkMode ? 0.3 : 0.2),
-    background: darkMode ? hexToRgba(journeyAccentStrong, 0.1) : hexToRgba(journeyAccentSoft, 0.16),
+    background: darkMode
+      ? hexToRgba(journeyAccentStrong, 0.1)
+      : hexToRgba(journeyAccentSoft, 0.16),
   };
+
   const mutedCtaStyle = {
     borderColor: hexToRgba(journeyAccent, darkMode ? 0.36 : 0.24),
-    background: darkMode ? hexToRgba(journeyAccentStrong, 0.16) : hexToRgba(journeyAccentSoft, 0.18),
+    background: darkMode
+      ? hexToRgba(journeyAccentStrong, 0.16)
+      : hexToRgba(journeyAccentSoft, 0.18),
     color: darkMode ? '#e5e7eb' : '#374151',
   };
+
   const primaryCtaStyle = {
     background: `linear-gradient(90deg, ${hexToRgba(journeyAccentStrong, 0.98)} 0%, ${hexToRgba(journeyAccent, 0.92)} 55%, ${hexToRgba(journeyAccentSoft, 0.9)} 100%)`,
     boxShadow: `0 10px 24px ${hexToRgba(journeyAccentStrong, 0.24)}`,
@@ -86,7 +100,7 @@ export default function JourneyPanel({
           relative overflow-hidden
           border-2
           rounded-3xl
-          p-4 sm:p-5
+          p-3 sm:p-3.5
           transition-all duration-500
           cursor-pointer
           group
@@ -102,46 +116,52 @@ export default function JourneyPanel({
           }
         }}
       >
-        <div className="absolute -right-10 -top-10 w-24 h-24 rounded-full blur-3xl pointer-events-none" style={glowStyle} />
+        <div
+          className="absolute -right-10 -top-10 h-16 w-16 rounded-full blur-3xl pointer-events-none"
+          style={glowStyle}
+        />
 
-        <div className="relative z-10 mb-4">
-          <div className="text-xs uppercase tracking-widest mb-3 font-semibold" style={accentTextStyle}>
+        <div className="relative z-10 mb-2.5">
+          <div
+            className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.22em]"
+            style={accentTextStyle}
+          >
             Today&apos;s Inspiration
           </div>
-          <blockquote className="text-lg sm:text-xl font-serif italic text-gray-800 dark:text-gray-100 leading-relaxed">
+          <blockquote className="text-[15px] sm:text-base font-serif italic text-gray-800 dark:text-gray-100 leading-snug">
             &quot;{quoteText}&quot;
           </blockquote>
           {quoteSource ? (
-            <div className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+            <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
               {quoteSource}
             </div>
           ) : null}
         </div>
 
         {primaryJourneyGoal ? (
-          <div className="relative z-10 space-y-3">
+          <div className="relative z-10 space-y-2">
             <div>
-              <div className="text-xs uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2">
+              <div className="mb-1 text-[10px] uppercase tracking-[0.22em] text-gray-600 dark:text-gray-400">
                 Your Focus
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1 tracking-tight">
+              <h3 className="mb-0.5 text-base font-bold tracking-tight text-gray-900 dark:text-white">
                 {primaryJourneyGoal.title}
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-[12px] text-gray-600 dark:text-gray-400">
                 {journeyProgressText}
               </p>
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+              <div className="mb-1 flex items-center justify-between text-[10px] font-medium text-gray-600 dark:text-gray-400">
                 <span>{journeySupportLabel}</span>
-                <span className="text-base font-bold" style={accentTextStyle}>
+                <span className="text-sm font-bold" style={accentTextStyle}>
                   {Math.round(primaryJourneyGoalProgress * 100)}%
                 </span>
               </div>
-              <div className="h-2.5 bg-gray-200/50 dark:bg-black/20 rounded-full overflow-hidden">
+              <div className="h-2 rounded-full overflow-hidden bg-gray-200/50 dark:bg-black/20">
                 <div
-                  className="h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
+                  className="relative h-full overflow-hidden rounded-full transition-all duration-1000 ease-out"
                   style={progressBarStyle}
                 >
                   <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
@@ -152,17 +172,15 @@ export default function JourneyPanel({
             {coachText ? (
               <div
                 className="
-                  bg-white/60 dark:bg-black/20
-                  backdrop-blur-sm
-                  border
                   rounded-2xl
-                  p-3.5
-                  flex items-start gap-3
+                  border
+                  bg-white/60 dark:bg-black/20
+                  p-2
+                  backdrop-blur-sm
                 "
                 style={coachCardStyle}
               >
-                <span className="text-2xl">💡</span>
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                <p className="text-[11px] leading-relaxed text-gray-700 dark:text-gray-300">
                   {coachText}
                 </p>
               </div>
@@ -175,12 +193,9 @@ export default function JourneyPanel({
                 onCtaClick();
               }}
               className={`
-                rounded-xl px-4 py-2 text-sm font-semibold
+                rounded-xl px-4 py-1.5 text-sm font-semibold
                 transition-all duration-200
-                ${primaryJourneyLoggedToday
-                  ? 'border-2'
-                  : 'text-white'
-                }
+                ${primaryJourneyLoggedToday ? 'border-2' : 'text-white'}
                 active:scale-95
               `}
               style={primaryJourneyLoggedToday ? mutedCtaStyle : primaryCtaStyle}
@@ -189,12 +204,11 @@ export default function JourneyPanel({
             </button>
           </div>
         ) : (
-          <div className="relative z-10 text-center py-6">
-            <div className="text-4xl mb-4">✨</div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          <div className="relative z-10 py-3 text-center">
+            <h3 className="mb-1.5 text-base font-bold text-gray-900 dark:text-white">
               Start Your Journey
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            <p className="mx-auto mb-4 max-w-md text-[12px] text-gray-600 dark:text-gray-400">
               One small step, can change everything.
             </p>
             <button
@@ -204,8 +218,9 @@ export default function JourneyPanel({
                 onCtaClick();
               }}
               className="
-                px-6 py-3 rounded-2xl
-                text-white font-semibold
+                rounded-2xl
+                px-4 py-2
+                font-semibold text-white
                 transition-all duration-200
                 active:scale-95
               "
