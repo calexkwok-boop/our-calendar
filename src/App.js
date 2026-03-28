@@ -2629,6 +2629,17 @@ function App() {
       window.history.replaceState({}, '', next);
     } catch {}
   };
+  const clearShareQueryParam = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('share')) return;
+      url.searchParams.delete('share');
+      const next = `${url.pathname}${url.search}${url.hash}`;
+      window.history.replaceState({}, '', next);
+    } catch {}
+  };
+  const PENDING_SHARE_TOKEN_STORAGE_KEY = 'pending-share-token';
 
   // -- Sub-calendar functions ----------------------------------------------
 
@@ -3913,11 +3924,73 @@ function App() {
     setSubCalInviteEmail('');
     setShowSubCalInviteModal(false);
   };
+  const getOrCreateShareLink = async ({ targetType, targetId, layerId = null }) => {
+    const normalizedTargetType = String(targetType || '').trim().toLowerCase();
+    const normalizedTargetId = String(targetId || '').trim();
+    const normalizedLayerId = String(layerId || '').trim() || null;
+    const ownerId = String(user?.id || '').trim();
+    if (!ownerId || !normalizedTargetType || !normalizedTargetId) return null;
+    try {
+      const { data: existingLink, error: existingErr } = await supabase
+        .from('share_links')
+        .select('token,target_type,target_id,layer_id,is_active')
+        .eq('owner_id', ownerId)
+        .eq('target_type', normalizedTargetType)
+        .eq('target_id', normalizedTargetId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!existingErr && existingLink?.token) return existingLink;
+
+      const { data: insertedLink, error: insertErr } = await supabase
+        .from('share_links')
+        .insert({
+          owner_id: ownerId,
+          target_type: normalizedTargetType,
+          target_id: normalizedTargetId,
+          layer_id: normalizedLayerId,
+          is_active: true,
+        })
+        .select('token,target_type,target_id,layer_id,is_active')
+        .maybeSingle();
+      if (!insertErr && insertedLink?.token) return insertedLink;
+
+      if (insertErr && /duplicate key|already exists|unique constraint|23505/i.test(String(insertErr.message || ''))) {
+        const retry = await supabase
+          .from('share_links')
+          .select('token,target_type,target_id,layer_id,is_active')
+          .eq('owner_id', ownerId)
+          .eq('target_type', normalizedTargetType)
+          .eq('target_id', normalizedTargetId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!retry.error && retry.data?.token) return retry.data;
+      }
+
+      if (existingErr || insertErr) {
+        console.error('Share link create failed:', insertErr || existingErr);
+      }
+    } catch (error) {
+      console.error('Share link create exception:', error);
+    }
+    return null;
+  };
   const copyTripInviteLink = async () => {
     const tripId = String(activeSubCalendar?.id || '').trim();
     if (!tripId || typeof window === 'undefined') return;
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}?trip=${tripId}`);
+      const shareLink = await getOrCreateShareLink({
+        targetType: 'trip',
+        targetId: tripId,
+        layerId: String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || activeLayerId || '').trim() || null,
+      });
+      const shareUrl = shareLink?.token
+        ? `${window.location.origin}?share=${encodeURIComponent(shareLink.token)}`
+        : `${window.location.origin}?trip=${tripId}`;
+      await navigator.clipboard.writeText(shareUrl);
       setTripInviteLinkCopied(true);
       setTimeout(() => setTripInviteLinkCopied(false), 2000);
     } catch {
@@ -4487,12 +4560,94 @@ function App() {
     const layerId = String(activeLayerId || '').trim();
     if (!layerId || typeof window === 'undefined') return;
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}?calendar=${layerId}`);
+      const shareLink = await getOrCreateShareLink({
+        targetType: 'calendar',
+        targetId: layerId,
+        layerId,
+      });
+      const shareUrl = shareLink?.token
+        ? `${window.location.origin}?share=${encodeURIComponent(shareLink.token)}`
+        : `${window.location.origin}?calendar=${layerId}`;
+      await navigator.clipboard.writeText(shareUrl);
       setCalendarShareLinkCopied(true);
       setTimeout(() => setCalendarShareLinkCopied(false), 2000);
     } catch {
       alert('Could not copy calendar link.');
     }
+  };
+  const openCalendarFromRedeemedShare = async (layerId) => {
+    const normalizedLayerId = String(layerId || '').trim();
+    if (!normalizedLayerId || !user?.id) return false;
+    try {
+      const loadedLayers = await loadLayersForUser(user.id, user.email, user.phone);
+      const targetLayer = (loadedLayers || []).find((row) => String(row?.id || '').trim() === normalizedLayerId);
+      if (!targetLayer) return false;
+      setActiveLayerId(normalizedLayerId);
+      localStorage.setItem(`active-layer-${user.id}`, normalizedLayerId);
+      setLayerRefreshToken((prev) => prev + 1);
+      clearShareQueryParam();
+      try { localStorage.removeItem(PENDING_SHARE_TOKEN_STORAGE_KEY); } catch {}
+      return true;
+    } catch (error) {
+      console.error('Redeemed calendar share open failed:', error);
+      return false;
+    }
+  };
+  const openTripFromRedeemedShare = async (tripId, layerIdFromShare = null) => {
+    const normalizedTripId = String(tripId || '').trim();
+    if (!normalizedTripId || !user?.id) return false;
+    try {
+      await loadLayersForUser(user.id, user.email, user.phone);
+      const { data: tripRow, error: tripErr } = await supabase
+        .from('sub_calendars')
+        .select('*')
+        .eq('id', normalizedTripId)
+        .maybeSingle();
+      if (tripErr || !tripRow) return false;
+      const targetLayerId = String(layerIdFromShare || tripRow?.layer_id || tripRow?.calendar_id || '').trim();
+      setSubCalendars((prev) => {
+        const next = new Map((prev || []).map((sc) => [String(sc?.id || ''), sc]));
+        next.set(normalizedTripId, tripRow);
+        return Array.from(next.values());
+      });
+      if (targetLayerId && targetLayerId !== String(activeLayerId || '')) {
+        setActiveLayerId(targetLayerId);
+        localStorage.setItem(`active-layer-${user.id}`, targetLayerId);
+      }
+      await openSubCalendar(tripRow);
+      setBottomNavTab('home');
+      setLayerRefreshToken((prev) => prev + 1);
+      clearShareQueryParam();
+      try { localStorage.removeItem(PENDING_SHARE_TOKEN_STORAGE_KEY); } catch {}
+      return true;
+    } catch (error) {
+      console.error('Redeemed trip share open failed:', error);
+      return false;
+    }
+  };
+  const redeemShareLinkToken = async (token) => {
+    const normalizedToken = String(token || '').trim();
+    if (!normalizedToken || !user?.id) return false;
+    try {
+      const { data, error } = await supabase.rpc('redeem_share_link', { p_token: normalizedToken });
+      if (error) {
+        console.error('Share link redeem failed:', error);
+        return false;
+      }
+      const payload = Array.isArray(data) ? data[0] : data;
+      const targetType = String(payload?.target_type || '').trim().toLowerCase();
+      const targetId = String(payload?.target_id || '').trim();
+      const layerId = String(payload?.layer_id || '').trim();
+      if (targetType === 'calendar' && targetId) {
+        return await openCalendarFromRedeemedShare(targetId);
+      }
+      if (targetType === 'trip' && targetId) {
+        return await openTripFromRedeemedShare(targetId, layerId);
+      }
+    } catch (error) {
+      console.error('Share link redeem exception:', error);
+    }
+    return false;
   };
   const openCalendarFromLink = async (layerId) => {
     const normalizedLayerId = String(layerId || '').trim();
@@ -12705,9 +12860,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const shareToken = String(params.get('share') || '').trim();
+      if (shareToken && !user?.id) {
+        localStorage.setItem(PENDING_SHARE_TOKEN_STORAGE_KEY, shareToken);
+      }
+    } catch {}
+  }, [user?.id]);
+
+  useEffect(() => {
     if (typeof window === 'undefined' || !user?.id) return;
     try {
       const params = new URLSearchParams(window.location.search || '');
+      const shareToken = String(params.get('share') || '').trim()
+        || String(localStorage.getItem(PENDING_SHARE_TOKEN_STORAGE_KEY) || '').trim();
+      if (shareToken) {
+        redeemShareLinkToken(shareToken);
+        return;
+      }
       const calendarId = String(params.get('calendar') || '').trim();
       if (calendarId) {
         openCalendarFromLink(calendarId);
