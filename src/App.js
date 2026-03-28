@@ -3117,7 +3117,34 @@ function App() {
         if (createdBy) addMember(createdBy, { status: 'accepted', source: 'trip_events', removable: true });
       });
 
-      setSubCalMembers(Array.from(merged.values()));
+      const dedupedMembers = Array.from(merged.values()).reduce((acc, member) => {
+        const labelKey = normalizeMemberLabelKey(member?.label || member?.identity || member?.email || member?.phone || '');
+        if (!labelKey) {
+          acc.push(member);
+          return acc;
+        }
+        const existingIndex = acc.findIndex((entry) => (
+          normalizeMemberLabelKey(entry?.label || entry?.identity || entry?.email || entry?.phone || '') === labelKey
+        ));
+        if (existingIndex === -1) {
+          acc.push(member);
+          return acc;
+        }
+        const existing = acc[existingIndex];
+        const existingConcrete = isConcreteMemberIdentity(existing?.identity || '', existing?.shareUserId || '');
+        const incomingConcrete = isConcreteMemberIdentity(member?.identity || '', member?.shareUserId || '');
+        const preferred = incomingConcrete && !existingConcrete
+          ? member
+          : (!incomingConcrete && existingConcrete ? existing : (
+            (member?.shareUserId && !existing?.shareUserId)
+              ? member
+              : existing
+          ));
+        acc[existingIndex] = preferred;
+        return acc;
+      }, []);
+
+      setSubCalMembers(dedupedMembers);
     } catch (e) { console.error(e); }
   };
 
@@ -29345,11 +29372,34 @@ transform: translateY(0);
       }
       return streak;
     };
+    const currentViewerLabelKeys = new Set(
+      [
+        String(currentUser || '').trim(),
+        String(resolveHandleLikeLabel(String(currentUser || user?.email || user?.phone || 'Member'), String(user?.id || '')) || '').trim(),
+        String(user?.user_metadata?.full_name || '').trim(),
+        String(user?.email || '').trim(),
+        String(user?.phone || '').trim(),
+      ]
+        .map((value) => normalizeIdentityKey(value))
+        .filter(Boolean)
+    );
+    const getViewerGroupRatingForEvent = (eventId) => (
+      (subCalEventGroupRatings?.[String(eventId || '')] || []).find((ratingRow) => {
+        const ratingUserId = String(ratingRow?.userId || ratingRow?.user_id || '').trim();
+        if (ratingUserId && ratingUserId === String(user?.id || '').trim()) return true;
+        const ratingLabelKeys = [
+          String(ratingRow?.userName || ratingRow?.user_name || '').trim(),
+          String(ratingRow?.display_name || '').trim(),
+          String(ratingRow?.email || '').trim(),
+        ]
+          .map((value) => normalizeIdentityKey(value))
+          .filter(Boolean);
+        return ratingLabelKeys.some((key) => currentViewerLabelKeys.has(key));
+      }) || null
+    );
     const eventsWithBadgeStats = allEvents.map((event) => {
       const eventId = String(event?.id || '');
-      const yourGroupRating = (subCalEventGroupRatings?.[eventId] || []).find(
-        (ratingRow) => String(ratingRow?.userId || '') === String(user?.id || '')
-      ) || null;
+      const yourGroupRating = getViewerGroupRatingForEvent(eventId);
       const localRating = Number(event?.rating || 0);
       const localReview = String(event?.review || '').trim();
       const localPhotos = Array.isArray(event?.photos) ? event.photos : [];
