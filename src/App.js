@@ -3050,11 +3050,16 @@ function App() {
 
       const subCalOwnerLabel = String(subCalRow?.created_by || '').trim();
       if (subCalOwnerLabel) {
-        addMember(subCalOwnerLabel, { status: 'accepted', source: 'subcal_owner', removable: false });
+        addMember(subCalOwnerLabel, {
+          status: 'accepted',
+          source: 'subcal_owner',
+          removable: false,
+          label: resolveHandleLikeLabel(subCalOwnerLabel, String(subCalRow?.owner_id || '').trim()),
+        });
       }
       const subCalOwnerId = String(subCalRow?.owner_id || '').trim();
       if (subCalOwnerId) {
-        const ownerLabel = String(sharedOwnerLabels?.[subCalOwnerId] || '').trim();
+        const ownerLabel = resolveHandleLikeLabel(String(sharedOwnerLabels?.[subCalOwnerId] || subCalOwnerLabel || '').trim(), subCalOwnerId);
         if (ownerLabel) addMember(ownerLabel, { status: 'accepted', source: 'subcal_owner', removable: false });
       }
       if (layerId) {
@@ -3064,9 +3069,7 @@ function App() {
           const sharedPhone = normalizePhoneNumber(row?.shared_with_phone);
           const sharedIdentity = sharedEmail || sharedPhone || sharedWithId;
           const ownerId = String(row?.owner_id || '').trim();
-          const label = sharedEmail
-            || sharedPhone
-            || String(sharedOwnerLabels?.[sharedWithId] || fallbackOwnerLabel(sharedWithId) || 'Member').trim();
+          const label = sharedEmail || sharedPhone || '';
 
           if (sharedIdentity) {
             addMember(sharedIdentity, {
@@ -3101,7 +3104,7 @@ function App() {
         (layerEventRows || []).forEach((row) => {
           const createdBy = String(row?.created_by || '').trim();
           if (createdBy) addMember(createdBy, { status: 'accepted', source: 'layer_events', removable: true });
-          const ownerLabel = String(sharedOwnerLabels?.[String(row?.user_id || '')] || '').trim();
+          const ownerLabel = resolveHandleLikeLabel(String(row?.created_by || '').trim(), String(row?.user_id || '').trim());
           if (ownerLabel) addMember(ownerLabel, { status: 'accepted', source: 'layer_events_owner', removable: true });
         });
       }
