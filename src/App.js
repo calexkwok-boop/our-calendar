@@ -2084,6 +2084,16 @@ function App() {
       );
     } catch {}
   };
+  const clearLocalRemovedTripMembers = (subCalId, identitiesToClear) => {
+    try {
+      const subCalKey = String(subCalId || '').trim();
+      if (!subCalKey) return;
+      const clearKeys = new Set((identitiesToClear || []).map((value) => normalizeIdentityKey(value)).filter(Boolean));
+      if (clearKeys.size === 0) return;
+      const nextRemoved = readLocalRemovedTripMembers(subCalKey).filter((value) => !clearKeys.has(normalizeIdentityKey(value)));
+      writeLocalRemovedTripMembers(subCalKey, nextRemoved);
+    } catch {}
+  };
   const writeLocalDeletedPhotoIds = (subCalId, ids) => {
     try {
       const normalized = Array.from(new Set((ids || []).map(id => String(id)).filter(Boolean)));
@@ -2971,6 +2981,9 @@ function App() {
           return values.map((value) => normalizeIdentityKey(value));
         })
       );
+      if (activeLayerRecipientKeys.size > 0) {
+        clearLocalRemovedTripMembers(subCalId, Array.from(activeLayerRecipientKeys));
+      }
 
       const merged = new Map();
       const memberKeyByLabel = new Map();
@@ -3197,6 +3210,17 @@ function App() {
           })
           .filter(([key]) => Boolean(key))
       ).values());
+
+      const activeSharedIdentityKeys = Array.from(new Set(
+        (sharedRows || []).flatMap((row) => ([
+          String(row?.shared_with_id || '').trim(),
+          normalizeEmail(row?.shared_with_email),
+          normalizePhoneNumber(row?.shared_with_phone),
+        ]).filter(Boolean).map((value) => normalizeIdentityKey(value)))
+      ));
+      if (activeSharedIdentityKeys.length > 0) {
+        clearLocalRemovedTripMembers(subCalId, activeSharedIdentityKeys);
+      }
 
       const sharedRecipients = Array.from(
         new Set(
