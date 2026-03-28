@@ -2919,24 +2919,72 @@ function App() {
     try {
       const myEmail = normalizeEmail(user?.email);
       const myPhone = normalizePhoneNumber(user?.phone);
+      const myUserId = String(user?.id || '').trim();
       const removedRecipients = new Set(readLocalRemovedTripMembers(subCalId));
+      const { data: subCalRow } = await supabase
+        .from('sub_calendars')
+        .select('layer_id,owner_id,created_by')
+        .eq('id', subCalId)
+        .maybeSingle();
+
       const { data: memberRows } = await supabase
         .from('sub_calendar_members')
         .select('*')
         .eq('sub_calendar_id', subCalId);
 
+      const layerId = String(subCalRow?.layer_id || '').trim();
+      let sharedRows = [];
+      if (layerId) {
+        const { data } = await supabase
+          .from('shared_access')
+          .select('owner_id,shared_with_id,shared_with_email,shared_with_phone')
+          .eq('layer_id', layerId);
+        sharedRows = data || [];
+        const supplementalShareRows = (myShares || [])
+          .filter((row) => String(row?.layer_id || row?.calendar_id || '').trim() === layerId);
+        if (supplementalShareRows.length > 0) {
+          const shareMap = new Map();
+          [...sharedRows, ...supplementalShareRows].forEach((row) => {
+            const key = [
+              String(row?.shared_with_id || '').trim(),
+              normalizeEmail(row?.shared_with_email),
+              normalizePhoneNumber(row?.shared_with_phone),
+            ].filter(Boolean).join('|');
+            if (key && !shareMap.has(key)) shareMap.set(key, row);
+          });
+          sharedRows = Array.from(shareMap.values());
+        }
+      }
+
+      const activeLayerRecipientKeys = new Set(
+        (sharedRows || []).flatMap((row) => {
+          const values = [
+            String(row?.shared_with_id || '').trim(),
+            normalizeEmail(row?.shared_with_email),
+            normalizePhoneNumber(row?.shared_with_phone),
+          ].filter(Boolean);
+          return values.map((value) => normalizeIdentityKey(value));
+        })
+      );
+
       const merged = new Map();
       const addMember = (identityValue, extra = {}) => {
-        const recipient = resolveInviteRecipient(identityValue);
-        if (!recipient?.value) return;
-        if (recipient.value === myEmail || recipient.value === myPhone) return;
-        if (removedRecipients.has(normalizeIdentityKey(recipient.value))) return;
-        if (!merged.has(recipient.value)) {
-          merged.set(recipient.value, {
-            id: recipient.value,
-            identity: recipient.value,
-            email: recipient.email || null,
-            phone: recipient.phone || null,
+        const rawIdentity = String(identityValue || '').trim();
+        const recipient = resolveInviteRecipient(rawIdentity);
+        const shareUserId = String(extra?.shareUserId || '').trim();
+        const normalizedIdentity = normalizeIdentityKey(recipient?.value || rawIdentity || shareUserId);
+        if (!normalizedIdentity) return;
+        if ((recipient?.value && (recipient.value === myEmail || recipient.value === myPhone)) || (shareUserId && shareUserId === myUserId)) return;
+        if (removedRecipients.has(normalizedIdentity)) return;
+        if (!merged.has(normalizedIdentity)) {
+          merged.set(normalizedIdentity, {
+            id: shareUserId || recipient?.value || rawIdentity,
+            identity: recipient?.value || rawIdentity || shareUserId,
+            email: recipient?.email || null,
+            phone: recipient?.phone || null,
+            shareUserId: shareUserId || null,
+            label: String(extra?.label || recipient?.value || rawIdentity || fallbackOwnerLabel(shareUserId) || 'Member').trim(),
+            sub_calendar_id: subCalId,
             ...extra,
           });
         }
@@ -2945,15 +2993,18 @@ function App() {
       (memberRows || []).forEach((row) => {
         const status = String(row?.status || '').toLowerCase();
         if (status === 'declined') return;
-        addMember(row?.email || row?.phone, { status: row?.status || null, source: 'trip_invite', removable: true });
+        const memberIdentity = row?.email || row?.phone;
+        const normalizedMemberIdentity = normalizeIdentityKey(memberIdentity);
+        const isPending = status === 'pending';
+        const stillShared = normalizedMemberIdentity && activeLayerRecipientKeys.has(normalizedMemberIdentity);
+        if (!isPending && layerId && normalizedMemberIdentity && activeLayerRecipientKeys.size > 0 && !stillShared) return;
+        addMember(memberIdentity, {
+          status: row?.status || null,
+          source: 'trip_invite',
+          removable: true,
+        });
       });
 
-      const { data: subCalRow } = await supabase
-        .from('sub_calendars')
-        .select('layer_id,owner_id,created_by')
-        .eq('id', subCalId)
-        .maybeSingle();
-      const layerId = String(subCalRow?.layer_id || '').trim();
       const subCalOwnerLabel = String(subCalRow?.created_by || '').trim();
       if (subCalOwnerLabel) {
         addMember(subCalOwnerLabel, { status: 'accepted', source: 'subcal_owner', removable: false });
@@ -2964,26 +3015,36 @@ function App() {
         if (ownerLabel) addMember(ownerLabel, { status: 'accepted', source: 'subcal_owner', removable: false });
       }
       if (layerId) {
-        const { data: sharedRows } = await supabase
-          .from('shared_access')
-          .select('owner_id,shared_with_email,shared_with_phone')
-          .eq('layer_id', layerId);
         (sharedRows || []).forEach((row) => {
+          const sharedWithId = String(row?.shared_with_id || '').trim();
           const sharedEmail = normalizeEmail(row?.shared_with_email);
           const sharedPhone = normalizePhoneNumber(row?.shared_with_phone);
-          const sharedIdentity = sharedEmail || sharedPhone;
+          const sharedIdentity = sharedEmail || sharedPhone || sharedWithId;
           const ownerId = String(row?.owner_id || '').trim();
+          const label = sharedEmail
+            || sharedPhone
+            || String(sharedOwnerLabels?.[sharedWithId] || fallbackOwnerLabel(sharedWithId) || 'Member').trim();
 
           if (sharedIdentity) {
-            addMember(sharedIdentity, { status: 'accepted', source: 'layer_share', removable: true });
+            addMember(sharedIdentity, {
+              status: 'accepted',
+              source: 'layer_share',
+              removable: true,
+              shareUserId: sharedWithId || null,
+              label,
+            });
           }
 
           // If this row is "owner shared to me", also include the owner label/email.
           // This preserves collaborator visibility for recipients under strict RLS.
-          if (sharedIdentity && (sharedIdentity === myEmail || sharedIdentity === myPhone) && ownerId) {
+          const rowTargetsMe = (sharedWithId && sharedWithId === myUserId)
+            || (sharedIdentity && (sharedIdentity === myEmail || sharedIdentity === myPhone));
+          if (rowTargetsMe && ownerId) {
             const ownerLabel = String(sharedOwnerLabels?.[ownerId] || '').trim().toLowerCase();
             if (ownerLabel.includes('@')) {
-              const ownerEmailGuard = String(ownerId || '') === String(user?.id || '') ? normalizeEmail(user?.email) : ''; const isTrueOwnerEmail = ownerEmailGuard && normalizeEmail(ownerLabel) === ownerEmailGuard; addMember(ownerLabel, { status: 'accepted', source: 'layer_share_owner', removable: !isTrueOwnerEmail });
+              const ownerEmailGuard = String(ownerId || '') === String(user?.id || '') ? normalizeEmail(user?.email) : '';
+              const isTrueOwnerEmail = ownerEmailGuard && normalizeEmail(ownerLabel) === ownerEmailGuard;
+              addMember(ownerLabel, { status: 'accepted', source: 'layer_share_owner', removable: !isTrueOwnerEmail });
             }
           }
         });
@@ -3065,14 +3126,27 @@ function App() {
       // Only owner should maintain canonical trip member mirror from layer shares.
       if (String(subCal?.owner_id || '') !== String(user.id)) return;
 
-      const { data: sharedRows, error: sharedErr } = await supabase
-        .from('shared_access')
-        .select('shared_with_email,shared_with_phone')
-        .eq('layer_id', layerId);
+        const { data: sharedRowsData, error: sharedErr } = await supabase
+          .from('shared_access')
+          .select('shared_with_id,shared_with_email,shared_with_phone')
+          .eq('layer_id', layerId);
       if (sharedErr) {
         console.error('syncSubCalendarMembersFromLayer shared_access error:', sharedErr);
         return;
       }
+
+      const sharedRows = Array.from(new Map(
+        [...(sharedRowsData || []), ...((myShares || []).filter((row) => String(row?.layer_id || row?.calendar_id || '').trim() === layerId))]
+          .map((row) => {
+            const key = [
+              String(row?.shared_with_id || '').trim(),
+              normalizeEmail(row?.shared_with_email),
+              normalizePhoneNumber(row?.shared_with_phone),
+            ].filter(Boolean).join('|');
+            return [key, row];
+          })
+          .filter(([key]) => Boolean(key))
+      ).values());
 
       const sharedRecipients = Array.from(
         new Set(
@@ -3081,16 +3155,38 @@ function App() {
             .filter(Boolean)
         )
       );
-      if (sharedRecipients.length === 0) return;
 
       const { data: existingRows, error: existingErr } = await supabase
         .from('sub_calendar_members')
-        .select('email,phone')
+        .select('id,email,phone,status')
         .eq('sub_calendar_id', subCalId);
       if (existingErr) {
         console.error('syncSubCalendarMembersFromLayer existing members error:', existingErr);
         return;
       }
+
+      const staleAcceptedIds = (existingRows || [])
+        .filter((row) => {
+          const status = String(row?.status || '').toLowerCase();
+          if (status === 'pending') return false;
+          const identity = normalizeEmail(row?.email) || normalizePhoneNumber(row?.phone);
+          if (!identity) return false;
+          return !sharedRecipients.includes(identity);
+        })
+        .map((row) => String(row?.id || '').trim())
+        .filter(Boolean);
+      if (staleAcceptedIds.length > 0) {
+        const { error: staleDeleteErr } = await supabase
+          .from('sub_calendar_members')
+          .delete()
+          .in('id', staleAcceptedIds);
+        if (staleDeleteErr) {
+          console.error('syncSubCalendarMembersFromLayer stale delete error:', staleDeleteErr);
+        }
+      }
+
+      if (sharedRecipients.length === 0) return;
+
       const existingRecipients = new Set(
         (existingRows || [])
           .map((r) => normalizeEmail(r?.email) || normalizePhoneNumber(r?.phone))
@@ -3734,39 +3830,49 @@ function App() {
     }
   };
 
-  const removeMemberFromSubCal = async (identity) => {
+  const removeMemberFromSubCal = async (memberOrIdentity) => {
     if (!activeSubCalendar || !canEditCurrentTrip) {
       alert('Only trip hosts can remove members.');
       return;
     }
-    const recipient = resolveInviteRecipient(identity);
-    if (!recipient?.value) return;
-    if (!window.confirm(`Remove ${resolveHandleLikeLabel(recipient.value)} from this trip?`)) return;
-    let deleteQuery = supabase.from('sub_calendar_members')
-      .delete()
-      .eq('sub_calendar_id', activeSubCalendar.id);
-    const recipientFilter = buildMemberRecipientFilter(recipient.email, recipient.phone);
-    if (recipientFilter) deleteQuery = deleteQuery.or(recipientFilter);
-    await deleteQuery;
+    const member = memberOrIdentity && typeof memberOrIdentity === 'object'
+      ? memberOrIdentity
+      : { identity: memberOrIdentity };
+    const shareUserId = String(member?.shareUserId || '').trim();
+    const recipient = resolveInviteRecipient(member?.identity || member?.email || member?.phone);
+    const memberLabel = String(member?.label || resolveHandleLikeLabel(recipient?.value || shareUserId || member?.identity || '')).trim();
+    if (!recipient?.value && !shareUserId) return;
+    if (!window.confirm(`Remove ${memberLabel || 'this member'} from this trip?`)) return;
+    if (recipient?.value) {
+      let deleteQuery = supabase.from('sub_calendar_members')
+        .delete()
+        .eq('sub_calendar_id', activeSubCalendar.id);
+      const recipientFilter = buildMemberRecipientFilter(recipient.email, recipient.phone);
+      if (recipientFilter) deleteQuery = deleteQuery.or(recipientFilter);
+      await deleteQuery;
+    }
     if (activeSubCalendar?.layer_id) {
       try {
         let shareDeleteQuery = supabase
           .from('shared_access')
           .delete()
           .eq('layer_id', activeSubCalendar.layer_id);
-        const shareRecipientFilter = buildShareRecipientFilter('', recipient.email, recipient.phone);
+        const shareRecipientFilter = buildShareRecipientFilter(shareUserId, recipient?.email, recipient?.phone);
         if (shareRecipientFilter) shareDeleteQuery = shareDeleteQuery.or(shareRecipientFilter);
         await shareDeleteQuery;
       } catch (error) {
         console.error('Trip member shared_access removal failed:', error);
       }
     }
-    const removedKey = normalizeIdentityKey(recipient.value);
+    const removedKey = normalizeIdentityKey(recipient?.value || shareUserId);
     if (removedKey) {
       const prevRemoved = readLocalRemovedTripMembers(activeSubCalendar.id);
       writeLocalRemovedTripMembers(activeSubCalendar.id, [...prevRemoved, removedKey]);
     }
-    setSubCalMembers(prev => prev.filter(m => m.identity !== recipient.value));
+    setSubCalMembers(prev => prev.filter((m) => {
+      const memberKey = normalizeIdentityKey(m?.identity || m?.email || m?.phone || m?.shareUserId);
+      return memberKey !== removedKey;
+    }));
   };
 
   const loadSubCalNotes = async (subCalId) => {
@@ -27254,8 +27360,8 @@ transform: translateY(0);
                   {currentUser} (you)
                 </span>
                 {subCalMembers.map((m) => {
-                  const memberIdentity = m.identity || m.email || m.phone;
-                  const memberLabel = resolveHandleLikeLabel(memberIdentity);
+                  const memberIdentity = m.identity || m.email || m.phone || m.shareUserId;
+                  const memberLabel = String(m.label || resolveHandleLikeLabel(memberIdentity)).trim();
                   const isRemovable = canEditCurrentTrip && m.removable !== false;
                   return (
                     <div
@@ -27275,7 +27381,7 @@ transform: translateY(0);
                       </div>
                       {isRemovable && (
                         <button
-                          onClick={() => removeMemberFromSubCal(memberIdentity)}
+                          onClick={() => removeMemberFromSubCal(m)}
                           className="ml-auto shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
                           type="button"
                         >
@@ -27487,16 +27593,19 @@ transform: translateY(0);
                 👤 {currentUser} (you)
               </span>
               {subCalMembers.map((m) => {
-                const memberIdentity = m.identity || m.email || m.phone;
+                const memberIdentity = m.identity || m.email || m.phone || m.shareUserId;
+                const memberLabel = String(m.label || resolveHandleLikeLabel(memberIdentity)).trim();
                 return (
                   <div key={memberIdentity} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-xs flex items-center gap-1.5">
-                    <span className="truncate max-w-[10rem]">{resolveHandleLikeLabel(memberIdentity)}</span>
-                    <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200">
-                      {getRecipientKindLabel(memberIdentity)}
-                    </span>
+                    <span className="truncate max-w-[10rem]">{memberLabel}</span>
+                    {getRecipientKindLabel(memberIdentity) ? (
+                      <span className="px-1 py-0.5 rounded text-[9px] font-semibold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200">
+                        {getRecipientKindLabel(memberIdentity)}
+                      </span>
+                    ) : null}
                     {canEditCurrentTrip && m.removable !== false && (
                       <button
-                        onClick={() => removeMemberFromSubCal(memberIdentity)}
+                        onClick={() => removeMemberFromSubCal(m)}
                         className="ml-1 shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
                       >
                         Remove

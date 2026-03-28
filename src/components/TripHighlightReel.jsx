@@ -66,17 +66,32 @@ export default function TripHighlightReel({
     try {
       const normalizedMoments = buildScoredMoments(events, groupRatingsByEventId, currentUserId);
       const slides = buildPremiumSlides(trip, normalizedMoments, events, tripPhotos);
-      return Array.isArray(slides) && slides.length > 0 ? slides : buildFallbackSlides(trip, events, tripPhotos);
+      const fallbackSlides = buildFallbackSlides(trip, events, tripPhotos);
+      return Array.isArray(slides) && slides.length > 0
+        ? slides
+        : (Array.isArray(fallbackSlides) && fallbackSlides.length > 0 ? fallbackSlides : buildEmergencySlides(trip));
     } catch (error) {
       console.error('Trip highlight reel generation failed:', error);
-      return buildFallbackSlides(trip, events, tripPhotos);
+      try {
+        const fallbackSlides = buildFallbackSlides(trip, events, tripPhotos);
+        return Array.isArray(fallbackSlides) && fallbackSlides.length > 0
+          ? fallbackSlides
+          : buildEmergencySlides(trip);
+      } catch (fallbackError) {
+        console.error('Trip highlight fallback generation failed:', fallbackError);
+        return buildEmergencySlides(trip);
+      }
     }
   }, [events, groupRatingsByEventId, currentUserId, trip, tripPhotos]);
+
+  const safeHighlights = useMemo(() => (
+    Array.isArray(highlights) && highlights.length > 0 ? highlights : buildEmergencySlides(trip)
+  ), [highlights, trip]);
 
   useEffect(() => {
     setCurrentSlide(0);
     setIsPlaying(false);
-  }, [highlights]);
+  }, [safeHighlights]);
 
   useEffect(() => {
     const nextTrackId = pickDefaultTrackId(events, groupRatingsByEventId, currentUserId);
@@ -88,7 +103,7 @@ export default function TripHighlightReel({
     if (isPlaying) {
       intervalRef.current = setInterval(() => {
         setCurrentSlide((prev) => {
-          if (prev >= highlights.length - 1) {
+          if (prev >= safeHighlights.length - 1) {
             setIsPlaying(false);
             return 0;
           }
@@ -101,7 +116,7 @@ export default function TripHighlightReel({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isPlaying, highlights.length]);
+  }, [isPlaying, safeHighlights.length]);
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -150,7 +165,7 @@ export default function TripHighlightReel({
   };
 
   const handleNext = () => {
-    setCurrentSlide((prev) => Math.min(prev + 1, highlights.length - 1));
+    setCurrentSlide((prev) => Math.min(prev + 1, safeHighlights.length - 1));
   };
 
   const handlePrev = () => {
@@ -160,19 +175,19 @@ export default function TripHighlightReel({
   const handleDownload = () => {
     setShowShareMenu(false);
     setShowMusicMenu(false);
-    if (onSave) onSave(highlights);
+    if (onSave) onSave(safeHighlights);
   };
 
   const handleShare = () => {
     setShowShareMenu(false);
     setShowMusicMenu(false);
-    if (onShare) onShare(highlights);
+    if (onShare) onShare(safeHighlights);
   };
 
   const handlePublish = () => {
     setShowShareMenu(false);
     setShowMusicMenu(false);
-    if (onPublish) onPublish(highlights);
+    if (onPublish) onPublish(safeHighlights);
   };
 
   const handleToggleMusicEnabled = () => {
@@ -194,18 +209,7 @@ export default function TripHighlightReel({
     setShowMusicMenu(false);
   };
 
-  if (highlights.length === 0) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
-        <div className="text-center text-white">
-          <div className="mb-4 text-6xl animate-spin">+</div>
-          <div className="text-xl">Creating your highlight reel...</div>
-        </div>
-      </div>
-    );
-  }
-
-  const currentHighlight = highlights[currentSlide];
+  const currentHighlight = safeHighlights[Math.max(0, Math.min(currentSlide, safeHighlights.length - 1))] || safeHighlights[0];
   const selectedTrack = HIGHLIGHT_REEL_TRACKS.find((track) => track.id === selectedTrackId) || HIGHLIGHT_REEL_TRACKS[0];
 
   return (
@@ -350,7 +354,7 @@ export default function TripHighlightReel({
             </button>
             <button
               onClick={handleNext}
-              disabled={currentSlide === highlights.length - 1}
+              disabled={currentSlide === safeHighlights.length - 1}
               className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md transition-colors hover:bg-white/30 disabled:opacity-30"
             >
               {'>'}
@@ -359,7 +363,7 @@ export default function TripHighlightReel({
         ) : null}
 
         <div className="mt-3 text-center text-sm text-white/75">
-          {currentSlide + 1} / {highlights.length}
+          {Math.max(1, Math.min(currentSlide + 1, safeHighlights.length))} / {safeHighlights.length}
         </div>
       </div>
     </div>
@@ -854,6 +858,30 @@ const buildFallbackSlides = (trip, events, tripPhotos) => {
     },
   ];
 };
+
+const buildEmergencySlides = (trip) => ([
+  {
+    type: 'title',
+    title: trip?.name || trip?.title || 'Trip Highlights',
+    subtitle: formatTripDates(trip?.startDate, trip?.endDate) || 'A memory reel for this trip',
+    background: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200',
+  },
+  {
+    type: 'spotlight',
+    eyebrow: 'Memory Reel',
+    title: 'Your highlights are ready',
+    caption: 'We opened a simplified reel so the trip still shows up cleanly.',
+    subcopy: 'The trip can still be shared, saved, and published even when richer slides are unavailable.',
+    background: 'linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)',
+  },
+  {
+    type: 'stats',
+    totalDays: 1,
+    totalPhotos: 0,
+    avgRating: '4.8',
+    topRated: String(trip?.name || trip?.title || 'Best memory'),
+  },
+]);
 
 const buildEventCopy = (moment, index) => {
   const eventTitle = String(moment?.event?.title || 'A standout stop').trim();
