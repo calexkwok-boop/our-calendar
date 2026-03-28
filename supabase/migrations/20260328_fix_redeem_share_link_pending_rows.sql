@@ -63,7 +63,7 @@ begin
         and (
           sa.shared_with_id = v_user_id
           or (v_email is not null and lower(coalesce(sa.shared_with_email, '')) = lower(v_email))
-          or (v_phone is not null and coalesce(sa.shared_with_phone, '')) = v_phone
+          or (v_phone is not null and coalesce(sa.shared_with_phone, '') = v_phone)
         )
       order by sa.created_at asc nulls last
       limit 1;
@@ -126,7 +126,7 @@ begin
         and (
           sa.shared_with_id = v_user_id
           or (v_email is not null and lower(coalesce(sa.shared_with_email, '')) = lower(v_email))
-          or (v_phone is not null and coalesce(sa.shared_with_phone, '')) = v_phone
+          or (v_phone is not null and coalesce(sa.shared_with_phone, '') = v_phone)
         )
       order by
         case when sa.shared_with_id = v_user_id then 0 else 1 end,
@@ -162,7 +162,7 @@ begin
         and (
           sa.shared_with_id = v_user_id
           or (v_email is not null and lower(coalesce(sa.shared_with_email, '')) = lower(v_email))
-          or (v_phone is not null and coalesce(sa.shared_with_phone, '')) = v_phone
+          or (v_phone is not null and coalesce(sa.shared_with_phone, '') = v_phone)
         )
       order by sa.created_at asc nulls last
       limit 1;
@@ -225,7 +225,7 @@ begin
         and (
           sa.shared_with_id = v_user_id
           or (v_email is not null and lower(coalesce(sa.shared_with_email, '')) = lower(v_email))
-          or (v_phone is not null and coalesce(sa.shared_with_phone, '')) = v_phone
+          or (v_phone is not null and coalesce(sa.shared_with_phone, '') = v_phone)
         )
       order by
         case when sa.shared_with_id = v_user_id then 0 else 1 end,
@@ -244,7 +244,7 @@ begin
       where scm.sub_calendar_id::text = v_trip_id
         and (
           (v_email is not null and lower(coalesce(scm.email, '')) = lower(v_email))
-          or (v_phone is not null and coalesce(scm.phone, '')) = v_phone
+          or (v_phone is not null and coalesce(scm.phone, '') = v_phone)
         )
       order by scm.created_at asc nulls last
       limit 1;

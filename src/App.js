@@ -21048,11 +21048,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           {editingListItemId !== item.id && (
             <button
               onClick={() => startEditingListItem(item)}
-              className="rounded-xl p-1.5"
-              style={themeAccentSoftButtonStyle}
+              className={`rounded-xl p-1.5 ${darkMode ? 'border border-white/10 bg-white/10 hover:bg-white/15 text-gray-100' : ''}`}
+              style={darkMode ? undefined : themeAccentSoftButtonStyle}
               title="Edit item"
             >
-              <Edit2 className="w-3.5 h-3.5" style={themeAccentTextStyle} />
+              <Edit2 className={`w-3.5 h-3.5 ${darkMode ? 'text-gray-100' : ''}`} style={darkMode ? undefined : themeAccentTextStyle} />
             </button>
           )}
         </div>
@@ -22662,8 +22662,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="self-center px-3 py-2 rounded-xl text-[11px] font-semibold shrink-0 transition-all"
-                  style={themeAccentSoftButtonStyle}
+                  className={`self-center px-3 py-2 rounded-xl text-[11px] font-semibold shrink-0 transition-all ${darkMode ? 'text-gray-100 border border-white/10 bg-white/10 hover:bg-white/15' : ''}`}
+                  style={darkMode ? undefined : themeAccentSoftButtonStyle}
                 >
                   Logout
                 </button>
@@ -23916,11 +23916,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   {editingListItemId !== item.id && (
                     <button
                       onClick={() => startEditingListItem(item)}
-                      className="rounded-xl p-1.5"
-                      style={themeAccentSoftButtonStyle}
+                      className={`rounded-xl p-1.5 ${darkMode ? 'border border-white/10 bg-white/10 hover:bg-white/15 text-gray-100' : ''}`}
+                      style={darkMode ? undefined : themeAccentSoftButtonStyle}
                       title="Edit item"
                     >
-                      <Edit2 className="w-3.5 h-3.5" style={themeAccentTextStyle} />
+                      <Edit2 className={`w-3.5 h-3.5 ${darkMode ? 'text-gray-100' : ''}`} style={darkMode ? undefined : themeAccentTextStyle} />
                     </button>
                   )}
                   <button
@@ -23978,11 +23978,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                         {editingListItemId !== item.id && (
                           <button
                             onClick={() => startEditingListItem(item)}
-                            className="rounded-xl p-1.5"
-                            style={themeAccentSoftButtonStyle}
+                            className={`rounded-xl p-1.5 ${darkMode ? 'border border-white/10 bg-white/10 hover:bg-white/15 text-gray-100' : ''}`}
+                            style={darkMode ? undefined : themeAccentSoftButtonStyle}
                             title="Edit item"
                           >
-                            <Edit2 className="w-3.5 h-3.5" style={themeAccentTextStyle} />
+                            <Edit2 className={`w-3.5 h-3.5 ${darkMode ? 'text-gray-100' : ''}`} style={darkMode ? undefined : themeAccentTextStyle} />
                           </button>
                         )}
                         <button
