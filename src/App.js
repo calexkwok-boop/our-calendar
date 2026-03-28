@@ -3978,6 +3978,33 @@ function App() {
     }
     return null;
   };
+  const copyTextToClipboard = async (text) => {
+    const value = String(text || '');
+    if (!value || typeof window === 'undefined' || typeof document === 'undefined') return false;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch {}
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-1000px';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      const copied = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return Boolean(copied);
+    } catch {
+      return false;
+    }
+  };
   const copyTripInviteLink = async () => {
     const tripId = String(activeSubCalendar?.id || '').trim();
     if (!tripId || typeof window === 'undefined') return;
@@ -3990,7 +4017,8 @@ function App() {
       const shareUrl = shareLink?.token
         ? `${window.location.origin}?share=${encodeURIComponent(shareLink.token)}`
         : `${window.location.origin}?trip=${tripId}`;
-      await navigator.clipboard.writeText(shareUrl);
+      const copied = await copyTextToClipboard(shareUrl);
+      if (!copied) throw new Error('copy failed');
       setTripInviteLinkCopied(true);
       setTimeout(() => setTripInviteLinkCopied(false), 2000);
     } catch {
@@ -4568,7 +4596,8 @@ function App() {
       const shareUrl = shareLink?.token
         ? `${window.location.origin}?share=${encodeURIComponent(shareLink.token)}`
         : `${window.location.origin}?calendar=${layerId}`;
-      await navigator.clipboard.writeText(shareUrl);
+      const copied = await copyTextToClipboard(shareUrl);
+      if (!copied) throw new Error('copy failed');
       setCalendarShareLinkCopied(true);
       setTimeout(() => setCalendarShareLinkCopied(false), 2000);
     } catch {
