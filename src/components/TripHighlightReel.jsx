@@ -91,6 +91,14 @@ export default function TripHighlightReel({
   const shareMenuRef = useRef(null);
   const musicMenuRef = useRef(null);
 
+  const handleNext = () => {
+    setCurrentSlide((prev) => Math.min(prev + 1, safeHighlights.length - 1));
+  };
+
+  const handlePrev = () => {
+    setCurrentSlide((prev) => Math.max(prev - 1, 0));
+  };
+
   const highlights = useMemo(() => {
     try {
       const normalizedMoments = buildScoredMoments(events, groupRatingsByEventId, currentUserId);
@@ -119,7 +127,7 @@ export default function TripHighlightReel({
 
   useEffect(() => {
     setCurrentSlide(0);
-    setIsPlaying(false);
+    setIsPlaying(safeHighlights.length > 1);
   }, [safeHighlights]);
 
   useEffect(() => {
@@ -195,14 +203,6 @@ export default function TripHighlightReel({
     } else {
       audioRef.current.pause();
     }
-  };
-
-  const handleNext = () => {
-    setCurrentSlide((prev) => Math.min(prev + 1, safeHighlights.length - 1));
-  };
-
-  const handlePrev = () => {
-    setCurrentSlide((prev) => Math.max(prev - 1, 0));
   };
 
   const handleDownload = () => {
@@ -352,6 +352,20 @@ export default function TripHighlightReel({
       </div>
 
       <div className="relative flex-1 overflow-hidden">
+        <button
+          type="button"
+          aria-label="Previous highlight"
+          onClick={handlePrev}
+          disabled={currentSlide === 0}
+          className="absolute inset-y-0 left-0 z-20 w-1/4 bg-transparent disabled:pointer-events-none"
+        />
+        <button
+          type="button"
+          aria-label="Next highlight"
+          onClick={handleNext}
+          disabled={currentSlide >= safeHighlights.length - 1}
+          className="absolute inset-y-0 right-0 z-20 w-1/4 bg-transparent disabled:pointer-events-none"
+        />
         {currentHighlight.type === 'title' && <TitleSlide highlight={currentHighlight} />}
         {currentHighlight.type === 'chapter' && <ChapterSlide highlight={currentHighlight} />}
         {currentHighlight.type === 'photo' && <PhotoHighlightSlide highlight={currentHighlight} />}
