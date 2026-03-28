@@ -2011,6 +2011,7 @@ function App() {
   const [tripCoverPhotoNoteId, setTripCoverPhotoNoteId] = useState(null);
   const [tripHighlightsSlides, setTripHighlightsSlides] = useState([]);
   const [showTripHighlightsModal, setShowTripHighlightsModal] = useState(false);
+  const [tripHighlightsOpenToken, setTripHighlightsOpenToken] = useState(0);
   const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
   const [deletedPhotosNoteId, setDeletedPhotosNoteId] = useState(null);
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
@@ -2972,26 +2973,64 @@ function App() {
       );
 
       const merged = new Map();
+      const memberKeyByLabel = new Map();
+      const normalizeMemberLabelKey = (value) => normalizeIdentityKey(String(value || '').trim());
+      const isConcreteMemberIdentity = (value, shareUserId = '') => {
+        if (String(shareUserId || '').trim()) return true;
+        const raw = String(value || '').trim();
+        return Boolean(normalizeEmail(raw) || normalizePhoneNumber(raw));
+      };
       const addMember = (identityValue, extra = {}) => {
         const rawIdentity = String(identityValue || '').trim();
         const recipient = resolveInviteRecipient(rawIdentity);
         const shareUserId = String(extra?.shareUserId || '').trim();
         const normalizedIdentity = normalizeIdentityKey(recipient?.value || rawIdentity || shareUserId);
+        const resolvedLabel = resolveHandleLikeLabel(String(extra?.label || recipient?.value || rawIdentity || shareUserId || fallbackOwnerLabel(shareUserId) || 'Member').trim(), shareUserId);
+        const normalizedLabel = normalizeMemberLabelKey(resolvedLabel);
+        const isConcrete = isConcreteMemberIdentity(recipient?.value || rawIdentity, shareUserId);
         if (!normalizedIdentity) return;
-        if ((recipient?.value && (recipient.value === myEmail || recipient.value === myPhone)) || (shareUserId && shareUserId === myUserId)) return;
+        if (
+          (recipient?.value && (recipient.value === myEmail || recipient.value === myPhone))
+          || (shareUserId && shareUserId === myUserId)
+          || (normalizedLabel && normalizedLabel === normalizeMemberLabelKey(currentUser || ''))
+        ) return;
         if (removedRecipients.has(normalizedIdentity)) return;
-        if (!merged.has(normalizedIdentity)) {
+        const existingKeyForLabel = normalizedLabel ? memberKeyByLabel.get(normalizedLabel) : '';
+        if (existingKeyForLabel && existingKeyForLabel !== normalizedIdentity) {
+          const existingForLabel = merged.get(existingKeyForLabel);
+          const existingConcrete = isConcreteMemberIdentity(existingForLabel?.identity || '', existingForLabel?.shareUserId || '');
+          if (!isConcrete && existingConcrete) return;
+          if (isConcrete && !existingConcrete) {
+            merged.delete(existingKeyForLabel);
+          }
+        }
+        const existing = merged.get(normalizedIdentity);
+        if (!existing) {
           merged.set(normalizedIdentity, {
             id: shareUserId || recipient?.value || rawIdentity,
             identity: recipient?.value || rawIdentity || shareUserId,
             email: recipient?.email || null,
             phone: recipient?.phone || null,
             shareUserId: shareUserId || null,
-            label: String(extra?.label || recipient?.value || rawIdentity || fallbackOwnerLabel(shareUserId) || 'Member').trim(),
+            label: resolvedLabel,
             sub_calendar_id: subCalId,
             ...extra,
           });
+          if (normalizedLabel) memberKeyByLabel.set(normalizedLabel, normalizedIdentity);
+          return;
         }
+        merged.set(normalizedIdentity, {
+          ...existing,
+          ...extra,
+          id: existing.id || shareUserId || recipient?.value || rawIdentity,
+          identity: existing.identity || recipient?.value || rawIdentity || shareUserId,
+          email: existing.email || recipient?.email || null,
+          phone: existing.phone || recipient?.phone || null,
+          shareUserId: existing.shareUserId || shareUserId || null,
+          label: (!isLikelyRawIdentity(resolvedLabel) || isLikelyRawIdentity(existing.label || '')) ? resolvedLabel : existing.label,
+          sub_calendar_id: subCalId,
+        });
+        if (normalizedLabel) memberKeyByLabel.set(normalizedLabel, normalizedIdentity);
       };
 
       (memberRows || []).forEach((row) => {
@@ -17047,6 +17086,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const openTripHighlights = () => {
     if (!activeSubCalendar) return;
     setTripHighlightsSlides([]);
+    setTripHighlightsOpenToken((prev) => prev + 1);
     setShowTripHighlightsModal(true);
   };
   const shareTripHighlightsWithFriends = async () => {
@@ -27263,6 +27303,7 @@ transform: translateY(0);
 
     {showTripHighlightsModal && activeSubCalendar && (
       <TripHighlightReel
+        key={`${String(activeSubCalendar?.id || 'trip')}-${tripHighlightsOpenToken}`}
         trip={{
           ...activeSubCalendar,
           startDate: getSubCalStartRaw(activeSubCalendar),
