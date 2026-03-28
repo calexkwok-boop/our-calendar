@@ -4623,9 +4623,18 @@ function App() {
     const normalizedLayerId = String(layerId || '').trim();
     if (!normalizedLayerId || !user?.id) return false;
     try {
-      const loadedLayers = await loadLayersForUser(user.id, user.email, user.phone);
-      const targetLayer = (loadedLayers || []).find((row) => String(row?.id || '').trim() === normalizedLayerId);
-      if (!targetLayer) return false;
+      let loadedLayers = await loadLayersForUser(user.id, user.email, user.phone);
+      let targetLayer = (loadedLayers || []).find((row) => String(row?.id || '').trim() === normalizedLayerId);
+      if (!targetLayer) {
+        loadedLayers = await loadLayersForUser(user.id, user.email, user.phone);
+        targetLayer = (loadedLayers || []).find((row) => String(row?.id || '').trim() === normalizedLayerId);
+      }
+      if (!targetLayer) {
+        try {
+          alert('Share link redeemed, but the calendar still is not visible yet. Please refresh and try again.');
+        } catch {}
+        return false;
+      }
       setActiveLayerId(normalizedLayerId);
       localStorage.setItem(`active-layer-${user.id}`, normalizedLayerId);
       setLayerRefreshToken((prev) => prev + 1);
@@ -4641,7 +4650,7 @@ function App() {
     const normalizedTripId = String(tripId || '').trim();
     if (!normalizedTripId || !user?.id) return false;
     try {
-      await loadLayersForUser(user.id, user.email, user.phone);
+      let loadedLayers = await loadLayersForUser(user.id, user.email, user.phone);
       const { data: tripRow, error: tripErr } = await supabase
         .from('sub_calendars')
         .select('*')
@@ -4649,6 +4658,9 @@ function App() {
         .maybeSingle();
       if (tripErr || !tripRow) return false;
       const targetLayerId = String(layerIdFromShare || tripRow?.layer_id || tripRow?.calendar_id || '').trim();
+      if (targetLayerId && !(loadedLayers || []).some((row) => String(row?.id || '').trim() === targetLayerId)) {
+        loadedLayers = await loadLayersForUser(user.id, user.email, user.phone);
+      }
       setSubCalendars((prev) => {
         const next = new Map((prev || []).map((sc) => [String(sc?.id || ''), sc]));
         next.set(normalizedTripId, tripRow);
@@ -4676,9 +4688,18 @@ function App() {
       const { data, error } = await supabase.rpc('redeem_share_link', { p_token: normalizedToken });
       if (error) {
         console.error('Share link redeem failed:', error);
+        try {
+          alert(`Share link failed: ${error.message || 'Unknown error'}`);
+        } catch {}
         return false;
       }
       const payload = Array.isArray(data) ? data[0] : data;
+      if (!payload) {
+        try {
+          alert('Share link failed: link was not redeemed.');
+        } catch {}
+        return false;
+      }
       const targetType = String(payload?.target_type || '').trim().toLowerCase();
       const targetId = String(payload?.target_id || '').trim();
       const layerId = String(payload?.layer_id || '').trim();
@@ -4690,6 +4711,9 @@ function App() {
       }
     } catch (error) {
       console.error('Share link redeem exception:', error);
+      try {
+        alert(`Share link failed: ${error?.message || 'Unknown exception'}`);
+      } catch {}
     }
     return false;
   };
