@@ -3967,6 +3967,62 @@ function App() {
           }
         }
       }
+      const tripLayerId = String(tripRow?.layer_id || tripRow?.calendar_id || '').trim();
+      if (!isOwner && tripLayerId) {
+        const shareRecipientFilter = buildShareRecipientFilter(user.id, meEmail, mePhone);
+        let existingShare = null;
+        if (shareRecipientFilter) {
+          const { data: existingShareRow } = await supabase
+            .from('shared_access')
+            .select('id,shared_with_id,shared_with_email,shared_with_phone')
+            .eq('layer_id', tripLayerId)
+            .eq('owner_id', String(tripRow?.owner_id || '').trim())
+            .or(shareRecipientFilter)
+            .maybeSingle();
+          existingShare = existingShareRow || null;
+        }
+        if (existingShare?.id) {
+          if (String(existingShare?.shared_with_id || '').trim() !== String(user.id || '').trim()) {
+            const { error: updateShareErr } = await supabase
+              .from('shared_access')
+              .update({
+                shared_with_id: user.id,
+                shared_with_email: meEmail || existingShare?.shared_with_email || null,
+                shared_with_phone: mePhone || existingShare?.shared_with_phone || null,
+              })
+              .eq('id', existingShare.id);
+            if (updateShareErr && !/duplicate key|already exists|unique constraint/i.test(String(updateShareErr.message || ''))) {
+              console.error('Trip link share upgrade failed:', updateShareErr);
+            }
+          }
+        } else {
+          const sharePayload = {
+            owner_id: String(tripRow?.owner_id || '').trim() || null,
+            layer_id: tripLayerId,
+            calendar_id: tripLayerId,
+            shared_with_id: user.id,
+            shared_with_email: meEmail || null,
+            shared_with_phone: mePhone || null,
+            can_edit: true,
+            role: 'member',
+            is_banned: false,
+          };
+          let insertShareErr = (await supabase.from('shared_access').insert(sharePayload)).error;
+          if (insertShareErr && /column .*can_edit|column .*role|column .*is_banned|schema cache/i.test(String(insertShareErr.message || ''))) {
+            insertShareErr = (await supabase.from('shared_access').insert({
+              owner_id: String(tripRow?.owner_id || '').trim() || null,
+              layer_id: tripLayerId,
+              calendar_id: tripLayerId,
+              shared_with_id: user.id,
+              shared_with_email: meEmail || null,
+              shared_with_phone: mePhone || null,
+            })).error;
+          }
+          if (insertShareErr && !/duplicate key|already exists|unique constraint|23505/i.test(String(insertShareErr.message || ''))) {
+            console.error('Trip link share insert failed:', insertShareErr);
+          }
+        }
+      }
       setSubCalendars((prev) => {
         const next = new Map((prev || []).map((sc) => [String(sc?.id || ''), sc]));
         next.set(normalizedTripId, tripRow);
