@@ -16792,9 +16792,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
   const openTripHighlights = () => {
     if (!activeSubCalendar) return;
-    const itineraryItems = Object.values(subCalendarEvents || {}).flatMap((rows) => Array.isArray(rows) ? rows : []);
-    const slides = buildTripHighlights(activeSubCalendar, tripPhotos, itineraryItems);
-    setTripHighlightsSlides(slides);
+    setTripHighlightsSlides([]);
     setShowTripHighlightsModal(true);
   };
   const shareTripHighlightsWithFriends = async () => {
@@ -16823,10 +16821,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       alert('Could not share trip highlights right now.');
     }
   };
-  const saveTripHighlightsToDevice = async () => {
+  const saveTripHighlightsToDevice = async (slidesArg = []) => {
+    const sourceSlides = Array.isArray(slidesArg) && slidesArg.length > 0 ? slidesArg : tripHighlightsSlides;
     const highlightImages = Array.from(new Set(
-      (tripHighlightsSlides || [])
-        .map((slide) => String(slide?.image || '').trim())
+      (sourceSlides || [])
+        .flatMap((slide) => [
+          String(slide?.image || '').trim(),
+          String(slide?.photo || '').trim(),
+          String(slide?.background || '').trim(),
+        ])
         .filter(Boolean)
     ));
     if (highlightImages.length === 0) {
@@ -16878,7 +16881,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       alert('Could not save trip highlights right now.');
     }
   };
-  const prepareTripHighlightsForExplore = () => {
+  const prepareTripHighlightsForExplore = (slidesArg = []) => {
     if (!activeSubCalendar?.layer_id) return;
     const targetLayer = (layers || []).find((layer) => String(layer?.id || '') === String(activeSubCalendar.layer_id || ''));
     if (!targetLayer) {
@@ -16889,14 +16892,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       alert('Only the calendar owner can publish this trip to Explore.');
       return;
     }
-    const previewSlides = tripHighlightsSlides.length > 0 ? tripHighlightsSlides : buildTripHighlights(
-      activeSubCalendar,
-      tripPhotos,
-      Object.values(subCalendarEvents || {}).flatMap((rows) => Array.isArray(rows) ? rows : [])
-    );
+    const previewSlides = Array.isArray(slidesArg) && slidesArg.length > 0 ? slidesArg : tripHighlightsSlides;
     const summaryText = previewSlides
-      .slice(1, 4)
-      .map((slide) => String(slide?.title || '').trim())
+      .slice(1, 5)
+      .map((slide) => String(slide?.title || slide?.caption || '').trim())
       .filter(Boolean)
       .join(', ');
     const locationBits = Array.from(new Set([
@@ -16905,7 +16904,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     ].filter(Boolean))).slice(0, 3);
     setPublishLayerTargetId(String(targetLayer.id));
     setPublishLayerDescription(
-      `${String(activeSubCalendar?.name || 'Trip').trim()} highlights reel with restaurants, food spots, attractions, and a reusable itinerary.${summaryText ? ` Featured: ${summaryText}.` : ''}${locationBits.length > 0 ? ` Stops: ${locationBits.join(', ')}.` : ''}`
+      `${String(activeSubCalendar?.name || 'Trip').trim()} highlights reel with memorable stops, family moments, photos, and a reusable itinerary.${summaryText ? ` Featured: ${summaryText}.` : ''}${locationBits.length > 0 ? ` Stops: ${locationBits.join(', ')}.` : ''}`
     );
     setPublishLayerTagsInput(
       ['trip', 'itinerary', 'restaurants', 'food', 'attractions', ...locationBits.map((item) => item.toLowerCase())]
@@ -26950,9 +26949,18 @@ transform: translateY(0);
         groupRatingsByEventId={subCalEventGroupRatings}
         currentUserId={user?.id}
         onClose={() => setShowTripHighlightsModal(false)}
-        onShare={shareTripHighlightsWithFriends}
-        onPublish={prepareTripHighlightsForExplore}
-        onSave={saveTripHighlightsToDevice}
+        onShare={(slides) => {
+          setTripHighlightsSlides(Array.isArray(slides) ? slides : []);
+          shareTripHighlightsWithFriends();
+        }}
+        onPublish={(slides) => {
+          setTripHighlightsSlides(Array.isArray(slides) ? slides : []);
+          prepareTripHighlightsForExplore(slides);
+        }}
+        onSave={(slides) => {
+          setTripHighlightsSlides(Array.isArray(slides) ? slides : []);
+          saveTripHighlightsToDevice(slides);
+        }}
       />
     )}
 
