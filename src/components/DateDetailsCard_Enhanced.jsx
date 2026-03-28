@@ -86,7 +86,7 @@ const buildCategoryOverride = (eventType, weEventCategory, title, categories) =>
   return available.other ? 'other' : Object.keys(available)[0] || 'other';
 };
 
-const baseInputClassName = 'w-full min-w-0 rounded-xl border px-4 py-3.5 text-base transition-all outline-none';
+const baseInputClassName = 'w-full min-w-0 rounded-xl border px-4 py-3 text-base transition-all outline-none';
 
 export default function DateDetailsCardEnhanced({
   isOpen = false,
@@ -497,7 +497,7 @@ export default function DateDetailsCardEnhanced({
                     </div>
                   ) : null}
 
-                  <div className={`rounded-2xl border p-4 ${eventType === 'me'
+                  <div className={`rounded-2xl border p-3 ${eventType === 'me'
                     ? (darkMode ? 'border-blue-400/20 bg-gradient-to-br from-blue-500/10 to-indigo-500/10' : 'border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50')
                     : (darkMode ? 'border-fuchsia-400/20 bg-gradient-to-br from-fuchsia-500/10 to-pink-500/10' : 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50')
                   }`}>
@@ -505,7 +505,7 @@ export default function DateDetailsCardEnhanced({
                       type="time"
                       value={selectedTime}
                       onChange={(event) => setSelectedTime(event.target.value)}
-                      className={`${inputSurface} min-w-0 max-w-full overflow-hidden pr-3`}
+                      className={`${inputSurface} min-w-0 max-w-full overflow-hidden py-2.5 pr-3 text-[15px]`}
                       style={{ width: '100%' }}
                     />
                   </div>
