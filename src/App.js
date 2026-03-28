@@ -11,7 +11,7 @@ import RoundRobinPanel from "./components/RoundRobinPanel";
 import ScramblePanel from "./components/ScramblePanel";
 import PopupEventPanel from "./components/PopupEventPanel";
 import AddEventModal from "./components/AddEventModal";
-import DateDetailsCard from "./components/DateDetailsCard";
+import DateDetailsCard from "./components/DateDetailsCard_Enhanced";
 import WhatTimeModal from "./components/WhatTimeModal";
 import SmartAddPlan, { SmartAddPlanCompact } from "./components/SmartAddPlan";
 import StartTripModal from "./components/StartTripModal";
@@ -15564,7 +15564,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         title: pendingEventDraft.title,
         time: pendingEventDraft.isMultiDay ? null : (time || null),
         date: dateKey,
-        category: pendingEventDraft.isPopupEvent ? 'popup_event' : selectedCategory,
+        category: pendingEventDraft.isPopupEvent ? 'popup_event' : (pendingEventDraft.categoryOverride || selectedCategory),
         description: String(pendingEventDraft.description || '').trim(),
         isPrivate: isPrivate,
         isUrgent: isUrgent,
@@ -15651,6 +15651,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       isPopupEvent: shouldCreatePopupEvent,
       popupMaxPeople: parsedMax,
       description: String(options?.description || '').trim(),
+      categoryOverride: String(options?.categoryOverride || '').trim() || null,
     };
     if (options?.directCreate) {
       const result = await submitPendingEvent(nextPendingEvent, options?.time || null);
