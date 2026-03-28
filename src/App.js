@@ -4005,6 +4005,15 @@ function App() {
       return false;
     }
   };
+  const presentManualCopyFallback = (text, label = 'Copy this link') => {
+    const value = String(text || '');
+    if (!value || typeof window === 'undefined') return;
+    try {
+      window.prompt(label, value);
+    } catch {
+      alert(value);
+    }
+  };
   const copyTripInviteLink = async () => {
     const tripId = String(activeSubCalendar?.id || '').trim();
     if (!tripId || typeof window === 'undefined') return;
@@ -4018,11 +4027,14 @@ function App() {
         ? `${window.location.origin}?share=${encodeURIComponent(shareLink.token)}`
         : `${window.location.origin}?trip=${tripId}`;
       const copied = await copyTextToClipboard(shareUrl);
-      if (!copied) throw new Error('copy failed');
+      if (!copied) {
+        presentManualCopyFallback(shareUrl, 'Copy this trip link');
+      }
       setTripInviteLinkCopied(true);
       setTimeout(() => setTripInviteLinkCopied(false), 2000);
     } catch {
-      alert('Could not copy trip link.');
+      const fallbackUrl = `${window.location.origin}?trip=${tripId}`;
+      presentManualCopyFallback(fallbackUrl, 'Copy this trip link');
     }
   };
   const openTripFromLink = async (tripId) => {
@@ -4597,11 +4609,14 @@ function App() {
         ? `${window.location.origin}?share=${encodeURIComponent(shareLink.token)}`
         : `${window.location.origin}?calendar=${layerId}`;
       const copied = await copyTextToClipboard(shareUrl);
-      if (!copied) throw new Error('copy failed');
+      if (!copied) {
+        presentManualCopyFallback(shareUrl, 'Copy this calendar link');
+      }
       setCalendarShareLinkCopied(true);
       setTimeout(() => setCalendarShareLinkCopied(false), 2000);
     } catch {
-      alert('Could not copy calendar link.');
+      const fallbackUrl = `${window.location.origin}?calendar=${layerId}`;
+      presentManualCopyFallback(fallbackUrl, 'Copy this calendar link');
     }
   };
   const openCalendarFromRedeemedShare = async (layerId) => {
