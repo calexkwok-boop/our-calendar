@@ -16092,8 +16092,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           title: pendingEventDraft.title,
           date: dateKey,
           time: pendingEventDraft.isMultiDay ? null : (time || null),
+          location: pendingEventDraft.location || null,
           max_players: maxPeople,
           is_public: !isPrivate,
+          category: pendingEventDraft.popupSubtype || null,
+          description: String(pendingEventDraft.description || '').trim() || null,
           status: 'open',
         }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
 
@@ -16133,6 +16136,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       isPopupEvent: shouldCreatePopupEvent,
       popupMaxPeople: parsedMax,
       description: String(options?.description || '').trim(),
+      location: String(options?.locationOverride || '').trim(),
+      popupSubtype: String(options?.popupSubtype || '').trim() || null,
       categoryOverride: String(options?.categoryOverride || '').trim() || null,
     };
     if (options?.directCreate) {
@@ -17143,8 +17148,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           title: pendingEvent.title,
           date: dateKey,
           time: pendingEvent.isMultiDay ? null : (time || null),
+          location: pendingEvent.location || null,
           max_players: maxPeople,
           is_public: !isPrivate,
+          category: pendingEvent.popupSubtype || null,
+          description: String(pendingEvent.description || '').trim() || null,
           status: 'open',
         }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
 

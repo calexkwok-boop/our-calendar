@@ -294,6 +294,8 @@ export default function DateDetailsCardEnhanced({
         directCreate: true,
         isPopupEvent: eventType === 'we',
         categoryOverride,
+        popupSubtype: eventType === 'we' ? (eventData.category || null) : null,
+        locationOverride: eventData.location || '',
         description: eventType === 'we' && currentTemplate ? `${currentTemplate.label} We Event` : '',
       });
       if (result?.ok || result === true) {
