@@ -73,6 +73,23 @@ const toTimeLabel = (time) => {
   });
 };
 
+const parseTimeInput = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return null;
+  const directMatch = normalized.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (directMatch) return normalized;
+  const match = normalized.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+  if (!match) return null;
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2] ? parseInt(match[2], 10) : 0;
+  const period = match[3]?.toLowerCase();
+  if (minutes < 0 || minutes > 59 || hours < 0 || hours > 23) return null;
+  if (period === 'pm' && hours < 12) hours += 12;
+  if (period === 'am' && hours === 12) hours = 0;
+  if (!period && hours > 23) return null;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
 const buildCategoryOverride = (eventType, weEventCategory, title, categories) => {
   if (eventType === 'we') return 'popup_event';
   const available = categories && typeof categories === 'object' ? categories : {};
@@ -244,14 +261,15 @@ export default function DateDetailsCardEnhanced({
   };
 
   const handleSave = async () => {
-    if (!eventTitle.trim() || !selectedTime) return;
+    const normalizedTime = parseTimeInput(selectedTime);
+    if (!eventTitle.trim() || !normalizedTime) return;
     const eventData = {
       type: eventType,
       category: weEventCategory,
       title: eventTitle.trim(),
       location: location.trim(),
       date: selectedDate,
-      time: selectedTime,
+      time: normalizedTime,
       invitees: eventType === 'we' ? invitees.filter((invitee) => invitee.selected) : [],
     };
 
@@ -484,7 +502,7 @@ export default function DateDetailsCardEnhanced({
                         <button
                           key={time}
                           type="button"
-                          onClick={() => setSelectedTime(time)}
+                            onClick={() => setSelectedTime(toTimeLabel(time))}
                           className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
                             selectedTime === time
                               ? (darkMode ? 'border-fuchsia-300/40 bg-fuchsia-500/20 text-fuchsia-100' : 'border-purple-300 bg-purple-200 text-purple-700')
@@ -502,9 +520,11 @@ export default function DateDetailsCardEnhanced({
                     : (darkMode ? 'border-fuchsia-400/20 bg-gradient-to-br from-fuchsia-500/10 to-pink-500/10' : 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50')
                   }`}>
                     <input
-                      type="time"
+                      type="text"
                       value={selectedTime}
                       onChange={(event) => setSelectedTime(event.target.value)}
+                      placeholder="e.g. 6:00 PM"
+                      inputMode="text"
                       className={`${inputSurface} min-w-0 max-w-full overflow-hidden py-2.5 pr-3 text-[15px]`}
                       style={{ width: '100%' }}
                     />
@@ -576,7 +596,7 @@ export default function DateDetailsCardEnhanced({
                 <button
                   type="button"
                   onClick={handleSave}
-                  disabled={!eventTitle.trim() || !selectedTime}
+                  disabled={!eventTitle.trim() || !parseTimeInput(selectedTime)}
                   className={`w-full rounded-2xl py-4 text-lg font-bold text-white transition-all shadow-sm disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none ${
                     eventType === 'me'
                       ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700'
