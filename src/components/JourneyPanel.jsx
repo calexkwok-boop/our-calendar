@@ -43,37 +43,40 @@ export default function JourneyPanel({
     ? String(journeyQuote.source || '').trim()
     : '';
   const coachText = getRenderableText(journeyCoachLabel);
+  const journeyAccent = '#f59e0b';
+  const journeyAccentStrong = '#f97316';
+  const journeyAccentSoft = '#fcd34d';
   const panelStyle = darkMode
     ? {
-        background: `linear-gradient(135deg, ${hexToRgba(accent, 0.16)} 0%, rgba(17,24,39,0.96) 55%, ${hexToRgba(accent, 0.08)} 100%)`,
-        borderColor: hexToRgba(accent, 0.34),
-        boxShadow: `0 18px 42px ${hexToRgba(accent, 0.18)}`,
+        background: `linear-gradient(135deg, ${hexToRgba(journeyAccentStrong, 0.26)} 0%, rgba(17,24,39,0.96) 46%, ${hexToRgba(journeyAccent, 0.16)} 100%)`,
+        borderColor: hexToRgba(journeyAccentSoft, 0.34),
+        boxShadow: `0 14px 34px ${hexToRgba(journeyAccentStrong, 0.18)}`,
       }
     : {
-        background: `linear-gradient(135deg, ${hexToRgba(accent, 0.12)} 0%, rgba(255,255,255,0.96) 45%, ${hexToRgba(accent, 0.2)} 100%)`,
-        borderColor: hexToRgba(accent, 0.24),
-        boxShadow: `0 18px 42px ${hexToRgba(accent, 0.12)}`,
+        background: `linear-gradient(135deg, ${hexToRgba(journeyAccentSoft, 0.3)} 0%, rgba(255,249,235,0.98) 42%, ${hexToRgba(journeyAccentStrong, 0.24)} 100%)`,
+        borderColor: hexToRgba(journeyAccent, 0.24),
+        boxShadow: `0 14px 34px ${hexToRgba(journeyAccentStrong, 0.12)}`,
       };
   const glowStyle = {
-    background: hexToRgba(accent, darkMode ? 0.16 : 0.22),
+    background: hexToRgba(journeyAccentStrong, darkMode ? 0.18 : 0.24),
   };
-  const accentTextStyle = { color: darkMode ? hexToRgba(accent, 0.92) : accent };
+  const accentTextStyle = { color: darkMode ? hexToRgba(journeyAccentSoft, 0.96) : journeyAccentStrong };
   const progressBarStyle = {
     width: `${Math.round(primaryJourneyGoalProgress * 100)}%`,
-    background: `linear-gradient(90deg, ${hexToRgba(accent, 1)} 0%, ${hexToRgba(accent, 0.72)} 100%)`,
+    background: `linear-gradient(90deg, ${hexToRgba(journeyAccentStrong, 1)} 0%, ${hexToRgba(journeyAccentSoft, 0.96)} 100%)`,
   };
   const coachCardStyle = {
-    borderColor: hexToRgba(accent, darkMode ? 0.26 : 0.2),
-    background: darkMode ? hexToRgba(accent, 0.08) : hexToRgba(accent, 0.08),
+    borderColor: hexToRgba(journeyAccent, darkMode ? 0.3 : 0.2),
+    background: darkMode ? hexToRgba(journeyAccentStrong, 0.1) : hexToRgba(journeyAccentSoft, 0.16),
   };
   const mutedCtaStyle = {
-    borderColor: hexToRgba(accent, darkMode ? 0.34 : 0.2),
-    background: darkMode ? hexToRgba(accent, 0.12) : hexToRgba(accent, 0.08),
+    borderColor: hexToRgba(journeyAccent, darkMode ? 0.36 : 0.24),
+    background: darkMode ? hexToRgba(journeyAccentStrong, 0.16) : hexToRgba(journeyAccentSoft, 0.18),
     color: darkMode ? '#e5e7eb' : '#374151',
   };
   const primaryCtaStyle = {
-    background: `linear-gradient(90deg, ${hexToRgba(accent, 0.98)} 0%, ${hexToRgba(accent, 0.74)} 100%)`,
-    boxShadow: `0 10px 24px ${hexToRgba(accent, 0.24)}`,
+    background: `linear-gradient(90deg, ${hexToRgba(journeyAccentStrong, 0.98)} 0%, ${hexToRgba(journeyAccent, 0.92)} 55%, ${hexToRgba(journeyAccentSoft, 0.9)} 100%)`,
+    boxShadow: `0 10px 24px ${hexToRgba(journeyAccentStrong, 0.24)}`,
   };
 
   return (
@@ -83,7 +86,7 @@ export default function JourneyPanel({
           relative overflow-hidden
           border-2
           rounded-3xl
-          p-6 sm:p-8
+          p-5 sm:p-6
           transition-all duration-500
           cursor-pointer
           group
@@ -99,9 +102,9 @@ export default function JourneyPanel({
           }
         }}
       >
-        <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-3xl pointer-events-none" style={glowStyle} />
+        <div className="absolute -right-10 -top-10 w-28 h-28 rounded-full blur-3xl pointer-events-none" style={glowStyle} />
 
-        <div className="relative z-10 mb-6">
+        <div className="relative z-10 mb-5">
           <div className="text-xs uppercase tracking-widest mb-3 font-semibold" style={accentTextStyle}>
             Today&apos;s Inspiration
           </div>
@@ -116,7 +119,7 @@ export default function JourneyPanel({
         </div>
 
         {primaryJourneyGoal ? (
-          <div className="relative z-10 space-y-4">
+          <div className="relative z-10 space-y-3.5">
             <div>
               <div className="text-xs uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2">
                 Your Focus
@@ -153,7 +156,7 @@ export default function JourneyPanel({
                   backdrop-blur-sm
                   border
                   rounded-2xl
-                  p-4
+                  p-3.5
                   flex items-start gap-3
                 "
                 style={coachCardStyle}

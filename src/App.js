@@ -5938,6 +5938,7 @@ function App() {
   const [savingAccountHandle, setSavingAccountHandle] = useState(false);
   const [accountVenmoInput, setAccountVenmoInput] = useState('');
   const [accountCashAppInput, setAccountCashAppInput] = useState('');
+  const [showAccountPaymentHandles, setShowAccountPaymentHandles] = useState(false);
   const [accountPaymentMessage, setAccountPaymentMessage] = useState('');
   const [savingAccountPayments, setSavingAccountPayments] = useState(false);
   const [showExpensePaymentHandlePrompt, setShowExpensePaymentHandlePrompt] = useState(false);
@@ -22675,52 +22676,69 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               )}
             </div>
             <div className="mb-4 p-3 rounded-xl border bg-gray-50 dark:bg-gray-800/70" style={{ borderColor: themeAccentBorder }}>
-              <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Payment Handles</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                onClick={() => setShowAccountPaymentHandles((prev) => !prev)}
+                className="w-full flex items-center justify-between gap-3 text-left"
+              >
                 <div>
-                  <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Venmo</div>
-                  <input
-                    type="text"
-                    value={accountVenmoInput}
-                    onChange={(e) => {
-                      setAccountVenmoInput(e.target.value);
-                      setAccountPaymentMessage('');
-                    }}
-                    placeholder="@username"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
-                  />
+                  <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Payment Handles</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {showAccountPaymentHandles ? 'Hide Venmo and Cash App' : 'Expand to manage Venmo and Cash App'}
+                  </div>
                 </div>
-                <div>
-                  <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Cash App</div>
-                  <input
-                    type="text"
-                    value={accountCashAppInput}
-                    onChange={(e) => {
-                      setAccountCashAppInput(e.target.value);
-                      setAccountPaymentMessage('');
-                    }}
-                    placeholder="$cashtag"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
-                  />
+                <div className={`text-xs font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-600'}`}>
+                  {showAccountPaymentHandles ? 'Hide' : 'Show'}
                 </div>
-              </div>
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  These handles will be used in the expense tracker payment links.
-                </p>
-                <button
-                  onClick={saveAccountPaymentHandles}
-                  disabled={savingAccountPayments}
-                  className="px-3 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50"
-                  style={themeAccentButtonStyle}
-                >
-                  {savingAccountPayments ? 'Saving...' : 'Save Payments'}
-                </button>
-              </div>
-              {accountPaymentMessage && (
-                <div className={`mt-2 text-xs ${/updated|saved/i.test(accountPaymentMessage) ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
-                  {accountPaymentMessage}
-                </div>
+              </button>
+              {showAccountPaymentHandles && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                    <div>
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Venmo</div>
+                      <input
+                        type="text"
+                        value={accountVenmoInput}
+                        onChange={(e) => {
+                          setAccountVenmoInput(e.target.value);
+                          setAccountPaymentMessage('');
+                        }}
+                        placeholder="@username"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Cash App</div>
+                      <input
+                        type="text"
+                        value={accountCashAppInput}
+                        onChange={(e) => {
+                          setAccountCashAppInput(e.target.value);
+                          setAccountPaymentMessage('');
+                        }}
+                        placeholder="$cashtag"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-purple-400"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      These handles will be used in the expense tracker payment links.
+                    </p>
+                    <button
+                      onClick={saveAccountPaymentHandles}
+                      disabled={savingAccountPayments}
+                      className="px-3 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50"
+                      style={themeAccentButtonStyle}
+                    >
+                      {savingAccountPayments ? 'Saving...' : 'Save Payments'}
+                    </button>
+                  </div>
+                  {accountPaymentMessage && (
+                    <div className={`mt-2 text-xs ${/updated|saved/i.test(accountPaymentMessage) ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
+                      {accountPaymentMessage}
+                    </div>
+                  )}
+                </>
               )}
             </div>
             <div className="mb-5">
