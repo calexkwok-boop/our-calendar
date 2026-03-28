@@ -2993,6 +2993,16 @@ function App() {
         const raw = String(value || '').trim();
         return Boolean(normalizeEmail(raw) || normalizePhoneNumber(raw));
       };
+      const areDistinctConcreteMembers = (left = {}, right = {}) => {
+        const leftShareUserId = String(left?.shareUserId || '').trim();
+        const rightShareUserId = String(right?.shareUserId || '').trim();
+        if (leftShareUserId && rightShareUserId && leftShareUserId !== rightShareUserId) return true;
+        const leftIdentity = normalizeIdentityKey(left?.identity || left?.email || left?.phone || leftShareUserId);
+        const rightIdentity = normalizeIdentityKey(right?.identity || right?.email || right?.phone || rightShareUserId);
+        return Boolean(leftIdentity && rightIdentity && leftIdentity !== rightIdentity
+          && isConcreteMemberIdentity(left?.identity || '', leftShareUserId)
+          && isConcreteMemberIdentity(right?.identity || '', rightShareUserId));
+      };
       const addMember = (identityValue, extra = {}) => {
         const rawIdentity = String(identityValue || '').trim();
         const recipient = resolveInviteRecipient(rawIdentity);
@@ -3011,10 +3021,20 @@ function App() {
         const existingKeyForLabel = normalizedLabel ? memberKeyByLabel.get(normalizedLabel) : '';
         if (existingKeyForLabel && existingKeyForLabel !== normalizedIdentity) {
           const existingForLabel = merged.get(existingKeyForLabel);
+          if (areDistinctConcreteMembers(existingForLabel, {
+            identity: recipient?.value || rawIdentity || shareUserId,
+            email: recipient?.email || null,
+            phone: recipient?.phone || null,
+            shareUserId: shareUserId || null,
+          })) {
+            // Two distinct account-backed members can share the same temporary label.
+            // Keep both and let identity-based keys distinguish them.
+          } else {
           const existingConcrete = isConcreteMemberIdentity(existingForLabel?.identity || '', existingForLabel?.shareUserId || '');
           if (!isConcrete && existingConcrete) return;
           if (isConcrete && !existingConcrete) {
             merged.delete(existingKeyForLabel);
+          }
           }
         }
         const existing = merged.get(normalizedIdentity);
@@ -3124,6 +3144,10 @@ function App() {
           return acc;
         }
         const existing = acc[existingIndex];
+        if (areDistinctConcreteMembers(existing, member)) {
+          acc.push(member);
+          return acc;
+        }
         const existingConcrete = isConcreteMemberIdentity(existing?.identity || '', existing?.shareUserId || '');
         const incomingConcrete = isConcreteMemberIdentity(member?.identity || '', member?.shareUserId || '');
         const preferred = incomingConcrete && !existingConcrete
