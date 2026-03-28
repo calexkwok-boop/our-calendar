@@ -3095,30 +3095,7 @@ function App() {
           }
         });
 
-        // Fallback: infer collaborators from visible layer events.
-        const { data: layerEventRows } = await supabase
-          .from('events')
-          .select('created_by,user_id')
-          .eq('layer_id', layerId)
-          .limit(500);
-        (layerEventRows || []).forEach((row) => {
-          const createdBy = String(row?.created_by || '').trim();
-          if (createdBy) addMember(createdBy, { status: 'accepted', source: 'layer_events', removable: true });
-          const ownerLabel = resolveHandleLikeLabel(String(row?.created_by || '').trim(), String(row?.user_id || '').trim());
-          if (ownerLabel) addMember(ownerLabel, { status: 'accepted', source: 'layer_events_owner', removable: true });
-        });
       }
-
-      // Fallback: infer collaborators from trip itinerary events.
-      const { data: subCalEventRows } = await supabase
-        .from('sub_calendar_events')
-        .select('created_by')
-        .eq('sub_calendar_id', subCalId)
-        .limit(500);
-      (subCalEventRows || []).forEach((row) => {
-        const createdBy = String(row?.created_by || '').trim();
-        if (createdBy) addMember(createdBy, { status: 'accepted', source: 'trip_events', removable: true });
-      });
 
       const dedupedMembers = Array.from(merged.values()).reduce((acc, member) => {
         const labelKey = normalizeMemberLabelKey(member?.label || member?.identity || member?.email || member?.phone || '');
