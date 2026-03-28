@@ -86,7 +86,7 @@ const buildCategoryOverride = (eventType, weEventCategory, title, categories) =>
   return available.other ? 'other' : Object.keys(available)[0] || 'other';
 };
 
-const baseInputClassName = 'w-full rounded-xl border px-4 py-3.5 text-base transition-all outline-none';
+const baseInputClassName = 'w-full min-w-0 rounded-xl border px-4 py-3.5 text-base transition-all outline-none';
 
 export default function DateDetailsCardEnhanced({
   isOpen = false,
@@ -505,7 +505,8 @@ export default function DateDetailsCardEnhanced({
                       type="time"
                       value={selectedTime}
                       onChange={(event) => setSelectedTime(event.target.value)}
-                      className={inputSurface}
+                      className={`${inputSurface} min-w-0 max-w-full overflow-hidden pr-3`}
+                      style={{ width: '100%' }}
                     />
                   </div>
                 </div>
