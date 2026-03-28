@@ -1,86 +1,5 @@
-create extension if not exists pgcrypto;
-
-create table if not exists public.share_links (
-  id uuid primary key default gen_random_uuid(),
-  token text not null unique default encode(gen_random_bytes(16), 'hex'),
-  owner_id uuid not null,
-  target_type text not null check (target_type in ('calendar', 'trip')),
-  target_id text not null,
-  layer_id text,
-  is_active boolean not null default true,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create unique index if not exists share_links_one_active_per_target_idx
-  on public.share_links (owner_id, target_type, target_id)
-  where is_active = true;
-
-alter table public.share_links enable row level security;
-
 alter table public.shared_access
   add column if not exists can_edit boolean not null default true;
-
-do $$
-begin
-  if not exists (
-    select 1
-    from pg_policies
-    where schemaname = 'public'
-      and tablename = 'share_links'
-      and policyname = 'share_links_select_own'
-  ) then
-    create policy share_links_select_own
-      on public.share_links
-      for select
-      to authenticated
-      using (auth.uid() = owner_id);
-  end if;
-
-  if not exists (
-    select 1
-    from pg_policies
-    where schemaname = 'public'
-      and tablename = 'share_links'
-      and policyname = 'share_links_insert_own'
-  ) then
-    create policy share_links_insert_own
-      on public.share_links
-      for insert
-      to authenticated
-      with check (auth.uid() = owner_id);
-  end if;
-
-  if not exists (
-    select 1
-    from pg_policies
-    where schemaname = 'public'
-      and tablename = 'share_links'
-      and policyname = 'share_links_update_own'
-  ) then
-    create policy share_links_update_own
-      on public.share_links
-      for update
-      to authenticated
-      using (auth.uid() = owner_id)
-      with check (auth.uid() = owner_id);
-  end if;
-
-  if not exists (
-    select 1
-    from pg_policies
-    where schemaname = 'public'
-      and tablename = 'share_links'
-      and policyname = 'share_links_delete_own'
-  ) then
-    create policy share_links_delete_own
-      on public.share_links
-      for delete
-      to authenticated
-      using (auth.uid() = owner_id);
-  end if;
-end
-$$;
 
 create or replace function public.redeem_share_link(p_token text)
 returns table (
@@ -146,7 +65,7 @@ begin
         and (
           sa.shared_with_id = v_user_id
           or (v_email is not null and lower(coalesce(sa.shared_with_email, '')) = lower(v_email))
-          or (v_phone is not null and coalesce(sa.shared_with_phone, '') = v_phone)
+          or (v_phone is not null and coalesce(sa.shared_with_phone, '')) = v_phone
         )
       order by sa.created_at asc nulls last
       limit 1;
@@ -212,7 +131,7 @@ begin
         and (
           sa.shared_with_id = v_user_id
           or (v_email is not null and lower(coalesce(sa.shared_with_email, '')) = lower(v_email))
-          or (v_phone is not null and coalesce(sa.shared_with_phone, '') = v_phone)
+          or (v_phone is not null and coalesce(sa.shared_with_phone, '')) = v_phone
         )
       order by sa.created_at asc nulls last
       limit 1;
@@ -261,7 +180,7 @@ begin
       where scm.sub_calendar_id::text = v_trip_id
         and (
           (v_email is not null and lower(coalesce(scm.email, '')) = lower(v_email))
-          or (v_phone is not null and coalesce(scm.phone, '') = v_phone)
+          or (v_phone is not null and coalesce(scm.phone, '')) = v_phone
         )
       order by scm.created_at asc nulls last
       limit 1;
