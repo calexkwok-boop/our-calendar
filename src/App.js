@@ -2017,6 +2017,7 @@ function App() {
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
   const [showPhotoSortMenu, setShowPhotoSortMenu] = useState(false);
   const [showSubCalInviteModal, setShowSubCalInviteModal] = useState(false);
+  const [calendarShareLinkCopied, setCalendarShareLinkCopied] = useState(false);
   const [tripInviteLinkCopied, setTripInviteLinkCopied] = useState(false);
   const [showSubCalNotesModal, setShowSubCalNotesModal] = useState(false);
   const [tripChatMessages, setTripChatMessages] = useState([]);
@@ -2614,6 +2615,16 @@ function App() {
       const url = new URL(window.location.href);
       if (!url.searchParams.has('trip')) return;
       url.searchParams.delete('trip');
+      const next = `${url.pathname}${url.search}${url.hash}`;
+      window.history.replaceState({}, '', next);
+    } catch {}
+  };
+  const clearCalendarQueryParam = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('calendar')) return;
+      url.searchParams.delete('calendar');
       const next = `${url.pathname}${url.search}${url.hash}`;
       window.history.replaceState({}, '', next);
     } catch {}
@@ -4097,19 +4108,6 @@ function App() {
       if (recipientFilter) deleteQuery = deleteQuery.or(recipientFilter);
       await deleteQuery;
     }
-    if (activeSubCalendar?.layer_id) {
-      try {
-        let shareDeleteQuery = supabase
-          .from('shared_access')
-          .delete()
-          .eq('layer_id', activeSubCalendar.layer_id);
-        const shareRecipientFilter = buildShareRecipientFilter(shareUserId, recipient?.email, recipient?.phone);
-        if (shareRecipientFilter) shareDeleteQuery = shareDeleteQuery.or(shareRecipientFilter);
-        await shareDeleteQuery;
-      } catch (error) {
-        console.error('Trip member shared_access removal failed:', error);
-      }
-    }
     const removedKey = normalizeIdentityKey(recipient?.value || shareUserId);
     if (removedKey) {
       const prevRemoved = readLocalRemovedTripMembers(activeSubCalendar.id);
@@ -4483,6 +4481,111 @@ function App() {
     if (photoTapRef.current.timer) {
       clearTimeout(photoTapRef.current.timer);
       photoTapRef.current.timer = null;
+    }
+  };
+  const copyCalendarShareLink = async () => {
+    const layerId = String(activeLayerId || '').trim();
+    if (!layerId || typeof window === 'undefined') return;
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}?calendar=${layerId}`);
+      setCalendarShareLinkCopied(true);
+      setTimeout(() => setCalendarShareLinkCopied(false), 2000);
+    } catch {
+      alert('Could not copy calendar link.');
+    }
+  };
+  const openCalendarFromLink = async (layerId) => {
+    const normalizedLayerId = String(layerId || '').trim();
+    if (!normalizedLayerId || !user?.id) return;
+    try {
+      const { data: layerRow, error: layerErr } = await supabase
+        .from('calendar_layers')
+        .select('*')
+        .eq('id', normalizedLayerId)
+        .maybeSingle();
+      if (layerErr || !layerRow) return;
+      const normalizedLayer = normalizeLayerRow(layerRow);
+      const meEmail = normalizeEmail(user?.email);
+      const mePhone = normalizePhoneNumber(user?.phone);
+      const isOwner = String(normalizedLayer?.owner_id || '') === String(user.id || '');
+      if (!isOwner && !normalizedLayer?.is_public) {
+        const shareRecipientFilter = buildShareRecipientFilter(user.id, meEmail, mePhone);
+        let existingShare = null;
+        if (shareRecipientFilter) {
+          const { data: existingShareRow } = await supabase
+            .from('shared_access')
+            .select('*')
+            .eq('layer_id', normalizedLayerId)
+            .eq('owner_id', String(normalizedLayer?.owner_id || '').trim())
+            .or(shareRecipientFilter)
+            .maybeSingle();
+          existingShare = existingShareRow || null;
+        }
+        if (existingShare?.id) {
+          if (String(existingShare?.shared_with_id || '').trim() !== String(user.id || '').trim()) {
+            const { error: updateShareErr } = await supabase
+              .from('shared_access')
+              .update({
+                shared_with_id: user.id,
+                shared_with_email: meEmail || existingShare?.shared_with_email || null,
+                shared_with_phone: mePhone || existingShare?.shared_with_phone || null,
+              })
+              .eq('id', existingShare.id);
+            if (updateShareErr && !/duplicate key|already exists|unique constraint/i.test(String(updateShareErr.message || ''))) {
+              console.error('Calendar link share upgrade failed:', updateShareErr);
+            }
+          }
+        } else {
+          const sharePayload = {
+            owner_id: String(normalizedLayer?.owner_id || '').trim() || null,
+            layer_id: normalizedLayerId,
+            calendar_id: normalizedLayerId,
+            shared_with_id: user.id,
+            shared_with_email: meEmail || null,
+            shared_with_phone: mePhone || null,
+            can_edit: true,
+            role: 'member',
+            is_banned: false,
+          };
+          let insertShareErr = (await supabase.from('shared_access').insert(sharePayload)).error;
+          if (insertShareErr && /column .*can_edit|column .*role|column .*is_banned|schema cache/i.test(String(insertShareErr.message || ''))) {
+            insertShareErr = (await supabase.from('shared_access').insert({
+              owner_id: String(normalizedLayer?.owner_id || '').trim() || null,
+              layer_id: normalizedLayerId,
+              calendar_id: normalizedLayerId,
+              shared_with_id: user.id,
+              shared_with_email: meEmail || null,
+              shared_with_phone: mePhone || null,
+            })).error;
+          }
+          if (insertShareErr && !/duplicate key|already exists|unique constraint|23505/i.test(String(insertShareErr.message || ''))) {
+            console.error('Calendar link share insert failed:', insertShareErr);
+          }
+        }
+      } else if (!isOwner && normalizedLayer?.is_public) {
+        await joinPublicCalendar(normalizedLayer);
+      }
+
+      await loadLayersForUser(user.id, user.email, user.phone);
+      setSharedCalendars((prev) => {
+        const next = new Map((prev || []).map((row) => [String(row?.id || `${row?.layer_id || ''}:${row?.shared_with_id || row?.shared_with_email || row?.shared_with_phone || ''}`), row]));
+        const syntheticKey = `calendar-link-${normalizedLayerId}-${String(user.id || '')}`;
+        next.set(syntheticKey, {
+          owner_id: normalizedLayer?.owner_id || null,
+          layer_id: normalizedLayerId,
+          calendar_id: normalizedLayerId,
+          shared_with_id: user.id,
+          shared_with_email: meEmail || null,
+          shared_with_phone: mePhone || null,
+        });
+        return Array.from(next.values());
+      });
+      setActiveLayerId(normalizedLayerId);
+      if (user?.id) localStorage.setItem(`active-layer-${user.id}`, normalizedLayerId);
+      setLayerRefreshToken((prev) => prev + 1);
+      clearCalendarQueryParam();
+    } catch (err) {
+      console.error('Calendar link open failed:', err);
     }
   };
 
@@ -12605,6 +12708,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (typeof window === 'undefined' || !user?.id) return;
     try {
       const params = new URLSearchParams(window.location.search || '');
+      const calendarId = String(params.get('calendar') || '').trim();
+      if (calendarId) {
+        openCalendarFromLink(calendarId);
+        return;
+      }
       const tripId = String(params.get('trip') || '').trim();
       if (!tripId) return;
       openTripFromLink(tripId);
@@ -22376,8 +22484,27 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               )}
             </div>
             <div className="mb-5">
+              <div className="mb-4 rounded-xl border bg-gray-50 p-3 dark:bg-gray-800/60" style={{ borderColor: themeAccentBorder }}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">Shareable link</div>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Private calendars are joined through this link. Anyone who opens it while signed in can join this calendar.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={copyCalendarShareLink}
+                    disabled={!canManageActiveLayer}
+                    className={`shrink-0 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${canManageActiveLayer ? 'text-white hover:shadow-lg' : 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'}`}
+                    style={canManageActiveLayer ? themeAccentButtonStyle : undefined}
+                  >
+                    {calendarShareLinkCopied ? 'Copied' : 'Copy Link'}
+                  </button>
+                </div>
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Enter someone's email or phone number to give them access to your calendar.
+                Direct email or phone invites are still available below, but the shareable link is now the preferred way to join private calendars.
               </p>
               <div className="flex gap-2">
                 <input
