@@ -837,10 +837,16 @@ export default function PopupEventPanel({
         supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
       ]);
       if (ev) {
+        const fallback = eventMetaFallbackRef.current || {};
         setEvent({
-          ...(eventMetaFallbackRef.current || {}),
+          ...fallback,
           ...ev,
-          category: String(ev?.category || eventMetaFallbackRef.current?.category || '').trim() || null,
+          title: String(ev?.title || fallback?.title || '').trim() || 'Untitled Event',
+          date: String(ev?.date || fallback?.date || '').trim() || '',
+          time: ev?.time || fallback?.time || null,
+          location: String(ev?.location || fallback?.location || '').trim() || null,
+          description: String(ev?.description || fallback?.description || '').trim() || '',
+          category: String(ev?.category || fallback?.category || '').trim() || null,
         });
       } else if (eventMetaFallbackRef.current) setEvent(eventMetaFallbackRef.current);
       // Merge popup_event_members + popup_event_signups, dedupe by user_id
