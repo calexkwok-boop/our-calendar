@@ -301,7 +301,7 @@ const UnifiedCalendarView = ({
         />
       )}
 
-      <div className="mt-4">
+      <div className="mt-4 mb-24 sm:mb-12">
         <JourneyPanel
           journeyHomeCtaLabel={journeyHomeCtaLabel}
           journeyCoachLabel={journeyCoachLabel}

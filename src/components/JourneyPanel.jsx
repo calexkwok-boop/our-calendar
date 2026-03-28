@@ -86,7 +86,7 @@ export default function JourneyPanel({
           relative overflow-hidden
           border-2
           rounded-3xl
-          p-5 sm:p-6
+          p-4 sm:p-5
           transition-all duration-500
           cursor-pointer
           group
@@ -102,13 +102,13 @@ export default function JourneyPanel({
           }
         }}
       >
-        <div className="absolute -right-10 -top-10 w-28 h-28 rounded-full blur-3xl pointer-events-none" style={glowStyle} />
+        <div className="absolute -right-10 -top-10 w-24 h-24 rounded-full blur-3xl pointer-events-none" style={glowStyle} />
 
-        <div className="relative z-10 mb-5">
+        <div className="relative z-10 mb-4">
           <div className="text-xs uppercase tracking-widest mb-3 font-semibold" style={accentTextStyle}>
             Today&apos;s Inspiration
           </div>
-          <blockquote className="text-xl sm:text-2xl font-serif italic text-gray-800 dark:text-gray-100 leading-relaxed">
+          <blockquote className="text-lg sm:text-xl font-serif italic text-gray-800 dark:text-gray-100 leading-relaxed">
             &quot;{quoteText}&quot;
           </blockquote>
           {quoteSource ? (
@@ -119,12 +119,12 @@ export default function JourneyPanel({
         </div>
 
         {primaryJourneyGoal ? (
-          <div className="relative z-10 space-y-3.5">
+          <div className="relative z-10 space-y-3">
             <div>
               <div className="text-xs uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2">
                 Your Focus
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1 tracking-tight">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1 tracking-tight">
                 {primaryJourneyGoal.title}
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -139,7 +139,7 @@ export default function JourneyPanel({
                   {Math.round(primaryJourneyGoalProgress * 100)}%
                 </span>
               </div>
-              <div className="h-3 bg-gray-200/50 dark:bg-black/20 rounded-full overflow-hidden">
+              <div className="h-2.5 bg-gray-200/50 dark:bg-black/20 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
                   style={progressBarStyle}
@@ -175,7 +175,7 @@ export default function JourneyPanel({
                 onCtaClick();
               }}
               className={`
-                rounded-xl px-4 py-2.5 text-sm font-semibold
+                rounded-xl px-4 py-2 text-sm font-semibold
                 transition-all duration-200
                 ${primaryJourneyLoggedToday
                   ? 'border-2'
