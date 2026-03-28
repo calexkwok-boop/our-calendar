@@ -27313,6 +27313,7 @@ transform: translateY(0);
         key={`${String(activeSubCalendar?.id || 'trip')}-${tripHighlightsOpenToken}`}
         trip={{
           ...activeSubCalendar,
+          title: String(activeSubCalendar?.title || activeSubCalendar?.name || 'Trip Highlights').trim() || 'Trip Highlights',
           startDate: getSubCalStartRaw(activeSubCalendar),
           endDate: getSubCalEndRaw(activeSubCalendar),
         }}

@@ -1,6 +1,35 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Music, Play, Share2, Sparkles, X } from 'lucide-react';
 
+/**
+ * TRIP HIGHLIGHT REEL - PERSONAL-FIRST ALGORITHM
+ * 
+ * This component creates Apple Photos-style highlight reels that prioritize
+ * PERSONAL MOMENTS over perfect ratings and tourist attractions.
+ * 
+ * Scoring Philosophy:
+ * 1. People photos (family, friends, kids) = 20-30 pts each (HIGHEST)
+ * 2. Candid/spontaneous moments = 15 pts
+ * 3. Group experiences = 10 pts  
+ * 4. Multiple photos = shows emotional investment
+ * 5. Ratings = MINIMAL weight (max 8 pts, only if 4+ stars)
+ * 
+ * Penalties:
+ * - Tourist sites without people: -12 pts
+ * - Generic restaurants without people or high ratings: -6 pts
+ * 
+ * How to maximize your highlight reel:
+ * - Tag photos with: 'candid', 'spontaneous', 'funny', 'kids', 'sweet'
+ * - Add people to photos (set hasPeople: true in photo metadata)
+ * - Upload in-between moments to trip album (not just event photos)
+ * - Take voice notes for emotional moments
+ * 
+ * The algorithm now values:
+ * ✅ Group photo at hotel pool > Eiffel Tower alone
+ * ✅ Kids eating ice cream > 5-star restaurant without people
+ * ✅ Random street selfie > Museum visit without faces
+ */
+
 const HIGHLIGHT_REEL_TRACKS = Object.freeze([
   { id: 'cinematic-sunrise', label: 'Cinematic', vibe: 'scenic', file: '/music/highlight-cinematic.mp3' },
   { id: 'city-lights', label: 'Upbeat', vibe: 'nightlife', file: '/music/highlight-upbeat.mp3' },
@@ -335,7 +364,7 @@ export default function TripHighlightReel({
         <div className="h-1 overflow-hidden rounded-full bg-white/30">
           <div
             className="h-full bg-white transition-all duration-300"
-            style={{ width: `${((currentSlide + 1) / highlights.length) * 100}%` }}
+            style={{ width: `${((currentSlide + 1) / Math.max(1, safeHighlights.length)) * 100}%` }}
           />
         </div>
       </div>
@@ -576,13 +605,62 @@ const buildScoredMoments = (events, groupRatingsByEventId, currentUserId) => (
       const mood = inferVisualMood(event);
       const title = String(event?.title || '').toLowerCase();
       const location = String(event?.location || '').toLowerCase();
+      const tags = Array.isArray(event?.tags) ? event.tags : [];
       const haystack = `${title} ${location} ${review.toLowerCase()}`;
-      let score = rating * 3;
-      score += photos.length * 1.5;
-      if (review) score += 2;
-      if (mood === 'food' || mood === 'nightlife') score += 1.5;
-      if (/(sunset|sunrise|view|beach|rooftop|favorite|best|must)/.test(haystack)) score += 1.5;
-      return { event, rating, photos, review, mood, score };
+      
+      // PERSONAL-FIRST SCORING
+      let score = 0;
+      
+      // 1. PEOPLE PHOTOS = TOP PRIORITY (20 pts each)
+      const peoplePhotos = photos.filter((photo) => photo.hasPeople);
+      score += peoplePhotos.length * 20;
+      
+      // 2. PHOTO QUANTITY (more photos = more memorable, up to 12 pts)
+      score += Math.min(photos.length, 8) * 1.5;
+      
+      // 3. CANDID/SPONTANEOUS TAGS (15 pts)
+      const candidTags = ['candid', 'spontaneous', 'funny', 'sweet', 'unexpected', 'kids'];
+      if (tags.some((tag) => candidTags.includes(tag))) score += 15;
+      
+      // 4. SHARED EXPERIENCE (10 pts for group events)
+      const groupRatings = groupRatingsByEventId[String(event?.id || '')] || [];
+      if (groupRatings.length > 1) score += 10;
+      
+      // 5. VOICE NOTES (8 pts) - shows emotional investment
+      if (event?.voiceNotes && Array.isArray(event.voiceNotes) && event.voiceNotes.length > 0) score += 8;
+      
+      // 6. RATING - NOW MINIMAL (max 8 pts, only if 4+ stars)
+      if (rating >= 4) score += rating * 1.6;
+      
+      // 7. GOLDEN HOUR / LIGHTING (6 pts)
+      const hour = event?.time ? parseInt(String(event.time || '').split(':')[0], 10) : 12;
+      if (hour >= 6 && hour < 10) score += 3; // Morning
+      if (hour >= 17 && hour < 20) score += 6; // Golden hour
+      
+      // 8. PERSONAL NOTES (4 pts)
+      if (review.length > 50) score += 4;
+      
+      // 9. SCENIC/EMOTIONAL KEYWORDS (reduced to 3 pts)
+      if (/(sunset|sunrise|beach|favorite|best|beautiful)/.test(haystack)) score += 3;
+      
+      // PENALTIES: Reduce touristy events without people
+      const isTouristy = /(museum|monument|landmark|cathedral|palace|tower|statue|attraction)/.test(haystack);
+      if (isTouristy && peoplePhotos.length === 0) score -= 12;
+      
+      // PENALTY: Generic food/restaurant without people or high rating
+      const isRestaurant = /(restaurant|dinner|lunch|breakfast|brunch|cafe)/.test(haystack);
+      if (isRestaurant && peoplePhotos.length === 0 && rating < 4.5) score -= 6;
+      
+      return { 
+        event, 
+        rating, 
+        photos, 
+        review, 
+        mood, 
+        score,
+        hasPeople: peoplePhotos.length > 0,
+        peopleCount: peoplePhotos.length
+      };
     })
     .sort((a, b) => b.score - a.score)
 );
@@ -756,10 +834,28 @@ const buildMemoryMoments = (tripPhotos) => (
   normalizeTripAlbumPhotos(tripPhotos)
     .filter((photo) => !String(photo?.event_id || '').trim())
     .map((photo, index) => {
-      const score = (photo?.hasPeople ? 5 : 0)
-        + (photo?.is_cover ? 3 : 0)
-        + (photo?.date ? 1.2 : 0)
-        + Math.max(0, 4 - index * 0.08);
+      // PEOPLE-FIRST SCORING FOR ALBUM PHOTOS
+      let score = 0;
+      
+      // People photos get MASSIVE boost (30 pts vs 5 before)
+      if (photo?.hasPeople) score += 30;
+      
+      // Cover photo bonus (still 3 pts)
+      if (photo?.is_cover) score += 3;
+      
+      // Has timestamp/date (shows it was deliberately captured)
+      if (photo?.date) score += 2;
+      
+      // Recency bonus (newer photos slightly preferred, but minimal)
+      score += Math.max(0, 3 - index * 0.05);
+      
+      // BONUS: Multiple people indicators (if your photo metadata has it)
+      if (photo?.peopleCount && photo.peopleCount > 1) score += photo.peopleCount * 2;
+      
+      // BONUS: Kids/family tags
+      const caption = String(photo?.caption || '').toLowerCase();
+      if (/(kid|kids|family|children|baby|daughter|son)/.test(caption)) score += 8;
+      
       return {
         photo,
         score,
