@@ -105,7 +105,8 @@ export default function TripHighlightReel({
         setCurrentSlide((prev) => {
           if (prev >= safeHighlights.length - 1) {
             setIsPlaying(false);
-            return 0;
+            if (audioRef.current) audioRef.current.pause();
+            return safeHighlights.length - 1;
           }
           return prev + 1;
         });
@@ -155,6 +156,9 @@ export default function TripHighlightReel({
 
   const handlePlayPause = () => {
     const nextPlaying = !isPlaying;
+    if (nextPlaying && currentSlide >= safeHighlights.length - 1) {
+      setCurrentSlide(0);
+    }
     setIsPlaying(nextPlaying);
     if (!audioRef.current) return;
     if (nextPlaying && musicEnabled && audioAvailable) {
