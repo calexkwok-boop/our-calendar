@@ -79,7 +79,7 @@ export default function TripHighlightReel({
   onPublish,
   onSave,
 }) {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -126,9 +126,13 @@ export default function TripHighlightReel({
   ), [highlights, trip]);
 
   useEffect(() => {
-    setCurrentSlide(0);
-    setIsPlaying(safeHighlights.length > 1);
-  }, [safeHighlights]);
+    if (safeHighlights.length <= 1) {
+      setIsPlaying(false);
+      setCurrentSlide(0);
+      return;
+    }
+    setCurrentSlide((prev) => Math.min(prev, safeHighlights.length - 1));
+  }, [safeHighlights.length]);
 
   useEffect(() => {
     const nextTrackId = pickDefaultTrackId(events, groupRatingsByEventId, currentUserId);
