@@ -15,8 +15,43 @@ import React from 'react';
  * - Custom → GenericEventCard
  */
 
+export const resolveEventCardCategory = (event) => {
+  const explicit = String(event?.category || '').trim().toLowerCase();
+  if (['sports', 'party', 'celebration', 'hangout', 'kids', 'custom'].includes(explicit)) {
+    return explicit;
+  }
+
+  const text = [
+    event?.category,
+    event?.description,
+    event?.title,
+    event?.activity,
+    event?.theme,
+  ]
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean)
+    .join(' ');
+
+  if (/(pickleball|tennis|basketball|soccer|golf|volleyball|softball|baseball|run|match|game|practice|workout|sports?)/.test(text)) {
+    return 'sports';
+  }
+  if (/(birthday|house party|holiday party|potluck|dance party|game night|party)/.test(text)) {
+    return 'party';
+  }
+  if (/(wedding|engagement|baby shower|bridal shower|graduation|celebration|anniversary)/.test(text)) {
+    return 'celebration';
+  }
+  if (/(playdate|kids|child|children|school|birthday party|sports practice|parent)/.test(text)) {
+    return 'kids';
+  }
+  if (/(coffee|brunch|drinks|dinner|movie|bbq|hangout|get together|lunch)/.test(text)) {
+    return 'hangout';
+  }
+  return 'custom';
+};
+
 const EventCardRouter = ({ event, ...props }) => {
-  const category = event?.category || 'custom';
+  const category = resolveEventCardCategory(event);
   
   // Route to appropriate card based on category
   switch (category) {
