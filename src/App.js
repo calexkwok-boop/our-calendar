@@ -11646,7 +11646,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (eventIds.length > 0) {
       const { data: eventRows, error: eventRowsErr } = await supabase
         .from('events')
-        .select('id,title,date,time,location,layer_id,sub_calendar_id')
+        .select('id,title,date,time,location,description,category,layer_id,sub_calendar_id')
         .in('id', eventIds);
       if (!eventRowsErr) {
         (eventRows || []).forEach((row) => {
@@ -11665,6 +11665,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
             dateKey: String(row?.date || ''),
             time: row?.time || null,
             location: row?.location || null,
+            description: String(row?.description || ''),
+            category: String(row?.category || '').trim() || null,
             layerId: String(row?.layer_id || ''),
             subCalendarId: String(row?.sub_calendar_id || '').trim() || null,
           }))
@@ -24497,6 +24499,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             title: evObj.title,
             date: evObj.date,
             time: evObj.time,
+            location: evObj.location || null,
+            description: evObj.description || '',
+            category: evObj.category || null,
             max_players: meta.maxPeople,
             is_public: true,
             status: 'open',

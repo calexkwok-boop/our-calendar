@@ -5,6 +5,7 @@ import {
   Calendar, CheckCircle, AlertCircle, Loader, Copy, Check, Trash2,
   Navigation, Radio, Gamepad2, MessageCircle, Map,
 } from 'lucide-react';
+import EventCardRouter, { resolveEventCardCategory } from './EventCardRouter';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
@@ -835,8 +836,13 @@ export default function PopupEventPanel({
         supabase.from('popup_event_members').select('*').eq('event_id', id).order('joined_at'),
         supabase.from('popup_event_signups').select('*').eq('event_id', id).order('created_at'),
       ]);
-      if (ev) setEvent(ev);
-      else if (eventMetaFallbackRef.current) setEvent(eventMetaFallbackRef.current);
+      if (ev) {
+        setEvent({
+          ...(eventMetaFallbackRef.current || {}),
+          ...ev,
+          category: String(ev?.category || eventMetaFallbackRef.current?.category || '').trim() || null,
+        });
+      } else if (eventMetaFallbackRef.current) setEvent(eventMetaFallbackRef.current);
       // Merge popup_event_members + popup_event_signups, dedupe by user_id
       const dedupedMembers = [];
       const seenSelfAliasByRole = new Set();
@@ -1146,6 +1152,21 @@ export default function PopupEventPanel({
   const hostMember = members.find((m) => m.role === 'host');
   const cohostMembers = sortedMembers.filter((m) => m.role === 'cohost');
   const isLegacyInvalidEvent = !isUuid(event.id);
+  const popupEventCardCategory = resolveEventCardCategory(event);
+  const isSportsPopupEvent = popupEventCardCategory === 'sports';
+  const routedEvent = {
+    ...event,
+    category: popupEventCardCategory,
+    invitees: sortedMembers.map((member) => ({
+      id: member?.id || member?.user_id || member?.display_name,
+      name: member?.display_name || 'Guest',
+      display_name: member?.display_name || 'Guest',
+      avatar: '👤',
+      status: 'accepted',
+      user_id: member?.user_id || '',
+      role: member?.role || 'player',
+    })),
+  };
 
   // ── TABS ───────────────────────────────────────────────────────────────────
   const tabs = [
@@ -1155,6 +1176,8 @@ export default function PopupEventPanel({
     { id: 'map',      label: 'Map',               emoji: '📍' },
     { id: 'game',     label: 'Play',              emoji: '🎮' },
   ];
+  const visibleTabs = isSportsPopupEvent ? tabs : tabs.filter((tab) => tab.id !== 'game');
+  const activeScreen = !isSportsPopupEvent && screen === 'game' ? 'detail' : screen;
 
   return (
     <div style={panelStyle}>
@@ -1190,19 +1213,25 @@ export default function PopupEventPanel({
 
       {/* Tab bar */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${border}`, background: softBg, overflowX: 'auto' }}>
-        {tabs.map(({ id, label, emoji }) => (
+        {visibleTabs.map(({ id, label, emoji }) => (
           <button key={id} onClick={() => setScreen(id)}
             style={{ flex: 1, minWidth: 56, padding: '11px 6px', fontSize: 11, fontWeight: 900, cursor: 'pointer', border: 'none',
-              background: 'transparent', color: screen === id ? accent : secondaryText,
-              borderBottom: screen === id ? `2px solid ${accent}` : '2px solid transparent', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
+              background: 'transparent', color: activeScreen === id ? accent : secondaryText,
+              borderBottom: activeScreen === id ? `2px solid ${accent}` : '2px solid transparent', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
             {emoji} {label}
           </button>
         ))}
       </div>
 
       {/* ── INFO TAB ── */}
-      {screen === 'detail' && (
+      {activeScreen === 'detail' && (
         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain' }}>
+          {!isSportsPopupEvent && (
+            <EventCardRouter
+              event={routedEvent}
+              hidePrimaryAction
+            />
+          )}
           {isLegacyInvalidEvent && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 14, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
               <AlertCircle style={{ width: 16, height: 16, color: '#d97706', flexShrink: 0, marginTop: 1 }} />
@@ -1211,7 +1240,7 @@ export default function PopupEventPanel({
               </div>
             </div>
           )}
-          {event.location && (
+          {isSportsPopupEvent && event.location && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 14, background: softBg, border: `1px solid ${border}` }}>
               <MapPin style={{ width: 16, height: 16, color: accent, flexShrink: 0, marginTop: 1 }} />
               <div>
@@ -1220,7 +1249,7 @@ export default function PopupEventPanel({
               </div>
             </div>
           )}
-          {event.description && (
+          {isSportsPopupEvent && event.description && (
             <div style={{ padding: '12px 14px', borderRadius: 14, background: softBg, border: `1px solid ${border}` }}>
               <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: accent, marginBottom: 4 }}>About</div>
               <div style={{ fontSize: 13, color: secondaryText, lineHeight: 1.6 }}>{event.description}</div>
@@ -1325,7 +1354,7 @@ export default function PopupEventPanel({
       )}
 
       {/* ── ROSTER TAB ── */}
-      {screen === 'roster' && (
+      {activeScreen === 'roster' && (
         <div style={{ paddingBottom: 112, flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain' }}>
           <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent }}>{memberCount} / {event.max_players} players</div>
@@ -1371,19 +1400,19 @@ export default function PopupEventPanel({
       )}
 
       {/* ── CHAT TAB ── */}
-      {screen === 'chat' && (
+      {activeScreen === 'chat' && (
         <ChatRoom eventId={event.id} supabase={supabase} user={user} displayName={effectiveDisplayName}
           accent={accent} darkMode={darkMode} border={border} softBg={softBg} members={members} />
       )}
 
       {/* ── MAP TAB ── */}
-      {screen === 'map' && (
+      {activeScreen === 'map' && (
         <LiveMap event={event} supabase={supabase} user={user} displayName={displayName}
           accent={accent} darkMode={darkMode} border={border} softBg={softBg} members={members} />
       )}
 
       {/* ── GAME TAB ── */}
-      {screen === 'game' && (
+      {isSportsPopupEvent && activeScreen === 'game' && (
         <GameModeLauncher event={event} members={members} accent={accent} darkMode={darkMode}
           border={border} softBg={softBg} btnStyle={btnStyle} isHost={isHostOrCohost}
           onLaunchRoundRobin={onLaunchRoundRobin} onLaunchGauntlet={onLaunchGauntlet} onLaunchScramble={onLaunchScramble} />
