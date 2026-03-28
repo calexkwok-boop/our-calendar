@@ -101,6 +101,18 @@ const InviteeRow = ({ event, borderClassName, label = 'Invited' }) => {
   );
 };
 
+const EmptyStateRow = ({ icon, title, subtitle, borderClassName, accentClassName }) => (
+  <div className={`mb-4 rounded-lg border bg-white p-3 ${borderClassName}`}>
+    <div className="flex items-center gap-3">
+      <span className="text-lg">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-gray-700">{title}</p>
+        <p className={`text-xs ${accentClassName}`}>{subtitle}</p>
+      </div>
+    </div>
+  </div>
+);
+
 const CardShell = ({
   event,
   emoji,
@@ -149,7 +161,15 @@ const CardShell = ({
             </button>
           ) : null}
         </div>
-      ) : null}
+      ) : (
+        <EmptyStateRow
+          icon="🎨"
+          title="Activity"
+          subtitle="Add the main activity so parents know what to expect."
+          borderClassName="border-yellow-200"
+          accentClassName="text-yellow-700"
+        />
+      )}
     </div>
 
     {children}
@@ -182,6 +202,15 @@ const PartyEventCard = ({ event, ...props }) => {
       primaryActionClassName="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
       {...props}
     >
+      {!theme ? (
+        <EmptyStateRow
+          icon="✨"
+          title="Theme"
+          subtitle="Add a party theme to set the vibe."
+          borderClassName="border-purple-100"
+          accentClassName="text-purple-600"
+        />
+      ) : null}
       {plusOnesAllowed ? (
         <p className="mb-3 text-xs font-medium text-purple-600">Plus-ones welcome</p>
       ) : null}
@@ -197,7 +226,15 @@ const PartyEventCard = ({ event, ...props }) => {
             ))}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <EmptyStateRow
+          icon="🍕"
+          title="Potluck"
+          subtitle="No items yet. Guests can add what they are bringing."
+          borderClassName="border-purple-100"
+          accentClassName="text-purple-600"
+        />
+      )}
       {musicPlaylist ? (
         <div className="mb-4 flex items-center gap-3 rounded-lg border border-purple-100 bg-white p-3">
           <span className="text-lg">🎵</span>
@@ -206,12 +243,28 @@ const PartyEventCard = ({ event, ...props }) => {
             <p className="truncate text-xs text-gray-500">{musicPlaylist}</p>
           </div>
         </div>
-      ) : null}
+      ) : (
+        <EmptyStateRow
+          icon="🎵"
+          title="Music Playlist"
+          subtitle="Link a playlist so everyone knows the soundtrack."
+          borderClassName="border-purple-100"
+          accentClassName="text-purple-600"
+        />
+      )}
       {event?.description ? (
         <div className="mb-4 rounded-lg border border-purple-100 bg-white p-3 text-sm text-gray-700">
           {event.description}
         </div>
-      ) : null}
+      ) : (
+        <EmptyStateRow
+          icon="⚠️"
+          title="Allergy Notes"
+          subtitle="Add allergy guidance or food restrictions."
+          borderClassName="border-yellow-200"
+          accentClassName="text-yellow-700"
+        />
+      )}
       <InviteeRow event={event} borderClassName="border-purple-200" label="Going" />
     </CardShell>
   );
@@ -245,7 +298,15 @@ const CelebrationEventCard = ({ event, ...props }) => {
             <p className="text-xs text-gray-600">View registry & shop</p>
           </div>
         </a>
-      ) : null}
+      ) : (
+        <EmptyStateRow
+          icon="🎁"
+          title="Gift Registry"
+          subtitle="Add a registry or gift link for guests."
+          borderClassName="border-rose-100"
+          accentClassName="text-rose-600"
+        />
+      )}
       {schedule.length > 0 ? (
         <div className="mb-4">
           <p className="mb-2 text-sm font-semibold text-gray-700">Schedule</p>
@@ -258,7 +319,15 @@ const CelebrationEventCard = ({ event, ...props }) => {
             ))}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <EmptyStateRow
+          icon="🗓️"
+          title="Schedule"
+          subtitle="Add a simple timeline for the celebration."
+          borderClassName="border-rose-100"
+          accentClassName="text-rose-600"
+        />
+      )}
       {event?.description ? (
         <div className="mb-4 rounded-lg border border-rose-100 bg-white p-3 text-sm text-gray-700">
           {event.description}
@@ -338,7 +407,15 @@ const HangoutEventCard = ({ event, ...props }) => {
     >
       {reservationName ? (
         <p className="mb-3 text-xs font-medium text-cyan-600">Reservation under: {reservationName}</p>
-      ) : null}
+      ) : (
+        <EmptyStateRow
+          icon="📍"
+          title="Reservation"
+          subtitle="Add a reservation name or meetup note."
+          borderClassName="border-cyan-200"
+          accentClassName="text-cyan-600"
+        />
+      )}
       <div className="mb-4 rounded-lg border border-cyan-200 bg-white p-3">
         <div className="flex items-center gap-2">
           <span className="text-lg">💳</span>
