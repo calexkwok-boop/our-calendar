@@ -1160,6 +1160,9 @@ export default function PopupEventPanel({
   const isLegacyInvalidEvent = !isUuid(event.id);
   const popupEventCardCategory = resolveEventCardCategory(event);
   const isSportsPopupEvent = popupEventCardCategory === 'sports';
+  const attendeeLabel = isSportsPopupEvent ? 'players' : 'guests';
+  const joinLabel = isSportsPopupEvent ? 'Join Event' : 'RSVP';
+  const joiningLabel = isSportsPopupEvent ? 'Joining...' : 'Saving RSVP...';
   const routedEvent = {
     ...event,
     category: popupEventCardCategory,
@@ -1189,22 +1192,27 @@ export default function PopupEventPanel({
     <div style={panelStyle}>
       {/* Header */}
       <div style={headerStyle}>
-        <CourtBg />
+        {isSportsPopupEvent ? <CourtBg /> : null}
         <div style={{ position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0, paddingRight: 36 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                <StatusBadge status={event.status} />
+                {isSportsPopupEvent ? <StatusBadge status={event.status} /> : null}
                 <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.2)', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   {event.is_public ? <Globe style={{ width: 10, height: 10 }} /> : <Lock style={{ width: 10, height: 10 }} />}
                   {event.is_public ? 'Public' : 'Private'}
                 </span>
+                {!isSportsPopupEvent ? (
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.18)', color: '#fff' }}>
+                    {popupEventCardCategory.charAt(0).toUpperCase() + popupEventCardCategory.slice(1)}
+                  </span>
+                ) : null}
               </div>
               <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 4 }}>{event.title}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Calendar style={{ width: 11, height: 11 }} />{formatDateKeyMMDDYYYY?.(event.date) || event.date}</span>
                 {event.time && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Clock style={{ width: 11, height: 11 }} />{formatTime?.(event.time) || event.time}</span>}
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Users style={{ width: 11, height: 11 }} />{memberCount}/{event.max_players}</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Users style={{ width: 11, height: 11 }} />{memberCount}/{event.max_players} {attendeeLabel}</span>
               </div>
             </div>
             <button onClick={(e) => { e.stopPropagation(); onClose?.(); }} style={{ position: 'absolute', top: 0, right: 0, background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 10, padding: 6, cursor: 'pointer' }}>
@@ -1282,8 +1290,10 @@ export default function PopupEventPanel({
             <div style={{ padding: '12px 14px', borderRadius: 14, background: softBg, border: `1px solid ${border}` }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: editingCapacity ? 10 : 0 }}>
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: accent, marginBottom: 2 }}>Player limit</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: primaryText }}>{memberCount} / {event.max_players} players</div>
+                  <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: accent, marginBottom: 2 }}>
+                    {isSportsPopupEvent ? 'Player limit' : 'Guest limit'}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: primaryText }}>{memberCount} / {event.max_players} {attendeeLabel}</div>
                 </div>
                 {!editingCapacity ? (
                   <button
@@ -1321,7 +1331,7 @@ export default function PopupEventPanel({
               </div>
               {editingCapacity && (
                 <div style={{ fontSize: 11, color: secondaryText }}>
-                  Set the max number of players. Minimum: {Math.max(memberCount || 1, 1)}.
+                  Set the max number of {attendeeLabel}. Minimum: {Math.max(memberCount || 1, 1)}.
                 </div>
               )}
               {capacityError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 8 }}>{capacityError}</div>}
@@ -1330,13 +1340,13 @@ export default function PopupEventPanel({
           {!isLegacyInvalidEvent && !isMember && event.status === 'open' && !isFull && (
             <button onClick={handleJoin} disabled={joining} style={{ ...btnStyle, padding: 13, borderRadius: 14, fontSize: 14, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: `0 6px 20px ${accent}40`, opacity: joining ? 0.7 : 1 }}>
               {joining ? <Loader style={{ width: 16, height: 16 }} /> : <Plus style={{ width: 16, height: 16 }} />}
-              {joining ? 'Joining...' : 'Join Event'}
+              {joining ? joiningLabel : joinLabel}
             </button>
           )}
           {isFull && !isMember && <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', fontSize: 13, fontWeight: 700, color: '#d97706', textAlign: 'center' }}>🏓 Event is full</div>}
           {isMember && !isHost && !isLegacyInvalidEvent && (
             <button onClick={handleLeave} style={{ padding: 11, borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: 'pointer', border: '1.5px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.07)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <UserMinus style={{ width: 14, height: 14 }} /> Leave Event
+              <UserMinus style={{ width: 14, height: 14 }} /> {isSportsPopupEvent ? 'Leave Event' : 'Cancel RSVP'}
             </button>
           )}
           {isHost && !isLegacyInvalidEvent && (
@@ -1344,10 +1354,10 @@ export default function PopupEventPanel({
               <div style={{ padding: '10px 14px', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent, background: softBg, borderBottom: `1px solid ${border}` }}>Host Controls</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: border }}>
                 {[
-                  { label: 'Copy Link',         icon: copied ? Check : Copy,  action: handleCopyLink,                            color: copied ? '#10b981' : undefined },
-                  { label: 'Go to Roster',      icon: Users,                  action: () => setScreen('roster') },
-                  { label: 'Start Play',        icon: Gamepad2,               action: () => setScreen('game'),                   color: accent },
-                  { label: 'Open Chat',         icon: MessageCircle,          action: () => setScreen('chat') },
+                  { label: 'Copy Link', icon: copied ? Check : Copy, action: handleCopyLink, color: copied ? '#10b981' : undefined },
+                  { label: `View ${isSportsPopupEvent ? 'Roster' : 'Guest List'}`, icon: Users, action: () => setScreen('roster') },
+                  { label: 'Open Chat', icon: MessageCircle, action: () => setScreen('chat') },
+                  ...(isSportsPopupEvent ? [{ label: 'Start Play', icon: Gamepad2, action: () => setScreen('game'), color: accent }] : []),
                 ].map(({ label, icon: Icon, action, color }) => (
                   <button key={label} onClick={action} style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', color: color || primaryText, fontSize: 12, fontWeight: 700 }}>
                     <Icon style={{ width: 13, height: 13, flexShrink: 0 }} />{label}
