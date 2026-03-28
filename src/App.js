@@ -17605,9 +17605,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const tripId = String(activeSubCalendar?.id || '').trim();
     const tripName = String(activeSubCalendar?.name || 'Trip').trim() || 'Trip';
     if (!tripId || typeof window === 'undefined') return;
-    const shareUrl = `${window.location.origin}?trip=${encodeURIComponent(tripId)}&tripHighlights=1`;
+    let shareUrl = `${window.location.origin}?trip=${encodeURIComponent(tripId)}&tripHighlights=1`;
     const shareText = `Take a look at my ${tripName} trip highlights reel.`;
     try {
+      const shareLink = await getOrCreateShareLink({
+        targetType: 'trip',
+        targetId: tripId,
+        layerId: String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || activeLayerId || '').trim() || null,
+      });
+      if (shareLink?.token) {
+        shareUrl = `${window.location.origin}?share=${encodeURIComponent(shareLink.token)}&trip=${encodeURIComponent(tripId)}&tripHighlights=1`;
+      }
       if (navigator.share) {
         await navigator.share({
           title: `${tripName} Trip Highlights`,
