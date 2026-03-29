@@ -516,22 +516,22 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
   };
   
   return (
-    <div className="mb-4 flex items-center justify-between gap-3">
+    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Month/Week navigation */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-2 sm:justify-start">
         <button
           type="button"
           onClick={goToPrev}
           aria-label={calendarView === 'week' ? 'Previous week' : 'Previous month'}
-          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-black/5 bg-white/80 text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-200"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-black/5 bg-white/80 text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-200 sm:h-10 sm:w-10"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <div className="min-w-[156px] text-center">
+        <div className="min-w-0 flex-1 text-center sm:min-w-[156px] sm:flex-none">
           <button
             type="button"
             onClick={goToToday}
-            className="text-lg font-bold text-gray-900 transition-colors hover:text-purple-600 dark:text-white dark:hover:text-purple-400"
+            className="text-base font-bold text-gray-900 transition-colors hover:text-purple-600 dark:text-white dark:hover:text-purple-400 sm:text-lg"
           >
             {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </button>
@@ -540,20 +540,20 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
           type="button"
           onClick={goToNext}
           aria-label={calendarView === 'week' ? 'Next week' : 'Next month'}
-          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-black/5 bg-white/80 text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-200"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-black/5 bg-white/80 text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-200 sm:h-10 sm:w-10"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
       
       {/* View toggle */}
-      <div className="inline-flex items-center gap-1 p-1 rounded-2xl shadow-inner" style={{ background: darkMode ? hexToRgba(accent, 0.18) : hexToRgba(accent, 0.12) }}>
+      <div className="inline-flex w-full items-center justify-center gap-1 self-center rounded-2xl p-1 shadow-inner sm:w-auto sm:justify-end sm:self-auto" style={{ background: darkMode ? hexToRgba(accent, 0.18) : hexToRgba(accent, 0.12) }}>
         {['month', 'week', 'agenda'].map(view => (
           <button
             key={view}
             onClick={() => setCalendarView(view)}
             className={`
-              px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300
+              flex-1 px-2.5 py-1.5 text-xs font-semibold transition-all duration-300 sm:flex-none sm:px-4 sm:py-2 sm:text-sm rounded-xl
               ${calendarView === view
                 ? 'bg-white dark:bg-gray-800 shadow-md scale-105'
                 : 'text-gray-600 dark:text-gray-400'
