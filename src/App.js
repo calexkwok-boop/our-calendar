@@ -24483,11 +24483,21 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       setSelectedPopupEventPanelId(null);
       clearPopupQueryParam();
     }}
-    style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))', touchAction: 'none', overscrollBehavior: 'none' }}
+    style={{
+      paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))',
+      paddingBottom: 'max(0.75rem, calc(env(safe-area-inset-bottom) + 0.35rem))',
+      touchAction: 'none',
+      overscrollBehavior: 'none'
+    }}
   >
     <div
-      className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-lg sm:max-h-[90vh] overflow-y-auto overscroll-contain"
-      style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
+      className="w-full h-full sm:h-auto sm:max-w-lg sm:max-h-[90vh] overflow-hidden overscroll-contain"
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-y',
+        overscrollBehaviorY: 'contain',
+        maxHeight: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0.75rem, env(safe-area-inset-bottom) + 0.35rem))'
+      }}
           onClick={(e) => e.stopPropagation()}
   >
   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />

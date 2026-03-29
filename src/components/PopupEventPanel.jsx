@@ -1235,7 +1235,8 @@ export default function PopupEventPanel({
     border: `1.5px solid ${border}`,
     background: darkMode ? 'linear-gradient(180deg, rgba(17,24,39,0.98) 0%, rgba(15,23,42,0.98) 100%)' : 'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,252,0.98) 100%)',
     boxShadow: darkMode ? `0 20px 48px ${accent}20` : `0 20px 48px ${accent}16`,
-    maxHeight: 'min(88vh, 52rem)',
+    maxHeight: '100%',
+    height: '100%',
     display: 'flex',
     flexDirection: 'column',
   };
@@ -1403,6 +1404,7 @@ export default function PopupEventPanel({
         <div
           style={{
             padding: '20px 20px 16px',
+            paddingTop: 30,
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
@@ -1415,7 +1417,7 @@ export default function PopupEventPanel({
           }}
         >
           {!isSportsPopupEvent && (
-            <div style={{ marginTop: 6 }}>
+            <div style={{ marginTop: 14 }}>
               <EventCardRouter
                 event={routedEvent}
                 hidePrimaryAction={!nonSportsPrimaryAction}
