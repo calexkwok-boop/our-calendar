@@ -783,8 +783,12 @@ export default function PopupEventPanel({
     const previousBodyLeft = document.body.style.left;
     const previousBodyRight = document.body.style.right;
     const previousBodyWidth = document.body.style.width;
+    const previousBodyBackground = document.body.style.background;
+    const previousBodyBackgroundColor = document.body.style.backgroundColor;
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior;
+    const previousHtmlBackground = document.documentElement.style.background;
+    const previousHtmlBackgroundColor = document.documentElement.style.backgroundColor;
 
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
@@ -796,6 +800,10 @@ export default function PopupEventPanel({
     document.body.style.width = '100%';
     document.documentElement.style.overflow = 'hidden';
     document.documentElement.style.overscrollBehavior = 'none';
+    document.body.style.background = 'rgb(2, 6, 23)';
+    document.body.style.backgroundColor = 'rgb(2, 6, 23)';
+    document.documentElement.style.background = 'rgb(2, 6, 23)';
+    document.documentElement.style.backgroundColor = 'rgb(2, 6, 23)';
 
     return () => {
       document.body.style.overflow = previousBodyOverflow;
@@ -806,8 +814,12 @@ export default function PopupEventPanel({
       document.body.style.left = previousBodyLeft;
       document.body.style.right = previousBodyRight;
       document.body.style.width = previousBodyWidth;
+      document.body.style.background = previousBodyBackground;
+      document.body.style.backgroundColor = previousBodyBackgroundColor;
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.documentElement.style.overscrollBehavior = previousHtmlOverscroll;
+      document.documentElement.style.background = previousHtmlBackground;
+      document.documentElement.style.backgroundColor = previousHtmlBackgroundColor;
       window.scrollTo(0, scrollY);
     };
   }, []);
@@ -1141,6 +1153,47 @@ export default function PopupEventPanel({
     }
     setManualAddBusy(false);
   };
+  const upsertPopupEventDetails = async (patch = {}) => {
+    if (!event || !isUuid(event?.id)) {
+      throw new Error('This event cannot be updated yet.');
+    }
+    const existingEventData = (event?.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data))
+      ? event.event_data
+      : {};
+    const nextEventData = Object.prototype.hasOwnProperty.call(patch, 'event_data')
+      ? patch.event_data
+      : existingEventData;
+    const detailPayload = {
+      id: event.id,
+      calendar_id: event.calendar_id || calendarId || null,
+      created_by: event.created_by || user?.id || null,
+      title: Object.prototype.hasOwnProperty.call(patch, 'title') ? patch.title : (event.title || 'Untitled Event'),
+      date: Object.prototype.hasOwnProperty.call(patch, 'date') ? patch.date : (event.date || null),
+      time: Object.prototype.hasOwnProperty.call(patch, 'time') ? patch.time : (event.time || null),
+      location: Object.prototype.hasOwnProperty.call(patch, 'location') ? patch.location : (event.location || null),
+      max_players: Object.prototype.hasOwnProperty.call(patch, 'max_players')
+        ? patch.max_players
+        : Math.max(1, Number(event.max_players || 10) || 10),
+      is_public: Object.prototype.hasOwnProperty.call(patch, 'is_public')
+        ? patch.is_public
+        : (typeof event.is_public === 'boolean' ? event.is_public : true),
+      category: Object.prototype.hasOwnProperty.call(patch, 'category')
+        ? patch.category
+        : (event.category || null),
+      description: Object.prototype.hasOwnProperty.call(patch, 'description')
+        ? patch.description
+        : (String(event.description || '').trim() || null),
+      status: Object.prototype.hasOwnProperty.call(patch, 'status')
+        ? patch.status
+        : (event.status || 'open'),
+      event_data: nextEventData,
+    };
+    const result = await supabase
+      .from('popup_event_details')
+      .upsert(detailPayload, { onConflict: 'id' });
+    if (result.error) throw result.error;
+    return detailPayload;
+  };
   const handleSaveCapacity = async () => {
     if (!isHost || !isUuid(event?.id)) return;
     const nextMax = Math.max(memberCount || 1, Number.parseInt(String(capacityDraft || '').trim(), 10) || 0);
@@ -1151,8 +1204,7 @@ export default function PopupEventPanel({
     setCapacityBusy(true);
     setCapacityError('');
     try {
-      const detailResult = await supabase.from('popup_event_details').update({ max_players: nextMax }).eq('id', event.id);
-      if (detailResult.error) throw detailResult.error;
+      await upsertPopupEventDetails({ max_players: nextMax });
       // Ensure popup_events has the summary row and keep it in sync
       try {
         await supabase
@@ -1193,8 +1245,7 @@ export default function PopupEventPanel({
     };
 
     try {
-      const detailResult = await supabase.from('popup_event_details').update(detailPayload).eq('id', event.id);
-      if (detailResult.error) throw detailResult.error;
+      await upsertPopupEventDetails(detailPayload);
       try {
         await supabase.from('events').update({
           title: normalizedTitle,
@@ -1217,8 +1268,7 @@ export default function PopupEventPanel({
       ...patch,
     };
     try {
-      const detailResult = await supabase.from('popup_event_details').update({ event_data: nextEventData }).eq('id', event.id);
-      if (detailResult.error) throw detailResult.error;
+      await upsertPopupEventDetails({ event_data: nextEventData });
       setEvent((prev) => (
         prev ? { ...prev, ...patch, event_data: nextEventData } : prev
       ));
@@ -1234,7 +1284,7 @@ export default function PopupEventPanel({
   const panelStyle = {
     borderRadius: 28,
     overflow: 'hidden',
-    border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(15,23,42,0.08)',
+    border: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(15,23,42,0.05)',
     background: darkMode ? 'linear-gradient(180deg, rgba(17,24,39,0.98) 0%, rgba(15,23,42,0.98) 100%)' : 'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,252,0.98) 100%)',
     boxShadow: darkMode ? '0 24px 56px rgba(2,6,23,0.46)' : '0 24px 56px rgba(15,23,42,0.18)',
     maxHeight: '100%',

@@ -24484,6 +24484,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       clearPopupQueryParam();
     }}
     style={{
+      inset: '0 0 -2px 0',
       minHeight: '100dvh',
       height: '100dvh',
       paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))',
@@ -24499,8 +24500,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         WebkitOverflowScrolling: 'touch',
         touchAction: 'pan-y',
         overscrollBehaviorY: 'contain',
-        height: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0px, env(safe-area-inset-bottom)))',
-        maxHeight: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0px, env(safe-area-inset-bottom)))'
+        height: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0px, env(safe-area-inset-bottom)) + 2px)',
+        maxHeight: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0px, env(safe-area-inset-bottom)) + 2px)'
       }}
       onClick={(e) => e.stopPropagation()}
     >
