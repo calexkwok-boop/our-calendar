@@ -193,6 +193,10 @@ const animationStyles = `
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-10px) scale(1.05); }
 }
+@keyframes party-card-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
 `;
 
 const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props }) => {
@@ -203,25 +207,34 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const plusOnesAllowed = event?.plusOnesAllowed !== false;
 
   return (
-    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-slate-200/80 bg-gradient-to-br from-white via-white to-slate-50/70 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-[#141414] dark:shadow-none">
+    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-slate-200/80 bg-gradient-to-br from-white via-white to-slate-50/70 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-gradient-to-br dark:from-[#121318] dark:via-[#171923] dark:to-[#11131a] dark:shadow-[0_24px_80px_rgba(0,0,0,0.34)]">
       <style>{animationStyles}</style>
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[10%] top-[15%] h-3 w-3 rotate-12 rounded-sm bg-gradient-to-br from-pink-400 to-rose-400 opacity-40 dark:opacity-20" style={{ animation: 'party-card-float 8s ease-in-out infinite' }} />
-        <div className="absolute left-[25%] top-[45%] h-2 w-2 rotate-45 rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 opacity-50 dark:opacity-25" style={{ animation: 'party-card-float 6s ease-in-out infinite 1s' }} />
-        <div className="absolute right-[15%] top-[25%] h-4 w-1 rotate-[30deg] rounded-full bg-gradient-to-b from-yellow-400 to-orange-400 opacity-40 dark:opacity-20" style={{ animation: 'party-card-float 7s ease-in-out infinite 0.5s' }} />
-        <div className="absolute left-[70%] top-[60%] h-2.5 w-2.5 rotate-[60deg] bg-gradient-to-br from-purple-400 to-pink-400 opacity-40 dark:opacity-20" style={{ animation: 'party-card-float 9s ease-in-out infinite 1.5s' }} />
-        <div className="absolute right-[30%] top-[70%] h-3 w-3 -rotate-12 rounded-sm bg-gradient-to-br from-green-400 to-emerald-400 opacity-35 dark:opacity-18" style={{ animation: 'party-card-float 8.5s ease-in-out infinite 2s' }} />
-        <div className="absolute left-[45%] top-[35%] h-2 w-2 rotate-90 bg-gradient-to-br from-orange-400 to-red-400 opacity-45 dark:opacity-22" style={{ animation: 'party-card-float 7.5s ease-in-out infinite 0.8s' }} />
-        <div className="absolute right-[60%] top-[80%] h-3 w-1 rotate-[15deg] rounded-full bg-gradient-to-b from-pink-400 to-purple-400 opacity-40 dark:opacity-20" style={{ animation: 'party-card-float 6.5s ease-in-out infinite 1.2s' }} />
-        <div className="absolute right-[20%] top-[50%] h-2 w-2 rotate-[75deg] rounded-sm bg-gradient-to-br from-cyan-400 to-blue-400 opacity-38 dark:opacity-19" style={{ animation: 'party-card-float 8s ease-in-out infinite 2.5s' }} />
-        <div className="absolute left-[15%] top-[90%] h-1.5 w-1.5 rotate-45 bg-yellow-400 opacity-60 dark:opacity-30" style={{ animation: 'party-card-twinkle 3s ease-in-out infinite' }} />
-        <div className="absolute right-[25%] top-[20%] h-1 w-1 rotate-12 bg-pink-400 opacity-50 dark:opacity-25" style={{ animation: 'party-card-twinkle 2.5s ease-in-out infinite 0.5s' }} />
-        <div className="absolute left-[80%] top-[75%] h-1.5 w-1.5 rotate-[30deg] bg-orange-400 opacity-55 dark:opacity-28" style={{ animation: 'party-card-twinkle 3.5s ease-in-out infinite 1s' }} />
-        <div className="absolute right-[75%] top-[40%] h-1 w-1 rotate-[60deg] bg-purple-400 opacity-45 dark:opacity-23" style={{ animation: 'party-card-twinkle 2.8s ease-in-out infinite 1.5s' }} />
+        <div className="absolute -left-2 top-24 h-24 w-16 rounded-full bg-gradient-to-b from-fuchsia-400 to-pink-500 opacity-85 shadow-[0_16px_40px_rgba(236,72,153,0.3)] dark:opacity-95" style={{ animation: 'party-card-bob 5.5s ease-in-out infinite' }} />
+        <div className="absolute left-5 top-[9.5rem] h-16 w-px bg-gradient-to-b from-pink-300/90 to-transparent dark:from-pink-300/70" />
+        <div className="absolute right-3 top-16 h-20 w-14 rounded-full bg-gradient-to-b from-sky-300 to-cyan-500 opacity-80 shadow-[0_16px_40px_rgba(6,182,212,0.28)] dark:opacity-90" style={{ animation: 'party-card-bob 6.3s ease-in-out infinite 0.7s' }} />
+        <div className="absolute right-9 top-[7.75rem] h-16 w-px bg-gradient-to-b from-cyan-300/90 to-transparent dark:from-cyan-300/70" />
+        <div className="absolute right-20 top-24 h-[4.5rem] w-12 rounded-full bg-gradient-to-b from-violet-300 to-violet-500 opacity-75 shadow-[0_16px_40px_rgba(139,92,246,0.28)] dark:opacity-90" style={{ animation: 'party-card-bob 5.9s ease-in-out infinite 1.2s' }} />
+        <div className="absolute right-[5.85rem] top-[9.5rem] h-14 w-px bg-gradient-to-b from-violet-300/90 to-transparent dark:from-violet-300/70" />
+
+        <div className="absolute left-[10%] top-[15%] h-3.5 w-3.5 rotate-12 rounded-sm bg-gradient-to-br from-pink-400 to-rose-400 opacity-75 dark:opacity-80" style={{ animation: 'party-card-float 8s ease-in-out infinite' }} />
+        <div className="absolute left-[25%] top-[45%] h-2.5 w-2.5 rotate-45 rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 opacity-75 dark:opacity-75" style={{ animation: 'party-card-float 6s ease-in-out infinite 1s' }} />
+        <div className="absolute right-[15%] top-[25%] h-5 w-1.5 rotate-[30deg] rounded-full bg-gradient-to-b from-yellow-300 to-fuchsia-400 opacity-70 dark:opacity-75" style={{ animation: 'party-card-float 7s ease-in-out infinite 0.5s' }} />
+        <div className="absolute left-[70%] top-[60%] h-3 w-3 rotate-[60deg] bg-gradient-to-br from-purple-400 to-pink-400 opacity-70 dark:opacity-74" style={{ animation: 'party-card-float 9s ease-in-out infinite 1.5s' }} />
+        <div className="absolute right-[30%] top-[70%] h-3.5 w-3.5 -rotate-12 rounded-sm bg-gradient-to-br from-green-400 to-emerald-400 opacity-68 dark:opacity-72" style={{ animation: 'party-card-float 8.5s ease-in-out infinite 2s' }} />
+        <div className="absolute left-[45%] top-[35%] h-2.5 w-2.5 rotate-90 bg-gradient-to-br from-fuchsia-400 to-red-400 opacity-78 dark:opacity-76" style={{ animation: 'party-card-float 7.5s ease-in-out infinite 0.8s' }} />
+        <div className="absolute right-[60%] top-[80%] h-4 w-1.5 rotate-[15deg] rounded-full bg-gradient-to-b from-pink-400 to-purple-400 opacity-72 dark:opacity-74" style={{ animation: 'party-card-float 6.5s ease-in-out infinite 1.2s' }} />
+        <div className="absolute right-[20%] top-[50%] h-2.5 w-2.5 rotate-[75deg] rounded-sm bg-gradient-to-br from-cyan-400 to-blue-400 opacity-70 dark:opacity-72" style={{ animation: 'party-card-float 8s ease-in-out infinite 2.5s' }} />
+        <div className="absolute left-[15%] top-[90%] h-2 w-2 rotate-45 bg-yellow-400 opacity-90 dark:opacity-85" style={{ animation: 'party-card-twinkle 3s ease-in-out infinite' }} />
+        <div className="absolute right-[25%] top-[20%] h-1.5 w-1.5 rotate-12 bg-pink-400 opacity-80 dark:opacity-78" style={{ animation: 'party-card-twinkle 2.5s ease-in-out infinite 0.5s' }} />
+        <div className="absolute left-[80%] top-[75%] h-2 w-2 rotate-[30deg] bg-fuchsia-400 opacity-80 dark:opacity-78" style={{ animation: 'party-card-twinkle 3.5s ease-in-out infinite 1s' }} />
+        <div className="absolute right-[75%] top-[40%] h-1.5 w-1.5 rotate-[60deg] bg-purple-400 opacity-72 dark:opacity-74" style={{ animation: 'party-card-twinkle 2.8s ease-in-out infinite 1.5s' }} />
+        <div className="absolute left-[36%] top-[16%] h-2 w-4 rotate-[18deg] rounded-full bg-rose-300 opacity-70 dark:opacity-72" style={{ animation: 'party-card-float 7.7s ease-in-out infinite 0.3s' }} />
+        <div className="absolute left-[58%] top-[22%] h-3 w-1.5 -rotate-[22deg] rounded-full bg-cyan-300 opacity-75 dark:opacity-78" style={{ animation: 'party-card-float 6.8s ease-in-out infinite 1.1s' }} />
       </div>
 
-      <div className="relative border-b-2 border-slate-200/80 bg-gradient-to-br from-white via-white to-slate-50/50 px-6 py-6 dark:border-white/10 dark:bg-[#171717] sm:px-7">
+      <div className="relative border-b-2 border-slate-200/80 bg-gradient-to-br from-white via-white to-slate-50/50 px-6 py-6 dark:border-white/10 dark:bg-gradient-to-br dark:from-[#181b24] dark:via-[#1d2230] dark:to-[#161923] sm:px-7">
         {(props.onEdit || props.onDelete) ? (
           <div className="absolute right-6 top-6 z-10 flex items-center gap-2">
             {props.onEdit ? (
@@ -245,9 +258,9 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           </div>
         ) : null}
 
-        <div className="mx-auto max-w-[30rem] rounded-[28px] border border-slate-200/80 bg-white px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-[#1a1a1a]">
+        <div className="mx-auto max-w-[30rem] rounded-[28px] border border-slate-200/80 bg-white px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-[#202431]">
           <div className="mb-3 flex items-center justify-center">
-            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-rose-600 dark:text-rose-300">
+            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-fuchsia-600 dark:text-fuchsia-300">
               You're Invited
             </div>
           </div>
@@ -256,13 +269,13 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
             {event?.title || 'Untitled party'}
           </h3>
 
-          <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-rose-300 to-transparent dark:via-rose-400/50" />
+          <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-300 to-transparent dark:via-fuchsia-400/60" />
 
           <div className="mt-4 space-y-2 text-[15px] text-gray-600 dark:text-gray-300">
             <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>
             {event?.location ? <div className="font-medium">{event.location}</div> : null}
             {theme ? (
-              <div className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
+              <div className="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-fuchsia-700 dark:border-fuchsia-400/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-200">
                 {theme}
               </div>
             ) : null}
@@ -305,7 +318,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         >
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 dark:border-white/10 dark:bg-white/[0.04]">
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-rose-600 dark:text-rose-300">Theme</div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-fuchsia-600 dark:text-fuchsia-300">Theme</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{theme || 'Open celebration vibe'}</div>
             </div>
             <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 dark:border-white/10 dark:bg-white/[0.04]">
@@ -355,12 +368,12 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               {potluckItems.slice(0, 4).map((item, index) => (
                 <div
                   key={`${item?.item || item}-${index}`}
-                  className="group/item flex items-center justify-between rounded-xl border-2 border-orange-100/80 bg-white px-4 py-3 text-sm shadow-sm transition-all hover:border-orange-200 hover:shadow-md dark:border-orange-500/10 dark:bg-white/5 dark:hover:border-orange-500/20"
+                  className="group/item flex items-center justify-between rounded-xl border-2 border-fuchsia-100/80 bg-white px-4 py-3 text-sm shadow-sm transition-all hover:border-fuchsia-200 hover:shadow-md dark:border-fuchsia-500/10 dark:bg-white/5 dark:hover:border-fuchsia-500/20"
                 >
                   <div className="flex items-center gap-2.5">
                     <span className="font-semibold text-gray-900 dark:text-white">{item?.item || item}</span>
                   </div>
-                  <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 dark:bg-orange-500/10 dark:text-orange-300">
+                  <span className="rounded-full bg-fuchsia-50 px-2.5 py-1 text-xs font-medium text-fuchsia-700 dark:bg-fuchsia-500/10 dark:text-fuchsia-300">
                     {item?.person || 'Unassigned'}
                   </span>
                 </div>
