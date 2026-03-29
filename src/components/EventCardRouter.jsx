@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import PartyEventCardView from './PartyEventCard';
 import CelebrationEventCardView from './CelebrationEventCard';
 import KidsEventCardView from './KidsEventCard';
+import HangoutEventCardView from './HangoutEventCard';
 
 export const resolveEventCardCategory = (event) => {
   const explicit = String(event?.category || '').trim().toLowerCase();
@@ -863,7 +864,7 @@ const EventCardRouter = ({ event, onEditBasics, ...props }) => {
       card = <CelebrationEventCardView event={routedEvent} {...sharedProps} />;
       break;
     case 'hangout':
-      card = <HangoutEventCard event={routedEvent} {...sharedProps} />;
+      card = <HangoutEventCardView event={routedEvent} {...sharedProps} />;
       break;
     case 'kids':
       card = <KidsEventCardView event={routedEvent} {...sharedProps} />;
