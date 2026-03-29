@@ -758,6 +758,7 @@ export default function PopupEventPanel({
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(Boolean(initialEventId));
   const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState('');
   const [copied, setCopied] = useState(false);
   const [manualPlayerName, setManualPlayerName] = useState('');
   const [manualAddBusy, setManualAddBusy] = useState(false);
@@ -967,9 +968,25 @@ export default function PopupEventPanel({
 
   const handleJoin = async () => {
     if (!event || isMember || isFull) return;
-    if (!isUuid(event.id)) return;
+    if (!user?.id) {
+      setJoinError('Sign in to RSVP to this event.');
+      return;
+    }
+    if (!isUuid(event.id)) {
+      setJoinError('This event cannot accept RSVPs yet.');
+      return;
+    }
+    setJoinError('');
     setJoining(true);
-    try { await supabase.from('popup_event_members').insert({ event_id: event.id, user_id: user.id, display_name: effectiveDisplayName || 'Player', role: 'player' }); await loadEvent(event.id); } catch {}
+    try {
+      const { error } = await supabase
+        .from('popup_event_members')
+        .insert({ event_id: event.id, user_id: user.id, display_name: effectiveDisplayName || 'Player', role: 'player' });
+      if (error && error.code !== '23505') throw error;
+      await loadEvent(event.id);
+    } catch (error) {
+      setJoinError(error?.message || 'Could not RSVP right now.');
+    }
     setJoining(false);
   };
   const ensurePopupMemberRecord = async (member, fallbackRole = 'player') => {
@@ -1016,7 +1033,17 @@ export default function PopupEventPanel({
       display_name: displayName,
     };
   };
-  const handleLeave = async () => { if (!myMember || isHost || !isUuid(event?.id)) return; await supabase.from('popup_event_members').delete().eq('id', myMember.id); await loadEvent(event.id); };
+  const handleLeave = async () => {
+    if (!myMember || isHost || !isUuid(event?.id)) return;
+    setJoinError('');
+    try {
+      const { error } = await supabase.from('popup_event_members').delete().eq('id', myMember.id);
+      if (error) throw error;
+      await loadEvent(event.id);
+    } catch (error) {
+      setJoinError(error?.message || 'Could not update your RSVP.');
+    }
+  };
   const handleKick = async (member) => {
     if (!isHostOrCohost || !isUuid(event?.id)) return;
     if (member?.is_manual) {
@@ -1294,6 +1321,17 @@ export default function PopupEventPanel({
   ];
   const visibleTabs = isSportsPopupEvent ? tabs : tabs.filter((tab) => tab.id !== 'game');
   const activeScreen = !isSportsPopupEvent && screen === 'game' ? 'detail' : screen;
+  const nonSportsPrimaryAction = !isSportsPopupEvent && !isLegacyInvalidEvent
+    ? (
+      !isMember && event.status === 'open' && !isFull
+        ? { label: joinLabel, action: handleJoin }
+        : isMember && !isHost
+          ? { label: 'Cancel RSVP', action: handleLeave }
+          : isHostOrCohost
+            ? { label: 'Edit Event', action: handleEditEventBasics }
+            : null
+    )
+    : null;
 
   return (
     <div style={panelStyle}>
@@ -1380,9 +1418,11 @@ export default function PopupEventPanel({
             <div style={{ marginTop: 6 }}>
               <EventCardRouter
                 event={routedEvent}
-                hidePrimaryAction
+                hidePrimaryAction={!nonSportsPrimaryAction}
                 onEdit={isHostOrCohost ? handleEditEventBasics : undefined}
                 onUpdateEventData={isHostOrCohost ? handleUpdateEventData : undefined}
+                onPrimaryAction={nonSportsPrimaryAction?.action}
+                primaryActionLabel={joining && nonSportsPrimaryAction?.action === handleJoin ? joiningLabel : nonSportsPrimaryAction?.label}
               />
             </div>
           )}
@@ -1482,6 +1522,11 @@ export default function PopupEventPanel({
               {joining ? <Loader style={{ width: 16, height: 16 }} /> : <Plus style={{ width: 16, height: 16 }} />}
               {joining ? joiningLabel : joinLabel}
             </button>
+          )}
+          {joinError && (
+            <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', fontSize: 12, fontWeight: 700, color: '#ef4444' }}>
+              {joinError}
+            </div>
           )}
           {isFull && !isMember && <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', fontSize: 13, fontWeight: 700, color: '#d97706', textAlign: 'center' }}>🏓 Event is full</div>}
           {isMember && !isHost && !isLegacyInvalidEvent && (

@@ -135,6 +135,35 @@ const EmptySection = ({ title, subtitle, actions }) => (
   </Section>
 );
 
+const NotesSection = ({ event, onEdit }) => {
+  const notes = String(event?.description || '').trim();
+
+  if (notes) {
+    return (
+      <Section
+        title="Notes"
+        actions={typeof onEdit === 'function' ? (
+          <ActionPill onClick={onEdit}>Edit</ActionPill>
+        ) : null}
+      >
+        <div className="text-sm leading-6 text-gray-700 dark:text-gray-300">{notes}</div>
+      </Section>
+    );
+  }
+
+  if (typeof onEdit === 'function') {
+    return (
+      <EmptySection
+        title="Notes"
+        subtitle="No notes added yet."
+        actions={<ActionPill onClick={onEdit}>Add</ActionPill>}
+      />
+    );
+  }
+
+  return null;
+};
+
 const InviteeRow = ({ event, label = 'Invited' }) => {
   const invitees = Array.isArray(event?.invitees) ? event.invitees : [];
 
@@ -250,7 +279,7 @@ const CardShell = ({
   );
 };
 
-const PartyEventCard = ({ event, onUpdateEventData, ...props }) => {
+const PartyEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
   const potluckItems = Array.isArray(event?.potluckItems) ? event.potluckItems : [];
   const theme = String(event?.theme || '').trim();
   const musicPlaylist = String(event?.musicPlaylist || '').trim();
@@ -387,18 +416,14 @@ const PartyEventCard = ({ event, onUpdateEventData, ...props }) => {
         />
       )}
 
-      {event?.description ? (
-        <Section title="Notes">
-          <div className="text-sm leading-6 text-gray-700 dark:text-gray-300">{event.description}</div>
-        </Section>
-      ) : null}
+      <NotesSection event={event} onEdit={onEdit} />
 
       <InviteeRow event={event} label="Going" />
     </CardShell>
   );
 };
 
-const CelebrationEventCard = ({ event, onUpdateEventData, ...props }) => {
+const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
   const dressCode = String(event?.dressCode || '').trim();
   const registryLink = String(event?.registryLink || '').trim();
   const schedule = Array.isArray(event?.schedule) ? event.schedule : [];
@@ -528,18 +553,14 @@ const CelebrationEventCard = ({ event, onUpdateEventData, ...props }) => {
         />
       )}
 
-      {event?.description ? (
-        <Section title="Notes">
-          <div className="text-sm leading-6 text-gray-700 dark:text-gray-300">{event.description}</div>
-        </Section>
-      ) : null}
+      <NotesSection event={event} onEdit={onEdit} />
 
       <InviteeRow event={event} label="Attending" />
     </CardShell>
   );
 };
 
-const KidsEventCard = ({ event, onUpdateEventData, ...props }) => {
+const KidsEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
   const ageRange = String(event?.ageRange || '').trim();
   const activity = String(event?.activity || '').trim();
   const parentRequired = event?.parentRequired !== false;
@@ -631,18 +652,14 @@ const KidsEventCard = ({ event, onUpdateEventData, ...props }) => {
         </div>
       </Section>
 
-      {event?.description ? (
-        <Section title="Notes">
-          <div className="text-sm leading-6 text-gray-700 dark:text-gray-300">{event.description}</div>
-        </Section>
-      ) : null}
+      <NotesSection event={event} onEdit={onEdit} />
 
       <InviteeRow event={event} label="Kids Attending" />
     </CardShell>
   );
 };
 
-const HangoutEventCard = ({ event, onUpdateEventData, ...props }) => {
+const HangoutEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
   const duration = String(event?.expectedDuration || '').trim();
   const reservationName = String(event?.reservationName || '').trim();
   const billSplitting = String(event?.billSplitting || 'separate').trim();
@@ -703,18 +720,14 @@ const HangoutEventCard = ({ event, onUpdateEventData, ...props }) => {
         </div>
       </Section>
 
-      {event?.description ? (
-        <Section title="Notes">
-          <div className="text-sm leading-6 text-gray-700 dark:text-gray-300">{event.description}</div>
-        </Section>
-      ) : null}
+      <NotesSection event={event} onEdit={onEdit} />
 
       <InviteeRow event={event} label="Coming" />
     </CardShell>
   );
 };
 
-const GenericEventCard = ({ event, ...props }) => (
+const GenericEventCard = ({ event, onEdit, ...props }) => (
   <CardShell
     event={event}
     categoryLabel={event?.category === 'sports' ? 'Sports' : 'Event'}
@@ -729,11 +742,7 @@ const GenericEventCard = ({ event, ...props }) => (
     }}
     {...props}
   >
-    {event?.description ? (
-      <Section title="Notes">
-        <div className="text-sm leading-6 text-gray-700 dark:text-gray-300">{event.description}</div>
-      </Section>
-    ) : null}
+    <NotesSection event={event} onEdit={onEdit} />
     <InviteeRow event={event} />
   </CardShell>
 );
