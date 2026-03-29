@@ -107,7 +107,7 @@ const ActionPill = ({ href, onClick, children }) => {
 };
 
 const Section = ({ title, subtitle, actions, children }) => (
-  <div className="group/section rounded-[22px] border border-orange-200/55 bg-white/96 p-5 shadow-[0_10px_26px_rgba(15,23,42,0.05)] backdrop-blur-sm transition-all hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-orange-400/14 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08]">
+  <div className="group/section rounded-[22px] border border-slate-200/70 bg-white/96 p-5 shadow-[0_10px_26px_rgba(15,23,42,0.05)] backdrop-blur-sm transition-all hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/[0.05] dark:shadow-none dark:hover:bg-white/[0.08]">
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-bold text-gray-900 dark:text-white">{title}</div>
@@ -121,7 +121,7 @@ const Section = ({ title, subtitle, actions, children }) => (
 
 const EmptySection = ({ title, subtitle, actions }) => (
   <Section title={title} subtitle={subtitle} actions={actions}>
-    <div className="rounded-2xl border border-dashed border-orange-200 bg-white px-4 py-4 text-sm text-orange-700 dark:border-orange-400/16 dark:bg-orange-500/8 dark:text-orange-200">
+    <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
       Nothing added yet.
     </div>
   </Section>
@@ -152,7 +152,7 @@ const InviteeRow = ({ event, label = 'Going' }) => {
     <Section title={label} subtitle={`${invitees.length} ${invitees.length === 1 ? 'person' : 'people'}`}>
       <div className="flex flex-wrap gap-2.5">
         {invitees.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-orange-200 bg-white px-4 py-4 text-sm text-orange-700 dark:border-orange-400/16 dark:bg-orange-500/8 dark:text-orange-200">
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
             No one has responded yet.
           </div>
         ) : (
@@ -203,7 +203,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const plusOnesAllowed = event?.plusOnesAllowed !== false;
 
   return (
-    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-orange-200/70 bg-gradient-to-br from-white via-orange-50/40 to-white shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-orange-400/25 dark:from-[#2d1f14] dark:via-[#1c150f] dark:to-[#13110e] dark:shadow-none">
+    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-slate-200/80 bg-gradient-to-br from-white via-white to-slate-50/70 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-[#141414] dark:shadow-none">
       <style>{animationStyles}</style>
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -221,10 +221,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         <div className="absolute right-[75%] top-[40%] h-1 w-1 rotate-[60deg] bg-purple-400 opacity-45 dark:opacity-23" style={{ animation: 'party-card-twinkle 2.8s ease-in-out infinite 1.5s' }} />
       </div>
 
-      <div className="pointer-events-none absolute right-6 top-0 h-32 w-0.5 bg-gradient-to-b from-orange-300/40 to-transparent dark:from-orange-400/20" style={{ animation: 'party-card-sway 4s ease-in-out infinite' }} />
-      <div className="pointer-events-none absolute right-5 top-[-8px] h-6 w-6 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 opacity-80 shadow-lg dark:opacity-60" style={{ animation: 'party-card-balloon 6s ease-in-out infinite' }} />
-
-      <div className="relative border-b-2 border-orange-200/70 bg-gradient-to-br from-white via-orange-50/35 to-white px-6 py-6 dark:border-orange-400/15 dark:from-white/[0.04] dark:to-orange-500/[0.02] sm:px-7">
+      <div className="relative border-b-2 border-slate-200/80 bg-gradient-to-br from-white via-white to-slate-50/50 px-6 py-6 dark:border-white/10 dark:bg-[#171717] sm:px-7">
         {(props.onEdit || props.onDelete) ? (
           <div className="absolute right-6 top-6 z-10 flex items-center gap-2">
             {props.onEdit ? (
@@ -248,15 +245,9 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           </div>
         ) : null}
 
-        <div className="mx-auto max-w-[30rem] rounded-[28px] border border-orange-200/80 bg-white/96 px-6 py-7 text-center shadow-[0_18px_40px_rgba(249,115,22,0.08)] dark:border-orange-400/18 dark:bg-white/[0.05]">
-          <div className="mb-3 flex items-center justify-center gap-3">
-            <span
-              className="inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-orange-300 bg-gradient-to-br from-white to-orange-50 text-xl shadow-lg shadow-orange-200/30 transition-transform group-hover:scale-110 group-hover:rotate-12 dark:border-orange-400/30 dark:from-orange-500/15 dark:to-amber-500/15 dark:shadow-orange-500/10"
-              style={{ animation: 'party-card-wiggle 2s ease-in-out infinite' }}
-            >
-              Party
-            </span>
-            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-orange-700 dark:text-orange-200">
+        <div className="mx-auto max-w-[30rem] rounded-[28px] border border-slate-200/80 bg-white px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-[#1a1a1a]">
+          <div className="mb-3 flex items-center justify-center">
+            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-rose-600 dark:text-rose-300">
               You're Invited
             </div>
           </div>
@@ -265,20 +256,20 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
             {event?.title || 'Untitled party'}
           </h3>
 
-          <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-orange-300 to-transparent dark:via-orange-400/50" />
+          <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-rose-300 to-transparent dark:via-rose-400/50" />
 
           <div className="mt-4 space-y-2 text-[15px] text-gray-600 dark:text-gray-300">
             <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>
             {event?.location ? <div className="font-medium">{event.location}</div> : null}
             {theme ? (
-              <div className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700 dark:border-orange-400/20 dark:bg-orange-500/10 dark:text-orange-200">
+              <div className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-200">
                 {theme}
               </div>
             ) : null}
           </div>
 
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
-            <span className="rounded-full border border-orange-200 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-800 shadow-sm dark:border-orange-400/20 dark:bg-white/5 dark:text-orange-200">
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm dark:border-white/12 dark:bg-white/5 dark:text-slate-200">
               {plusOnesAllowed ? 'Plus-Ones Welcome' : 'Invite Only'}
             </span>
             {event?.location ? <ActionPill href={buildMapHref(event.location)}>View map</ActionPill> : null}
@@ -313,18 +304,18 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           ) : null}
         >
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-orange-200/70 bg-gradient-to-br from-orange-50/90 to-white px-4 py-4 dark:border-orange-400/18 dark:bg-gray-900/90">
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600 dark:text-orange-300">Theme</div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 dark:border-white/10 dark:bg-white/[0.04]">
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-rose-600 dark:text-rose-300">Theme</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{theme || 'Open celebration vibe'}</div>
             </div>
-            <div className="rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50/90 to-white px-4 py-4 dark:border-amber-400/18 dark:bg-gray-900/90">
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-300">Guest List</div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 dark:border-white/10 dark:bg-white/[0.04]">
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Guest List</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
                 {plusOnesAllowed ? 'Bring a plus-one' : 'Named guests only'}
               </div>
             </div>
-            <div className="rounded-2xl border border-yellow-200/70 bg-gradient-to-br from-yellow-50/90 to-white px-4 py-4 dark:border-yellow-400/18 dark:bg-gray-900/90">
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-700 dark:text-yellow-300">Mood</div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 dark:border-white/10 dark:bg-white/[0.04]">
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Mood</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
                 {musicPlaylist ? 'Playlist ready' : 'Set the soundtrack'}
               </div>
