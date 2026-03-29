@@ -24476,7 +24476,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   </div>
 )}
 
-{selectedPopupEventPanelId && (
+{selectedPopupEventPanelId && renderJourneyPortal((
   <div
     className="fixed inset-0 z-50 bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
     onClick={() => {
@@ -24494,7 +24494,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     }}
   >
     <div
-      className="w-full h-full sm:h-auto sm:max-w-lg sm:max-h-[90vh] overflow-hidden overscroll-contain"
+      className="relative w-full h-full sm:h-auto sm:max-w-lg sm:max-h-[90vh] overflow-hidden overscroll-contain"
       style={{
         WebkitOverflowScrolling: 'touch',
         touchAction: 'pan-y',
@@ -24502,9 +24502,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         height: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0px, env(safe-area-inset-bottom)))',
         maxHeight: 'calc(100dvh - max(2.75rem, env(safe-area-inset-top) + 1rem) - max(0px, env(safe-area-inset-bottom)))'
       }}
-          onClick={(e) => e.stopPropagation()}
-  >
-  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
       <PopupEventPanel
         activeLayerPageTheme={activeLayerPageTheme}
         darkMode={darkMode}
@@ -24568,7 +24568,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       />
     </div>
   </div>
-)}
+))}
 
         {showCategoryEditor && (
           <div className="glass-panel rounded-2xl p-6 mb-6">
