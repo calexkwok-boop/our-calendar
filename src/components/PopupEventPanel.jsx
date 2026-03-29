@@ -1203,17 +1203,22 @@ export default function PopupEventPanel({
   const handleCopyLink = () => { navigator.clipboard.writeText(`${window.location.origin}?popup=${event.id}`).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   const panelStyle = {
-    borderRadius: 24,
+    borderRadius: 28,
     overflow: 'hidden',
-    marginBottom: 24,
     border: `1.5px solid ${border}`,
-    background: darkMode ? 'rgba(17,24,39,0.95)' : '#fff',
-    boxShadow: `0 8px 40px ${accent}18`,
+    background: darkMode ? 'linear-gradient(180deg, rgba(17,24,39,0.98) 0%, rgba(15,23,42,0.98) 100%)' : 'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,252,0.98) 100%)',
+    boxShadow: darkMode ? `0 20px 48px ${accent}20` : `0 20px 48px ${accent}16`,
     maxHeight: 'min(88vh, 52rem)',
     display: 'flex',
     flexDirection: 'column',
   };
-  const headerStyle = { background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)`, padding: '18px 20px 16px', position: 'relative', overflow: 'hidden' };
+  const headerStyle = {
+    background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)`,
+    padding: '18px 20px 16px',
+    position: 'relative',
+    overflow: 'hidden',
+    flexShrink: 0,
+  };
 
   if (loading) return (
     <div style={{ ...panelStyle, padding: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
@@ -1332,18 +1337,24 @@ export default function PopupEventPanel({
         style={{
           display: 'flex',
           borderBottom: `1px solid ${border}`,
-          background: softBg,
+          background: darkMode ? 'rgba(15,23,42,0.82)' : 'rgba(255,255,255,0.92)',
           overflowX: 'auto',
-          position: 'relative',
-          zIndex: 3,
-          boxShadow: darkMode ? '0 1px 0 rgba(255,255,255,0.04)' : '0 1px 0 rgba(15,23,42,0.04)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 4,
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          boxShadow: darkMode ? '0 8px 20px rgba(2,6,23,0.28)' : '0 8px 20px rgba(15,23,42,0.08)',
+          padding: '4px 8px 0',
         }}
       >
         {visibleTabs.map(({ id, label, emoji }) => (
           <button key={id} onClick={() => setScreen(id)}
-            style={{ flex: 1, minWidth: 56, padding: '11px 6px', fontSize: 11, fontWeight: 900, cursor: 'pointer', border: 'none',
+            style={{ flex: 1, minWidth: 56, padding: '12px 8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer', border: 'none',
               background: 'transparent', color: activeScreen === id ? accent : secondaryText,
-              borderBottom: activeScreen === id ? `2px solid ${accent}` : '2px solid transparent', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
+              borderBottom: activeScreen === id ? `2px solid ${accent}` : '2px solid transparent', transition: 'all 0.15s', whiteSpace: 'nowrap',
+              borderTopLeftRadius: 12, borderTopRightRadius: 12,
+              backgroundColor: activeScreen === id ? (darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.72)') : 'transparent' }}>
             {emoji} {label}
           </button>
         ))}
@@ -1366,7 +1377,7 @@ export default function PopupEventPanel({
           }}
         >
           {!isSportsPopupEvent && (
-            <div style={{ marginTop: 4 }}>
+            <div style={{ marginTop: 6 }}>
               <EventCardRouter
                 event={routedEvent}
                 hidePrimaryAction
