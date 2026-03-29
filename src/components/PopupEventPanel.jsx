@@ -816,8 +816,10 @@ export default function PopupEventPanel({
     eventMetaFallbackRef.current = eventMetaFallback;
   }, [eventMetaFallback]);
 
-  const myMember = members.find((m) => m.user_id === user?.id);
-  const isHost = myMember?.role === 'host';
+  const myMember = members.find((m) => String(m?.user_id || '').trim() === String(user?.id || '').trim());
+  const creatorUserId = String(event?.created_by || event?.created_by_user_id || '').trim();
+  const isEventCreator = Boolean(creatorUserId) && creatorUserId === String(user?.id || '').trim();
+  const isHost = myMember?.role === 'host' || isEventCreator;
   const isCohost = myMember?.role === 'cohost';
   const isHostOrCohost = isHost || isCohost;
   const isMember = Boolean(myMember);
@@ -1232,9 +1234,9 @@ export default function PopupEventPanel({
   const panelStyle = {
     borderRadius: 28,
     overflow: 'hidden',
-    border: `1.5px solid ${border}`,
+    border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(15,23,42,0.08)',
     background: darkMode ? 'linear-gradient(180deg, rgba(17,24,39,0.98) 0%, rgba(15,23,42,0.98) 100%)' : 'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,252,0.98) 100%)',
-    boxShadow: darkMode ? `0 20px 48px ${accent}20` : `0 20px 48px ${accent}16`,
+    boxShadow: darkMode ? '0 24px 56px rgba(2,6,23,0.46)' : '0 24px 56px rgba(15,23,42,0.18)',
     maxHeight: '100%',
     height: '100%',
     display: 'flex',

@@ -24504,7 +24504,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       }}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
       <PopupEventPanel
         activeLayerPageTheme={activeLayerPageTheme}
         darkMode={darkMode}
