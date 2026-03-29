@@ -75,6 +75,18 @@ const detectPlaylistService = (value) => {
   }
   return null;
 };
+const normalizeEventNotes = (event) => {
+  const rawNotes = String(event?.description || '').trim();
+  if (!rawNotes) return '';
+  const normalized = rawNotes.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (/^(party|kids event|celebration|hangout|custom|sports)( we event)?$/.test(normalized)) {
+    return '';
+  }
+  if (/^[a-z ]+ we event$/.test(normalized)) {
+    return '';
+  }
+  return rawNotes;
+};
 const buildMapHref = (location) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(location || '').trim())}`;
 const normalizeList = (value) => String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
 const parseLineItems = (value) => String(value || '')
@@ -267,7 +279,7 @@ const EmptySection = ({ title, subtitle, actions }) => (
 );
 
 const NotesSection = ({ event, onEdit }) => {
-  const notes = String(event?.description || '').trim();
+  const notes = normalizeEventNotes(event);
 
   if (notes) {
     return (
@@ -1004,7 +1016,7 @@ const EventCardRouter = ({ event, onEditBasics, ...props }) => {
         fields: [
           { key: 'title', label: 'Event title', value: String(event?.title || '').trim(), placeholder: 'Game Night @ Home' },
           { key: 'location', label: 'Location', value: String(event?.location || '').trim(), placeholder: 'Home, rooftop, park...' },
-          { key: 'description', label: 'Notes', type: 'textarea', rows: 5, value: String(event?.description || '').trim(), placeholder: 'Add anything guests should know.' },
+          { key: 'description', label: 'Notes', type: 'textarea', rows: 5, value: normalizeEventNotes(event), placeholder: 'Add anything guests should know.' },
         ],
         onSave: (values) => onEditBasics({
           title: String(values.title || '').trim() || String(event?.title || '').trim(),
