@@ -203,7 +203,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const plusOnesAllowed = event?.plusOnesAllowed !== false;
 
   return (
-    <div className="group relative flex min-h-full flex-col overflow-hidden rounded-[32px] border-2 border-orange-300/70 bg-gradient-to-br from-orange-50 via-amber-50/80 to-yellow-50/55 shadow-[0_24px_80px_rgba(251,146,60,0.25)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(251,146,60,0.35)] dark:border-orange-400/25 dark:from-[#2d1f14] dark:via-[#1c150f] dark:to-[#13110e] dark:shadow-none">
+    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-orange-300/70 bg-gradient-to-br from-orange-50 via-amber-50/80 to-yellow-50/55 shadow-[0_24px_80px_rgba(251,146,60,0.25)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(251,146,60,0.35)] dark:border-orange-400/25 dark:from-[#2d1f14] dark:via-[#1c150f] dark:to-[#13110e] dark:shadow-none">
       <style>{animationStyles}</style>
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -294,7 +294,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         </div>
       </div>
 
-      <div className="relative flex-1 space-y-5 px-6 py-6 sm:px-7">
+      <div className="relative space-y-5 px-6 py-6 sm:px-7">
         <Section
           title="Party Setup"
           subtitle={plusOnesAllowed ? 'Plus-ones welcome' : 'Invite list only'}

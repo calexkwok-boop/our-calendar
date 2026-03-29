@@ -1475,7 +1475,7 @@ export default function PopupEventPanel({
           }}
         >
           {!isSportsPopupEvent && (
-            <div style={{ marginTop: 14, flex: 1, minHeight: 'calc(100% - 14px)', display: 'flex' }}>
+            <div style={{ marginTop: 14, width: '100%', alignSelf: 'stretch' }}>
               <EventCardRouter
                 event={routedEvent}
                 hidePrimaryAction={!nonSportsPrimaryAction}
