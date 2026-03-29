@@ -25334,7 +25334,7 @@ transform: translateY(0);
                         )}
                         {weatherData && !isSelected && !isInSelection && (
                           <div className="flex flex-col items-center leading-none mt-0.5">
-                            <span style={{ fontSize: weatherData.icon.length > 2 ? '0.5rem' : '0.85rem' }} className={`${weatherData.icon.length > 2 ? `font-bold ${weatherData.color}` : ''}`}>
+                            <span style={{ fontSize: weatherData.icon === 'FOG' ? '0.38rem' : (weatherData.icon.length > 2 ? '0.5rem' : '0.85rem') }} className={`${weatherData.icon.length > 2 ? `${weatherData.icon === 'FOG' ? 'font-semibold tracking-tight' : 'font-bold'} ${weatherData.color}` : ''}`}>
                               {weatherData.icon}
                             </span>
                             <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
@@ -25400,7 +25400,7 @@ transform: translateY(0);
                       {/* Weather */}
                       {weatherData && !isSelected && (
                         <div className="flex items-center gap-0.5 mb-1">
-                          <span style={{ fontSize: '0.7rem' }}>{weatherData.icon.length > 2 ? <span className={`text-xs font-bold ${weatherData.color}`}>{weatherData.icon}</span> : weatherData.icon}</span>
+                          <span style={{ fontSize: weatherData.icon === 'FOG' ? '0.55rem' : '0.7rem' }}>{weatherData.icon.length > 2 ? <span className={`${weatherData.icon === 'FOG' ? 'text-[0.42rem] font-semibold tracking-tight' : 'text-xs font-bold'} ${weatherData.color}`}>{weatherData.icon}</span> : weatherData.icon}</span>
                           <span style={{ fontSize: '0.55rem' }} className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{weatherData.high}°/{weatherData.low}°</span>
                         </div>
                       )}
