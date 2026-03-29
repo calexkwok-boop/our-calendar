@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 export const resolveEventCardCategory = (event) => {
   const explicit = String(event?.category || '').trim().toLowerCase();
@@ -107,11 +107,127 @@ const ActionPill = ({ href, onClick, children, tone = 'neutral' }) => {
   );
 };
 
-const promptToUpdate = async (handler, buildPatch) => {
-  if (typeof handler !== 'function') return;
-  const patch = buildPatch();
-  if (!patch) return;
-  await handler(patch);
+const EventEditorModal = ({ config, onClose, onSave }) => {
+  const [draft, setDraft] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!config) {
+      setDraft({});
+      setSaving(false);
+      return;
+    }
+    const nextDraft = {};
+    (config.fields || []).forEach((field) => {
+      nextDraft[field.key] = field.type === 'toggle' ? Boolean(field.value) : (field.value ?? '');
+    });
+    setDraft(nextDraft);
+    setSaving(false);
+  }, [config]);
+
+  if (!config) return null;
+
+  const setFieldValue = (key, value) => {
+    setDraft((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    try {
+      const result = await onSave?.(draft);
+      if (result !== false) onClose?.();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[140] flex items-end justify-center bg-slate-950/55 p-3 backdrop-blur-md sm:items-center sm:p-6" onClick={onClose}>
+      <form
+        className="w-full max-w-md overflow-hidden rounded-[28px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.24)] dark:border-white/10 dark:bg-slate-950"
+        onClick={(event) => event.stopPropagation()}
+        onSubmit={handleSubmit}
+      >
+        <div className="border-b border-black/5 bg-gradient-to-br from-white via-slate-50 to-slate-100 px-5 py-5 dark:border-white/10 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="text-[18px] font-bold tracking-tight text-slate-950 dark:text-white">{config.title || 'Edit details'}</div>
+              {config.subtitle ? <div className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">{config.subtitle}</div> : null}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/5 bg-white/80 text-slate-500 transition hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              <span className="text-lg leading-none">×</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 px-5 py-5">
+          {(config.fields || []).map((field) => (
+            <label key={field.key} className="block">
+              <div className="mb-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{field.label}</div>
+              {field.type === 'textarea' ? (
+                <textarea
+                  value={draft[field.key] ?? ''}
+                  onChange={(event) => setFieldValue(field.key, event.target.value)}
+                  rows={field.rows || 4}
+                  placeholder={field.placeholder || ''}
+                  className="min-h-[112px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]"
+                />
+              ) : field.type === 'select' ? (
+                <select
+                  value={draft[field.key] ?? field.options?.[0]?.value ?? ''}
+                  onChange={(event) => setFieldValue(field.key, event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[15px] text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:focus:border-white/20 dark:focus:bg-white/[0.06]"
+                >
+                  {(field.options || []).map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              ) : field.type === 'toggle' ? (
+                <button
+                  type="button"
+                  onClick={() => setFieldValue(field.key, !draft[field.key])}
+                  className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
+                    draft[field.key]
+                      ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-950'
+                      : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200'
+                  }`}
+                >
+                  <span className="text-[15px] font-medium">{field.toggleLabel || field.label}</span>
+                  <span className={`inline-flex h-6 w-11 items-center rounded-full p-1 transition ${draft[field.key] ? 'bg-white/25 dark:bg-slate-950/20' : 'bg-slate-300 dark:bg-white/10'}`}>
+                    <span className={`h-4 w-4 rounded-full bg-white shadow-sm transition ${draft[field.key] ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </span>
+                </button>
+              ) : (
+                <input
+                  type="text"
+                  value={draft[field.key] ?? ''}
+                  onChange={(event) => setFieldValue(field.key, event.target.value)}
+                  placeholder={field.placeholder || ''}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]"
+                />
+              )}
+              {field.help ? <div className="mt-1.5 text-xs leading-5 text-slate-500 dark:text-slate-400">{field.help}</div> : null}
+            </label>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 border-t border-black/5 bg-slate-50/80 px-5 py-4 dark:border-white/10 dark:bg-white/[0.03]">
+          <button type="button" onClick={onClose} className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200 dark:hover:bg-white/[0.08]">
+            Cancel
+          </button>
+          <button type="submit" disabled={saving} className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-default disabled:opacity-70 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100">
+            {saving ? 'Saving…' : (config.saveLabel || 'Save changes')}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 };
 
 const Section = ({ title, subtitle, actions, children }) => (
@@ -279,7 +395,7 @@ const CardShell = ({
   );
 };
 
-const PartyEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
+const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props }) => {
   const potluckItems = Array.isArray(event?.potluckItems) ? event.potluckItems : [];
   const theme = String(event?.theme || '').trim();
   const musicPlaylist = String(event?.musicPlaylist || '').trim();
@@ -304,13 +420,19 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
       <Section
         title="Party Setup"
         subtitle={plusOnesAllowed ? 'Plus-ones welcome' : 'Invite list only'}
-        actions={onUpdateEventData ? (
+        actions={onUpdateEventData && openEditor ? (
           <ActionPill
-            onClick={() => promptToUpdate(onUpdateEventData, () => {
-              const nextTheme = window.prompt('Party theme', theme);
-              if (nextTheme === null) return null;
-              const nextPlusOnes = window.confirm('Allow plus-ones for this party?');
-              return { theme: String(nextTheme || '').trim(), plusOnesAllowed: nextPlusOnes };
+            onClick={() => openEditor({
+              title: 'Edit Party Setup',
+              subtitle: 'Update the party vibe and guest policy.',
+              fields: [
+                { key: 'theme', label: 'Theme', value: theme, placeholder: 'Game night, retro, rooftop...' },
+                { key: 'plusOnesAllowed', label: 'Guest style', type: 'toggle', value: plusOnesAllowed, toggleLabel: 'Allow plus-ones' },
+              ],
+              onSave: (values) => onUpdateEventData({
+                theme: String(values.theme || '').trim(),
+                plusOnesAllowed: Boolean(values.plusOnesAllowed),
+              }),
             })}
           >
             Edit
@@ -333,13 +455,22 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
         <Section
           title="Potluck"
           subtitle={`${potluckItems.length} planned item${potluckItems.length === 1 ? '' : 's'}`}
-          actions={onUpdateEventData ? (
+          actions={onUpdateEventData && openEditor ? (
             <ActionPill
-              onClick={() => promptToUpdate(onUpdateEventData, () => {
-                const currentValue = potluckItems.map((item) => `${item?.item || ''}${item?.person ? ` | ${item.person}` : ''}`).join('\n');
-                const nextValue = window.prompt('Potluck items. Use one line per item. Optional format: item | person', currentValue);
-                if (nextValue === null) return null;
-                return { potluckItems: parseLineItems(nextValue) };
+              onClick={() => openEditor({
+                title: 'Edit Potluck',
+                subtitle: 'Use one line per item. Optional format: `dish | person`.',
+                fields: [
+                  {
+                    key: 'potluckItems',
+                    label: 'Potluck list',
+                    type: 'textarea',
+                    rows: 6,
+                    value: potluckItems.map((item) => `${item?.item || ''}${item?.person ? ` | ${item.person}` : ''}`).join('\n'),
+                    placeholder: 'Chips | Alex',
+                  },
+                ],
+                onSave: (values) => onUpdateEventData({ potluckItems: parseLineItems(values.potluckItems) }),
               })}
             >
               Edit
@@ -359,12 +490,22 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
         <EmptySection
           title="Potluck"
           subtitle="No dish list added yet."
-          actions={onUpdateEventData ? (
+          actions={onUpdateEventData && openEditor ? (
             <ActionPill
-              onClick={() => promptToUpdate(onUpdateEventData, () => {
-                const nextValue = window.prompt('Potluck items. Use one line per item. Optional format: item | person', '');
-                if (nextValue === null) return null;
-                return { potluckItems: parseLineItems(nextValue) };
+              onClick={() => openEditor({
+                title: 'Add Potluck Items',
+                subtitle: 'Use one line per item. Optional format: `dish | person`.',
+                fields: [
+                  {
+                    key: 'potluckItems',
+                    label: 'Potluck list',
+                    type: 'textarea',
+                    rows: 6,
+                    value: '',
+                    placeholder: 'Brownies | Jordan',
+                  },
+                ],
+                onSave: (values) => onUpdateEventData({ potluckItems: parseLineItems(values.potluckItems) }),
               })}
             >
               Add
@@ -380,12 +521,15 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
           actions={(
             <>
               {isProbablyUrl(musicPlaylist) ? <ActionPill href={musicPlaylist}>Open playlist</ActionPill> : null}
-              {onUpdateEventData ? (
+              {onUpdateEventData && openEditor ? (
                 <ActionPill
-                  onClick={() => promptToUpdate(onUpdateEventData, () => {
-                    const nextValue = window.prompt('Playlist URL or note', musicPlaylist);
-                    if (nextValue === null) return null;
-                    return { musicPlaylist: String(nextValue || '').trim() };
+                  onClick={() => openEditor({
+                    title: 'Edit Music',
+                    subtitle: 'Add a playlist link or a note for the music vibe.',
+                    fields: [
+                      { key: 'musicPlaylist', label: 'Playlist', value: musicPlaylist, placeholder: 'Spotify link or DJ note' },
+                    ],
+                    onSave: (values) => onUpdateEventData({ musicPlaylist: String(values.musicPlaylist || '').trim() }),
                   })}
                 >
                   Edit
@@ -402,12 +546,15 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
         <EmptySection
           title="Music"
           subtitle="No playlist linked yet."
-          actions={onUpdateEventData ? (
+          actions={onUpdateEventData && openEditor ? (
             <ActionPill
-              onClick={() => promptToUpdate(onUpdateEventData, () => {
-                const nextValue = window.prompt('Playlist URL or note', '');
-                if (nextValue === null) return null;
-                return { musicPlaylist: String(nextValue || '').trim() };
+              onClick={() => openEditor({
+                title: 'Add Music',
+                subtitle: 'Drop in a playlist link or a note for the soundtrack.',
+                fields: [
+                  { key: 'musicPlaylist', label: 'Playlist', value: '', placeholder: 'Spotify link or DJ note' },
+                ],
+                onSave: (values) => onUpdateEventData({ musicPlaylist: String(values.musicPlaylist || '').trim() }),
               })}
             >
               Add
@@ -423,7 +570,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
   );
 };
 
-const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
+const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props }) => {
   const dressCode = String(event?.dressCode || '').trim();
   const registryLink = String(event?.registryLink || '').trim();
   const schedule = Array.isArray(event?.schedule) ? event.schedule : [];
@@ -451,14 +598,19 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, ...props }) =>
           actions={(
             <>
               <ActionPill href={registryLink}>Open registry</ActionPill>
-              {onUpdateEventData ? (
+              {onUpdateEventData && openEditor ? (
                 <ActionPill
-                  onClick={() => promptToUpdate(onUpdateEventData, () => {
-                    const nextLink = window.prompt('Registry link', registryLink);
-                    if (nextLink === null) return null;
-                    const nextDressCode = window.prompt('Dress code', dressCode);
-                    if (nextDressCode === null) return null;
-                    return { registryLink: String(nextLink || '').trim(), dressCode: String(nextDressCode || '').trim() };
+                  onClick={() => openEditor({
+                    title: 'Edit Celebration Details',
+                    subtitle: 'Keep registry and dress expectations in one polished place.',
+                    fields: [
+                      { key: 'registryLink', label: 'Registry link', value: registryLink, placeholder: 'https://...' },
+                      { key: 'dressCode', label: 'Dress code', value: dressCode, placeholder: 'Cocktail, garden, festive...' },
+                    ],
+                    onSave: (values) => onUpdateEventData({
+                      registryLink: String(values.registryLink || '').trim(),
+                      dressCode: String(values.dressCode || '').trim(),
+                    }),
                   })}
                 >
                   Edit
@@ -475,14 +627,19 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, ...props }) =>
         <EmptySection
           title="Gift Registry"
           subtitle="No registry or gift link added yet."
-          actions={onUpdateEventData ? (
+          actions={onUpdateEventData && openEditor ? (
             <ActionPill
-              onClick={() => promptToUpdate(onUpdateEventData, () => {
-                const nextLink = window.prompt('Registry link', '');
-                if (nextLink === null) return null;
-                const nextDressCode = window.prompt('Dress code', dressCode);
-                if (nextDressCode === null) return null;
-                return { registryLink: String(nextLink || '').trim(), dressCode: String(nextDressCode || '').trim() };
+              onClick={() => openEditor({
+                title: 'Add Registry',
+                subtitle: 'Add a registry link and optional dress note.',
+                fields: [
+                  { key: 'registryLink', label: 'Registry link', value: '', placeholder: 'https://...' },
+                  { key: 'dressCode', label: 'Dress code', value: dressCode, placeholder: 'Cocktail, garden, festive...' },
+                ],
+                onSave: (values) => onUpdateEventData({
+                  registryLink: String(values.registryLink || '').trim(),
+                  dressCode: String(values.dressCode || '').trim(),
+                }),
               })}
             >
               Add
@@ -495,22 +652,32 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, ...props }) =>
         <Section
           title="Schedule"
           subtitle={`${schedule.length} timeline item${schedule.length === 1 ? '' : 's'}`}
-          actions={onUpdateEventData ? (
+          actions={onUpdateEventData && openEditor ? (
             <ActionPill
-              onClick={() => promptToUpdate(onUpdateEventData, () => {
-                const currentValue = schedule.map((item) => `${item?.time || ''} | ${item?.activity || ''}`).join('\n');
-                const nextValue = window.prompt('Schedule. Use one line per item in the format: time | activity', currentValue);
-                if (nextValue === null) return null;
-                const nextSchedule = String(nextValue || '')
-                  .split('\n')
-                  .map((line) => line.trim())
-                  .filter(Boolean)
-                  .map((line) => {
-                    const [time, activity] = line.split('|').map((part) => part.trim());
-                    return { time: time || '', activity: activity || '' };
-                  })
-                  .filter((item) => item.time || item.activity);
-                return { schedule: nextSchedule };
+              onClick={() => openEditor({
+                title: 'Edit Schedule',
+                subtitle: 'Use one line per timeline item in the format `time | activity`.',
+                fields: [
+                  {
+                    key: 'schedule',
+                    label: 'Timeline',
+                    type: 'textarea',
+                    rows: 6,
+                    value: schedule.map((item) => `${item?.time || ''} | ${item?.activity || ''}`).join('\n'),
+                    placeholder: '6:30 PM | Toasts',
+                  },
+                ],
+                onSave: (values) => onUpdateEventData({
+                  schedule: String(values.schedule || '')
+                    .split('\n')
+                    .map((line) => line.trim())
+                    .filter(Boolean)
+                    .map((line) => {
+                      const [time, activity] = line.split('|').map((part) => part.trim());
+                      return { time: time || '', activity: activity || '' };
+                    })
+                    .filter((item) => item.time || item.activity),
+                }),
               })}
             >
               Edit
@@ -530,21 +697,32 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, ...props }) =>
         <EmptySection
           title="Schedule"
           subtitle="No timeline added yet."
-          actions={onUpdateEventData ? (
+          actions={onUpdateEventData && openEditor ? (
             <ActionPill
-              onClick={() => promptToUpdate(onUpdateEventData, () => {
-                const nextValue = window.prompt('Schedule. Use one line per item in the format: time | activity', '');
-                if (nextValue === null) return null;
-                const nextSchedule = String(nextValue || '')
-                  .split('\n')
-                  .map((line) => line.trim())
-                  .filter(Boolean)
-                  .map((line) => {
-                    const [time, activity] = line.split('|').map((part) => part.trim());
-                    return { time: time || '', activity: activity || '' };
-                  })
-                  .filter((item) => item.time || item.activity);
-                return { schedule: nextSchedule };
+              onClick={() => openEditor({
+                title: 'Add Schedule',
+                subtitle: 'Use one line per timeline item in the format `time | activity`.',
+                fields: [
+                  {
+                    key: 'schedule',
+                    label: 'Timeline',
+                    type: 'textarea',
+                    rows: 6,
+                    value: '',
+                    placeholder: '7:00 PM | First dance',
+                  },
+                ],
+                onSave: (values) => onUpdateEventData({
+                  schedule: String(values.schedule || '')
+                    .split('\n')
+                    .map((line) => line.trim())
+                    .filter(Boolean)
+                    .map((line) => {
+                      const [time, activity] = line.split('|').map((part) => part.trim());
+                      return { time: time || '', activity: activity || '' };
+                    })
+                    .filter((item) => item.time || item.activity),
+                }),
               })}
             >
               Add
@@ -560,7 +738,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, ...props }) =>
   );
 };
 
-const KidsEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
+const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props }) => {
   const ageRange = String(event?.ageRange || '').trim();
   const activity = String(event?.activity || '').trim();
   const parentRequired = event?.parentRequired !== false;
@@ -586,14 +764,19 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
         <Section
           title="Main Activity"
           subtitle="What the kids will be doing"
-          actions={onUpdateEventData ? (
+          actions={onUpdateEventData && openEditor ? (
             <ActionPill
-              onClick={() => promptToUpdate(onUpdateEventData, () => {
-                const nextActivity = window.prompt('Main activity', activity);
-                if (nextActivity === null) return null;
-                const nextAgeRange = window.prompt('Age range', ageRange);
-                if (nextAgeRange === null) return null;
-                return { activity: String(nextActivity || '').trim(), ageRange: String(nextAgeRange || '').trim() };
+              onClick={() => openEditor({
+                title: 'Edit Activity',
+                subtitle: 'Set the main activity and age range for the event.',
+                fields: [
+                  { key: 'activity', label: 'Main activity', value: activity, placeholder: 'Crafts, bounce house, movie...' },
+                  { key: 'ageRange', label: 'Age range', value: ageRange, placeholder: '4-6, 8-10, all ages...' },
+                ],
+                onSave: (values) => onUpdateEventData({
+                  activity: String(values.activity || '').trim(),
+                  ageRange: String(values.ageRange || '').trim(),
+                }),
               })}
             >
               Edit
@@ -606,14 +789,19 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
         <EmptySection
           title="Main Activity"
           subtitle="No activity details added yet."
-          actions={onUpdateEventData ? (
+          actions={onUpdateEventData && openEditor ? (
             <ActionPill
-              onClick={() => promptToUpdate(onUpdateEventData, () => {
-                const nextActivity = window.prompt('Main activity', '');
-                if (nextActivity === null) return null;
-                const nextAgeRange = window.prompt('Age range', ageRange);
-                if (nextAgeRange === null) return null;
-                return { activity: String(nextActivity || '').trim(), ageRange: String(nextAgeRange || '').trim() };
+              onClick={() => openEditor({
+                title: 'Add Activity',
+                subtitle: 'Set the main activity and age range for the event.',
+                fields: [
+                  { key: 'activity', label: 'Main activity', value: '', placeholder: 'Crafts, scavenger hunt, trampoline...' },
+                  { key: 'ageRange', label: 'Age range', value: ageRange, placeholder: '4-6, 8-10, all ages...' },
+                ],
+                onSave: (values) => onUpdateEventData({
+                  activity: String(values.activity || '').trim(),
+                  ageRange: String(values.ageRange || '').trim(),
+                }),
               })}
             >
               Add
@@ -625,13 +813,19 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
       <Section
         title="Parent Notes"
         subtitle={parentRequired ? 'Parents should stay' : 'Drop-off friendly'}
-        actions={onUpdateEventData ? (
+        actions={onUpdateEventData && openEditor ? (
           <ActionPill
-            onClick={() => promptToUpdate(onUpdateEventData, () => {
-              const nextAllergens = window.prompt('Allergy notes. Use commas between items.', allergenAlerts.join(', '));
-              if (nextAllergens === null) return null;
-              const nextParentRequired = window.confirm('Should parents stay for this event?');
-              return { allergenAlerts: normalizeList(nextAllergens), parentRequired: nextParentRequired };
+            onClick={() => openEditor({
+              title: 'Edit Parent Notes',
+              subtitle: 'Add allergy context and set whether parents should stay.',
+              fields: [
+                { key: 'allergenAlerts', label: 'Allergy notes', value: allergenAlerts.join(', '), placeholder: 'Peanuts, dairy, latex...' },
+                { key: 'parentRequired', label: 'Attendance', type: 'toggle', value: parentRequired, toggleLabel: 'Parents should stay' },
+              ],
+              onSave: (values) => onUpdateEventData({
+                allergenAlerts: normalizeList(values.allergenAlerts),
+                parentRequired: Boolean(values.parentRequired),
+              }),
             })}
           >
             Edit
@@ -659,7 +853,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
   );
 };
 
-const HangoutEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
+const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props }) => {
   const duration = String(event?.expectedDuration || '').trim();
   const reservationName = String(event?.reservationName || '').trim();
   const billSplitting = String(event?.billSplitting || 'separate').trim();
@@ -688,20 +882,33 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, ...props }) => {
       <Section
         title="Plan"
         subtitle={reservationName ? `Reservation under ${reservationName}` : 'No reservation note yet'}
-        actions={onUpdateEventData ? (
+        actions={onUpdateEventData && openEditor ? (
           <ActionPill
-            onClick={() => promptToUpdate(onUpdateEventData, () => {
-              const nextReservation = window.prompt('Reservation name', reservationName);
-              if (nextReservation === null) return null;
-              const nextDuration = window.prompt('Expected duration', duration);
-              if (nextDuration === null) return null;
-              const nextBill = window.prompt('Bill style: separate, split, or host', billSplitting);
-              if (nextBill === null) return null;
-              return {
-                reservationName: String(nextReservation || '').trim(),
-                expectedDuration: String(nextDuration || '').trim(),
-                billSplitting: ['separate', 'split', 'host'].includes(String(nextBill || '').trim()) ? String(nextBill || '').trim() : 'separate',
-              };
+            onClick={() => openEditor({
+              title: 'Edit Hangout Plan',
+              subtitle: 'Update the reservation name, timing, and bill style.',
+              fields: [
+                { key: 'reservationName', label: 'Reservation name', value: reservationName, placeholder: 'Under Mia, rooftop table...' },
+                { key: 'expectedDuration', label: 'Expected duration', value: duration, placeholder: '2 hours' },
+                {
+                  key: 'billSplitting',
+                  label: 'Bill style',
+                  type: 'select',
+                  value: billSplitting,
+                  options: [
+                    { value: 'separate', label: 'Separate checks' },
+                    { value: 'split', label: 'Split evenly' },
+                    { value: 'host', label: 'Host pays' },
+                  ],
+                },
+              ],
+              onSave: (values) => onUpdateEventData({
+                reservationName: String(values.reservationName || '').trim(),
+                expectedDuration: String(values.expectedDuration || '').trim(),
+                billSplitting: ['separate', 'split', 'host'].includes(String(values.billSplitting || '').trim())
+                  ? String(values.billSplitting || '').trim()
+                  : 'separate',
+              }),
             })}
           >
             Edit
@@ -747,24 +954,71 @@ const GenericEventCard = ({ event, onEdit, ...props }) => (
   </CardShell>
 );
 
-const EventCardRouter = ({ event, ...props }) => {
+const EventCardRouter = ({ event, onEditBasics, ...props }) => {
   const category = resolveEventCardCategory(event);
   const routedEvent = { ...event, category };
+  const [editorConfig, setEditorConfig] = useState(null);
+
+  const openEditor = (config) => {
+    setEditorConfig(config || null);
+  };
+  const closeEditor = () => {
+    setEditorConfig(null);
+  };
+  const handleSaveEditor = async (values) => {
+    if (typeof editorConfig?.onSave !== 'function') return false;
+    return editorConfig.onSave(values);
+  };
+  const handleOpenBasicsEditor = typeof onEditBasics === 'function'
+    ? () => openEditor({
+        title: 'Edit Event Details',
+        subtitle: 'Update the name, location, and notes for this event.',
+        fields: [
+          { key: 'title', label: 'Event title', value: String(event?.title || '').trim(), placeholder: 'Game Night @ Home' },
+          { key: 'location', label: 'Location', value: String(event?.location || '').trim(), placeholder: 'Home, rooftop, park...' },
+          { key: 'description', label: 'Notes', type: 'textarea', rows: 5, value: String(event?.description || '').trim(), placeholder: 'Add anything guests should know.' },
+        ],
+        onSave: (values) => onEditBasics({
+          title: String(values.title || '').trim() || String(event?.title || '').trim(),
+          location: String(values.location || '').trim() || null,
+          description: String(values.description || '').trim() || null,
+        }),
+      })
+    : props.onEdit;
+  const sharedProps = {
+    ...props,
+    onEdit: handleOpenBasicsEditor,
+    openEditor,
+  };
+
+  let card = null;
 
   switch (category) {
     case 'party':
-      return <PartyEventCard event={routedEvent} {...props} />;
+      card = <PartyEventCard event={routedEvent} {...sharedProps} />;
+      break;
     case 'celebration':
-      return <CelebrationEventCard event={routedEvent} {...props} />;
+      card = <CelebrationEventCard event={routedEvent} {...sharedProps} />;
+      break;
     case 'hangout':
-      return <HangoutEventCard event={routedEvent} {...props} />;
+      card = <HangoutEventCard event={routedEvent} {...sharedProps} />;
+      break;
     case 'kids':
-      return <KidsEventCard event={routedEvent} {...props} />;
+      card = <KidsEventCard event={routedEvent} {...sharedProps} />;
+      break;
     case 'sports':
     case 'custom':
     default:
-      return <GenericEventCard event={routedEvent} {...props} />;
+      card = <GenericEventCard event={routedEvent} {...sharedProps} />;
+      break;
   }
+
+  return (
+    <>
+      {card}
+      <EventEditorModal config={editorConfig} onClose={closeEditor} onSave={handleSaveEditor} />
+    </>
+  );
 };
 
 export default EventCardRouter;

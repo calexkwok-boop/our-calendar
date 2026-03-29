@@ -1225,23 +1225,21 @@ export default function PopupEventPanel({
     }
     setCapacityBusy(false);
   };
-  const handleEditEventBasics = async () => {
-    if (!isHostOrCohost || !event || !isUuid(event?.id)) return;
-    const nextTitle = window.prompt('Event title', String(event?.title || '').trim());
-    if (nextTitle === null) return;
-    const normalizedTitle = String(nextTitle || '').trim();
-    if (!normalizedTitle) return;
-
-    const nextLocation = window.prompt('Location', String(event?.location || '').trim());
-    if (nextLocation === null) return;
-
-    const nextDescription = window.prompt('Notes', String(event?.description || '').trim());
-    if (nextDescription === null) return;
+  const handleEditEventBasics = async (patch = {}) => {
+    if (!isHostOrCohost || !event || !isUuid(event?.id)) return false;
+    const normalizedTitle = String(
+      Object.prototype.hasOwnProperty.call(patch, 'title') ? patch.title : event?.title
+    ).trim();
+    if (!normalizedTitle) return false;
 
     const detailPayload = {
       title: normalizedTitle,
-      location: String(nextLocation || '').trim() || null,
-      description: String(nextDescription || '').trim() || null,
+      location: Object.prototype.hasOwnProperty.call(patch, 'location')
+        ? (String(patch.location || '').trim() || null)
+        : (String(event?.location || '').trim() || null),
+      description: Object.prototype.hasOwnProperty.call(patch, 'description')
+        ? (String(patch.description || '').trim() || null)
+        : (String(event?.description || '').trim() || null),
     };
 
     try {
@@ -1257,8 +1255,10 @@ export default function PopupEventPanel({
         prev ? { ...prev, ...detailPayload } : prev
       ));
       await loadEvent(event.id);
+      return true;
     } catch (err) {
       window.alert(err?.message || 'Could not update this event.');
+      return false;
     }
   };
   const handleUpdateEventData = async (patch) => {
@@ -1380,9 +1380,7 @@ export default function PopupEventPanel({
         ? { label: joinLabel, action: handleJoin }
         : isMember && !isHost
           ? { label: 'Cancel RSVP', action: handleLeave }
-          : isHostOrCohost
-            ? { label: 'Edit Event', action: handleEditEventBasics }
-            : null
+          : null
     )
     : null;
 
@@ -1473,7 +1471,7 @@ export default function PopupEventPanel({
               <EventCardRouter
                 event={routedEvent}
                 hidePrimaryAction={!nonSportsPrimaryAction}
-                onEdit={isHostOrCohost ? handleEditEventBasics : undefined}
+                onEditBasics={isHostOrCohost ? handleEditEventBasics : undefined}
                 onUpdateEventData={isHostOrCohost ? handleUpdateEventData : undefined}
                 onPrimaryAction={nonSportsPrimaryAction?.action}
                 primaryActionLabel={joining && nonSportsPrimaryAction?.action === handleJoin ? joiningLabel : nonSportsPrimaryAction?.label}
