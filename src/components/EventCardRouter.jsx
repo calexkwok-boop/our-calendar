@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export const resolveEventCardCategory = (event) => {
   const explicit = String(event?.category || '').trim().toLowerCase();
@@ -143,10 +144,10 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[140] flex items-end justify-center bg-slate-950/55 p-3 backdrop-blur-md sm:items-center sm:p-6" onClick={onClose}>
+  const modalNode = (
+    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/55 p-3 pt-6 pb-6 backdrop-blur-md sm:p-6" onClick={onClose}>
       <form
-        className="w-full max-w-md overflow-hidden rounded-[28px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.24)] dark:border-white/10 dark:bg-slate-950"
+        className="max-h-[min(78dvh,42rem)] w-full max-w-md overflow-hidden rounded-[28px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.24)] dark:border-white/10 dark:bg-slate-950"
         onClick={(event) => event.stopPropagation()}
         onSubmit={handleSubmit}
       >
@@ -166,7 +167,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
           </div>
         </div>
 
-        <div className="space-y-4 px-5 py-5">
+        <div className="space-y-4 overflow-y-auto px-5 py-5">
           {(config.fields || []).map((field) => (
             <label key={field.key} className="block">
               <div className="mb-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{field.label}</div>
@@ -228,6 +229,9 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
       </form>
     </div>
   );
+
+  if (typeof document === 'undefined') return modalNode;
+  return createPortal(modalNode, document.body);
 };
 
 const Section = ({ title, subtitle, actions, children }) => (
