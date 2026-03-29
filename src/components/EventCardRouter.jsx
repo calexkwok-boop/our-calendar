@@ -89,8 +89,8 @@ const TrashIcon = () => (
 
 const ActionPill = ({ href, onClick, children, tone = 'neutral' }) => {
   const className = tone === 'accent'
-    ? 'inline-flex items-center rounded-full border border-transparent bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200'
-    : 'inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10';
+    ? 'inline-flex items-center gap-1.5 rounded-full border-2 border-transparent bg-gray-900 px-4 py-2 text-xs font-bold text-white shadow-md transition-all hover:scale-[1.02] hover:bg-black hover:shadow-lg active:scale-[0.98] dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100'
+    : 'inline-flex items-center gap-1.5 rounded-full border-2 border-gray-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 hover:shadow-md active:scale-[0.98] dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10';
 
   if (href) {
     return (
@@ -115,11 +115,11 @@ const promptToUpdate = async (handler, buildPatch) => {
 };
 
 const Section = ({ title, subtitle, actions, children }) => (
-  <div className="rounded-2xl border border-black/5 bg-white/85 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur dark:border-white/10 dark:bg-white/5 dark:shadow-none">
-    <div className="mb-3 flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <div className="text-sm font-semibold text-gray-900 dark:text-white">{title}</div>
-        {subtitle ? <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{subtitle}</div> : null}
+  <div className="group/section rounded-[20px] border-2 border-black/[0.06] bg-white/90 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-sm transition-all hover:shadow-[0_12px_32px_rgba(15,23,42,0.06)] dark:border-white/[0.12] dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08]">
+    <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <div className="text-[15px] font-bold text-gray-900 dark:text-white">{title}</div>
+        {subtitle ? <div className="mt-1.5 text-[13px] font-medium text-gray-500 dark:text-gray-400">{subtitle}</div> : null}
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
     </div>
@@ -140,18 +140,18 @@ const InviteeRow = ({ event, label = 'Invited' }) => {
 
   return (
     <Section title={label} subtitle={`${invitees.length} ${invitees.length === 1 ? 'person' : 'people'}`}>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2.5">
         {invitees.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-3 py-3 text-sm text-gray-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-400">
+          <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-4 py-3.5 text-sm text-gray-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-400">
             No one has responded yet.
           </div>
         ) : (
           invitees.slice(0, 8).map((invitee, index) => (
             <div
               key={invitee.id || invitee.user_id || invitee.name || `${index}`}
-              className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
+              className="inline-flex items-center gap-2 rounded-full border-2 border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/8"
             >
-              <span>{invitee.avatar || '•'}</span>
+              <span className="text-base leading-none">{invitee.avatar || '👤'}</span>
               <span>{invitee.name || invitee.display_name || 'Guest'}</span>
             </div>
           ))
@@ -177,29 +177,43 @@ const CardShell = ({
   const location = String(event?.location || '').trim();
 
   return (
-    <div className={`overflow-hidden rounded-[28px] border shadow-[0_20px_60px_rgba(15,23,42,0.10)] dark:shadow-none ${accentClasses.shell}`}>
-      <div className={`border-b px-5 py-5 sm:px-6 ${accentClasses.header}`}>
+    <div className={`group relative overflow-hidden rounded-[32px] border-2 shadow-[0_24px_80px_rgba(15,23,42,0.12)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.16)] dark:shadow-none ${accentClasses.shell}`}>
+      {/* Decorative gradient overlay */}
+      <div className={`pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.08] ${accentClasses.gradientOverlay || ''}`} />
+      
+      <div className={`relative border-b-2 px-6 py-6 sm:px-7 ${accentClasses.header}`}>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl border text-lg ${accentClasses.iconWrap}`}>
+            <div className="mb-4 flex flex-wrap items-center gap-2.5">
+              <span className={`inline-flex h-12 w-12 items-center justify-center rounded-[18px] border-2 text-xl shadow-sm transition-transform group-hover:scale-105 ${accentClasses.iconWrap}`}>
                 {icon}
               </span>
-              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${accentClasses.categoryChip}`}>
+              <span className={`rounded-full px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em] shadow-sm ${accentClasses.categoryChip}`}>
                 {categoryLabel}
               </span>
               {accentChip ? (
-                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${accentClasses.secondaryChip}`}>
+                <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm ${accentClasses.secondaryChip}`}>
                   {accentChip}
                 </span>
               ) : null}
             </div>
-            <h3 className="text-xl font-semibold tracking-tight text-gray-950 dark:text-white">{event?.title || 'Untitled event'}</h3>
-            <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">{formatEventDateTime(event?.date, event?.time)}</div>
+            <h3 className="text-[22px] font-bold leading-tight tracking-tight text-gray-950 dark:text-white">{event?.title || 'Untitled event'}</h3>
+            <div className="mt-2.5 flex items-center gap-2 text-[15px] font-medium text-gray-600 dark:text-gray-300">
+              <svg className="h-4 w-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>{formatEventDateTime(event?.date, event?.time)}</span>
+            </div>
             {location ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                <span className="truncate">{location}</span>
-                <ActionPill href={buildMapHref(location)}>Open map</ActionPill>
+              <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                <div className="flex items-center gap-2 text-[15px] font-medium text-gray-600 dark:text-gray-300">
+                  <svg className="h-4 w-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span className="truncate">{location}</span>
+                </div>
+                <ActionPill href={buildMapHref(location)}>View map</ActionPill>
               </div>
             ) : null}
           </div>
@@ -207,12 +221,12 @@ const CardShell = ({
           {(onEdit || onDelete) ? (
             <div className="flex items-center gap-2">
               {onEdit ? (
-                <button className="rounded-full border border-gray-200 bg-white p-2 text-gray-500 transition hover:text-gray-800 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:text-white" onClick={onEdit} type="button">
+                <button className="rounded-full border-2 border-gray-200 bg-white p-2.5 text-gray-500 shadow-sm transition-all hover:border-gray-300 hover:text-gray-900 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white" onClick={onEdit} type="button">
                   <EditIcon />
                 </button>
               ) : null}
               {onDelete ? (
-                <button className="rounded-full border border-gray-200 bg-white p-2 text-gray-500 transition hover:text-red-600 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:text-red-400" onClick={onDelete} type="button">
+                <button className="rounded-full border-2 border-gray-200 bg-white p-2.5 text-gray-500 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:border-red-400/20 dark:hover:bg-red-500/10 dark:hover:text-red-400" onClick={onDelete} type="button">
                   <TrashIcon />
                 </button>
               ) : null}
@@ -221,11 +235,11 @@ const CardShell = ({
         </div>
       </div>
 
-      <div className="space-y-4 px-5 py-5 sm:px-6">
+      <div className="relative space-y-5 px-6 py-6 sm:px-7">
         {children}
 
         {!hidePrimaryAction && onPrimaryAction ? (
-          <div className="pt-1">
+          <div className="pt-2">
             <ActionPill onClick={onPrimaryAction} tone="accent">
               {primaryActionLabel || 'Open'}
             </ActionPill>
@@ -247,13 +261,14 @@ const PartyEventCard = ({ event, onUpdateEventData, ...props }) => {
       event={event}
       categoryLabel="Party"
       accentChip={theme || null}
-      icon="✦"
+      icon="🎉"
       accentClasses={{
-        shell: 'border-orange-200/80 bg-gradient-to-b from-orange-50 via-amber-50 to-white dark:border-orange-400/20 dark:from-[#2a1f14] dark:via-[#19140f] dark:to-[#111111]',
-        header: 'border-orange-200/70 bg-white/70 dark:border-orange-400/10 dark:bg-white/[0.03]',
-        iconWrap: 'border-orange-200 bg-orange-100 text-orange-700 dark:border-orange-400/20 dark:bg-orange-500/10 dark:text-orange-300',
-        categoryChip: 'bg-orange-100 text-orange-800 dark:bg-orange-500/10 dark:text-orange-200',
-        secondaryChip: 'bg-white/80 text-orange-700 dark:bg-white/5 dark:text-orange-200',
+        shell: 'border-orange-300/70 bg-gradient-to-br from-orange-50 via-amber-50/80 to-yellow-50/50 dark:border-orange-400/25 dark:from-[#2d1f14] dark:via-[#1c150f] dark:to-[#13110e]',
+        header: 'border-orange-200/80 bg-gradient-to-br from-white/95 to-orange-50/60 dark:border-orange-400/15 dark:bg-gradient-to-br dark:from-white/[0.04] dark:to-orange-500/[0.02]',
+        iconWrap: 'border-orange-300 bg-gradient-to-br from-orange-100 to-amber-100 text-orange-700 shadow-orange-200/40 dark:border-orange-400/30 dark:from-orange-500/15 dark:to-amber-500/15 dark:text-orange-300 dark:shadow-orange-500/10',
+        categoryChip: 'bg-gradient-to-br from-orange-100 to-orange-200 text-orange-800 dark:from-orange-500/15 dark:to-orange-600/15 dark:text-orange-200',
+        secondaryChip: 'border-orange-200 bg-white/90 text-orange-700 dark:border-orange-400/20 dark:bg-white/5 dark:text-orange-200',
+        gradientOverlay: 'bg-gradient-to-br from-orange-400 via-amber-400 to-yellow-400',
       }}
       {...props}
     >
@@ -393,13 +408,14 @@ const CelebrationEventCard = ({ event, onUpdateEventData, ...props }) => {
       event={event}
       categoryLabel="Celebration"
       accentChip={dressCode || null}
-      icon="◌"
+      icon="🥂"
       accentClasses={{
-        shell: 'border-rose-200/80 bg-gradient-to-b from-rose-50 via-orange-50 to-white dark:border-rose-400/20 dark:from-[#2b171d] dark:via-[#201514] dark:to-[#111111]',
-        header: 'border-rose-200/70 bg-white/70 dark:border-rose-400/10 dark:bg-white/[0.03]',
-        iconWrap: 'border-rose-200 bg-rose-100 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/10 dark:text-rose-300',
-        categoryChip: 'bg-rose-100 text-rose-800 dark:bg-rose-500/10 dark:text-rose-200',
-        secondaryChip: 'bg-white/80 text-rose-700 dark:bg-white/5 dark:text-rose-200',
+        shell: 'border-rose-300/70 bg-gradient-to-br from-rose-50 via-pink-50/80 to-orange-50/50 dark:border-rose-400/25 dark:from-[#2d1a1f] dark:via-[#1e1517] dark:to-[#14110f]',
+        header: 'border-rose-200/80 bg-gradient-to-br from-white/95 to-rose-50/60 dark:border-rose-400/15 dark:bg-gradient-to-br dark:from-white/[0.04] dark:to-rose-500/[0.02]',
+        iconWrap: 'border-rose-300 bg-gradient-to-br from-rose-100 to-pink-100 text-rose-700 shadow-rose-200/40 dark:border-rose-400/30 dark:from-rose-500/15 dark:to-pink-500/15 dark:text-rose-300 dark:shadow-rose-500/10',
+        categoryChip: 'bg-gradient-to-br from-rose-100 to-rose-200 text-rose-800 dark:from-rose-500/15 dark:to-rose-600/15 dark:text-rose-200',
+        secondaryChip: 'border-rose-200 bg-white/90 text-rose-700 dark:border-rose-400/20 dark:bg-white/5 dark:text-rose-200',
+        gradientOverlay: 'bg-gradient-to-br from-rose-400 via-pink-400 to-orange-400',
       }}
       {...props}
     >
@@ -534,13 +550,14 @@ const KidsEventCard = ({ event, onUpdateEventData, ...props }) => {
       event={event}
       categoryLabel="Kids Event"
       accentChip={ageRange ? `Ages ${ageRange}` : null}
-      icon="○"
+      icon="🎈"
       accentClasses={{
-        shell: 'border-amber-200/80 bg-gradient-to-b from-amber-50 via-yellow-50 to-white dark:border-amber-400/20 dark:from-[#2d2314] dark:via-[#1c1811] dark:to-[#111111]',
-        header: 'border-amber-200/70 bg-white/70 dark:border-amber-400/10 dark:bg-white/[0.03]',
-        iconWrap: 'border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-300',
-        categoryChip: 'bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200',
-        secondaryChip: 'bg-white/80 text-amber-700 dark:bg-white/5 dark:text-amber-200',
+        shell: 'border-amber-300/70 bg-gradient-to-br from-amber-50 via-yellow-50/80 to-orange-50/50 dark:border-amber-400/25 dark:from-[#2d2314] dark:via-[#1e1911] dark:to-[#13110e]',
+        header: 'border-amber-200/80 bg-gradient-to-br from-white/95 to-amber-50/60 dark:border-amber-400/15 dark:bg-gradient-to-br dark:from-white/[0.04] dark:to-amber-500/[0.02]',
+        iconWrap: 'border-amber-300 bg-gradient-to-br from-amber-100 to-yellow-100 text-amber-700 shadow-amber-200/40 dark:border-amber-400/30 dark:from-amber-500/15 dark:to-yellow-500/15 dark:text-amber-300 dark:shadow-amber-500/10',
+        categoryChip: 'bg-gradient-to-br from-amber-100 to-amber-200 text-amber-800 dark:from-amber-500/15 dark:to-amber-600/15 dark:text-amber-200',
+        secondaryChip: 'border-amber-200 bg-white/90 text-amber-700 dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200',
+        gradientOverlay: 'bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-400',
       }}
       {...props}
     >
@@ -640,13 +657,14 @@ const HangoutEventCard = ({ event, onUpdateEventData, ...props }) => {
       event={event}
       categoryLabel="Hangout"
       accentChip={duration ? `~${duration}` : null}
-      icon="•"
+      icon="☕"
       accentClasses={{
-        shell: 'border-cyan-200/80 bg-gradient-to-b from-cyan-50 via-sky-50 to-white dark:border-cyan-400/20 dark:from-[#15262b] dark:via-[#111a1f] dark:to-[#111111]',
-        header: 'border-cyan-200/70 bg-white/70 dark:border-cyan-400/10 dark:bg-white/[0.03]',
-        iconWrap: 'border-cyan-200 bg-cyan-100 text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-500/10 dark:text-cyan-300',
-        categoryChip: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-500/10 dark:text-cyan-200',
-        secondaryChip: 'bg-white/80 text-cyan-700 dark:bg-white/5 dark:text-cyan-200',
+        shell: 'border-cyan-300/70 bg-gradient-to-br from-cyan-50 via-sky-50/80 to-blue-50/50 dark:border-cyan-400/25 dark:from-[#15242d] dark:via-[#121a1f] dark:to-[#0f1113]',
+        header: 'border-cyan-200/80 bg-gradient-to-br from-white/95 to-cyan-50/60 dark:border-cyan-400/15 dark:bg-gradient-to-br dark:from-white/[0.04] dark:to-cyan-500/[0.02]',
+        iconWrap: 'border-cyan-300 bg-gradient-to-br from-cyan-100 to-sky-100 text-cyan-700 shadow-cyan-200/40 dark:border-cyan-400/30 dark:from-cyan-500/15 dark:to-sky-500/15 dark:text-cyan-300 dark:shadow-cyan-500/10',
+        categoryChip: 'bg-gradient-to-br from-cyan-100 to-cyan-200 text-cyan-800 dark:from-cyan-500/15 dark:to-cyan-600/15 dark:text-cyan-200',
+        secondaryChip: 'border-cyan-200 bg-white/90 text-cyan-700 dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200',
+        gradientOverlay: 'bg-gradient-to-br from-cyan-400 via-sky-400 to-blue-400',
       }}
       {...props}
     >
@@ -699,14 +717,15 @@ const HangoutEventCard = ({ event, onUpdateEventData, ...props }) => {
 const GenericEventCard = ({ event, ...props }) => (
   <CardShell
     event={event}
-    categoryLabel="Event"
-    icon="◇"
+    categoryLabel={event?.category === 'sports' ? 'Sports' : 'Event'}
+    icon={event?.category === 'sports' ? '🏃' : '✨'}
     accentClasses={{
-      shell: 'border-gray-200/80 bg-gradient-to-b from-gray-50 via-slate-50 to-white dark:border-white/10 dark:from-[#181818] dark:via-[#141414] dark:to-[#111111]',
-      header: 'border-gray-200/70 bg-white/70 dark:border-white/10 dark:bg-white/[0.03]',
-      iconWrap: 'border-gray-200 bg-gray-100 text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200',
-      categoryChip: 'bg-gray-100 text-gray-800 dark:bg-white/5 dark:text-gray-200',
-      secondaryChip: 'bg-white/80 text-gray-700 dark:bg-white/5 dark:text-gray-200',
+      shell: 'border-slate-300/70 bg-gradient-to-br from-slate-50 via-gray-50/80 to-zinc-50/50 dark:border-slate-400/25 dark:from-[#1a1a1a] dark:via-[#151515] dark:to-[#111111]',
+      header: 'border-slate-200/80 bg-gradient-to-br from-white/95 to-slate-50/60 dark:border-slate-400/15 dark:bg-gradient-to-br dark:from-white/[0.04] dark:to-slate-500/[0.02]',
+      iconWrap: 'border-slate-300 bg-gradient-to-br from-slate-100 to-gray-100 text-slate-700 shadow-slate-200/40 dark:border-slate-400/30 dark:from-slate-500/15 dark:to-gray-500/15 dark:text-slate-300 dark:shadow-slate-500/10',
+      categoryChip: 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-800 dark:from-slate-500/15 dark:to-slate-600/15 dark:text-slate-200',
+      secondaryChip: 'border-slate-200 bg-white/90 text-slate-700 dark:border-slate-400/20 dark:bg-white/5 dark:text-slate-200',
+      gradientOverlay: 'bg-gradient-to-br from-slate-400 via-gray-400 to-zinc-400',
     }}
     {...props}
   >
