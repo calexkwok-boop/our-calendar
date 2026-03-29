@@ -345,11 +345,12 @@ const CardShell = ({
   primaryActionLabel,
   onPrimaryAction,
   hidePrimaryAction = false,
+  fillHeight = false,
 }) => {
   const location = String(event?.location || '').trim();
 
   return (
-    <div className={`group relative overflow-hidden rounded-[32px] border-2 shadow-[0_24px_80px_rgba(15,23,42,0.12)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.16)] dark:shadow-none ${accentClasses.shell}`}>
+    <div className={`group relative overflow-hidden rounded-[32px] border-2 shadow-[0_24px_80px_rgba(15,23,42,0.12)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.16)] dark:shadow-none ${fillHeight ? 'flex min-h-full flex-col' : ''} ${accentClasses.shell}`}>
       {/* Decorative gradient overlay */}
       <div className={`pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.08] ${accentClasses.gradientOverlay || ''}`} />
       
@@ -407,7 +408,7 @@ const CardShell = ({
         </div>
       </div>
 
-      <div className="relative space-y-5 px-6 py-6 sm:px-7">
+      <div className={`relative space-y-5 px-6 py-6 sm:px-7 ${fillHeight ? 'flex-1' : ''}`}>
         {children}
 
         {!hidePrimaryAction && onPrimaryAction ? (
@@ -443,6 +444,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         secondaryChip: 'border-orange-200 bg-white/90 text-orange-700 dark:border-orange-400/20 dark:bg-white/5 dark:text-orange-200',
         gradientOverlay: 'bg-gradient-to-br from-orange-400 via-amber-400 to-yellow-400',
       }}
+      fillHeight
       {...props}
     >
       <Section
@@ -629,6 +631,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
         secondaryChip: 'border-rose-200 bg-white/90 text-rose-700 dark:border-rose-400/20 dark:bg-white/5 dark:text-rose-200',
         gradientOverlay: 'bg-gradient-to-br from-rose-400 via-pink-400 to-orange-400',
       }}
+      fillHeight
       {...props}
     >
       {registryLink ? (
@@ -798,6 +801,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
         secondaryChip: 'border-amber-200 bg-white/90 text-amber-700 dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200',
         gradientOverlay: 'bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-400',
       }}
+      fillHeight
       {...props}
     >
       {activity ? (
@@ -917,6 +921,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
         secondaryChip: 'border-cyan-200 bg-white/90 text-cyan-700 dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200',
         gradientOverlay: 'bg-gradient-to-br from-cyan-400 via-sky-400 to-blue-400',
       }}
+      fillHeight
       {...props}
     >
       <Section
@@ -987,6 +992,7 @@ const GenericEventCard = ({ event, onEdit, ...props }) => (
       secondaryChip: 'border-slate-200 bg-white/90 text-slate-700 dark:border-slate-400/20 dark:bg-white/5 dark:text-slate-200',
       gradientOverlay: 'bg-gradient-to-br from-slate-400 via-gray-400 to-zinc-400',
     }}
+    fillHeight
     {...props}
   >
     <NotesSection event={event} onEdit={onEdit} />

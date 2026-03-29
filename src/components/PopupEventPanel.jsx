@@ -1471,10 +1471,11 @@ export default function PopupEventPanel({
             overscrollBehavior: 'contain',
             position: 'relative',
             zIndex: 1,
+            paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 12px))',
           }}
         >
           {!isSportsPopupEvent && (
-            <div style={{ marginTop: 14 }}>
+            <div style={{ marginTop: 14, flex: 1, minHeight: 'calc(100% - 14px)', display: 'flex' }}>
               <EventCardRouter
                 event={routedEvent}
                 hidePrimaryAction={!nonSportsPrimaryAction}
