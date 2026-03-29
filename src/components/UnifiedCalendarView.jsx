@@ -1,6 +1,6 @@
 // UnifiedCalendarView.jsx - One beautiful page for everything
 import React, { useState, useEffect } from 'react';
-import { MapPin, Plus, Trash2 } from 'lucide-react';
+import { MapPin, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import Agenda from './Agenda';
 import JourneyPanel from './JourneyPanel';
 
@@ -516,16 +516,34 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
   };
   
   return (
-    <div className="mb-4 flex items-center justify-between">
+    <div className="mb-4 flex items-center justify-between gap-3">
       {/* Month/Week navigation */}
-      <div className="flex items-center justify-center">
-        <div className="min-w-[140px] text-center">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={goToPrev}
+          aria-label={calendarView === 'week' ? 'Previous week' : 'Previous month'}
+          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-black/5 bg-white/80 text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-200"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div className="min-w-[156px] text-center">
           <button
+            type="button"
             onClick={goToToday}
-            className="text-lg font-bold text-gray-900 dark:text-white hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+            className="text-lg font-bold text-gray-900 transition-colors hover:text-purple-600 dark:text-white dark:hover:text-purple-400"
+          >
             {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </button>
         </div>
+        <button
+          type="button"
+          onClick={goToNext}
+          aria-label={calendarView === 'week' ? 'Next week' : 'Next month'}
+          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-black/5 bg-white/80 text-gray-700 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-200"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
       
       {/* View toggle */}

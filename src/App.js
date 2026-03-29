@@ -25481,8 +25481,8 @@ transform: translateY(0);
   React.createElement(
     require('./components/UnifiedCalendarView').default,
     {
-      currentDate: (selectedDate || new Date()),
-      setCurrentDate: setSelectedDate,
+      currentDate: currentDate,
+      setCurrentDate: setCurrentDate,
       selectedDate: selectedDate,
       setSelectedDate: setSelectedDate,
       events: { [getDateKey(new Date())]: getEventsForDate(new Date()) },
