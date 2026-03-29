@@ -535,6 +535,34 @@ export default function DateDetailsCardEnhanced({
 
                 {eventType === 'we' ? (
                   <div>
+                    <label className={`mb-2 block text-sm font-semibold ${labelText}`}>Max people</label>
+                    <div className={`rounded-2xl border p-4 ${darkMode ? 'border-fuchsia-400/20 bg-gradient-to-br from-fuchsia-500/10 to-pink-500/10' : 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50'}`}>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min={2}
+                          max={30}
+                          step={1}
+                          value={Math.max(2, parseInt(String(popupEventMaxPeopleDraft || '10'), 10) || 10)}
+                          onChange={(event) => setPopupEventMaxPeopleDraft?.(String(event.target.value))}
+                          className="flex-1 accent-fuchsia-500"
+                        />
+                        <input
+                          type="number"
+                          min={2}
+                          max={99}
+                          value={popupEventMaxPeopleDraft}
+                          onChange={(event) => setPopupEventMaxPeopleDraft?.(String(Math.max(2, parseInt(String(event.target.value || '2'), 10) || 2)))}
+                          className={`${inputSurface} w-20 py-2 text-center text-sm font-semibold`}
+                        />
+                      </div>
+                      <p className={`mt-2 text-xs ${mutedText}`}>Set the guest limit before creating the event.</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {eventType === 'we' ? (
+                  <div>
                     <label className={`mb-2 block text-sm font-semibold ${labelText}`}>Who's invited?</label>
                     <div className={`space-y-3 rounded-2xl border p-4 ${darkMode ? 'border-fuchsia-400/20 bg-gradient-to-br from-fuchsia-500/10 to-pink-500/10' : 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50'}`}>
                       <div className="flex flex-wrap gap-2">

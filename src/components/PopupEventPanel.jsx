@@ -1098,6 +1098,43 @@ export default function PopupEventPanel({
     }
     setCapacityBusy(false);
   };
+  const handleEditEventBasics = async () => {
+    if (!isHostOrCohost || !event || !isUuid(event?.id)) return;
+    const nextTitle = window.prompt('Event title', String(event?.title || '').trim());
+    if (nextTitle === null) return;
+    const normalizedTitle = String(nextTitle || '').trim();
+    if (!normalizedTitle) return;
+
+    const nextLocation = window.prompt('Location', String(event?.location || '').trim());
+    if (nextLocation === null) return;
+
+    const nextDescription = window.prompt('Notes', String(event?.description || '').trim());
+    if (nextDescription === null) return;
+
+    const detailPayload = {
+      title: normalizedTitle,
+      location: String(nextLocation || '').trim() || null,
+      description: String(nextDescription || '').trim() || null,
+    };
+
+    try {
+      const detailResult = await supabase.from('popup_event_details').update(detailPayload).eq('id', event.id);
+      if (detailResult.error) throw detailResult.error;
+      try {
+        await supabase.from('events').update({
+          title: normalizedTitle,
+          location: detailPayload.location,
+          description: detailPayload.description,
+        }).eq('id', event.id);
+      } catch {}
+      setEvent((prev) => (
+        prev ? { ...prev, ...detailPayload } : prev
+      ));
+      await loadEvent(event.id);
+    } catch (err) {
+      window.alert(err?.message || 'Could not update this event.');
+    }
+  };
   const handleCopyLink = () => { navigator.clipboard.writeText(`${window.location.origin}?popup=${event.id}`).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   const panelStyle = {
@@ -1244,6 +1281,7 @@ export default function PopupEventPanel({
             <EventCardRouter
               event={routedEvent}
               hidePrimaryAction
+              onEdit={isHostOrCohost ? handleEditEventBasics : undefined}
             />
           )}
           {isLegacyInvalidEvent && (
