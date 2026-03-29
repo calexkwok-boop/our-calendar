@@ -149,7 +149,7 @@ const CreateEventForm = ({ accent, darkMode, btnStyle, border, softBg, supabase,
         date: form.date, time: form.time || null, location: form.location || null,
         location_lat: form.location_lat, location_lng: form.location_lng,
         max_players: Number(form.max_players) || 10, is_public: form.is_public,
-        description: form.description.trim() || null, status: 'open',
+        description: form.description.trim() || null, event_data: {}, status: 'open',
       }).select().single();
       if (err) throw err;
       // Ensure summary row exists in popup_events for cross-panel features (capacity bar, home cards, etc.)
@@ -838,15 +838,20 @@ export default function PopupEventPanel({
       ]);
       if (ev) {
         const fallback = eventMetaFallbackRef.current || {};
+        const eventData = ev?.event_data && typeof ev.event_data === 'object' && !Array.isArray(ev.event_data)
+          ? ev.event_data
+          : {};
         setEvent({
           ...fallback,
           ...ev,
+          ...eventData,
           title: String(ev?.title || fallback?.title || '').trim() || 'Untitled Event',
           date: String(ev?.date || fallback?.date || '').trim() || '',
           time: ev?.time || fallback?.time || null,
           location: String(ev?.location || fallback?.location || '').trim() || null,
           description: String(ev?.description || fallback?.description || '').trim() || '',
           category: String(ev?.category || fallback?.category || '').trim() || null,
+          event_data: eventData,
         });
       } else if (eventMetaFallbackRef.current) setEvent(eventMetaFallbackRef.current);
       // Merge popup_event_members + popup_event_signups, dedupe by user_id
@@ -1135,6 +1140,25 @@ export default function PopupEventPanel({
       window.alert(err?.message || 'Could not update this event.');
     }
   };
+  const handleUpdateEventData = async (patch) => {
+    if (!isHostOrCohost || !event || !isUuid(event?.id) || !patch || typeof patch !== 'object') return false;
+    const nextEventData = {
+      ...((event?.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data)) ? event.event_data : {}),
+      ...patch,
+    };
+    try {
+      const detailResult = await supabase.from('popup_event_details').update({ event_data: nextEventData }).eq('id', event.id);
+      if (detailResult.error) throw detailResult.error;
+      setEvent((prev) => (
+        prev ? { ...prev, ...patch, event_data: nextEventData } : prev
+      ));
+      await loadEvent(event.id);
+      return true;
+    } catch (err) {
+      window.alert(err?.message || 'Could not update this event.');
+      return false;
+    }
+  };
   const handleCopyLink = () => { navigator.clipboard.writeText(`${window.location.origin}?popup=${event.id}`).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   const panelStyle = {
@@ -1282,6 +1306,7 @@ export default function PopupEventPanel({
               event={routedEvent}
               hidePrimaryAction
               onEdit={isHostOrCohost ? handleEditEventBasics : undefined}
+              onUpdateEventData={isHostOrCohost ? handleUpdateEventData : undefined}
             />
           )}
           {isLegacyInvalidEvent && (

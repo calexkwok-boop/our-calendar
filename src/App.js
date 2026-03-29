@@ -10193,6 +10193,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         time,
         max_players: maxPeople,
         is_public: !isPrivate,
+        event_data: {},
         status: 'open',
       }).then(({ error }) => { if (error) console.error('popup_event_details insert error (home add):', error); });
     }
@@ -16085,20 +16086,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
        for (const eventId of createdEventIds) {
         const eventDate = pendingEventDraft.datesToAdd.find((_, i) => createdEventIds[i] === eventId);
         const dateKey = eventDate ? getDateKey(eventDate) : '';
-        supabase.from('popup_event_details').insert({
-          id: eventId,
-          calendar_id: activeLayerId,
-          created_by: user.id,
-          title: pendingEventDraft.title,
+      supabase.from('popup_event_details').insert({
+        id: eventId,
+        calendar_id: activeLayerId,
+        created_by: user.id,
+        title: pendingEventDraft.title,
           date: dateKey,
           time: pendingEventDraft.isMultiDay ? null : (time || null),
           location: pendingEventDraft.location || null,
           max_players: maxPeople,
-          is_public: !isPrivate,
-          category: pendingEventDraft.popupSubtype || null,
-          description: String(pendingEventDraft.description || '').trim() || null,
-          status: 'open',
-        }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
+        is_public: !isPrivate,
+        category: pendingEventDraft.popupSubtype || null,
+        event_data: pendingEventDraft.popupMetadata || {},
+        description: String(pendingEventDraft.description || '').trim() || null,
+        status: 'open',
+      }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
 
         supabase.from('popup_event_members').insert({
           event_id: eventId,
@@ -16138,6 +16140,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       description: String(options?.description || '').trim(),
       location: String(options?.locationOverride || '').trim(),
       popupSubtype: String(options?.popupSubtype || '').trim() || null,
+      popupMetadata: options?.popupMetadata && typeof options.popupMetadata === 'object' ? options.popupMetadata : {},
       categoryOverride: String(options?.categoryOverride || '').trim() || null,
     };
     if (options?.directCreate) {
@@ -17141,20 +17144,21 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
        for (const eventId of createdEventIds) {
         const eventDate = pendingEvent.datesToAdd.find((_, i) => createdEventIds[i] === eventId);
         const dateKey = eventDate ? getDateKey(eventDate) : '';
-        supabase.from('popup_event_details').insert({
-          id: eventId,
-          calendar_id: activeLayerId,
-          created_by: user.id,
-          title: pendingEvent.title,
+      supabase.from('popup_event_details').insert({
+        id: eventId,
+        calendar_id: activeLayerId,
+        created_by: user.id,
+        title: pendingEvent.title,
           date: dateKey,
           time: pendingEvent.isMultiDay ? null : (time || null),
           location: pendingEvent.location || null,
           max_players: maxPeople,
-          is_public: !isPrivate,
-          category: pendingEvent.popupSubtype || null,
-          description: String(pendingEvent.description || '').trim() || null,
-          status: 'open',
-        }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
+        is_public: !isPrivate,
+        category: pendingEvent.popupSubtype || null,
+        event_data: pendingEvent.popupMetadata || {},
+        description: String(pendingEvent.description || '').trim() || null,
+        status: 'open',
+      }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
 
         supabase.from('popup_event_members').insert({
           event_id: eventId,

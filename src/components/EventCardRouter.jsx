@@ -64,6 +64,16 @@ const formatEventDateTime = (date, time) => {
 
 const isProbablyUrl = (value) => /^https?:\/\//i.test(String(value || '').trim());
 const buildMapHref = (location) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(location || '').trim())}`;
+const normalizeList = (value) => String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
+const parseLineItems = (value) => String(value || '')
+  .split('\n')
+  .map((line) => line.trim())
+  .filter(Boolean)
+  .map((line) => {
+    const [item, person] = line.split('|').map((part) => part.trim());
+    return { item: item || '', person: person || '' };
+  })
+  .filter((entry) => entry.item);
 
 const EditIcon = () => (
   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,6 +107,13 @@ const ActionPill = ({ href, onClick, children, tone = 'neutral' }) => {
   );
 };
 
+const promptToUpdate = async (handler, buildPatch) => {
+  if (typeof handler !== 'function') return;
+  const patch = buildPatch();
+  if (!patch) return;
+  await handler(patch);
+};
+
 const Section = ({ title, subtitle, actions, children }) => (
   <div className="rounded-2xl border border-black/5 bg-white/85 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur dark:border-white/10 dark:bg-white/5 dark:shadow-none">
     <div className="mb-3 flex items-start justify-between gap-3">
@@ -110,8 +127,8 @@ const Section = ({ title, subtitle, actions, children }) => (
   </div>
 );
 
-const EmptySection = ({ title, subtitle }) => (
-  <Section title={title} subtitle={subtitle}>
+const EmptySection = ({ title, subtitle, actions }) => (
+  <Section title={title} subtitle={subtitle} actions={actions}>
     <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-3 py-3 text-sm text-gray-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-400">
       Nothing added yet.
     </div>
@@ -219,7 +236,7 @@ const CardShell = ({
   );
 };
 
-const PartyEventCard = ({ event, ...props }) => {
+const PartyEventCard = ({ event, onUpdateEventData, ...props }) => {
   const potluckItems = Array.isArray(event?.potluckItems) ? event.potluckItems : [];
   const theme = String(event?.theme || '').trim();
   const musicPlaylist = String(event?.musicPlaylist || '').trim();
@@ -243,6 +260,18 @@ const PartyEventCard = ({ event, ...props }) => {
       <Section
         title="Party Setup"
         subtitle={plusOnesAllowed ? 'Plus-ones welcome' : 'Invite list only'}
+        actions={onUpdateEventData ? (
+          <ActionPill
+            onClick={() => promptToUpdate(onUpdateEventData, () => {
+              const nextTheme = window.prompt('Party theme', theme);
+              if (nextTheme === null) return null;
+              const nextPlusOnes = window.confirm('Allow plus-ones for this party?');
+              return { theme: String(nextTheme || '').trim(), plusOnesAllowed: nextPlusOnes };
+            })}
+          >
+            Edit
+          </ActionPill>
+        ) : null}
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-orange-50 px-3 py-3 text-sm text-orange-900 dark:bg-orange-500/10 dark:text-orange-100">
@@ -257,7 +286,22 @@ const PartyEventCard = ({ event, ...props }) => {
       </Section>
 
       {potluckItems.length > 0 ? (
-        <Section title="Potluck" subtitle={`${potluckItems.length} planned item${potluckItems.length === 1 ? '' : 's'}`}>
+        <Section
+          title="Potluck"
+          subtitle={`${potluckItems.length} planned item${potluckItems.length === 1 ? '' : 's'}`}
+          actions={onUpdateEventData ? (
+            <ActionPill
+              onClick={() => promptToUpdate(onUpdateEventData, () => {
+                const currentValue = potluckItems.map((item) => `${item?.item || ''}${item?.person ? ` | ${item.person}` : ''}`).join('\n');
+                const nextValue = window.prompt('Potluck items. Use one line per item. Optional format: item | person', currentValue);
+                if (nextValue === null) return null;
+                return { potluckItems: parseLineItems(nextValue) };
+              })}
+            >
+              Edit
+            </ActionPill>
+          ) : null}
+        >
           <div className="space-y-2">
             {potluckItems.slice(0, 4).map((item, index) => (
               <div key={`${item?.item || item}-${index}`} className="flex items-center justify-between rounded-xl bg-white px-3 py-2.5 text-sm text-gray-700 shadow-sm ring-1 ring-black/5 dark:bg-white/5 dark:text-gray-200 dark:ring-white/10">
@@ -268,21 +312,64 @@ const PartyEventCard = ({ event, ...props }) => {
           </div>
         </Section>
       ) : (
-        <EmptySection title="Potluck" subtitle="No dish list added yet." />
+        <EmptySection
+          title="Potluck"
+          subtitle="No dish list added yet."
+          actions={onUpdateEventData ? (
+            <ActionPill
+              onClick={() => promptToUpdate(onUpdateEventData, () => {
+                const nextValue = window.prompt('Potluck items. Use one line per item. Optional format: item | person', '');
+                if (nextValue === null) return null;
+                return { potluckItems: parseLineItems(nextValue) };
+              })}
+            >
+              Add
+            </ActionPill>
+          ) : null}
+        />
       )}
 
       {musicPlaylist ? (
         <Section
           title="Music"
           subtitle={isProbablyUrl(musicPlaylist) ? 'Playlist link ready' : musicPlaylist}
-          actions={isProbablyUrl(musicPlaylist) ? <ActionPill href={musicPlaylist}>Open playlist</ActionPill> : null}
+          actions={(
+            <>
+              {isProbablyUrl(musicPlaylist) ? <ActionPill href={musicPlaylist}>Open playlist</ActionPill> : null}
+              {onUpdateEventData ? (
+                <ActionPill
+                  onClick={() => promptToUpdate(onUpdateEventData, () => {
+                    const nextValue = window.prompt('Playlist URL or note', musicPlaylist);
+                    if (nextValue === null) return null;
+                    return { musicPlaylist: String(nextValue || '').trim() };
+                  })}
+                >
+                  Edit
+                </ActionPill>
+              ) : null}
+            </>
+          )}
         >
           <div className="rounded-xl bg-white px-3 py-3 text-sm text-gray-600 ring-1 ring-black/5 dark:bg-white/5 dark:text-gray-300 dark:ring-white/10">
             {isProbablyUrl(musicPlaylist) ? 'Tap the button to open the playlist.' : musicPlaylist}
           </div>
         </Section>
       ) : (
-        <EmptySection title="Music" subtitle="No playlist linked yet." />
+        <EmptySection
+          title="Music"
+          subtitle="No playlist linked yet."
+          actions={onUpdateEventData ? (
+            <ActionPill
+              onClick={() => promptToUpdate(onUpdateEventData, () => {
+                const nextValue = window.prompt('Playlist URL or note', '');
+                if (nextValue === null) return null;
+                return { musicPlaylist: String(nextValue || '').trim() };
+              })}
+            >
+              Add
+            </ActionPill>
+          ) : null}
+        />
       )}
 
       {event?.description ? (
@@ -296,7 +383,7 @@ const PartyEventCard = ({ event, ...props }) => {
   );
 };
 
-const CelebrationEventCard = ({ event, ...props }) => {
+const CelebrationEventCard = ({ event, onUpdateEventData, ...props }) => {
   const dressCode = String(event?.dressCode || '').trim();
   const registryLink = String(event?.registryLink || '').trim();
   const schedule = Array.isArray(event?.schedule) ? event.schedule : [];
@@ -320,18 +407,75 @@ const CelebrationEventCard = ({ event, ...props }) => {
         <Section
           title="Gift Registry"
           subtitle="Guests can open the registry directly."
-          actions={<ActionPill href={registryLink}>Open registry</ActionPill>}
+          actions={(
+            <>
+              <ActionPill href={registryLink}>Open registry</ActionPill>
+              {onUpdateEventData ? (
+                <ActionPill
+                  onClick={() => promptToUpdate(onUpdateEventData, () => {
+                    const nextLink = window.prompt('Registry link', registryLink);
+                    if (nextLink === null) return null;
+                    const nextDressCode = window.prompt('Dress code', dressCode);
+                    if (nextDressCode === null) return null;
+                    return { registryLink: String(nextLink || '').trim(), dressCode: String(nextDressCode || '').trim() };
+                  })}
+                >
+                  Edit
+                </ActionPill>
+              ) : null}
+            </>
+          )}
         >
           <div className="text-sm text-gray-600 dark:text-gray-300">
             Registry link is attached and ready to share.
           </div>
         </Section>
       ) : (
-        <EmptySection title="Gift Registry" subtitle="No registry or gift link added yet." />
+        <EmptySection
+          title="Gift Registry"
+          subtitle="No registry or gift link added yet."
+          actions={onUpdateEventData ? (
+            <ActionPill
+              onClick={() => promptToUpdate(onUpdateEventData, () => {
+                const nextLink = window.prompt('Registry link', '');
+                if (nextLink === null) return null;
+                const nextDressCode = window.prompt('Dress code', dressCode);
+                if (nextDressCode === null) return null;
+                return { registryLink: String(nextLink || '').trim(), dressCode: String(nextDressCode || '').trim() };
+              })}
+            >
+              Add
+            </ActionPill>
+          ) : null}
+        />
       )}
 
       {schedule.length > 0 ? (
-        <Section title="Schedule" subtitle={`${schedule.length} timeline item${schedule.length === 1 ? '' : 's'}`}>
+        <Section
+          title="Schedule"
+          subtitle={`${schedule.length} timeline item${schedule.length === 1 ? '' : 's'}`}
+          actions={onUpdateEventData ? (
+            <ActionPill
+              onClick={() => promptToUpdate(onUpdateEventData, () => {
+                const currentValue = schedule.map((item) => `${item?.time || ''} | ${item?.activity || ''}`).join('\n');
+                const nextValue = window.prompt('Schedule. Use one line per item in the format: time | activity', currentValue);
+                if (nextValue === null) return null;
+                const nextSchedule = String(nextValue || '')
+                  .split('\n')
+                  .map((line) => line.trim())
+                  .filter(Boolean)
+                  .map((line) => {
+                    const [time, activity] = line.split('|').map((part) => part.trim());
+                    return { time: time || '', activity: activity || '' };
+                  })
+                  .filter((item) => item.time || item.activity);
+                return { schedule: nextSchedule };
+              })}
+            >
+              Edit
+            </ActionPill>
+          ) : null}
+        >
           <div className="space-y-2">
             {schedule.map((item, index) => (
               <div key={`${item?.time || 'time'}-${index}`} className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 rounded-xl bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-black/5 dark:bg-white/5 dark:ring-white/10">
@@ -342,7 +486,30 @@ const CelebrationEventCard = ({ event, ...props }) => {
           </div>
         </Section>
       ) : (
-        <EmptySection title="Schedule" subtitle="No timeline added yet." />
+        <EmptySection
+          title="Schedule"
+          subtitle="No timeline added yet."
+          actions={onUpdateEventData ? (
+            <ActionPill
+              onClick={() => promptToUpdate(onUpdateEventData, () => {
+                const nextValue = window.prompt('Schedule. Use one line per item in the format: time | activity', '');
+                if (nextValue === null) return null;
+                const nextSchedule = String(nextValue || '')
+                  .split('\n')
+                  .map((line) => line.trim())
+                  .filter(Boolean)
+                  .map((line) => {
+                    const [time, activity] = line.split('|').map((part) => part.trim());
+                    return { time: time || '', activity: activity || '' };
+                  })
+                  .filter((item) => item.time || item.activity);
+                return { schedule: nextSchedule };
+              })}
+            >
+              Add
+            </ActionPill>
+          ) : null}
+        />
       )}
 
       {event?.description ? (
@@ -356,7 +523,7 @@ const CelebrationEventCard = ({ event, ...props }) => {
   );
 };
 
-const KidsEventCard = ({ event, ...props }) => {
+const KidsEventCard = ({ event, onUpdateEventData, ...props }) => {
   const ageRange = String(event?.ageRange || '').trim();
   const activity = String(event?.activity || '').trim();
   const parentRequired = event?.parentRequired !== false;
@@ -378,14 +545,61 @@ const KidsEventCard = ({ event, ...props }) => {
       {...props}
     >
       {activity ? (
-        <Section title="Main Activity" subtitle="What the kids will be doing">
+        <Section
+          title="Main Activity"
+          subtitle="What the kids will be doing"
+          actions={onUpdateEventData ? (
+            <ActionPill
+              onClick={() => promptToUpdate(onUpdateEventData, () => {
+                const nextActivity = window.prompt('Main activity', activity);
+                if (nextActivity === null) return null;
+                const nextAgeRange = window.prompt('Age range', ageRange);
+                if (nextAgeRange === null) return null;
+                return { activity: String(nextActivity || '').trim(), ageRange: String(nextAgeRange || '').trim() };
+              })}
+            >
+              Edit
+            </ActionPill>
+          ) : null}
+        >
           <div className="text-sm text-gray-700 dark:text-gray-300">{activity}</div>
         </Section>
       ) : (
-        <EmptySection title="Main Activity" subtitle="No activity details added yet." />
+        <EmptySection
+          title="Main Activity"
+          subtitle="No activity details added yet."
+          actions={onUpdateEventData ? (
+            <ActionPill
+              onClick={() => promptToUpdate(onUpdateEventData, () => {
+                const nextActivity = window.prompt('Main activity', '');
+                if (nextActivity === null) return null;
+                const nextAgeRange = window.prompt('Age range', ageRange);
+                if (nextAgeRange === null) return null;
+                return { activity: String(nextActivity || '').trim(), ageRange: String(nextAgeRange || '').trim() };
+              })}
+            >
+              Add
+            </ActionPill>
+          ) : null}
+        />
       )}
 
-      <Section title="Parent Notes" subtitle={parentRequired ? 'Parents should stay' : 'Drop-off friendly'}>
+      <Section
+        title="Parent Notes"
+        subtitle={parentRequired ? 'Parents should stay' : 'Drop-off friendly'}
+        actions={onUpdateEventData ? (
+          <ActionPill
+            onClick={() => promptToUpdate(onUpdateEventData, () => {
+              const nextAllergens = window.prompt('Allergy notes. Use commas between items.', allergenAlerts.join(', '));
+              if (nextAllergens === null) return null;
+              const nextParentRequired = window.confirm('Should parents stay for this event?');
+              return { allergenAlerts: normalizeList(nextAllergens), parentRequired: nextParentRequired };
+            })}
+          >
+            Edit
+          </ActionPill>
+        ) : null}
+      >
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-white px-3 py-3 text-sm ring-1 ring-black/5 dark:bg-white/5 dark:ring-white/10">
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600 dark:text-blue-300">Attendance</div>
@@ -411,7 +625,7 @@ const KidsEventCard = ({ event, ...props }) => {
   );
 };
 
-const HangoutEventCard = ({ event, ...props }) => {
+const HangoutEventCard = ({ event, onUpdateEventData, ...props }) => {
   const duration = String(event?.expectedDuration || '').trim();
   const reservationName = String(event?.reservationName || '').trim();
   const billSplitting = String(event?.billSplitting || 'separate').trim();
@@ -436,7 +650,29 @@ const HangoutEventCard = ({ event, ...props }) => {
       }}
       {...props}
     >
-      <Section title="Plan" subtitle={reservationName ? `Reservation under ${reservationName}` : 'No reservation note yet'}>
+      <Section
+        title="Plan"
+        subtitle={reservationName ? `Reservation under ${reservationName}` : 'No reservation note yet'}
+        actions={onUpdateEventData ? (
+          <ActionPill
+            onClick={() => promptToUpdate(onUpdateEventData, () => {
+              const nextReservation = window.prompt('Reservation name', reservationName);
+              if (nextReservation === null) return null;
+              const nextDuration = window.prompt('Expected duration', duration);
+              if (nextDuration === null) return null;
+              const nextBill = window.prompt('Bill style: separate, split, or host', billSplitting);
+              if (nextBill === null) return null;
+              return {
+                reservationName: String(nextReservation || '').trim(),
+                expectedDuration: String(nextDuration || '').trim(),
+                billSplitting: ['separate', 'split', 'host'].includes(String(nextBill || '').trim()) ? String(nextBill || '').trim() : 'separate',
+              };
+            })}
+          >
+            Edit
+          </ActionPill>
+        ) : null}
+      >
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-white px-3 py-3 text-sm ring-1 ring-black/5 dark:bg-white/5 dark:ring-white/10">
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-700 dark:text-cyan-300">Reservation</div>

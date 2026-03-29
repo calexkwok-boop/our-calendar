@@ -103,6 +103,21 @@ const buildCategoryOverride = (eventType, weEventCategory, title, categories) =>
   return available.other ? 'other' : Object.keys(available)[0] || 'other';
 };
 
+const buildWeEventMetadata = (category) => {
+  switch (String(category || '').trim()) {
+    case 'party':
+      return { theme: '', potluckItems: [], musicPlaylist: '', plusOnesAllowed: true };
+    case 'celebration':
+      return { dressCode: '', registryLink: '', schedule: [] };
+    case 'kids':
+      return { ageRange: '', activity: '', parentRequired: true, allergenAlerts: [] };
+    case 'hangout':
+      return { expectedDuration: '', reservationName: '', billSplitting: 'separate' };
+    default:
+      return {};
+  }
+};
+
 const baseInputClassName = 'w-full min-w-0 rounded-xl border px-4 py-3 text-base transition-all outline-none';
 
 export default function DateDetailsCardEnhanced({
@@ -295,6 +310,7 @@ export default function DateDetailsCardEnhanced({
         isPopupEvent: eventType === 'we',
         categoryOverride,
         popupSubtype: eventType === 'we' ? (eventData.category || null) : null,
+        popupMetadata: eventType === 'we' ? buildWeEventMetadata(eventData.category) : {},
         locationOverride: eventData.location || '',
         description: eventType === 'we' && currentTemplate ? `${currentTemplate.label} We Event` : '',
       });
