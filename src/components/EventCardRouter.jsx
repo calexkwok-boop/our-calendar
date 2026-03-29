@@ -64,6 +64,17 @@ const formatEventDateTime = (date, time) => {
 };
 
 const isProbablyUrl = (value) => /^https?:\/\//i.test(String(value || '').trim());
+const detectPlaylistService = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized.includes('spotify.com')) {
+    return { name: 'Spotify', icon: '♪', chipClass: 'bg-[#1ed760]/15 text-[#15803d] dark:text-[#86efac]' };
+  }
+  if (normalized.includes('music.apple.com') || normalized.includes('itunes.apple.com')) {
+    return { name: 'Apple Music', icon: '♫', chipClass: 'bg-[#fa233b]/12 text-[#be123c] dark:text-[#fda4af]' };
+  }
+  return null;
+};
 const buildMapHref = (location) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(location || '').trim())}`;
 const normalizeList = (value) => String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
 const parseLineItems = (value) => String(value || '')
@@ -403,6 +414,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const potluckItems = Array.isArray(event?.potluckItems) ? event.potluckItems : [];
   const theme = String(event?.theme || '').trim();
   const musicPlaylist = String(event?.musicPlaylist || '').trim();
+  const playlistService = detectPlaylistService(musicPlaylist);
   const plusOnesAllowed = event?.plusOnesAllowed !== false;
 
   return (
@@ -521,10 +533,10 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
       {musicPlaylist ? (
         <Section
           title="Music"
-          subtitle={isProbablyUrl(musicPlaylist) ? 'Playlist link ready' : musicPlaylist}
+          subtitle={isProbablyUrl(musicPlaylist) ? `${playlistService?.name || 'Playlist'} link ready` : musicPlaylist}
           actions={(
             <>
-              {isProbablyUrl(musicPlaylist) ? <ActionPill href={musicPlaylist}>Open playlist</ActionPill> : null}
+              {isProbablyUrl(musicPlaylist) ? <ActionPill href={musicPlaylist}>Open {playlistService?.name || 'playlist'}</ActionPill> : null}
               {onUpdateEventData && openEditor ? (
                 <ActionPill
                   onClick={() => openEditor({
@@ -543,7 +555,19 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           )}
         >
           <div className="rounded-xl bg-white px-3 py-3 text-sm text-gray-600 ring-1 ring-black/5 dark:bg-white/5 dark:text-gray-300 dark:ring-white/10">
-            {isProbablyUrl(musicPlaylist) ? 'Tap the button to open the playlist.' : musicPlaylist}
+            {isProbablyUrl(musicPlaylist) ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {playlistService ? (
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] ${playlistService.chipClass}`}>
+                    <span className="text-sm leading-none">{playlistService.icon}</span>
+                    <span>{playlistService.name}</span>
+                  </span>
+                ) : null}
+                <span className="min-w-0 flex-1 truncate text-sm text-gray-500 dark:text-gray-400">
+                  {playlistService ? 'Tap the button to open the playlist.' : musicPlaylist}
+                </span>
+              </div>
+            ) : musicPlaylist}
           </div>
         </Section>
       ) : (
