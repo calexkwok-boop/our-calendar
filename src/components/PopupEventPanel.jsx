@@ -771,6 +771,47 @@ export default function PopupEventPanel({
   const eventMetaFallbackRef = useRef(eventMetaFallback);
 
   useEffect(() => {
+    if (typeof document === 'undefined' || typeof window === 'undefined') return undefined;
+
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyTouchAction = document.body.style.touchAction;
+    const previousBodyOverscroll = document.body.style.overscrollBehavior;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyTop = document.body.style.top;
+    const previousBodyLeft = document.body.style.left;
+    const previousBodyRight = document.body.style.right;
+    const previousBodyWidth = document.body.style.width;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior;
+
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    document.body.style.overscrollBehavior = 'none';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.overscrollBehavior = 'none';
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.touchAction = previousBodyTouchAction;
+      document.body.style.overscrollBehavior = previousBodyOverscroll;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.left = previousBodyLeft;
+      document.body.style.right = previousBodyRight;
+      document.body.style.width = previousBodyWidth;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscroll;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  useEffect(() => {
     eventMetaFallbackRef.current = eventMetaFallback;
   }, [eventMetaFallback]);
 
@@ -1287,7 +1328,17 @@ export default function PopupEventPanel({
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', borderBottom: `1px solid ${border}`, background: softBg, overflowX: 'auto' }}>
+      <div
+        style={{
+          display: 'flex',
+          borderBottom: `1px solid ${border}`,
+          background: softBg,
+          overflowX: 'auto',
+          position: 'relative',
+          zIndex: 3,
+          boxShadow: darkMode ? '0 1px 0 rgba(255,255,255,0.04)' : '0 1px 0 rgba(15,23,42,0.04)',
+        }}
+      >
         {visibleTabs.map(({ id, label, emoji }) => (
           <button key={id} onClick={() => setScreen(id)}
             style={{ flex: 1, minWidth: 56, padding: '11px 6px', fontSize: 11, fontWeight: 900, cursor: 'pointer', border: 'none',
@@ -1300,14 +1351,29 @@ export default function PopupEventPanel({
 
       {/* ── INFO TAB ── */}
       {activeScreen === 'detail' && (
-        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain' }}>
+        <div
+          style={{
+            padding: '20px 20px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
           {!isSportsPopupEvent && (
-            <EventCardRouter
-              event={routedEvent}
-              hidePrimaryAction
-              onEdit={isHostOrCohost ? handleEditEventBasics : undefined}
-              onUpdateEventData={isHostOrCohost ? handleUpdateEventData : undefined}
-            />
+            <div style={{ marginTop: 4 }}>
+              <EventCardRouter
+                event={routedEvent}
+                hidePrimaryAction
+                onEdit={isHostOrCohost ? handleEditEventBasics : undefined}
+                onUpdateEventData={isHostOrCohost ? handleUpdateEventData : undefined}
+              />
+            </div>
           )}
           {isLegacyInvalidEvent && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 14, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
