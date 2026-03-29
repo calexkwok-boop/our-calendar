@@ -16096,8 +16096,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           location: pendingEventDraft.location || null,
           max_players: maxPeople,
         is_public: !isPrivate,
-        category: pendingEventDraft.popupSubtype || null,
-        event_data: pendingEventDraft.popupMetadata || {},
+        event_data: {
+          ...(pendingEventDraft.popupMetadata || {}),
+          category: pendingEventDraft.popupSubtype || null,
+          popupSubtype: pendingEventDraft.popupSubtype || null,
+        },
         description: String(pendingEventDraft.description || '').trim() || null,
         status: 'open',
       }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });
@@ -17154,8 +17157,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           location: pendingEvent.location || null,
           max_players: maxPeople,
         is_public: !isPrivate,
-        category: pendingEvent.popupSubtype || null,
-        event_data: pendingEvent.popupMetadata || {},
+        event_data: {
+          ...(pendingEvent.popupMetadata || {}),
+          category: pendingEvent.popupSubtype || null,
+          popupSubtype: pendingEvent.popupSubtype || null,
+        },
         description: String(pendingEvent.description || '').trim() || null,
         status: 'open',
       }).then(({ error }) => { if (error) console.error('popup_event_details insert error:', error); });

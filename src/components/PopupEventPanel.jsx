@@ -906,7 +906,7 @@ export default function PopupEventPanel({
           time: ev?.time || fallback?.time || null,
           location: String(ev?.location || fallback?.location || '').trim() || null,
           description: String(ev?.description || fallback?.description || '').trim() || '',
-          category: String(ev?.category || fallback?.category || '').trim() || null,
+          category: String(ev?.category || eventData?.category || eventData?.popupSubtype || fallback?.category || '').trim() || null,
           event_data: eventData,
         });
       } else if (eventMetaFallbackRef.current) setEvent(eventMetaFallbackRef.current);
@@ -1160,9 +1160,19 @@ export default function PopupEventPanel({
     const existingEventData = (event?.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data))
       ? event.event_data
       : {};
-    const nextEventData = Object.prototype.hasOwnProperty.call(patch, 'event_data')
+    const rawNextEventData = Object.prototype.hasOwnProperty.call(patch, 'event_data')
       ? patch.event_data
       : existingEventData;
+    const nextEventData = {
+      ...((rawNextEventData && typeof rawNextEventData === 'object' && !Array.isArray(rawNextEventData)) ? rawNextEventData : {}),
+    };
+    if (Object.prototype.hasOwnProperty.call(patch, 'category')) {
+      nextEventData.category = patch.category || null;
+      nextEventData.popupSubtype = patch.category || null;
+    } else if (!Object.prototype.hasOwnProperty.call(nextEventData, 'category') && event?.category) {
+      nextEventData.category = event.category;
+      nextEventData.popupSubtype = event.category;
+    }
     const detailPayload = {
       id: event.id,
       calendar_id: event.calendar_id || calendarId || null,
@@ -1177,9 +1187,6 @@ export default function PopupEventPanel({
       is_public: Object.prototype.hasOwnProperty.call(patch, 'is_public')
         ? patch.is_public
         : (typeof event.is_public === 'boolean' ? event.is_public : true),
-      category: Object.prototype.hasOwnProperty.call(patch, 'category')
-        ? patch.category
-        : (event.category || null),
       description: Object.prototype.hasOwnProperty.call(patch, 'description')
         ? patch.description
         : (String(event.description || '').trim() || null),
