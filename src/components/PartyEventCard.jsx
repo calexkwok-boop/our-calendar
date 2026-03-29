@@ -107,7 +107,7 @@ const ActionPill = ({ href, onClick, children }) => {
 };
 
 const Section = ({ title, subtitle, actions, children }) => (
-  <div className="group/section rounded-[22px] border border-orange-200/70 bg-white/88 p-5 shadow-[0_10px_26px_rgba(251,146,60,0.09)] backdrop-blur-sm transition-all hover:shadow-[0_16px_36px_rgba(251,146,60,0.14)] dark:border-orange-400/14 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08]">
+  <div className="group/section rounded-[22px] border border-orange-200/55 bg-white/96 p-5 shadow-[0_10px_26px_rgba(15,23,42,0.05)] backdrop-blur-sm transition-all hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-orange-400/14 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08]">
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-bold text-gray-900 dark:text-white">{title}</div>
@@ -121,7 +121,7 @@ const Section = ({ title, subtitle, actions, children }) => (
 
 const EmptySection = ({ title, subtitle, actions }) => (
   <Section title={title} subtitle={subtitle} actions={actions}>
-    <div className="rounded-2xl border border-dashed border-orange-200 bg-orange-50/70 px-4 py-4 text-sm text-orange-700 dark:border-orange-400/16 dark:bg-orange-500/8 dark:text-orange-200">
+    <div className="rounded-2xl border border-dashed border-orange-200 bg-white px-4 py-4 text-sm text-orange-700 dark:border-orange-400/16 dark:bg-orange-500/8 dark:text-orange-200">
       Nothing added yet.
     </div>
   </Section>
@@ -152,7 +152,7 @@ const InviteeRow = ({ event, label = 'Going' }) => {
     <Section title={label} subtitle={`${invitees.length} ${invitees.length === 1 ? 'person' : 'people'}`}>
       <div className="flex flex-wrap gap-2.5">
         {invitees.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-orange-200 bg-orange-50/70 px-4 py-4 text-sm text-orange-700 dark:border-orange-400/16 dark:bg-orange-500/8 dark:text-orange-200">
+          <div className="rounded-2xl border border-dashed border-orange-200 bg-white px-4 py-4 text-sm text-orange-700 dark:border-orange-400/16 dark:bg-orange-500/8 dark:text-orange-200">
             No one has responded yet.
           </div>
         ) : (
@@ -203,7 +203,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const plusOnesAllowed = event?.plusOnesAllowed !== false;
 
   return (
-    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-orange-300/70 bg-gradient-to-br from-orange-50 via-amber-50/80 to-yellow-50/55 shadow-[0_24px_80px_rgba(251,146,60,0.25)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(251,146,60,0.35)] dark:border-orange-400/25 dark:from-[#2d1f14] dark:via-[#1c150f] dark:to-[#13110e] dark:shadow-none">
+    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-orange-200/70 bg-gradient-to-br from-white via-orange-50/40 to-white shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-orange-400/25 dark:from-[#2d1f14] dark:via-[#1c150f] dark:to-[#13110e] dark:shadow-none">
       <style>{animationStyles}</style>
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -224,17 +224,17 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
       <div className="pointer-events-none absolute right-6 top-0 h-32 w-0.5 bg-gradient-to-b from-orange-300/40 to-transparent dark:from-orange-400/20" style={{ animation: 'party-card-sway 4s ease-in-out infinite' }} />
       <div className="pointer-events-none absolute right-5 top-[-8px] h-6 w-6 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 opacity-80 shadow-lg dark:opacity-60" style={{ animation: 'party-card-balloon 6s ease-in-out infinite' }} />
 
-      <div className="relative border-b-2 border-orange-200/80 bg-gradient-to-br from-white/95 to-orange-50/60 px-6 py-6 dark:border-orange-400/15 dark:from-white/[0.04] dark:to-orange-500/[0.02] sm:px-7">
+      <div className="relative border-b-2 border-orange-200/70 bg-gradient-to-br from-white via-orange-50/35 to-white px-6 py-6 dark:border-orange-400/15 dark:from-white/[0.04] dark:to-orange-500/[0.02] sm:px-7">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="mb-4 flex flex-wrap items-center gap-2.5">
               <span
-                className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] border-2 border-orange-300 bg-gradient-to-br from-orange-100 to-amber-100 text-2xl shadow-lg shadow-orange-200/40 transition-transform group-hover:scale-110 group-hover:rotate-12 dark:border-orange-400/30 dark:from-orange-500/15 dark:to-amber-500/15 dark:shadow-orange-500/10"
+                className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] border-2 border-orange-300 bg-gradient-to-br from-white to-orange-50 text-2xl shadow-lg shadow-orange-200/30 transition-transform group-hover:scale-110 group-hover:rotate-12 dark:border-orange-400/30 dark:from-orange-500/15 dark:to-amber-500/15 dark:shadow-orange-500/10"
                 style={{ animation: 'party-card-wiggle 2s ease-in-out infinite' }}
               >
                 Party
               </span>
-              <span className="rounded-full bg-gradient-to-br from-orange-100 to-orange-200 px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em] text-orange-800 shadow-sm dark:from-orange-500/15 dark:to-orange-600/15 dark:text-orange-200">
+              <span className="rounded-full border border-orange-200 bg-white/95 px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em] text-orange-800 shadow-sm dark:from-orange-500/15 dark:to-orange-600/15 dark:text-orange-200 dark:border-orange-400/20 dark:bg-white/5">
                 Party
               </span>
               {theme ? (
@@ -321,16 +321,16 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           ) : null}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="group/card relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-100 to-orange-50 p-[2px] shadow-sm transition-all hover:shadow-md dark:from-orange-500/20 dark:to-orange-500/10">
-              <div className="rounded-[14px] bg-white/90 px-4 py-3.5 dark:bg-gray-900/90">
+            <div className="group/card relative overflow-hidden rounded-2xl border border-orange-200/70 bg-white p-4 shadow-sm transition-all hover:shadow-md dark:border-orange-400/18 dark:bg-gray-900/90">
+              <div className="rounded-[14px] bg-gradient-to-br from-orange-50/85 to-white px-4 py-3.5 dark:bg-gray-900/90">
                 <div className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-orange-600 dark:text-orange-300">
                   <span>Theme</span>
                 </div>
                 <div className="text-sm font-semibold text-gray-900 dark:text-white">{theme || 'No theme added yet'}</div>
               </div>
             </div>
-            <div className="group/card relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-100 to-yellow-50 p-[2px] shadow-sm transition-all hover:shadow-md dark:from-amber-500/20 dark:to-yellow-500/10">
-              <div className="rounded-[14px] bg-white/90 px-4 py-3.5 dark:bg-gray-900/90">
+            <div className="group/card relative overflow-hidden rounded-2xl border border-amber-200/70 bg-white p-4 shadow-sm transition-all hover:shadow-md dark:border-amber-400/18 dark:bg-gray-900/90">
+              <div className="rounded-[14px] bg-gradient-to-br from-amber-50/85 to-white px-4 py-3.5 dark:bg-gray-900/90">
                 <div className="mb-1.5 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-amber-600 dark:text-amber-300">
                   <span>Guest Style</span>
                 </div>
@@ -374,7 +374,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               {potluckItems.slice(0, 4).map((item, index) => (
                 <div
                   key={`${item?.item || item}-${index}`}
-                  className="group/item flex items-center justify-between rounded-xl border-2 border-orange-100 bg-white px-4 py-3 text-sm shadow-sm transition-all hover:border-orange-200 hover:shadow-md dark:border-orange-500/10 dark:bg-white/5 dark:hover:border-orange-500/20"
+                  className="group/item flex items-center justify-between rounded-xl border-2 border-orange-100/80 bg-white px-4 py-3 text-sm shadow-sm transition-all hover:border-orange-200 hover:shadow-md dark:border-orange-500/10 dark:bg-white/5 dark:hover:border-orange-500/20"
                 >
                   <div className="flex items-center gap-2.5">
                     <span className="font-semibold text-gray-900 dark:text-white">{item?.item || item}</span>
@@ -440,7 +440,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               </>
             }
           >
-            <div className="relative overflow-hidden rounded-2xl border-2 border-purple-100 bg-gradient-to-br from-purple-50 to-pink-50 p-4 shadow-sm dark:border-purple-500/10 dark:from-purple-500/5 dark:to-pink-500/5">
+            <div className="relative overflow-hidden rounded-2xl border-2 border-purple-100 bg-white p-4 shadow-sm dark:border-purple-500/10 dark:from-purple-500/5 dark:to-pink-500/5">
               <div className="relative flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   {isProbablyUrl(musicPlaylist) ? (
