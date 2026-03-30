@@ -3094,9 +3094,6 @@ function App() {
         if (status === 'declined') return;
         const memberIdentity = row?.email || row?.phone;
         const normalizedMemberIdentity = normalizeIdentityKey(memberIdentity);
-        const isPending = status === 'pending';
-        const stillShared = normalizedMemberIdentity && activeLayerRecipientKeys.has(normalizedMemberIdentity);
-        if (!isPending && layerId && normalizedMemberIdentity && activeLayerRecipientKeys.size > 0 && !stillShared) return;
         addMember(memberIdentity, {
           status: row?.status || null,
           source: 'trip_invite',
@@ -4120,99 +4117,6 @@ function App() {
           }
           if (insertErr && !/duplicate key|already exists|unique constraint/i.test(String(insertErr.message || ''))) {
             console.error('Trip link join failed:', insertErr);
-          }
-        }
-      }
-      const tripLayerId = String(tripRow?.layer_id || tripRow?.calendar_id || '').trim();
-      if (!isOwner && tripLayerId) {
-        let shareChanged = false;
-        const shareRecipientFilter = buildShareRecipientFilter(user.id, meEmail, mePhone);
-        let existingShare = null;
-        if (shareRecipientFilter) {
-          const { data: existingShareRow } = await supabase
-            .from('shared_access')
-            .select('id,shared_with_id,shared_with_email,shared_with_phone')
-            .eq('layer_id', tripLayerId)
-            .eq('owner_id', String(tripRow?.owner_id || '').trim())
-            .or(shareRecipientFilter)
-            .maybeSingle();
-          existingShare = existingShareRow || null;
-        }
-        if (existingShare?.id) {
-          if (String(existingShare?.shared_with_id || '').trim() !== String(user.id || '').trim()) {
-            const { error: updateShareErr } = await supabase
-              .from('shared_access')
-              .update({
-                shared_with_id: user.id,
-                shared_with_email: meEmail || existingShare?.shared_with_email || null,
-                shared_with_phone: mePhone || existingShare?.shared_with_phone || null,
-              })
-              .eq('id', existingShare.id);
-            if (updateShareErr && !/duplicate key|already exists|unique constraint/i.test(String(updateShareErr.message || ''))) {
-              console.error('Trip link share upgrade failed:', updateShareErr);
-            } else if (!updateShareErr) {
-              shareChanged = true;
-            }
-          }
-        } else {
-          const sharePayload = {
-            owner_id: String(tripRow?.owner_id || '').trim() || null,
-            layer_id: tripLayerId,
-            calendar_id: tripLayerId,
-            shared_with_id: user.id,
-            shared_with_email: meEmail || null,
-            shared_with_phone: mePhone || null,
-            can_edit: true,
-            role: 'member',
-            is_banned: false,
-          };
-          let insertShareErr = (await supabase.from('shared_access').insert(sharePayload)).error;
-          if (insertShareErr && /column .*can_edit|column .*role|column .*is_banned|schema cache/i.test(String(insertShareErr.message || ''))) {
-            insertShareErr = (await supabase.from('shared_access').insert({
-              owner_id: String(tripRow?.owner_id || '').trim() || null,
-              layer_id: tripLayerId,
-              calendar_id: tripLayerId,
-              shared_with_id: user.id,
-              shared_with_email: meEmail || null,
-              shared_with_phone: mePhone || null,
-            })).error;
-          }
-          if (insertShareErr && !/duplicate key|already exists|unique constraint|23505/i.test(String(insertShareErr.message || ''))) {
-            console.error('Trip link share insert failed:', insertShareErr);
-          } else if (!insertShareErr) {
-            shareChanged = true;
-          }
-        }
-        if (shareChanged) {
-          try {
-            await loadLayersForUser(user.id, user.email, user.phone);
-          } catch (shareRefreshErr) {
-            console.error('Trip link layer refresh failed:', shareRefreshErr);
-          }
-          setLayerRefreshToken((prev) => prev + 1);
-        }
-        if (shareRecipientFilter) {
-          try {
-            let sharedWithMeQuery = supabase
-              .from('shared_access')
-              .select('*')
-              .eq('layer_id', tripLayerId)
-              .or(shareRecipientFilter);
-            const { data: sharedWithMeRows, error: sharedWithMeErr } = await sharedWithMeQuery;
-            if (sharedWithMeErr) {
-              console.error('Trip link shared calendar refresh failed:', sharedWithMeErr);
-            } else if (Array.isArray(sharedWithMeRows) && sharedWithMeRows.length > 0) {
-              setSharedCalendars((prev) => {
-                const mergedShares = new Map((prev || []).map((row) => [String(row?.id || `${row?.layer_id || ''}:${row?.shared_with_id || row?.shared_with_email || row?.shared_with_phone || ''}`), row]));
-                sharedWithMeRows.forEach((row) => {
-                  const key = String(row?.id || `${row?.layer_id || ''}:${row?.shared_with_id || row?.shared_with_email || row?.shared_with_phone || ''}`);
-                  if (key) mergedShares.set(key, row);
-                });
-                return Array.from(mergedShares.values());
-              });
-            }
-          } catch (sharedRefreshErr) {
-            console.error('Trip link shared calendar state refresh exception:', sharedRefreshErr);
           }
         }
       }
