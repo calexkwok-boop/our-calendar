@@ -1309,6 +1309,35 @@ export default function PopupEventPanel({
       return false;
     }
   };
+  const handlePotluckClaim = async (itemIndex) => {
+    if (!event || !isUuid(event?.id) || !user?.id || (!isMember && !isHostOrCohost)) return false;
+    const existingItems = Array.isArray(event?.potluckItems) ? event.potluckItems : [];
+    const nextItems = existingItems.map((entry, index) => {
+      if (index !== itemIndex) return entry;
+      const alreadyMine = String(entry?.claimedByUserId || '').trim() === String(user.id || '').trim();
+      if (alreadyMine) {
+        return {
+          ...entry,
+          person: '',
+          claimedByUserId: '',
+        };
+      }
+      if (String(entry?.claimedByUserId || '').trim()) {
+        return entry;
+      }
+      return {
+        ...entry,
+        person: effectiveDisplayName || 'Guest',
+        claimedByUserId: String(user.id || '').trim(),
+      };
+    });
+    try {
+      await handleUpdateEventData({ potluckItems: nextItems });
+      return true;
+    } catch {
+      return false;
+    }
+  };
   const handleCopyLink = () => { navigator.clipboard.writeText(`${window.location.origin}?popup=${event.id}`).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   const panelStyle = {
@@ -1504,6 +1533,10 @@ export default function PopupEventPanel({
                 hidePrimaryAction={!nonSportsPrimaryAction}
                 onEditBasics={isHostOrCohost ? handleEditEventBasics : undefined}
                 onUpdateEventData={isHostOrCohost ? handleUpdateEventData : undefined}
+                onClaimPotluck={handlePotluckClaim}
+                canClaimPotluck={Boolean(user?.id) && (isMember || isHostOrCohost)}
+                currentUserId={String(user?.id || '').trim()}
+                currentUserName={effectiveDisplayName || 'Guest'}
                 onPrimaryAction={nonSportsPrimaryAction?.action}
                 primaryActionLabel={joining && nonSportsPrimaryAction?.action === handleJoin ? joiningLabel : nonSportsPrimaryAction?.label}
               />

@@ -103,6 +103,31 @@ const parseLineItems = (value) => String(value || '')
   })
   .filter((entry) => entry.item);
 
+const normalizeGuestListEntries = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => ({
+      name: String(entry?.name || '').trim(),
+      rsvp: String(entry?.rsvp || 'pending').trim().toLowerCase() === 'yes'
+        ? 'yes'
+        : String(entry?.rsvp || 'pending').trim().toLowerCase() === 'no'
+          ? 'no'
+          : 'pending',
+    }))
+    .filter((entry) => entry.name);
+};
+
+const normalizePotluckEntries = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => ({
+      item: String(entry?.item || '').trim(),
+      person: String(entry?.person || '').trim(),
+      claimedByUserId: String(entry?.claimedByUserId || '').trim(),
+    }))
+    .filter((entry) => entry.item);
+};
+
 const EditIcon = () => (
   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -148,7 +173,15 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
     }
     const nextDraft = {};
     (config.fields || []).forEach((field) => {
-      nextDraft[field.key] = field.type === 'toggle' ? Boolean(field.value) : (field.value ?? '');
+      if (field.type === 'toggle') {
+        nextDraft[field.key] = Boolean(field.value);
+      } else if (field.type === 'guest-list') {
+        nextDraft[field.key] = normalizeGuestListEntries(field.value);
+      } else if (field.type === 'potluck-list') {
+        nextDraft[field.key] = normalizePotluckEntries(field.value);
+      } else {
+        nextDraft[field.key] = field.value ?? '';
+      }
     });
     setDraft(nextDraft);
     setSaving(false);
@@ -158,6 +191,52 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
 
   const setFieldValue = (key, value) => {
     setDraft((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleAddGuestRow = (key) => {
+    setDraft((prev) => ({
+      ...prev,
+      [key]: [...normalizeGuestListEntries(prev[key]), { name: '', rsvp: 'pending' }],
+    }));
+  };
+
+  const handleGuestRowChange = (key, index, patch) => {
+    setDraft((prev) => {
+      const rows = Array.isArray(prev[key]) ? [...prev[key]] : [];
+      rows[index] = { ...(rows[index] || { name: '', rsvp: 'pending' }), ...patch };
+      return { ...prev, [key]: rows };
+    });
+  };
+
+  const handleRemoveGuestRow = (key, index) => {
+    setDraft((prev) => {
+      const rows = Array.isArray(prev[key]) ? [...prev[key]] : [];
+      rows.splice(index, 1);
+      return { ...prev, [key]: rows };
+    });
+  };
+
+  const handleAddPotluckRow = (key) => {
+    setDraft((prev) => ({
+      ...prev,
+      [key]: [...normalizePotluckEntries(prev[key]), { item: '', person: '', claimedByUserId: '' }],
+    }));
+  };
+
+  const handlePotluckRowChange = (key, index, patch) => {
+    setDraft((prev) => {
+      const rows = Array.isArray(prev[key]) ? [...prev[key]] : [];
+      rows[index] = { ...(rows[index] || { item: '', person: '', claimedByUserId: '' }), ...patch };
+      return { ...prev, [key]: rows };
+    });
+  };
+
+  const handleRemovePotluckRow = (key, index) => {
+    setDraft((prev) => {
+      const rows = Array.isArray(prev[key]) ? [...prev[key]] : [];
+      rows.splice(index, 1);
+      return { ...prev, [key]: rows };
+    });
   };
 
   const handleSubmit = async (event) => {
@@ -234,6 +313,139 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                       : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]'
                   }`}
                 />
+              ) : field.type === 'guest-list' ? (
+                <div className={`rounded-[24px] border p-3 ${isPartyEditor ? 'border-fuchsia-200 bg-white/82 dark:border-white/10 dark:bg-white/[0.05]' : 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/[0.04]'}`}>
+                  <div className="space-y-3">
+                    {normalizeGuestListEntries(draft[field.key]).map((guest, index) => (
+                      <div key={`${field.key}-${index}`} className="rounded-2xl border border-white/60 bg-white/70 p-3 shadow-sm dark:border-white/8 dark:bg-white/[0.04]">
+                        <div className="flex items-start gap-2">
+                          <input
+                            type="text"
+                            value={guest.name}
+                            onChange={(event) => handleGuestRowChange(field.key, index, { name: event.target.value })}
+                            placeholder={field.placeholder || 'Guest name'}
+                            className={`min-w-0 flex-1 rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${
+                              isPartyEditor
+                                ? 'border-fuchsia-200 bg-white/90 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
+                                : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20'
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGuestRow(field.key, index)}
+                            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${
+                              isPartyEditor
+                                ? 'border-fuchsia-200 bg-white/85 text-fuchsia-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200'
+                                : 'border-slate-200 bg-white text-slate-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200'
+                            }`}
+                          >
+                            <span className="text-lg leading-none">×</span>
+                          </button>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {[
+                            { value: 'yes', label: 'Yes', activeClass: 'border-emerald-400 bg-emerald-500 text-white dark:border-emerald-300 dark:bg-emerald-500' },
+                            { value: 'no', label: 'No', activeClass: 'border-rose-400 bg-rose-500 text-white dark:border-rose-300 dark:bg-rose-500' },
+                          ].map((option) => {
+                            const active = guest.rsvp === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => handleGuestRowChange(field.key, index, { rsvp: option.value })}
+                                className={`rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${
+                                  active
+                                    ? option.activeClass
+                                    : isPartyEditor
+                                      ? 'border-fuchsia-200 bg-white/85 text-slate-600 hover:border-fuchsia-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:border-fuchsia-300'
+                                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200'
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                    {normalizeGuestListEntries(draft[field.key]).length === 0 ? (
+                      <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${isPartyEditor ? 'border-fuchsia-200 bg-white/65 text-fuchsia-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200' : 'border-slate-200 bg-white text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300'}`}>
+                        No guests added yet.
+                      </div>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAddGuestRow(field.key)}
+                    className={`mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${
+                      isPartyEditor
+                        ? 'border-fuchsia-200 bg-white/85 text-fuchsia-700 hover:border-fuchsia-300 hover:bg-fuchsia-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-fuchsia-200 dark:hover:bg-white/[0.08]'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    <span className="text-sm leading-none">+</span>
+                    <span>Add guest</span>
+                  </button>
+                </div>
+              ) : field.type === 'potluck-list' ? (
+                <div className={`rounded-[24px] border p-3 ${isPartyEditor ? 'border-fuchsia-200 bg-white/82 dark:border-white/10 dark:bg-white/[0.05]' : 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/[0.04]'}`}>
+                  <div className="space-y-3">
+                    {normalizePotluckEntries(draft[field.key]).map((entry, index) => (
+                      <div key={`${field.key}-${index}`} className="rounded-2xl border border-white/60 bg-white/70 p-3 shadow-sm dark:border-white/8 dark:bg-white/[0.04]">
+                        <div className="flex items-start gap-2">
+                          <input
+                            type="text"
+                            value={entry.item}
+                            onChange={(event) => handlePotluckRowChange(field.key, index, { item: event.target.value })}
+                            placeholder={field.placeholder || 'Potluck item'}
+                            className={`min-w-0 flex-1 rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${
+                              isPartyEditor
+                                ? 'border-fuchsia-200 bg-white/90 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
+                                : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20'
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePotluckRow(field.key, index)}
+                            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${
+                              isPartyEditor
+                                ? 'border-fuchsia-200 bg-white/85 text-fuchsia-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200'
+                                : 'border-slate-200 bg-white text-slate-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200'
+                            }`}
+                          >
+                            <span className="text-lg leading-none">×</span>
+                          </button>
+                        </div>
+                        {entry.person ? (
+                          <div className={`mt-3 inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] ${isPartyEditor ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-200' : 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-200'}`}>
+                            Claimed by {entry.person}
+                          </div>
+                        ) : (
+                          <div className={`mt-3 text-xs font-medium ${isPartyEditor ? 'text-fuchsia-700/75 dark:text-fuchsia-100/65' : 'text-slate-500 dark:text-slate-400'}`}>
+                            Unclaimed
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {normalizePotluckEntries(draft[field.key]).length === 0 ? (
+                      <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${isPartyEditor ? 'border-fuchsia-200 bg-white/65 text-fuchsia-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200' : 'border-slate-200 bg-white text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300'}`}>
+                        No potluck items yet.
+                      </div>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAddPotluckRow(field.key)}
+                    className={`mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${
+                      isPartyEditor
+                        ? 'border-fuchsia-200 bg-white/85 text-fuchsia-700 hover:border-fuchsia-300 hover:bg-fuchsia-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-fuchsia-200 dark:hover:bg-white/[0.08]'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    <span className="text-sm leading-none">+</span>
+                    <span>Add item</span>
+                  </button>
+                </div>
               ) : field.type === 'select' ? (
                 <select
                   value={draft[field.key] ?? field.options?.[0]?.value ?? ''}

@@ -112,6 +112,17 @@ const parseLineItems = (value) =>
     })
     .filter((entry) => entry.item);
 
+const normalizePotluckItems = (value) =>
+  Array.isArray(value)
+    ? value
+        .map((entry) => ({
+          item: String(entry?.item || '').trim(),
+          person: String(entry?.person || '').trim(),
+          claimedByUserId: String(entry?.claimedByUserId || '').trim(),
+        }))
+        .filter((entry) => entry.item)
+    : [];
+
 const parseGuestListItems = (value) =>
   String(value || '')
     .split('\n')
@@ -284,6 +295,8 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const guestSummary = guestList.length
     ? `${guestList.filter((guest) => guest?.rsvp === 'yes').length}/${guestList.length} RSVP'd yes`
     : (plusOnesAllowed ? 'Plus-ones welcome' : 'Invite only');
+  const currentUserId = String(props.currentUserId || '').trim();
+  const canClaimPotluck = Boolean(props.canClaimPotluck && typeof props.onClaimPotluck === 'function');
   const openHeaderEditor =
     onUpdateEventData && openEditor
       ? () =>
@@ -512,16 +525,26 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                           {
                             key: 'guestList',
                             label: 'Guest List',
-                            type: 'textarea',
-                            rows: 7,
-                            value: guestList.map((guest) => `${guest?.name || ''}${guest?.rsvp && guest.rsvp !== 'pending' ? ` | ${guest.rsvp}` : ''}`).join('\n'),
-                            placeholder: 'Alex | yes\nJordan | no\nTaylor',
+                            type: 'guest-list',
+                            value: guestList,
+                            placeholder: 'Guest name',
                           },
                           { key: 'plusOnesAllowed', label: 'Allow plus-ones', type: 'toggle', value: plusOnesAllowed, toggleLabel: 'Allow plus-ones' },
                         ],
                         onSave: (values) =>
                           onUpdateEventData({
-                            guestList: parseGuestListItems(values.guestList),
+                            guestList: Array.isArray(values.guestList)
+                              ? values.guestList
+                                  .map((guest) => ({
+                                    name: String(guest?.name || '').trim(),
+                                    rsvp: String(guest?.rsvp || 'pending').trim().toLowerCase() === 'yes'
+                                      ? 'yes'
+                                      : String(guest?.rsvp || 'pending').trim().toLowerCase() === 'no'
+                                        ? 'no'
+                                        : 'pending',
+                                  }))
+                                  .filter((guest) => guest.name)
+                              : parseGuestListItems(values.guestList),
                             plusOnesAllowed: Boolean(values.plusOnesAllowed),
                           }),
                       })
@@ -618,13 +641,16 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       {
                         key: 'potluckItems',
                         label: 'Potluck list',
-                        type: 'textarea',
-                        rows: 6,
-                        value: potluckItems.map((item) => `${item?.item || ''}${item?.person ? ` | ${item.person}` : ''}`).join('\n'),
-                        placeholder: 'Chips | Alex',
+                        type: 'potluck-list',
+                        value: potluckItems,
+                        placeholder: 'Chips',
                       },
                     ],
-                    onSave: (values) => onUpdateEventData({ potluckItems: parseLineItems(values.potluckItems) }),
+                    onSave: (values) => onUpdateEventData({
+                      potluckItems: Array.isArray(values.potluckItems)
+                        ? normalizePotluckItems(values.potluckItems)
+                        : parseLineItems(values.potluckItems),
+                    }),
                   })
                 }
               >
@@ -638,12 +664,29 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                   key={`${item?.item || item}-${index}`}
                   className="group/item flex items-center justify-between rounded-xl border-2 border-fuchsia-100/80 bg-white px-4 py-3 text-sm shadow-sm transition-all hover:border-fuchsia-200 hover:shadow-md dark:border-fuchsia-500/10 dark:bg-white/5 dark:hover:border-fuchsia-500/20"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <span className="font-semibold text-gray-900 dark:text-white">{item?.item || item}</span>
+                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <span className="truncate font-semibold text-gray-900 dark:text-white">{item?.item || item}</span>
                   </div>
-                  <span className="rounded-full bg-fuchsia-50 px-2.5 py-1 text-xs font-medium text-fuchsia-700 dark:bg-fuchsia-500/10 dark:text-fuchsia-300">
-                    {item?.person || 'Unassigned'}
-                  </span>
+                  <div className="ml-3 flex items-center gap-2">
+                    <span className="rounded-full bg-fuchsia-50 px-2.5 py-1 text-xs font-medium text-fuchsia-700 dark:bg-fuchsia-500/10 dark:text-fuchsia-300">
+                      {item?.person || 'Unassigned'}
+                    </span>
+                    {canClaimPotluck ? (
+                      item?.claimedByUserId && item.claimedByUserId !== currentUserId ? null : (
+                        <button
+                          type="button"
+                          onClick={() => props.onClaimPotluck?.(index)}
+                          className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] transition ${
+                            item?.claimedByUserId === currentUserId
+                              ? 'bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/18'
+                              : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/12 dark:text-emerald-200 dark:hover:bg-emerald-500/18'
+                          }`}
+                        >
+                          {item?.claimedByUserId === currentUserId ? 'Remove me' : "I'll bring this"}
+                        </button>
+                      )
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
@@ -661,13 +704,16 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       {
                         key: 'potluckItems',
                         label: 'Potluck list',
-                        type: 'textarea',
-                        rows: 6,
-                        value: '',
-                        placeholder: 'Brownies | Jordan',
+                        type: 'potluck-list',
+                        value: [],
+                        placeholder: 'Brownies',
                       },
                     ],
-                    onSave: (values) => onUpdateEventData({ potluckItems: parseLineItems(values.potluckItems) }),
+                    onSave: (values) => onUpdateEventData({
+                      potluckItems: Array.isArray(values.potluckItems)
+                        ? normalizePotluckItems(values.potluckItems)
+                        : parseLineItems(values.potluckItems),
+                    }),
                   })
                 }
               >
