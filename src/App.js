@@ -17750,6 +17750,27 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setShowTripHighlightsModal(false);
     setShowPublishLayerModal(true);
   };
+  const tripHighlightTrip = useMemo(() => {
+    if (!activeSubCalendar) return null;
+    return {
+      ...activeSubCalendar,
+      title: String(activeSubCalendar?.title || activeSubCalendar?.name || 'Trip Highlights').trim() || 'Trip Highlights',
+      startDate: getSubCalStartRaw(activeSubCalendar),
+      endDate: getSubCalEndRaw(activeSubCalendar),
+    };
+  }, [activeSubCalendar]);
+  const tripHighlightEvents = useMemo(() => (
+    Object.entries(subCalendarEvents || {}).flatMap(([dk, arr]) => (
+      (arr || []).map((ev) => ({
+        ...ev,
+        date: dk,
+        rating: Number(subCalEventRatings[ev.id] || 0),
+        tags: subCalEventTagsMap[ev.id] || [],
+        review: String(subCalEventReviews[ev.id] || ''),
+        photos: (tripPhotos || []).filter((photo) => String(photo?.event_id || '') === String(ev?.id || '')),
+      }))
+    ))
+  ), [subCalendarEvents, subCalEventRatings, subCalEventTagsMap, subCalEventReviews, tripPhotos]);
   const parseNotificationTimestamp = (value) => {
     const raw = String(value || '').trim();
     if (!raw) return null;
@@ -27894,26 +27915,12 @@ transform: translateY(0);
       </div>
     )}
 
-    {showTripHighlightsModal && activeSubCalendar && (
+    {showTripHighlightsModal && activeSubCalendar && tripHighlightTrip && (
       <TripHighlightReel
         key={`${String(activeSubCalendar?.id || 'trip')}-${tripHighlightsOpenToken}`}
-        trip={{
-          ...activeSubCalendar,
-          title: String(activeSubCalendar?.title || activeSubCalendar?.name || 'Trip Highlights').trim() || 'Trip Highlights',
-          startDate: getSubCalStartRaw(activeSubCalendar),
-          endDate: getSubCalEndRaw(activeSubCalendar),
-        }}
+        trip={tripHighlightTrip}
         tripPhotos={tripPhotos}
-        events={Object.entries(subCalendarEvents || {}).flatMap(([dk, arr]) => (
-          (arr || []).map((ev) => ({
-            ...ev,
-            date: dk,
-            rating: Number(subCalEventRatings[ev.id] || 0),
-            tags: subCalEventTagsMap[ev.id] || [],
-            review: String(subCalEventReviews[ev.id] || ''),
-            photos: (tripPhotos || []).filter((photo) => String(photo?.event_id || '') === String(ev?.id || '')),
-          }))
-        ))}
+        events={tripHighlightEvents}
         groupRatingsByEventId={subCalEventGroupRatings}
         currentUserId={user?.id}
         onClose={() => setShowTripHighlightsModal(false)}
