@@ -1974,6 +1974,8 @@ function App() {
   const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', startTime: '', endTime: '', location: '', category: 'other' });
   const [subCalTab, setSubCalTab] = useState('itinerary'); // 'itinerary' | 'expenses' | 'photos' | 'chat'
   const [ratingsFocusEventId, setRatingsFocusEventId] = useState(null);
+  const subCalDateStripRef = useRef(null);
+  const subCalDateButtonRefs = useRef({});
 
   // Load group ratings for active trip when viewing Ratings tab (depends on subCalTab)
   useEffect(() => {
@@ -2030,9 +2032,8 @@ function App() {
   const [tripHighlightsOpenToken, setTripHighlightsOpenToken] = useState(0);
   const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
   const [deletedPhotosNoteId, setDeletedPhotosNoteId] = useState(null);
-  const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
+  const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline' | 'users'
   const [showPhotoSortMenu, setShowPhotoSortMenu] = useState(false);
-  const [tripPhotoUserFilter, setTripPhotoUserFilter] = useState('all');
   const [showSubCalInviteModal, setShowSubCalInviteModal] = useState(false);
   const [calendarShareLinkCopied, setCalendarShareLinkCopied] = useState(false);
   const [tripInviteLinkCopied, setTripInviteLinkCopied] = useState(false);
@@ -2079,13 +2080,16 @@ function App() {
       .filter(Boolean)
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [tripPhotos]);
-  const visibleTripPhotos = useMemo(() => {
-    if (tripPhotoUserFilter === 'all') return tripPhotos;
-    return (tripPhotos || []).filter((photo) => {
-      const uploaderValue = String(photo?.user_id || '').trim() || `label:${String(photo?.uploaded_by || '').trim()}`;
-      return uploaderValue === tripPhotoUserFilter;
+  const tripPhotosByUser = useMemo(() => {
+    const grouped = {};
+    (tripPhotos || []).forEach((photo) => {
+      const value = String(photo?.user_id || '').trim() || `label:${String(photo?.uploaded_by || '').trim()}`;
+      const label = String(photo?.uploaded_by || resolveHandleLikeLabel(photo?.user_id || 'User', photo?.user_id) || 'User').trim() || 'User';
+      if (!grouped[value]) grouped[value] = { label, photos: [] };
+      grouped[value].photos.push(photo);
     });
-  }, [tripPhotos, tripPhotoUserFilter]);
+    return Object.values(grouped).sort((a, b) => a.label.localeCompare(b.label));
+  }, [tripPhotos]);
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
@@ -4305,14 +4309,15 @@ function App() {
   }, [activeSubCalendar?.id, deletedPhotoIds]);
 
   useEffect(() => {
-    setTripPhotoUserFilter('all');
-  }, [activeSubCalendar?.id]);
-
-  useEffect(() => {
-    if (tripPhotoUserFilter === 'all') return;
-    if (tripPhotoUserOptions.some((option) => option.value === tripPhotoUserFilter)) return;
-    setTripPhotoUserFilter('all');
-  }, [tripPhotoUserFilter, tripPhotoUserOptions]);
+    const strip = subCalDateStripRef.current;
+    const selectedKey = subCalSelectedDate ? getDateKey(subCalSelectedDate) : '';
+    const selectedButton = selectedKey ? subCalDateButtonRefs.current?.[selectedKey] : null;
+    if (!strip || !selectedButton) return;
+    const stripRect = strip.getBoundingClientRect();
+    const buttonRect = selectedButton.getBoundingClientRect();
+    const targetLeft = Math.max(0, strip.scrollLeft + (buttonRect.left - stripRect.left) - 16);
+    strip.scrollTo({ left: targetLeft, behavior: 'smooth' });
+  }, [activeSubCalendar?.id, subCalSelectedDate]);
 
   useEffect(() => {
     const subCalId = String(activeSubCalendar?.id || '').trim();
@@ -28375,6 +28380,7 @@ transform: translateY(0);
         {/* Day tabs */}
         <div className="bg-white/55 dark:bg-slate-950/35 border-b border-white/10 backdrop-blur-sm">
           <div
+            ref={subCalDateStripRef}
             className="flex gap-2 px-4 py-3 overflow-x-auto items-center"
             onMouseLeave={() => { if (shakingDates) { clearTimeout(shakingTimeoutRef.current); setShakingDates(false); } }}
           >
@@ -28409,6 +28415,10 @@ transform: translateY(0);
                   onTouchCancel={() => clearTimeout(shakingTimeoutRef.current)}
                 >
                   <button
+                    ref={(node) => {
+                      if (node) subCalDateButtonRefs.current[dk] = node;
+                      else delete subCalDateButtonRefs.current[dk];
+                    }}
                     onClick={() => { if (shakingDates) return; setSubCalSelectedDate(date); }}
                     className={`flex min-w-[68px] flex-col items-center px-3 py-2.5 rounded-2xl transition-all ${
                       isSelected && !shakingDates
@@ -29420,22 +29430,6 @@ transform: translateY(0);
                   {photoUploadMessage}
                 </span>
               )}
-                {tripPhotoUserOptions.length > 0 && (
-                  <div className="ml-auto sm:ml-0">
-                    <label className="sr-only" htmlFor="trip-photo-user-filter">Filter photos by uploader</label>
-                    <select
-                      id="trip-photo-user-filter"
-                      value={tripPhotoUserFilter}
-                      onChange={(e) => setTripPhotoUserFilter(e.target.value)}
-                      className="min-h-[2rem] rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200"
-                    >
-                      <option value="all">All users</option>
-                      {tripPhotoUserOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
                 <div className="relative ml-auto">
                   <button
                     onClick={() => setShowPhotoSortMenu((prev) => !prev)}
@@ -29472,19 +29466,30 @@ transform: translateY(0);
                       >
                         Timeline
                       </button>
+                      {tripPhotoUserOptions.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setPhotoView('users');
+                            setShowPhotoSortMenu(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${photoView === 'users' ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                        >
+                          Users
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
             </div>
 
-            {visibleTripPhotos.length === 0 ? (
+            {tripPhotos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center px-8">
                 <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200/80 bg-white/90 text-gray-500 shadow-sm dark:border-white/10 dark:bg-slate-900/70 dark:text-gray-300">
                   <Camera className="w-4 h-4" />
                 </div>
-                <div className="text-gray-500 dark:text-gray-400 font-medium mb-1">{tripPhotos.length === 0 ? 'No photos yet' : 'No photos match this filter'}</div>
+                <div className="text-gray-500 dark:text-gray-400 font-medium mb-1">No photos yet</div>
                 <div className="text-sm text-gray-400 dark:text-gray-500">
-                  {tripPhotos.length === 0 ? 'Tap "Add Photos" to share memories from this trip' : 'Try switching the uploader filter to see more trip photos'}
+                  Tap "Add Photos" to share memories from this trip
                 </div>
               </div>
             ) : photoView === 'grid' ? (
@@ -29493,7 +29498,7 @@ transform: translateY(0);
                 {/* Group by date */}
                 {(() => {
                   const byDate = {};
-                  visibleTripPhotos.forEach(p => {
+                  tripPhotos.forEach(p => {
                     const d = p.date || 'unlinked';
                     if (!byDate[d]) byDate[d] = [];
                     byDate[d].push(p);
@@ -29606,12 +29611,12 @@ transform: translateY(0);
                   ));
                 })()}
               </div>
-            ) : (
+            ) : photoView === 'timeline' ? (
               /* -- TIMELINE VIEW -- */
               <div className="px-4 pb-4 pt-6 space-y-8">
                 {(() => {
                   const byDate = {};
-                  visibleTripPhotos.forEach(p => {
+                  tripPhotos.forEach(p => {
                     const d = p.date || 'unlinked';
                     if (!byDate[d]) byDate[d] = [];
                     byDate[d].push(p);
@@ -29734,6 +29739,104 @@ transform: translateY(0);
                     </div>
                   ));
                 })()}
+              </div>
+            ) : (
+              <div className="px-4 pb-4 pt-6">
+                {tripPhotosByUser.map(({ label, photos }) => (
+                  <div key={label} className="mb-6">
+                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      <span>{label}</span>
+                      <span className="text-gray-300 dark:text-gray-600">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {photos.map(photo => {
+                        const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
+                        const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
+                        const hasPhotoReactions = Object.keys(photoReactions).length > 0;
+                        const isPhotoReactionPickerOpen = tripPhotoReactionPickerId === String(photo.id || '');
+                        return (
+                        <div
+                          key={photo.id}
+                          className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer ${isSelectedPhoto ? 'ring-2 ring-purple-500' : ''}`}
+                          onClick={() => handlePhotoTap(photo)}
+                          onDoubleClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handlePhotoDoubleTap(photo);
+                          }}
+                          onMouseDown={() => startPhotoHoldAction(photo)}
+                          onMouseUp={clearPhotoReactionHold}
+                          onMouseLeave={clearPhotoReactionHold}
+                          onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
+                          onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
+                          onTouchCancel={clearPhotoReactionHold}
+                        >
+                          <img
+                            src={photo.url}
+                            alt={photo.caption || ''}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                            sizes="(max-width: 640px) 33vw, 20vw"
+                            draggable={false}
+                            onError={() => { markPhotoDeleted(photo.id); }}
+                          />
+                          {isPhotoSelectionMode && (
+                            <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
+                              <span className={`text-xs ${isSelectedPhoto ? 'text-emerald-300' : 'text-white/70'}`}>{isSelectedPhoto ? 'âœ“' : ''}</span>
+                            </div>
+                          )}
+                          {photo.caption && (
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-2">
+                              <p className="truncate text-xs text-white drop-shadow">{photo.caption}</p>
+                            </div>
+                          )}
+                          {!isPhotoSelectionMode && photoDeleteMode && (
+                            <button
+                              onClick={e => { e.stopPropagation(); deleteTripPhoto(photo); }}
+                              className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center shadow"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {!isPhotoSelectionMode && !photoDeleteMode && hasPhotoReactions && (
+                            <div className="absolute left-1.5 right-1.5 bottom-1.5 flex flex-wrap gap-1 pointer-events-none">
+                              {Object.entries(photoReactions).map(([emoji, users]) => (
+                                <span
+                                  key={emoji}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/55 text-white text-[10px]"
+                                  title={(users || []).map((entry) => entry?.label || 'Someone').join(', ')}
+                                >
+                                  <span>{emoji}</span>
+                                  <span>{Array.isArray(users) ? users.length : 0}</span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {!isPhotoSelectionMode && !photoDeleteMode && isPhotoReactionPickerOpen && (
+                            <div className="trip-photo-reaction-picker absolute left-2 right-2 bottom-3 z-20 overflow-x-auto rounded-[22px] border border-white/15 bg-black/72 p-2 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+                              <div className="flex w-max min-w-full items-center gap-1.5 pr-1">
+                              {PHOTO_REACTION_EMOJIS.map((emoji) => (
+                                <button
+                                  key={`${photo.id}-${emoji}`}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleTripPhotoReaction(photo, emoji);
+                                  }}
+                                  className="flex h-9 w-9 items-center justify-center rounded-full p-0 text-xl transition-transform hover:scale-110 hover:bg-white/10"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )})}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
