@@ -754,6 +754,15 @@ const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
   'weather',
   'categories',
 ]);
+const PICKLEBALL_559_DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
+  'theme',
+  'weather',
+  'gauntlet',
+  'roundrobin',
+  'scramble',
+  'notifications',
+  'categories',
+]);
 const WIDGET_SPAWN_SLOTS = Object.freeze({
   account: { x: 10, y: 80 },
   notifications: { x: 20, y: 80 },
@@ -771,6 +780,13 @@ const WIDGET_SPAWN_SLOTS = Object.freeze({
   theme: { x: 55, y: 65 },
   import: { x: 75, y: 65 },
 });
+const getDefaultControlWidgetOrderForLayer = (layerName = '') => {
+  const normalizedLayerName = String(layerName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (normalizedLayerName === '559pickleball') {
+    return [...PICKLEBALL_559_DEFAULT_CONTROL_WIDGET_ORDER];
+  }
+  return [...DEFAULT_CONTROL_WIDGET_ORDER];
+};
 const WIDGET_GRID_COLUMNS = 10;
 const WIDGET_GRID_ROWS = 40;
 const WIDGET_MIN_SIZE = 38;
@@ -5923,7 +5939,7 @@ function App() {
   const [useManualRoundRobinRoster, setUseManualRoundRobinRoster] = useState(true);
   const [roundRobinError, setRoundRobinError] = useState('');
   const [showChatPanel, setShowChatPanel] = useState(false);
-  const [controlWidgetOrder, setControlWidgetOrder] = useState([...DEFAULT_CONTROL_WIDGET_ORDER]);
+  const [controlWidgetOrder, setControlWidgetOrder] = useState(() => getDefaultControlWidgetOrderForLayer());
   const [showControlWidgetAddPanel, setShowControlWidgetAddPanel] = useState(false);
   const [coverWidgetLayout, setCoverWidgetLayout] = useState({});
   const [controlWidgetPrefsReady, setControlWidgetPrefsReady] = useState(false);
@@ -19122,9 +19138,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id]);
 
   useEffect(() => {
+    const defaultControlWidgetOrder = getDefaultControlWidgetOrderForLayer(activeLayer?.name || calendarTitle || '');
     if (!user?.id || !activeLayerId) {
       setControlWidgetPrefsReady(false);
-      setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+      setControlWidgetOrder(defaultControlWidgetOrder);
       setCoverWidgetLayout({});
       setShowControlWidgetAddPanel(false);
       return;
@@ -19149,11 +19166,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
       }
       if (!raw) {
-        setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+        setControlWidgetOrder(defaultControlWidgetOrder);
       } else {
         const parsed = JSON.parse(raw);
         if (!Array.isArray(parsed)) {
-          setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+          setControlWidgetOrder(defaultControlWidgetOrder);
         } else {
           const normalized = parsed
             .map((id) => String(id || '').trim())
@@ -19201,11 +19218,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
       setControlWidgetPrefsReady(true);
     } catch {
-      setControlWidgetOrder([...DEFAULT_CONTROL_WIDGET_ORDER]);
+      setControlWidgetOrder(defaultControlWidgetOrder);
       setCoverWidgetLayout({});
       setControlWidgetPrefsReady(true);
     }
-  }, [user?.id, activeLayerId, getControlWidgetStorageBases, getControlWidgetStorageMapKey]);
+  }, [user?.id, activeLayerId, activeLayer?.name, calendarTitle, getControlWidgetStorageBases, getControlWidgetStorageMapKey]);
 
   useEffect(() => {
     if (!user?.id || !activeLayerId) {
