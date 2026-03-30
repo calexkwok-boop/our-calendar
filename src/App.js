@@ -3010,10 +3010,11 @@ function App() {
         .eq('id', subCalId)
         .maybeSingle();
 
-      const { data: memberRows } = await supabase
-        .from('sub_calendar_members')
-        .select('*')
-        .eq('sub_calendar_id', subCalId);
+      const { data: memberRows, error: memberRowsError } = await supabase
+        .rpc('get_trip_members', { p_sub_calendar_id: String(subCalId || '') });
+      if (memberRowsError) {
+        console.error('Error loading trip members:', memberRowsError);
+      }
 
       const layerId = String(subCalRow?.layer_id || '').trim();
       let sharedRows = [];
