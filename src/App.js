@@ -2032,6 +2032,7 @@ function App() {
   const [deletedPhotosNoteId, setDeletedPhotosNoteId] = useState(null);
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline'
   const [showPhotoSortMenu, setShowPhotoSortMenu] = useState(false);
+  const [tripPhotoUserFilter, setTripPhotoUserFilter] = useState('all');
   const [showSubCalInviteModal, setShowSubCalInviteModal] = useState(false);
   const [calendarShareLinkCopied, setCalendarShareLinkCopied] = useState(false);
   const [tripInviteLinkCopied, setTripInviteLinkCopied] = useState(false);
@@ -2065,6 +2066,26 @@ function App() {
   const REACTION_EMOJIS = ['😍', '🔥', '👏', '😂', '🥹', '🤩', '💯', '🙌', '❤️'];
   const PHOTO_REACTION_EMOJIS = ['😍', '❤️', '🥹', '😂', '🔥', '👏', '🙌', '🤩', '💯', '✨', '🎉', '😭', '😮', '😎', '🥰', '🙏', '💖', '📸'];
   const getTripPhotoReactionsLocalKey = (subCalId) => `subcal-trip-photo-reactions-${String(subCalId || '').trim()}`;
+  const tripPhotoUserOptions = useMemo(() => {
+    const seen = new Set();
+    return (tripPhotos || [])
+      .map((photo) => {
+        const value = String(photo?.user_id || '').trim() || `label:${String(photo?.uploaded_by || '').trim()}`;
+        const label = String(photo?.uploaded_by || resolveHandleLikeLabel(photo?.user_id || 'User', photo?.user_id) || 'User').trim();
+        if (!value || !label || seen.has(value)) return null;
+        seen.add(value);
+        return { value, label };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [tripPhotos]);
+  const visibleTripPhotos = useMemo(() => {
+    if (tripPhotoUserFilter === 'all') return tripPhotos;
+    return (tripPhotos || []).filter((photo) => {
+      const uploaderValue = String(photo?.user_id || '').trim() || `label:${String(photo?.uploaded_by || '').trim()}`;
+      return uploaderValue === tripPhotoUserFilter;
+    });
+  }, [tripPhotos, tripPhotoUserFilter]);
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
@@ -3777,22 +3798,11 @@ function App() {
   const ensureCurrentUserTripMembership = async (subCal) => {
     try {
       const subCalId = String(subCal?.id || '').trim();
-      const layerId = String(subCal?.layer_id || subCal?.calendar_id || '').trim();
       const userId = String(user?.id || '').trim();
       const myEmail = normalizeEmail(user?.email);
       const myPhone = normalizePhoneNumber(user?.phone);
-      if (!subCalId || !layerId || !userId || (!myEmail && !myPhone)) return false;
+      if (!subCalId || !userId || (!myEmail && !myPhone)) return false;
       if (String(subCal?.owner_id || '') === userId) return true;
-
-      const shareRecipientFilter = buildShareRecipientFilter(userId, myEmail, myPhone);
-      if (!shareRecipientFilter) return false;
-      const { data: sharedRow, error: sharedErr } = await supabase
-        .from('shared_access')
-        .select('id')
-        .eq('layer_id', layerId)
-        .or(shareRecipientFilter)
-        .maybeSingle();
-      if (sharedErr || !sharedRow?.id) return false;
 
       const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
       if (!memberRecipientFilter) return false;
@@ -4293,6 +4303,16 @@ function App() {
     if (!activeSubCalendar?.id) return;
     loadMergedTripPhotos(activeSubCalendar, deletedPhotoIds);
   }, [activeSubCalendar?.id, deletedPhotoIds]);
+
+  useEffect(() => {
+    setTripPhotoUserFilter('all');
+  }, [activeSubCalendar?.id]);
+
+  useEffect(() => {
+    if (tripPhotoUserFilter === 'all') return;
+    if (tripPhotoUserOptions.some((option) => option.value === tripPhotoUserFilter)) return;
+    setTripPhotoUserFilter('all');
+  }, [tripPhotoUserFilter, tripPhotoUserOptions]);
 
   useEffect(() => {
     const subCalId = String(activeSubCalendar?.id || '').trim();
@@ -29400,6 +29420,22 @@ transform: translateY(0);
                   {photoUploadMessage}
                 </span>
               )}
+                {tripPhotoUserOptions.length > 0 && (
+                  <div className="ml-auto sm:ml-0">
+                    <label className="sr-only" htmlFor="trip-photo-user-filter">Filter photos by uploader</label>
+                    <select
+                      id="trip-photo-user-filter"
+                      value={tripPhotoUserFilter}
+                      onChange={(e) => setTripPhotoUserFilter(e.target.value)}
+                      className="min-h-[2rem] rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200"
+                    >
+                      <option value="all">All users</option>
+                      {tripPhotoUserOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="relative ml-auto">
                   <button
                     onClick={() => setShowPhotoSortMenu((prev) => !prev)}
@@ -29441,13 +29477,15 @@ transform: translateY(0);
                 </div>
             </div>
 
-            {tripPhotos.length === 0 ? (
+            {visibleTripPhotos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center px-8">
                 <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200/80 bg-white/90 text-gray-500 shadow-sm dark:border-white/10 dark:bg-slate-900/70 dark:text-gray-300">
                   <Camera className="w-4 h-4" />
                 </div>
-                <div className="text-gray-500 dark:text-gray-400 font-medium mb-1">No photos yet</div>
-                <div className="text-sm text-gray-400 dark:text-gray-500">Tap "Add Photos" to share memories from this trip</div>
+                <div className="text-gray-500 dark:text-gray-400 font-medium mb-1">{tripPhotos.length === 0 ? 'No photos yet' : 'No photos match this filter'}</div>
+                <div className="text-sm text-gray-400 dark:text-gray-500">
+                  {tripPhotos.length === 0 ? 'Tap "Add Photos" to share memories from this trip' : 'Try switching the uploader filter to see more trip photos'}
+                </div>
               </div>
             ) : photoView === 'grid' ? (
               /* -- GRID VIEW -- */
@@ -29455,7 +29493,7 @@ transform: translateY(0);
                 {/* Group by date */}
                 {(() => {
                   const byDate = {};
-                  tripPhotos.forEach(p => {
+                  visibleTripPhotos.forEach(p => {
                     const d = p.date || 'unlinked';
                     if (!byDate[d]) byDate[d] = [];
                     byDate[d].push(p);
@@ -29573,7 +29611,7 @@ transform: translateY(0);
               <div className="px-4 pb-4 pt-6 space-y-8">
                 {(() => {
                   const byDate = {};
-                  tripPhotos.forEach(p => {
+                  visibleTripPhotos.forEach(p => {
                     const d = p.date || 'unlinked';
                     if (!byDate[d]) byDate[d] = [];
                     byDate[d].push(p);

@@ -705,15 +705,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
     },
   ];
 
-  if (topMemoryMoments.length > 0) {
-    slides.push({
-      type: 'chapter',
-      eyebrow: 'The Real Story',
-      title: 'The moments between the plans',
-      subtitle: '',
-      background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)',
-    });
-  } else if (scenicMoment) {
+  if (!topMemoryMoments.length && scenicMoment) {
     slides.push({
       type: 'chapter',
       eyebrow: 'Opening Scene',
@@ -745,16 +737,6 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         rating: 0,
         treatment: getMemoryPhotoTreatment(index),
       });
-      if (index === 1 && topMemoryMoments.length >= 3) {
-        slides.push({
-          type: 'spotlight',
-          eyebrow: 'Little Moments',
-          title: 'In-between moments',
-          caption: '',
-          subcopy: '',
-          background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
-        });
-      }
       return;
     }
 
