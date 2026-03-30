@@ -348,6 +348,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                 onUpdateEventData && openEditor
                   ? () =>
                       openEditor({
+                        variant: 'party',
                         title: 'Theme',
                         subtitle: 'Set the party vibe. Think colorful, fun, and instantly recognizable.',
                         fields: [
@@ -371,6 +372,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                 onUpdateEventData && openEditor
                   ? () =>
                       openEditor({
+                        variant: 'party',
                         title: 'Guest Style',
                         subtitle: 'Decide how open the invitation should feel for guests.',
                         fields: [
@@ -396,6 +398,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                 onUpdateEventData && openEditor
                   ? () =>
                       openEditor({
+                        variant: 'party',
                         title: 'Mood',
                         subtitle: 'Drop in a playlist or describe the soundtrack for the night.',
                         fields: [
@@ -426,6 +429,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               <ActionPill
                 onClick={() =>
                   openEditor({
+                    variant: 'party',
                     title: 'Edit Potluck',
                     subtitle: 'Use one line per item. Optional format: `dish | person`.',
                     fields: [
@@ -470,6 +474,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               <ActionPill
                 onClick={() =>
                   openEditor({
+                    variant: 'party',
                     title: 'Add Potluck Items',
                     subtitle: 'Use one line per item. Optional format: `dish | person`.',
                     fields: [

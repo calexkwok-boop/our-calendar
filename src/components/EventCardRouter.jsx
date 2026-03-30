@@ -138,6 +138,7 @@ const ActionPill = ({ href, onClick, children, tone = 'neutral' }) => {
 const EventEditorModal = ({ config, onClose, onSave }) => {
   const [draft, setDraft] = useState({});
   const [saving, setSaving] = useState(false);
+  const isPartyEditor = config?.variant === 'party';
 
   useEffect(() => {
     if (!config) {
@@ -174,43 +175,74 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
   const modalNode = (
     <div className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/55 p-3 pt-6 pb-6 backdrop-blur-md sm:p-6" onClick={onClose}>
       <form
-        className="max-h-[min(78dvh,42rem)] w-full max-w-md overflow-hidden rounded-[28px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.24)] dark:border-white/10 dark:bg-slate-950"
+        className={`max-h-[min(78dvh,42rem)] w-full max-w-md overflow-hidden rounded-[28px] border shadow-[0_30px_80px_rgba(15,23,42,0.24)] ${
+          isPartyEditor
+            ? 'border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/95 to-cyan-50/95 dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#20162e] dark:via-[#251b38] dark:to-[#16233a]'
+            : 'border-white/10 bg-white dark:border-white/10 dark:bg-slate-950'
+        }`}
         onClick={(event) => event.stopPropagation()}
         onSubmit={handleSubmit}
       >
-        <div className="border-b border-black/5 bg-gradient-to-br from-white via-slate-50 to-slate-100 px-5 py-5 dark:border-white/10 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
+        <div className={`relative overflow-hidden border-b px-5 py-5 ${
+          isPartyEditor
+            ? 'border-fuchsia-200/60 bg-gradient-to-br from-white via-rose-50/90 to-cyan-50/90 dark:border-fuchsia-400/15 dark:from-[#2a1d3e] dark:via-[#231933] dark:to-[#1a2940]'
+            : 'border-black/5 bg-gradient-to-br from-white via-slate-50 to-slate-100 dark:border-white/10 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900'
+        }`}>
+          {isPartyEditor ? (
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+              <div className="absolute left-3 top-3 text-2xl opacity-70 dark:opacity-60">🎉</div>
+              <div className="absolute right-12 top-2 text-[1.7rem] opacity-65 dark:opacity-55">🥂</div>
+              <div className="absolute right-4 top-10 h-10 w-7 rounded-full bg-gradient-to-b from-cyan-200/60 to-cyan-500/70 dark:from-cyan-200/35 dark:to-cyan-500/45" />
+              <div className="absolute right-7 top-[4.2rem] h-7 w-px bg-gradient-to-b from-cyan-200/75 to-transparent" />
+              <div className="absolute left-11 top-8 h-12 w-8 rounded-full bg-gradient-to-b from-fuchsia-200/60 to-fuchsia-500/70 dark:from-fuchsia-200/35 dark:to-fuchsia-500/45" />
+              <div className="absolute left-[3.35rem] top-[4.75rem] h-8 w-px bg-gradient-to-b from-fuchsia-200/75 to-transparent" />
+              <div className="absolute left-[38%] top-2 text-xl opacity-55 dark:opacity-50">🎊</div>
+            </div>
+          ) : null}
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <div className="text-[18px] font-bold tracking-tight text-slate-950 dark:text-white">{config.title || 'Edit details'}</div>
-              {config.subtitle ? <div className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">{config.subtitle}</div> : null}
+              <div className={`text-[18px] font-bold tracking-tight ${isPartyEditor ? 'text-fuchsia-950 dark:text-white' : 'text-slate-950 dark:text-white'}`}>{config.title || 'Edit details'}</div>
+              {config.subtitle ? <div className={`mt-1 text-sm leading-6 ${isPartyEditor ? 'text-fuchsia-700/80 dark:text-fuchsia-100/75' : 'text-slate-500 dark:text-slate-400'}`}>{config.subtitle}</div> : null}
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/5 bg-white/80 text-slate-500 transition hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+              className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${
+                isPartyEditor
+                  ? 'border-fuchsia-200/80 bg-white/75 text-fuchsia-500 hover:text-fuchsia-700 dark:border-white/10 dark:bg-white/10 dark:text-fuchsia-200 dark:hover:bg-white/15 dark:hover:text-white'
+                  : 'border-black/5 bg-white/80 text-slate-500 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white'
+              }`}
             >
               <span className="text-lg leading-none">×</span>
             </button>
           </div>
         </div>
 
-        <div className="space-y-4 overflow-y-auto px-5 py-5">
+        <div className={`space-y-4 overflow-y-auto px-5 py-5 ${isPartyEditor ? 'bg-gradient-to-b from-transparent via-white/20 to-white/30 dark:via-white/[0.02] dark:to-white/[0.03]' : ''}`}>
           {(config.fields || []).map((field) => (
             <label key={field.key} className="block">
-              <div className="mb-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{field.label}</div>
+              <div className={`mb-1.5 text-[12px] font-bold uppercase tracking-[0.16em] ${isPartyEditor ? 'text-fuchsia-700 dark:text-fuchsia-200' : 'text-slate-500 dark:text-slate-400'}`}>{field.label}</div>
               {field.type === 'textarea' ? (
                 <textarea
                   value={draft[field.key] ?? ''}
                   onChange={(event) => setFieldValue(field.key, event.target.value)}
                   rows={field.rows || 4}
                   placeholder={field.placeholder || ''}
-                  className="min-h-[112px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]"
+                  className={`min-h-[112px] w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${
+                    isPartyEditor
+                      ? 'border-fuchsia-200 bg-white/85 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
+                      : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]'
+                  }`}
                 />
               ) : field.type === 'select' ? (
                 <select
                   value={draft[field.key] ?? field.options?.[0]?.value ?? ''}
                   onChange={(event) => setFieldValue(field.key, event.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[15px] text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:focus:border-white/20 dark:focus:bg-white/[0.06]"
+                  className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${
+                    isPartyEditor
+                      ? 'border-fuchsia-200 bg-white/85 text-slate-900 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
+                      : 'border-slate-200 bg-slate-50 text-slate-900 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:focus:border-white/20 dark:focus:bg-white/[0.06]'
+                  }`}
                 >
                   {(field.options || []).map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -222,8 +254,12 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   onClick={() => setFieldValue(field.key, !draft[field.key])}
                   className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
                     draft[field.key]
-                      ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-950'
-                      : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200'
+                      ? isPartyEditor
+                        ? 'border-fuchsia-500 bg-gradient-to-r from-fuchsia-600 to-cyan-500 text-white dark:border-fuchsia-300 dark:from-fuchsia-500 dark:to-cyan-400 dark:text-white'
+                        : 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-950'
+                      : isPartyEditor
+                        ? 'border-fuchsia-200 bg-white/85 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200'
                   }`}
                 >
                   <span className="text-[15px] font-medium">{field.toggleLabel || field.label}</span>
@@ -237,19 +273,35 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   value={draft[field.key] ?? ''}
                   onChange={(event) => setFieldValue(field.key, event.target.value)}
                   placeholder={field.placeholder || ''}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]"
+                  className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${
+                    isPartyEditor
+                      ? 'border-fuchsia-200 bg-white/85 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
+                      : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]'
+                  }`}
                 />
               )}
-              {field.help ? <div className="mt-1.5 text-xs leading-5 text-slate-500 dark:text-slate-400">{field.help}</div> : null}
+              {field.help ? <div className={`mt-1.5 text-xs leading-5 ${isPartyEditor ? 'text-fuchsia-700/80 dark:text-fuchsia-100/70' : 'text-slate-500 dark:text-slate-400'}`}>{field.help}</div> : null}
             </label>
           ))}
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-black/5 bg-slate-50/80 px-5 py-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <button type="button" onClick={onClose} className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200 dark:hover:bg-white/[0.08]">
+        <div className={`flex items-center justify-end gap-3 border-t px-5 py-4 ${
+          isPartyEditor
+            ? 'border-fuchsia-200/60 bg-white/50 dark:border-white/10 dark:bg-white/[0.04]'
+            : 'border-black/5 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.03]'
+        }`}>
+          <button type="button" onClick={onClose} className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+            isPartyEditor
+              ? 'border-fuchsia-200 bg-white text-fuchsia-700 hover:border-fuchsia-300 hover:bg-fuchsia-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200 dark:hover:bg-white/[0.08]'
+              : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200 dark:hover:bg-white/[0.08]'
+          }`}>
             Cancel
           </button>
-          <button type="submit" disabled={saving} className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-default disabled:opacity-70 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100">
+          <button type="submit" disabled={saving} className={`rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-default disabled:opacity-70 ${
+            isPartyEditor
+              ? 'bg-gradient-to-r from-fuchsia-600 to-cyan-500 text-white hover:from-fuchsia-700 hover:to-cyan-600 dark:from-fuchsia-500 dark:to-cyan-400'
+              : 'bg-slate-950 text-white hover:bg-black dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100'
+          }`}>
             {saving ? 'Saving…' : (config.saveLabel || 'Save changes')}
           </button>
         </div>
@@ -834,6 +886,7 @@ const EventCardRouter = ({ event, onEditBasics, ...props }) => {
   };
   const handleOpenBasicsEditor = typeof onEditBasics === 'function'
     ? () => openEditor({
+        variant: category === 'party' ? 'party' : undefined,
         title: 'Edit Event Details',
         subtitle: 'Update the name, location, and notes for this event.',
         fields: [
