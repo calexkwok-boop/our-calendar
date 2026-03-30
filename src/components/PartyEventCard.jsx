@@ -204,6 +204,8 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const theme = String(event?.theme || '').trim();
   const musicPlaylist = String(event?.musicPlaylist || '').trim();
   const plusOnesAllowed = event?.plusOnesAllowed !== false;
+  const titleText = String(event?.title || '').trim();
+  const shouldShowLocationLine = Boolean(event?.location) && !titleText.includes('@');
 
   return (
     <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/55 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#15111f] dark:via-[#1b1930] dark:to-[#0f1727] dark:shadow-[0_24px_80px_rgba(0,0,0,0.38)]">
@@ -309,7 +311,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
 
           <div className="mt-4 space-y-2 text-[15px] text-gray-600 dark:text-gray-300">
             <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>
-            {event?.location ? <div className="font-medium">{event.location}</div> : null}
+            {shouldShowLocationLine ? <div className="font-medium">{event.location}</div> : null}
             {theme ? (
               <div className="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-fuchsia-700 dark:border-fuchsia-400/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-200">
                 {theme}
