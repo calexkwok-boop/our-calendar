@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown, Share2, Trophy } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
@@ -2019,6 +2019,7 @@ function App() {
   const [showSubCalInviteModal, setShowSubCalInviteModal] = useState(false);
   const [calendarShareLinkCopied, setCalendarShareLinkCopied] = useState(false);
   const [tripInviteLinkCopied, setTripInviteLinkCopied] = useState(false);
+  const [tripInviteShareUrl, setTripInviteShareUrl] = useState('');
   const [showSubCalNotesModal, setShowSubCalNotesModal] = useState(false);
   const [tripChatMessages, setTripChatMessages] = useState([]);
   const [tripChatDraft, setTripChatDraft] = useState('');
@@ -3924,7 +3925,7 @@ function App() {
     setSubCalInviteEmail('');
     setShowSubCalInviteModal(false);
   };
-  const getOrCreateShareLink = async ({ targetType, targetId, layerId = null }) => {
+  const getOrCreateShareLink = useCallback(async ({ targetType, targetId, layerId = null }) => {
     const normalizedTargetType = String(targetType || '').trim().toLowerCase();
     const normalizedTargetId = String(targetId || '').trim();
     const normalizedLayerId = String(layerId || '').trim() || null;
@@ -3977,7 +3978,7 @@ function App() {
       console.error('Share link create exception:', error);
     }
     return null;
-  };
+  }, [user?.id]);
   const copyTextToClipboard = async (text) => {
     const value = String(text || '');
     if (!value || typeof window === 'undefined' || typeof document === 'undefined') return false;
@@ -4014,18 +4015,49 @@ function App() {
       alert(value);
     }
   };
+  useEffect(() => {
+    if (!showSubCalInviteModal || !activeSubCalendar?.id || typeof window === 'undefined') {
+      setTripInviteShareUrl('');
+      return;
+    }
+
+    let cancelled = false;
+    const tripId = String(activeSubCalendar?.id || '').trim();
+    const fallbackUrl = tripId ? `${window.location.origin}?trip=${tripId}` : '';
+    setTripInviteShareUrl(fallbackUrl);
+
+    (async () => {
+      const shareLink = await getOrCreateShareLink({
+        targetType: 'trip',
+        targetId: tripId,
+        layerId: String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || '').trim() || null,
+      });
+      if (cancelled) return;
+      if (shareLink?.token) {
+        setTripInviteShareUrl(`${window.location.origin}?share=${encodeURIComponent(shareLink.token)}`);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showSubCalInviteModal, activeSubCalendar?.id, activeSubCalendar?.layer_id, activeSubCalendar?.calendar_id, getOrCreateShareLink]);
   const copyTripInviteLink = async () => {
     const tripId = String(activeSubCalendar?.id || '').trim();
     if (!tripId || typeof window === 'undefined') return;
     try {
-      const shareLink = await getOrCreateShareLink({
-        targetType: 'trip',
-        targetId: tripId,
-        layerId: String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || activeLayerId || '').trim() || null,
-      });
-      const shareUrl = shareLink?.token
-        ? `${window.location.origin}?share=${encodeURIComponent(shareLink.token)}`
-        : `${window.location.origin}?trip=${tripId}`;
+      let shareUrl = String(tripInviteShareUrl || '').trim();
+      if (!shareUrl) {
+        const shareLink = await getOrCreateShareLink({
+          targetType: 'trip',
+          targetId: tripId,
+          layerId: String(activeSubCalendar?.layer_id || activeSubCalendar?.calendar_id || '').trim() || null,
+        });
+        shareUrl = shareLink?.token
+          ? `${window.location.origin}?share=${encodeURIComponent(shareLink.token)}`
+          : `${window.location.origin}?trip=${tripId}`;
+        setTripInviteShareUrl(shareUrl);
+      }
       const copied = await copyTextToClipboard(shareUrl);
       if (!copied) {
         presentManualCopyFallback(shareUrl, 'Copy this trip link');

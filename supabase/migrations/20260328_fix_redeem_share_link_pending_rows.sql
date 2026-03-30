@@ -17,10 +17,12 @@ declare
   v_phone text := null;
   v_owner_id uuid := null;
   v_layer_id text := null;
+  v_layer_uuid uuid := null;
   v_trip_id text := null;
-  v_existing_share_id text := null;
-  v_existing_trip_member_id text := null;
-  v_verified_share_id text := null;
+  v_trip_uuid uuid := null;
+  v_existing_share_id uuid := null;
+  v_existing_trip_member_id uuid := null;
+  v_verified_share_id uuid := null;
 begin
   if v_user_id is null then
     raise exception 'Authentication required';
@@ -55,11 +57,13 @@ begin
       return;
     end if;
 
+    v_layer_uuid := v_layer_id::uuid;
+
     if v_owner_id is distinct from v_user_id then
-      select sa.id::text
+      select sa.id
       into v_existing_share_id
       from public.shared_access sa
-      where sa.layer_id::text = v_layer_id
+      where sa.layer_id = v_layer_uuid
         and (
           sa.shared_with_id = v_user_id
           or (v_email is not null and lower(coalesce(sa.shared_with_email, '')) = lower(v_email))
@@ -69,11 +73,11 @@ begin
       limit 1;
 
       if v_existing_share_id is null then
-        select sa.id::text
+        select sa.id
         into v_existing_share_id
         from public.shared_access sa
         where sa.owner_id = v_owner_id
-          and sa.layer_id::text = v_layer_id
+          and sa.layer_id = v_layer_uuid
           and coalesce(sa.shared_with_id::text, '') = ''
           and not coalesce(sa.is_banned, false)
         order by sa.created_at asc nulls last
@@ -104,8 +108,8 @@ begin
           )
           values (
             v_owner_id,
-            v_layer_id,
-            v_layer_id,
+            v_layer_uuid,
+            v_layer_uuid,
             v_user_id,
             v_email,
             v_phone,
@@ -119,10 +123,10 @@ begin
         end;
       end if;
 
-      select sa.id::text
+      select sa.id
       into v_verified_share_id
       from public.shared_access sa
-      where sa.layer_id::text = v_layer_id
+      where sa.layer_id = v_layer_uuid
         and (
           sa.shared_with_id = v_user_id
           or (v_email is not null and lower(coalesce(sa.shared_with_email, '')) = lower(v_email))
@@ -154,11 +158,14 @@ begin
       return;
     end if;
 
+    v_trip_uuid := v_trip_id::uuid;
+    v_layer_uuid := case when v_layer_id is not null then v_layer_id::uuid else null end;
+
     if v_owner_id is distinct from v_user_id and v_layer_id is not null then
-      select sa.id::text
+      select sa.id
       into v_existing_share_id
       from public.shared_access sa
-      where sa.layer_id::text = v_layer_id
+      where sa.layer_id = v_layer_uuid
         and (
           sa.shared_with_id = v_user_id
           or (v_email is not null and lower(coalesce(sa.shared_with_email, '')) = lower(v_email))
@@ -168,11 +175,11 @@ begin
       limit 1;
 
       if v_existing_share_id is null then
-        select sa.id::text
+        select sa.id
         into v_existing_share_id
         from public.shared_access sa
         where sa.owner_id = v_owner_id
-          and sa.layer_id::text = v_layer_id
+          and sa.layer_id = v_layer_uuid
           and coalesce(sa.shared_with_id::text, '') = ''
           and not coalesce(sa.is_banned, false)
         order by sa.created_at asc nulls last
@@ -203,8 +210,8 @@ begin
           )
           values (
             v_owner_id,
-            v_layer_id,
-            v_layer_id,
+            v_layer_uuid,
+            v_layer_uuid,
             v_user_id,
             v_email,
             v_phone,
@@ -218,10 +225,10 @@ begin
         end;
       end if;
 
-      select sa.id::text
+      select sa.id
       into v_verified_share_id
       from public.shared_access sa
-      where sa.layer_id::text = v_layer_id
+      where sa.layer_id = v_layer_uuid
         and (
           sa.shared_with_id = v_user_id
           or (v_email is not null and lower(coalesce(sa.shared_with_email, '')) = lower(v_email))
@@ -238,10 +245,10 @@ begin
     end if;
 
     if v_owner_id is distinct from v_user_id and (v_email is not null or v_phone is not null) then
-      select scm.id::text
+      select scm.id
       into v_existing_trip_member_id
       from public.sub_calendar_members scm
-      where scm.sub_calendar_id::text = v_trip_id
+      where scm.sub_calendar_id = v_trip_uuid
         and (
           (v_email is not null and lower(coalesce(scm.email, '')) = lower(v_email))
           or (v_phone is not null and coalesce(scm.phone, '') = v_phone)
@@ -264,7 +271,7 @@ begin
             invited_at
           )
           values (
-            v_trip_id,
+            v_trip_uuid,
             v_email,
             v_phone,
             v_owner_id,

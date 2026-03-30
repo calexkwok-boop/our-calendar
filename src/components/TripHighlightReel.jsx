@@ -576,7 +576,7 @@ function StatsHighlightSlide({ highlight }) {
         <div className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-white/65">Wrapped</div>
         <h2 className="mb-3 text-4xl font-bold sm:text-5xl">Worth replaying.</h2>
         <p className="mx-auto mb-8 max-w-xl text-base text-white/78 sm:text-lg">
-          A few of the moments that made this one memorable.
+          Trip highlights.
         </p>
         <div className="grid max-w-lg grid-cols-2 gap-6">
           <StatBubble icon="Days Away" value={highlight.totalDays} label="Days Away" />
@@ -710,7 +710,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
       type: 'chapter',
       eyebrow: 'The Real Story',
       title: 'The moments between the plans',
-      subtitle: 'The photos that mattered even when nothing was on the itinerary.',
+      subtitle: '',
       background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)',
     });
   } else if (scenicMoment) {
@@ -749,9 +749,9 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         slides.push({
           type: 'spotlight',
           eyebrow: 'Little Moments',
-          title: 'Some of the best parts were never scheduled',
-          caption: 'The reel should remember the in-between moments too.',
-          subcopy: 'Family photos, candid stops, and the quiet parts of the trip deserve as much space as the itinerary.',
+          title: 'In-between moments',
+          caption: '',
+          subcopy: '',
           background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
         });
       }
@@ -813,7 +813,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
       type: 'spotlight',
       eyebrow: 'Favorite Photo',
       title: topMemoryMoments[0].title,
-      caption: 'The kind of memory you keep coming back to.',
+      caption: '',
       subcopy: topMemoryMoments[0].subcopy,
       location: topMemoryMoments[0].meta,
       background: 'linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%)',
@@ -823,8 +823,8 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
       type: 'spotlight',
       eyebrow: 'Favorite Moment',
       title: buildSpotlightTitle(favoriteMoment),
-      caption: 'The one worth replaying first.',
-      subcopy: favoriteMoment.review || 'A memory that still holds up after the trip is over.',
+      caption: '',
+      subcopy: favoriteMoment.review || '',
       location: favoriteMoment.event?.location || '',
       background: 'linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)',
     });
@@ -890,19 +890,19 @@ const buildMemoryTitle = (photo, index) => {
   if (photo?.hasPeople) {
     if (index === 0) return 'Just us';
     if (index === 1) return 'The kind of photo you keep';
-    return 'One of the moments that mattered most';
+    return 'Favorite photo';
   }
-  if (photo?.date) return 'A favorite from the in-between';
-  return 'A memory worth keeping in the reel';
+  if (photo?.date) return 'Trip photo';
+  return 'Photo highlight';
 };
 
 const buildMemorySubcopy = (photo, index) => {
   if (photo?.hasPeople) {
     return index === 0
-      ? 'Not everything important happened at a reservation or on the itinerary.'
-      : 'Some of the best parts of a trip are the photos that happen in the middle of everything else.';
+      ? ''
+      : '';
   }
-  return 'The reel should hold onto the quiet, unscheduled parts too.';
+  return '';
 };
 
 const buildMemoryEyebrow = (photo, index) => {
@@ -962,9 +962,9 @@ const buildFallbackSlides = (trip, events, tripPhotos) => {
     {
       type: 'spotlight',
       eyebrow: 'Memory Reel',
-      title: 'A few moments worth keeping',
-      caption: 'The memories, not just the itinerary.',
-      subcopy: 'This trip reel is using a simplified fallback so it can still open cleanly.',
+      title: 'Trip highlights',
+      caption: '',
+      subcopy: '',
       background: 'linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)',
     },
     {
@@ -987,9 +987,9 @@ const buildEmergencySlides = (trip) => ([
   {
     type: 'spotlight',
     eyebrow: 'Memory Reel',
-    title: 'Your highlights are ready',
-    caption: 'We opened a simplified reel so the trip still shows up cleanly.',
-    subcopy: 'The trip can still be shared, saved, and published even when richer slides are unavailable.',
+    title: 'Trip highlights',
+    caption: '',
+    subcopy: '',
     background: 'linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)',
   },
   {
@@ -1007,50 +1007,50 @@ const buildEventCopy = (moment, index) => {
     return {
       eyebrow: index === 0 ? 'Best Of The Trip' : 'Worth Ordering Again',
       title: eventTitle,
-      subcopy: moment.review || 'One of those meals that becomes part of the trip story.',
+      subcopy: moment.review || '',
     };
   }
   if (moment.mood === 'nightlife') {
     return {
       eyebrow: 'After Dark',
       title: eventTitle,
-      subcopy: moment.review || 'The night that kept the trip going a little longer.',
+      subcopy: moment.review || '',
     };
   }
   if (moment.mood === 'reflective') {
     return {
       eyebrow: 'Quiet Favorite',
       title: eventTitle,
-      subcopy: moment.review || 'A slower moment that still made the reel.',
+      subcopy: moment.review || '',
     };
   }
   return {
     eyebrow: index === 0 ? 'Core Memory' : 'Postcard Moment',
     title: eventTitle,
-    subcopy: moment.review || 'A frame that deserved its own spot in the recap.',
+    subcopy: moment.review || '',
   };
 };
 
 const buildChapterTitle = (moment) => {
-  if (moment.mood === 'nightlife') return 'When the city woke up';
-  if (moment.mood === 'food') return 'The stops we kept talking about';
-  if (moment.mood === 'reflective') return 'The quieter side of the trip';
-  return 'The views that set the tone';
+  if (moment.mood === 'nightlife') return 'Nightlife';
+  if (moment.mood === 'food') return 'Food';
+  if (moment.mood === 'reflective') return 'Slow moments';
+  return 'Views';
 };
 
 const buildChapterCaption = (moment) => (
   moment?.event?.location
-    ? `Centered around ${moment.event.location}.`
-    : 'The scenes that made the trip feel bigger than the itinerary.'
+    ? `${moment.event.location}.`
+    : ''
 );
 
 const buildSpotlightTitle = (moment) => String(moment?.event?.title || 'Favorite Moment').trim();
 
 const buildSpotlightCaption = (moment) => {
-  if (moment.mood === 'food') return 'The reservation we would make again immediately.';
-  if (moment.mood === 'nightlife') return 'The night that earned a replay.';
-  if (moment.mood === 'reflective') return 'A slower moment that still stole the spotlight.';
-  return 'One of the moments that defined the whole trip.';
+  if (moment.mood === 'food') return '';
+  if (moment.mood === 'nightlife') return '';
+  if (moment.mood === 'reflective') return '';
+  return '';
 };
 
 const estimateTripDays = (trip, events) => {

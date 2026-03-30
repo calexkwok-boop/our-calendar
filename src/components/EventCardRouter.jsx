@@ -448,10 +448,10 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
               <div className="absolute left-3 top-3 text-2xl opacity-70 dark:opacity-60">🎉</div>
               <div className="absolute right-12 top-2 text-[1.7rem] opacity-65 dark:opacity-55">🥂</div>
-              <div className="absolute right-4 top-10 h-10 w-7 rounded-full bg-gradient-to-b from-cyan-200/60 to-cyan-500/70 dark:from-cyan-200/35 dark:to-cyan-500/45" />
-              <div className="absolute right-7 top-[4.2rem] h-7 w-px bg-gradient-to-b from-cyan-200/75 to-transparent" />
-              <div className="absolute left-11 top-8 h-12 w-8 rounded-full bg-gradient-to-b from-fuchsia-200/60 to-fuchsia-500/70 dark:from-fuchsia-200/35 dark:to-fuchsia-500/45" />
-              <div className="absolute left-[3.35rem] top-[4.75rem] h-8 w-px bg-gradient-to-b from-fuchsia-200/75 to-transparent" />
+              <div className="absolute right-5 top-10 h-2 w-2 rotate-[18deg] rounded-sm bg-cyan-400/75 dark:bg-cyan-300/50" />
+              <div className="absolute right-10 top-[3.75rem] h-1.5 w-4 -rotate-[32deg] rounded-full bg-fuchsia-400/70 dark:bg-fuchsia-300/45" />
+              <div className="absolute left-11 top-8 h-2 w-2 rotate-45 rounded-sm bg-fuchsia-400/70 dark:bg-fuchsia-300/50" />
+              <div className="absolute left-[3.25rem] top-[3.65rem] h-1.5 w-4 -rotate-[24deg] rounded-full bg-cyan-400/70 dark:bg-cyan-300/45" />
               <div className="absolute left-[38%] top-2 text-xl opacity-55 dark:opacity-50">🎊</div>
             </div>
           ) : null}
