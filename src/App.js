@@ -4876,24 +4876,6 @@ function App() {
     }
   };
 
-  const startPhotoHoldAction = (photo) => {
-    if (!photo || isPhotoSelectionMode || photoDeleteMode) return;
-    clearPhotoReactionHold();
-    photoDeleteHoldTimerRef.current = setTimeout(() => {
-      photoHoldSuppressRef.current = { id: photo.id, until: Date.now() + 500 };
-      void showAppConfirm('Save this photo to your device?', {
-        heading: 'Save Photo',
-        confirmLabel: 'Save',
-        cancelLabel: 'Cancel',
-        tone: 'default',
-      }).then((confirmed) => {
-        if (confirmed) return saveSinglePhotoToDevice(photo);
-        return null;
-      });
-      clearPhotoReactionHold();
-    }, 550);
-  };
-
   const handlePhotoTap = (photo, options = {}) => {
     if (!photo) return;
     const source = String(options?.source || 'click');
@@ -4921,7 +4903,6 @@ function App() {
   };
 
   const handlePhotoTouchStart = (photo, event) => {
-    startPhotoHoldAction(photo);
     const touch = event?.touches?.[0];
     photoTouchRef.current = {
       id: String(photo?.id || ''),
@@ -29562,12 +29543,8 @@ transform: translateY(0);
                               e.stopPropagation();
                               handlePhotoDoubleTap(photo);
                             }}
-                            onMouseDown={() => startPhotoHoldAction(photo)}
-                            onMouseUp={clearPhotoReactionHold}
-                            onMouseLeave={clearPhotoReactionHold}
                             onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
                             onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
-                            onTouchCancel={clearPhotoReactionHold}
                           >
                             <div
                               aria-label={photo.caption || 'Trip photo'}
@@ -29683,12 +29660,8 @@ transform: translateY(0);
                               e.stopPropagation();
                               handlePhotoDoubleTap(photo);
                             }}
-                            onMouseDown={() => startPhotoHoldAction(photo)}
-                            onMouseUp={clearPhotoReactionHold}
-                            onMouseLeave={clearPhotoReactionHold}
                             onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
                             onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
-                            onTouchCancel={clearPhotoReactionHold}
                           >
                             <div
                               aria-label={photo.caption || 'Trip photo'}
@@ -29790,12 +29763,8 @@ transform: translateY(0);
                             e.stopPropagation();
                             handlePhotoDoubleTap(photo);
                           }}
-                          onMouseDown={() => startPhotoHoldAction(photo)}
-                          onMouseUp={clearPhotoReactionHold}
-                          onMouseLeave={clearPhotoReactionHold}
                           onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
                           onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
-                          onTouchCancel={clearPhotoReactionHold}
                         >
                           <div
                             aria-label={photo.caption || 'Trip photo'}
