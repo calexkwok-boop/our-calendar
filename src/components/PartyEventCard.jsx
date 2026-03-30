@@ -291,7 +291,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const playlistService = detectPlaylistService(musicPlaylist);
   const plusOnesAllowed = event?.plusOnesAllowed !== false;
   const titleText = String(event?.title || '').trim();
-  const shouldShowLocationLine = Boolean(event?.location) && !titleText.includes('@');
+  const shouldShowLocationLine = Boolean(event?.location);
   const guestSummary = guestList.length
     ? `${guestList.filter((guest) => guest?.rsvp === 'yes').length}/${guestList.length} RSVP'd yes`
     : (plusOnesAllowed ? 'Plus-ones welcome' : 'Invite only');
@@ -307,7 +307,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               { key: 'title', label: 'Title', value: titleText, placeholder: 'House Party @ Home' },
               { key: 'date', label: 'Date', value: String(event?.date || '').trim(), placeholder: '2026-04-12' },
               { key: 'time', label: 'Time', value: String(event?.time || '').trim(), placeholder: '7:00 PM' },
-              { key: 'location', label: 'Location', value: String(event?.location || '').trim(), placeholder: 'Home' },
+              { key: 'location', label: 'Location', type: 'location', value: String(event?.location || '').trim(), placeholder: 'Search venue...' },
             ],
             onSave: (values) =>
               onUpdateEventData({
@@ -636,7 +636,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                 onClick={() =>
                   openEditor({
                     variant: 'party',
-                    title: 'Edit Potluck',
+                    title: 'Potluck Signups',
                     fields: [
                       {
                         key: 'potluckItems',
@@ -699,7 +699,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                 onClick={() =>
                   openEditor({
                     variant: 'party',
-                    title: 'Add Potluck Items',
+                title: 'Potluck Signups',
                     fields: [
                       {
                         key: 'potluckItems',

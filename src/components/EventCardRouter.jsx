@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import PartyEventCardView from './PartyEventCard';
 import CelebrationEventCardView from './CelebrationEventCard';
@@ -117,6 +117,18 @@ const normalizeGuestListEntries = (value) => {
     .filter((entry) => entry.name);
 };
 
+const normalizeGuestListDraftEntries = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => ({
+    name: String(entry?.name || '').trim(),
+    rsvp: String(entry?.rsvp || 'pending').trim().toLowerCase() === 'yes'
+      ? 'yes'
+      : String(entry?.rsvp || 'pending').trim().toLowerCase() === 'no'
+        ? 'no'
+        : 'pending',
+  }));
+};
+
 const normalizePotluckEntries = (value) => {
   if (!Array.isArray(value)) return [];
   return value
@@ -126,6 +138,15 @@ const normalizePotluckEntries = (value) => {
       claimedByUserId: String(entry?.claimedByUserId || '').trim(),
     }))
     .filter((entry) => entry.item);
+};
+
+const normalizePotluckDraftEntries = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => ({
+    item: String(entry?.item || '').trim(),
+    person: String(entry?.person || '').trim(),
+    claimedByUserId: String(entry?.claimedByUserId || '').trim(),
+  }));
 };
 
 const EditIcon = () => (
@@ -160,6 +181,155 @@ const ActionPill = ({ href, onClick, children, tone = 'neutral' }) => {
   );
 };
 
+const PlacesAutocompleteField = ({ value, onChange, placeholder, inputClassName, dropdownClassName, optionClassName }) => {
+  const [input, setInput] = useState(value || '');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState(null);
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+  const serviceRef = useRef(null);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    setInput(value || '');
+  }, [value]);
+
+  useEffect(() => {
+    const handleClick = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+      clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showSuggestions) return undefined;
+
+    const updateDropdownPosition = () => {
+      if (!inputRef.current) return;
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      });
+    };
+
+    updateDropdownPosition();
+    window.addEventListener('resize', updateDropdownPosition);
+    window.addEventListener('scroll', updateDropdownPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateDropdownPosition);
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+    };
+  }, [showSuggestions, input]);
+
+  const getService = () => {
+    if (serviceRef.current) return serviceRef.current;
+    if (!window.google?.maps?.places) return null;
+    serviceRef.current = new window.google.maps.places.AutocompleteService();
+    return serviceRef.current;
+  };
+
+  const search = (query) => {
+    clearTimeout(debounceRef.current);
+    if (!query || query.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    debounceRef.current = setTimeout(() => {
+      const service = getService();
+      if (!service) return;
+      service.getPlacePredictions({ input: query }, (predictions, status) => {
+        if (predictions && status === 'OK') {
+          setSuggestions(predictions);
+          setShowSuggestions(true);
+        } else {
+          setSuggestions([]);
+          setShowSuggestions(false);
+        }
+      });
+    }, 200);
+  };
+
+  const handleSelect = (prediction) => {
+    const nextValue = prediction.description;
+    setInput(nextValue);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    onChange?.(nextValue);
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        value={input}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+          setInput(nextValue);
+          onChange?.(nextValue);
+          search(nextValue);
+        }}
+        onFocus={() => {
+          if (suggestions.length > 0) setShowSuggestions(true);
+        }}
+        onBlur={() => {
+          setTimeout(() => {
+            setShowSuggestions(false);
+            const nextValue = input.trim() || '';
+            if (nextValue !== String(value || '')) {
+              onChange?.(nextValue);
+            }
+          }, 200);
+        }}
+        placeholder={placeholder || 'Search venue...'}
+        className={inputClassName}
+      />
+      {showSuggestions && suggestions.length > 0 && dropdownStyle
+        ? createPortal(
+            <div className={dropdownClassName} style={dropdownStyle}>
+              {suggestions.map((suggestion) => (
+                <button
+                  key={suggestion.place_id}
+                  type="button"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    handleSelect(suggestion);
+                  }}
+                  className={optionClassName}
+                >
+                  <span className="mr-1 text-gray-400 dark:text-gray-500">📍</span>
+                  <span className="font-medium text-gray-800 dark:text-white">
+                    {suggestion.structured_formatting?.main_text || suggestion.description}
+                  </span>
+                  {suggestion.structured_formatting?.secondary_text ? (
+                    <span className="ml-1 text-gray-400 dark:text-gray-500">
+                      {suggestion.structured_formatting.secondary_text}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </div>,
+            document.body
+          )
+        : null}
+    </div>
+  );
+};
+
 const EventEditorModal = ({ config, onClose, onSave }) => {
   const [draft, setDraft] = useState({});
   const [saving, setSaving] = useState(false);
@@ -176,9 +346,9 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
       if (field.type === 'toggle') {
         nextDraft[field.key] = Boolean(field.value);
       } else if (field.type === 'guest-list') {
-        nextDraft[field.key] = normalizeGuestListEntries(field.value);
+        nextDraft[field.key] = normalizeGuestListDraftEntries(field.value);
       } else if (field.type === 'potluck-list') {
-        nextDraft[field.key] = normalizePotluckEntries(field.value);
+        nextDraft[field.key] = normalizePotluckDraftEntries(field.value);
       } else {
         nextDraft[field.key] = field.value ?? '';
       }
@@ -196,7 +366,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
   const handleAddGuestRow = (key) => {
     setDraft((prev) => ({
       ...prev,
-      [key]: [...normalizeGuestListEntries(prev[key]), { name: '', rsvp: 'pending' }],
+      [key]: [...normalizeGuestListDraftEntries(prev[key]), { name: '', rsvp: 'pending' }],
     }));
   };
 
@@ -219,7 +389,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
   const handleAddPotluckRow = (key) => {
     setDraft((prev) => ({
       ...prev,
-      [key]: [...normalizePotluckEntries(prev[key]), { item: '', person: '', claimedByUserId: '' }],
+      [key]: [...normalizePotluckDraftEntries(prev[key]), { item: '', person: '', claimedByUserId: '' }],
     }));
   };
 
@@ -316,7 +486,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
               ) : field.type === 'guest-list' ? (
                 <div className={`rounded-[24px] border p-3 ${isPartyEditor ? 'border-fuchsia-200 bg-white/82 dark:border-white/10 dark:bg-white/[0.05]' : 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/[0.04]'}`}>
                   <div className="space-y-3">
-                    {normalizeGuestListEntries(draft[field.key]).map((guest, index) => (
+                    {normalizeGuestListDraftEntries(draft[field.key]).map((guest, index) => (
                       <div key={`${field.key}-${index}`} className="rounded-2xl border border-white/60 bg-white/70 p-3 shadow-sm dark:border-white/8 dark:bg-white/[0.04]">
                         <div className="flex items-start gap-2">
                           <input
@@ -368,7 +538,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                         </div>
                       </div>
                     ))}
-                    {normalizeGuestListEntries(draft[field.key]).length === 0 ? (
+                    {normalizeGuestListDraftEntries(draft[field.key]).length === 0 ? (
                       <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${isPartyEditor ? 'border-fuchsia-200 bg-white/65 text-fuchsia-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200' : 'border-slate-200 bg-white text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300'}`}>
                         No guests added yet.
                       </div>
@@ -390,7 +560,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
               ) : field.type === 'potluck-list' ? (
                 <div className={`rounded-[24px] border p-3 ${isPartyEditor ? 'border-fuchsia-200 bg-white/82 dark:border-white/10 dark:bg-white/[0.05]' : 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/[0.04]'}`}>
                   <div className="space-y-3">
-                    {normalizePotluckEntries(draft[field.key]).map((entry, index) => (
+                    {normalizePotluckDraftEntries(draft[field.key]).map((entry, index) => (
                       <div key={`${field.key}-${index}`} className="rounded-2xl border border-white/60 bg-white/70 p-3 shadow-sm dark:border-white/8 dark:bg-white/[0.04]">
                         <div className="flex items-start gap-2">
                           <input
@@ -427,7 +597,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                         )}
                       </div>
                     ))}
-                    {normalizePotluckEntries(draft[field.key]).length === 0 ? (
+                    {normalizePotluckDraftEntries(draft[field.key]).length === 0 ? (
                       <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${isPartyEditor ? 'border-fuchsia-200 bg-white/65 text-fuchsia-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200' : 'border-slate-200 bg-white text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300'}`}>
                         No potluck items yet.
                       </div>
@@ -460,6 +630,27 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
+              ) : field.type === 'location' ? (
+                <PlacesAutocompleteField
+                  value={draft[field.key] ?? ''}
+                  onChange={(value) => setFieldValue(field.key, value)}
+                  placeholder={field.placeholder || 'Search venue...'}
+                  inputClassName={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${
+                    isPartyEditor
+                      ? 'border-fuchsia-200 bg-white/85 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
+                      : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]'
+                  }`}
+                  dropdownClassName={`overflow-hidden rounded-2xl border shadow-xl ${
+                    isPartyEditor
+                      ? 'border-fuchsia-200 bg-white/96 dark:border-white/10 dark:bg-[#241b38]'
+                      : 'border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900'
+                  }`}
+                  optionClassName={`block w-full border-b px-4 py-3 text-left text-sm last:border-b-0 ${
+                    isPartyEditor
+                      ? 'border-fuchsia-100 hover:bg-fuchsia-50 dark:border-white/10 dark:hover:bg-white/[0.06]'
+                      : 'border-slate-100 hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/[0.06]'
+                  }`}
+                />
               ) : field.type === 'toggle' ? (
                 <button
                   type="button"
