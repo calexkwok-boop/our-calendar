@@ -112,32 +112,6 @@ const NotesSection = ({ event, onEdit }) => {
   return null;
 };
 
-const InviteeRow = ({ event, label = 'Coming' }) => {
-  const invitees = Array.isArray(event?.invitees) ? event.invitees : [];
-
-  return (
-    <Section title={label} subtitle={`${invitees.length} ${invitees.length === 1 ? 'person' : 'people'}`}>
-      <div className="flex flex-wrap gap-2.5">
-        {invitees.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-cyan-200 bg-cyan-50/70 px-4 py-4 text-sm text-cyan-700 dark:border-cyan-400/16 dark:bg-cyan-500/8 dark:text-cyan-200">
-            No one has responded yet.
-          </div>
-        ) : (
-          invitees.slice(0, 8).map((invitee, index) => (
-            <div
-              key={invitee.id || invitee.user_id || invitee.name || `${index}`}
-              className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm dark:border-cyan-400/14 dark:bg-white/5 dark:text-gray-200"
-            >
-              <span className="text-base leading-none">{invitee.avatar || 'Guest'}</span>
-              <span>{invitee.name || invitee.display_name || 'Guest'}</span>
-            </div>
-          ))
-        )}
-      </div>
-    </Section>
-  );
-};
-
 const animationStyles = `
 @keyframes hangout-rise-steam {
   0% { transform: translateY(0) translateX(0) scaleY(1); opacity: 0; }
@@ -325,7 +299,6 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
 
         <NotesSection event={event} onEdit={onEdit} />
 
-        <InviteeRow event={event} label="Coming" />
       </div>
     </div>
   );

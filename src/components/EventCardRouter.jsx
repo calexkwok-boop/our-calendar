@@ -216,12 +216,19 @@ const PlacesAutocompleteField = ({ value, onChange, placeholder, inputClassName,
     const updateDropdownPosition = () => {
       if (!inputRef.current) return;
       const rect = inputRef.current.getBoundingClientRect();
+      const estimatedHeight = Math.min(Math.max(suggestions.length, 1) * 56, 280);
+      const spaceBelow = window.innerHeight - rect.bottom - 12;
+      const spaceAbove = rect.top - 12;
+      const openUpward = spaceBelow < Math.min(estimatedHeight, 220) && spaceAbove > spaceBelow;
+      const maxHeight = Math.max(160, Math.min(estimatedHeight, openUpward ? spaceAbove : spaceBelow, 280));
       setDropdownStyle({
         position: 'fixed',
-        top: rect.bottom + 8,
+        top: openUpward ? Math.max(8, rect.top - maxHeight - 8) : rect.bottom + 8,
         left: rect.left,
         width: rect.width,
-        zIndex: 9999,
+        maxHeight,
+        overflowY: 'auto',
+        zIndex: 10020,
       });
     };
 
@@ -232,7 +239,7 @@ const PlacesAutocompleteField = ({ value, onChange, placeholder, inputClassName,
       window.removeEventListener('resize', updateDropdownPosition);
       window.removeEventListener('scroll', updateDropdownPosition, true);
     };
-  }, [showSuggestions, input]);
+  }, [showSuggestions, input, suggestions.length]);
 
   const getService = () => {
     if (serviceRef.current) return serviceRef.current;
@@ -640,10 +647,10 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                       ? 'border-fuchsia-200 bg-white/85 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
                       : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]'
                   }`}
-                  dropdownClassName={`overflow-hidden rounded-2xl border shadow-xl ${
+                  dropdownClassName={`overflow-hidden rounded-2xl border backdrop-blur-md ring-1 ring-black/5 shadow-[0_24px_60px_rgba(15,23,42,0.22)] ${
                     isPartyEditor
-                      ? 'border-fuchsia-200 bg-white/96 dark:border-white/10 dark:bg-[#241b38]'
-                      : 'border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900'
+                      ? 'border-fuchsia-200 bg-white/98 dark:border-white/10 dark:bg-[#241b38]/98'
+                      : 'border-slate-200 bg-white/98 dark:border-white/10 dark:bg-slate-900/98'
                   }`}
                   optionClassName={`block w-full border-b px-4 py-3 text-left text-sm last:border-b-0 ${
                     isPartyEditor

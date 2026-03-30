@@ -118,32 +118,6 @@ const NotesSection = ({ event, onEdit }) => {
   return null;
 };
 
-const InviteeRow = ({ event, label = 'Kids Attending' }) => {
-  const invitees = Array.isArray(event?.invitees) ? event.invitees : [];
-
-  return (
-    <Section title={label} subtitle={`${invitees.length} ${invitees.length === 1 ? 'person' : 'people'}`}>
-      <div className="flex flex-wrap gap-2.5">
-        {invitees.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50/70 px-4 py-4 text-sm text-amber-700 dark:border-amber-400/16 dark:bg-amber-500/8 dark:text-amber-200">
-            No one has responded yet.
-          </div>
-        ) : (
-          invitees.slice(0, 8).map((invitee, index) => (
-            <div
-              key={invitee.id || invitee.user_id || invitee.name || `${index}`}
-              className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm dark:border-amber-400/14 dark:bg-white/5 dark:text-gray-200"
-            >
-              <span className="text-base leading-none">{invitee.avatar || 'Guest'}</span>
-              <span>{invitee.name || invitee.display_name || 'Guest'}</span>
-            </div>
-          ))
-        )}
-      </div>
-    </Section>
-  );
-};
-
 const animationStyles = `
 @keyframes kids-bounce-ball {
   0%, 100% { transform: translateY(0); }
@@ -401,7 +375,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
 
         <NotesSection event={event} onEdit={onEdit} />
 
-        <InviteeRow event={event} label="Kids Attending" />
       </div>
     </div>
   );

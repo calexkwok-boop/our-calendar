@@ -202,32 +202,6 @@ const NotesSection = ({ event, onEdit, tone }) => {
   return null;
 };
 
-const InviteeRow = ({ event, label = 'Attending', tone }) => {
-  const invitees = Array.isArray(event?.invitees) ? event.invitees : [];
-
-  return (
-    <Section title={label} subtitle={`${invitees.length} ${invitees.length === 1 ? 'person' : 'people'}`} tone={tone}>
-      <div className="flex flex-wrap gap-2.5">
-        {invitees.length === 0 ? (
-          <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${tone?.empty || 'border-rose-200 bg-rose-50/70 text-rose-700 dark:border-rose-400/16 dark:bg-rose-500/8 dark:text-rose-200'}`}>
-            No one has responded yet.
-          </div>
-        ) : (
-          invitees.slice(0, 8).map((invitee, index) => (
-            <div
-              key={invitee.id || invitee.user_id || invitee.name || `${index}`}
-              className={`inline-flex items-center gap-2 rounded-full border bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm dark:bg-white/5 dark:text-gray-200 ${tone?.invitee || 'border-rose-200 dark:border-rose-400/14'}`}
-            >
-              <span className="text-base leading-none">{invitee.avatar || 'Guest'}</span>
-              <span>{invitee.name || invitee.display_name || 'Guest'}</span>
-            </div>
-          ))
-        )}
-      </div>
-    </Section>
-  );
-};
-
 const animationStyles = `
 @keyframes celebration-rise-bubble {
   0% { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
@@ -530,7 +504,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
 
         <NotesSection event={event} onEdit={onEdit} tone={tone} />
 
-        <InviteeRow event={event} label="Attending" tone={tone} />
       </div>
     </div>
   );

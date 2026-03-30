@@ -229,32 +229,6 @@ const NotesSection = ({ event, onEdit, onUpdateEventData, openEditor }) => {
   return null;
 };
 
-const InviteeRow = ({ event, label = 'Going' }) => {
-  const invitees = Array.isArray(event?.invitees) ? event.invitees : [];
-
-  return (
-    <Section title={label} subtitle={`${invitees.length} ${invitees.length === 1 ? 'person' : 'people'}`}>
-      <div className="flex flex-wrap gap-2.5">
-        {invitees.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
-            No one has responded yet.
-          </div>
-        ) : (
-          invitees.slice(0, 8).map((invitee, index) => (
-            <div
-              key={invitee.id || invitee.user_id || invitee.name || `${index}`}
-              className="inline-flex items-center gap-2 rounded-full border border-fuchsia-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm dark:border-fuchsia-400/18 dark:bg-white/5 dark:text-gray-200"
-            >
-              <span className="text-base leading-none">{invitee.avatar || 'Guest'}</span>
-              <span>{invitee.name || invitee.display_name || 'Guest'}</span>
-            </div>
-          ))
-        )}
-      </div>
-    </Section>
-  );
-};
-
 const animationStyles = `
 @keyframes party-card-float {
   0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -725,7 +699,6 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
 
         <NotesSection event={event} onEdit={onEdit} onUpdateEventData={onUpdateEventData} openEditor={openEditor} />
 
-        <InviteeRow event={event} label="Going" />
       </div>
     </div>
   );

@@ -226,7 +226,7 @@ const CreateEventForm = ({ accent, darkMode, btnStyle, border, softBg, supabase,
 // RosterRow
 // ─────────────────────────────────────────────────────────────────────────────
 
-const RosterRow = ({ member, isMe, isHost, accent, darkMode, onKick, onPromote, onDemote }) => {
+const RosterRow = ({ member, isMe, isHost, accent, darkMode, onKick, onPromote, onDemote, attendeeRoleLabel = 'Player' }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const RoleIcon = ROLE_ICONS[member.role];
   const secondaryText = darkMode ? '#cbd5e1' : 'var(--color-text-secondary)';
@@ -240,7 +240,7 @@ const RosterRow = ({ member, isMe, isHost, accent, darkMode, onKick, onPromote, 
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
           {RoleIcon && <RoleIcon style={{ width: 10, height: 10, color: member.role === 'host' ? '#f59e0b' : '#8b5cf6' }} />}
           <span style={{ fontSize: 10, fontWeight: 700, color: member.role === 'host' ? '#f59e0b' : member.role === 'cohost' ? '#a78bfa' : (darkMode ? '#cbd5e1' : 'var(--color-text-secondary)') }}>
-            {member.role === 'host' ? 'Host' : member.role === 'cohost' ? 'Co-host' : 'Player'}
+            {member.role === 'host' ? 'Host' : member.role === 'cohost' ? 'Co-host' : attendeeRoleLabel}
           </span>
         </div>
       </div>
@@ -1433,7 +1433,7 @@ export default function PopupEventPanel({
   // ── TABS ───────────────────────────────────────────────────────────────────
   const tabs = [
     { id: 'detail',   label: 'Info',             emoji: 'ℹ️' },
-    { id: 'roster',   label: `(${memberCount})`,  emoji: '👥' },
+    { id: 'roster',   label: 'People',           emoji: '👥' },
     { id: 'chat',     label: 'Chat',              emoji: '💬' },
     { id: 'map',      label: 'Map',               emoji: '📍' },
     { id: 'game',     label: 'Play',              emoji: '🎮' },
@@ -1681,7 +1681,7 @@ export default function PopupEventPanel({
       {activeScreen === 'roster' && (
         <div style={{ paddingBottom: 112, flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain' }}>
           <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent }}>{memberCount} / {event.max_players} players</div>
+            <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent }}>{memberCount} / {event.max_players} {attendeeLabel}</div>
             <div style={{ flex: 1, height: 4, borderRadius: 999, background: border, margin: '0 12px', overflow: 'hidden' }}>
               <div style={{ height: '100%', borderRadius: 999, background: accent, width: `${Math.min(100, (memberCount / (event.max_players || 1)) * 100)}%`, transition: 'width 0.4s' }} />
             </div>
@@ -1691,7 +1691,8 @@ export default function PopupEventPanel({
             <React.Fragment key={m.id || m.user_id}>
               <RosterRow member={m} isMe={m.id === myMember?.id}
                 isHost={isHostOrCohost} accent={accent} darkMode={darkMode}
-                onKick={handleKick} onPromote={handlePromote} onDemote={handleDemote} />
+                onKick={handleKick} onPromote={handlePromote} onDemote={handleDemote}
+                attendeeRoleLabel={isSportsPopupEvent ? 'Player' : 'Guest'} />
               {isHost && !isLegacyInvalidEvent && m.role === 'host' && (
                 <div style={{ padding: '0 16px 12px 88px' }}>
                   <div style={{ padding: '10px 0 0' }}>
@@ -1702,13 +1703,13 @@ export default function PopupEventPanel({
                         style={{ ...btnStyle, padding: '8px 12px', borderRadius: 999, fontSize: 12, fontWeight: 800, opacity: manualAddBusy || isFull || !String(manualPlayerName || '').trim() ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                       >
                         {manualAddBusy ? <Loader style={{ width: 14, height: 14 }} /> : <Plus style={{ width: 14, height: 14 }} />}
-                        {manualAddBusy ? 'Adding...' : 'Add player'}
+                        {manualAddBusy ? 'Adding...' : `Add ${isSportsPopupEvent ? 'player' : 'guest'}`}
                       </button>
                       <input
                         value={manualPlayerName}
                         onChange={(e) => { setManualPlayerName(e.target.value); if (manualAddError) setManualAddError(''); }}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddManualPlayer(); } }}
-                        placeholder="Player name"
+                        placeholder={`${isSportsPopupEvent ? 'Player' : 'Guest'} name`}
                         style={{ flex: 1, minWidth: 0, padding: '8px 12px', borderRadius: 999, fontSize: 13, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', color: primaryText, outline: 'none' }}
                       />
                     </div>
@@ -1719,7 +1720,7 @@ export default function PopupEventPanel({
               )}
             </React.Fragment>
           ))}
-          {members.length === 0 && <div style={{ padding: '32px 20px', textAlign: 'center' }}><div style={{ fontSize: 32, marginBottom: 8 }}>🎾</div><div style={{ fontSize: 14, fontWeight: 700, color: secondaryText }}>No players yet</div></div>}
+          {members.length === 0 && <div style={{ padding: '32px 20px', textAlign: 'center' }}><div style={{ fontSize: 32, marginBottom: 8 }}>{isSportsPopupEvent ? '🎾' : '👥'}</div><div style={{ fontSize: 14, fontWeight: 700, color: secondaryText }}>{isSportsPopupEvent ? 'No players yet' : 'No guests yet'}</div></div>}
         </div>
       )}
 
