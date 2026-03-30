@@ -1282,8 +1282,15 @@ export default function PopupEventPanel({
         delete metadataPatch[key];
       }
     });
+    const explicitEventData = Object.prototype.hasOwnProperty.call(metadataPatch, 'event_data')
+      ? metadataPatch.event_data
+      : undefined;
+    if (Object.prototype.hasOwnProperty.call(metadataPatch, 'event_data')) {
+      delete metadataPatch.event_data;
+    }
     const nextEventData = {
       ...((event?.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data)) ? event.event_data : {}),
+      ...((explicitEventData && typeof explicitEventData === 'object' && !Array.isArray(explicitEventData)) ? explicitEventData : {}),
       ...metadataPatch,
     };
     try {
