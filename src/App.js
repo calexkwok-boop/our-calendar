@@ -3299,26 +3299,6 @@ function App() {
         return;
       }
 
-      const staleAcceptedIds = (existingRows || [])
-        .filter((row) => {
-          const status = String(row?.status || '').toLowerCase();
-          if (status === 'pending') return false;
-          const identity = normalizeEmail(row?.email) || normalizePhoneNumber(row?.phone);
-          if (!identity) return false;
-          return !sharedRecipients.includes(identity);
-        })
-        .map((row) => String(row?.id || '').trim())
-        .filter(Boolean);
-      if (staleAcceptedIds.length > 0) {
-        const { error: staleDeleteErr } = await supabase
-          .from('sub_calendar_members')
-          .delete()
-          .in('id', staleAcceptedIds);
-        if (staleDeleteErr) {
-          console.error('syncSubCalendarMembersFromLayer stale delete error:', staleDeleteErr);
-        }
-      }
-
       if (sharedRecipients.length === 0) return;
 
       const existingRecipients = new Set(
