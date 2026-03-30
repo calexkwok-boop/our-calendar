@@ -2063,6 +2063,7 @@ function App() {
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
   const photoTouchRef = useRef({ id: null, x: 0, y: 0 });
   const photoClickSuppressRef = useRef({ id: null, until: 0 });
+  const photoReactionPickerOpenedRef = useRef({ id: null, at: 0 });
   const suppressImageSavePrompt = (event) => {
     event.preventDefault();
   };
@@ -4787,6 +4788,8 @@ function App() {
     const actorId = String(user?.id || currentUser || 'guest').trim();
     const actorLabel = String(currentUser || user?.email || 'You').trim();
     if (!photoId || !emojiKey || !actorId) return;
+    const justOpenedPicker = photoReactionPickerOpenedRef.current;
+    if (justOpenedPicker.id === photoId && Date.now() - justOpenedPicker.at < 250) return;
     setTripPhotoReactionsById((prev) => {
       const current = (prev && typeof prev === 'object') ? prev : {};
       const photoReactions = current[photoId] && typeof current[photoId] === 'object' ? current[photoId] : {};
@@ -4809,6 +4812,7 @@ function App() {
   const openTripPhotoReactionPicker = (photo) => {
     const photoId = String(photo?.id || '').trim();
     if (!photoId || isPhotoSelectionMode || photoDeleteMode) return;
+    photoReactionPickerOpenedRef.current = { id: photoId, at: Date.now() };
     setTripPhotoReactionPickerId((prev) => (prev === photoId ? null : photoId));
   };
 
