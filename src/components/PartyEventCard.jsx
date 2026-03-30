@@ -49,6 +49,32 @@ const detectPlaylistService = (value) => {
   return null;
 };
 
+const SpotifyIcon = ({ className = 'h-4 w-4' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" fill="currentColor" />
+    <path d="M7.2 9.3c3.2-1 6.8-.8 9.8.6" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M8.1 12.1c2.5-.8 5.2-.6 7.5.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M9 14.7c1.8-.5 3.8-.4 5.2.4" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" />
+  </svg>
+);
+
+const AppleMusicIcon = ({ className = 'h-4 w-4' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="currentColor" />
+    <path d="M14.5 7.5v6.8a2.2 2.2 0 1 1-1.4-2.06V9.3l4-1v5a2.2 2.2 0 1 1-1.4-2.06V7.15l-1.2.35Z" fill="#fff" />
+  </svg>
+);
+
+const PlaylistServiceIcon = ({ service, className }) => {
+  if (service?.name === 'Spotify') {
+    return <SpotifyIcon className={className} />;
+  }
+  if (service?.name === 'Apple Music') {
+    return <AppleMusicIcon className={className} />;
+  }
+  return null;
+};
+
 const normalizeEventNotes = (event) => {
   const rawNotes = String(event?.description || '').trim();
   if (!rawNotes) return '';
@@ -203,6 +229,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const potluckItems = Array.isArray(event?.potluckItems) ? event.potluckItems : [];
   const theme = String(event?.theme || '').trim();
   const musicPlaylist = String(event?.musicPlaylist || '').trim();
+  const playlistService = detectPlaylistService(musicPlaylist);
   const plusOnesAllowed = event?.plusOnesAllowed !== false;
   const titleText = String(event?.title || '').trim();
   const shouldShowLocationLine = Boolean(event?.location) && !titleText.includes('@');
@@ -415,8 +442,30 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
             >
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Mood</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
-                {musicPlaylist ? 'Playlist ready' : 'Set the soundtrack'}
+                {musicPlaylist ? (playlistService?.name || 'Playlist ready') : 'Set the soundtrack'}
               </div>
+              {musicPlaylist ? (
+                isProbablyUrl(musicPlaylist) ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] ${playlistService?.chipClass || 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-200'}`}>
+                      <PlaylistServiceIcon service={playlistService} className="h-3.5 w-3.5" />
+                      <span>{playlistService?.name || 'Playlist'}</span>
+                    </span>
+                    <a
+                      href={musicPlaylist}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(event) => event.stopPropagation()}
+                      className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50/80 px-2.5 py-1 text-[11px] font-semibold text-violet-700 transition-colors hover:bg-violet-100 dark:border-violet-400/20 dark:bg-violet-500/10 dark:text-violet-200 dark:hover:bg-violet-500/15"
+                    >
+                      <PlaylistServiceIcon service={playlistService} className="h-3.5 w-3.5" />
+                      <span>Open {playlistService?.name || 'playlist'}</span>
+                    </a>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-xs font-medium text-gray-500 dark:text-gray-400">{musicPlaylist}</div>
+                )
+              ) : null}
             </button>
           </div>
         </Section>
