@@ -29546,10 +29546,10 @@ transform: translateY(0);
                             onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
                             onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
                           >
-                            <div
-                              aria-label={photo.caption || 'Trip photo'}
-                              className="pointer-events-none h-full w-full select-none bg-cover bg-center bg-no-repeat"
-                              style={{ backgroundImage: `url("${photo.url}")` }}
+                            <img
+                              src={photo.url}
+                              alt={photo.caption || 'Trip photo'}
+                              className="h-full w-full object-cover"
                             />
                             {isPhotoSelectionMode && (
                               <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
@@ -29663,10 +29663,10 @@ transform: translateY(0);
                             onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
                             onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
                           >
-                            <div
-                              aria-label={photo.caption || 'Trip photo'}
-                              className="pointer-events-none h-72 w-full select-none bg-cover bg-center bg-no-repeat"
-                              style={{ backgroundImage: `url("${photo.url}")` }}
+                            <img
+                              src={photo.url}
+                              alt={photo.caption || 'Trip photo'}
+                              className="h-72 w-full object-cover"
                             />
                             {isPhotoSelectionMode && (
                               <div className="px-3 pt-2">
@@ -29766,10 +29766,10 @@ transform: translateY(0);
                           onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
                           onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
                         >
-                          <div
-                            aria-label={photo.caption || 'Trip photo'}
-                            className="pointer-events-none h-full w-full select-none bg-cover bg-center bg-no-repeat"
-                            style={{ backgroundImage: `url("${photo.url}")` }}
+                          <img
+                            src={photo.url}
+                            alt={photo.caption || 'Trip photo'}
+                            className="h-full w-full object-cover"
                           />
                           {isPhotoSelectionMode && (
                             <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
