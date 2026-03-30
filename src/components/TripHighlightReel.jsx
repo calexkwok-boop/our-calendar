@@ -41,30 +41,30 @@ const PHOTO_TREATMENTS = Object.freeze({
   scenic: {
     layout: 'full',
     shellClassName: 'p-0',
-    imageClassName: 'w-full h-full object-cover animate-ken-burns',
-    imageStyle: { filter: 'saturate(1.08) contrast(1.06) brightness(0.96)' },
-    overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.04),rgba(15,23,42,0.12)_45%,rgba(15,23,42,0.52)_100%)]',
+    imageClassName: 'w-full h-full object-cover',
+    imageStyle: { filter: 'saturate(1.02) contrast(1.01) brightness(0.98)' },
+    overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.08),rgba(15,23,42,0.16)_45%,rgba(15,23,42,0.48)_100%)]',
   },
   food: {
-    layout: 'postcard',
-    shellClassName: 'px-6 py-10 sm:px-10',
-    imageClassName: 'h-full w-full rounded-[2rem] object-cover shadow-[0_30px_80px_rgba(0,0,0,0.28)]',
-    imageStyle: { filter: 'sepia(0.08) saturate(1.14) contrast(1.02) brightness(1.02)' },
-    overlayClassName: 'absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.20),transparent_32%),linear-gradient(180deg,rgba(15,23,42,0.05),rgba(15,23,42,0.18)_45%,rgba(15,23,42,0.46)_100%)]',
+    layout: 'full',
+    shellClassName: 'p-0',
+    imageClassName: 'w-full h-full object-cover',
+    imageStyle: { filter: 'saturate(1.04) contrast(1.01) brightness(1.01)' },
+    overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.08),rgba(15,23,42,0.16)_45%,rgba(15,23,42,0.48)_100%)]',
   },
   nightlife: {
-    layout: 'editorial',
-    shellClassName: 'px-5 py-8 sm:px-8',
-    imageClassName: 'h-full w-full rounded-[2.25rem] object-cover shadow-[0_26px_80px_rgba(15,23,42,0.42)]',
-    imageStyle: { filter: 'contrast(1.12) saturate(1.18) brightness(0.9) hue-rotate(-6deg)' },
-    overlayClassName: 'absolute inset-0 bg-[linear-gradient(135deg,rgba(88,28,135,0.18),rgba(15,23,42,0.58))]',
+    layout: 'full',
+    shellClassName: 'p-0',
+    imageClassName: 'w-full h-full object-cover',
+    imageStyle: { filter: 'contrast(1.04) saturate(1.06) brightness(0.94)' },
+    overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.12),rgba(15,23,42,0.22)_45%,rgba(15,23,42,0.56)_100%)]',
   },
   reflective: {
-    layout: 'polaroid',
-    shellClassName: 'px-6 py-10 sm:px-10',
-    imageClassName: 'h-full w-full rounded-[1.75rem] object-cover shadow-[0_24px_60px_rgba(0,0,0,0.24)]',
-    imageStyle: { filter: 'contrast(0.96) saturate(0.92) brightness(1.03)' },
-    overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(15,23,42,0.42))]',
+    layout: 'full',
+    shellClassName: 'p-0',
+    imageClassName: 'w-full h-full object-cover',
+    imageStyle: { filter: 'contrast(0.98) saturate(0.96) brightness(1.01)' },
+    overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.08),rgba(15,23,42,0.16)_45%,rgba(15,23,42,0.48)_100%)]',
   },
 });
 
@@ -425,14 +425,13 @@ function TitleSlide({ highlight }) {
   return (
     <div className="absolute inset-0 flex items-center justify-center">
       <div
-        className="absolute inset-0 scale-110 bg-cover bg-center blur-sm"
+        className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${highlight.background})` }}
       />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.12),rgba(15,23,42,0.36))]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.18),rgba(15,23,42,0.46))]" />
       <div className="relative z-10 px-8 text-center text-white">
-        <div className="mb-4 text-6xl animate-pulse">+</div>
-        <h1 className="mb-3 text-5xl font-bold animate-fade-in">{highlight.title}</h1>
-        <p className="text-2xl opacity-90 animate-fade-in-delay">{highlight.subtitle}</p>
+        <h1 className="mb-3 text-5xl font-bold">{highlight.title}</h1>
+        <p className="text-xl opacity-90">{highlight.subtitle}</p>
       </div>
     </div>
   );
@@ -444,16 +443,16 @@ function ChapterSlide({ highlight }) {
       className="absolute inset-0 flex items-center justify-center px-6 py-12"
       style={{ background: highlight.background || 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),transparent_26%),linear-gradient(180deg,rgba(15,23,42,0.12),rgba(15,23,42,0.42))]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.16),rgba(15,23,42,0.44))]" />
       <div className="relative z-10 mx-auto max-w-2xl text-center text-white">
         {highlight.eyebrow ? (
-          <div className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
             {highlight.eyebrow}
           </div>
         ) : null}
         <h2 className="text-5xl font-bold leading-none sm:text-6xl">{highlight.title}</h2>
         {highlight.subtitle ? (
-          <p className="mx-auto mt-5 max-w-xl text-lg text-white/84 sm:text-xl">{highlight.subtitle}</p>
+          <p className="mx-auto mt-4 max-w-xl text-base text-white/84 sm:text-lg">{highlight.subtitle}</p>
         ) : null}
       </div>
     </div>
@@ -466,10 +465,7 @@ function PhotoHighlightSlide({ highlight }) {
 
   return (
     <div className="absolute inset-0 overflow-hidden">
-      <div
-        className="absolute inset-0 scale-110 bg-cover bg-center blur-2xl"
-        style={{ backgroundImage: `url(${highlight.photo})`, filter: 'saturate(1.12) brightness(0.96) contrast(1.02)' }}
-      />
+      <div className="absolute inset-0 bg-black" />
       <div className={treatment.overlayClassName} />
       <div className={`relative z-10 flex h-full w-full items-center justify-center ${treatment.shellClassName}`}>
         <div className={frameClassName}>
@@ -484,25 +480,24 @@ function PhotoHighlightSlide({ highlight }) {
       <div className="absolute inset-x-0 bottom-0 z-10 px-7 pb-10 pt-20 text-white">
         <div className="mx-auto max-w-xl">
           {highlight.eyebrow ? (
-            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-white/72">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/72">
               {highlight.eyebrow}
             </div>
           ) : null}
           {Number(highlight.rating || 0) > 0 ? (
-            <div className="mb-3 flex items-center justify-end gap-3">
+            <div className="mb-2 flex items-center justify-end gap-3">
               <RatingStars rating={highlight.rating} sizeClassName="text-xl" />
             </div>
           ) : null}
           <h2 className="text-3xl font-bold leading-tight sm:text-4xl">{highlight.caption}</h2>
           {highlight.subcopy ? (
-            <p className="mt-3 max-w-lg text-sm leading-relaxed text-white/82 sm:text-base">{highlight.subcopy}</p>
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-white/82 sm:text-base">{highlight.subcopy}</p>
           ) : null}
           {highlight.location ? (
-            <p className="mt-2 text-base text-white/85 sm:text-lg">{highlight.location}</p>
+            <p className="mt-2 text-sm text-white/85 sm:text-base">{highlight.location}</p>
           ) : null}
         </div>
       </div>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_58%,rgba(15,23,42,0.08)_100%)]" />
     </div>
   );
 }
@@ -514,10 +509,10 @@ function TextHighlightSlide({ highlight }) {
       className="absolute inset-0 flex items-center justify-center px-6 py-12"
       style={{ background: treatment.background }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),transparent_28%),linear-gradient(180deg,rgba(15,23,42,0.12),rgba(15,23,42,0.38))]" />
-      <div className="relative z-10 mx-auto max-w-2xl rounded-[2rem] border border-white/15 bg-white/10 px-8 py-10 text-center text-white backdrop-blur-md">
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.14),rgba(15,23,42,0.36))]" />
+      <div className="relative z-10 mx-auto max-w-2xl px-8 py-10 text-center text-white">
         {highlight.eyebrow ? (
-          <div className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-white/70">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-white/70">
             {highlight.eyebrow}
           </div>
         ) : null}
@@ -526,13 +521,13 @@ function TextHighlightSlide({ highlight }) {
         ) : null}
         <h2 className={`${Number(highlight.rating || 0) > 0 ? 'mt-5' : ''} text-4xl font-bold leading-tight`}>{highlight.title}</h2>
         {highlight.subcopy ? (
-          <p className="mt-4 text-base leading-relaxed text-white/82 sm:text-lg">{highlight.subcopy}</p>
+          <p className="mt-3 text-base leading-relaxed text-white/82 sm:text-lg">{highlight.subcopy}</p>
         ) : null}
         {highlight.location ? (
-          <p className="mt-4 text-xl text-white/88">{highlight.location}</p>
+          <p className="mt-3 text-base text-white/88">{highlight.location}</p>
         ) : null}
         {highlight.review ? (
-          <p className="mt-5 line-clamp-4 text-lg italic text-white/88">"{highlight.review}"</p>
+          <p className="mt-4 line-clamp-4 text-base italic text-white/88">"{highlight.review}"</p>
         ) : null}
       </div>
     </div>
@@ -545,10 +540,10 @@ function SpotlightSlide({ highlight }) {
       className="absolute inset-0 flex items-center justify-center px-6 py-12"
       style={{ background: highlight.background || 'linear-gradient(135deg, #be185d 0%, #7c2d12 100%)' }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_26%),linear-gradient(180deg,rgba(15,23,42,0.1),rgba(15,23,42,0.36))]" />
-      <div className="relative z-10 mx-auto max-w-2xl rounded-[2.5rem] border border-white/15 bg-white/10 px-8 py-10 text-center text-white shadow-[0_24px_70px_rgba(15,23,42,0.26)] backdrop-blur-md">
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.12),rgba(15,23,42,0.4))]" />
+      <div className="relative z-10 mx-auto max-w-2xl px-8 py-10 text-center text-white">
         {highlight.eyebrow ? (
-          <div className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-white/70">
             {highlight.eyebrow}
           </div>
         ) : null}
@@ -562,7 +557,7 @@ function SpotlightSlide({ highlight }) {
           </p>
         ) : null}
         {highlight.location ? (
-          <p className="mt-5 text-sm uppercase tracking-[0.18em] text-white/62">{highlight.location}</p>
+          <p className="mt-4 text-sm text-white/70">{highlight.location}</p>
         ) : null}
       </div>
     </div>
@@ -571,13 +566,10 @@ function SpotlightSlide({ highlight }) {
 
 function StatsHighlightSlide({ highlight }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-fuchsia-900 px-8">
+    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-8">
       <div className="text-center text-white">
-        <div className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-white/65">Wrapped</div>
-        <h2 className="mb-3 text-4xl font-bold sm:text-5xl">Worth replaying.</h2>
-        <p className="mx-auto mb-8 max-w-xl text-base text-white/78 sm:text-lg">
-          Trip highlights.
-        </p>
+        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/65">Summary</div>
+        <h2 className="mb-6 text-4xl font-bold sm:text-5xl">Trip highlights</h2>
         <div className="grid max-w-lg grid-cols-2 gap-6">
           <StatBubble icon="Days Away" value={highlight.totalDays} label="Days Away" />
           <StatBubble icon="Photos" value={highlight.totalPhotos} label="Photos" />
@@ -591,7 +583,7 @@ function StatsHighlightSlide({ highlight }) {
 
 function StatBubble({ icon, value, label, small = false }) {
   return (
-    <div className="rounded-2xl bg-white/20 p-4 backdrop-blur-md">
+    <div className="rounded-2xl bg-white/10 p-4">
       <div className="mb-2 text-sm uppercase tracking-[0.18em] text-white/70">{icon}</div>
       <div className={`mb-1 font-bold ${small ? 'truncate text-sm' : 'text-3xl'}`}>{value}</div>
       <div className="text-sm opacity-90">{label}</div>
@@ -691,10 +683,6 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
     || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200';
   const topMoments = safeMoments.slice(0, 6);
   const topMemoryMoments = memoryMoments.slice(0, 4);
-  const scenicMoment = topMoments.find((moment) => moment.mood === 'scenic');
-  const foodMoment = topMoments.find((moment) => moment.mood === 'food');
-  const nightlifeMoment = topMoments.find((moment) => moment.mood === 'nightlife');
-  const favoriteMoment = topMoments[0];
 
   const slides = [
     {
@@ -704,16 +692,6 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
       background: coverPhoto,
     },
   ];
-
-  if (!topMemoryMoments.length && scenicMoment) {
-    slides.push({
-      type: 'chapter',
-      eyebrow: 'Opening Scene',
-      title: buildChapterTitle(scenicMoment),
-      subtitle: buildChapterCaption(scenicMoment),
-      background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-    });
-  }
 
   const eventSlides = topMoments.map((moment, index) => ({ kind: 'event', moment, index }));
   const memorySlides = topMemoryMoments.map((memory, index) => ({ kind: 'memory', memory, index }));
@@ -735,7 +713,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         eyebrow: memory.eyebrow,
         location: memory.meta,
         rating: 0,
-        treatment: getMemoryPhotoTreatment(index),
+        treatment: PHOTO_TREATMENTS.scenic,
       });
       return;
     }
@@ -752,7 +730,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         eyebrow: copy.eyebrow,
         location: moment.event?.location || '',
         rating: moment.rating,
-        treatment: getPhotoTreatment({ event: moment.event, rating: moment.rating, photoIndex: index }),
+        treatment: getPhotoTreatment({ event: moment.event }),
       });
     } else {
       slides.push({
@@ -766,58 +744,14 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         treatment: getTextTreatment({ event: moment.event }),
       });
     }
-
-    if (index === 1 && foodMoment) {
-      slides.push({
-        type: 'spotlight',
-        eyebrow: 'Best Meal',
-        title: buildSpotlightTitle(foodMoment),
-        caption: buildSpotlightCaption(foodMoment),
-        subcopy: foodMoment.review || 'The kind of stop you plan the next trip around.',
-        location: foodMoment.event?.location || '',
-        background: 'linear-gradient(135deg, #f97316 0%, #be185d 100%)',
-      });
-    }
-
-    if (index === 3 && nightlifeMoment) {
-      slides.push({
-        type: 'chapter',
-        eyebrow: 'After Hours',
-        title: buildChapterTitle(nightlifeMoment),
-        subtitle: buildChapterCaption(nightlifeMoment),
-        background: 'linear-gradient(135deg, #581c87 0%, #0f172a 100%)',
-      });
-    }
   });
-
-  if (topMemoryMoments[0]) {
-    slides.push({
-      type: 'spotlight',
-      eyebrow: 'Favorite Photo',
-      title: topMemoryMoments[0].title,
-      caption: '',
-      subcopy: topMemoryMoments[0].subcopy,
-      location: topMemoryMoments[0].meta,
-      background: 'linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%)',
-    });
-  } else if (favoriteMoment) {
-    slides.push({
-      type: 'spotlight',
-      eyebrow: 'Favorite Moment',
-      title: buildSpotlightTitle(favoriteMoment),
-      caption: '',
-      subcopy: favoriteMoment.review || '',
-      location: favoriteMoment.event?.location || '',
-      background: 'linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)',
-    });
-  }
 
   const totalPhotos = Array.isArray(tripPhotos) && tripPhotos.length > 0
     ? tripPhotos.length
     : safeMoments.reduce((sum, moment) => sum + moment.photos.length, 0);
   const ratings = safeMoments.map((moment) => Number(moment.rating || 0)).filter((rating) => rating > 0);
   const avgRating = ratings.length ? (ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1) : '4.8';
-  const topRated = topMemoryMoments[0]?.title || favoriteMoment?.event?.title || 'Best memory';
+  const topRated = topMemoryMoments[0]?.title || topMoments[0]?.event?.title || 'Best memory';
 
   slides.push({
     type: 'stats',
@@ -868,15 +802,7 @@ const buildMemoryMoments = (tripPhotos) => (
     .sort((a, b) => b.score - a.score)
 );
 
-const buildMemoryTitle = (photo, index) => {
-  if (photo?.hasPeople) {
-    if (index === 0) return 'Just us';
-    if (index === 1) return 'The kind of photo you keep';
-    return 'Favorite photo';
-  }
-  if (photo?.date) return 'Trip photo';
-  return 'Photo highlight';
-};
+const buildMemoryTitle = (photo) => String(photo?.caption || '').trim() || 'Trip photo';
 
 const buildMemorySubcopy = (photo, index) => {
   if (photo?.hasPeople) {
@@ -887,10 +813,7 @@ const buildMemorySubcopy = (photo, index) => {
   return '';
 };
 
-const buildMemoryEyebrow = (photo, index) => {
-  if (photo?.hasPeople) return index === 0 ? 'Family Moment' : 'Memory Moment';
-  return 'In Between';
-};
+const buildMemoryEyebrow = () => '';
 
 const formatMemoryMeta = (photo) => {
   const dateValue = String(photo?.date || '').trim();
@@ -942,14 +865,6 @@ const buildFallbackSlides = (trip, events, tripPhotos) => {
       background: coverPhoto,
     },
     {
-      type: 'spotlight',
-      eyebrow: 'Memory Reel',
-      title: 'Trip highlights',
-      caption: '',
-      subcopy: '',
-      background: 'linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)',
-    },
-    {
       type: 'stats',
       totalDays: estimateTripDays(trip, events),
       totalPhotos,
@@ -967,14 +882,6 @@ const buildEmergencySlides = (trip) => ([
     background: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200',
   },
   {
-    type: 'spotlight',
-    eyebrow: 'Memory Reel',
-    title: 'Trip highlights',
-    caption: '',
-    subcopy: '',
-    background: 'linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)',
-  },
-  {
     type: 'stats',
     totalDays: 1,
     totalPhotos: 0,
@@ -985,29 +892,8 @@ const buildEmergencySlides = (trip) => ([
 
 const buildEventCopy = (moment, index) => {
   const eventTitle = String(moment?.event?.title || 'A standout stop').trim();
-  if (moment.mood === 'food') {
-    return {
-      eyebrow: index === 0 ? 'Best Of The Trip' : 'Worth Ordering Again',
-      title: eventTitle,
-      subcopy: moment.review || '',
-    };
-  }
-  if (moment.mood === 'nightlife') {
-    return {
-      eyebrow: 'After Dark',
-      title: eventTitle,
-      subcopy: moment.review || '',
-    };
-  }
-  if (moment.mood === 'reflective') {
-    return {
-      eyebrow: 'Quiet Favorite',
-      title: eventTitle,
-      subcopy: moment.review || '',
-    };
-  }
   return {
-    eyebrow: index === 0 ? 'Core Memory' : 'Postcard Moment',
+    eyebrow: index === 0 ? 'Top rated' : '',
     title: eventTitle,
     subcopy: moment.review || '',
   };
@@ -1115,23 +1001,9 @@ const inferVisualMood = (event) => {
   return 'scenic';
 };
 
-const getPhotoTreatment = ({ event, rating, photoIndex = 0 }) => {
+const getPhotoTreatment = ({ event }) => {
   const mood = inferVisualMood(event);
-  const base = PHOTO_TREATMENTS[mood] || PHOTO_TREATMENTS.scenic;
-  if (base.layout === 'full' && photoIndex % 2 === 1) {
-    return {
-      ...base,
-      layout: 'editorial',
-      shellClassName: 'px-5 py-8 sm:px-8',
-    };
-  }
-  if (mood === 'food' && rating >= 4.5) {
-    return {
-      ...base,
-      imageStyle: { ...base.imageStyle, filter: 'sepia(0.1) saturate(1.2) contrast(1.02) brightness(1.03)' },
-    };
-  }
-  return base;
+  return PHOTO_TREATMENTS[mood] || PHOTO_TREATMENTS.scenic;
 };
 
 const getTextTreatment = ({ event }) => {
@@ -1149,8 +1021,5 @@ const getTextTreatment = ({ event }) => {
 };
 
 const getPhotoFrameClassName = (layout) => {
-  if (layout === 'postcard') return 'w-full max-w-[22rem] sm:max-w-[24rem] aspect-[4/5] rounded-[2.25rem] border border-white/20 bg-white/10 p-3 backdrop-blur-sm';
-  if (layout === 'polaroid') return 'w-full max-w-[22rem] sm:max-w-[24rem] aspect-[4/5] rounded-[2.5rem] border border-white/15 bg-white/90 p-3 pb-10 shadow-[0_24px_60px_rgba(15,23,42,0.25)]';
-  if (layout === 'editorial') return 'w-full max-w-[32rem] aspect-[4/5] rounded-[2.5rem] border border-white/15 bg-white/10 p-3 backdrop-blur-sm';
   return 'h-full w-full';
 };
