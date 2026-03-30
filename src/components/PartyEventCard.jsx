@@ -69,8 +69,13 @@ const AppleMusicIcon = ({ className = 'h-4 w-4' }) => (
     </defs>
     <rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="url(#apple-music-gradient)" />
     <path
-      d="M14.35 7.55v6.3a2.05 2.05 0 1 1-1.25-1.9V9.15l3.85-1.05v5.05A2.05 2.05 0 1 1 15.7 11.2V7.2l-1.35.35Z"
+      d="M9.72 8.2c.33-.36.56-.86.52-1.36-.47.03-1.02.31-1.35.67-.3.32-.57.83-.5 1.31.52.04 1-.24 1.33-.62Zm1 .72c-.75-.04-1.39.43-1.75.43-.37 0-.93-.41-1.55-.4-.8.02-1.54.46-1.95 1.18-.83 1.43-.21 3.55.59 4.71.39.57.85 1.2 1.47 1.18.59-.02.82-.38 1.54-.38s.92.38 1.55.37c.64-.01 1.05-.58 1.43-1.16.44-.65.61-1.28.62-1.31-.01-.01-1.2-.46-1.22-1.82-.01-1.14.94-1.68.99-1.72-.54-.8-1.38-.91-1.67-.93Z"
       fill="#fff"
+    />
+    <path
+      d="M15.2 8.15v5.86a1.74 1.74 0 1 1-.96-1.56V9.25l2.85-.77v4.46a1.74 1.74 0 1 1-.96-1.56V7.9l-1.2.25Z"
+      fill="#fff"
+      opacity="0.95"
     />
   </svg>
 );
@@ -190,7 +195,7 @@ const NotesSection = ({ event, onEdit }) => {
   }
 
   if (typeof onEdit === 'function') {
-    return <EmptySection title="Notes" subtitle="No notes added yet." actions={<ActionPill onClick={onEdit}>Add</ActionPill>} />;
+    return <EmptySection title="Notes" actions={<ActionPill onClick={onEdit}>Add</ActionPill>} />;
   }
 
   return null;
@@ -407,7 +412,6 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
       <div className="relative space-y-5 px-6 py-6 sm:px-7">
         <Section
           title="Invitation Details"
-          subtitle="Everything guests should know at a glance"
         >
           <div className="grid gap-3 sm:grid-cols-3">
             <button
@@ -418,7 +422,6 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       openEditor({
                         variant: 'party',
                         title: 'Theme',
-                        subtitle: 'Set the party vibe. Think colorful, fun, and instantly recognizable.',
                         fields: [
                           { key: 'theme', label: 'Theme', value: theme, placeholder: 'Game night, disco, rooftop glow...' },
                         ],
@@ -442,7 +445,6 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       openEditor({
                         variant: 'party',
                         title: 'Guest List',
-                        subtitle: 'Add your invited guests one per line. Use `name | yes` or `name | no` for RSVP status.',
                         fields: [
                           {
                             key: 'guestList',
@@ -501,8 +503,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                   ? () =>
                       openEditor({
                         variant: 'party',
-                        title: 'Mood',
-                        subtitle: 'Drop in a playlist or describe the soundtrack for the night.',
+                        title: 'Music',
                         fields: [
                           { key: 'musicPlaylist', label: 'Playlist or mood', value: musicPlaylist, placeholder: 'Spotify link, Apple Music, or a vibe note...' },
                         ],
@@ -515,7 +516,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               }
               className="rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-violet-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-violet-400/20"
             >
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Mood</div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Music</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
                 {musicPlaylist ? (playlistService?.name || 'Playlist ready') : 'Set the soundtrack'}
               </div>
@@ -544,14 +545,12 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         {potluckItems.length > 0 ? (
           <Section
             title="Potluck"
-            subtitle={`${potluckItems.length} planned item${potluckItems.length === 1 ? '' : 's'}`}
             actions={onUpdateEventData && openEditor ? (
               <ActionPill
                 onClick={() =>
                   openEditor({
                     variant: 'party',
                     title: 'Edit Potluck',
-                    subtitle: 'Use one line per item. Optional format: `dish | person`.',
                     fields: [
                       {
                         key: 'potluckItems',
@@ -589,14 +588,12 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         ) : (
           <EmptySection
             title="Potluck"
-            subtitle="No dish list added yet."
             actions={onUpdateEventData && openEditor ? (
               <ActionPill
                 onClick={() =>
                   openEditor({
                     variant: 'party',
                     title: 'Add Potluck Items',
-                    subtitle: 'Use one line per item. Optional format: `dish | person`.',
                     fields: [
                       {
                         key: 'potluckItems',
