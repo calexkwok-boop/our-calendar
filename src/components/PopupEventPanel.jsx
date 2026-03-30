@@ -1270,14 +1270,37 @@ export default function PopupEventPanel({
   };
   const handleUpdateEventData = async (patch) => {
     if (!isHostOrCohost || !event || !isUuid(event?.id) || !patch || typeof patch !== 'object') return false;
+    const hasOwn = (key) => Object.prototype.hasOwnProperty.call(patch, key);
+    const detailFieldKeys = ['title', 'date', 'time', 'location', 'description', 'max_players', 'is_public', 'status', 'category'];
+    const detailPatch = {};
+    detailFieldKeys.forEach((key) => {
+      if (hasOwn(key)) detailPatch[key] = patch[key];
+    });
+    const metadataPatch = { ...patch };
+    detailFieldKeys.forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(metadataPatch, key)) {
+        delete metadataPatch[key];
+      }
+    });
     const nextEventData = {
       ...((event?.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data)) ? event.event_data : {}),
-      ...patch,
+      ...metadataPatch,
     };
     try {
-      await upsertPopupEventDetails({ event_data: nextEventData });
+      await upsertPopupEventDetails({ ...detailPatch, event_data: nextEventData });
+      if (hasOwn('title') || hasOwn('date') || hasOwn('time') || hasOwn('location') || hasOwn('description')) {
+        try {
+          await supabase.from('events').update({
+            ...(hasOwn('title') ? { title: String(patch.title || '').trim() || String(event?.title || '').trim() } : {}),
+            ...(hasOwn('date') ? { date: String(patch.date || '').trim() || null } : {}),
+            ...(hasOwn('time') ? { time: String(patch.time || '').trim() || null } : {}),
+            ...(hasOwn('location') ? { location: String(patch.location || '').trim() || null } : {}),
+            ...(hasOwn('description') ? { description: String(patch.description || '').trim() || null } : {}),
+          }).eq('id', event.id);
+        } catch {}
+      }
       setEvent((prev) => (
-        prev ? { ...prev, ...patch, event_data: nextEventData } : prev
+        prev ? { ...prev, ...detailPatch, ...metadataPatch, event_data: nextEventData } : prev
       ));
       await loadEvent(event.id);
       return true;
