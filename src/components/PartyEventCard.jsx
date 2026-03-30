@@ -268,18 +268,30 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         <div className="absolute left-[28%] top-[73%] h-10 w-28 rounded-full border-t-[5px] border-dashed border-amber-300/90 opacity-75 dark:border-amber-300/55 dark:opacity-58" style={{ transform: 'rotate(10deg)', animation: 'party-card-sway 8.8s ease-in-out infinite 0.6s' }} />
         <div className="absolute left-[52%] top-[28%] h-12 w-32 rounded-full border-t-[5px] border-dashed border-violet-300/90 opacity-78 dark:border-violet-300/55 dark:opacity-58" style={{ transform: 'rotate(-8deg)', animation: 'party-card-sway 7.8s ease-in-out infinite 1.2s' }} />
         <div className="absolute right-[24%] top-[82%] h-10 w-24 rounded-full border-t-[5px] border-dashed border-rose-300/90 opacity-75 dark:border-rose-300/55 dark:opacity-56" style={{ transform: 'rotate(-14deg)', animation: 'party-card-sway 8.6s ease-in-out infinite 0.4s' }} />
-        <div className="absolute -left-3 top-20 h-28 w-[4.75rem] rounded-full bg-gradient-to-b from-fuchsia-300 to-pink-500 opacity-95 shadow-[0_18px_44px_rgba(236,72,153,0.35)] dark:opacity-100" style={{ animation: 'party-card-bob 5.5s ease-in-out infinite' }} />
-        <div className="absolute left-5 top-[9.5rem] h-16 w-px bg-gradient-to-b from-pink-300/90 to-transparent dark:from-pink-300/70" />
-        <div className="absolute right-2 top-14 h-24 w-16 rounded-full bg-gradient-to-b from-sky-200 to-cyan-500 opacity-90 shadow-[0_18px_44px_rgba(6,182,212,0.32)] dark:opacity-95" style={{ animation: 'party-card-bob 6.3s ease-in-out infinite 0.7s' }} />
-        <div className="absolute right-9 top-[7.75rem] h-16 w-px bg-gradient-to-b from-cyan-300/90 to-transparent dark:from-cyan-300/70" />
-        <div className="absolute right-20 top-24 h-20 w-14 rounded-full bg-gradient-to-b from-violet-200 to-violet-500 opacity-88 shadow-[0_18px_44px_rgba(139,92,246,0.3)] dark:opacity-94" style={{ animation: 'party-card-bob 5.9s ease-in-out infinite 1.2s' }} />
-        <div className="absolute right-[5.85rem] top-[9.5rem] h-14 w-px bg-gradient-to-b from-violet-300/90 to-transparent dark:from-violet-300/70" />
-        <div className="absolute left-[18%] top-10 h-16 w-11 rounded-full bg-gradient-to-b from-yellow-200 to-amber-400 opacity-85 shadow-[0_12px_32px_rgba(251,191,36,0.32)] dark:opacity-92" style={{ animation: 'party-card-bob 6.1s ease-in-out infinite 0.4s' }} />
-        <div className="absolute left-[20%] top-[5.9rem] h-12 w-px bg-gradient-to-b from-amber-300/90 to-transparent dark:from-amber-300/70" />
-        <div className="absolute left-[56%] top-[58%] h-24 w-16 rounded-full bg-gradient-to-b from-rose-200 to-fuchsia-500 opacity-84 shadow-[0_18px_44px_rgba(244,63,94,0.28)] dark:opacity-90" style={{ animation: 'party-card-bob 6.8s ease-in-out infinite 1.6s' }} />
-        <div className="absolute left-[59%] top-[72%] h-14 w-px bg-gradient-to-b from-rose-300/90 to-transparent dark:from-rose-300/70" />
-        <div className="absolute right-[36%] top-[63%] h-20 w-14 rounded-full bg-gradient-to-b from-cyan-200 to-sky-500 opacity-82 shadow-[0_18px_44px_rgba(59,130,246,0.24)] dark:opacity-88" style={{ animation: 'party-card-bob 7.1s ease-in-out infinite 0.3s' }} />
-        <div className="absolute right-[33.5%] top-[74%] h-12 w-px bg-gradient-to-b from-sky-300/90 to-transparent dark:from-sky-300/70" />
+        <div className="absolute -left-3 top-20 h-44 w-[4.75rem]" style={{ animation: 'party-card-bob 5.5s ease-in-out infinite' }}>
+          <div className="mx-auto h-28 w-[4.75rem] rounded-full bg-gradient-to-b from-fuchsia-300 to-pink-500 opacity-90 shadow-[0_18px_44px_rgba(236,72,153,0.28)] dark:opacity-88" />
+          <div className="mx-auto h-16 w-px bg-gradient-to-b from-pink-300/75 to-transparent dark:from-pink-300/45" />
+        </div>
+        <div className="absolute right-2 top-14 h-40 w-16" style={{ animation: 'party-card-bob 6.3s ease-in-out infinite 0.7s' }}>
+          <div className="mx-auto h-24 w-16 rounded-full bg-gradient-to-b from-sky-200 to-cyan-500 opacity-84 shadow-[0_18px_44px_rgba(6,182,212,0.24)] dark:opacity-82" />
+          <div className="mx-auto h-16 w-px bg-gradient-to-b from-cyan-300/75 to-transparent dark:from-cyan-300/45" />
+        </div>
+        <div className="absolute right-20 top-24 h-34 w-14" style={{ animation: 'party-card-bob 5.9s ease-in-out infinite 1.2s' }}>
+          <div className="mx-auto h-20 w-14 rounded-full bg-gradient-to-b from-violet-200 to-violet-500 opacity-82 shadow-[0_18px_44px_rgba(139,92,246,0.22)] dark:opacity-80" />
+          <div className="mx-auto h-14 w-px bg-gradient-to-b from-violet-300/75 to-transparent dark:from-violet-300/45" />
+        </div>
+        <div className="absolute left-[18%] top-10 h-28 w-11" style={{ animation: 'party-card-bob 6.1s ease-in-out infinite 0.4s' }}>
+          <div className="mx-auto h-16 w-11 rounded-full bg-gradient-to-b from-yellow-200 to-amber-400 opacity-80 shadow-[0_12px_32px_rgba(251,191,36,0.22)] dark:opacity-78" />
+          <div className="mx-auto h-12 w-px bg-gradient-to-b from-amber-300/75 to-transparent dark:from-amber-300/45" />
+        </div>
+        <div className="absolute left-[56%] top-[58%] h-38 w-16" style={{ animation: 'party-card-bob 6.8s ease-in-out infinite 1.6s' }}>
+          <div className="mx-auto h-24 w-16 rounded-full bg-gradient-to-b from-rose-200 to-fuchsia-500 opacity-78 shadow-[0_18px_44px_rgba(244,63,94,0.2)] dark:opacity-76" />
+          <div className="mx-auto h-14 w-px bg-gradient-to-b from-rose-300/75 to-transparent dark:from-rose-300/45" />
+        </div>
+        <div className="absolute right-[36%] top-[63%] h-32 w-14" style={{ animation: 'party-card-bob 7.1s ease-in-out infinite 0.3s' }}>
+          <div className="mx-auto h-20 w-14 rounded-full bg-gradient-to-b from-cyan-200 to-sky-500 opacity-76 shadow-[0_18px_44px_rgba(59,130,246,0.18)] dark:opacity-74" />
+          <div className="mx-auto h-12 w-px bg-gradient-to-b from-sky-300/75 to-transparent dark:from-sky-300/45" />
+        </div>
 
         <div className="absolute left-[10%] top-[15%] h-4 w-4 rotate-12 rounded-sm bg-gradient-to-br from-pink-400 to-rose-400 opacity-90 dark:opacity-90" style={{ animation: 'party-card-float 8s ease-in-out infinite' }} />
         <div className="absolute left-[25%] top-[45%] h-3 w-3 rotate-45 rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 opacity-90 dark:opacity-86" style={{ animation: 'party-card-float 6s ease-in-out infinite 1s' }} />
@@ -388,7 +400,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       })
                   : undefined
               }
-              className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 text-left transition-all hover:border-fuchsia-200 hover:shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-fuchsia-400/20"
+              className="rounded-2xl border border-slate-200/75 bg-white/82 px-4 py-4 text-left backdrop-blur-sm transition-all hover:border-fuchsia-200 hover:shadow-sm dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-fuchsia-400/20"
             >
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-fuchsia-600 dark:text-fuchsia-300">Theme</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{theme || 'Open celebration vibe'}</div>
@@ -412,7 +424,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       })
                   : undefined
               }
-              className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 text-left transition-all hover:border-cyan-200 hover:shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-cyan-400/20"
+              className="rounded-2xl border border-slate-200/75 bg-white/82 px-4 py-4 text-left backdrop-blur-sm transition-all hover:border-cyan-200 hover:shadow-sm dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-cyan-400/20"
             >
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Guest List</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
@@ -438,7 +450,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       })
                   : undefined
               }
-              className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 text-left transition-all hover:border-violet-200 hover:shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-violet-400/20"
+              className="rounded-2xl border border-slate-200/75 bg-white/82 px-4 py-4 text-left backdrop-blur-sm transition-all hover:border-violet-200 hover:shadow-sm dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-violet-400/20"
             >
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Mood</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
