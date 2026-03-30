@@ -183,19 +183,41 @@ const EmptySection = ({ title, subtitle, actions }) => (
   </Section>
 );
 
-const NotesSection = ({ event, onEdit }) => {
+const NotesSection = ({ event, onEdit, onUpdateEventData, openEditor }) => {
   const notes = normalizeEventNotes(event);
+  const openNotesEditor =
+    onUpdateEventData && openEditor
+      ? () =>
+          openEditor({
+            variant: 'party',
+            title: 'Notes',
+            fields: [
+              {
+                key: 'description',
+                label: 'Notes',
+                type: 'textarea',
+                rows: 6,
+                value: notes,
+                placeholder: 'Add party notes, house rules, parking info, or anything guests should know...',
+              },
+            ],
+            onSave: (values) =>
+              onUpdateEventData({
+                description: String(values.description || '').trim(),
+              }),
+          })
+      : onEdit;
 
   if (notes) {
     return (
-      <Section title="Notes" actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null}>
+      <Section title="Notes" actions={typeof openNotesEditor === 'function' ? <ActionPill onClick={openNotesEditor}>Edit</ActionPill> : null}>
         <div className="text-sm leading-6 text-gray-700 dark:text-gray-300">{notes}</div>
       </Section>
     );
   }
 
-  if (typeof onEdit === 'function') {
-    return <EmptySection title="Notes" actions={<ActionPill onClick={onEdit}>Add</ActionPill>} />;
+  if (typeof openNotesEditor === 'function') {
+    return <EmptySection title="Notes" actions={<ActionPill onClick={openNotesEditor}>Add</ActionPill>} />;
   }
 
   return null;
@@ -267,6 +289,27 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const guestSummary = guestList.length
     ? `${guestList.filter((guest) => guest?.rsvp === 'yes').length}/${guestList.length} RSVP'd yes`
     : (plusOnesAllowed ? 'Plus-ones welcome' : 'Invite only');
+  const openHeaderEditor =
+    onUpdateEventData && openEditor
+      ? () =>
+          openEditor({
+            variant: 'party',
+            title: 'Invitation',
+            fields: [
+              { key: 'title', label: 'Title', value: titleText, placeholder: 'House Party @ Home' },
+              { key: 'date', label: 'Date', value: String(event?.date || '').trim(), placeholder: '2026-04-12' },
+              { key: 'time', label: 'Time', value: String(event?.time || '').trim(), placeholder: '7:00 PM' },
+              { key: 'location', label: 'Location', value: String(event?.location || '').trim(), placeholder: 'Home' },
+            ],
+            onSave: (values) =>
+              onUpdateEventData({
+                title: String(values.title || '').trim(),
+                date: String(values.date || '').trim(),
+                time: String(values.time || '').trim(),
+                location: String(values.location || '').trim(),
+              }),
+          })
+      : onEdit;
 
   return (
     <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/55 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#15111f] dark:via-[#1b1930] dark:to-[#0f1727] dark:shadow-[0_24px_80px_rgba(0,0,0,0.38)]">
@@ -384,15 +427,40 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
             </div>
           </div>
 
-          <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
-            {event?.title || 'Untitled party'}
-          </h3>
+          {typeof openHeaderEditor === 'function' ? (
+            <button
+              type="button"
+              onClick={openHeaderEditor}
+              className="mx-auto block rounded-2xl px-2 py-1 text-center transition-colors hover:bg-white/30 dark:hover:bg-white/5"
+            >
+              <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
+                {event?.title || 'Untitled party'}
+              </h3>
+            </button>
+          ) : (
+            <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
+              {event?.title || 'Untitled party'}
+            </h3>
+          )}
 
           <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent dark:via-cyan-300/80" />
 
           <div className="mt-4 space-y-2 text-[15px] text-gray-600 dark:text-gray-300">
-            <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>
-            {shouldShowLocationLine ? <div className="font-medium">{event.location}</div> : null}
+            {typeof openHeaderEditor === 'function' ? (
+              <button
+                type="button"
+                onClick={openHeaderEditor}
+                className="mx-auto block rounded-2xl px-3 py-1.5 transition-colors hover:bg-white/30 dark:hover:bg-white/5"
+              >
+                <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>
+                {shouldShowLocationLine ? <div className="mt-1 font-medium">{event.location}</div> : null}
+              </button>
+            ) : (
+              <>
+                <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>
+                {shouldShowLocationLine ? <div className="font-medium">{event.location}</div> : null}
+              </>
+            )}
             {theme ? (
               <div className="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-fuchsia-700 dark:border-fuchsia-400/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-200">
                 {theme}
@@ -614,7 +682,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           />
         )}
 
-        <NotesSection event={event} onEdit={onEdit} />
+        <NotesSection event={event} onEdit={onEdit} onUpdateEventData={onUpdateEventData} openEditor={openEditor} />
 
         <InviteeRow event={event} label="Going" />
       </div>
