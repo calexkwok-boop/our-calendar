@@ -41,28 +41,28 @@ const PHOTO_TREATMENTS = Object.freeze({
   scenic: {
     layout: 'full',
     shellClassName: 'p-0',
-    imageClassName: 'w-full h-full object-cover',
+    imageClassName: 'w-full h-full object-contain',
     imageStyle: { filter: 'saturate(1.02) contrast(1.01) brightness(0.98)' },
     overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.08),rgba(15,23,42,0.16)_45%,rgba(15,23,42,0.48)_100%)]',
   },
   food: {
     layout: 'full',
     shellClassName: 'p-0',
-    imageClassName: 'w-full h-full object-cover',
+    imageClassName: 'w-full h-full object-contain',
     imageStyle: { filter: 'saturate(1.04) contrast(1.01) brightness(1.01)' },
     overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.08),rgba(15,23,42,0.16)_45%,rgba(15,23,42,0.48)_100%)]',
   },
   nightlife: {
     layout: 'full',
     shellClassName: 'p-0',
-    imageClassName: 'w-full h-full object-cover',
+    imageClassName: 'w-full h-full object-contain',
     imageStyle: { filter: 'contrast(1.04) saturate(1.06) brightness(0.94)' },
     overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.12),rgba(15,23,42,0.22)_45%,rgba(15,23,42,0.56)_100%)]',
   },
   reflective: {
     layout: 'full',
     shellClassName: 'p-0',
-    imageClassName: 'w-full h-full object-cover',
+    imageClassName: 'w-full h-full object-contain',
     imageStyle: { filter: 'contrast(0.98) saturate(0.96) brightness(1.01)' },
     overlayClassName: 'absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.08),rgba(15,23,42,0.16)_45%,rgba(15,23,42,0.48)_100%)]',
   },
@@ -679,7 +679,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   const safeMoments = Array.isArray(moments) ? moments.filter(Boolean) : [];
   const memoryMoments = buildMemoryMoments(tripPhotos);
   const coverPhoto = memoryMoments[0]?.photo?.url
-    || safeMoments.find((moment) => moment.photos[0]?.url)?.photos[0]?.url
+    || safeMoments.map((moment) => getPreferredHighlightPhoto(moment.photos)).find((photo) => photo?.url)?.url
     || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200';
   const topMoments = safeMoments.slice(0, 6);
   const topMemoryMoments = memoryMoments.slice(0, 4);
@@ -719,7 +719,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
     }
 
     const { moment, index } = entry;
-    const primaryPhoto = moment.photos[0]?.url;
+    const primaryPhoto = getPreferredHighlightPhoto(moment.photos)?.url;
     const copy = buildEventCopy(moment, index);
     if (primaryPhoto) {
       slides.push({
@@ -765,7 +765,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
 };
 
 const buildMemoryMoments = (tripPhotos) => (
-  normalizeTripAlbumPhotos(tripPhotos)
+  preferPortraitPhotos(normalizeTripAlbumPhotos(tripPhotos))
     .filter((photo) => !String(photo?.event_id || '').trim())
     .map((photo, index) => {
       // PEOPLE-FIRST SCORING FOR ALBUM PHOTOS
@@ -840,16 +840,18 @@ const normalizeTripAlbumPhotos = (photos) => (
         url,
         hasPeople: Boolean(photo.hasPeople),
         date: String(photo.date || photo.created_at || photo.createdAt || '').trim(),
+        width: toPositiveNumber(photo.width || photo.image_width || photo.naturalWidth || photo.metadata?.width),
+        height: toPositiveNumber(photo.height || photo.image_height || photo.naturalHeight || photo.metadata?.height),
       };
     })
     .filter(Boolean)
 );
 
 const buildFallbackSlides = (trip, events, tripPhotos) => {
-  const albumPhotos = normalizeTripAlbumPhotos(tripPhotos);
+  const albumPhotos = preferPortraitPhotos(normalizeTripAlbumPhotos(tripPhotos));
   const firstAlbumPhoto = albumPhotos[0]?.url || '';
   const firstEventPhoto = (Array.isArray(events) ? events : [])
-    .flatMap((event) => normalizeEventPhotos(event?.photos || event?.photoUrls || []))
+    .flatMap((event) => preferPortraitPhotos(normalizeEventPhotos(event?.photos || event?.photoUrls || [])))
     .find((photo) => photo?.url)?.url || '';
   const coverPhoto = firstAlbumPhoto || firstEventPhoto || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200';
   const totalPhotos = albumPhotos.length > 0
@@ -952,7 +954,13 @@ const normalizeEventPhotos = (photos) => (
       }
       if (photo && typeof photo === 'object') {
         const url = String(photo.url || photo.src || '').trim();
-        return url ? { ...photo, url, hasPeople: Boolean(photo.hasPeople) } : null;
+        return url ? {
+          ...photo,
+          url,
+          hasPeople: Boolean(photo.hasPeople),
+          width: toPositiveNumber(photo.width || photo.image_width || photo.naturalWidth || photo.metadata?.width),
+          height: toPositiveNumber(photo.height || photo.image_height || photo.naturalHeight || photo.metadata?.height),
+        } : null;
       }
       return null;
     })
@@ -1021,5 +1029,24 @@ const getTextTreatment = ({ event }) => {
 };
 
 const getPhotoFrameClassName = (layout) => {
-  return 'h-full w-full';
+  return 'flex h-full w-full items-center justify-center bg-black';
 };
+
+const toPositiveNumber = (value) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+};
+
+const isPortraitPhoto = (photo) => {
+  const width = toPositiveNumber(photo?.width);
+  const height = toPositiveNumber(photo?.height);
+  return Boolean(width && height && height >= width);
+};
+
+const preferPortraitPhotos = (photos) => {
+  const safePhotos = Array.isArray(photos) ? photos.filter(Boolean) : [];
+  const portraitPhotos = safePhotos.filter((photo) => isPortraitPhoto(photo));
+  return portraitPhotos.length > 0 ? portraitPhotos : safePhotos;
+};
+
+const getPreferredHighlightPhoto = (photos) => preferPortraitPhotos(photos)[0] || null;
