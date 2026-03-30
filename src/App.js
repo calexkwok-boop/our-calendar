@@ -29569,15 +29569,10 @@ transform: translateY(0);
                             onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
                             onTouchCancel={clearPhotoReactionHold}
                           >
-                            <img
-                              src={photo.url}
-                              alt={photo.caption || ''}
-                              className="pointer-events-none w-full h-full select-none object-cover"
-                              loading="lazy"
-                              decoding="async"
-                              sizes="(max-width: 640px) 33vw, 20vw"
-                              draggable={false}
-                              onError={() => { markPhotoDeleted(photo.id); }}
+                            <div
+                              aria-label={photo.caption || 'Trip photo'}
+                              className="pointer-events-none h-full w-full select-none bg-cover bg-center bg-no-repeat"
+                              style={{ backgroundImage: `url("${photo.url}")` }}
                             />
                             {isPhotoSelectionMode && (
                               <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
@@ -29695,15 +29690,10 @@ transform: translateY(0);
                             onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
                             onTouchCancel={clearPhotoReactionHold}
                           >
-                            <img
-                              src={photo.url}
-                              alt={photo.caption || ''}
-                              className="pointer-events-none w-full max-h-72 select-none object-cover"
-                              loading="lazy"
-                              decoding="async"
-                              sizes="(max-width: 640px) 100vw, 720px"
-                              draggable={false}
-                              onError={() => { markPhotoDeleted(photo.id); }}
+                            <div
+                              aria-label={photo.caption || 'Trip photo'}
+                              className="pointer-events-none h-72 w-full select-none bg-cover bg-center bg-no-repeat"
+                              style={{ backgroundImage: `url("${photo.url}")` }}
                             />
                             {isPhotoSelectionMode && (
                               <div className="px-3 pt-2">
@@ -29807,15 +29797,10 @@ transform: translateY(0);
                           onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
                           onTouchCancel={clearPhotoReactionHold}
                         >
-                          <img
-                            src={photo.url}
-                            alt={photo.caption || ''}
-                            className="pointer-events-none w-full h-full select-none object-cover"
-                            loading="lazy"
-                            decoding="async"
-                            sizes="(max-width: 640px) 33vw, 20vw"
-                            draggable={false}
-                            onError={() => { markPhotoDeleted(photo.id); }}
+                          <div
+                            aria-label={photo.caption || 'Trip photo'}
+                            className="pointer-events-none h-full w-full select-none bg-cover bg-center bg-no-repeat"
+                            style={{ backgroundImage: `url("${photo.url}")` }}
                           />
                           {isPhotoSelectionMode && (
                             <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">

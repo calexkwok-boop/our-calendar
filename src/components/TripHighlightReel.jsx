@@ -256,7 +256,7 @@ export default function TripHighlightReel({
       </audio>
 
       <div
-        className="absolute top-0 left-0 right-0 z-10 px-4 pb-4 pt-6 bg-gradient-to-b from-black/60 to-transparent"
+        className="absolute top-0 left-0 right-0 z-30 px-4 pb-4 pt-6 bg-gradient-to-b from-black/60 to-transparent"
         style={{ paddingTop: 'max(1.25rem, calc(env(safe-area-inset-top) + 1rem))' }}
       >
         <div className="flex items-center justify-between">
