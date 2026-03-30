@@ -60,8 +60,18 @@ const SpotifyIcon = ({ className = 'h-4 w-4' }) => (
 
 const AppleMusicIcon = ({ className = 'h-4 w-4' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="currentColor" />
-    <path d="M14.5 7.5v6.8a2.2 2.2 0 1 1-1.4-2.06V9.3l4-1v5a2.2 2.2 0 1 1-1.4-2.06V7.15l-1.2.35Z" fill="#fff" />
+    <defs>
+      <linearGradient id="apple-music-gradient" x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#ff7aa2" />
+        <stop offset="0.52" stopColor="#fa233b" />
+        <stop offset="1" stopColor="#b3125d" />
+      </linearGradient>
+    </defs>
+    <rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="url(#apple-music-gradient)" />
+    <path
+      d="M14.35 7.55v6.3a2.05 2.05 0 1 1-1.25-1.9V9.15l3.85-1.05v5.05A2.05 2.05 0 1 1 15.7 11.2V7.2l-1.35.35Z"
+      fill="#fff"
+    />
   </svg>
 );
 
@@ -101,6 +111,21 @@ const parseLineItems = (value) =>
       return { item: item || '', person: person || '' };
     })
     .filter((entry) => entry.item);
+
+const parseGuestListItems = (value) =>
+  String(value || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [name, status] = line.split('|').map((part) => part.trim());
+      const normalizedStatus = String(status || '').trim().toLowerCase();
+      let rsvp = 'pending';
+      if (normalizedStatus === 'yes' || normalizedStatus === 'going') rsvp = 'yes';
+      if (normalizedStatus === 'no' || normalizedStatus === 'declined') rsvp = 'no';
+      return { name: name || '', rsvp };
+    })
+    .filter((entry) => entry.name);
 
 const EditIcon = () => (
   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,12 +252,16 @@ const animationStyles = `
 
 const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props }) => {
   const potluckItems = Array.isArray(event?.potluckItems) ? event.potluckItems : [];
+  const guestList = Array.isArray(event?.guestList) ? event.guestList.filter((guest) => String(guest?.name || '').trim()) : [];
   const theme = String(event?.theme || '').trim();
   const musicPlaylist = String(event?.musicPlaylist || '').trim();
   const playlistService = detectPlaylistService(musicPlaylist);
   const plusOnesAllowed = event?.plusOnesAllowed !== false;
   const titleText = String(event?.title || '').trim();
   const shouldShowLocationLine = Boolean(event?.location) && !titleText.includes('@');
+  const guestSummary = guestList.length
+    ? `${guestList.filter((guest) => guest?.rsvp === 'yes').length}/${guestList.length} RSVP'd yes`
+    : (plusOnesAllowed ? 'Plus-ones welcome' : 'Invite only');
 
   return (
     <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/55 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#15111f] dark:via-[#1b1930] dark:to-[#0f1727] dark:shadow-[0_24px_80px_rgba(0,0,0,0.38)]">
@@ -412,13 +441,22 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                   ? () =>
                       openEditor({
                         variant: 'party',
-                        title: 'Guest Style',
-                        subtitle: 'Decide how open the invitation should feel for guests.',
+                        title: 'Guest List',
+                        subtitle: 'Add your invited guests one per line. Use `name | yes` or `name | no` for RSVP status.',
                         fields: [
-                          { key: 'plusOnesAllowed', label: 'Guest style', type: 'toggle', value: plusOnesAllowed, toggleLabel: 'Allow plus-ones' },
+                          {
+                            key: 'guestList',
+                            label: 'Guest List',
+                            type: 'textarea',
+                            rows: 7,
+                            value: guestList.map((guest) => `${guest?.name || ''}${guest?.rsvp && guest.rsvp !== 'pending' ? ` | ${guest.rsvp}` : ''}`).join('\n'),
+                            placeholder: 'Alex | yes\nJordan | no\nTaylor',
+                          },
+                          { key: 'plusOnesAllowed', label: 'Allow plus-ones', type: 'toggle', value: plusOnesAllowed, toggleLabel: 'Allow plus-ones' },
                         ],
                         onSave: (values) =>
                           onUpdateEventData({
+                            guestList: parseGuestListItems(values.guestList),
                             plusOnesAllowed: Boolean(values.plusOnesAllowed),
                           }),
                       })
@@ -428,8 +466,33 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
             >
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Guest List</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
-                {plusOnesAllowed ? 'Bring a plus-one' : 'Named guests only'}
+                {guestSummary}
               </div>
+              {guestList.length ? (
+                <div className="mt-3 space-y-1.5">
+                  {guestList.slice(0, 3).map((guest, index) => (
+                    <div key={`${guest.name}-${index}`} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="truncate text-gray-600 dark:text-gray-300">{guest.name}</span>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 font-semibold uppercase tracking-[0.12em] ${
+                          guest.rsvp === 'yes'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                            : guest.rsvp === 'no'
+                              ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200'
+                              : 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300'
+                        }`}
+                      >
+                        {guest.rsvp === 'yes' ? 'Yes' : guest.rsvp === 'no' ? 'No' : 'Pending'}
+                      </span>
+                    </div>
+                  ))}
+                  {guestList.length > 3 ? (
+                    <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                      +{guestList.length - 3} more
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </button>
             <button
               type="button"
@@ -459,19 +522,15 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               {musicPlaylist ? (
                 isProbablyUrl(musicPlaylist) ? (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <span className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] ${playlistService?.chipClass || 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-200'}`}>
-                      <PlaylistServiceIcon service={playlistService} className="h-3.5 w-3.5" />
-                      <span>{playlistService?.name || 'Playlist'}</span>
-                    </span>
                     <a
                       href={musicPlaylist}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(event) => event.stopPropagation()}
-                      className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50/80 px-2.5 py-1 text-[11px] font-semibold text-violet-700 transition-colors hover:bg-violet-100 dark:border-violet-400/20 dark:bg-violet-500/10 dark:text-violet-200 dark:hover:bg-violet-500/15"
+                      className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] transition-opacity hover:opacity-90 ${playlistService?.chipClass || 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-200'}`}
                     >
                       <PlaylistServiceIcon service={playlistService} className="h-3.5 w-3.5" />
-                      <span>Open {playlistService?.name || 'playlist'}</span>
+                      <span>{playlistService?.name || 'Playlist'}</span>
                     </a>
                   </div>
                 ) : (
