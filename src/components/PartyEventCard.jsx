@@ -168,6 +168,17 @@ const ActionPill = ({ href, onClick, children }) => {
   );
 };
 
+const PartyTileConfetti = () => (
+  <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-55 dark:opacity-40">
+    <div className="absolute left-3 top-3 h-2.5 w-2.5 rotate-12 rounded-sm bg-fuchsia-300/80 dark:bg-fuchsia-300/55" />
+    <div className="absolute right-5 top-4 h-3 w-1.5 rotate-[28deg] rounded-full bg-cyan-300/80 dark:bg-cyan-300/55" />
+    <div className="absolute left-[22%] top-[58%] h-2 w-4 rotate-[22deg] rounded-full bg-pink-300/75 dark:bg-pink-300/50" />
+    <div className="absolute right-[28%] top-[62%] h-2.5 w-2.5 rotate-45 bg-sky-300/80 dark:bg-sky-300/55" />
+    <div className="absolute left-[58%] top-[20%] h-1.5 w-5 rotate-[-18deg] rounded-full bg-fuchsia-200/75 dark:bg-fuchsia-200/45" />
+    <div className="absolute left-[70%] top-[70%] h-3 w-1.5 rotate-[40deg] rounded-full bg-cyan-200/80 dark:bg-cyan-200/50" />
+  </div>
+);
+
 const Section = ({ title, subtitle, actions, children }) => (
   <div className="group/section rounded-[22px] border border-fuchsia-100/80 bg-white/96 p-5 shadow-[0_10px_26px_rgba(15,23,42,0.05)] backdrop-blur-sm transition-all hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.09]">
     <div className="mb-4 flex items-start justify-between gap-3">
@@ -183,8 +194,9 @@ const Section = ({ title, subtitle, actions, children }) => (
 
 const EmptySection = ({ title, subtitle, actions }) => (
   <Section title={title} subtitle={subtitle} actions={actions}>
-    <div className="rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
-      Nothing added yet.
+    <div className="relative overflow-hidden rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
+      <PartyTileConfetti />
+      <div className="relative">Nothing added yet.</div>
     </div>
   </Section>
 );
@@ -217,7 +229,10 @@ const NotesSection = ({ event, onEdit, onUpdateEventData, openEditor }) => {
   if (notes) {
     return (
       <Section title="Notes" actions={typeof openNotesEditor === 'function' ? <ActionPill onClick={openNotesEditor}>Edit</ActionPill> : null}>
-        <div className="text-sm leading-6 text-gray-700 dark:text-gray-300">{notes}</div>
+        <div className="relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 px-4 py-4 text-sm leading-6 text-gray-700 dark:border-white/10 dark:bg-white/[0.045] dark:text-gray-300">
+          <PartyTileConfetti />
+          <div className="relative">{notes}</div>
+        </div>
       </Section>
     );
   }
@@ -266,6 +281,9 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const plusOnesAllowed = event?.plusOnesAllowed !== false;
   const titleText = String(event?.title || '').trim();
   const shouldShowLocationLine = Boolean(event?.location);
+  const claimedPotluckCount = potluckItems.filter((item) => String(item?.claimedByUserId || item?.person || '').trim()).length;
+  const openPotluckCount = Math.max(0, potluckItems.length - claimedPotluckCount);
+  const potluckPreviewItems = potluckItems.slice(0, 3);
   const guestSummary = guestList.length
     ? `${guestList.filter((guest) => guest?.rsvp === 'yes').length}/${guestList.length} RSVP'd yes`
     : (plusOnesAllowed ? 'Plus-ones welcome' : 'Invite only');
@@ -482,10 +500,11 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       })
                   : undefined
               }
-              className="rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-fuchsia-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-fuchsia-400/20"
+              className="relative overflow-hidden rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-fuchsia-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-fuchsia-400/20"
             >
+              <PartyTileConfetti />
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-fuchsia-600 dark:text-fuchsia-300">Theme</div>
-              <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{theme || 'Open celebration vibe'}</div>
+              <div className="relative mt-2 text-sm font-semibold text-gray-900 dark:text-white">{theme || 'Open celebration vibe'}</div>
             </button>
             <button
               type="button"
@@ -524,14 +543,15 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       })
                   : undefined
               }
-              className="rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-cyan-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-cyan-400/20"
+              className="relative overflow-hidden rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-cyan-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-cyan-400/20"
             >
+              <PartyTileConfetti />
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Guest List</div>
-              <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
+              <div className="relative mt-2 text-sm font-semibold text-gray-900 dark:text-white">
                 {guestSummary}
               </div>
               {guestList.length ? (
-                <div className="mt-3 space-y-1.5">
+                <div className="relative mt-3 space-y-1.5">
                   {guestList.slice(0, 3).map((guest, index) => (
                     <div key={`${guest.name}-${index}`} className="flex items-center justify-between gap-2 text-xs">
                       <span className="truncate text-gray-600 dark:text-gray-300">{guest.name}</span>
@@ -574,15 +594,16 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       })
                   : undefined
               }
-              className="rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-violet-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-violet-400/20"
+              className="relative overflow-hidden rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-violet-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-violet-400/20"
             >
+              <PartyTileConfetti />
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Music</div>
-              <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
+              <div className="relative mt-2 text-sm font-semibold text-gray-900 dark:text-white">
                 {musicPlaylist ? (playlistService?.name || 'Playlist ready') : 'Set the soundtrack'}
               </div>
               {musicPlaylist ? (
                 isProbablyUrl(musicPlaylist) ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="relative mt-3 flex flex-wrap gap-2">
                     <a
                       href={musicPlaylist}
                       target="_blank"
@@ -595,7 +616,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                     </a>
                   </div>
                 ) : (
-                  <div className="mt-2 text-xs font-medium text-gray-500 dark:text-gray-400">{musicPlaylist}</div>
+                  <div className="relative mt-2 text-xs font-medium text-gray-500 dark:text-gray-400">{musicPlaylist}</div>
                 )
               ) : null}
             </button>
@@ -605,6 +626,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         {potluckItems.length > 0 ? (
           <Section
             title="Potluck"
+            subtitle={`${potluckItems.length} items • ${claimedPotluckCount} claimed${openPotluckCount ? ` • ${openPotluckCount} open` : ''}`}
             actions={onUpdateEventData && openEditor ? (
               <ActionPill
                 onClick={() =>
@@ -632,37 +654,76 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               </ActionPill>
             ) : null}
           >
-            <div className="space-y-2">
-              {potluckItems.slice(0, 4).map((item, index) => (
+            <div className="space-y-2.5">
+              {potluckPreviewItems.map((item, index) => (
                 <div
                   key={`${item?.item || item}-${index}`}
-                  className="group/item flex items-center justify-between rounded-xl border-2 border-fuchsia-100/80 bg-white px-4 py-3 text-sm shadow-sm transition-all hover:border-fuchsia-200 hover:shadow-md dark:border-fuchsia-500/10 dark:bg-white/5 dark:hover:border-fuchsia-500/20"
+                  className="group/item relative overflow-hidden flex items-center justify-between gap-3 rounded-2xl border border-fuchsia-100/80 bg-white/88 px-3.5 py-2.5 text-sm shadow-sm transition-all hover:border-fuchsia-200 hover:shadow-md dark:border-fuchsia-500/10 dark:bg-white/[0.045] dark:hover:border-fuchsia-500/20"
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                    <span className="truncate font-semibold text-gray-900 dark:text-white">{item?.item || item}</span>
+                  <PartyTileConfetti />
+                  <div className="relative min-w-0 flex-1">
+                    <div className="truncate font-semibold text-gray-900 dark:text-white">{item?.item || item}</div>
+                    <div className="mt-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                      {item?.person ? `Claimed by ${item.person}` : 'Open signup'}
+                    </div>
                   </div>
-                  <div className="ml-3 flex items-center gap-2">
-                    <span className="rounded-full bg-fuchsia-50 px-2.5 py-1 text-xs font-medium text-fuchsia-700 dark:bg-fuchsia-500/10 dark:text-fuchsia-300">
-                      {item?.person || 'Unassigned'}
+                  <div className="relative ml-2 flex shrink-0 items-center gap-2">
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                      item?.person
+                        ? 'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-500/10 dark:text-fuchsia-300'
+                        : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200'
+                    }`}>
+                      {item?.person ? 'Claimed' : 'Open'}
                     </span>
                     {canClaimPotluck ? (
                       item?.claimedByUserId && item.claimedByUserId !== currentUserId ? null : (
                         <button
                           type="button"
                           onClick={() => props.onClaimPotluck?.(index)}
-                          className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] transition ${
+                          className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] transition ${
                             item?.claimedByUserId === currentUserId
                               ? 'bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/18'
                               : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/12 dark:text-emerald-200 dark:hover:bg-emerald-500/18'
                           }`}
                         >
-                          {item?.claimedByUserId === currentUserId ? 'Remove me' : "I'll bring this"}
+                          {item?.claimedByUserId === currentUserId ? 'Unclaim' : 'Claim'}
                         </button>
                       )
                     ) : null}
                   </div>
                 </div>
               ))}
+              {potluckItems.length > potluckPreviewItems.length ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onUpdateEventData && openEditor
+                      ? openEditor({
+                          variant: 'party',
+                          title: 'Potluck Signups',
+                          fields: [
+                            {
+                              key: 'potluckItems',
+                              label: 'Potluck list',
+                              type: 'potluck-list',
+                              value: potluckItems,
+                              placeholder: 'Chips',
+                            },
+                          ],
+                          onSave: (values) => onUpdateEventData({
+                            potluckItems: Array.isArray(values.potluckItems)
+                              ? normalizePotluckItems(values.potluckItems)
+                              : parseLineItems(values.potluckItems),
+                          }),
+                        })
+                      : undefined
+                  }
+                  className="relative w-full overflow-hidden rounded-2xl border border-dashed border-fuchsia-200/90 bg-white/65 px-4 py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-fuchsia-700 transition hover:border-fuchsia-300 hover:bg-fuchsia-50/70 dark:border-white/10 dark:bg-white/[0.03] dark:text-fuchsia-200 dark:hover:bg-white/[0.06]"
+                >
+                  <PartyTileConfetti />
+                  <span className="relative">+{potluckItems.length - potluckPreviewItems.length} more items</span>
+                </button>
+              ) : null}
             </div>
           </Section>
         ) : (
