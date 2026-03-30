@@ -2064,10 +2064,6 @@ function App() {
   const photoTouchRef = useRef({ id: null, x: 0, y: 0 });
   const photoClickSuppressRef = useRef({ id: null, until: 0 });
   const photoReactionPickerOpenedRef = useRef({ id: null, at: 0 });
-  const suppressImageSavePrompt = (event) => {
-    event.preventDefault();
-  };
-
   const REACTION_EMOJIS = ['😍', '🔥', '👏', '😂', '🥹', '🤩', '💯', '🙌', '❤️'];
   const PHOTO_REACTION_EMOJIS = ['😍', '❤️', '🥹', '😂', '🔥', '👏', '🙌', '🤩', '💯', '✨', '🎉', '😭', '😮', '😎', '🥰', '🙏', '💖', '📸'];
   const getTripPhotoReactionsLocalKey = (subCalId) => `subcal-trip-photo-reactions-${String(subCalId || '').trim()}`;
@@ -28790,9 +28786,6 @@ transform: translateY(0);
                             src={getEventPhotos(event.id)[0].url}
                             alt=""
                             className="h-28 w-full rounded-2xl object-cover"
-                            draggable={false}
-                            onContextMenu={suppressImageSavePrompt}
-                            style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
                           />
                           {getEventPhotos(event.id).length > 1 && (
                             <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">
@@ -29551,9 +29544,6 @@ transform: translateY(0);
                               loading="lazy"
                               decoding="async"
                               sizes="(max-width: 640px) 33vw, 20vw"
-                              draggable={false}
-                              onContextMenu={suppressImageSavePrompt}
-                              style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
                               onError={() => { markPhotoDeleted(photo.id); }}
                             />
                             {isPhotoSelectionMode && (
@@ -29672,9 +29662,6 @@ transform: translateY(0);
                               loading="lazy"
                               decoding="async"
                               sizes="(max-width: 640px) 100vw, 720px"
-                              draggable={false}
-                              onContextMenu={suppressImageSavePrompt}
-                              style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
                               onError={() => { markPhotoDeleted(photo.id); }}
                               onClick={() => handlePhotoTap(photo)}
                               onMouseDown={() => startPhotoHoldAction(photo)}
@@ -29793,9 +29780,6 @@ transform: translateY(0);
                             loading="lazy"
                             decoding="async"
                             sizes="(max-width: 640px) 33vw, 20vw"
-                            draggable={false}
-                            onContextMenu={suppressImageSavePrompt}
-                            style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
                             onError={() => { markPhotoDeleted(photo.id); }}
                           />
                           {isPhotoSelectionMode && (
@@ -30792,9 +30776,6 @@ transform: translateY(0);
               src={lightboxPhoto.url}
               alt={lightboxPhoto.caption || ''}
               className="max-w-full max-h-[80vh] rounded-xl object-contain"
-              draggable={false}
-              onContextMenu={suppressImageSavePrompt}
-              style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
               onClick={e => e.stopPropagation()}
             />
             <div className="mt-3 text-center"     onClick={e => e.stopPropagation()}
