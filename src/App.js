@@ -4226,6 +4226,8 @@ function App() {
       }
       await openSubCalendar(tripRow);
       setBottomNavTab('home');
+      setPreferCalendarHome(true);
+      setShowHomeCalendarOverview(true);
       clearTripQueryParam();
     } catch (err) {
       console.error('Trip link open failed:', err);
@@ -4704,6 +4706,8 @@ function App() {
       }
       await openSubCalendar(tripRow);
       setBottomNavTab('home');
+      setPreferCalendarHome(true);
+      setShowHomeCalendarOverview(true);
       setLayerRefreshToken((prev) => prev + 1);
       clearShareQueryParam();
       try { localStorage.removeItem(PENDING_SHARE_TOKEN_STORAGE_KEY); } catch {}
@@ -27987,7 +27991,7 @@ transform: translateY(0);
         >
           <div className="flex items-start justify-between gap-3">
             <button
-              onClick={() => { setActiveSubCalendar(null); clearTripQueryParam(); }}
+              onClick={() => { setActiveSubCalendar(null); setPreferCalendarHome(true); setShowHomeCalendarOverview(true); clearTripQueryParam(); }}
               className={`shrink-0 flex items-center gap-1.5 rounded-full px-3 py-2 font-medium text-sm ${tripHeaderPillClassName} ${darkMode ? 'text-purple-200' : 'text-purple-600'}`}
             >
               <ChevronLeft className="w-4 h-4" /> Back
@@ -28221,7 +28225,7 @@ transform: translateY(0);
 
         {/* Header */}
         <div className="hidden" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
-          <button onClick={() => { setActiveSubCalendar(null); clearTripQueryParam(); }} className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium text-sm">
+          <button onClick={() => { setActiveSubCalendar(null); setPreferCalendarHome(true); setShowHomeCalendarOverview(true); clearTripQueryParam(); }} className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium text-sm">
             <ChevronLeft className="w-4 h-4" /> Back
           </button>
           <div className="text-center">
