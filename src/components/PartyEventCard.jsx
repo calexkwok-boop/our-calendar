@@ -267,7 +267,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
     <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/55 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#15111f] dark:via-[#1b1930] dark:to-[#0f1727] dark:shadow-[0_24px_80px_rgba(0,0,0,0.38)]">
       <style>{animationStyles}</style>
 
-      <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-55 dark:opacity-40">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-42 dark:opacity-26">
         <div className="absolute left-6 top-12 text-[2.8rem] opacity-80 drop-shadow-[0_10px_22px_rgba(236,72,153,0.22)] dark:opacity-70" style={{ animation: 'party-card-float 8.6s ease-in-out infinite 0.2s' }}>
           🥂
         </div>
@@ -429,7 +429,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       })
                   : undefined
               }
-              className="rounded-2xl border border-slate-200/75 bg-white/82 px-4 py-4 text-left backdrop-blur-sm transition-all hover:border-fuchsia-200 hover:shadow-sm dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-fuchsia-400/20"
+              className="rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-fuchsia-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-fuchsia-400/20"
             >
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-fuchsia-600 dark:text-fuchsia-300">Theme</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{theme || 'Open celebration vibe'}</div>
@@ -462,7 +462,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       })
                   : undefined
               }
-              className="rounded-2xl border border-slate-200/75 bg-white/82 px-4 py-4 text-left backdrop-blur-sm transition-all hover:border-cyan-200 hover:shadow-sm dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-cyan-400/20"
+              className="rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-cyan-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-cyan-400/20"
             >
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Guest List</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
@@ -513,7 +513,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
                       })
                   : undefined
               }
-              className="rounded-2xl border border-slate-200/75 bg-white/82 px-4 py-4 text-left backdrop-blur-sm transition-all hover:border-violet-200 hover:shadow-sm dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-violet-400/20"
+              className="rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-violet-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-violet-400/20"
             >
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Mood</div>
               <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
