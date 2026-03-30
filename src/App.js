@@ -2090,6 +2090,34 @@ function App() {
     });
     return Object.values(grouped).sort((a, b) => a.label.localeCompare(b.label));
   }, [tripPhotos]);
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+
+    const shouldBlockImageMenu = (target) => {
+      if (!(target instanceof Element)) return false;
+      return Boolean(target.closest('img'));
+    };
+
+    const handleContextMenu = (event) => {
+      if (shouldBlockImageMenu(event.target)) {
+        event.preventDefault();
+      }
+    };
+
+    const handleDragStart = (event) => {
+      if (shouldBlockImageMenu(event.target)) {
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu, true);
+    document.addEventListener('dragstart', handleDragStart, true);
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu, true);
+      document.removeEventListener('dragstart', handleDragStart, true);
+    };
+  }, []);
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
@@ -31653,6 +31681,12 @@ transform: translateY(0);
           select {
             font-size: 16px !important;
           }
+        }
+
+        img {
+          -webkit-touch-callout: none;
+          -webkit-user-select: none;
+          user-select: none;
         }
       `}</style>
     </>
