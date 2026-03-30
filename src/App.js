@@ -29600,10 +29600,11 @@ transform: translateY(0);
                             <img
                               src={photo.url}
                               alt={photo.caption || ''}
-                              className="w-full h-full object-cover"
+                              className="pointer-events-none w-full h-full select-none object-cover"
                               loading="lazy"
                               decoding="async"
                               sizes="(max-width: 640px) 33vw, 20vw"
+                              draggable={false}
                               onError={() => { markPhotoDeleted(photo.id); }}
                             />
                             {isPhotoSelectionMode && (
@@ -29709,27 +29710,28 @@ transform: translateY(0);
                           <div
                             key={photo.id}
                             className={`relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'}`}
+                            onClick={() => handlePhotoTap(photo)}
                             onDoubleClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
                               handlePhotoDoubleTap(photo);
                             }}
+                            onMouseDown={() => startPhotoHoldAction(photo)}
+                            onMouseUp={clearPhotoReactionHold}
+                            onMouseLeave={clearPhotoReactionHold}
+                            onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
+                            onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
+                            onTouchCancel={clearPhotoReactionHold}
                           >
                             <img
                               src={photo.url}
                               alt={photo.caption || ''}
-                              className="w-full max-h-72 object-cover cursor-pointer"
+                              className="pointer-events-none w-full max-h-72 select-none object-cover"
                               loading="lazy"
                               decoding="async"
                               sizes="(max-width: 640px) 100vw, 720px"
+                              draggable={false}
                               onError={() => { markPhotoDeleted(photo.id); }}
-                              onClick={() => handlePhotoTap(photo)}
-                              onMouseDown={() => startPhotoHoldAction(photo)}
-                              onMouseUp={clearPhotoReactionHold}
-                              onMouseLeave={clearPhotoReactionHold}
-                              onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
-                              onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
-                              onTouchCancel={clearPhotoReactionHold}
                             />
                             {isPhotoSelectionMode && (
                               <div className="px-3 pt-2">
@@ -29836,10 +29838,11 @@ transform: translateY(0);
                           <img
                             src={photo.url}
                             alt={photo.caption || ''}
-                            className="w-full h-full object-cover"
+                            className="pointer-events-none w-full h-full select-none object-cover"
                             loading="lazy"
                             decoding="async"
                             sizes="(max-width: 640px) 33vw, 20vw"
+                            draggable={false}
                             onError={() => { markPhotoDeleted(photo.id); }}
                           />
                           {isPhotoSelectionMode && (
