@@ -2171,6 +2171,24 @@ function App() {
       localStorage.setItem(getDeletedPhotosLocalKey(subCalId), JSON.stringify(normalized));
     } catch {}
   };
+  const getTripPhotosCacheLocalKey = (subCalId) => `subcal-trip-photos-cache-${String(subCalId || '').trim()}`;
+  const readLocalTripPhotosCache = (subCalId) => {
+    try {
+      const raw = localStorage.getItem(getTripPhotosCacheLocalKey(subCalId));
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((row) => row && typeof row === 'object') : [];
+    } catch {
+      return [];
+    }
+  };
+  const writeLocalTripPhotosCache = (subCalId, rows) => {
+    try {
+      localStorage.setItem(
+        getTripPhotosCacheLocalKey(subCalId),
+        JSON.stringify(Array.isArray(rows) ? rows.filter((row) => row && typeof row === 'object') : [])
+      );
+    } catch {}
+  };
   const getLayerCategoriesLocalKey = (_userId, layerId) => `layer-categories-${String(layerId || '').trim()}`;
   const readLocalLayerCategories = (userId, layerId) => {
     try {
@@ -3019,6 +3037,7 @@ function App() {
     }
     const deduped = merged.filter((row, index, arr) => arr.findIndex((candidate) => String(candidate?.id) === String(row?.id)) === index);
     setTripPhotos(deduped);
+    writeLocalTripPhotosCache(subCal?.id, deduped);
     return deduped;
   };
 
@@ -3795,7 +3814,7 @@ function App() {
 
     setTripChatMessages([]);
     setTripChatUnreadCounts((prev) => ({ ...prev, [String(sc?.id || '')]: 0 }));
-    setTripPhotos([]);
+    setTripPhotos(readLocalTripPhotosCache(sc.id));
     setTripCoverPhoto(null);
     setTripCoverPhotoNoteId(null);
     setDeletedPhotoIds([]);
@@ -4326,7 +4345,6 @@ function App() {
       if (error) { console.error('Error loading photos:', error); return []; }
       const deletedSet = new Set(((deletedIdsOverride ?? deletedPhotoIds) || []).map(id => String(id)));
       const filtered = (data || []).filter(p => !deletedSet.has(String(p.id)));
-      setTripPhotos(filtered);
       return filtered;
     } catch (e) { console.error(e); }
     return [];
@@ -4396,7 +4414,10 @@ function App() {
       let uploadError = null;
 
       for (const bucket of TRIP_PHOTO_BUCKETS) {
-        const { error } = await supabase.storage.from(bucket).upload(filename, file, { contentType: file.type });
+        const { error } = await supabase.storage.from(bucket).upload(filename, file, {
+          contentType: file.type,
+          cacheControl: '31536000',
+        });
         if (!error) {
           selectedBucket = bucket;
           uploadError = null;
@@ -4441,7 +4462,11 @@ function App() {
         setPhotoUploadMessage(`Saved file but failed to add photo record: ${dbError.message}`);
         return null;
       }
-      setTripPhotos(prev => [...prev, photo]);
+      setTripPhotos(prev => {
+        const next = [...prev, photo];
+        writeLocalTripPhotosCache(activeSubCalendar.id, next);
+        return next;
+      });
       setPhotoUploadError(false);
       setPhotoUploadMessage('');
       return photo;
@@ -4476,7 +4501,10 @@ function App() {
       let selectedBucket = null;
       let uploadError = null;
       for (const bucket of TRIP_PHOTO_BUCKETS) {
-        const { error } = await supabase.storage.from(bucket).upload(filename, file, { contentType: file.type });
+        const { error } = await supabase.storage.from(bucket).upload(filename, file, {
+          contentType: file.type,
+          cacheControl: '31536000',
+        });
         if (!error) {
           selectedBucket = bucket;
           uploadError = null;
@@ -5576,7 +5604,11 @@ function App() {
     const ok = await saveDeletedPhotoIds(nextDeleted);
     if (!ok) return false;
     setDeletedPhotoIds(nextDeleted);
-    setTripPhotos(prev => prev.filter(p => String(p.id) !== String(photoId)));
+    setTripPhotos(prev => {
+      const next = prev.filter(p => String(p.id) !== String(photoId));
+      writeLocalTripPhotosCache(activeSubCalendar?.id, next);
+      return next;
+    });
     return true;
   };
 
