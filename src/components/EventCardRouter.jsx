@@ -1264,12 +1264,12 @@ const GenericEventCard = ({ event, onEdit, ...props }) => (
     categoryLabel={event?.category === 'sports' ? 'Sports' : 'Event'}
     icon={event?.category === 'sports' ? '🏃' : '✨'}
     accentClasses={{
-      shell: 'border-slate-300/70 bg-gradient-to-br from-slate-50 via-gray-50/80 to-zinc-50/50 dark:border-slate-400/25 dark:from-[#1a1a1a] dark:via-[#151515] dark:to-[#111111]',
-      header: 'border-slate-200/80 bg-gradient-to-br from-white/95 to-slate-50/60 dark:border-slate-400/15 dark:bg-gradient-to-br dark:from-white/[0.04] dark:to-slate-500/[0.02]',
-      iconWrap: 'border-slate-300 bg-gradient-to-br from-slate-100 to-gray-100 text-slate-700 shadow-slate-200/40 dark:border-slate-400/30 dark:from-slate-500/15 dark:to-gray-500/15 dark:text-slate-300 dark:shadow-slate-500/10',
-      categoryChip: 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-800 dark:from-slate-500/15 dark:to-slate-600/15 dark:text-slate-200',
-      secondaryChip: 'border-slate-200 bg-white/90 text-slate-700 dark:border-slate-400/20 dark:bg-white/5 dark:text-slate-200',
-      gradientOverlay: 'bg-gradient-to-br from-slate-400 via-gray-400 to-zinc-400',
+      shell: 'border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/65 to-cyan-50/60 dark:border-fuchsia-400/20 dark:from-[#171320] dark:via-[#1d1a30] dark:to-[#0f1727]',
+      header: 'border-fuchsia-200/70 bg-gradient-to-br from-white via-rose-50/90 to-cyan-50/90 dark:border-fuchsia-400/15 dark:bg-gradient-to-br dark:from-[#261c38] dark:via-[#231933] dark:to-[#17263e]',
+      iconWrap: 'border-fuchsia-300 bg-gradient-to-br from-fuchsia-100 to-rose-100 text-fuchsia-700 shadow-fuchsia-200/40 dark:border-fuchsia-400/30 dark:from-fuchsia-500/15 dark:to-rose-500/15 dark:text-fuchsia-200 dark:shadow-fuchsia-500/10',
+      categoryChip: 'bg-gradient-to-br from-fuchsia-100 to-rose-100 text-fuchsia-800 dark:from-fuchsia-500/15 dark:to-rose-500/15 dark:text-fuchsia-200',
+      secondaryChip: 'border-cyan-200 bg-white/90 text-cyan-700 dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200',
+      gradientOverlay: 'bg-gradient-to-br from-fuchsia-400 via-rose-400 to-cyan-400',
     }}
     fillHeight
     {...props}
@@ -1296,7 +1296,7 @@ const EventCardRouter = ({ event, onEditBasics, ...props }) => {
   };
   const handleOpenBasicsEditor = typeof onEditBasics === 'function'
     ? () => openEditor({
-        variant: category === 'party' ? 'party' : undefined,
+        variant: 'party',
         title: 'Edit Event Details',
         subtitle: 'Update the name, location, and notes for this event.',
         fields: [

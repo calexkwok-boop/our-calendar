@@ -146,7 +146,7 @@ const TrashIcon = () => (
 );
 
 const ActionPill = ({ href, onClick, children }) => {
-  const className = 'inline-flex items-center gap-1.5 rounded-full border-2 border-gray-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 hover:shadow-md active:scale-[0.98] dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10';
+  const className = 'inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200 bg-white/92 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/75 hover:shadow-md active:scale-[0.98] dark:border-white/10 dark:bg-white/5 dark:text-fuchsia-200 dark:hover:bg-white/10';
 
   if (href) {
     return (
@@ -164,7 +164,7 @@ const ActionPill = ({ href, onClick, children }) => {
 };
 
 const Section = ({ title, subtitle, actions, children, tone }) => (
-  <div className={`group/section rounded-[22px] border bg-white/90 p-5 backdrop-blur-sm transition-all dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08] ${tone?.sectionBorder || 'border-rose-200/70 dark:border-rose-400/14'} ${tone?.sectionShadow || 'shadow-[0_12px_30px_rgba(244,63,94,0.09)] hover:shadow-[0_18px_40px_rgba(244,63,94,0.14)]'}`}>
+  <div className={`group/section rounded-[22px] border border-fuchsia-100/80 bg-white/96 p-5 backdrop-blur-sm transition-all dark:border-white/10 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08] ${tone?.sectionShadow || 'shadow-[0_10px_26px_rgba(15,23,42,0.05)] hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)]'}`}>
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-bold text-gray-900 dark:text-white">{title}</div>
@@ -178,7 +178,7 @@ const Section = ({ title, subtitle, actions, children, tone }) => (
 
 const EmptySection = ({ title, subtitle, actions, tone }) => (
   <Section title={title} subtitle={subtitle} actions={actions} tone={tone}>
-    <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${tone?.empty || 'border-rose-200 bg-rose-50/70 text-rose-700 dark:border-rose-400/16 dark:bg-rose-500/8 dark:text-rose-200'}`}>
+    <div className="rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
       Nothing added yet.
     </div>
   </Section>
@@ -230,7 +230,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
   const tone = resolveCelebrationStyle(event);
 
   return (
-    <div className={`group relative w-full overflow-hidden rounded-[32px] border-2 transition-all duration-300 dark:shadow-none ${tone.shell} ${tone.kind === 'baby' ? 'shadow-[0_24px_80px_rgba(56,189,248,0.22)] hover:shadow-[0_28px_100px_rgba(56,189,248,0.3)]' : 'shadow-[0_24px_80px_rgba(244,63,94,0.25)] hover:shadow-[0_28px_100px_rgba(244,63,94,0.35)]'}`}>
+    <div className={`group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/60 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#171320] dark:via-[#201930] dark:to-[#111a2b] ${tone.kind === 'baby' ? 'dark:shadow-[0_24px_80px_rgba(56,189,248,0.12)]' : 'dark:shadow-[0_24px_80px_rgba(236,72,153,0.12)]'}`}>
       <style>{animationStyles}</style>
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -274,9 +274,14 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
         <div className={`absolute left-[70%] top-[40%] h-1 w-1 rotate-[30deg] ${tone.kind === 'baby' ? 'bg-amber-400' : 'bg-orange-400'} opacity-55 dark:opacity-28`} style={{ animation: 'celebration-twinkle 4.5s ease-in-out infinite 2s' }} />
       </div>
 
-      <div className={`relative border-b-2 px-6 py-6 sm:px-7 ${tone.header}`}>
+      <div className="relative border-b border-fuchsia-200/60 bg-gradient-to-br from-white via-rose-50/92 to-cyan-50/92 px-6 py-6 dark:border-fuchsia-400/15 dark:from-[#271c3a] dark:via-[#231933] dark:to-[#16263d] sm:px-7">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
+            <div className="mb-3 flex items-center justify-center sm:justify-start">
+              <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-fuchsia-700 dark:text-fuchsia-200">
+                You're Invited
+              </div>
+            </div>
             <div className="mb-4 flex flex-wrap items-center gap-2.5">
               <span
                 className={`inline-flex h-12 w-12 items-center justify-center rounded-[18px] border-2 text-2xl shadow-lg transition-transform group-hover:scale-110 ${tone.iconWrap}`}
@@ -296,11 +301,13 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
               ) : null}
             </div>
 
-            <h3 className="text-[22px] font-bold leading-tight tracking-tight text-gray-950 dark:text-white">
+            <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
               {event?.title || 'Untitled celebration'}
             </h3>
 
-            <div className="mt-2.5 flex items-center gap-2 text-[15px] font-medium text-gray-600 dark:text-gray-300">
+            <div className="mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent dark:via-cyan-300/80" />
+
+            <div className="mt-4 flex items-center gap-2 text-[15px] font-medium text-gray-600 dark:text-gray-300">
               <svg className="h-4 w-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -344,7 +351,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
             href={registryLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="group/gift relative block overflow-hidden rounded-2xl border-2 border-rose-200 bg-gradient-to-br from-rose-100 to-pink-100 p-5 shadow-md transition-all hover:scale-[1.02] hover:border-rose-300 hover:shadow-lg dark:border-rose-400/20 dark:from-rose-500/15 dark:to-pink-500/15"
+            className="group/gift relative block overflow-hidden rounded-2xl border border-fuchsia-200/80 bg-white/88 p-5 shadow-md transition-all hover:scale-[1.02] hover:border-fuchsia-300 hover:shadow-lg dark:border-white/10 dark:bg-white/[0.045]"
           >
             <div className="pointer-events-none absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-white/30 to-transparent opacity-0 transition-opacity group-hover/gift:opacity-100 dark:from-white/10" />
 
@@ -406,7 +413,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
             </ActionPill>
           ) : null}
         >
-          <div className={`relative overflow-hidden rounded-2xl border-2 p-4 shadow-sm ${tone.detailSurface}`}>
+          <div className="relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.045]">
             <div className="flex items-start gap-3">
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-sm font-semibold ${tone.kind === 'baby' ? 'from-sky-100 to-cyan-100 text-sky-700 dark:from-sky-500/15 dark:to-cyan-500/15 dark:text-sky-200' : 'from-rose-100 to-pink-100 text-rose-700 dark:from-rose-500/15 dark:to-pink-500/15 dark:text-rose-200'}`}>
                 Style
@@ -459,7 +466,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
                   <div className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-rose-200 bg-white shadow-sm dark:border-rose-500/20 dark:bg-gray-900">
                     <div className="h-2 w-2 rounded-full bg-gradient-to-br from-rose-400 to-pink-400" />
                   </div>
-                  <div className={`min-w-0 flex-1 rounded-xl border-2 p-3 shadow-sm ${tone.detailSurface}`}>
+                  <div className="min-w-0 flex-1 rounded-xl border border-fuchsia-100/80 bg-white/88 p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.045]">
                     <div className={`mb-1 text-xs font-bold ${tone.detailLabel}`}>
                       {item?.time || 'Time TBD'}
                     </div>

@@ -56,7 +56,7 @@ const TrashIcon = () => (
 );
 
 const ActionPill = ({ href, onClick, children }) => {
-  const className = 'inline-flex items-center gap-1.5 rounded-full border-2 border-gray-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 hover:shadow-md active:scale-[0.98] dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10';
+  const className = 'inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200 bg-white/92 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/75 hover:shadow-md active:scale-[0.98] dark:border-white/10 dark:bg-white/5 dark:text-fuchsia-200 dark:hover:bg-white/10';
 
   if (href) {
     return (
@@ -74,7 +74,7 @@ const ActionPill = ({ href, onClick, children }) => {
 };
 
 const Section = ({ title, subtitle, actions, children }) => (
-  <div className="group/section rounded-[22px] border border-cyan-200/70 bg-white/90 p-5 shadow-[0_12px_30px_rgba(34,211,238,0.09)] backdrop-blur-sm transition-all hover:shadow-[0_18px_40px_rgba(34,211,238,0.14)] dark:border-cyan-400/14 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08]">
+  <div className="group/section rounded-[22px] border border-fuchsia-100/80 bg-white/96 p-5 shadow-[0_10px_26px_rgba(15,23,42,0.05)] backdrop-blur-sm transition-all hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08]">
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-bold text-gray-900 dark:text-white">{title}</div>
@@ -88,7 +88,7 @@ const Section = ({ title, subtitle, actions, children }) => (
 
 const EmptySection = ({ title, subtitle, actions }) => (
   <Section title={title} subtitle={subtitle} actions={actions}>
-    <div className="rounded-2xl border border-dashed border-cyan-200 bg-cyan-50/70 px-4 py-4 text-sm text-cyan-700 dark:border-cyan-400/16 dark:bg-cyan-500/8 dark:text-cyan-200">
+    <div className="rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
       Nothing added yet.
     </div>
   </Section>
@@ -142,7 +142,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
       : 'Separate checks';
 
   return (
-    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-cyan-300/70 bg-gradient-to-br from-cyan-50 via-sky-50/80 to-blue-50/50 shadow-[0_24px_80px_rgba(34,211,238,0.25)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(34,211,238,0.35)] dark:border-cyan-400/25 dark:from-[#15242d] dark:via-[#121a1f] dark:to-[#0f1113] dark:shadow-none">
+    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/60 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:from-[#171320] dark:via-[#1d1a30] dark:to-[#111a2b] dark:shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
       <style>{animationStyles}</style>
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -160,12 +160,17 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
       <div className="pointer-events-none absolute -left-12 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-gradient-to-r from-cyan-300/20 to-transparent blur-3xl dark:from-cyan-400/10" />
       <div className="pointer-events-none absolute -right-12 top-1/3 h-32 w-32 -translate-y-1/2 rounded-full bg-gradient-to-l from-sky-300/20 to-transparent blur-3xl dark:from-sky-400/10" />
 
-      <div className="relative border-b-2 border-cyan-200/80 bg-gradient-to-br from-white/95 to-cyan-50/60 px-6 py-6 dark:border-cyan-400/15 dark:from-white/[0.04] dark:to-cyan-500/[0.02] sm:px-7">
+      <div className="relative border-b border-fuchsia-200/60 bg-gradient-to-br from-white via-rose-50/92 to-cyan-50/92 px-6 py-6 dark:border-fuchsia-400/15 dark:from-[#271c3a] dark:via-[#231933] dark:to-[#16263d] sm:px-7">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
+            <div className="mb-3 flex items-center justify-center sm:justify-start">
+              <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-fuchsia-700 dark:text-fuchsia-200">
+                You're Invited
+              </div>
+            </div>
             <div className="mb-4 flex flex-wrap items-center gap-2.5">
               <span
-                className="relative inline-flex h-12 w-12 items-center justify-center rounded-[18px] border-2 border-cyan-300 bg-gradient-to-br from-cyan-100 to-sky-100 text-2xl shadow-lg shadow-cyan-200/40 transition-transform group-hover:scale-110 dark:border-cyan-400/30 dark:from-cyan-500/15 dark:to-sky-500/15 dark:shadow-cyan-500/10"
+                className="relative inline-flex h-12 w-12 items-center justify-center rounded-[18px] border-2 border-cyan-200 bg-gradient-to-br from-cyan-100 to-sky-100 text-2xl shadow-lg shadow-cyan-200/30 transition-transform group-hover:scale-110 dark:border-cyan-400/20 dark:from-cyan-500/15 dark:to-sky-500/15 dark:shadow-cyan-500/10"
                 style={{ animation: 'hangout-gentle-wobble 3s ease-in-out infinite' }}
               >
                 Coffee
@@ -183,11 +188,13 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
               ) : null}
             </div>
 
-            <h3 className="text-[22px] font-bold leading-tight tracking-tight text-gray-950 dark:text-white">
+            <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
               {event?.title || 'Untitled hangout'}
             </h3>
 
-            <div className="mt-2.5 flex items-center gap-2 text-[15px] font-medium text-gray-600 dark:text-gray-300">
+            <div className="mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent dark:via-cyan-300/80" />
+
+            <div className="mt-4 flex items-center gap-2 text-[15px] font-medium text-gray-600 dark:text-gray-300">
               <svg className="h-4 w-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -256,7 +263,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
           ) : null}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="group/card relative overflow-hidden rounded-2xl border-2 border-cyan-200 bg-white p-4 shadow-sm transition-all hover:border-cyan-300 hover:shadow-md dark:border-cyan-400/20 dark:bg-white/5">
+            <div className="group/card relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 p-4 shadow-sm transition-all hover:border-fuchsia-200 hover:shadow-md dark:border-white/10 dark:bg-white/[0.045]">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-100 to-sky-100 text-sm font-semibold text-cyan-700 dark:from-cyan-500/15 dark:to-sky-500/15 dark:text-cyan-200">
                   Plan
@@ -268,7 +275,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
               </div>
             </div>
 
-            <div className="group/card relative overflow-hidden rounded-2xl border-2 border-sky-200 bg-white p-4 shadow-sm transition-all hover:border-sky-300 hover:shadow-md dark:border-sky-400/20 dark:bg-white/5">
+            <div className="group/card relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 p-4 shadow-sm transition-all hover:border-fuchsia-200 hover:shadow-md dark:border-white/10 dark:bg-white/[0.045]">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-blue-100 text-sm font-semibold text-sky-700 dark:from-sky-500/15 dark:to-blue-500/15 dark:text-sky-200">
                   Bill
@@ -283,7 +290,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
         </Section>
 
         {duration ? (
-          <div className="relative overflow-hidden rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-5 shadow-sm dark:border-blue-400/20 dark:from-blue-500/10 dark:to-cyan-500/10">
+          <div className="relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.045]">
             <div className="relative flex items-center gap-3">
               <div className="min-w-0 flex-1">
                 <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-blue-700 dark:text-blue-300">
