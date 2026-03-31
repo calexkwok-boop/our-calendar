@@ -29659,6 +29659,14 @@ transform: translateY(0);
                               src={photo.url}
                               alt={photo.caption || 'Trip photo'}
                               className="h-72 w-full object-cover"
+                              onClick={() => handlePhotoTap(photo)}
+                              onDoubleClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handlePhotoDoubleTap(photo);
+                              }}
+                              onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
+                              onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
                             />
                             {isPhotoSelectionMode && (
                               <div className="px-3 pt-2">
