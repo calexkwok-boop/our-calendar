@@ -209,6 +209,32 @@ export default function DateDetailsCardEnhanced({
   const softButton = darkMode
     ? 'border-white/10 bg-white/5 text-white hover:bg-white/10'
     : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100';
+  const accentSoftBackground = darkMode ? hexToRgba(accent, 0.16) : hexToRgba(accent, 0.08);
+  const accentSurfaceBackground = darkMode ? hexToRgba(accent, 0.12) : hexToRgba(accent, 0.05);
+  const accentBorderColor = darkMode ? hexToRgba(accent, 0.42) : hexToRgba(accent, 0.24);
+  const accentStrongBorderColor = darkMode ? hexToRgba(accent, 0.5) : hexToRgba(accent, 0.32);
+  const themedWeCardStyle = {
+    borderColor: accentBorderColor,
+    background: darkMode
+      ? `linear-gradient(135deg, ${hexToRgba(accent, 0.18)} 0%, rgba(15,23,42,0.78) 100%)`
+      : `linear-gradient(135deg, ${hexToRgba(accent, 0.12)} 0%, rgba(255,255,255,0.96) 100%)`,
+  };
+  const themedWeTemplateStyle = {
+    borderColor: accentBorderColor,
+    background: darkMode
+      ? `linear-gradient(135deg, ${hexToRgba(accent, 0.14)} 0%, rgba(15,23,42,0.82) 100%)`
+      : `linear-gradient(135deg, ${hexToRgba(accent, 0.1)} 0%, rgba(255,255,255,0.98) 100%)`,
+  };
+  const themedWeChipStyle = {
+    backgroundColor: accentSoftBackground,
+    color: accent,
+  };
+  const themedWeSectionStyle = {
+    borderColor: accentBorderColor,
+    background: darkMode
+      ? `linear-gradient(135deg, ${hexToRgba(accent, 0.12)} 0%, rgba(15,23,42,0.82) 100%)`
+      : `linear-gradient(135deg, ${hexToRgba(accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)`,
+  };
 
   const handleLocationSearch = async (query) => {
     setLocation(query);
@@ -372,7 +398,8 @@ export default function DateDetailsCardEnhanced({
                 <button
                   type="button"
                   onClick={() => setEventType('we')}
-                  className={`w-full rounded-2xl border p-5 text-left transition-all hover:shadow-md ${darkMode ? 'border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 to-pink-500/10' : 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50'}`}
+                  className="w-full rounded-2xl border p-5 text-left transition-all hover:shadow-md"
+                  style={themedWeCardStyle}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`flex h-12 w-12 items-center justify-center rounded-xl text-2xl shadow-sm ${darkMode ? 'bg-white/10' : 'bg-white'}`}>👥</div>
@@ -406,7 +433,8 @@ export default function DateDetailsCardEnhanced({
                         key={template.id}
                         type="button"
                         onClick={() => setWeEventCategory(template.id)}
-                        className={`rounded-xl border p-4 text-center transition-all hover:shadow-md ${darkMode ? 'border-fuchsia-400/20 bg-gradient-to-br from-fuchsia-500/10 to-pink-500/10' : 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50'}`}
+                        className="rounded-xl border p-4 text-center transition-all hover:shadow-md"
+                        style={themedWeTemplateStyle}
                       >
                         <div className="mb-2 text-3xl">{template.emoji}</div>
                         <div className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{template.label}</div>
@@ -445,7 +473,8 @@ export default function DateDetailsCardEnhanced({
                           key={example}
                           type="button"
                           onClick={() => setEventTitle(example)}
-                          className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${darkMode ? 'bg-fuchsia-500/15 text-fuchsia-100 hover:bg-fuchsia-500/25' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}
+                          className="rounded-full px-3 py-1.5 text-sm font-medium transition-colors hover:opacity-90"
+                          style={themedWeChipStyle}
                         >
                           {example}
                         </button>
@@ -523,9 +552,10 @@ export default function DateDetailsCardEnhanced({
                             onClick={() => setSelectedTime(toTimeLabel(time))}
                           className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
                             selectedTime === time
-                              ? (darkMode ? 'border-fuchsia-300/40 bg-fuchsia-500/20 text-fuchsia-100' : 'border-purple-300 bg-purple-200 text-purple-700')
+                              ? ''
                               : softButton
                           }`}
+                          style={selectedTime === time ? { borderColor: accentStrongBorderColor, backgroundColor: accentSoftBackground, color: accent } : undefined}
                         >
                           {toTimeLabel(time)}
                         </button>
@@ -535,8 +565,9 @@ export default function DateDetailsCardEnhanced({
 
                   <div className={`rounded-2xl border p-3 ${eventType === 'me'
                     ? (darkMode ? 'border-blue-400/20 bg-gradient-to-br from-blue-500/10 to-indigo-500/10' : 'border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50')
-                    : (darkMode ? 'border-fuchsia-400/20 bg-gradient-to-br from-fuchsia-500/10 to-pink-500/10' : 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50')
-                  }`}>
+                    : ''
+                  }`}
+                  style={eventType === 'we' ? themedWeSectionStyle : undefined}>
                     <input
                       type="text"
                       value={selectedTime}
@@ -552,7 +583,7 @@ export default function DateDetailsCardEnhanced({
                 {eventType === 'we' ? (
                   <div>
                     <label className={`mb-2 block text-sm font-semibold ${labelText}`}>Max people</label>
-                    <div className={`rounded-2xl border p-4 ${darkMode ? 'border-fuchsia-400/20 bg-gradient-to-br from-fuchsia-500/10 to-pink-500/10' : 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50'}`}>
+                    <div className="rounded-2xl border p-4" style={themedWeSectionStyle}>
                       <div className="flex items-center gap-3">
                         <input
                           type="range"
@@ -561,7 +592,8 @@ export default function DateDetailsCardEnhanced({
                           step={1}
                           value={Math.max(2, parseInt(String(popupEventMaxPeopleDraft || '10'), 10) || 10)}
                           onChange={(event) => setPopupEventMaxPeopleDraft?.(String(event.target.value))}
-                          className="flex-1 accent-fuchsia-500"
+                          className="flex-1"
+                          style={{ accentColor: accent }}
                         />
                         <input
                           type="number"
@@ -580,7 +612,7 @@ export default function DateDetailsCardEnhanced({
                 {eventType === 'we' ? (
                   <div>
                     <label className={`mb-2 block text-sm font-semibold ${labelText}`}>Who's invited?</label>
-                    <div className={`space-y-3 rounded-2xl border p-4 ${darkMode ? 'border-fuchsia-400/20 bg-gradient-to-br from-fuchsia-500/10 to-pink-500/10' : 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50'}`}>
+                    <div className="space-y-3 rounded-2xl border p-4" style={themedWeSectionStyle}>
                       <div className="flex flex-wrap gap-2">
                         {invitees.map((invitee) => (
                           <button
@@ -589,9 +621,10 @@ export default function DateDetailsCardEnhanced({
                             onClick={() => toggleInvitee(invitee.id)}
                             className={`flex items-center gap-2 rounded-full px-3 py-2 font-medium transition-all ${
                               invitee.selected
-                                ? (darkMode ? 'border-2 border-fuchsia-300/50 bg-white/10 text-white' : 'border-2 border-purple-400 bg-white text-purple-700 shadow-sm')
+                                ? ''
                                 : (darkMode ? 'border-2 border-white/10 bg-white/5 text-white/55' : 'border-2 border-gray-200 bg-white/60 text-gray-500')
                             }`}
+                            style={invitee.selected ? { borderColor: accentStrongBorderColor, backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#ffffff', color: accent, boxShadow: darkMode ? 'none' : '0 1px 3px rgba(15,23,42,0.08)' } : undefined}
                           >
                             <span className="text-lg">{invitee.avatar}</span>
                             <span className="text-sm">{invitee.name}</span>
@@ -601,7 +634,8 @@ export default function DateDetailsCardEnhanced({
                         <button
                           type="button"
                           onClick={() => setShowAddPeople(true)}
-                          className={`rounded-full border-2 border-dashed px-4 py-2 text-sm font-medium transition-all ${darkMode ? 'border-fuchsia-300/35 text-fuchsia-100 hover:bg-white/5' : 'border-purple-300 text-purple-600 hover:bg-purple-50'}`}
+                          className="rounded-full border-2 border-dashed px-4 py-2 text-sm font-medium transition-all hover:opacity-90"
+                          style={{ borderColor: accentStrongBorderColor, color: accent }}
                         >
                           + Add people
                         </button>
@@ -625,7 +659,8 @@ export default function DateDetailsCardEnhanced({
                                   key={contact.id}
                                   type="button"
                                   onClick={() => addInvitee(contact)}
-                                  className={`flex w-full items-center gap-3 rounded-xl border p-2.5 transition-colors ${darkMode ? 'border-white/5 bg-white/5 hover:bg-white/10' : 'border-transparent bg-white hover:border-purple-200 hover:bg-purple-50'}`}
+                                  className="flex w-full items-center gap-3 rounded-xl border p-2.5 transition-colors hover:opacity-95"
+                                  style={{ borderColor: accentBorderColor, backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : '#ffffff' }}
                                 >
                                   <span className="text-xl">{contact.avatar}</span>
                                   <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{contact.name}</span>
@@ -646,9 +681,16 @@ export default function DateDetailsCardEnhanced({
                   className={`w-full rounded-2xl py-4 text-lg font-bold text-white transition-all shadow-sm disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none ${
                     eventType === 'me'
                       ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700'
-                      : 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700'
+                      : ''
                   }`}
-                  style={eventType === 'me' ? themeAccentButtonStyle : undefined}
+                  style={eventType === 'me'
+                    ? themeAccentButtonStyle
+                    : {
+                        ...(themeAccentButtonStyle || {}),
+                        background: themeAccentButtonStyle?.backgroundColor
+                          ? `linear-gradient(90deg, ${themeAccentButtonStyle.backgroundColor} 0%, ${hexToRgba(themeAccentButtonStyle.backgroundColor, 0.78)} 100%)`
+                          : undefined,
+                      }}
                 >
                   Create {eventType === 'we' ? 'We' : 'Me'} Event
                 </button>
@@ -918,7 +960,8 @@ export default function DateDetailsCardEnhanced({
                                   clickEvent.stopPropagation();
                                   setEditingEvent?.(null);
                                 }}
-                                className="w-full rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 px-3 py-2 text-sm font-medium text-white"
+                                className="w-full rounded-xl px-3 py-2 text-sm font-medium text-white"
+                                style={themeAccentButtonStyle}
                               >
                                 Done
                               </button>
