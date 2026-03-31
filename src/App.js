@@ -135,6 +135,35 @@ const buildTripPhotoVariantPath = (basePath, variant) => {
   return `${normalizedBasePath}/${normalizedVariant}.jpg`;
 };
 
+const getTripPhotoStorageLocation = (url) => {
+  const normalizedUrl = normalizeTripPhotoUrl(url);
+  if (!normalizedUrl) return null;
+  try {
+    const parsed = new URL(normalizedUrl, window?.location?.origin || 'http://localhost');
+    const prefixes = [
+      '/storage/v1/object/public/',
+      '/storage/v1/object/sign/',
+      '/storage/v1/render/image/public/',
+      '/object/public/',
+      '/object/sign/',
+    ];
+    for (const bucket of TRIP_PHOTO_BUCKETS) {
+      for (const prefix of prefixes) {
+        const marker = `${prefix}${bucket}/`;
+        const idx = parsed.pathname.indexOf(marker);
+        if (idx === -1) continue;
+        return {
+          bucket,
+          path: decodeURIComponent(parsed.pathname.slice(idx + marker.length).replace(/^\/+/, '')),
+        };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 const buildTripPhotoVariantUrl = (url, variant) => {
   const normalizedUrl = normalizeTripPhotoUrl(url);
   const normalizedVariant = String(variant || '').trim().toLowerCase();
@@ -165,18 +194,43 @@ const buildTripPhotoVariantUrl = (url, variant) => {
   }
 };
 
+const buildTripPhotoTransformedUrl = (url, transform) => {
+  const location = getTripPhotoStorageLocation(url);
+  if (!location?.bucket || !location?.path) return '';
+  try {
+    const { data } = supabase.storage.from(location.bucket).getPublicUrl(location.path, { transform });
+    return String(data?.publicUrl || '').trim();
+  } catch {
+    return '';
+  }
+};
+
 const normalizeTripPhotoRecord = (photo) => {
   if (!photo || typeof photo !== 'object') return photo;
   const normalizedUrl = normalizeTripPhotoUrl(photo?.url);
+  const transformedThumbUrl = buildTripPhotoTransformedUrl(normalizedUrl, {
+    width: 480,
+    height: 480,
+    resize: 'cover',
+    quality: 70,
+  });
+  const transformedMediumUrl = buildTripPhotoTransformedUrl(normalizedUrl, {
+    width: 1400,
+    height: 1400,
+    resize: 'contain',
+    quality: 78,
+  });
   const normalizedThumbnailUrl = normalizeTripPhotoUrl(
     photo?.thumbnail_url
     || photo?.thumb_url
     || buildTripPhotoVariantUrl(normalizedUrl, 'thumb')
+    || transformedThumbUrl
     || ''
   );
   const normalizedMediumUrl = normalizeTripPhotoUrl(
     photo?.medium_url
     || buildTripPhotoVariantUrl(normalizedUrl, 'main')
+    || transformedMediumUrl
     || normalizedUrl
   );
   return {
@@ -194,6 +248,13 @@ const getTripPhotoThumbnailUrl = (photo) => String(
   || photo?.url
   || ''
 ).trim();
+
+const handleTripPhotoImageError = (event) => {
+  const fallbackUrl = String(event?.currentTarget?.dataset?.fallbackSrc || '').trim();
+  if (!fallbackUrl) return;
+  if (String(event?.currentTarget?.src || '').trim() === fallbackUrl) return;
+  event.currentTarget.src = fallbackUrl;
+};
 
 // Supabase storage wrapper
 const storage = {
@@ -29985,11 +30046,13 @@ transform: translateY(0);
                           >
                             <img
                               src={previewUrl}
+                              data-fallback-src={String(photo?.url || '').trim()}
                               alt={photo.caption || 'Trip photo'}
                               className="h-full w-full object-cover"
                               loading={index < 6 ? 'eager' : 'lazy'}
                               decoding="async"
                               fetchPriority={index < 3 ? 'high' : 'low'}
+                              onError={handleTripPhotoImageError}
                             />
                             {isPhotoSelectionMode && (
                               <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
@@ -30107,11 +30170,13 @@ transform: translateY(0);
                           >
                             <img
                               src={displayUrl}
+                              data-fallback-src={String(photo?.url || '').trim()}
                               alt={photo.caption || 'Trip photo'}
                               className="h-72 w-full object-cover"
                               loading={index === 0 ? 'eager' : 'lazy'}
                               decoding="async"
                               fetchPriority={index === 0 ? 'high' : 'low'}
+                              onError={handleTripPhotoImageError}
                               onClick={() => handlePhotoTap(photo)}
                               onDoubleClick={(e) => {
                                 e.preventDefault();
@@ -30233,11 +30298,13 @@ transform: translateY(0);
                         >
                           <img
                             src={previewUrl}
+                            data-fallback-src={String(photo?.url || '').trim()}
                             alt={photo.caption || 'Trip photo'}
                             className="h-full w-full object-cover"
                             loading={index < 6 ? 'eager' : 'lazy'}
                             decoding="async"
                             fetchPriority={index < 3 ? 'high' : 'low'}
+                            onError={handleTripPhotoImageError}
                           />
                           {isPhotoSelectionMode && (
                             <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
