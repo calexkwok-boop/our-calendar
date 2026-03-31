@@ -39,6 +39,21 @@ const normalizeEventNotes = (event) => {
   }
   return rawNotes;
 };
+const getCardBackdropUrl = (event) => {
+  const candidates = [
+    event?.coverImageUrl,
+    event?.cover_image_url,
+    event?.backgroundImageUrl,
+    event?.background_image_url,
+    event?.event_data?.coverImageUrl,
+    event?.event_data?.cover_image_url,
+    event?.event_data?.backgroundImageUrl,
+    event?.event_data?.background_image_url,
+  ];
+  return candidates
+    .map((value) => String(value || '').trim())
+    .find((value) => /^https?:\/\//i.test(value)) || '';
+};
 
 const buildMapHref = (location) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(location || '').trim())}`;
@@ -228,10 +243,20 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
   const registryLink = String(event?.registryLink || '').trim();
   const schedule = Array.isArray(event?.schedule) ? event.schedule : [];
   const tone = resolveCelebrationStyle(event);
+  const coverImageUrl = getCardBackdropUrl(event);
 
   return (
     <div className={`group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/60 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#171320] dark:via-[#201930] dark:to-[#111a2b] ${tone.kind === 'baby' ? 'dark:shadow-[0_24px_80px_rgba(56,189,248,0.12)]' : 'dark:shadow-[0_24px_80px_rgba(236,72,153,0.12)]'}`}>
       <style>{animationStyles}</style>
+      {coverImageUrl ? (
+        <>
+          <div
+            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.19] saturate-[1.04]"
+            style={{ backgroundImage: `url(${coverImageUrl})` }}
+          />
+          <div className={`pointer-events-none absolute inset-0 ${tone.kind === 'baby' ? 'bg-gradient-to-br from-white/80 via-sky-50/70 to-amber-50/72 dark:from-[#171320]/88 dark:via-[#201930]/84 dark:to-[#111a2b]/88' : 'bg-gradient-to-br from-white/80 via-rose-50/70 to-amber-50/72 dark:from-[#171320]/88 dark:via-[#201930]/84 dark:to-[#111a2b]/88'}`} />
+        </>
+      ) : null}
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         {tone.kind === 'baby' ? (

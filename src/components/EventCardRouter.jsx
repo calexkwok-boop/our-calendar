@@ -91,6 +91,21 @@ const normalizeEventNotes = (event) => {
   }
   return rawNotes;
 };
+const normalizeEventCoverImage = (event) => {
+  const candidates = [
+    event?.coverImageUrl,
+    event?.cover_image_url,
+    event?.backgroundImageUrl,
+    event?.background_image_url,
+    event?.event_data?.coverImageUrl,
+    event?.event_data?.cover_image_url,
+    event?.event_data?.backgroundImageUrl,
+    event?.event_data?.background_image_url,
+  ];
+  return candidates
+    .map((value) => String(value || '').trim())
+    .find((value) => isProbablyUrl(value)) || '';
+};
 const buildMapHref = (location) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(location || '').trim())}`;
 const normalizeList = (value) => String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
 const parseLineItems = (value) => String(value || '')
@@ -1363,17 +1378,19 @@ const EventCardRouter = ({ event, onEditBasics, ...props }) => {
   };
   const handleOpenBasicsEditor = typeof onEditBasics === 'function'
     ? () => openEditor({
-        variant: 'party',
+        variant: ['kids', 'hangout', 'celebration', 'party'].includes(category) ? category : 'party',
         title: 'Edit Event Details',
-        subtitle: 'Update the name, location, and notes for this event.',
+        subtitle: 'Update the name, location, notes, and invitation backdrop.',
         fields: [
           { key: 'title', label: 'Event title', value: String(event?.title || '').trim(), placeholder: 'Game Night @ Home' },
           { key: 'location', label: 'Location', value: String(event?.location || '').trim(), placeholder: 'Home, rooftop, park...' },
+          { key: 'coverImageUrl', label: 'Cover photo URL', value: normalizeEventCoverImage(event), placeholder: 'https://images.example.com/invitation-photo.jpg' },
           { key: 'description', label: 'Notes', type: 'textarea', rows: 5, value: normalizeEventNotes(event), placeholder: 'Add anything guests should know.' },
         ],
         onSave: (values) => onEditBasics({
           title: String(values.title || '').trim() || String(event?.title || '').trim(),
           location: String(values.location || '').trim() || null,
+          coverImageUrl: String(values.coverImageUrl || '').trim() || null,
           description: String(values.description || '').trim() || null,
         }),
       })

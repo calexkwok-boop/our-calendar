@@ -1248,9 +1248,15 @@ export default function PopupEventPanel({
         ? (String(patch.description || '').trim() || null)
         : (String(event?.description || '').trim() || null),
     };
+    const nextEventData = {
+      ...((event?.event_data && typeof event.event_data === 'object' && !Array.isArray(event.event_data)) ? event.event_data : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, 'coverImageUrl')
+        ? { coverImageUrl: String(patch.coverImageUrl || '').trim() || null }
+        : {}),
+    };
 
     try {
-      await upsertPopupEventDetails(detailPayload);
+      await upsertPopupEventDetails({ ...detailPayload, event_data: nextEventData });
       try {
         await supabase.from('events').update({
           title: normalizedTitle,
@@ -1259,7 +1265,7 @@ export default function PopupEventPanel({
         }).eq('id', event.id);
       } catch {}
       setEvent((prev) => (
-        prev ? { ...prev, ...detailPayload } : prev
+        prev ? { ...prev, ...detailPayload, ...(Object.prototype.hasOwnProperty.call(patch, 'coverImageUrl') ? { coverImageUrl: nextEventData.coverImageUrl, event_data: nextEventData } : {}) } : prev
       ));
       await loadEvent(event.id);
       return true;

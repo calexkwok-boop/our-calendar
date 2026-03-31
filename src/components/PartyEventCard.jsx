@@ -28,6 +28,21 @@ const formatEventDateTime = (date, time) => {
 };
 
 const isProbablyUrl = (value) => /^https?:\/\//i.test(String(value || '').trim());
+const getCardBackdropUrl = (event) => {
+  const candidates = [
+    event?.coverImageUrl,
+    event?.cover_image_url,
+    event?.backgroundImageUrl,
+    event?.background_image_url,
+    event?.event_data?.coverImageUrl,
+    event?.event_data?.cover_image_url,
+    event?.event_data?.backgroundImageUrl,
+    event?.event_data?.background_image_url,
+  ];
+  return candidates
+    .map((value) => String(value || '').trim())
+    .find((value) => isProbablyUrl(value)) || '';
+};
 
 const detectPlaylistService = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
@@ -281,6 +296,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   const plusOnesAllowed = event?.plusOnesAllowed !== false;
   const titleText = String(event?.title || '').trim();
   const shouldShowLocationLine = Boolean(event?.location);
+  const coverImageUrl = getCardBackdropUrl(event);
   const claimedPotluckCount = potluckItems.filter((item) => String(item?.claimedByUserId || item?.person || '').trim()).length;
   const openPotluckCount = Math.max(0, potluckItems.length - claimedPotluckCount);
   const potluckPreviewItems = potluckItems.slice(0, 3);
@@ -314,6 +330,16 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
   return (
     <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/55 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#15111f] dark:via-[#1b1930] dark:to-[#0f1727] dark:shadow-[0_24px_80px_rgba(0,0,0,0.38)]">
       <style>{animationStyles}</style>
+
+      {coverImageUrl ? (
+        <>
+          <div
+            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.22] saturate-[1.05]"
+            style={{ backgroundImage: `url(${coverImageUrl})` }}
+          />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/78 via-rose-50/68 to-cyan-50/70 dark:from-[#15111f]/88 dark:via-[#1b1930]/84 dark:to-[#0f1727]/88" />
+        </>
+      ) : null}
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-42 dark:opacity-26">
         <div className="absolute left-6 top-12 text-[2.8rem] opacity-80 drop-shadow-[0_10px_22px_rgba(236,72,153,0.22)] dark:opacity-70" style={{ animation: 'party-card-float 8.6s ease-in-out infinite 0.2s' }}>

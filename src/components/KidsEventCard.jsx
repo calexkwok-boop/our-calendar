@@ -39,6 +39,21 @@ const normalizeEventNotes = (event) => {
   }
   return rawNotes;
 };
+const getCardBackdropUrl = (event) => {
+  const candidates = [
+    event?.coverImageUrl,
+    event?.cover_image_url,
+    event?.backgroundImageUrl,
+    event?.background_image_url,
+    event?.event_data?.coverImageUrl,
+    event?.event_data?.cover_image_url,
+    event?.event_data?.backgroundImageUrl,
+    event?.event_data?.background_image_url,
+  ];
+  return candidates
+    .map((value) => String(value || '').trim())
+    .find((value) => /^https?:\/\//i.test(value)) || '';
+};
 
 const buildMapHref = (location) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(location || '').trim())}`;
@@ -128,9 +143,19 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
   const parentRequired = event?.parentRequired !== false;
   const allergenAlerts = Array.isArray(event?.allergenAlerts) ? event.allergenAlerts : [];
   const registryLink = String(event?.registryLink || '').trim();
+  const coverImageUrl = getCardBackdropUrl(event);
 
   return (
     <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/60 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:from-[#171320] dark:via-[#1d1a30] dark:to-[#111a2b] dark:shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+      {coverImageUrl ? (
+        <>
+          <div
+            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.2] saturate-[1.03]"
+            style={{ backgroundImage: `url(${coverImageUrl})` }}
+          />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/78 via-amber-50/68 to-sky-50/72 dark:from-[#171320]/88 dark:via-[#1d1a30]/84 dark:to-[#111a2b]/88" />
+        </>
+      ) : null}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-[7%] top-[11%] text-[1.9rem] opacity-65 dark:opacity-38">🎈</div>
         <div className="absolute right-[10%] top-[12%] text-[1.8rem] opacity-60 dark:opacity-34">🧸</div>
