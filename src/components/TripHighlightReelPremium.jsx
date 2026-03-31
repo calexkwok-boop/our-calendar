@@ -62,8 +62,6 @@ export default function TripHighlightReel({
 }) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [nextSlide, setNextSlide] = useState(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showMusicMenu, setShowMusicMenu] = useState(false);
@@ -116,18 +114,8 @@ export default function TripHighlightReel({
     };
   }, [isPlaying, currentSlide, safeHighlights]);
 
-  // Smooth cross-dissolve transition
   const advanceSlide = () => {
-    if (isTransitioning) return;
-    
-    setIsTransitioning(true);
-    setNextSlide(currentSlide + 1);
-    
-    setTimeout(() => {
-      setCurrentSlide(currentSlide + 1);
-      setNextSlide(null);
-      setIsTransitioning(false);
-    }, 600); // Cross-dissolve duration
+    setCurrentSlide((prev) => Math.min(prev + 1, safeHighlights.length - 1));
   };
 
   const handlePlayPause = () => {
@@ -153,13 +141,7 @@ export default function TripHighlightReel({
 
   const handlePrev = () => {
     if (currentSlide > 0) {
-      setIsTransitioning(true);
-      setNextSlide(currentSlide - 1);
-      setTimeout(() => {
-        setCurrentSlide(currentSlide - 1);
-        setNextSlide(null);
-        setIsTransitioning(false);
-      }, 600);
+      setCurrentSlide((prev) => Math.max(prev - 1, 0));
     }
   };
 
@@ -174,7 +156,7 @@ export default function TripHighlightReel({
       </audio>
 
       {/* PREMIUM TOP BAR - Glassmorphism with blur */}
-      <div className="absolute top-0 left-0 right-0 z-30 px-6 pb-6 pt-8 bg-gradient-to-b from-black/70 via-black/40 to-transparent backdrop-blur-sm"
+      <div className="absolute top-0 left-0 right-0 z-30 px-6 pb-5 pt-8 bg-gradient-to-b from-black/72 via-black/34 to-transparent"
            style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1.5rem))' }}>
         <div className="flex items-center justify-between">
           {/* Close Button - Elevated design */}
@@ -277,7 +259,7 @@ export default function TripHighlightReel({
         </div>
       </div>
 
-      {/* MAIN SLIDE AREA - Cross-dissolve transitions */}
+      {/* MAIN SLIDE AREA */}
       <div className="relative flex-1 overflow-hidden">
         {/* Touch/Click navigation zones */}
         <button
@@ -293,17 +275,9 @@ export default function TripHighlightReel({
           aria-label="Next"
         />
 
-        {/* Current Slide */}
-        <div className={`absolute inset-0 transition-opacity duration-600 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
+        <div key={currentSlide} className="absolute inset-0 animate-fade-in">
           <SlideRenderer highlight={currentHighlight} />
         </div>
-
-        {/* Next Slide (for cross-dissolve) */}
-        {nextSlide !== null && (
-          <div className="absolute inset-0 opacity-0 animate-fade-in">
-            <SlideRenderer highlight={safeHighlights[nextSlide]} />
-          </div>
-        )}
       </div>
 
       {/* PREMIUM PROGRESS BAR - Subtle line */}
@@ -317,7 +291,7 @@ export default function TripHighlightReel({
       </div>
 
       {/* PREMIUM PLAYBACK CONTROLS */}
-      <div className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-6 bg-gradient-to-t from-black/70 via-black/40 to-transparent backdrop-blur-sm"
+      <div className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-5 bg-gradient-to-t from-black/74 via-black/34 to-transparent"
            style={{ paddingBottom: 'max(2rem, calc(env(safe-area-inset-bottom) + 1.5rem))' }}>
         <div className="flex items-center justify-center gap-6">
           {/* Previous */}
@@ -366,7 +340,7 @@ export default function TripHighlightReel({
           to { opacity: 1; }
         }
         .animate-fade-in {
-          animation: fade-in 600ms ease-out forwards;
+          animation: fade-in 320ms ease-out forwards;
         }
         
         /* Ken Burns variations */
@@ -449,47 +423,59 @@ function TitleSlide({ highlight }) {
 
 function PhotoSlide({ highlight }) {
   const treatment = PHOTO_TREATMENTS[highlight.mood] || PHOTO_TREATMENTS.scenic;
-  
+
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black">
-      {/* Photo with Ken Burns effect */}
       <div className="absolute inset-0">
-        <div 
+        <div
           className="h-full w-full bg-cover bg-center"
           style={{
             backgroundImage: `url(${highlight.photo})`,
+            filter: `${treatment.filter} blur(20px) brightness(0.62)`,
+            transform: 'scale(1.08)',
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{ background: treatment.vignette }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/22 via-transparent to-black/62" />
+      </div>
+
+      <div className="absolute inset-x-4 top-24 bottom-24 sm:inset-x-8 sm:top-28 sm:bottom-28">
+        <img
+          src={highlight.photo}
+          alt={highlight.caption || 'Trip highlight'}
+          className="h-full w-full object-contain"
+          style={{
             filter: treatment.filter,
             animation: `${treatment.kenBurns} 20s ease-out forwards`,
           }}
         />
-        {/* Professional vignette */}
-        <div 
-          className="absolute inset-0"
-          style={{ background: treatment.vignette }}
-        />
-        {/* Bottom gradient for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/70" />
       </div>
 
-      {/* Caption - Editorial typography */}
-      <div className="absolute bottom-0 left-0 right-0 px-12 pb-40 text-white">
-        {highlight.rating && (
-          <div className="mb-3 flex items-center gap-1.5">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className={`h-2.5 w-2.5 rounded-full ${i < highlight.rating ? 'bg-white shadow-sm shadow-white/50' : 'bg-white/30'}`} />
-            ))}
-          </div>
-        )}
-        <h2 className="mb-3 text-4xl font-bold leading-tight tracking-tight drop-shadow-2xl sm:text-5xl" 
-            style={{ fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '-0.02em' }}>
-          {highlight.caption}
-        </h2>
-        {highlight.location && (
-          <p className="flex items-center gap-2 text-lg font-medium text-white/90">
-            <span className="text-xl">📍</span>
-            <span>{highlight.location}</span>
-          </p>
-        )}
+      <div className="absolute inset-x-0 bottom-36 px-5 sm:bottom-40 sm:px-8">
+        <div className="max-w-[22rem] rounded-[1.75rem] border border-white/12 bg-black/28 px-4 py-3 text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-lg">
+          {Number(highlight.rating || 0) > 0 && (
+            <div className="mb-2 flex items-center gap-1.5">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className={`h-2 w-2 rounded-full ${i < highlight.rating ? 'bg-white shadow-sm shadow-white/50' : 'bg-white/30'}`} />
+              ))}
+            </div>
+          )}
+          <h2
+            className="mb-1.5 text-2xl font-bold leading-[0.98] tracking-tight drop-shadow-2xl sm:text-3xl"
+            style={{ fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '-0.02em' }}
+          >
+            {highlight.caption}
+          </h2>
+          {highlight.location && (
+            <p className="flex items-center gap-2 text-xs font-medium text-white/80 sm:text-sm">
+              <span className="text-base sm:text-lg">📍</span>
+              <span className="line-clamp-2">{highlight.location}</span>
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -658,12 +644,16 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   ];
 
   if (topMemoryMoments.length > 0) {
+    const leadMemory = topMemoryMoments[0];
     slides.push({
-      type: 'chapter',
-      eyebrow: 'The Real Story',
-      title: 'The moments between the plans',
-      subtitle: 'The photos that mattered even when nothing was on the itinerary.',
-      background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)',
+      type: 'photo',
+      photo: leadMemory.photo.url,
+      caption: leadMemory.title,
+      subcopy: leadMemory.subcopy,
+      eyebrow: leadMemory.eyebrow,
+      location: leadMemory.meta,
+      rating: 0,
+      mood: leadMemory.photo?.hasPeople ? 'people' : 'reflective',
     });
   } else if (scenicMoment) {
     slides.push({
@@ -698,13 +688,16 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         mood: memory.photo?.hasPeople ? 'people' : (index % 2 === 0 ? 'reflective' : 'scenic'),
       });
       if (index === 1 && topMemoryMoments.length >= 3) {
+        const extraMemory = topMemoryMoments[2];
         slides.push({
-          type: 'spotlight',
-          eyebrow: 'Little Moments',
-          title: 'Some of the best parts were never scheduled',
-          caption: 'The reel should remember the in-between moments too.',
-          subcopy: 'Family photos, candid stops, and the quiet parts of the trip deserve as much space as the itinerary.',
-          background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+          type: 'photo',
+          photo: extraMemory.photo.url,
+          caption: extraMemory.title,
+          subcopy: extraMemory.subcopy,
+          eyebrow: extraMemory.eyebrow,
+          location: extraMemory.meta,
+          rating: 0,
+          mood: extraMemory.photo?.hasPeople ? 'people' : 'scenic',
         });
       }
       return;
