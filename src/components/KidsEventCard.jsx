@@ -130,8 +130,10 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-[7%] top-[11%] text-[1.9rem] opacity-65 dark:opacity-38">🎈</div>
         <div className="absolute right-[10%] top-[12%] text-[1.8rem] opacity-60 dark:opacity-34">🧸</div>
+        <div className="absolute right-[18%] top-[31%] text-[1.85rem] opacity-45 dark:opacity-26">🎠</div>
         <div className="absolute left-[76%] top-[62%] text-[1.8rem] opacity-55 dark:opacity-32">🖍️</div>
         <div className="absolute left-[10%] bottom-[14%] text-[1.7rem] opacity-55 dark:opacity-32">🧩</div>
+        <div className="absolute left-[14%] bottom-[31%] text-[1.7rem] opacity-42 dark:opacity-24">🎠</div>
       </div>
 
       <div className="pointer-events-none absolute inset-0">
@@ -143,71 +145,51 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
       <div className="pointer-events-none absolute -left-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-amber-300/18 to-yellow-300/8 blur-2xl dark:from-amber-400/10 dark:to-yellow-400/5" />
       <div className="pointer-events-none absolute -bottom-8 -right-8 h-32 w-32 rounded-full bg-gradient-to-br from-sky-300/16 to-cyan-300/8 blur-2xl dark:from-sky-400/10 dark:to-cyan-400/5" />
 
-      <div className="relative border-b border-fuchsia-200/60 bg-gradient-to-br from-white via-rose-50/92 to-cyan-50/92 px-6 py-6 dark:border-fuchsia-400/15 dark:from-[#271c3a] dark:via-[#231933] dark:to-[#16263d] sm:px-7">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="mb-3 flex items-center justify-center sm:justify-start">
-              <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-fuchsia-700 dark:text-fuchsia-200">
-                You're Invited
-              </div>
+      <div className="relative px-6 py-7 sm:px-7">
+        {(props.onEdit || props.onDelete) ? (
+          <div className="absolute right-6 top-5 z-10 flex items-center gap-2 sm:right-7">
+            {props.onEdit ? (
+              <button className="rounded-full border-2 border-gray-200 bg-white/95 p-2.5 text-gray-500 shadow-sm transition-all hover:border-gray-300 hover:text-gray-900 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white" onClick={props.onEdit} type="button">
+                <EditIcon />
+              </button>
+            ) : null}
+            {props.onDelete ? (
+              <button className="rounded-full border-2 border-gray-200 bg-white/95 p-2.5 text-gray-500 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:border-red-400/20 dark:hover:bg-red-500/10 dark:hover:text-red-400" onClick={props.onDelete} type="button">
+                <TrashIcon />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 bg-white/78 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:bg-[rgba(38,28,57,0.72)] dark:backdrop-blur-[12px]">
+          <div className="mb-3 flex items-center justify-center">
+            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-fuchsia-700 dark:text-fuchsia-200">
+              You're Invited
             </div>
-            <div className="mb-4 flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] border-2 border-amber-200 bg-gradient-to-br from-amber-100 to-yellow-100 text-2xl shadow-lg shadow-amber-200/30 transition-transform group-hover:scale-105 dark:border-amber-400/20 dark:from-amber-500/15 dark:to-yellow-500/15 dark:shadow-amber-500/10">
-                🎠
+          </div>
+
+          <div className="mb-4 flex flex-wrap items-center justify-center gap-2.5">
+            {ageRange ? (
+              <span className="rounded-full border-2 border-amber-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200">
+                Ages {ageRange}
               </span>
-
-              <span className="rounded-full bg-gradient-to-br from-amber-100 to-yellow-100 px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em] text-amber-800 shadow-sm dark:from-amber-500/15 dark:to-yellow-500/15 dark:text-amber-200">
-                Kids Event
-              </span>
-
-              {ageRange ? (
-                <span className="rounded-full border-2 border-amber-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200">
-                  Ages {ageRange}
-                </span>
-              ) : null}
-            </div>
-
-            <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
-              {event?.title || 'Untitled kids event'}
-            </h3>
-
-            <div className="mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent dark:via-cyan-300/80" />
-
-            <div className="mt-4 flex items-center gap-2 text-[15px] font-medium text-gray-600 dark:text-gray-300">
-              <svg className="h-4 w-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span>{formatEventDateTime(event?.date, event?.time)}</span>
-            </div>
-
-            {event?.location ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2.5">
-                <div className="flex items-center gap-2 text-[15px] font-medium text-gray-600 dark:text-gray-300">
-                  <svg className="h-4 w-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span className="truncate">{event.location}</span>
-                </div>
-                <ActionPill href={buildMapHref(event.location)}>View map</ActionPill>
-              </div>
             ) : null}
           </div>
 
-          {(props.onEdit || props.onDelete) ? (
-            <div className="flex items-center gap-2">
-              {props.onEdit ? (
-                <button className="rounded-full border-2 border-gray-200 bg-white p-2.5 text-gray-500 shadow-sm transition-all hover:border-gray-300 hover:text-gray-900 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white" onClick={props.onEdit} type="button">
-                  <EditIcon />
-                </button>
-              ) : null}
-              {props.onDelete ? (
-                <button className="rounded-full border-2 border-gray-200 bg-white p-2.5 text-gray-500 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:border-red-400/20 dark:hover:bg-red-500/10 dark:hover:text-red-400" onClick={props.onDelete} type="button">
-                  <TrashIcon />
-                </button>
-              ) : null}
-            </div>
-          ) : null}
+          <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
+            {event?.title || 'Untitled kids event'}
+          </h3>
+
+          <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent dark:via-cyan-300/80" />
+
+          <div className="mt-4 space-y-2 text-[15px] text-gray-600 dark:text-gray-300">
+            <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>
+            {event?.location ? <div className="font-medium">{event.location}</div> : null}
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+            {event?.location ? <ActionPill href={buildMapHref(event.location)}>View map</ActionPill> : null}
+          </div>
         </div>
       </div>
 

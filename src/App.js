@@ -77,6 +77,124 @@ const normalizeTripPhotoUrl = (value) => {
   }
 };
 
+const loadImageElementFromSource = (src) => new Promise((resolve, reject) => {
+  const image = new Image();
+  image.onload = () => resolve(image);
+  image.onerror = reject;
+  image.decoding = 'async';
+  image.src = src;
+});
+
+const canvasToBlobAsync = (canvas, type, quality) => new Promise((resolve) => {
+  canvas.toBlob(resolve, type, quality);
+});
+
+const resizeImageFile = async (file, {
+  maxWidth,
+  maxHeight,
+  quality = 0.82,
+  type = 'image/jpeg',
+  fileName = 'photo.jpg',
+} = {}) => {
+  if (!file || !String(file?.type || '').startsWith('image/')) return file;
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await loadImageElementFromSource(objectUrl);
+    const srcWidth = Number(image?.naturalWidth || image?.width || 0);
+    const srcHeight = Number(image?.naturalHeight || image?.height || 0);
+    if (!srcWidth || !srcHeight) return file;
+
+    const widthRatio = maxWidth ? maxWidth / srcWidth : 1;
+    const heightRatio = maxHeight ? maxHeight / srcHeight : 1;
+    const scale = Math.min(widthRatio, heightRatio, 1);
+    const targetWidth = Math.max(1, Math.round(srcWidth * scale));
+    const targetHeight = Math.max(1, Math.round(srcHeight * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const context = canvas.getContext('2d');
+    if (!context) return file;
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(image, 0, 0, targetWidth, targetHeight);
+    const blob = await canvasToBlobAsync(canvas, type, quality);
+    if (!blob) return file;
+    return new File([blob], fileName, { type, lastModified: Date.now() });
+  } catch {
+    return file;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+};
+
+const buildTripPhotoVariantPath = (basePath, variant) => {
+  const normalizedBasePath = String(basePath || '').trim().replace(/^\/+/, '');
+  const normalizedVariant = String(variant || '').trim().toLowerCase();
+  if (!normalizedBasePath || !normalizedVariant) return '';
+  return `${normalizedBasePath}/${normalizedVariant}.jpg`;
+};
+
+const buildTripPhotoVariantUrl = (url, variant) => {
+  const normalizedUrl = normalizeTripPhotoUrl(url);
+  const normalizedVariant = String(variant || '').trim().toLowerCase();
+  if (!normalizedUrl || !normalizedVariant) return '';
+  try {
+    const parsed = new URL(normalizedUrl, window?.location?.origin || 'http://localhost');
+    const prefixes = [
+      '/storage/v1/object/public/',
+      '/storage/v1/object/sign/',
+      '/object/public/',
+      '/object/sign/',
+    ];
+    for (const bucket of TRIP_PHOTO_BUCKETS) {
+      for (const prefix of prefixes) {
+        const marker = `${prefix}${bucket}/`;
+        const idx = parsed.pathname.indexOf(marker);
+        if (idx === -1) continue;
+        const objectPath = parsed.pathname.slice(idx + marker.length).replace(/^\/+/, '');
+        if (!/\/main\.(?:jpe?g|png|webp)$/i.test(objectPath)) return '';
+        const variantPath = normalizeStorageObjectPath(objectPath.replace(/\/main\.(?:jpe?g|png|webp)$/i, `/${normalizedVariant}.jpg`));
+        const origin = SUPABASE_URL || `${parsed.protocol}//${parsed.host}`;
+        return `${origin}/storage/v1/object/public/${bucket}/${variantPath}`;
+      }
+    }
+    return '';
+  } catch {
+    return '';
+  }
+};
+
+const normalizeTripPhotoRecord = (photo) => {
+  if (!photo || typeof photo !== 'object') return photo;
+  const normalizedUrl = normalizeTripPhotoUrl(photo?.url);
+  const normalizedThumbnailUrl = normalizeTripPhotoUrl(
+    photo?.thumbnail_url
+    || photo?.thumb_url
+    || buildTripPhotoVariantUrl(normalizedUrl, 'thumb')
+    || ''
+  );
+  const normalizedMediumUrl = normalizeTripPhotoUrl(
+    photo?.medium_url
+    || buildTripPhotoVariantUrl(normalizedUrl, 'main')
+    || normalizedUrl
+  );
+  return {
+    ...photo,
+    url: normalizedMediumUrl || normalizedUrl,
+    medium_url: normalizedMediumUrl || normalizedUrl,
+    thumbnail_url: normalizedThumbnailUrl,
+  };
+};
+
+const getTripPhotoThumbnailUrl = (photo) => String(
+  photo?.thumbnail_url
+  || photo?.thumb_url
+  || photo?.medium_url
+  || photo?.url
+  || ''
+).trim();
+
 // Supabase storage wrapper
 const storage = {
   get: async (key, shared = false) => {
@@ -2303,7 +2421,9 @@ function App() {
     try {
       const raw = localStorage.getItem(getTripPhotosCacheLocalKey(subCalId));
       const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed.filter((row) => row && typeof row === 'object') : [];
+      return Array.isArray(parsed)
+        ? parsed.filter((row) => row && typeof row === 'object').map((row) => normalizeTripPhotoRecord(row))
+        : [];
     } catch {
       return [];
     }
@@ -2312,7 +2432,11 @@ function App() {
     try {
       localStorage.setItem(
         getTripPhotosCacheLocalKey(subCalId),
-        JSON.stringify(Array.isArray(rows) ? rows.filter((row) => row && typeof row === 'object') : [])
+        JSON.stringify(
+          Array.isArray(rows)
+            ? rows.filter((row) => row && typeof row === 'object').map((row) => normalizeTripPhotoRecord(row))
+            : []
+        )
       );
     } catch {}
   };
@@ -4473,10 +4597,7 @@ function App() {
       const deletedSet = new Set(((deletedIdsOverride ?? deletedPhotoIds) || []).map(id => String(id)));
       const filtered = (data || [])
         .filter(p => !deletedSet.has(String(p.id)))
-        .map((photo) => ({
-          ...photo,
-          url: normalizeTripPhotoUrl(photo?.url),
-        }));
+        .map((photo) => normalizeTripPhotoRecord(photo));
       return filtered;
     } catch (e) { console.error(e); }
     return [];
@@ -4540,17 +4661,42 @@ function App() {
     setPhotoUploadMessage('');
     try {
       const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
-      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-      const filename = `${activeSubCalendar.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+      const photoBasePath = `${activeSubCalendar.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+      const mainFilename = buildTripPhotoVariantPath(photoBasePath, 'main');
+      const thumbFilename = buildTripPhotoVariantPath(photoBasePath, 'thumb');
+      const mainFile = await resizeImageFile(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+        type: 'image/jpeg',
+        fileName: 'main.jpg',
+      });
+      const thumbFile = await resizeImageFile(file, {
+        maxWidth: 480,
+        maxHeight: 480,
+        quality: 0.72,
+        type: 'image/jpeg',
+        fileName: 'thumb.jpg',
+      });
       let selectedBucket = null;
       let uploadError = null;
+      let uploadedThumb = false;
 
       for (const bucket of TRIP_PHOTO_BUCKETS) {
-        const { error } = await supabase.storage.from(bucket).upload(filename, file, {
-          contentType: file.type,
+        const { error } = await supabase.storage.from(bucket).upload(mainFilename, mainFile, {
+          contentType: mainFile.type || 'image/jpeg',
           cacheControl: '31536000',
         });
         if (!error) {
+          const thumbUpload = await supabase.storage.from(bucket).upload(thumbFilename, thumbFile, {
+            contentType: thumbFile.type || 'image/jpeg',
+            cacheControl: '31536000',
+            upsert: true,
+          });
+          uploadedThumb = !thumbUpload?.error;
+          if (thumbUpload?.error) {
+            console.warn('Trip photo thumbnail upload failed:', thumbUpload.error);
+          }
           selectedBucket = bucket;
           uploadError = null;
           break;
@@ -4570,24 +4716,33 @@ function App() {
         return null;
       }
 
-      const { data: urlData } = supabase.storage.from(selectedBucket).getPublicUrl(filename);
+      const { data: urlData } = supabase.storage.from(selectedBucket).getPublicUrl(mainFilename);
+      const { data: thumbUrlData } = supabase.storage.from(selectedBucket).getPublicUrl(thumbFilename);
       if (!urlData?.publicUrl) {
         setPhotoUploadError(true);
         setPhotoUploadMessage('Upload succeeded but no public URL was generated.');
         return null;
       }
-      const photo = {
+      const photo = normalizeTripPhotoRecord({
         id: `ph_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
         sub_calendar_id: activeSubCalendar.id,
         event_id: eventId || null,
         date: date || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null),
         url: urlData.publicUrl,
+        thumbnail_url: uploadedThumb ? (thumbUrlData?.publicUrl || '') : '',
         caption: caption || null,
         uploaded_by: currentUser,
         user_id: user.id,
         created_at: new Date().toISOString(),
-      };
-      const { error: dbError } = await supabase.from('trip_photos').insert(photo);
+      });
+      let insertPayload = photo;
+      let { error: dbError } = await supabase.from('trip_photos').insert(insertPayload);
+      if (dbError && /column .*thumbnail_url|column .*medium_url|schema cache/i.test(String(dbError?.message || ''))) {
+        insertPayload = { ...photo };
+        delete insertPayload.thumbnail_url;
+        delete insertPayload.medium_url;
+        dbError = (await supabase.from('trip_photos').insert(insertPayload)).error;
+      }
       if (dbError) {
         console.error('DB error:', dbError);
         setPhotoUploadError(true);
@@ -29809,11 +29964,12 @@ transform: translateY(0);
                         <span className="shrink-0 text-sm text-gray-400 dark:text-gray-500">{isCollapsed ? 'Show' : 'Hide'}</span>
                       </button>
                       {!isCollapsed ? <div className="grid grid-cols-3 gap-1.5">
-                        {photos.map(photo => {
+                        {photos.map((photo, index) => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
                           const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
                           const hasPhotoReactions = Object.keys(photoReactions).length > 0;
                           const isPhotoReactionPickerOpen = tripPhotoReactionPickerId === String(photo.id || '');
+                          const previewUrl = getTripPhotoThumbnailUrl(photo);
                           return (
                           <div
                             key={photo.id}
@@ -29828,9 +29984,12 @@ transform: translateY(0);
                             onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
                           >
                             <img
-                              src={photo.url}
+                              src={previewUrl}
                               alt={photo.caption || 'Trip photo'}
                               className="h-full w-full object-cover"
+                              loading={index < 6 ? 'eager' : 'lazy'}
+                              decoding="async"
+                              fetchPriority={index < 3 ? 'high' : 'low'}
                             />
                             {isPhotoSelectionMode && (
                               <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">
@@ -29936,19 +30095,23 @@ transform: translateY(0);
                         </div>
                       </button>
                       {!isCollapsed ? <div className="space-y-4">
-                        {photos.map(photo => {
+                        {photos.map((photo, index) => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
                           const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
                           const isPhotoReactionPickerOpen = tripPhotoReactionPickerId === String(photo.id || '');
+                          const displayUrl = String(photo?.medium_url || photo?.url || '').trim();
                           return (
                           <div
                             key={photo.id}
                             className={`relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'}`}
                           >
                             <img
-                              src={photo.url}
+                              src={displayUrl}
                               alt={photo.caption || 'Trip photo'}
                               className="h-72 w-full object-cover"
+                              loading={index === 0 ? 'eager' : 'lazy'}
+                              decoding="async"
+                              fetchPriority={index === 0 ? 'high' : 'low'}
                               onClick={() => handlePhotoTap(photo)}
                               onDoubleClick={(e) => {
                                 e.preventDefault();
@@ -30049,11 +30212,12 @@ transform: translateY(0);
                       <span className="text-gray-300 dark:text-gray-600">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-1.5">
-                      {photos.map(photo => {
+                      {photos.map((photo, index) => {
                         const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
                         const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
                         const hasPhotoReactions = Object.keys(photoReactions).length > 0;
                         const isPhotoReactionPickerOpen = tripPhotoReactionPickerId === String(photo.id || '');
+                        const previewUrl = getTripPhotoThumbnailUrl(photo);
                         return (
                         <div
                           key={photo.id}
@@ -30068,9 +30232,12 @@ transform: translateY(0);
                           onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
                         >
                           <img
-                            src={photo.url}
+                            src={previewUrl}
                             alt={photo.caption || 'Trip photo'}
                             className="h-full w-full object-cover"
+                            loading={index < 6 ? 'eager' : 'lazy'}
+                            decoding="async"
+                            fetchPriority={index < 3 ? 'high' : 'low'}
                           />
                           {isPhotoSelectionMode && (
                             <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/50 border border-white flex items-center justify-center">

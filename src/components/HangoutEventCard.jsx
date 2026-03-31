@@ -160,75 +160,63 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
       <div className="pointer-events-none absolute -left-12 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-gradient-to-r from-cyan-300/20 to-transparent blur-3xl dark:from-cyan-400/10" />
       <div className="pointer-events-none absolute -right-12 top-1/3 h-32 w-32 -translate-y-1/2 rounded-full bg-gradient-to-l from-sky-300/20 to-transparent blur-3xl dark:from-sky-400/10" />
 
-      <div className="relative border-b border-fuchsia-200/60 bg-gradient-to-br from-white via-rose-50/92 to-cyan-50/92 px-6 py-6 dark:border-fuchsia-400/15 dark:from-[#271c3a] dark:via-[#231933] dark:to-[#16263d] sm:px-7">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="mb-3 flex items-center justify-center sm:justify-start">
-              <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-fuchsia-700 dark:text-fuchsia-200">
-                You're Invited
-              </div>
+      <div className="relative px-6 py-7 sm:px-7">
+        {(props.onEdit || props.onDelete) ? (
+          <div className="absolute right-6 top-5 z-10 flex items-center gap-2 sm:right-7">
+            {props.onEdit ? (
+              <button className="rounded-full border-2 border-gray-200 bg-white/95 p-2.5 text-gray-500 shadow-sm transition-all hover:border-gray-300 hover:text-gray-900 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white" onClick={props.onEdit} type="button">
+                <EditIcon />
+              </button>
+            ) : null}
+            {props.onDelete ? (
+              <button className="rounded-full border-2 border-gray-200 bg-white/95 p-2.5 text-gray-500 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:border-red-400/20 dark:hover:bg-red-500/10 dark:hover:text-red-400" onClick={props.onDelete} type="button">
+                <TrashIcon />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 bg-white/78 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:bg-[rgba(38,28,57,0.72)] dark:backdrop-blur-[12px]">
+          <div className="mb-3 flex items-center justify-center">
+            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-fuchsia-700 dark:text-fuchsia-200">
+              You're Invited
             </div>
-            <div className="mb-4 flex flex-wrap items-center gap-2.5">
-              <span
-                className="relative inline-flex h-12 w-12 items-center justify-center rounded-[18px] border-2 border-cyan-200 bg-gradient-to-br from-cyan-100 to-sky-100 text-2xl shadow-lg shadow-cyan-200/30 transition-transform group-hover:scale-110 dark:border-cyan-400/20 dark:from-cyan-500/15 dark:to-sky-500/15 dark:shadow-cyan-500/10"
-                style={{ animation: 'hangout-gentle-wobble 3s ease-in-out infinite' }}
-              >
-                Coffee
-                <div className="absolute -top-1 left-1/2 h-3 w-0.5 -translate-x-1/2 rounded-full bg-cyan-300/40 blur-[1px] dark:bg-cyan-400/20" style={{ animation: 'hangout-rise-mini-steam 2s ease-in infinite' }} />
+          </div>
+
+          <div className="mb-4 flex flex-wrap items-center justify-center gap-2.5">
+            <span
+              className="relative inline-flex h-12 w-12 items-center justify-center rounded-[18px] border-2 border-cyan-200 bg-gradient-to-br from-cyan-100 to-sky-100 text-2xl shadow-lg shadow-cyan-200/30 transition-transform group-hover:scale-110 dark:border-cyan-400/20 dark:from-cyan-500/15 dark:to-sky-500/15 dark:shadow-cyan-500/10"
+              style={{ animation: 'hangout-gentle-wobble 3s ease-in-out infinite' }}
+            >
+              Coffee
+              <div className="absolute -top-1 left-1/2 h-3 w-0.5 -translate-x-1/2 rounded-full bg-cyan-300/40 blur-[1px] dark:bg-cyan-400/20" style={{ animation: 'hangout-rise-mini-steam 2s ease-in infinite' }} />
+            </span>
+
+            <span className="rounded-full bg-gradient-to-br from-cyan-100 to-cyan-200 px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em] text-cyan-800 shadow-sm dark:from-cyan-500/15 dark:to-cyan-600/15 dark:text-cyan-200">
+              Hangout
+            </span>
+
+            {duration ? (
+              <span className="rounded-full border-2 border-cyan-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200">
+                ~{duration}
               </span>
-
-              <span className="rounded-full bg-gradient-to-br from-cyan-100 to-cyan-200 px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em] text-cyan-800 shadow-sm dark:from-cyan-500/15 dark:to-cyan-600/15 dark:text-cyan-200">
-                Hangout
-              </span>
-
-              {duration ? (
-                <span className="rounded-full border-2 border-cyan-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200">
-                  ~{duration}
-                </span>
-              ) : null}
-            </div>
-
-            <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
-              {event?.title || 'Untitled hangout'}
-            </h3>
-
-            <div className="mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent dark:via-cyan-300/80" />
-
-            <div className="mt-4 flex items-center gap-2 text-[15px] font-medium text-gray-600 dark:text-gray-300">
-              <svg className="h-4 w-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span>{formatEventDateTime(event?.date, event?.time)}</span>
-            </div>
-
-            {event?.location ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2.5">
-                <div className="flex items-center gap-2 text-[15px] font-medium text-gray-600 dark:text-gray-300">
-                  <svg className="h-4 w-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span className="truncate">{event.location}</span>
-                </div>
-                <ActionPill href={buildMapHref(event.location)}>View map</ActionPill>
-              </div>
             ) : null}
           </div>
 
-          {(props.onEdit || props.onDelete) ? (
-            <div className="flex items-center gap-2">
-              {props.onEdit ? (
-                <button className="rounded-full border-2 border-gray-200 bg-white p-2.5 text-gray-500 shadow-sm transition-all hover:border-gray-300 hover:text-gray-900 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white" onClick={props.onEdit} type="button">
-                  <EditIcon />
-                </button>
-              ) : null}
-              {props.onDelete ? (
-                <button className="rounded-full border-2 border-gray-200 bg-white p-2.5 text-gray-500 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:border-red-400/20 dark:hover:bg-red-500/10 dark:hover:text-red-400" onClick={props.onDelete} type="button">
-                  <TrashIcon />
-                </button>
-              ) : null}
-            </div>
-          ) : null}
+          <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
+            {event?.title || 'Untitled hangout'}
+          </h3>
+
+          <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent dark:via-cyan-300/80" />
+
+          <div className="mt-4 space-y-2 text-[15px] text-gray-600 dark:text-gray-300">
+            <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>
+            {event?.location ? <div className="font-medium">{event.location}</div> : null}
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+            {event?.location ? <ActionPill href={buildMapHref(event.location)}>View map</ActionPill> : null}
+          </div>
         </div>
       </div>
 
