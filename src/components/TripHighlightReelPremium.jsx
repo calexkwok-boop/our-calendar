@@ -424,8 +424,6 @@ function TitleSlide({ highlight }) {
 function PhotoSlide({ highlight }) {
   const treatment = PHOTO_TREATMENTS[highlight.mood] || PHOTO_TREATMENTS.scenic;
   const caption = String(highlight.caption || '').trim();
-  const location = String(highlight.location || '').trim();
-  const showCaptionCard = Boolean(location);
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black">
@@ -455,32 +453,6 @@ function PhotoSlide({ highlight }) {
             animation: `${treatment.kenBurns} 20s ease-out forwards`,
           }}
         />
-      </div>
-
-      <div className={`${showCaptionCard ? '' : 'hidden '}absolute inset-x-0 bottom-48 px-5 sm:bottom-52 sm:px-8`}>
-        <div className="max-w-[23rem] rounded-[1.6rem] border border-white/12 bg-black/24 px-4 py-3 text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-lg">
-          {Number(highlight.rating || 0) > 0 && (
-            <div className="mb-2 flex items-center gap-1.5">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className={`h-2 w-2 rounded-full ${i < highlight.rating ? 'bg-white shadow-sm shadow-white/50' : 'bg-white/30'}`} />
-              ))}
-            </div>
-          )}
-          {caption && (
-          <h2
-            className="mb-1 text-[1.9rem] font-bold leading-[1.02] tracking-tight drop-shadow-2xl sm:text-[2.15rem]"
-            style={{ fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '-0.02em' }}
-          >
-            {caption}
-          </h2>
-          )}
-          {location && (
-            <p className="flex items-start gap-2 text-xs font-medium leading-snug text-white/82 sm:text-sm">
-              <span className="text-base sm:text-lg">📍</span>
-              <span className="line-clamp-2">{location}</span>
-            </p>
-          )}
-        </div>
       </div>
     </div>
   );
@@ -629,21 +601,39 @@ const buildScoredMoments = (events, groupRatingsByEventId, currentUserId) => (
 const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   const safeMoments = Array.isArray(moments) ? moments.filter(Boolean) : [];
   const memoryMoments = buildMemoryMoments(tripPhotos);
+  const targetPhotoSlideCount = 25;
   const coverPhoto = memoryMoments[0]?.photo?.url
     || safeMoments.find((moment) => moment.photos[0]?.url)?.photos[0]?.url
     || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200';
-  const topMoments = safeMoments.slice(0, 6);
-  const topMemoryMoments = memoryMoments.slice(0, 4);
+  const topMoments = safeMoments.slice(0, 14);
+  const topMemoryMoments = memoryMoments.slice(0, 14);
   const scenicMoment = topMoments.find((moment) => moment.mood === 'scenic');
-  const foodMoment = topMoments.find((moment) => moment.mood === 'food');
-  const nightlifeMoment = topMoments.find((moment) => moment.mood === 'nightlife');
   const favoriteMoment = topMoments[0];
-  const usedPhotoUrls = new Set();
-  const claimPhotoUrl = (url) => {
-    const normalizedUrl = String(url || '').trim();
-    if (!normalizedUrl || usedPhotoUrls.has(normalizedUrl)) return false;
-    usedPhotoUrls.add(normalizedUrl);
-    return true;
+  const candidateByUrl = new Map();
+  const getChronologicalSortValue = (dateValue, timeValue = '', fallbackIndex = 0) => {
+    const rawDate = String(dateValue || '').trim();
+    if (!rawDate) return Number.MAX_SAFE_INTEGER - 100000 + fallbackIndex;
+    const rawTime = String(timeValue || '').trim();
+    const normalizedDateTime = rawDate.includes('T')
+      ? rawDate
+      : `${rawDate}T${rawTime || '00:00:00'}`;
+    const parsed = new Date(normalizedDateTime);
+    if (Number.isNaN(parsed.getTime())) return Number.MAX_SAFE_INTEGER - 100000 + fallbackIndex;
+    return parsed.getTime();
+  };
+  const pushPhotoCandidate = (slide, options = {}) => {
+    const photoUrl = String(slide?.photo || '').trim();
+    if (!photoUrl) return;
+    const nextCandidate = {
+      slide,
+      score: Number(options.score || 0),
+      sortValue: getChronologicalSortValue(options.date, options.time, Number(options.fallbackIndex || 0)),
+      fallbackIndex: Number(options.fallbackIndex || 0),
+    };
+    const existing = candidateByUrl.get(photoUrl);
+    if (!existing || nextCandidate.score > existing.score || (nextCandidate.score === existing.score && nextCandidate.sortValue < existing.sortValue)) {
+      candidateByUrl.set(photoUrl, nextCandidate);
+    }
   };
 
   const slides = [
@@ -657,18 +647,20 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
 
   if (topMemoryMoments.length > 0) {
     const leadMemory = topMemoryMoments[0];
-    if (claimPhotoUrl(leadMemory.photo.url)) {
-      slides.push({
-        type: 'photo',
-        photo: leadMemory.photo.url,
-        caption: leadMemory.title,
-        subcopy: leadMemory.subcopy,
-        eyebrow: leadMemory.eyebrow,
-        location: leadMemory.meta,
-        rating: 0,
-        mood: leadMemory.photo?.hasPeople ? 'people' : 'reflective',
-      });
-    }
+    pushPhotoCandidate({
+      type: 'photo',
+      photo: leadMemory.photo.url,
+      caption: leadMemory.title,
+      subcopy: leadMemory.subcopy,
+      eyebrow: leadMemory.eyebrow,
+      location: leadMemory.meta,
+      rating: 0,
+      mood: leadMemory.photo?.hasPeople ? 'people' : 'reflective',
+    }, {
+      score: Number(leadMemory.score || 0) + 12,
+      date: leadMemory.photo?.date,
+      fallbackIndex: 0,
+    });
   } else if (scenicMoment) {
     slides.push({
       type: 'chapter',
@@ -691,32 +683,36 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   mixedSlides.forEach((entry) => {
     if (entry.kind === 'memory') {
       const { memory, index } = entry;
-      if (claimPhotoUrl(memory.photo.url)) {
-        slides.push({
+      pushPhotoCandidate({
+        type: 'photo',
+        photo: memory.photo.url,
+        caption: memory.title,
+        subcopy: memory.subcopy,
+        eyebrow: memory.eyebrow,
+        location: memory.meta,
+        rating: 0,
+        mood: memory.photo?.hasPeople ? 'people' : (index % 2 === 0 ? 'reflective' : 'scenic'),
+      }, {
+        score: Number(memory.score || 0),
+        date: memory.photo?.date,
+        fallbackIndex: index + 1,
+      });
+      const extraMemory = topMemoryMoments[index + 1];
+      if (extraMemory) {
+        pushPhotoCandidate({
           type: 'photo',
-          photo: memory.photo.url,
-          caption: memory.title,
-          subcopy: memory.subcopy,
-          eyebrow: memory.eyebrow,
-          location: memory.meta,
+          photo: extraMemory.photo.url,
+          caption: extraMemory.title,
+          subcopy: extraMemory.subcopy,
+          eyebrow: extraMemory.eyebrow,
+          location: extraMemory.meta,
           rating: 0,
-          mood: memory.photo?.hasPeople ? 'people' : (index % 2 === 0 ? 'reflective' : 'scenic'),
+          mood: extraMemory.photo?.hasPeople ? 'people' : 'scenic',
+        }, {
+          score: Number(extraMemory.score || 0) - 1,
+          date: extraMemory.photo?.date,
+          fallbackIndex: index + 20,
         });
-      }
-      if (index === 1 && topMemoryMoments.length >= 3) {
-        const extraMemory = topMemoryMoments[2];
-        if (claimPhotoUrl(extraMemory.photo.url)) {
-          slides.push({
-            type: 'photo',
-            photo: extraMemory.photo.url,
-            caption: extraMemory.title,
-            subcopy: extraMemory.subcopy,
-            eyebrow: extraMemory.eyebrow,
-            location: extraMemory.meta,
-            rating: 0,
-            mood: extraMemory.photo?.hasPeople ? 'people' : 'scenic',
-          });
-        }
       }
       return;
     }
@@ -724,8 +720,8 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
     const { moment, index } = entry;
     const primaryPhoto = moment.photos[0]?.url;
     const copy = buildEventCopy(moment, index);
-    if (primaryPhoto && claimPhotoUrl(primaryPhoto)) {
-      slides.push({
+    if (primaryPhoto) {
+      pushPhotoCandidate({
         type: 'photo',
         photo: primaryPhoto,
         caption: copy.title,
@@ -734,6 +730,28 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         location: moment.event?.location || '',
         rating: moment.rating,
         mood: moment.mood,
+      }, {
+        score: Number(moment.score || 0) + 6,
+        date: moment.event?.date || moment.photos[0]?.date || moment.photos[0]?.created_at || moment.photos[0]?.createdAt,
+        time: moment.event?.time,
+        fallbackIndex: index + 40,
+      });
+      moment.photos.slice(1, 4).forEach((photo, photoIndex) => {
+        pushPhotoCandidate({
+          type: 'photo',
+          photo: photo?.url,
+          caption: photoIndex === 0 ? copy.title : '',
+          subcopy: copy.subcopy,
+          eyebrow: photoIndex === 0 ? copy.eyebrow : '',
+          location: moment.event?.location || '',
+          rating: moment.rating,
+          mood: moment.mood,
+        }, {
+          score: Number(moment.score || 0) - (photoIndex + 1) * 1.5,
+          date: photo?.date || photo?.created_at || photo?.createdAt || moment.event?.date,
+          time: moment.event?.time,
+          fallbackIndex: index + 60 + photoIndex,
+        });
       });
     } else {
       slides.push({
@@ -745,28 +763,55 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         background: getTextTreatment({ event: moment.event }).background,
       });
     }
-
-    if (index === 1 && foodMoment) {
-      slides.push({
-        type: 'spotlight',
-        eyebrow: 'Best Meal',
-        title: buildSpotlightTitle(foodMoment),
-        caption: buildSpotlightCaption(foodMoment),
-        subcopy: foodMoment.review || 'The kind of stop you plan the next trip around.',
-        background: 'linear-gradient(135deg, #f97316 0%, #be185d 100%)',
-      });
-    }
-
-    if (index === 3 && nightlifeMoment) {
-      slides.push({
-        type: 'chapter',
-        eyebrow: 'After Hours',
-        title: buildChapterTitle(nightlifeMoment),
-        subtitle: buildChapterCaption(nightlifeMoment),
-        background: 'linear-gradient(135deg, #581c87 0%, #0f172a 100%)',
-      });
-    }
   });
+
+  topMemoryMoments.forEach((memory, index) => {
+    pushPhotoCandidate({
+      type: 'photo',
+      photo: memory.photo.url,
+      caption: index % 3 === 0 ? memory.title : '',
+      subcopy: memory.subcopy,
+      eyebrow: index % 3 === 0 ? memory.eyebrow : '',
+      location: memory.meta,
+      rating: 0,
+      mood: memory.photo?.hasPeople ? 'people' : 'scenic',
+    }, {
+      score: Number(memory.score || 0) - 2,
+      date: memory.photo?.date,
+      fallbackIndex: index + 100,
+    });
+  });
+
+  topMoments.forEach((moment, index) => {
+    const copy = buildEventCopy(moment, index);
+    moment.photos.forEach((photo, photoIndex) => {
+      pushPhotoCandidate({
+        type: 'photo',
+        photo: photo?.url,
+        caption: photoIndex === 0 ? copy.title : '',
+        subcopy: copy.subcopy,
+        eyebrow: photoIndex === 0 ? copy.eyebrow : '',
+        location: moment.event?.location || '',
+        rating: moment.rating,
+        mood: moment.mood,
+      }, {
+        score: Number(moment.score || 0) - photoIndex,
+        date: photo?.date || photo?.created_at || photo?.createdAt || moment.event?.date,
+        time: moment.event?.time,
+        fallbackIndex: index + 140 + photoIndex,
+      });
+    });
+  });
+
+  const selectedPhotoSlides = Array.from(candidateByUrl.values())
+    .sort((a, b) => b.score - a.score || a.sortValue - b.sortValue || a.fallbackIndex - b.fallbackIndex)
+    .slice(0, targetPhotoSlideCount)
+    .sort((a, b) => a.sortValue - b.sortValue || b.score - a.score || a.fallbackIndex - b.fallbackIndex)
+    .map((entry) => entry.slide);
+
+  if (selectedPhotoSlides.length > 0) {
+    slides.push(...selectedPhotoSlides);
+  }
 
   if (topMemoryMoments[0]) {
     slides.push({

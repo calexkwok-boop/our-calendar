@@ -164,6 +164,12 @@ const TrashIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
   </svg>
 );
+const CameraIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.75 8.75h2.6l1.35-2h6.6l1.35 2h2.6a1.5 1.5 0 011.5 1.5v7a1.5 1.5 0 01-1.5 1.5H4.75a1.5 1.5 0 01-1.5-1.5v-7a1.5 1.5 0 011.5-1.5Z" />
+    <circle cx="12" cy="13" r="3.1" strokeWidth={1.8} />
+  </svg>
+);
 
 const ActionPill = ({ href, onClick, children }) => {
   const className = 'inline-flex items-center gap-1.5 rounded-full border-2 border-gray-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 hover:shadow-md active:scale-[0.98] dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10';
@@ -218,6 +224,8 @@ const EmptySection = ({ title, subtitle, actions }) => (
 
 const NotesSection = ({ event, onEdit, onUpdateEventData, openEditor }) => {
   const notes = normalizeEventNotes(event);
+  const sectionTitle = 'Party Notes';
+  const emptySubtitle = 'Add house rules, parking info, or anything guests should know.';
   const openNotesEditor =
     onUpdateEventData && openEditor
       ? () =>
@@ -243,7 +251,7 @@ const NotesSection = ({ event, onEdit, onUpdateEventData, openEditor }) => {
 
   if (notes) {
     return (
-      <Section title="Notes" actions={typeof openNotesEditor === 'function' ? <ActionPill onClick={openNotesEditor}>Edit</ActionPill> : null}>
+      <Section title={sectionTitle} subtitle="House rules, parking, and the vibe" actions={typeof openNotesEditor === 'function' ? <ActionPill onClick={openNotesEditor}>Edit</ActionPill> : null}>
         <div className="relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 px-4 py-4 text-sm leading-6 text-gray-700 dark:border-white/10 dark:bg-white/[0.045] dark:text-gray-300">
           <PartyTileConfetti />
           <div className="relative">{notes}</div>
@@ -253,7 +261,7 @@ const NotesSection = ({ event, onEdit, onUpdateEventData, openEditor }) => {
   }
 
   if (typeof openNotesEditor === 'function') {
-    return <EmptySection title="Notes" actions={<ActionPill onClick={openNotesEditor}>Add</ActionPill>} />;
+    return <EmptySection title={sectionTitle} subtitle={emptySubtitle} actions={<ActionPill onClick={openNotesEditor}>Add</ActionPill>} />;
   }
 
   return null;
@@ -326,6 +334,18 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               }),
           })
       : onEdit;
+  const openCoverEditor = onUpdateEventData && openEditor
+    ? () =>
+        openEditor({
+          variant: 'party',
+          title: coverImageUrl ? 'Change Cover Photo' : 'Add Cover Photo',
+          subtitle: 'Set the image that sits behind the invitation card.',
+          fields: [
+            { key: 'coverImageUrl', label: 'Cover photo URL', value: coverImageUrl, placeholder: 'https://images.example.com/invitation-photo.jpg' },
+          ],
+          onSave: (values) => onUpdateEventData({ coverImageUrl: String(values.coverImageUrl || '').trim() || null }),
+        })
+    : null;
 
   return (
     <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/55 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#15111f] dark:via-[#1b1930] dark:to-[#0f1727] dark:shadow-[0_24px_80px_rgba(0,0,0,0.38)]">
@@ -438,7 +458,17 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           </div>
         ) : null}
 
-        <div className="mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 bg-white/78 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:bg-[rgba(38,28,57,0.72)] dark:backdrop-blur-[12px]">
+        <div className="relative mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 bg-white/78 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:bg-[rgba(38,28,57,0.72)] dark:backdrop-blur-[12px]">
+          {typeof openCoverEditor === 'function' ? (
+            <button
+              type="button"
+              onClick={openCoverEditor}
+              className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-fuchsia-200 bg-white/92 text-fuchsia-600 shadow-sm transition hover:border-fuchsia-300 hover:bg-white hover:text-fuchsia-700 dark:border-white/10 dark:bg-white/10 dark:text-fuchsia-200 dark:hover:bg-white/15 dark:hover:text-white"
+              title={coverImageUrl ? 'Change cover photo' : 'Add cover photo'}
+            >
+              <CameraIcon />
+            </button>
+          ) : null}
           <div className="pointer-events-none absolute inset-0 hidden overflow-hidden dark:block">
             <div className="absolute -left-2 top-6 h-16 w-11 rounded-full bg-gradient-to-b from-fuchsia-300/45 to-pink-500/55 blur-[0.2px]" style={{ animation: 'party-card-bob 5.8s ease-in-out infinite' }} />
             <div className="absolute left-4 top-[4.5rem] h-10 w-px bg-gradient-to-b from-fuchsia-200/70 to-transparent" />

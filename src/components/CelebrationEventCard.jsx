@@ -159,6 +159,12 @@ const TrashIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
   </svg>
 );
+const CameraIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.75 8.75h2.6l1.35-2h6.6l1.35 2h2.6a1.5 1.5 0 011.5 1.5v7a1.5 1.5 0 01-1.5 1.5H4.75a1.5 1.5 0 01-1.5-1.5v-7a1.5 1.5 0 011.5-1.5Z" />
+    <circle cx="12" cy="13" r="3.1" strokeWidth={1.8} />
+  </svg>
+);
 
 const ActionPill = ({ href, onClick, children }) => {
   const className = 'inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200 bg-white/92 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/75 hover:shadow-md active:scale-[0.98] dark:border-white/10 dark:bg-white/5 dark:text-fuchsia-200 dark:hover:bg-white/10';
@@ -201,17 +207,27 @@ const EmptySection = ({ title, subtitle, actions, tone }) => (
 
 const NotesSection = ({ event, onEdit, tone }) => {
   const notes = normalizeEventNotes(event);
+  const sectionTitle = tone?.kind === 'baby'
+    ? 'Shower Notes'
+    : tone?.kind === 'wedding'
+      ? 'Celebration Notes'
+      : 'Event Notes';
+  const sectionSubtitle = tone?.kind === 'baby'
+    ? 'Registry reminders, arrival tips, and sweet little details'
+    : tone?.kind === 'wedding'
+      ? 'Ceremony details, timing notes, and guest reminders'
+      : 'Everything guests should know before they arrive';
 
   if (notes) {
     return (
-      <Section title="Notes" actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null} tone={tone}>
+      <Section title={sectionTitle} subtitle={sectionSubtitle} actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null} tone={tone}>
         <div className={`rounded-2xl border px-4 py-4 text-sm leading-6 ${tone?.detailSurface || 'border-fuchsia-100 bg-white dark:border-white/10 dark:bg-white/[0.05]'} text-gray-700 dark:text-gray-300`}>{notes}</div>
       </Section>
     );
   }
 
   if (typeof onEdit === 'function') {
-    return <EmptySection title="Notes" subtitle="No notes added yet." actions={<ActionPill onClick={onEdit}>Add</ActionPill>} tone={tone} />;
+    return <EmptySection title={sectionTitle} subtitle={sectionSubtitle} actions={<ActionPill onClick={onEdit}>Add</ActionPill>} tone={tone} />;
   }
 
   return null;
@@ -244,6 +260,18 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
   const schedule = Array.isArray(event?.schedule) ? event.schedule : [];
   const tone = resolveCelebrationStyle(event);
   const coverImageUrl = getCardBackdropUrl(event);
+  const openCoverEditor = onUpdateEventData && openEditor
+    ? () =>
+        openEditor({
+          variant: 'celebration',
+          title: coverImageUrl ? 'Change Cover Photo' : 'Add Cover Photo',
+          subtitle: 'Set the image that sits behind the invitation card.',
+          fields: [
+            { key: 'coverImageUrl', label: 'Cover photo URL', value: coverImageUrl, placeholder: 'https://images.example.com/invitation-photo.jpg' },
+          ],
+          onSave: (values) => onUpdateEventData({ coverImageUrl: String(values.coverImageUrl || '').trim() || null }),
+        })
+    : null;
 
   return (
     <div className={`group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/60 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#171320] dark:via-[#201930] dark:to-[#111a2b] ${tone.kind === 'baby' ? 'dark:shadow-[0_24px_80px_rgba(56,189,248,0.12)]' : 'dark:shadow-[0_24px_80px_rgba(236,72,153,0.12)]'}`}>
@@ -315,7 +343,17 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
           </div>
         ) : null}
 
-        <div className="mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 bg-white/78 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:bg-[rgba(38,28,57,0.72)] dark:backdrop-blur-[12px]">
+        <div className="relative mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 bg-white/78 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:bg-[rgba(38,28,57,0.72)] dark:backdrop-blur-[12px]">
+          {typeof openCoverEditor === 'function' ? (
+            <button
+              type="button"
+              onClick={openCoverEditor}
+              className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-white/92 text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-white hover:text-rose-700 dark:border-white/10 dark:bg-white/10 dark:text-rose-200 dark:hover:bg-white/15 dark:hover:text-white"
+              title={coverImageUrl ? 'Change cover photo' : 'Add cover photo'}
+            >
+              <CameraIcon />
+            </button>
+          ) : null}
           <div className="mb-3 flex items-center justify-center">
             <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-fuchsia-700 dark:text-fuchsia-200">
               You're Invited
