@@ -2107,6 +2107,7 @@ function App() {
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
   const photoTouchRef = useRef({ id: null, x: 0, y: 0 });
   const photoTouchTapRef = useRef({ id: null, at: 0 });
+  const photoTouchOpenTimerRef = useRef({ id: null, timer: null });
   const photoClickSuppressRef = useRef({ id: null, until: 0 });
   const photoReactionPickerOpenedRef = useRef({ id: null, at: 0 });
   const REACTION_EMOJIS = ['😍', '🔥', '👏', '😂', '🥹', '🤩', '💯', '🙌', '❤️'];
@@ -4857,6 +4858,13 @@ function App() {
     photoTapRef.current = { id: null, at: 0, timer: null };
   };
 
+  const clearPhotoTouchOpenTimer = () => {
+    if (photoTouchOpenTimerRef.current?.timer) {
+      clearTimeout(photoTouchOpenTimerRef.current.timer);
+    }
+    photoTouchOpenTimerRef.current = { id: null, timer: null };
+  };
+
   const toggleTripPhotoReaction = (photo, emoji) => {
     const photoId = String(photo?.id || '').trim();
     const emojiKey = String(emoji || '').trim();
@@ -4979,6 +4987,7 @@ function App() {
     const now = Date.now();
     const previousTouchTap = photoTouchTapRef.current;
     if (previousTouchTap.id === String(photo?.id || '') && now - previousTouchTap.at < 650) {
+      clearPhotoTouchOpenTimer();
       photoTouchTapRef.current = { id: null, at: 0 };
       resetPhotoTapState();
       handlePhotoDoubleTap(photo);
@@ -4986,12 +4995,19 @@ function App() {
     }
     photoTouchTapRef.current = { id: String(photo?.id || ''), at: now };
     photoClickSuppressRef.current = { id: String(photo?.id || ''), until: Date.now() + 500 };
-    handlePhotoTap(photo, { source: 'touch' });
+    clearPhotoTouchOpenTimer();
+    const timer = setTimeout(() => {
+      setLightboxPhoto(photo);
+      photoTouchOpenTimerRef.current = { id: null, timer: null };
+      photoTouchTapRef.current = { id: null, at: 0 };
+    }, 480);
+    photoTouchOpenTimerRef.current = { id: String(photo?.id || ''), timer };
   };
 
   useEffect(() => () => {
     clearPhotoReactionHold();
     resetPhotoTapState();
+    clearPhotoTouchOpenTimer();
     photoTouchTapRef.current = { id: null, at: 0 };
   }, []);
 
