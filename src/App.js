@@ -33,6 +33,50 @@ process.env.REACT_APP_SUPABASE_URL,
 process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
+const SUPABASE_URL = String(process.env.REACT_APP_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
+
+const normalizeStorageObjectPath = (value = '') => (
+  String(value || '')
+    .split('/')
+    .map((segment) => {
+      const decoded = decodeURIComponent(String(segment || '').replace(/\+/g, '%20'));
+      return encodeURIComponent(decoded);
+    })
+    .join('/')
+);
+
+const normalizeTripPhotoUrl = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^(data:|blob:)/i.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw, window?.location?.origin || 'http://localhost');
+    const prefixes = [
+      '/storage/v1/object/public/',
+      '/storage/v1/object/sign/',
+      '/object/public/',
+      '/object/sign/',
+    ];
+    for (const bucket of TRIP_PHOTO_BUCKETS) {
+      for (const prefix of prefixes) {
+        const marker = `${prefix}${bucket}/`;
+        const idx = parsed.pathname.indexOf(marker);
+        if (idx === -1) continue;
+        const objectPath = normalizeStorageObjectPath(parsed.pathname.slice(idx + marker.length));
+        const origin = SUPABASE_URL || `${parsed.protocol}//${parsed.host}`;
+        return `${origin}/storage/v1/object/public/${bucket}/${objectPath}`;
+      }
+    }
+    if (parsed.pathname !== '/' && /\s/.test(parsed.pathname)) {
+      return `${parsed.origin}${normalizeStorageObjectPath(parsed.pathname)}${parsed.search}${parsed.hash}`;
+    }
+    return parsed.toString();
+  } catch {
+    return encodeURI(raw);
+  }
+};
+
 // Supabase storage wrapper
 const storage = {
   get: async (key, shared = false) => {
@@ -4317,7 +4361,12 @@ function App() {
         .order('created_at', { ascending: true });
       if (error) { console.error('Error loading photos:', error); return []; }
       const deletedSet = new Set(((deletedIdsOverride ?? deletedPhotoIds) || []).map(id => String(id)));
-      const filtered = (data || []).filter(p => !deletedSet.has(String(p.id)));
+      const filtered = (data || [])
+        .filter(p => !deletedSet.has(String(p.id)))
+        .map((photo) => ({
+          ...photo,
+          url: normalizeTripPhotoUrl(photo?.url),
+        }));
       return filtered;
     } catch (e) { console.error(e); }
     return [];
