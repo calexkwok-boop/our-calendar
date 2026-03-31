@@ -19,6 +19,10 @@ if ('serviceWorker' in navigator) {
   (async () => {
     try {
       const regs = await navigator.serviceWorker.getRegistrations();
+      if (process.env.NODE_ENV !== 'production') {
+        await Promise.all(regs.map((reg) => reg.unregister()));
+        return;
+      }
       await Promise.all(
         regs
           .filter((reg) => !reg.active?.scriptURL?.includes('/firebase-messaging-sw.js'))
