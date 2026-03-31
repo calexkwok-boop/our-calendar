@@ -206,6 +206,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
               <ActionPill
                 onClick={() =>
                   openEditor({
+                    variant: 'kids',
                     title: 'Edit Activity',
                     subtitle: 'Update what the kids will be doing.',
                     fields: [
@@ -243,6 +244,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
               <ActionPill
                 onClick={() =>
                   openEditor({
+                    variant: 'kids',
                     title: 'Add Activity',
                     subtitle: 'What will the kids be doing?',
                     fields: [
@@ -270,6 +272,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
             <ActionPill
               onClick={() =>
                 openEditor({
+                  variant: 'kids',
                   title: 'Edit Parent Notes',
                   subtitle: 'Update allergy info and supervision requirements.',
                   fields: [

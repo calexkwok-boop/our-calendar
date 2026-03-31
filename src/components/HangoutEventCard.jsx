@@ -232,6 +232,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
             <ActionPill
               onClick={() =>
                 openEditor({
+                  variant: 'hangout',
                   title: 'Edit Plan',
                   subtitle: 'Update reservation and logistics.',
                   fields: [

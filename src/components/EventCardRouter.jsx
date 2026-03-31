@@ -340,7 +340,156 @@ const PlacesAutocompleteField = ({ value, onChange, placeholder, inputClassName,
 const EventEditorModal = ({ config, onClose, onSave }) => {
   const [draft, setDraft] = useState({});
   const [saving, setSaving] = useState(false);
-  const isPartyEditor = config?.variant === 'party';
+  const editorVariant = String(config?.variant || '').trim().toLowerCase();
+  const isPartyEditor = editorVariant === 'party';
+  const editorTheme = editorVariant === 'kids'
+    ? {
+        shell: 'border-amber-200/80 bg-gradient-to-br from-white via-amber-50/95 to-sky-50/90 dark:border-amber-400/20 dark:bg-gradient-to-br dark:from-[#2b2317] dark:via-[#241d2f] dark:to-[#16253a]',
+        header: 'border-amber-200/60 bg-gradient-to-br from-white via-amber-50/92 to-sky-50/88 dark:border-amber-400/15 dark:from-[#352919] dark:via-[#2a2037] dark:to-[#1b2a3f]',
+        title: 'text-amber-950 dark:text-white',
+        subtitle: 'text-amber-700/80 dark:text-amber-100/75',
+        close: 'border-amber-200/80 bg-white/75 text-amber-600 hover:text-amber-800 dark:border-white/10 dark:bg-white/10 dark:text-amber-200 dark:hover:bg-white/15 dark:hover:text-white',
+        body: 'bg-gradient-to-b from-transparent via-amber-50/30 to-sky-50/26 dark:via-white/[0.02] dark:to-white/[0.03]',
+        label: 'text-amber-700 dark:text-amber-200',
+        input: 'border-amber-200 bg-white/88 text-slate-900 placeholder:text-amber-300 focus:border-amber-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-amber-200/40 dark:focus:border-amber-300 dark:focus:bg-white/[0.1]',
+        panel: 'border-amber-200 bg-white/82 dark:border-white/10 dark:bg-white/[0.05]',
+        empty: 'border-amber-200 bg-white/68 text-amber-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-amber-200',
+        footer: 'border-amber-200/60 bg-white/50 dark:border-white/10 dark:bg-white/[0.04]',
+        cancel: 'border-amber-200 bg-white text-amber-700 hover:border-amber-300 hover:bg-amber-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-amber-200 dark:hover:bg-white/[0.08]',
+        submit: 'bg-gradient-to-r from-amber-500 to-sky-500 text-white hover:from-amber-600 hover:to-sky-600 dark:from-amber-500 dark:to-sky-400',
+      }
+    : editorVariant === 'hangout'
+      ? {
+          shell: 'border-cyan-200/80 bg-gradient-to-br from-white via-cyan-50/95 to-sky-50/92 dark:border-cyan-400/20 dark:bg-gradient-to-br dark:from-[#18252d] dark:via-[#1b2134] dark:to-[#132232]',
+          header: 'border-cyan-200/60 bg-gradient-to-br from-white via-cyan-50/92 to-sky-50/88 dark:border-cyan-400/15 dark:from-[#1f313c] dark:via-[#1d2339] dark:to-[#193042]',
+          title: 'text-cyan-950 dark:text-white',
+          subtitle: 'text-cyan-700/80 dark:text-cyan-100/75',
+          close: 'border-cyan-200/80 bg-white/75 text-cyan-600 hover:text-cyan-800 dark:border-white/10 dark:bg-white/10 dark:text-cyan-200 dark:hover:bg-white/15 dark:hover:text-white',
+          body: 'bg-gradient-to-b from-transparent via-cyan-50/28 to-sky-50/24 dark:via-white/[0.02] dark:to-white/[0.03]',
+          label: 'text-cyan-700 dark:text-cyan-200',
+          input: 'border-cyan-200 bg-white/88 text-slate-900 placeholder:text-cyan-300 focus:border-cyan-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-cyan-200/40 dark:focus:border-cyan-300 dark:focus:bg-white/[0.1]',
+          panel: 'border-cyan-200 bg-white/82 dark:border-white/10 dark:bg-white/[0.05]',
+          empty: 'border-cyan-200 bg-white/68 text-cyan-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-cyan-200',
+          footer: 'border-cyan-200/60 bg-white/50 dark:border-white/10 dark:bg-white/[0.04]',
+          cancel: 'border-cyan-200 bg-white text-cyan-700 hover:border-cyan-300 hover:bg-cyan-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-cyan-200 dark:hover:bg-white/[0.08]',
+          submit: 'bg-gradient-to-r from-cyan-500 to-sky-500 text-white hover:from-cyan-600 hover:to-sky-600 dark:from-cyan-500 dark:to-sky-400',
+        }
+      : editorVariant === 'celebration'
+        ? {
+            shell: 'border-rose-200/80 bg-gradient-to-br from-white via-rose-50/95 to-amber-50/90 dark:border-rose-400/20 dark:bg-gradient-to-br dark:from-[#291a22] dark:via-[#261d33] dark:to-[#2a2318]',
+            header: 'border-rose-200/60 bg-gradient-to-br from-white via-rose-50/92 to-amber-50/88 dark:border-rose-400/15 dark:from-[#341e28] dark:via-[#2b2038] dark:to-[#312618]',
+            title: 'text-rose-950 dark:text-white',
+            subtitle: 'text-rose-700/80 dark:text-rose-100/75',
+            close: 'border-rose-200/80 bg-white/75 text-rose-600 hover:text-rose-800 dark:border-white/10 dark:bg-white/10 dark:text-rose-200 dark:hover:bg-white/15 dark:hover:text-white',
+            body: 'bg-gradient-to-b from-transparent via-rose-50/28 to-amber-50/24 dark:via-white/[0.02] dark:to-white/[0.03]',
+            label: 'text-rose-700 dark:text-rose-200',
+            input: 'border-rose-200 bg-white/88 text-slate-900 placeholder:text-rose-300 focus:border-rose-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-rose-200/40 dark:focus:border-rose-300 dark:focus:bg-white/[0.1]',
+            panel: 'border-rose-200 bg-white/82 dark:border-white/10 dark:bg-white/[0.05]',
+            empty: 'border-rose-200 bg-white/68 text-rose-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-rose-200',
+            footer: 'border-rose-200/60 bg-white/50 dark:border-white/10 dark:bg-white/[0.04]',
+            cancel: 'border-rose-200 bg-white text-rose-700 hover:border-rose-300 hover:bg-rose-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-rose-200 dark:hover:bg-white/[0.08]',
+            submit: 'bg-gradient-to-r from-rose-500 to-amber-500 text-white hover:from-rose-600 hover:to-amber-600 dark:from-rose-500 dark:to-amber-400',
+          }
+        : isPartyEditor
+          ? {
+              shell: 'border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/95 to-cyan-50/95 dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#20162e] dark:via-[#251b38] dark:to-[#16233a]',
+              header: 'border-fuchsia-200/60 bg-gradient-to-br from-white via-rose-50/90 to-cyan-50/90 dark:border-fuchsia-400/15 dark:from-[#2a1d3e] dark:via-[#231933] dark:to-[#1a2940]',
+              title: 'text-fuchsia-950 dark:text-white',
+              subtitle: 'text-fuchsia-700/80 dark:text-fuchsia-100/75',
+              close: 'border-fuchsia-200/80 bg-white/75 text-fuchsia-500 hover:text-fuchsia-700 dark:border-white/10 dark:bg-white/10 dark:text-fuchsia-200 dark:hover:bg-white/15 dark:hover:text-white',
+              body: 'bg-gradient-to-b from-transparent via-white/20 to-white/30 dark:via-white/[0.02] dark:to-white/[0.03]',
+              label: 'text-fuchsia-700 dark:text-fuchsia-200',
+              input: 'border-fuchsia-200 bg-white/85 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]',
+              panel: 'border-fuchsia-200 bg-white/82 dark:border-white/10 dark:bg-white/[0.05]',
+              empty: 'border-fuchsia-200 bg-white/65 text-fuchsia-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200',
+              footer: 'border-fuchsia-200/60 bg-white/50 dark:border-white/10 dark:bg-white/[0.04]',
+              cancel: 'border-fuchsia-200 bg-white text-fuchsia-700 hover:border-fuchsia-300 hover:bg-fuchsia-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200 dark:hover:bg-white/[0.08]',
+              submit: 'bg-gradient-to-r from-fuchsia-600 to-cyan-500 text-white hover:from-fuchsia-700 hover:to-cyan-600 dark:from-fuchsia-500 dark:to-cyan-400',
+            }
+          : {
+              shell: 'border-white/10 bg-white dark:border-white/10 dark:bg-slate-950',
+              header: 'border-black/5 bg-gradient-to-br from-white via-slate-50 to-slate-100 dark:border-white/10 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900',
+              title: 'text-slate-950 dark:text-white',
+              subtitle: 'text-slate-500 dark:text-slate-400',
+              close: 'border-black/5 bg-white/80 text-slate-500 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white',
+              body: '',
+              label: 'text-slate-500 dark:text-slate-400',
+              input: 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]',
+              panel: 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/[0.04]',
+              empty: 'border-slate-200 bg-white text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300',
+              footer: 'border-black/5 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.03]',
+              cancel: 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200 dark:hover:bg-white/[0.08]',
+              submit: 'bg-slate-950 text-white hover:bg-black dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100',
+            };
+  const editorAccent = editorVariant === 'kids'
+    ? {
+        itemSurface: 'border-amber-100/90 bg-white/78 dark:border-white/8 dark:bg-white/[0.04]',
+        remove: 'border-amber-200 bg-white/85 text-amber-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-amber-200 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200',
+        optionIdle: 'border-amber-200 bg-white/85 text-slate-600 hover:border-amber-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:border-amber-300',
+        addChip: 'border-amber-200 bg-white/85 text-amber-700 hover:border-amber-300 hover:bg-amber-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-amber-200 dark:hover:bg-white/[0.08]',
+        claimed: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-200',
+        unclaimed: 'text-amber-700/75 dark:text-amber-100/65',
+        dropdown: 'border-amber-200 bg-white/98 dark:border-white/10 dark:bg-[#2b2317]/98',
+        option: 'border-amber-100 hover:bg-amber-50 dark:border-white/10 dark:hover:bg-white/[0.06]',
+        toggleOn: 'border-amber-500 bg-gradient-to-r from-amber-500 to-sky-500 text-white dark:border-amber-300 dark:from-amber-500 dark:to-sky-400 dark:text-white',
+        toggleOff: 'border-amber-200 bg-white/85 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200',
+        help: 'text-amber-700/80 dark:text-amber-100/70',
+      }
+    : editorVariant === 'hangout'
+      ? {
+          itemSurface: 'border-cyan-100/90 bg-white/78 dark:border-white/8 dark:bg-white/[0.04]',
+          remove: 'border-cyan-200 bg-white/85 text-cyan-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-cyan-200 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200',
+          optionIdle: 'border-cyan-200 bg-white/85 text-slate-600 hover:border-cyan-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:border-cyan-300',
+          addChip: 'border-cyan-200 bg-white/85 text-cyan-700 hover:border-cyan-300 hover:bg-cyan-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-cyan-200 dark:hover:bg-white/[0.08]',
+          claimed: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-200',
+          unclaimed: 'text-cyan-700/75 dark:text-cyan-100/65',
+          dropdown: 'border-cyan-200 bg-white/98 dark:border-white/10 dark:bg-[#18252d]/98',
+          option: 'border-cyan-100 hover:bg-cyan-50 dark:border-white/10 dark:hover:bg-white/[0.06]',
+          toggleOn: 'border-cyan-500 bg-gradient-to-r from-cyan-500 to-sky-500 text-white dark:border-cyan-300 dark:from-cyan-500 dark:to-sky-400 dark:text-white',
+          toggleOff: 'border-cyan-200 bg-white/85 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200',
+          help: 'text-cyan-700/80 dark:text-cyan-100/70',
+        }
+      : editorVariant === 'celebration'
+        ? {
+            itemSurface: 'border-rose-100/90 bg-white/78 dark:border-white/8 dark:bg-white/[0.04]',
+            remove: 'border-rose-200 bg-white/85 text-rose-500 hover:border-fuchsia-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-rose-200 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200',
+            optionIdle: 'border-rose-200 bg-white/85 text-slate-600 hover:border-rose-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:border-rose-300',
+            addChip: 'border-rose-200 bg-white/85 text-rose-700 hover:border-rose-300 hover:bg-rose-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-rose-200 dark:hover:bg-white/[0.08]',
+            claimed: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200',
+            unclaimed: 'text-rose-700/75 dark:text-rose-100/65',
+            dropdown: 'border-rose-200 bg-white/98 dark:border-white/10 dark:bg-[#291a22]/98',
+            option: 'border-rose-100 hover:bg-rose-50 dark:border-white/10 dark:hover:bg-white/[0.06]',
+            toggleOn: 'border-rose-500 bg-gradient-to-r from-rose-500 to-amber-500 text-white dark:border-rose-300 dark:from-rose-500 dark:to-amber-400 dark:text-white',
+            toggleOff: 'border-rose-200 bg-white/85 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200',
+            help: 'text-rose-700/80 dark:text-rose-100/70',
+          }
+        : isPartyEditor
+          ? {
+              itemSurface: 'border-white/60 bg-white/70 dark:border-white/8 dark:bg-white/[0.04]',
+              remove: 'border-fuchsia-200 bg-white/85 text-fuchsia-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200',
+              optionIdle: 'border-fuchsia-200 bg-white/85 text-slate-600 hover:border-fuchsia-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:border-fuchsia-300',
+              addChip: 'border-fuchsia-200 bg-white/85 text-fuchsia-700 hover:border-fuchsia-300 hover:bg-fuchsia-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-fuchsia-200 dark:hover:bg-white/[0.08]',
+              claimed: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-200',
+              unclaimed: 'text-fuchsia-700/75 dark:text-fuchsia-100/65',
+              dropdown: 'border-fuchsia-200 bg-white/98 dark:border-white/10 dark:bg-[#241b38]/98',
+              option: 'border-fuchsia-100 hover:bg-fuchsia-50 dark:border-white/10 dark:hover:bg-white/[0.06]',
+              toggleOn: 'border-fuchsia-500 bg-gradient-to-r from-fuchsia-600 to-cyan-500 text-white dark:border-fuchsia-300 dark:from-fuchsia-500 dark:to-cyan-400 dark:text-white',
+              toggleOff: 'border-fuchsia-200 bg-white/85 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200',
+              help: 'text-fuchsia-700/80 dark:text-fuchsia-100/70',
+            }
+          : {
+              itemSurface: 'border-white/60 bg-white/70 dark:border-white/8 dark:bg-white/[0.04]',
+              remove: 'border-slate-200 bg-white text-slate-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200',
+              optionIdle: 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200',
+              addChip: 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:bg-white/[0.08]',
+              claimed: 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-200',
+              unclaimed: 'text-slate-500 dark:text-slate-400',
+              dropdown: 'border-slate-200 bg-white/98 dark:border-white/10 dark:bg-slate-900/98',
+              option: 'border-slate-100 hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/[0.06]',
+              toggleOn: 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-950',
+              toggleOff: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200',
+              help: 'text-slate-500 dark:text-slate-400',
+            };
 
   useEffect(() => {
     if (!config) {
@@ -431,19 +580,11 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
   const modalNode = (
     <div className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/55 p-3 pt-6 pb-6 backdrop-blur-md sm:p-6" onClick={onClose}>
       <form
-        className={`max-h-[min(78dvh,42rem)] w-full max-w-md overflow-hidden rounded-[28px] border shadow-[0_30px_80px_rgba(15,23,42,0.24)] ${
-          isPartyEditor
-            ? 'border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/95 to-cyan-50/95 dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#20162e] dark:via-[#251b38] dark:to-[#16233a]'
-            : 'border-white/10 bg-white dark:border-white/10 dark:bg-slate-950'
-        }`}
+        className={`max-h-[min(78dvh,42rem)] w-full max-w-md overflow-hidden rounded-[28px] border shadow-[0_30px_80px_rgba(15,23,42,0.24)] ${editorTheme.shell}`}
         onClick={(event) => event.stopPropagation()}
         onSubmit={handleSubmit}
       >
-        <div className={`relative overflow-hidden border-b px-5 py-5 ${
-          isPartyEditor
-            ? 'border-fuchsia-200/60 bg-gradient-to-br from-white via-rose-50/90 to-cyan-50/90 dark:border-fuchsia-400/15 dark:from-[#2a1d3e] dark:via-[#231933] dark:to-[#1a2940]'
-            : 'border-black/5 bg-gradient-to-br from-white via-slate-50 to-slate-100 dark:border-white/10 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900'
-        }`}>
+        <div className={`relative overflow-hidden border-b px-5 py-5 ${editorTheme.header}`}>
           {isPartyEditor ? (
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
               <div className="absolute left-3 top-3 text-2xl opacity-70 dark:opacity-60">🎉</div>
@@ -457,64 +598,48 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
           ) : null}
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <div className={`text-[18px] font-bold tracking-tight ${isPartyEditor ? 'text-fuchsia-950 dark:text-white' : 'text-slate-950 dark:text-white'}`}>{config.title || 'Edit details'}</div>
-              {config.subtitle ? <div className={`mt-1 text-sm leading-6 ${isPartyEditor ? 'text-fuchsia-700/80 dark:text-fuchsia-100/75' : 'text-slate-500 dark:text-slate-400'}`}>{config.subtitle}</div> : null}
+              <div className={`text-[18px] font-bold tracking-tight ${editorTheme.title}`}>{config.title || 'Edit details'}</div>
+              {config.subtitle ? <div className={`mt-1 text-sm leading-6 ${editorTheme.subtitle}`}>{config.subtitle}</div> : null}
             </div>
             <button
               type="button"
               onClick={onClose}
-              className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${
-                isPartyEditor
-                  ? 'border-fuchsia-200/80 bg-white/75 text-fuchsia-500 hover:text-fuchsia-700 dark:border-white/10 dark:bg-white/10 dark:text-fuchsia-200 dark:hover:bg-white/15 dark:hover:text-white'
-                  : 'border-black/5 bg-white/80 text-slate-500 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white'
-              }`}
+              className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${editorTheme.close}`}
             >
               <span className="text-lg leading-none">×</span>
             </button>
           </div>
         </div>
 
-        <div className={`space-y-4 overflow-y-auto px-5 py-5 ${isPartyEditor ? 'bg-gradient-to-b from-transparent via-white/20 to-white/30 dark:via-white/[0.02] dark:to-white/[0.03]' : ''}`}>
+        <div className={`space-y-4 overflow-y-auto px-5 py-5 ${editorTheme.body}`}>
           {(config.fields || []).map((field) => (
             <label key={field.key} className="block">
-              <div className={`mb-1.5 text-[12px] font-bold uppercase tracking-[0.16em] ${isPartyEditor ? 'text-fuchsia-700 dark:text-fuchsia-200' : 'text-slate-500 dark:text-slate-400'}`}>{field.label}</div>
+              <div className={`mb-1.5 text-[12px] font-bold uppercase tracking-[0.16em] ${editorTheme.label}`}>{field.label}</div>
               {field.type === 'textarea' ? (
                 <textarea
                   value={draft[field.key] ?? ''}
                   onChange={(event) => setFieldValue(field.key, event.target.value)}
                   rows={field.rows || 4}
                   placeholder={field.placeholder || ''}
-                  className={`min-h-[112px] w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${
-                    isPartyEditor
-                      ? 'border-fuchsia-200 bg-white/85 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
-                      : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]'
-                  }`}
+                  className={`min-h-[112px] w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
                 />
               ) : field.type === 'guest-list' ? (
-                <div className={`rounded-[24px] border p-3 ${isPartyEditor ? 'border-fuchsia-200 bg-white/82 dark:border-white/10 dark:bg-white/[0.05]' : 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/[0.04]'}`}>
+                <div className={`rounded-[24px] border p-3 ${editorTheme.panel}`}>
                   <div className="space-y-3">
                     {normalizeGuestListDraftEntries(draft[field.key]).map((guest, index) => (
-                      <div key={`${field.key}-${index}`} className="rounded-2xl border border-white/60 bg-white/70 p-3 shadow-sm dark:border-white/8 dark:bg-white/[0.04]">
+                      <div key={`${field.key}-${index}`} className={`rounded-2xl border p-3 shadow-sm ${editorAccent.itemSurface}`}>
                         <div className="flex items-start gap-2">
                           <input
                             type="text"
                             value={guest.name}
                             onChange={(event) => handleGuestRowChange(field.key, index, { name: event.target.value })}
                             placeholder={field.placeholder || 'Guest name'}
-                            className={`min-w-0 flex-1 rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${
-                              isPartyEditor
-                                ? 'border-fuchsia-200 bg-white/90 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
-                                : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20'
-                            }`}
+                            className={`min-w-0 flex-1 rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
                           />
                           <button
                             type="button"
                             onClick={() => handleRemoveGuestRow(field.key, index)}
-                            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${
-                              isPartyEditor
-                                ? 'border-fuchsia-200 bg-white/85 text-fuchsia-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200'
-                                : 'border-slate-200 bg-white text-slate-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200'
-                            }`}
+                            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${editorAccent.remove}`}
                           >
                             <span className="text-lg leading-none">×</span>
                           </button>
@@ -533,9 +658,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                                 className={`rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${
                                   active
                                     ? option.activeClass
-                                    : isPartyEditor
-                                      ? 'border-fuchsia-200 bg-white/85 text-slate-600 hover:border-fuchsia-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:border-fuchsia-300'
-                                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200'
+                                    : editorAccent.optionIdle
                                 }`}
                               >
                                 {option.label}
@@ -546,7 +669,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                       </div>
                     ))}
                     {normalizeGuestListDraftEntries(draft[field.key]).length === 0 ? (
-                      <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${isPartyEditor ? 'border-fuchsia-200 bg-white/65 text-fuchsia-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200' : 'border-slate-200 bg-white text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300'}`}>
+                      <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${editorTheme.empty}`}>
                         No guests added yet.
                       </div>
                     ) : null}
@@ -554,58 +677,46 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   <button
                     type="button"
                     onClick={() => handleAddGuestRow(field.key)}
-                    className={`mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${
-                      isPartyEditor
-                        ? 'border-fuchsia-200 bg-white/85 text-fuchsia-700 hover:border-fuchsia-300 hover:bg-fuchsia-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-fuchsia-200 dark:hover:bg-white/[0.08]'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:bg-white/[0.08]'
-                    }`}
+                    className={`mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.addChip}`}
                   >
                     <span className="text-sm leading-none">+</span>
                     <span>Add guest</span>
                   </button>
                 </div>
               ) : field.type === 'potluck-list' ? (
-                <div className={`rounded-[24px] border p-3 ${isPartyEditor ? 'border-fuchsia-200 bg-white/82 dark:border-white/10 dark:bg-white/[0.05]' : 'border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/[0.04]'}`}>
+                <div className={`rounded-[24px] border p-3 ${editorTheme.panel}`}>
                   <div className="space-y-3">
                     {normalizePotluckDraftEntries(draft[field.key]).map((entry, index) => (
-                      <div key={`${field.key}-${index}`} className="rounded-2xl border border-white/60 bg-white/70 p-3 shadow-sm dark:border-white/8 dark:bg-white/[0.04]">
+                      <div key={`${field.key}-${index}`} className={`rounded-2xl border p-3 shadow-sm ${editorAccent.itemSurface}`}>
                         <div className="flex items-start gap-2">
                           <input
                             type="text"
                             value={entry.item}
                             onChange={(event) => handlePotluckRowChange(field.key, index, { item: event.target.value })}
                             placeholder={field.placeholder || 'Potluck item'}
-                            className={`min-w-0 flex-1 rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${
-                              isPartyEditor
-                                ? 'border-fuchsia-200 bg-white/90 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
-                                : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20'
-                            }`}
+                            className={`min-w-0 flex-1 rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
                           />
                           <button
                             type="button"
                             onClick={() => handleRemovePotluckRow(field.key, index)}
-                            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${
-                              isPartyEditor
-                                ? 'border-fuchsia-200 bg-white/85 text-fuchsia-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200'
-                                : 'border-slate-200 bg-white text-slate-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:border-rose-400/20 dark:hover:bg-rose-500/10 dark:hover:text-rose-200'
-                            }`}
+                            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition ${editorAccent.remove}`}
                           >
                             <span className="text-lg leading-none">×</span>
                           </button>
                         </div>
                         {entry.person ? (
-                          <div className={`mt-3 inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] ${isPartyEditor ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-200' : 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-200'}`}>
+                          <div className={`mt-3 inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] ${editorAccent.claimed}`}>
                             Claimed by {entry.person}
                           </div>
                         ) : (
-                          <div className={`mt-3 text-xs font-medium ${isPartyEditor ? 'text-fuchsia-700/75 dark:text-fuchsia-100/65' : 'text-slate-500 dark:text-slate-400'}`}>
+                          <div className={`mt-3 text-xs font-medium ${editorAccent.unclaimed}`}>
                             Unclaimed
                           </div>
                         )}
                       </div>
                     ))}
                     {normalizePotluckDraftEntries(draft[field.key]).length === 0 ? (
-                      <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${isPartyEditor ? 'border-fuchsia-200 bg-white/65 text-fuchsia-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200' : 'border-slate-200 bg-white text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300'}`}>
+                      <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${editorTheme.empty}`}>
                         No potluck items yet.
                       </div>
                     ) : null}
@@ -613,11 +724,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   <button
                     type="button"
                     onClick={() => handleAddPotluckRow(field.key)}
-                    className={`mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${
-                      isPartyEditor
-                        ? 'border-fuchsia-200 bg-white/85 text-fuchsia-700 hover:border-fuchsia-300 hover:bg-fuchsia-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-fuchsia-200 dark:hover:bg-white/[0.08]'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:bg-white/[0.08]'
-                    }`}
+                    className={`mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.addChip}`}
                   >
                     <span className="text-sm leading-none">+</span>
                     <span>Add item</span>
@@ -627,11 +734,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                 <select
                   value={draft[field.key] ?? field.options?.[0]?.value ?? ''}
                   onChange={(event) => setFieldValue(field.key, event.target.value)}
-                  className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${
-                    isPartyEditor
-                      ? 'border-fuchsia-200 bg-white/85 text-slate-900 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
-                      : 'border-slate-200 bg-slate-50 text-slate-900 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:focus:border-white/20 dark:focus:bg-white/[0.06]'
-                  }`}
+                  className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
                 >
                   {(field.options || []).map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -642,35 +745,15 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   value={draft[field.key] ?? ''}
                   onChange={(value) => setFieldValue(field.key, value)}
                   placeholder={field.placeholder || 'Search venue...'}
-                  inputClassName={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${
-                    isPartyEditor
-                      ? 'border-fuchsia-200 bg-white/85 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
-                      : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]'
-                  }`}
-                  dropdownClassName={`overflow-hidden rounded-2xl border backdrop-blur-md ring-1 ring-black/5 shadow-[0_24px_60px_rgba(15,23,42,0.22)] ${
-                    isPartyEditor
-                      ? 'border-fuchsia-200 bg-white/98 dark:border-white/10 dark:bg-[#241b38]/98'
-                      : 'border-slate-200 bg-white/98 dark:border-white/10 dark:bg-slate-900/98'
-                  }`}
-                  optionClassName={`block w-full border-b px-4 py-3 text-left text-sm last:border-b-0 ${
-                    isPartyEditor
-                      ? 'border-fuchsia-100 hover:bg-fuchsia-50 dark:border-white/10 dark:hover:bg-white/[0.06]'
-                      : 'border-slate-100 hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/[0.06]'
-                  }`}
+                    inputClassName={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                  dropdownClassName={`overflow-hidden rounded-2xl border backdrop-blur-md ring-1 ring-black/5 shadow-[0_24px_60px_rgba(15,23,42,0.22)] ${editorAccent.dropdown}`}
+                  optionClassName={`block w-full border-b px-4 py-3 text-left text-sm last:border-b-0 ${editorAccent.option}`}
                 />
               ) : field.type === 'toggle' ? (
                 <button
                   type="button"
                   onClick={() => setFieldValue(field.key, !draft[field.key])}
-                  className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
-                    draft[field.key]
-                      ? isPartyEditor
-                        ? 'border-fuchsia-500 bg-gradient-to-r from-fuchsia-600 to-cyan-500 text-white dark:border-fuchsia-300 dark:from-fuchsia-500 dark:to-cyan-400 dark:text-white'
-                        : 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-950'
-                      : isPartyEditor
-                        ? 'border-fuchsia-200 bg-white/85 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200'
-                        : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200'
-                  }`}
+                  className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${draft[field.key] ? editorAccent.toggleOn : editorAccent.toggleOff}`}
                 >
                   <span className="text-[15px] font-medium">{field.toggleLabel || field.label}</span>
                   <span className={`inline-flex h-6 w-11 items-center rounded-full p-1 transition ${draft[field.key] ? 'bg-white/25 dark:bg-slate-950/20' : 'bg-slate-300 dark:bg-white/10'}`}>
@@ -683,35 +766,19 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   value={draft[field.key] ?? ''}
                   onChange={(event) => setFieldValue(field.key, event.target.value)}
                   placeholder={field.placeholder || ''}
-                  className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${
-                    isPartyEditor
-                      ? 'border-fuchsia-200 bg-white/85 text-slate-900 placeholder:text-fuchsia-300 focus:border-fuchsia-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-fuchsia-200/40 dark:focus:border-fuchsia-300 dark:focus:bg-white/[0.1]'
-                      : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white/20 dark:focus:bg-white/[0.06]'
-                  }`}
+                  className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
                 />
               )}
-              {field.help ? <div className={`mt-1.5 text-xs leading-5 ${isPartyEditor ? 'text-fuchsia-700/80 dark:text-fuchsia-100/70' : 'text-slate-500 dark:text-slate-400'}`}>{field.help}</div> : null}
+              {field.help ? <div className={`mt-1.5 text-xs leading-5 ${editorAccent.help}`}>{field.help}</div> : null}
             </label>
           ))}
         </div>
 
-        <div className={`flex items-center justify-end gap-3 border-t px-5 py-4 ${
-          isPartyEditor
-            ? 'border-fuchsia-200/60 bg-white/50 dark:border-white/10 dark:bg-white/[0.04]'
-            : 'border-black/5 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.03]'
-        }`}>
-          <button type="button" onClick={onClose} className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
-            isPartyEditor
-              ? 'border-fuchsia-200 bg-white text-fuchsia-700 hover:border-fuchsia-300 hover:bg-fuchsia-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-fuchsia-200 dark:hover:bg-white/[0.08]'
-              : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200 dark:hover:bg-white/[0.08]'
-          }`}>
+        <div className={`flex items-center justify-end gap-3 border-t px-5 py-4 ${editorTheme.footer}`}>
+          <button type="button" onClick={onClose} className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${editorTheme.cancel}`}>
             Cancel
           </button>
-          <button type="submit" disabled={saving} className={`rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-default disabled:opacity-70 ${
-            isPartyEditor
-              ? 'bg-gradient-to-r from-fuchsia-600 to-cyan-500 text-white hover:from-fuchsia-700 hover:to-cyan-600 dark:from-fuchsia-500 dark:to-cyan-400'
-              : 'bg-slate-950 text-white hover:bg-black dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100'
-          }`}>
+          <button type="submit" disabled={saving} className={`rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-default disabled:opacity-70 ${editorTheme.submit}`}>
             {saving ? 'Saving…' : (config.saveLabel || 'Save changes')}
           </button>
         </div>

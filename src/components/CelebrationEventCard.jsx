@@ -369,6 +369,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
               <ActionPill
                 onClick={() =>
                   openEditor({
+                    variant: 'celebration',
                     title: 'Add Gift Registry',
                     subtitle: 'Link to Amazon, Target, Zola, or any registry.',
                     fields: [{ key: 'registryLink', label: 'Registry URL', value: '', placeholder: 'https://...' }],
@@ -390,6 +391,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
             <ActionPill
               onClick={() =>
                 openEditor({
+                  variant: 'celebration',
                   title: 'Edit Details',
                   subtitle: 'Update dress code and celebration specifics.',
                   fields: [{ key: 'dressCode', label: 'Dress code', value: dressCode, placeholder: 'Formal, cocktail, casual...' }],
@@ -427,6 +429,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
               <ActionPill
                 onClick={() =>
                   openEditor({
+                    variant: 'celebration',
                     title: 'Edit Schedule',
                     subtitle: 'Timeline for the celebration.',
                     fields: [
@@ -475,6 +478,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
               <ActionPill
                 onClick={() =>
                   openEditor({
+                    variant: 'celebration',
                     title: 'Add Schedule',
                     subtitle: 'Create a timeline for the celebration.',
                     fields: [
