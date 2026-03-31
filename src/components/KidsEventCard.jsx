@@ -80,7 +80,7 @@ const ActionPill = ({ href, onClick, children }) => {
 };
 
 const Section = ({ title, subtitle, actions, children }) => (
-  <div className="group/section rounded-[22px] border border-amber-200/70 bg-white/90 p-5 shadow-[0_12px_30px_rgba(251,191,36,0.09)] backdrop-blur-sm transition-all hover:shadow-[0_18px_40px_rgba(251,191,36,0.14)] dark:border-amber-400/14 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08]">
+  <div className="group/section rounded-[22px] border border-amber-200/55 bg-white/90 p-5 shadow-[0_12px_30px_rgba(245,158,11,0.08)] backdrop-blur-sm transition-all hover:shadow-[0_18px_40px_rgba(245,158,11,0.12)] dark:border-amber-400/14 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08]">
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-bold text-gray-900 dark:text-white">{title}</div>
@@ -94,7 +94,7 @@ const Section = ({ title, subtitle, actions, children }) => (
 
 const EmptySection = ({ title, subtitle, actions }) => (
   <Section title={title} subtitle={subtitle} actions={actions}>
-    <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50/70 px-4 py-4 text-sm text-amber-700 dark:border-amber-400/16 dark:bg-amber-500/8 dark:text-amber-200">
+    <div className="rounded-2xl border border-dashed border-amber-200/80 bg-amber-50/60 px-4 py-4 text-sm text-amber-700 dark:border-amber-400/16 dark:bg-amber-500/8 dark:text-amber-200">
       Nothing added yet.
     </div>
   </Section>
@@ -118,21 +118,6 @@ const NotesSection = ({ event, onEdit }) => {
   return null;
 };
 
-const animationStyles = `
-@keyframes kids-bounce-ball {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(calc(100vh + 100px)); }
-}
-@keyframes kids-bounce-gentle {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-@keyframes kids-spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-`;
-
 const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props }) => {
   const ageRange = String(event?.ageRange || '').trim();
   const activity = String(event?.activity || '').trim();
@@ -141,36 +126,32 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
   const registryLink = String(event?.registryLink || '').trim();
 
   return (
-    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-amber-300/70 bg-gradient-to-br from-amber-50 via-yellow-50/80 to-orange-50/50 shadow-[0_24px_80px_rgba(251,191,60,0.25)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(251,191,60,0.35)] dark:border-amber-400/25 dark:from-[#2d2314] dark:via-[#1e1911] dark:to-[#13110e] dark:shadow-none">
-      <style>{animationStyles}</style>
-
+    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-amber-300/65 bg-gradient-to-br from-white via-amber-50/60 to-sky-50/45 shadow-[0_24px_80px_rgba(245,158,11,0.18)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(245,158,11,0.24)] dark:border-amber-400/25 dark:from-[#201b14] dark:via-[#171513] dark:to-[#14181c] dark:shadow-none">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[12%] top-[-50px] h-10 w-10 rounded-full bg-gradient-to-br from-red-400 to-red-500 opacity-25 dark:opacity-13" style={{ animation: 'kids-bounce-ball 4s ease-in-out infinite' }} />
-        <div className="absolute left-[35%] top-[-50px] h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 opacity-30 dark:opacity-15" style={{ animation: 'kids-bounce-ball 3.5s ease-in-out infinite 0.5s' }} />
-        <div className="absolute right-[25%] top-[-50px] h-12 w-12 rounded-full bg-gradient-to-br from-green-400 to-green-500 opacity-20 dark:opacity-10" style={{ animation: 'kids-bounce-ball 4.5s ease-in-out infinite 1s' }} />
-        <div className="absolute right-[10%] top-[-50px] h-9 w-9 rounded-full bg-gradient-to-br from-purple-400 to-purple-500 opacity-28 dark:opacity-14" style={{ animation: 'kids-bounce-ball 3.8s ease-in-out infinite 1.5s' }} />
+        <div className="absolute left-[7%] top-[11%] text-[1.9rem] opacity-65 dark:opacity-38">🎈</div>
+        <div className="absolute right-[10%] top-[12%] text-[1.8rem] opacity-60 dark:opacity-34">🧸</div>
+        <div className="absolute left-[76%] top-[62%] text-[1.8rem] opacity-55 dark:opacity-32">🖍️</div>
+        <div className="absolute left-[10%] bottom-[14%] text-[1.7rem] opacity-55 dark:opacity-32">🧩</div>
       </div>
 
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-[18%] top-[20%] text-2xl opacity-20 dark:opacity-10" style={{ animation: 'kids-spin-slow 8s linear infinite' }}>Star</div>
-        <div className="absolute right-[15%] top-[65%] text-xl opacity-25 dark:opacity-13" style={{ animation: 'kids-spin-slow 10s linear infinite reverse' }}>Spark</div>
+        <div className="absolute left-[22%] top-[23%] h-2.5 w-2.5 rotate-12 rounded-sm bg-amber-200/70 dark:bg-amber-300/20" />
+        <div className="absolute right-[18%] top-[58%] h-2 w-2 rounded-full bg-sky-200/80 dark:bg-sky-300/20" />
+        <div className="absolute left-[70%] top-[32%] h-2.5 w-2.5 rotate-45 rounded-sm bg-rose-200/70 dark:bg-rose-300/20" />
       </div>
 
-      <div className="pointer-events-none absolute -left-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-yellow-300/20 to-orange-300/10 blur-2xl dark:from-yellow-400/10 dark:to-orange-400/5" />
-      <div className="pointer-events-none absolute -bottom-8 -right-8 h-32 w-32 rounded-full bg-gradient-to-br from-amber-300/20 to-yellow-300/10 blur-2xl dark:from-amber-400/10 dark:to-yellow-400/5" />
+      <div className="pointer-events-none absolute -left-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-amber-300/18 to-yellow-300/8 blur-2xl dark:from-amber-400/10 dark:to-yellow-400/5" />
+      <div className="pointer-events-none absolute -bottom-8 -right-8 h-32 w-32 rounded-full bg-gradient-to-br from-sky-300/16 to-cyan-300/8 blur-2xl dark:from-sky-400/10 dark:to-cyan-400/5" />
 
-      <div className="relative border-b-2 border-amber-200/80 bg-gradient-to-br from-white/95 to-amber-50/60 px-6 py-6 dark:border-amber-400/15 dark:from-white/[0.04] dark:to-amber-500/[0.02] sm:px-7">
+      <div className="relative border-b-2 border-amber-200/80 bg-gradient-to-br from-white/95 to-amber-50/45 px-6 py-6 dark:border-amber-400/15 dark:from-white/[0.04] dark:to-amber-500/[0.02] sm:px-7">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="mb-4 flex flex-wrap items-center gap-2.5">
-              <span
-                className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] border-2 border-amber-300 bg-gradient-to-br from-amber-100 to-yellow-100 text-2xl shadow-lg shadow-amber-200/40 transition-transform group-hover:scale-110 dark:border-amber-400/30 dark:from-amber-500/15 dark:to-yellow-500/15 dark:shadow-amber-500/10"
-                style={{ animation: 'kids-bounce-gentle 2s ease-in-out infinite' }}
-              >
-                Kids
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] border-2 border-amber-300 bg-gradient-to-br from-amber-100 to-yellow-100 text-2xl shadow-lg shadow-amber-200/30 transition-transform group-hover:scale-105 dark:border-amber-400/30 dark:from-amber-500/15 dark:to-yellow-500/15 dark:shadow-amber-500/10">
+                🎠
               </span>
 
-              <span className="rounded-full bg-gradient-to-br from-amber-100 to-amber-200 px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em] text-amber-800 shadow-sm dark:from-amber-500/15 dark:to-amber-600/15 dark:text-amber-200">
+              <span className="rounded-full bg-gradient-to-br from-amber-100 to-yellow-100 px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em] text-amber-800 shadow-sm dark:from-amber-500/15 dark:to-yellow-500/15 dark:text-amber-200">
                 Kids Event
               </span>
 
@@ -250,10 +231,10 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
               </ActionPill>
             ) : null}
           >
-            <div className="relative overflow-hidden rounded-2xl border-2 border-amber-200 bg-gradient-to-br from-yellow-100 to-amber-100 p-4 shadow-sm dark:border-amber-400/20 dark:from-yellow-500/15 dark:to-amber-500/15">
+            <div className="relative overflow-hidden rounded-2xl border-2 border-amber-100 bg-white p-4 shadow-sm dark:border-amber-400/20 dark:bg-white/5">
               <div className="relative flex items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/80 text-sm font-semibold text-amber-700 shadow-sm dark:bg-gray-900/80 dark:text-amber-200">
-                  Play
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-yellow-100 text-sm font-semibold text-amber-700 shadow-sm dark:from-amber-500/15 dark:to-yellow-500/15 dark:text-amber-200">
+                  Fun
                 </div>
                 <div className="min-w-0 flex-1 pt-1">
                   <div className="text-sm font-bold text-gray-900 dark:text-white">{activity}</div>
@@ -315,10 +296,10 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
           ) : null}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="relative overflow-hidden rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-100 to-cyan-100 p-4 shadow-sm dark:border-blue-400/20 dark:from-blue-500/15 dark:to-cyan-500/15">
+            <div className="relative overflow-hidden rounded-2xl border-2 border-sky-100 bg-white p-4 shadow-sm dark:border-sky-400/20 dark:bg-white/5">
               <div className="flex items-start gap-2.5">
                 <div className="min-w-0 flex-1">
-                  <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-blue-700 dark:text-blue-300">Supervision</div>
+                  <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-sky-700 dark:text-sky-300">Supervision</div>
                   <div className="text-sm font-semibold text-gray-900 dark:text-white">
                     {parentRequired ? 'Parents stay' : 'Drop-off OK'}
                   </div>
@@ -328,13 +309,13 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
 
             <div className={`relative overflow-hidden rounded-2xl border-2 p-4 shadow-sm ${
               allergenAlerts.length > 0
-                ? 'border-red-200 bg-gradient-to-br from-red-100 to-orange-100 dark:border-red-400/20 dark:from-red-500/15 dark:to-orange-500/15'
-                : 'border-green-200 bg-gradient-to-br from-green-100 to-emerald-100 dark:border-green-400/20 dark:from-green-500/15 dark:to-emerald-500/15'
+                ? 'border-red-200 bg-white dark:border-red-400/20 dark:bg-white/5'
+                : 'border-emerald-200 bg-white dark:border-emerald-400/20 dark:bg-white/5'
             }`}>
               <div className="flex items-start gap-2.5">
                 <div className="min-w-0 flex-1">
                   <div className={`mb-1 text-xs font-bold uppercase tracking-[0.14em] ${
-                    allergenAlerts.length > 0 ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'
+                    allergenAlerts.length > 0 ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'
                   }`}>
                     Allergies
                   </div>
@@ -352,11 +333,11 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
             href={registryLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="group/gift relative block overflow-hidden rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-100 to-pink-100 p-5 shadow-md transition-all hover:scale-[1.02] hover:border-purple-300 hover:shadow-lg dark:border-purple-400/20 dark:from-purple-500/15 dark:to-pink-500/15"
+            className="group/gift relative block overflow-hidden rounded-2xl border-2 border-purple-200 bg-white p-5 shadow-md transition-all hover:scale-[1.02] hover:border-purple-300 hover:shadow-lg dark:border-purple-400/20 dark:bg-white/5"
           >
             <div className="relative flex items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-200 to-pink-200 text-sm font-semibold text-purple-700 shadow-sm transition-transform group-hover/gift:scale-110 dark:from-purple-500/20 dark:to-pink-500/20 dark:text-purple-200">
-                Gift
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 text-sm font-semibold text-purple-700 shadow-sm transition-transform group-hover/gift:scale-105 dark:from-purple-500/20 dark:to-pink-500/20 dark:text-purple-200">
+                🎁
               </div>
               <div className="min-w-0 flex-1">
                 <div className="mb-1 text-sm font-bold uppercase tracking-[0.14em] text-purple-700 dark:text-purple-300">
