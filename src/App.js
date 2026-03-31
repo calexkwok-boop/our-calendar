@@ -29654,14 +29654,6 @@ transform: translateY(0);
                           <div
                             key={photo.id}
                             className={`relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border ${isSelectedPhoto ? 'border-purple-500 ring-1 ring-purple-500' : 'border-gray-100 dark:border-gray-700'}`}
-                            onClick={() => handlePhotoTap(photo)}
-                            onDoubleClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handlePhotoDoubleTap(photo);
-                            }}
-                            onTouchStart={(e) => handlePhotoTouchStart(photo, e)}
-                            onTouchEnd={(e) => handlePhotoTouchEnd(photo, e)}
                           >
                             <img
                               src={photo.url}
@@ -29697,7 +29689,18 @@ transform: translateY(0);
                                 )}
                                 <p className="text-xs text-gray-400 dark:text-gray-500">Uploaded by {photo.uploaded_by}</p>
                               </div>
-                              {!isPhotoSelectionMode && photoDeleteMode && <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">Delete mode</span>}
+                              <div className="shrink-0 flex flex-col items-end gap-2">
+                                {!isPhotoSelectionMode && !photoDeleteMode && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setLightboxPhoto(photo)}
+                                    className="rounded-full bg-gray-100 px-3 py-1 text-[11px] font-medium text-gray-700 transition hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                                  >
+                                    Open
+                                  </button>
+                                )}
+                                {!isPhotoSelectionMode && photoDeleteMode && <span className="text-[11px] text-gray-400 dark:text-gray-500">Delete mode</span>}
+                              </div>
                             </div>
                             {!isPhotoSelectionMode && !photoDeleteMode && isPhotoReactionPickerOpen && (
                               <div className="trip-photo-reaction-picker absolute left-3 right-3 bottom-3 z-20 overflow-x-auto rounded-[22px] border border-white/15 bg-black/72 p-2 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
