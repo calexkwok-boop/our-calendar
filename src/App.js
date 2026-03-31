@@ -2338,7 +2338,6 @@ function App() {
   const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
   const [deletedPhotosNoteId, setDeletedPhotosNoteId] = useState(null);
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline' | 'users'
-  const [collapsedTripPhotoDays, setCollapsedTripPhotoDays] = useState({});
   const [showPhotoSortMenu, setShowPhotoSortMenu] = useState(false);
   const [showSubCalInviteModal, setShowSubCalInviteModal] = useState(false);
   const [calendarShareLinkCopied, setCalendarShareLinkCopied] = useState(false);
@@ -2398,32 +2397,6 @@ function App() {
     });
     return Object.values(grouped).sort((a, b) => a.label.localeCompare(b.label));
   }, [tripPhotos]);
-  const getDefaultTripPhotoDayCollapsed = (dateKey) => {
-    const normalizedDateKey = String(dateKey || '').trim();
-    if (!normalizedDateKey || normalizedDateKey === 'unlinked') return false;
-    const selectedKey = subCalSelectedDate ? getDateKey(subCalSelectedDate) : '';
-    if (selectedKey && normalizedDateKey === selectedKey) return false;
-    const todayKey = getDateKey(new Date());
-    if (normalizedDateKey >= todayKey) return false;
-    return true;
-  };
-  const isTripPhotoDayCollapsed = (dateKey) => {
-    const normalizedDateKey = String(dateKey || '').trim();
-    if (Object.prototype.hasOwnProperty.call(collapsedTripPhotoDays, normalizedDateKey)) {
-      return Boolean(collapsedTripPhotoDays[normalizedDateKey]);
-    }
-    return getDefaultTripPhotoDayCollapsed(normalizedDateKey);
-  };
-  const toggleTripPhotoDayCollapsed = (dateKey) => {
-    const normalizedDateKey = String(dateKey || '').trim();
-    setCollapsedTripPhotoDays((prev) => ({
-      ...prev,
-      [normalizedDateKey]: !isTripPhotoDayCollapsed(normalizedDateKey),
-    }));
-  };
-  useEffect(() => {
-    setCollapsedTripPhotoDays({});
-  }, [activeSubCalendar?.id, subCalSelectedDate, photoView]);
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
   const VENMO_HANDLES_NOTE_TEXT = '__VENMO_HANDLES_V1__';
   const CASHAPP_HANDLES_NOTE_TEXT = '__CASHAPP_HANDLES_V1__';
@@ -30008,23 +29981,16 @@ transform: translateY(0);
                     byDate[d].push(p);
                   });
                   return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b)).map(([date, photos]) => {
-                    const isCollapsed = isTripPhotoDayCollapsed(date);
                     return (
                     <div key={date} className="mb-6">
-                      <button
-                        type="button"
-                        onClick={() => toggleTripPhotoDayCollapsed(date)}
-                        className="mb-2 flex w-full items-center justify-between gap-3 rounded-2xl border border-gray-200/80 bg-white/75 px-3 py-2 text-left backdrop-blur-sm transition hover:border-purple-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-purple-400/30"
-                      >
+                      <div className="mb-2 flex w-full items-center justify-between gap-3 rounded-2xl border border-gray-200/80 bg-white/75 px-3 py-2 text-left backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.04]">
                         <div className="min-w-0 flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
                         <span>{date !== 'unlinked' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Unlinked'}</span>
                         {subCalWeather[date] && <span>{subCalWeather[date].icon} {subCalWeather[date].high}°</span>}
                         <span className="text-gray-300 dark:text-gray-600">{photos.length} photo{photos.length !== 1 ? 's' : ''}</span>
-                        {isCollapsed ? <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">Minimized</span> : null}
                         </div>
-                        <span className="shrink-0 text-sm text-gray-400 dark:text-gray-500">{isCollapsed ? 'Show' : 'Hide'}</span>
-                      </button>
-                      {!isCollapsed ? <div className="grid grid-cols-3 gap-1.5">
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
                         {photos.map((photo, index) => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
                           const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
@@ -30117,7 +30083,7 @@ transform: translateY(0);
                             className="aspect-square rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-all flex items-center justify-center text-2xl"
                           >+</button>
                         )}
-                      </div> : null}
+                      </div>
                     </div>
                   )});
                 })()}
@@ -30133,18 +30099,13 @@ transform: translateY(0);
                     byDate[d].push(p);
                   });
                   return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b)).map(([date, photos]) => {
-                    const isCollapsed = isTripPhotoDayCollapsed(date);
                     return (
                     <div key={date} className="relative pl-6 border-l-2 border-purple-200 dark:border-purple-800">
                       {/* Date marker */}
                       <div className="absolute -left-3 top-0 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
                         <span className="text-white text-xs font-bold">{date !== 'unlinked' ? new Date(date + 'T00:00:00').getDate() : '?'}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleTripPhotoDayCollapsed(date)}
-                        className="mb-3 block w-full rounded-2xl border border-gray-200/80 bg-white/70 px-3 py-2 text-left backdrop-blur-sm transition hover:border-purple-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-purple-400/30"
-                      >
+                      <div className="mb-3 block w-full rounded-2xl border border-gray-200/80 bg-white/70 px-3 py-2 text-left backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.04]">
                         <div className="font-semibold text-gray-800 dark:text-white text-sm">
                           {date !== 'unlinked' ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'Unlinked Photos'}
                         </div>
@@ -30154,10 +30115,10 @@ transform: translateY(0);
                           </div>
                         )}
                         <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">
-                          {isCollapsed ? `Show ${photos.length} photo${photos.length !== 1 ? 's' : ''}` : 'Hide photos'}
+                          {photos.length} photo{photos.length !== 1 ? 's' : ''}
                         </div>
-                      </button>
-                      {!isCollapsed ? <div className="space-y-4">
+                      </div>
+                      <div className="space-y-4">
                         {photos.map((photo, index) => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
                           const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
@@ -30263,7 +30224,7 @@ transform: translateY(0);
                             className="flex items-center gap-2 text-xs text-purple-500 hover:text-purple-700 font-medium"
                           >+ Add photo to this day</button>
                         )}
-                      </div> : null}
+                      </div>
                     </div>
                   )});
                 })()}
