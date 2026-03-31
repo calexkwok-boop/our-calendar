@@ -4964,9 +4964,13 @@ function App() {
   };
 
   const handlePhotoTouchStart = (photo, event) => {
+    const photoId = String(photo?.id || '');
+    if (photoTouchOpenTimerRef.current?.id === photoId) {
+      clearPhotoTouchOpenTimer();
+    }
     const touch = event?.touches?.[0];
     photoTouchRef.current = {
-      id: String(photo?.id || ''),
+      id: photoId,
       x: Number(touch?.clientX || 0),
       y: Number(touch?.clientY || 0),
     };
@@ -4984,23 +4988,26 @@ function App() {
       ) > 12;
     photoTouchRef.current = { id: null, x: 0, y: 0 };
     if (moved || isPhotoSelectionMode || photoDeleteMode) return;
+    if (event?.cancelable) event.preventDefault();
+    if (typeof event?.stopPropagation === 'function') event.stopPropagation();
     const now = Date.now();
     const previousTouchTap = photoTouchTapRef.current;
     if (previousTouchTap.id === String(photo?.id || '') && now - previousTouchTap.at < 650) {
       clearPhotoTouchOpenTimer();
       photoTouchTapRef.current = { id: null, at: 0 };
       resetPhotoTapState();
+      photoClickSuppressRef.current = { id: String(photo?.id || ''), until: Date.now() + 1000 };
       handlePhotoDoubleTap(photo);
       return;
     }
     photoTouchTapRef.current = { id: String(photo?.id || ''), at: now };
-    photoClickSuppressRef.current = { id: String(photo?.id || ''), until: Date.now() + 500 };
+    photoClickSuppressRef.current = { id: String(photo?.id || ''), until: Date.now() + 1000 };
     clearPhotoTouchOpenTimer();
     const timer = setTimeout(() => {
       setLightboxPhoto(photo);
       photoTouchOpenTimerRef.current = { id: null, timer: null };
       photoTouchTapRef.current = { id: null, at: 0 };
-    }, 480);
+    }, 650);
     photoTouchOpenTimerRef.current = { id: String(photo?.id || ''), timer };
   };
 
@@ -5117,9 +5124,7 @@ function App() {
       if (error) throw error;
       setTripPhotos(prev => prev.map(p => selectedPhotoIds.includes(p.id) ? { ...p, event_id: String(photoEventId || '') || null } : p));
       closePhotoSelectionMode();
-      // Return to Ratings, focusing the event you just attached to
       setRatingsFocusEventId(String(photoEventId || ''));
-      setSubCalTab('ratings');
       setPhotoEventId(null);
       setPhotoUploadMessage('Attached to event.');
     } catch (err) {
@@ -5157,7 +5162,6 @@ function App() {
     }
     if (String(photoEventId || '')) {
       setRatingsFocusEventId(String(photoEventId || ''));
-      setSubCalTab('ratings');
     }
     setPhotoEventId(null);
     setPhotoDate(null);
