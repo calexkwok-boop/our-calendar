@@ -2062,6 +2062,7 @@ function App() {
   const photoTapRef = useRef({ id: null, at: 0, timer: null });
   const photoHoldSuppressRef = useRef({ id: null, until: 0 });
   const photoTouchRef = useRef({ id: null, x: 0, y: 0 });
+  const photoTouchTapRef = useRef({ id: null, at: 0 });
   const photoClickSuppressRef = useRef({ id: null, until: 0 });
   const photoReactionPickerOpenedRef = useRef({ id: null, at: 0 });
   const REACTION_EMOJIS = ['😍', '🔥', '👏', '😂', '🥹', '🤩', '💯', '🙌', '❤️'];
@@ -4926,6 +4927,15 @@ function App() {
       ) > 12;
     photoTouchRef.current = { id: null, x: 0, y: 0 };
     if (moved || isPhotoSelectionMode || photoDeleteMode) return;
+    const now = Date.now();
+    const previousTouchTap = photoTouchTapRef.current;
+    if (previousTouchTap.id === String(photo?.id || '') && now - previousTouchTap.at < 650) {
+      photoTouchTapRef.current = { id: null, at: 0 };
+      resetPhotoTapState();
+      handlePhotoDoubleTap(photo);
+      return;
+    }
+    photoTouchTapRef.current = { id: String(photo?.id || ''), at: now };
     photoClickSuppressRef.current = { id: String(photo?.id || ''), until: Date.now() + 500 };
     handlePhotoTap(photo, { source: 'touch' });
   };
@@ -4933,6 +4943,7 @@ function App() {
   useEffect(() => () => {
     clearPhotoReactionHold();
     resetPhotoTapState();
+    photoTouchTapRef.current = { id: null, at: 0 };
   }, []);
 
   useEffect(() => {
