@@ -423,6 +423,9 @@ function TitleSlide({ highlight }) {
 
 function PhotoSlide({ highlight }) {
   const treatment = PHOTO_TREATMENTS[highlight.mood] || PHOTO_TREATMENTS.scenic;
+  const caption = String(highlight.caption || '').trim();
+  const location = String(highlight.location || '').trim();
+  const showCaptionCard = Number(highlight.rating || 0) > 0 || Boolean(caption) || Boolean(location);
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black">
@@ -445,7 +448,7 @@ function PhotoSlide({ highlight }) {
       <div className="absolute inset-x-4 top-24 bottom-24 sm:inset-x-8 sm:top-28 sm:bottom-28">
         <img
           src={highlight.photo}
-          alt={highlight.caption || 'Trip highlight'}
+          alt={caption || 'Trip highlight'}
           className="h-full w-full object-contain"
           style={{
             filter: treatment.filter,
@@ -454,8 +457,8 @@ function PhotoSlide({ highlight }) {
         />
       </div>
 
-      <div className="absolute inset-x-0 bottom-36 px-5 sm:bottom-40 sm:px-8">
-        <div className="max-w-[22rem] rounded-[1.75rem] border border-white/12 bg-black/28 px-4 py-3 text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-lg">
+      <div className={`${showCaptionCard ? '' : 'hidden '}absolute inset-x-0 bottom-48 px-5 sm:bottom-52 sm:px-8`}>
+        <div className="max-w-[23rem] rounded-[1.6rem] border border-white/12 bg-black/24 px-4 py-3 text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-lg">
           {Number(highlight.rating || 0) > 0 && (
             <div className="mb-2 flex items-center gap-1.5">
               {[...Array(5)].map((_, i) => (
@@ -463,16 +466,18 @@ function PhotoSlide({ highlight }) {
               ))}
             </div>
           )}
+          {caption && (
           <h2
-            className="mb-1.5 text-2xl font-bold leading-[0.98] tracking-tight drop-shadow-2xl sm:text-3xl"
+            className="mb-1 text-[1.9rem] font-bold leading-[1.02] tracking-tight drop-shadow-2xl sm:text-[2.15rem]"
             style={{ fontFamily: 'system-ui, -apple-system, sans-serif', letterSpacing: '-0.02em' }}
           >
-            {highlight.caption}
+            {caption}
           </h2>
-          {highlight.location && (
-            <p className="flex items-center gap-2 text-xs font-medium text-white/80 sm:text-sm">
+          )}
+          {location && (
+            <p className="flex items-start gap-2 text-xs font-medium leading-snug text-white/82 sm:text-sm">
               <span className="text-base sm:text-lg">📍</span>
-              <span className="line-clamp-2">{highlight.location}</span>
+              <span className="line-clamp-2">{location}</span>
             </p>
           )}
         </div>
@@ -831,8 +836,7 @@ const buildMemoryTitle = (photo, index) => {
     if (index === 1) return 'The kind of photo you keep';
     return 'One of the moments that mattered most';
   }
-  if (photo?.date) return 'A favorite from the in-between';
-  return 'A memory worth keeping in the reel';
+  return '';
 };
 
 const buildMemorySubcopy = (photo, index) => {
@@ -841,12 +845,12 @@ const buildMemorySubcopy = (photo, index) => {
       ? 'Not everything important happened at a reservation or on the itinerary.'
       : 'Some of the best parts of a trip are the photos that happen in the middle of everything else.';
   }
-  return 'The reel should hold onto the quiet, unscheduled parts too.';
+  return '';
 };
 
 const buildMemoryEyebrow = (photo, index) => {
   if (photo?.hasPeople) return index === 0 ? 'Family Moment' : 'Memory Moment';
-  return 'In Between';
+  return '';
 };
 
 const formatMemoryMeta = (photo) => {
