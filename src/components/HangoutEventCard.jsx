@@ -73,8 +73,12 @@ const ActionPill = ({ href, onClick, children }) => {
   );
 };
 
+const hangoutSectionClassName = 'rounded-[22px] border border-cyan-200/75 bg-gradient-to-br from-white via-cyan-50/88 to-sky-50/72 p-5 shadow-[0_12px_30px_rgba(34,211,238,0.10)] backdrop-blur-sm transition-all hover:shadow-[0_18px_40px_rgba(59,130,246,0.12)] dark:border-cyan-400/18 dark:bg-gradient-to-br dark:from-white/[0.07] dark:via-cyan-500/[0.05] dark:to-sky-500/[0.05] dark:hover:bg-white/[0.08]';
+const hangoutDetailSurfaceClassName = 'border-cyan-200/75 bg-white/88 dark:border-cyan-400/16 dark:bg-white/[0.05]';
+const hangoutEmptyClassName = 'border-cyan-200/75 bg-cyan-50/75 text-cyan-800 dark:border-cyan-400/16 dark:bg-cyan-500/8 dark:text-cyan-100';
+
 const Section = ({ title, subtitle, actions, children }) => (
-  <div className="group/section rounded-[22px] border border-fuchsia-100/80 bg-white/96 p-5 shadow-[0_10px_26px_rgba(15,23,42,0.05)] backdrop-blur-sm transition-all hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08]">
+  <div className={`group/section ${hangoutSectionClassName}`}>
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-bold text-gray-900 dark:text-white">{title}</div>
@@ -88,7 +92,7 @@ const Section = ({ title, subtitle, actions, children }) => (
 
 const EmptySection = ({ title, subtitle, actions }) => (
   <Section title={title} subtitle={subtitle} actions={actions}>
-    <div className="rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
+    <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${hangoutEmptyClassName}`}>
       Nothing added yet.
     </div>
   </Section>
@@ -100,7 +104,7 @@ const NotesSection = ({ event, onEdit }) => {
   if (notes) {
     return (
       <Section title="Notes" actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null}>
-        <div className="text-sm leading-6 text-gray-700 dark:text-gray-300">{notes}</div>
+        <div className={`rounded-2xl border px-4 py-4 text-sm leading-6 text-gray-700 dark:text-gray-300 ${hangoutDetailSurfaceClassName}`}>{notes}</div>
       </Section>
     );
   }
@@ -251,7 +255,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
           ) : null}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="group/card relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 p-4 shadow-sm transition-all hover:border-fuchsia-200 hover:shadow-md dark:border-white/10 dark:bg-white/[0.045]">
+            <div className={`group/card relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${hangoutDetailSurfaceClassName}`}>
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-100 to-sky-100 text-sm font-semibold text-cyan-700 dark:from-cyan-500/15 dark:to-sky-500/15 dark:text-cyan-200">
                   Plan
@@ -263,7 +267,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
               </div>
             </div>
 
-            <div className="group/card relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 p-4 shadow-sm transition-all hover:border-fuchsia-200 hover:shadow-md dark:border-white/10 dark:bg-white/[0.045]">
+            <div className={`group/card relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${hangoutDetailSurfaceClassName}`}>
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-blue-100 text-sm font-semibold text-sky-700 dark:from-sky-500/15 dark:to-blue-500/15 dark:text-sky-200">
                   Bill
@@ -278,7 +282,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
         </Section>
 
         {duration ? (
-          <div className="relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.045]">
+          <div className={`relative overflow-hidden rounded-2xl border p-5 shadow-sm ${hangoutDetailSurfaceClassName}`}>
             <div className="relative flex items-center gap-3">
               <div className="min-w-0 flex-1">
                 <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-blue-700 dark:text-blue-300">

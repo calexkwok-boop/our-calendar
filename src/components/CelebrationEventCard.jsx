@@ -164,7 +164,7 @@ const ActionPill = ({ href, onClick, children }) => {
 };
 
 const Section = ({ title, subtitle, actions, children, tone }) => (
-  <div className={`group/section rounded-[22px] border border-fuchsia-100/80 bg-white/96 p-5 backdrop-blur-sm transition-all dark:border-white/10 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08] ${tone?.sectionShadow || 'shadow-[0_10px_26px_rgba(15,23,42,0.05)] hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)]'}`}>
+  <div className={`group/section rounded-[22px] border bg-white/96 p-5 backdrop-blur-sm transition-all dark:shadow-none dark:hover:bg-white/[0.08] ${tone?.sectionBorder || 'border-fuchsia-100/80 dark:border-white/10'} ${tone?.kind === 'baby' ? 'bg-gradient-to-br from-white via-sky-50/85 to-amber-50/60 dark:bg-gradient-to-br dark:from-white/[0.07] dark:via-sky-500/[0.05] dark:to-amber-500/[0.04]' : tone?.kind === 'wedding' ? 'bg-gradient-to-br from-white via-rose-50/88 to-amber-50/55 dark:bg-gradient-to-br dark:from-white/[0.07] dark:via-rose-500/[0.05] dark:to-amber-500/[0.04]' : 'bg-gradient-to-br from-white via-rose-50/88 to-orange-50/55 dark:bg-gradient-to-br dark:from-white/[0.07] dark:via-rose-500/[0.05] dark:to-orange-500/[0.04]'} ${tone?.sectionShadow || 'shadow-[0_10px_26px_rgba(15,23,42,0.05)] hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)]'}`}>
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-bold text-gray-900 dark:text-white">{title}</div>
@@ -178,7 +178,7 @@ const Section = ({ title, subtitle, actions, children, tone }) => (
 
 const EmptySection = ({ title, subtitle, actions, tone }) => (
   <Section title={title} subtitle={subtitle} actions={actions} tone={tone}>
-    <div className="rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
+    <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${tone?.empty || 'border-fuchsia-100 bg-white text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300'}`}>
       Nothing added yet.
     </div>
   </Section>
@@ -190,7 +190,7 @@ const NotesSection = ({ event, onEdit, tone }) => {
   if (notes) {
     return (
       <Section title="Notes" actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null} tone={tone}>
-        <div className="text-sm leading-6 text-gray-700 dark:text-gray-300">{notes}</div>
+        <div className={`rounded-2xl border px-4 py-4 text-sm leading-6 ${tone?.detailSurface || 'border-fuchsia-100 bg-white dark:border-white/10 dark:bg-white/[0.05]'} text-gray-700 dark:text-gray-300`}>{notes}</div>
       </Section>
     );
   }
@@ -339,7 +339,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
             href={registryLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="group/gift relative block overflow-hidden rounded-2xl border border-fuchsia-200/80 bg-white/88 p-5 shadow-md transition-all hover:scale-[1.02] hover:border-fuchsia-300 hover:shadow-lg dark:border-white/10 dark:bg-white/[0.045]"
+            className={`group/gift relative block overflow-hidden rounded-2xl border p-5 shadow-md transition-all hover:scale-[1.02] hover:shadow-lg ${tone?.detailSurface || 'border-fuchsia-200/80 bg-white/88 dark:border-white/10 dark:bg-white/[0.045]'}`}
           >
             <div className="pointer-events-none absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-white/30 to-transparent opacity-0 transition-opacity group-hover/gift:opacity-100 dark:from-white/10" />
 
@@ -401,7 +401,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
             </ActionPill>
           ) : null}
         >
-          <div className="relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.045]">
+          <div className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm ${tone?.detailSurface || 'border-fuchsia-100/80 bg-white/88 dark:border-white/10 dark:bg-white/[0.045]'}`}>
             <div className="flex items-start gap-3">
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-sm font-semibold ${tone.kind === 'baby' ? 'from-sky-100 to-cyan-100 text-sky-700 dark:from-sky-500/15 dark:to-cyan-500/15 dark:text-sky-200' : 'from-rose-100 to-pink-100 text-rose-700 dark:from-rose-500/15 dark:to-pink-500/15 dark:text-rose-200'}`}>
                 Style
@@ -454,7 +454,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
                   <div className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-rose-200 bg-white shadow-sm dark:border-rose-500/20 dark:bg-gray-900">
                     <div className="h-2 w-2 rounded-full bg-gradient-to-br from-rose-400 to-pink-400" />
                   </div>
-                  <div className="min-w-0 flex-1 rounded-xl border border-fuchsia-100/80 bg-white/88 p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.045]">
+                  <div className={`min-w-0 flex-1 rounded-xl border p-3 shadow-sm ${tone?.detailSurface || 'border-fuchsia-100/80 bg-white/88 dark:border-white/10 dark:bg-white/[0.045]'}`}>
                     <div className={`mb-1 text-xs font-bold ${tone.detailLabel}`}>
                       {item?.time || 'Time TBD'}
                     </div>

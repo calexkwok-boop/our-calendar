@@ -79,8 +79,12 @@ const ActionPill = ({ href, onClick, children }) => {
   );
 };
 
+const kidsSectionClassName = 'rounded-[22px] border border-amber-200/75 bg-gradient-to-br from-white via-amber-50/88 to-sky-50/70 p-5 shadow-[0_12px_30px_rgba(251,191,36,0.10)] backdrop-blur-sm transition-all hover:shadow-[0_18px_40px_rgba(56,189,248,0.12)] dark:border-amber-400/18 dark:bg-gradient-to-br dark:from-white/[0.07] dark:via-amber-500/[0.05] dark:to-sky-500/[0.05] dark:hover:bg-white/[0.08]';
+const kidsDetailSurfaceClassName = 'border-amber-200/75 bg-white/88 dark:border-amber-400/16 dark:bg-white/[0.05]';
+const kidsEmptyClassName = 'border-amber-200/75 bg-amber-50/75 text-amber-800 dark:border-amber-400/16 dark:bg-amber-500/8 dark:text-amber-100';
+
 const Section = ({ title, subtitle, actions, children }) => (
-  <div className="group/section rounded-[22px] border border-fuchsia-100/80 bg-white/96 p-5 shadow-[0_10px_26px_rgba(15,23,42,0.05)] backdrop-blur-sm transition-all hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.08]">
+  <div className={`group/section ${kidsSectionClassName}`}>
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-bold text-gray-900 dark:text-white">{title}</div>
@@ -94,7 +98,7 @@ const Section = ({ title, subtitle, actions, children }) => (
 
 const EmptySection = ({ title, subtitle, actions }) => (
   <Section title={title} subtitle={subtitle} actions={actions}>
-    <div className="rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
+    <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${kidsEmptyClassName}`}>
       Nothing added yet.
     </div>
   </Section>
@@ -106,7 +110,7 @@ const NotesSection = ({ event, onEdit }) => {
   if (notes) {
     return (
       <Section title="Notes" actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null}>
-        <div className="text-sm leading-6 text-gray-700 dark:text-gray-300">{notes}</div>
+        <div className={`rounded-2xl border px-4 py-4 text-sm leading-6 text-gray-700 dark:text-gray-300 ${kidsDetailSurfaceClassName}`}>{notes}</div>
       </Section>
     );
   }
@@ -220,7 +224,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
               </ActionPill>
             ) : null}
           >
-            <div className="relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.045]">
+            <div className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm ${kidsDetailSurfaceClassName}`}>
               <div className="relative flex items-start gap-3">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-yellow-100 text-sm font-semibold text-amber-700 shadow-sm dark:from-amber-500/15 dark:to-yellow-500/15 dark:text-amber-200">
                   Fun
@@ -285,7 +289,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
           ) : null}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.045]">
+            <div className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm ${kidsDetailSurfaceClassName}`}>
               <div className="flex items-start gap-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-sky-700 dark:text-sky-300">Supervision</div>
@@ -298,8 +302,8 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
 
             <div className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm ${
               allergenAlerts.length > 0
-                ? 'border-fuchsia-100/80 bg-white/88 dark:border-white/10 dark:bg-white/[0.045]'
-                : 'border-fuchsia-100/80 bg-white/88 dark:border-white/10 dark:bg-white/[0.045]'
+                ? kidsDetailSurfaceClassName
+                : kidsDetailSurfaceClassName
             }`}>
               <div className="flex items-start gap-2.5">
                 <div className="min-w-0 flex-1">
@@ -322,7 +326,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
             href={registryLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="group/gift relative block overflow-hidden rounded-2xl border border-fuchsia-200/80 bg-white/88 p-5 shadow-md transition-all hover:scale-[1.02] hover:border-fuchsia-300 hover:shadow-lg dark:border-white/10 dark:bg-white/[0.045]"
+            className={`group/gift relative block overflow-hidden rounded-2xl border p-5 shadow-md transition-all hover:scale-[1.02] hover:shadow-lg ${kidsDetailSurfaceClassName}`}
           >
             <div className="relative flex items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 text-sm font-semibold text-purple-700 shadow-sm transition-transform group-hover/gift:scale-105 dark:from-purple-500/20 dark:to-pink-500/20 dark:text-purple-200">
