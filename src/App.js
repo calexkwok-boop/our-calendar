@@ -615,15 +615,59 @@ const calculateJourneyGoalStreak = (entries, goalId) => {
 const generateUuid = () => uuidv4();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
+const getProfilePhotoCacheKey = (userId) => `our-calendar-profile-photo:${String(userId || '').trim()}`;
+const readCachedProfilePhotoUrl = (userId) => {
+  if (typeof window === 'undefined') return '';
+  const key = getProfilePhotoCacheKey(userId);
+  if (!key || key.endsWith(':')) return '';
+  try {
+    return String(window.localStorage.getItem(key) || '').trim();
+  } catch {
+    return '';
+  }
+};
+const writeCachedProfilePhotoUrl = (userId, photoUrl) => {
+  if (typeof window === 'undefined') return;
+  const key = getProfilePhotoCacheKey(userId);
+  if (!key || key.endsWith(':')) return;
+  try {
+    const normalizedPhotoUrl = String(photoUrl || '').trim();
+    if (normalizedPhotoUrl) {
+      window.localStorage.setItem(key, normalizedPhotoUrl);
+    } else {
+      window.localStorage.removeItem(key);
+    }
+  } catch {}
+};
 const getUserProfilePhotoUrl = (authUser) => {
   const metadata = authUser?.user_metadata || {};
+  const rawMetadata = authUser?.raw_user_meta_data || {};
+  const identityCandidates = Array.isArray(authUser?.identities)
+    ? authUser.identities.flatMap((identity) => ([
+      identity?.identity_data?.avatar_url,
+      identity?.identity_data?.picture,
+      identity?.identity_data?.photo_url,
+      identity?.identity_data?.photoURL,
+      identity?.identity_data?.avatarUrl,
+      identity?.provider_metadata?.avatar_url,
+      identity?.provider_metadata?.picture,
+    ]))
+    : [];
   const candidates = [
     metadata?.avatar_url,
     metadata?.picture,
     metadata?.photo_url,
     metadata?.photoURL,
+    metadata?.avatarUrl,
+    rawMetadata?.avatar_url,
+    rawMetadata?.picture,
+    rawMetadata?.photo_url,
+    rawMetadata?.photoURL,
+    rawMetadata?.avatarUrl,
     authUser?.avatar_url,
     authUser?.picture,
+    ...identityCandidates,
+    readCachedProfilePhotoUrl(authUser?.id || ''),
   ];
   for (const candidate of candidates) {
     const url = String(candidate || '').trim();
@@ -631,21 +675,57 @@ const getUserProfilePhotoUrl = (authUser) => {
   }
   return '';
 };
+const mergeAuthUserPreservingProfilePhoto = (nextAuthUser, previousAuthUser, preservedPhotoUrl = '') => {
+  if (!nextAuthUser) return null;
+  const nextPhotoUrl = getUserProfilePhotoUrl(nextAuthUser);
+  if (nextPhotoUrl) return nextAuthUser;
+
+  const fallbackPhotoUrl = String(
+    preservedPhotoUrl
+    || getUserProfilePhotoUrl(previousAuthUser)
+    || readCachedProfilePhotoUrl(nextAuthUser?.id || previousAuthUser?.id || '')
+    || ''
+  ).trim();
+  if (!fallbackPhotoUrl) return nextAuthUser;
+
+  return {
+    ...nextAuthUser,
+    user_metadata: {
+      ...(nextAuthUser?.user_metadata || {}),
+      avatar_url: fallbackPhotoUrl,
+    },
+  };
+};
 const UserProfileAvatar = ({
   photoUrl,
+  userId = '',
   label,
   sizeClass = 'w-10 h-10',
   roundedClass = 'rounded-xl',
   borderClass = 'border border-purple-200 dark:border-gray-600',
   textClass = 'text-sm',
 }) => {
+  const cachedPhotoUrl = readCachedProfilePhotoUrl(userId);
+  const preferredPhotoUrl = String(photoUrl || cachedPhotoUrl || '').trim();
+  const [displayPhotoUrl, setDisplayPhotoUrl] = React.useState(preferredPhotoUrl);
+  React.useEffect(() => {
+    setDisplayPhotoUrl(preferredPhotoUrl);
+  }, [preferredPhotoUrl]);
   const initial = String(label || '?').trim().charAt(0).toUpperCase() || '?';
-  if (photoUrl) {
+  if (displayPhotoUrl) {
     return (
       <img
-        src={photoUrl}
+        src={displayPhotoUrl}
         alt="Profile"
         className={`${sizeClass} ${roundedClass} object-cover ${borderClass}`}
+        onError={() => {
+          const fallbackPhotoUrl = String(cachedPhotoUrl || '').trim();
+          if (fallbackPhotoUrl && fallbackPhotoUrl !== displayPhotoUrl) {
+            setDisplayPhotoUrl(fallbackPhotoUrl);
+            return;
+          }
+          setDisplayPhotoUrl('');
+        }}
       />
     );
   }
@@ -1831,6 +1911,7 @@ function App() {
   const dismissedCalendarInviteIdsRef = useRef(new Set());
   const inAppSyncCursorRef = useRef({ events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null, tripInvites: null });
   const seenExpenseIdsRef = useRef(new Set());
+  const attemptedGoogleAvatarFetchRef = useRef(new Set());
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
   const [showAppPrompt, setShowAppPrompt] = useState(false);
@@ -1877,6 +1958,7 @@ function App() {
   const coverOpacityPreviewValueRef = useRef(null);
   const coverOpacityPreviewRafRef = useRef(null);
   const [user, setUser] = useState(null);
+  const preservedProfilePhotoUrlRef = useRef('');
   const [showAuth, setShowAuth] = useState(true);
   const [authError, setAuthError] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
@@ -7724,6 +7806,48 @@ useEffect(() => {
     borderColor: themeAccentBorder,
   };
   const currentUserProfilePhotoUrl = getUserProfilePhotoUrl(user);
+  useEffect(() => {
+    const nextPhotoUrl = String(currentUserProfilePhotoUrl || '').trim();
+    if (nextPhotoUrl) {
+      preservedProfilePhotoUrlRef.current = nextPhotoUrl;
+      writeCachedProfilePhotoUrl(user?.id, nextPhotoUrl);
+    }
+  }, [currentUserProfilePhotoUrl, user?.id]);
+  useEffect(() => {
+    const userId = String(user?.id || '').trim();
+    if (!userId) return undefined;
+    if (String(currentUserProfilePhotoUrl || '').trim()) return undefined;
+    if (attemptedGoogleAvatarFetchRef.current.has(userId)) return undefined;
+
+    attemptedGoogleAvatarFetchRef.current.add(userId);
+    let cancelled = false;
+
+    const hydrateGoogleAvatar = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const providerToken = String(sessionData?.session?.provider_token || '').trim();
+        if (!providerToken) return;
+
+        const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${providerToken}` },
+        });
+        if (!response.ok) return;
+
+        const profile = await response.json().catch(() => null);
+        const googleAvatarUrl = String(profile?.picture || '').trim();
+        if (!googleAvatarUrl || cancelled) return;
+
+        preservedProfilePhotoUrlRef.current = googleAvatarUrl;
+        writeCachedProfilePhotoUrl(userId, googleAvatarUrl);
+        setUser((prev) => mergeAuthUserPreservingProfilePhoto(prev, prev, googleAvatarUrl));
+      } catch {}
+    };
+
+    void hydrateGoogleAvatar();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserProfilePhotoUrl, user?.id]);
   const currentUserProfileLabel = currentUser || user?.email || user?.phone || 'User';
 
   const normalizeLayerRow = (row) => ({
@@ -8278,6 +8402,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         const nextMetadata = {
           ...(user?.user_metadata || {}),
           avatar_url: publicUrl,
+          avatarUrl: publicUrl,
+          picture: publicUrl,
+          photo_url: publicUrl,
+          photoURL: publicUrl,
         };
         const { data: authData, error: authError } = await supabase.auth.updateUser({ data: nextMetadata });
         if (authError) {
@@ -8285,6 +8413,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           return false;
         }
         const nextUser = authData?.user || { ...user, user_metadata: nextMetadata };
+        preservedProfilePhotoUrlRef.current = publicUrl;
+        writeCachedProfilePhotoUrl(nextUser?.id || user?.id, publicUrl);
         setUser(nextUser);
         setShowLayerMediaMenu(false);
         return true;
@@ -8784,6 +8914,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         return;
       }
       const nextUser = authData?.user || { ...user, user_metadata: nextMetadata };
+      preservedProfilePhotoUrlRef.current = '';
+      writeCachedProfilePhotoUrl(nextUser?.id || user?.id, '');
       setUser(nextUser);
       setShowLayerMediaMenu(false);
       return;
@@ -12869,25 +13001,50 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   // Check auth session
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setShowAuth(!session?.user);
-      if (session?.user) {
-        void loadAccountHandleForUser(session.user);
+    const hydrateAuthUser = async (sessionUser) => {
+      const sessionUserId = String(sessionUser?.id || '').trim();
+      const cachedProfilePhotoUrl = readCachedProfilePhotoUrl(sessionUserId);
+      if (cachedProfilePhotoUrl) {
+        preservedProfilePhotoUrlRef.current = cachedProfilePhotoUrl;
+      }
+
+      let resolvedAuthUser = sessionUser ?? null;
+      if (sessionUserId) {
+        try {
+          const { data: userData } = await supabase.auth.getUser();
+          if (userData?.user?.id && String(userData.user.id) === sessionUserId) {
+            resolvedAuthUser = userData.user;
+          }
+        } catch (error) {
+          console.warn('Could not hydrate full auth user for avatar fallback:', error);
+        }
+      }
+
+      setUser((prev) => mergeAuthUserPreservingProfilePhoto(
+        resolvedAuthUser,
+        prev,
+        preservedProfilePhotoUrlRef.current || cachedProfilePhotoUrl,
+      ));
+      setShowAuth(!resolvedAuthUser);
+      if (resolvedAuthUser) {
+        void loadAccountHandleForUser(resolvedAuthUser);
       } else {
         setCurrentUser('');
       }
-      setIsLoading(false);
-    });
+      return resolvedAuthUser;
+    };
+
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
+        await hydrateAuthUser(session?.user ?? null);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setIsLoading(false);
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setShowAuth(!session?.user);
-      if (session?.user) {
-        void loadAccountHandleForUser(session.user);
-      } else {
-        setCurrentUser('');
-      }
+      void hydrateAuthUser(session?.user ?? null);
     });
 
     return () => subscription.unsubscribe();
@@ -22134,6 +22291,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   >
                     <UserProfileAvatar
                       photoUrl={currentUserProfilePhotoUrl}
+                      userId={user?.id}
                       label={currentUserProfileLabel}
                       sizeClass="w-9 h-9 sm:w-10 sm:h-10"
                       roundedClass="rounded-xl"
@@ -22245,6 +22403,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                       <div className="relative pointer-events-auto">
                         <UserProfileAvatar
                           photoUrl={currentUserProfilePhotoUrl}
+                          userId={user?.id}
                           label={currentUserProfileLabel}
                           sizeClass="w-9 h-9 sm:w-10 sm:h-10"
                           roundedClass="rounded-xl"
@@ -22300,6 +22459,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <div className="relative shrink-0 pointer-events-auto">
                 <UserProfileAvatar
                   photoUrl={currentUserProfilePhotoUrl}
+                  userId={user?.id}
                   label={currentUserProfileLabel}
                   sizeClass="w-9 h-9 sm:w-10 sm:h-10"
                   roundedClass="rounded-xl"
@@ -24572,6 +24732,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         <div className="flex items-center gap-3 mb-3">
           <UserProfileAvatar
             photoUrl={currentUserProfilePhotoUrl}
+            userId={user?.id}
             label={currentUserProfileLabel}
             sizeClass="w-10 h-10"
             roundedClass="rounded-full"

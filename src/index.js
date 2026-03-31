@@ -4,6 +4,13 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+if (process.env.NODE_ENV !== 'production') {
+  const devStamp = 'DEV-STAMP-2026-03-31-our-calendar';
+  window.__OUR_CALENDAR_DEV_STAMP__ = devStamp;
+  document.title = `${document.title ? `${document.title} ` : ''}${devStamp}`;
+  console.log(devStamp);
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render( 
     <App />
