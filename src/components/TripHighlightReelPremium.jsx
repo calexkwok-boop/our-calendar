@@ -425,7 +425,7 @@ function PhotoSlide({ highlight }) {
   const treatment = PHOTO_TREATMENTS[highlight.mood] || PHOTO_TREATMENTS.scenic;
   const caption = String(highlight.caption || '').trim();
   const location = String(highlight.location || '').trim();
-  const showCaptionCard = Number(highlight.rating || 0) > 0 || Boolean(caption) || Boolean(location);
+  const showCaptionCard = Boolean(location);
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black">
@@ -638,6 +638,13 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   const foodMoment = topMoments.find((moment) => moment.mood === 'food');
   const nightlifeMoment = topMoments.find((moment) => moment.mood === 'nightlife');
   const favoriteMoment = topMoments[0];
+  const usedPhotoUrls = new Set();
+  const claimPhotoUrl = (url) => {
+    const normalizedUrl = String(url || '').trim();
+    if (!normalizedUrl || usedPhotoUrls.has(normalizedUrl)) return false;
+    usedPhotoUrls.add(normalizedUrl);
+    return true;
+  };
 
   const slides = [
     {
@@ -650,16 +657,18 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
 
   if (topMemoryMoments.length > 0) {
     const leadMemory = topMemoryMoments[0];
-    slides.push({
-      type: 'photo',
-      photo: leadMemory.photo.url,
-      caption: leadMemory.title,
-      subcopy: leadMemory.subcopy,
-      eyebrow: leadMemory.eyebrow,
-      location: leadMemory.meta,
-      rating: 0,
-      mood: leadMemory.photo?.hasPeople ? 'people' : 'reflective',
-    });
+    if (claimPhotoUrl(leadMemory.photo.url)) {
+      slides.push({
+        type: 'photo',
+        photo: leadMemory.photo.url,
+        caption: leadMemory.title,
+        subcopy: leadMemory.subcopy,
+        eyebrow: leadMemory.eyebrow,
+        location: leadMemory.meta,
+        rating: 0,
+        mood: leadMemory.photo?.hasPeople ? 'people' : 'reflective',
+      });
+    }
   } else if (scenicMoment) {
     slides.push({
       type: 'chapter',
@@ -682,28 +691,32 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   mixedSlides.forEach((entry) => {
     if (entry.kind === 'memory') {
       const { memory, index } = entry;
-      slides.push({
-        type: 'photo',
-        photo: memory.photo.url,
-        caption: memory.title,
-        subcopy: memory.subcopy,
-        eyebrow: memory.eyebrow,
-        location: memory.meta,
-        rating: 0,
-        mood: memory.photo?.hasPeople ? 'people' : (index % 2 === 0 ? 'reflective' : 'scenic'),
-      });
-      if (index === 1 && topMemoryMoments.length >= 3) {
-        const extraMemory = topMemoryMoments[2];
+      if (claimPhotoUrl(memory.photo.url)) {
         slides.push({
           type: 'photo',
-          photo: extraMemory.photo.url,
-          caption: extraMemory.title,
-          subcopy: extraMemory.subcopy,
-          eyebrow: extraMemory.eyebrow,
-          location: extraMemory.meta,
+          photo: memory.photo.url,
+          caption: memory.title,
+          subcopy: memory.subcopy,
+          eyebrow: memory.eyebrow,
+          location: memory.meta,
           rating: 0,
-          mood: extraMemory.photo?.hasPeople ? 'people' : 'scenic',
+          mood: memory.photo?.hasPeople ? 'people' : (index % 2 === 0 ? 'reflective' : 'scenic'),
         });
+      }
+      if (index === 1 && topMemoryMoments.length >= 3) {
+        const extraMemory = topMemoryMoments[2];
+        if (claimPhotoUrl(extraMemory.photo.url)) {
+          slides.push({
+            type: 'photo',
+            photo: extraMemory.photo.url,
+            caption: extraMemory.title,
+            subcopy: extraMemory.subcopy,
+            eyebrow: extraMemory.eyebrow,
+            location: extraMemory.meta,
+            rating: 0,
+            mood: extraMemory.photo?.hasPeople ? 'people' : 'scenic',
+          });
+        }
       }
       return;
     }
@@ -711,7 +724,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
     const { moment, index } = entry;
     const primaryPhoto = moment.photos[0]?.url;
     const copy = buildEventCopy(moment, index);
-    if (primaryPhoto) {
+    if (primaryPhoto && claimPhotoUrl(primaryPhoto)) {
       slides.push({
         type: 'photo',
         photo: primaryPhoto,
