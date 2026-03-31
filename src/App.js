@@ -4879,6 +4879,9 @@ function App() {
   const handlePhotoTap = (photo, options = {}) => {
     if (!photo) return;
     const source = String(options?.source || 'click');
+    const isTouchSource = source === 'touch';
+    const doubleTapThreshold = isTouchSource ? 520 : 380;
+    const openDelay = isTouchSource ? 360 : 280;
     if (isPhotoSelectionMode) {
       toggleSelectedPhoto(photo.id);
       return;
@@ -4890,7 +4893,7 @@ function App() {
     const clickSuppress = photoClickSuppressRef.current;
     if (source === 'click' && clickSuppress.id === photo.id && now < clickSuppress.until) return;
     const prev = photoTapRef.current;
-    if (prev.id === photo.id && now - prev.at < 380) {
+    if (prev.id === photo.id && now - prev.at < doubleTapThreshold) {
       handlePhotoDoubleTap(photo);
       return;
     }
@@ -4898,7 +4901,7 @@ function App() {
     const timer = setTimeout(() => {
       setLightboxPhoto(photo);
       photoTapRef.current = { id: null, at: 0, timer: null };
-    }, 280);
+    }, openDelay);
     photoTapRef.current = { id: photo.id, at: now, timer };
   };
 
