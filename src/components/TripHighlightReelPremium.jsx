@@ -424,6 +424,8 @@ function TitleSlide({ highlight }) {
 function PhotoSlide({ highlight }) {
   const treatment = PHOTO_TREATMENTS[highlight.mood] || PHOTO_TREATMENTS.scenic;
   const caption = String(highlight.caption || '').trim();
+  const location = String(highlight.location || '').trim();
+  const showFoodLocationCaption = highlight.mood === 'food' && Boolean(location);
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black">
@@ -454,6 +456,19 @@ function PhotoSlide({ highlight }) {
           }}
         />
       </div>
+
+      {showFoodLocationCaption ? (
+        <div className="absolute inset-x-5 bottom-8 flex justify-center sm:inset-x-8 sm:bottom-10">
+          <div className="max-w-[min(34rem,92vw)] rounded-[24px] border border-white/18 bg-black/42 px-5 py-3 text-center text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+            <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-white/72">
+              <span>Food Stop</span>
+            </div>
+            <div className="mt-2 text-[15px] font-medium text-white/96 sm:text-[17px]">
+              {location}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -610,6 +625,12 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   const scenicMoment = topMoments.find((moment) => moment.mood === 'scenic');
   const favoriteMoment = topMoments[0];
   const candidateByUrl = new Map();
+  const getFoodPhotoPenalty = (moment, photoIndex = 0) => {
+    if (moment?.mood !== 'food') return 0;
+    return moment?.hasPeople
+      ? 2 + photoIndex * 1.5
+      : 8 + photoIndex * 3;
+  };
   const getChronologicalSortValue = (dateValue, timeValue = '', fallbackIndex = 0) => {
     const rawDate = String(dateValue || '').trim();
     if (!rawDate) return Number.MAX_SAFE_INTEGER - 100000 + fallbackIndex;
@@ -731,7 +752,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         rating: moment.rating,
         mood: moment.mood,
       }, {
-        score: Number(moment.score || 0) + 6,
+        score: Number(moment.score || 0) + 6 - getFoodPhotoPenalty(moment, 0),
         date: moment.event?.date || moment.photos[0]?.date || moment.photos[0]?.created_at || moment.photos[0]?.createdAt,
         time: moment.event?.time,
         fallbackIndex: index + 40,
@@ -747,7 +768,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
           rating: moment.rating,
           mood: moment.mood,
         }, {
-          score: Number(moment.score || 0) - (photoIndex + 1) * 1.5,
+          score: Number(moment.score || 0) - (photoIndex + 1) * 1.5 - getFoodPhotoPenalty(moment, photoIndex + 1),
           date: photo?.date || photo?.created_at || photo?.createdAt || moment.event?.date,
           time: moment.event?.time,
           fallbackIndex: index + 60 + photoIndex,
@@ -795,7 +816,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         rating: moment.rating,
         mood: moment.mood,
       }, {
-        score: Number(moment.score || 0) - photoIndex,
+        score: Number(moment.score || 0) - photoIndex - getFoodPhotoPenalty(moment, photoIndex),
         date: photo?.date || photo?.created_at || photo?.createdAt || moment.event?.date,
         time: moment.event?.time,
         fallbackIndex: index + 140 + photoIndex,
