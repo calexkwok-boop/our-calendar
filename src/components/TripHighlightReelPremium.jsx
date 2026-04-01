@@ -63,6 +63,8 @@ const getPhotoLocationCaptionMeta = (highlight) => {
   const location = String(highlight?.location || '').trim();
   if (!hasMeaningfulLocation(location)) return null;
 
+  if (String(highlight?.mood || '').trim().toLowerCase() === 'people') return null;
+
   const haystack = [
     String(highlight?.mood || ''),
     String(highlight?.caption || ''),
@@ -75,6 +77,9 @@ const getPhotoLocationCaptionMeta = (highlight) => {
   }
   if (String(highlight?.mood || '').trim().toLowerCase() === 'hotel' || HOTEL_HIGHLIGHT_PATTERN.test(haystack)) {
     return { label: 'Stay', location };
+  }
+  if (['scenic', 'reflective'].includes(String(highlight?.mood || '').trim().toLowerCase())) {
+    return { label: 'Place', location };
   }
   return null;
 };
@@ -487,7 +492,7 @@ function PhotoSlide({ highlight }) {
       </div>
 
       {locationCaptionMeta ? (
-        <div className="absolute inset-x-5 bottom-8 flex justify-center sm:inset-x-8 sm:bottom-10">
+        <div className="absolute inset-x-5 bottom-24 flex justify-center sm:inset-x-8 sm:bottom-28">
           <div className="max-w-[min(34rem,92vw)] rounded-[24px] border border-white/18 bg-black/42 px-5 py-3 text-center text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl">
             <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-white/72">
               <span>{locationCaptionMeta.label}</span>
