@@ -260,7 +260,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
         openEditor({
           variant: 'celebration',
           title: coverImageUrl ? 'Change Cover Photo' : 'Add Cover Photo',
-          subtitle: 'Set the image that sits behind the invitation card.',
           fields: [
             { key: 'coverImageUrl', label: 'Cover photo URL', value: coverImageUrl, placeholder: 'https://images.example.com/invitation-photo.jpg' },
           ],
@@ -428,7 +427,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
                   openEditor({
                     variant: 'celebration',
                     title: 'Add Gift Registry',
-                    subtitle: 'Link to Amazon, Target, Zola, or any registry.',
                     fields: [{ key: 'registryLink', label: 'Registry URL', value: '', placeholder: 'https://...' }],
                     onSave: (values) => onUpdateEventData({ registryLink: String(values.registryLink || '').trim() }),
                   })
@@ -449,7 +447,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
                 openEditor({
                   variant: 'celebration',
                   title: 'Edit Details',
-                  subtitle: 'Update dress code and celebration specifics.',
                   fields: [{ key: 'dressCode', label: 'Dress code', value: dressCode, placeholder: 'Formal, cocktail, casual...' }],
                   onSave: (values) => onUpdateEventData({ dressCode: String(values.dressCode || '').trim() }),
                 })
@@ -486,7 +483,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
                   openEditor({
                     variant: 'celebration',
                     title: 'Edit Schedule',
-                    subtitle: 'Timeline for the celebration.',
                     fields: [
                       {
                         key: 'schedule',
@@ -534,7 +530,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
                   openEditor({
                     variant: 'celebration',
                     title: 'Add Schedule',
-                    subtitle: 'Create a timeline for the celebration.',
                     fields: [
                       {
                         key: 'schedule',

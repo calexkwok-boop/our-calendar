@@ -172,7 +172,6 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
         openEditor({
           variant: 'hangout',
           title: coverImageUrl ? 'Change Cover Photo' : 'Add Cover Photo',
-          subtitle: 'Set the image that sits behind the invitation card.',
           fields: [
             { key: 'coverImageUrl', label: 'Cover photo URL', value: coverImageUrl, placeholder: 'https://images.example.com/invitation-photo.jpg' },
           ],
@@ -287,7 +286,6 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
                 openEditor({
                   variant: 'hangout',
                   title: 'Edit Plan',
-                  subtitle: 'Update reservation and logistics.',
                   fields: [
                     { key: 'reservationName', label: 'Reservation name', value: reservationName, placeholder: 'Smith' },
                     { key: 'expectedDuration', label: 'Expected duration', value: duration, placeholder: '2 hours' },

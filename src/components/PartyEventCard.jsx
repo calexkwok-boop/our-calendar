@@ -338,7 +338,6 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         openEditor({
           variant: 'party',
           title: coverImageUrl ? 'Change Cover Photo' : 'Add Cover Photo',
-          subtitle: 'Set the image that sits behind the invitation card.',
           fields: [
             { key: 'coverImageUrl', label: 'Cover photo URL', value: coverImageUrl, placeholder: 'https://images.example.com/invitation-photo.jpg' },
           ],

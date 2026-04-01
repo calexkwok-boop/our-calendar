@@ -156,7 +156,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
         openEditor({
           variant: 'kids',
           title: coverImageUrl ? 'Change Cover Photo' : 'Add Cover Photo',
-          subtitle: 'Set the image that sits behind the invitation card.',
           fields: [
             { key: 'coverImageUrl', label: 'Cover photo URL', value: coverImageUrl, placeholder: 'https://images.example.com/invitation-photo.jpg' },
           ],
@@ -261,7 +260,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
                   openEditor({
                     variant: 'kids',
                     title: 'Edit Activity',
-                    subtitle: 'Update what the kids will be doing.',
                     fields: [
                       { key: 'activity', label: 'Activity', value: activity, placeholder: 'Face painting, bounce house...' },
                       { key: 'ageRange', label: 'Age range', value: ageRange, placeholder: '5-8' },
@@ -298,7 +296,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
                   openEditor({
                     variant: 'kids',
                     title: 'Add Activity',
-                    subtitle: 'What will the kids be doing?',
                     fields: [
                       { key: 'activity', label: 'Activity', value: '', placeholder: 'Face painting, bounce house...' },
                       { key: 'ageRange', label: 'Age range', value: ageRange, placeholder: '5-8' },
@@ -325,7 +322,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
                 openEditor({
                   variant: 'kids',
                   title: 'Edit Parent Notes',
-                  subtitle: 'Update allergy info and supervision requirements.',
                   fields: [
                     { key: 'allergenAlerts', label: 'Allergy notes', value: allergenAlerts.join(', '), placeholder: 'peanuts, dairy, gluten' },
                     { key: 'parentRequired', label: 'Supervision', type: 'toggle', value: parentRequired, toggleLabel: 'Parents should stay' },

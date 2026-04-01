@@ -1004,7 +1004,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
                 <ActionPill
                   onClick={() => openEditor({
                     title: 'Edit Celebration Details',
-                    subtitle: 'Keep registry and dress expectations in one polished place.',
                     fields: [
                       { key: 'registryLink', label: 'Registry link', value: registryLink, placeholder: 'https://...' },
                       { key: 'dressCode', label: 'Dress code', value: dressCode, placeholder: 'Cocktail, garden, festive...' },
@@ -1032,7 +1031,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
             <ActionPill
               onClick={() => openEditor({
                 title: 'Add Registry',
-                subtitle: 'Add a registry link and optional dress note.',
                 fields: [
                   { key: 'registryLink', label: 'Registry link', value: '', placeholder: 'https://...' },
                   { key: 'dressCode', label: 'Dress code', value: dressCode, placeholder: 'Cocktail, garden, festive...' },
@@ -1056,7 +1054,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
             <ActionPill
               onClick={() => openEditor({
                 title: 'Edit Schedule',
-                subtitle: 'Use one line per timeline item in the format `time | activity`.',
                 fields: [
                   {
                     key: 'schedule',
@@ -1100,7 +1097,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
             <ActionPill
               onClick={() => openEditor({
                 title: 'Add Schedule',
-                subtitle: 'Use one line per timeline item in the format `time | activity`.',
                 fields: [
                   {
                     key: 'schedule',
@@ -1167,7 +1163,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
             <ActionPill
               onClick={() => openEditor({
                 title: 'Edit Activity',
-                subtitle: 'Set the main activity and age range for the event.',
                 fields: [
                   { key: 'activity', label: 'Main activity', value: activity, placeholder: 'Crafts, bounce house, movie...' },
                   { key: 'ageRange', label: 'Age range', value: ageRange, placeholder: '4-6, 8-10, all ages...' },
@@ -1191,7 +1186,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
             <ActionPill
               onClick={() => openEditor({
                 title: 'Add Activity',
-                subtitle: 'Set the main activity and age range for the event.',
                 fields: [
                   { key: 'activity', label: 'Main activity', value: '', placeholder: 'Crafts, scavenger hunt, trampoline...' },
                   { key: 'ageRange', label: 'Age range', value: ageRange, placeholder: '4-6, 8-10, all ages...' },
@@ -1214,7 +1208,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
           <ActionPill
             onClick={() => openEditor({
               title: 'Edit Parent Notes',
-              subtitle: 'Add allergy context and set whether parents should stay.',
               fields: [
                 { key: 'allergenAlerts', label: 'Allergy notes', value: allergenAlerts.join(', '), placeholder: 'Peanuts, dairy, latex...' },
                 { key: 'parentRequired', label: 'Attendance', type: 'toggle', value: parentRequired, toggleLabel: 'Parents should stay' },
@@ -1283,7 +1276,6 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
           <ActionPill
             onClick={() => openEditor({
               title: 'Edit Hangout Plan',
-              subtitle: 'Update the reservation name, timing, and bill style.',
               fields: [
                 { key: 'reservationName', label: 'Reservation name', value: reservationName, placeholder: 'Under Mia, rooftop table...' },
                 { key: 'expectedDuration', label: 'Expected duration', value: duration, placeholder: '2 hours' },
@@ -1371,7 +1363,6 @@ const EventCardRouter = ({ event, onEditBasics, ...props }) => {
     ? () => openEditor({
         variant: ['kids', 'hangout', 'celebration', 'party'].includes(category) ? category : 'party',
         title: 'Edit Event Details',
-        subtitle: 'Update the name, location, notes, and invitation backdrop.',
         fields: [
           { key: 'title', label: 'Event title', value: String(event?.title || '').trim(), placeholder: 'Game Night @ Home' },
           { key: 'location', label: 'Location', value: String(event?.location || '').trim(), placeholder: 'Home, rooftop, park...' },
