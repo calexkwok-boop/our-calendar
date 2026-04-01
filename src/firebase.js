@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging, isSupported } from "firebase/messaging";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyAzQ0jVpurMyxCsDZF8uLGQrGJEQFnyRFE",
@@ -11,8 +12,18 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+let firebaseStorageInstance = null;
 
 export const getMessagingIfSupported = async () => {
   const supported = await isSupported();
   return supported ? getMessaging(app) : null;
+};
+
+export const getFirebaseStorageIfConfigured = () => {
+  const bucket = String(firebaseConfig.storageBucket || '').trim();
+  if (!bucket) return null;
+  if (!firebaseStorageInstance) {
+    firebaseStorageInstance = getStorage(app);
+  }
+  return firebaseStorageInstance;
 };

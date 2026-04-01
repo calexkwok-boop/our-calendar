@@ -3,8 +3,9 @@ import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
+import { deleteObject, getDownloadURL, ref as firebaseStorageRef, uploadBytes } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid';
-import { getMessagingIfSupported } from "./firebase";
+import { getFirebaseStorageIfConfigured, getMessagingIfSupported } from "./firebase";
 import GauntletPanel from "./components/GauntletPanel";
 import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
@@ -35,6 +36,11 @@ process.env.REACT_APP_SUPABASE_ANON_KEY
 
 const SUPABASE_URL = String(process.env.REACT_APP_SUPABASE_URL || '').trim().replace(/\/+$/, '');
 const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
+const TRIP_PHOTO_STORAGE_PROVIDER = String(process.env.REACT_APP_TRIP_PHOTO_STORAGE_PROVIDER || 'supabase').trim().toLowerCase();
+const USE_FIREBASE_TRIP_PHOTO_STORAGE = TRIP_PHOTO_STORAGE_PROVIDER === 'firebase';
+const USE_R2_TRIP_PHOTO_STORAGE = TRIP_PHOTO_STORAGE_PROVIDER === 'r2';
+const FIREBASE_STORAGE_BUCKET = String(process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || '').trim();
+const R2_PUBLIC_BASE_URL = String(process.env.REACT_APP_R2_PUBLIC_BASE_URL || '').trim().replace(/\/+$/, '');
 
 const normalizeStorageObjectPath = (value = '') => (
   String(value || '')
@@ -133,6 +139,152 @@ const buildTripPhotoVariantPath = (basePath, variant) => {
   const normalizedVariant = String(variant || '').trim().toLowerCase();
   if (!normalizedBasePath || !normalizedVariant) return '';
   return `${normalizedBasePath}/${normalizedVariant}.jpg`;
+};
+
+const getFirebaseTripPhotoStorageLocation = (url) => {
+  const raw = String(url || '').trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw, window?.location?.origin || 'http://localhost');
+    if (/firebasestorage\.googleapis\.com$/i.test(parsed.host)) {
+      const marker = '/o/';
+      const idx = parsed.pathname.indexOf(marker);
+      if (idx === -1) return null;
+      const bucketMatch = parsed.pathname.match(/\/b\/([^/]+)\/o\//i);
+      const path = decodeURIComponent(parsed.pathname.slice(idx + marker.length).replace(/^\/+/, ''));
+      if (!path) return null;
+      return {
+        provider: 'firebase',
+        bucket: bucketMatch?.[1] || FIREBASE_STORAGE_BUCKET || '',
+        path,
+      };
+    }
+    if (/storage\.googleapis\.com$/i.test(parsed.host)) {
+      const parts = parsed.pathname.split('/').filter(Boolean);
+      if (parts.length < 2) return null;
+      return {
+        provider: 'firebase',
+        bucket: parts[0],
+        path: decodeURIComponent(parts.slice(1).join('/')),
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const uploadTripPhotoFileToFirebase = async (path, file) => {
+  const storage = getFirebaseStorageIfConfigured();
+  if (!storage) {
+    throw new Error('Firebase Storage is not configured. Add REACT_APP_FIREBASE_STORAGE_BUCKET and related Firebase env vars.');
+  }
+  const storageRef = firebaseStorageRef(storage, path);
+  await uploadBytes(storageRef, file, {
+    contentType: file?.type || 'image/jpeg',
+    cacheControl: 'public, max-age=31536000, immutable',
+  });
+  const url = await getDownloadURL(storageRef);
+  return { url, path };
+};
+
+const deleteTripPhotoFileFromFirebase = async (input) => {
+  const location = typeof input === 'string'
+    ? getFirebaseTripPhotoStorageLocation(input)
+    : input;
+  if (!location?.path) return false;
+  const storage = getFirebaseStorageIfConfigured();
+  if (!storage) return false;
+  try {
+    await deleteObject(firebaseStorageRef(storage, location.path));
+    return true;
+  } catch (error) {
+    if (!/object.*not found|no object exists/i.test(String(error?.message || ''))) {
+      console.warn('Firebase photo delete warning:', error);
+    }
+    return false;
+  }
+};
+
+const getR2TripPhotoStorageLocation = (url) => {
+  const raw = String(url || '').trim();
+  if (!raw || !R2_PUBLIC_BASE_URL) return null;
+  try {
+    const parsed = new URL(raw, window?.location?.origin || 'http://localhost');
+    const base = new URL(R2_PUBLIC_BASE_URL, window?.location?.origin || 'http://localhost');
+    if (parsed.origin !== base.origin) return null;
+    if (!parsed.pathname.startsWith(base.pathname)) return null;
+    const path = decodeURIComponent(parsed.pathname.slice(base.pathname.length).replace(/^\/+/, ''));
+    if (!path) return null;
+    return { provider: 'r2', path };
+  } catch {
+    return null;
+  }
+};
+
+const requestR2TripPhotoUploads = async (files) => {
+  const payloadFiles = Array.isArray(files)
+    ? files.map((file) => ({
+        path: String(file?.path || '').trim(),
+        contentType: String(file?.contentType || 'image/jpeg').trim(),
+      })).filter((file) => file.path)
+    : [];
+  if (!payloadFiles.length) {
+    throw new Error('No files were prepared for upload.');
+  }
+  const { data, error } = await supabase.functions.invoke('r2-trip-photos', {
+    body: {
+      action: 'createUploadUrls',
+      files: payloadFiles,
+    },
+  });
+  if (error) {
+    throw new Error(error.message || 'Could not prepare R2 upload.');
+  }
+  const uploadTargets = Array.isArray(data?.files) ? data.files : [];
+  if (!uploadTargets.length) {
+    throw new Error('R2 upload setup returned no files.');
+  }
+  return uploadTargets;
+};
+
+const uploadTripPhotoFileToR2 = async (path, file) => {
+  const uploadTargets = await requestR2TripPhotoUploads([{
+    path,
+    contentType: file?.type || 'image/jpeg',
+  }]);
+  const target = uploadTargets[0];
+  const uploadUrl = String(target?.uploadUrl || '').trim();
+  const publicUrl = String(target?.publicUrl || '').trim();
+  const headers = target?.headers && typeof target.headers === 'object' ? target.headers : {};
+  if (!uploadUrl || !publicUrl) {
+    throw new Error('R2 upload target was incomplete.');
+  }
+  const response = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers,
+    body: file,
+  });
+  if (!response.ok) {
+    throw new Error(`R2 upload failed with status ${response.status}.`);
+  }
+  return { url: publicUrl, path };
+};
+
+const deleteTripPhotoFilesFromR2 = async (paths) => {
+  const normalizedPaths = Array.isArray(paths)
+    ? paths.map((path) => String(path || '').trim()).filter(Boolean)
+    : [];
+  if (!normalizedPaths.length) return;
+  const { error } = await supabase.functions.invoke('r2-trip-photos', {
+    body: {
+      action: 'deleteObjects',
+      paths: normalizedPaths,
+    },
+  });
+  if (error) {
+    console.warn('R2 delete warning:', error.message || error);
+  }
 };
 
 const getTripPhotoStorageLocation = (url) => {
@@ -4695,7 +4847,6 @@ function App() {
     setPhotoUploadError(false);
     setPhotoUploadMessage('');
     try {
-      const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
       const photoBasePath = `${activeSubCalendar.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
       const mainFilename = buildTripPhotoVariantPath(photoBasePath, 'main');
       const thumbFilename = buildTripPhotoVariantPath(photoBasePath, 'thumb');
@@ -4713,47 +4864,84 @@ function App() {
         type: 'image/jpeg',
         fileName: 'thumb.jpg',
       });
-      let selectedBucket = null;
-      let uploadError = null;
+      let mainUrl = '';
+      let thumbUrl = '';
       let uploadedThumb = false;
 
-      for (const bucket of TRIP_PHOTO_BUCKETS) {
-        const { error } = await supabase.storage.from(bucket).upload(mainFilename, mainFile, {
-          contentType: mainFile.type || 'image/jpeg',
-          cacheControl: '31536000',
-        });
-        if (!error) {
-          const thumbUpload = await supabase.storage.from(bucket).upload(thumbFilename, thumbFile, {
-            contentType: thumbFile.type || 'image/jpeg',
+      if (USE_R2_TRIP_PHOTO_STORAGE) {
+        try {
+          const [mainUpload, thumbUpload] = await Promise.all([
+            uploadTripPhotoFileToR2(mainFilename, mainFile),
+            uploadTripPhotoFileToR2(thumbFilename, thumbFile),
+          ]);
+          mainUrl = String(mainUpload?.url || '').trim();
+          thumbUrl = String(thumbUpload?.url || '').trim();
+          uploadedThumb = Boolean(thumbUrl);
+        } catch (r2Error) {
+          console.warn('R2 trip photo upload failed; falling back to other storage.', r2Error);
+        }
+      }
+
+      if (!mainUrl && USE_FIREBASE_TRIP_PHOTO_STORAGE) {
+        try {
+          const mainUpload = await uploadTripPhotoFileToFirebase(mainFilename, mainFile);
+          mainUrl = String(mainUpload?.url || '').trim();
+          const thumbUpload = await uploadTripPhotoFileToFirebase(thumbFilename, thumbFile);
+          thumbUrl = String(thumbUpload?.url || '').trim();
+          uploadedThumb = Boolean(thumbUrl);
+        } catch (firebaseError) {
+          console.warn('Firebase trip photo upload failed; falling back to Supabase Storage.', firebaseError);
+        }
+      }
+
+      if (!mainUrl) {
+        let selectedBucket = null;
+        let uploadError = null;
+        for (const bucket of TRIP_PHOTO_BUCKETS) {
+          const { error } = await supabase.storage.from(bucket).upload(mainFilename, mainFile, {
+            contentType: mainFile.type || 'image/jpeg',
             cacheControl: '31536000',
-            upsert: true,
           });
-          uploadedThumb = !thumbUpload?.error;
-          if (thumbUpload?.error) {
-            console.warn('Trip photo thumbnail upload failed:', thumbUpload.error);
+          if (!error) {
+            const thumbUpload = await supabase.storage.from(bucket).upload(thumbFilename, thumbFile, {
+              contentType: thumbFile.type || 'image/jpeg',
+              cacheControl: '31536000',
+              upsert: true,
+            });
+            uploadedThumb = !thumbUpload?.error;
+            if (thumbUpload?.error) {
+              console.warn('Trip photo thumbnail upload failed:', thumbUpload.error);
+            }
+            selectedBucket = bucket;
+            uploadError = null;
+            break;
           }
-          selectedBucket = bucket;
-          uploadError = null;
-          break;
+          uploadError = error;
+          if (!/bucket.*not found/i.test(error.message || '')) break;
         }
-        uploadError = error;
-        if (!/bucket.*not found/i.test(error.message || '')) break;
+
+        if (!selectedBucket) {
+          console.error('Upload error:', uploadError);
+          setPhotoUploadError(true);
+          if (USE_R2_TRIP_PHOTO_STORAGE) {
+            setPhotoUploadMessage(`Upload failed: ${uploadError?.message || 'R2-backed photo storage is not configured yet.'}`);
+          } else if (USE_FIREBASE_TRIP_PHOTO_STORAGE) {
+            setPhotoUploadMessage(`Upload failed: ${uploadError?.message || 'Google-backed photo storage is not configured yet.'}`);
+          } else if (/bucket.*not found/i.test(uploadError?.message || '')) {
+            setPhotoUploadMessage("Upload failed: no storage bucket found. Create a public bucket named 'trip-photos' or 'trip_photos' in Supabase Storage.");
+          } else {
+            setPhotoUploadMessage(`Upload failed: ${uploadError?.message || 'Unknown upload error'}`);
+          }
+          return null;
+        }
+
+        const { data: urlData } = supabase.storage.from(selectedBucket).getPublicUrl(mainFilename);
+        const { data: thumbUrlData } = supabase.storage.from(selectedBucket).getPublicUrl(thumbFilename);
+        mainUrl = String(urlData?.publicUrl || '').trim();
+        thumbUrl = uploadedThumb ? String(thumbUrlData?.publicUrl || '').trim() : '';
       }
 
-      if (!selectedBucket) {
-        console.error('Upload error:', uploadError);
-        setPhotoUploadError(true);
-        if (/bucket.*not found/i.test(uploadError?.message || '')) {
-          setPhotoUploadMessage("Upload failed: no storage bucket found. Create a public bucket named 'trip-photos' or 'trip_photos' in Supabase Storage.");
-        } else {
-          setPhotoUploadMessage(`Upload failed: ${uploadError?.message || 'Unknown upload error'}`);
-        }
-        return null;
-      }
-
-      const { data: urlData } = supabase.storage.from(selectedBucket).getPublicUrl(mainFilename);
-      const { data: thumbUrlData } = supabase.storage.from(selectedBucket).getPublicUrl(thumbFilename);
-      if (!urlData?.publicUrl) {
+      if (!mainUrl) {
         setPhotoUploadError(true);
         setPhotoUploadMessage('Upload succeeded but no public URL was generated.');
         return null;
@@ -4763,8 +4951,9 @@ function App() {
         sub_calendar_id: activeSubCalendar.id,
         event_id: eventId || null,
         date: date || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null),
-        url: urlData.publicUrl,
-        thumbnail_url: uploadedThumb ? (thumbUrlData?.publicUrl || '') : '',
+        url: mainUrl,
+        medium_url: mainUrl,
+        thumbnail_url: uploadedThumb ? thumbUrl : '',
         caption: caption || null,
         uploaded_by: currentUser,
         user_id: user.id,
@@ -4817,39 +5006,62 @@ function App() {
     setPhotoUploadError(false);
     setPhotoUploadMessage('');
     try {
-      const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
       const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
       const filename = `${activeSubCalendar.id}/background_${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
-      let selectedBucket = null;
-      let uploadError = null;
-      for (const bucket of TRIP_PHOTO_BUCKETS) {
-        const { error } = await supabase.storage.from(bucket).upload(filename, file, {
-          contentType: file.type,
-          cacheControl: '31536000',
-        });
-        if (!error) {
-          selectedBucket = bucket;
-          uploadError = null;
-          break;
+      let backgroundUrl = '';
+
+      if (USE_R2_TRIP_PHOTO_STORAGE) {
+        try {
+          const uploadResult = await uploadTripPhotoFileToR2(filename, file);
+          backgroundUrl = String(uploadResult?.url || '').trim();
+        } catch (r2Error) {
+          console.warn('R2 trip background upload failed; falling back to other storage.', r2Error);
         }
-        uploadError = error;
-        if (!/bucket.*not found/i.test(error.message || '')) break;
       }
-      if (!selectedBucket) {
-        console.error('Background upload error:', uploadError);
-        setPhotoUploadError(true);
-        setPhotoUploadMessage(`Upload failed: ${uploadError?.message || 'Unknown upload error'}`);
-        return null;
+
+      if (!backgroundUrl && USE_FIREBASE_TRIP_PHOTO_STORAGE) {
+        try {
+          const uploadResult = await uploadTripPhotoFileToFirebase(filename, file);
+          backgroundUrl = String(uploadResult?.url || '').trim();
+        } catch (firebaseError) {
+          console.warn('Firebase trip background upload failed; falling back to Supabase Storage.', firebaseError);
+        }
       }
-      const { data: urlData } = supabase.storage.from(selectedBucket).getPublicUrl(filename);
-      if (!urlData?.publicUrl) {
+
+      if (!backgroundUrl) {
+        let selectedBucket = null;
+        let uploadError = null;
+        for (const bucket of TRIP_PHOTO_BUCKETS) {
+          const { error } = await supabase.storage.from(bucket).upload(filename, file, {
+            contentType: file.type,
+            cacheControl: '31536000',
+          });
+          if (!error) {
+            selectedBucket = bucket;
+            uploadError = null;
+            break;
+          }
+          uploadError = error;
+          if (!/bucket.*not found/i.test(error.message || '')) break;
+        }
+        if (!selectedBucket) {
+          console.error('Background upload error:', uploadError);
+          setPhotoUploadError(true);
+          setPhotoUploadMessage(`Upload failed: ${uploadError?.message || 'Unknown upload error'}`);
+          return null;
+        }
+        const { data: urlData } = supabase.storage.from(selectedBucket).getPublicUrl(filename);
+        backgroundUrl = String(urlData?.publicUrl || '').trim();
+      }
+
+      if (!backgroundUrl) {
         setPhotoUploadError(true);
         setPhotoUploadMessage('Upload succeeded but no public URL was generated.');
         return null;
       }
       const backgroundPhoto = {
         id: `bg_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
-        url: urlData.publicUrl,
+        url: backgroundUrl,
         caption: null,
       };
       const ok = await saveTripCoverPhoto(backgroundPhoto);
@@ -4870,12 +5082,30 @@ function App() {
   const removeTripPhotoRecord = async (photo) => {
     try {
       const removeFromStorage = async () => {
-        const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
+        const r2Locations = [photo?.url, photo?.thumbnail_url, photo?.medium_url]
+          .map((url) => getR2TripPhotoStorageLocation(url))
+          .filter((location, index, all) => location?.path && all.findIndex((item) => item?.path === location.path) === index);
+
+        if (r2Locations.length > 0) {
+          await deleteTripPhotoFilesFromR2(r2Locations.map((location) => location.path));
+          return;
+        }
+
+        const firebaseDeleteUrls = [photo?.url, photo?.thumbnail_url, photo?.medium_url].filter(Boolean);
+        const firebaseLocations = firebaseDeleteUrls
+          .map((url) => getFirebaseTripPhotoStorageLocation(url))
+          .filter((location, index, all) => location?.path && all.findIndex((item) => item?.path === location.path) === index);
+
+        if (firebaseLocations.length > 0) {
+          await Promise.all(firebaseLocations.map((location) => deleteTripPhotoFileFromFirebase(location)));
+          return;
+        }
+
         for (const bucket of TRIP_PHOTO_BUCKETS) {
           const marker = `/object/public/${bucket}/`;
-          const idx = photo.url.indexOf(marker);
+          const idx = String(photo?.url || '').indexOf(marker);
           if (idx === -1) continue;
-          const path = decodeURIComponent(photo.url.slice(idx + marker.length));
+          const path = decodeURIComponent(String(photo.url || '').slice(idx + marker.length));
           if (!path) continue;
           const { error: storageError } = await supabase.storage.from(bucket).remove([path]);
           if (storageError) console.warn('Storage delete warning:', storageError.message);
