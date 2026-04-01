@@ -502,10 +502,10 @@ function PhotoSlide({ highlight }) {
       </div>
 
       {locationCaptionMeta ? (
-        <div className="absolute inset-x-5 bottom-40 flex justify-center sm:inset-x-8 sm:bottom-44">
+        <div className="absolute inset-x-5 bottom-44 flex justify-center sm:inset-x-8 sm:bottom-48">
           <div className="max-w-[min(34rem,92vw)] rounded-[24px] border border-white/18 bg-black/42 px-5 py-3 text-center text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl">
             <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-white/72">
-              <span>{locationCaptionMeta.label}</span>
+              <span role="img" aria-label="Location pin">📍</span>
             </div>
             <div className="mt-2 text-[15px] font-medium text-white/96 sm:text-[17px]">
               {locationCaptionMeta.location}
@@ -874,6 +874,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   const selectedPhotoSlides = rankedPhotoCandidates
     .reduce((selected, entry) => {
       if (selected.length >= targetPhotoSlideCount) return selected;
+      if (isFoodPhotoHighlight(entry.slide) && !getPhotoLocationCaptionMeta(entry.slide)) return selected;
       const foodCount = selected.reduce((count, item) => count + (isFoodPhotoHighlight(item.slide) ? 1 : 0), 0);
       if (isFoodPhotoHighlight(entry.slide) && foodCount >= maxFoodSlides) return selected;
       selected.push(entry);
