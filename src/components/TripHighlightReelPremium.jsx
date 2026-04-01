@@ -68,25 +68,34 @@ const hasMeaningfulLocation = (value) => {
 };
 
 const getPhotoLocationCaptionMeta = (highlight) => {
-  const location = String(highlight?.location || '').trim();
-  if (!hasMeaningfulLocation(location)) return null;
+  const mood = String(highlight?.mood || '').trim().toLowerCase();
+  const eventMood = String(highlight?.eventMood || '').trim().toLowerCase();
+  const directLocation = String(highlight?.location || '').trim();
+  const eventLocation = String(highlight?.eventLocation || '').trim();
+  const location = hasMeaningfulLocation(directLocation)
+    ? directLocation
+    : ((mood === 'food' || eventMood === 'food' || mood === 'hotel' || eventMood === 'hotel') && hasMeaningfulLocation(eventLocation)
+      ? eventLocation
+      : '');
+  if (!location) return null;
 
-  if (String(highlight?.mood || '').trim().toLowerCase() === 'people') return null;
+  if (mood === 'people') return null;
 
   const haystack = [
     String(highlight?.mood || ''),
+    String(highlight?.eventMood || ''),
     String(highlight?.caption || ''),
     String(highlight?.eyebrow || ''),
     location,
   ].join(' ');
 
-  if (String(highlight?.mood || '').trim().toLowerCase() === 'food' || FOOD_HIGHLIGHT_PATTERN.test(haystack)) {
+  if (mood === 'food' || eventMood === 'food' || FOOD_HIGHLIGHT_PATTERN.test(haystack)) {
     return { label: 'Food Stop', location };
   }
-  if (String(highlight?.mood || '').trim().toLowerCase() === 'hotel' || HOTEL_HIGHLIGHT_PATTERN.test(haystack)) {
+  if (mood === 'hotel' || eventMood === 'hotel' || HOTEL_HIGHLIGHT_PATTERN.test(haystack)) {
     return { label: 'Stay', location };
   }
-  if (['scenic', 'reflective'].includes(String(highlight?.mood || '').trim().toLowerCase())) {
+  if (['scenic', 'reflective'].includes(mood)) {
     return { label: 'Place', location };
   }
   return null;
@@ -147,8 +156,10 @@ const buildEventPhotoHighlight = ({ moment, photo, photoIndex, copy }) => {
     subcopy: copy.subcopy,
     eyebrow: isLeadPhoto ? copy.eyebrow : '',
     location: resolvedLocation,
+    eventLocation: String(moment?.event?.location || '').trim(),
     rating: moment?.rating,
     mood: resolvedMood,
+    eventMood: String(moment?.mood || '').trim(),
   };
 };
 
@@ -395,7 +406,7 @@ export default function TripHighlightReel({
       </div>
 
       {/* PREMIUM PROGRESS BAR - Subtle line */}
-      <div className="absolute bottom-28 left-0 right-0 px-12">
+      <div className="absolute bottom-24 left-0 right-0 px-12">
         <div className="h-0.5 overflow-hidden rounded-full bg-white/20">
           <div
             className="h-full bg-white shadow-sm shadow-white/50 transition-all duration-300 ease-out"
