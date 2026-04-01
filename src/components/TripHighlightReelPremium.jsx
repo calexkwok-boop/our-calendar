@@ -395,7 +395,7 @@ export default function TripHighlightReel({
       </div>
 
       {/* PREMIUM PROGRESS BAR - Subtle line */}
-      <div className="absolute bottom-28 left-0 right-0 px-12">
+      <div className="absolute bottom-16 left-0 right-0 px-12">
         <div className="h-0.5 overflow-hidden rounded-full bg-white/20">
           <div
             className="h-full bg-white shadow-sm shadow-white/50 transition-all duration-300 ease-out"
@@ -571,7 +571,7 @@ function PhotoSlide({ highlight }) {
       </div>
 
       {locationCaptionMeta ? (
-        <div className="absolute inset-x-5 bottom-48 flex justify-center sm:inset-x-8 sm:bottom-52">
+        <div className="absolute inset-x-5 bottom-52 flex justify-center sm:inset-x-8 sm:bottom-56">
           <div className="max-w-[min(34rem,92vw)] rounded-[24px] border border-white/18 bg-black/42 px-5 py-3 text-center text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl">
             <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-white/72">
               <span role="img" aria-label="Location pin">📍</span>
