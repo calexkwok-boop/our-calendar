@@ -57,7 +57,15 @@ const PHOTO_TREATMENTS = Object.freeze({
 const FOOD_HIGHLIGHT_PATTERN = /(food|restaurant|breakfast|brunch|lunch|dinner|coffee|cafe|dessert|bakery|meal|drink|cocktail)/i;
 const HOTEL_HIGHLIGHT_PATTERN = /(hotel|resort|inn|suite|stay|check-in|check in|lobby|room|villa|airbnb)/i;
 
-const hasMeaningfulLocation = (value) => Boolean(String(value || '').trim());
+const hasMeaningfulLocation = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return false;
+  const parsed = new Date(normalized);
+  if (!Number.isNaN(parsed.getTime()) && /^[A-Za-z]{3,9}\s+\d{1,2}(,\s+\d{4})?$/.test(normalized)) {
+    return false;
+  }
+  return true;
+};
 
 const getPhotoLocationCaptionMeta = (highlight) => {
   const location = String(highlight?.location || '').trim();
@@ -92,6 +100,60 @@ const isFoodPhotoHighlight = (highlight) => {
     String(highlight?.location || ''),
   ].join(' ');
   return String(highlight?.mood || '').trim().toLowerCase() === 'food' || FOOD_HIGHLIGHT_PATTERN.test(haystack);
+};
+
+const resolvePhotoSpecificLocation = (photo) => {
+  const candidates = [
+    photo?.location,
+    photo?.place,
+    photo?.place_name,
+    photo?.placeName,
+    photo?.venue,
+    photo?.venue_name,
+    photo?.venueName,
+    photo?.address,
+    photo?.city,
+  ];
+  return candidates
+    .map((value) => String(value || '').trim())
+    .find((value) => hasMeaningfulLocation(value)) || '';
+};
+
+const buildEventPhotoHighlight = ({ moment, photo, photoIndex, copy }) => {
+  const isLeadPhoto = photoIndex === 0;
+  const photoSpecificLocation = resolvePhotoSpecificLocation(photo);
+  const fallbackLocation = isLeadPhoto ? String(moment?.event?.location || '').trim() : '';
+  const resolvedLocation = photoSpecificLocation || fallbackLocation;
+  const resolvedMood = isLeadPhoto
+    ? moment?.mood
+    : (photo?.hasPeople ? 'people' : (photoSpecificLocation ? inferVisualMood({
+        title: '',
+        location: photoSpecificLocation,
+        review: String(photo?.caption || '').trim(),
+        tags: Array.isArray(photo?.tags) ? photo.tags : [],
+      }) : 'scenic'));
+
+  return {
+    type: 'photo',
+    photo: photo?.url,
+    caption: isLeadPhoto ? copy.title : '',
+    subcopy: copy.subcopy,
+    eyebrow: isLeadPhoto ? copy.eyebrow : '',
+    location: resolvedLocation,
+    rating: moment?.rating,
+    mood: resolvedMood,
+  };
+};
+
+const hasMeaningfulPhotoStory = (highlight) => {
+  const caption = String(highlight?.caption || '').trim();
+  const eyebrow = String(highlight?.eyebrow || '').trim();
+  const mood = String(highlight?.mood || '').trim().toLowerCase();
+  const locationCaptionMeta = getPhotoLocationCaptionMeta(highlight);
+  if (mood === 'people') {
+    return Boolean(caption || eyebrow);
+  }
+  return Boolean(locationCaptionMeta);
 };
 
 export default function TripHighlightReel({
@@ -803,16 +865,12 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         fallbackIndex: index + 40,
       });
       moment.photos.slice(1, 4).forEach((photo, photoIndex) => {
-        pushPhotoCandidate({
-          type: 'photo',
-          photo: photo?.url,
-          caption: photoIndex === 0 ? copy.title : '',
-          subcopy: copy.subcopy,
-          eyebrow: photoIndex === 0 ? copy.eyebrow : '',
-          location: moment.event?.location || '',
-          rating: moment.rating,
-          mood: moment.mood,
-        }, {
+        pushPhotoCandidate(buildEventPhotoHighlight({
+          moment,
+          photo,
+          photoIndex: photoIndex + 1,
+          copy,
+        }), {
           score: Number(moment.score || 0) - (photoIndex + 1) * 1.5 - getFoodPhotoPenalty(moment, photoIndex + 1),
           date: photo?.date || photo?.created_at || photo?.createdAt || moment.event?.date,
           time: moment.event?.time,
@@ -851,16 +909,12 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   topMoments.forEach((moment, index) => {
     const copy = buildEventCopy(moment, index);
     moment.photos.forEach((photo, photoIndex) => {
-      pushPhotoCandidate({
-        type: 'photo',
-        photo: photo?.url,
-        caption: photoIndex === 0 ? copy.title : '',
-        subcopy: copy.subcopy,
-        eyebrow: photoIndex === 0 ? copy.eyebrow : '',
-        location: moment.event?.location || '',
-        rating: moment.rating,
-        mood: moment.mood,
-      }, {
+      pushPhotoCandidate(buildEventPhotoHighlight({
+        moment,
+        photo,
+        photoIndex,
+        copy,
+      }), {
         score: Number(moment.score || 0) - photoIndex - getFoodPhotoPenalty(moment, photoIndex),
         date: photo?.date || photo?.created_at || photo?.createdAt || moment.event?.date,
         time: moment.event?.time,
@@ -874,6 +928,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   const selectedPhotoSlides = rankedPhotoCandidates
     .reduce((selected, entry) => {
       if (selected.length >= targetPhotoSlideCount) return selected;
+      if (!hasMeaningfulPhotoStory(entry.slide)) return selected;
       if (isFoodPhotoHighlight(entry.slide) && !getPhotoLocationCaptionMeta(entry.slide)) return selected;
       const foodCount = selected.reduce((count, item) => count + (isFoodPhotoHighlight(item.slide) ? 1 : 0), 0);
       if (isFoodPhotoHighlight(entry.slide) && foodCount >= maxFoodSlides) return selected;
