@@ -84,6 +84,16 @@ const getPhotoLocationCaptionMeta = (highlight) => {
   return null;
 };
 
+const isFoodPhotoHighlight = (highlight) => {
+  const haystack = [
+    String(highlight?.mood || ''),
+    String(highlight?.caption || ''),
+    String(highlight?.eyebrow || ''),
+    String(highlight?.location || ''),
+  ].join(' ');
+  return String(highlight?.mood || '').trim().toLowerCase() === 'food' || FOOD_HIGHLIGHT_PATTERN.test(haystack);
+};
+
 export default function TripHighlightReel({
   trip,
   tripPhotos = [],
@@ -492,7 +502,7 @@ function PhotoSlide({ highlight }) {
       </div>
 
       {locationCaptionMeta ? (
-        <div className="absolute inset-x-5 bottom-24 flex justify-center sm:inset-x-8 sm:bottom-28">
+        <div className="absolute inset-x-5 bottom-40 flex justify-center sm:inset-x-8 sm:bottom-44">
           <div className="max-w-[min(34rem,92vw)] rounded-[24px] border border-white/18 bg-black/42 px-5 py-3 text-center text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl">
             <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-white/72">
               <span>{locationCaptionMeta.label}</span>
@@ -651,6 +661,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   const safeMoments = Array.isArray(moments) ? moments.filter(Boolean) : [];
   const memoryMoments = buildMemoryMoments(tripPhotos);
   const targetPhotoSlideCount = 25;
+  const maxFoodSlides = 4;
   const coverPhoto = memoryMoments[0]?.photo?.url
     || safeMoments.find((moment) => moment.photos[0]?.url)?.photos[0]?.url
     || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200';
@@ -858,9 +869,16 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
     });
   });
 
-  const selectedPhotoSlides = Array.from(candidateByUrl.values())
-    .sort((a, b) => b.score - a.score || a.sortValue - b.sortValue || a.fallbackIndex - b.fallbackIndex)
-    .slice(0, targetPhotoSlideCount)
+  const rankedPhotoCandidates = Array.from(candidateByUrl.values())
+    .sort((a, b) => b.score - a.score || a.sortValue - b.sortValue || a.fallbackIndex - b.fallbackIndex);
+  const selectedPhotoSlides = rankedPhotoCandidates
+    .reduce((selected, entry) => {
+      if (selected.length >= targetPhotoSlideCount) return selected;
+      const foodCount = selected.reduce((count, item) => count + (isFoodPhotoHighlight(item.slide) ? 1 : 0), 0);
+      if (isFoodPhotoHighlight(entry.slide) && foodCount >= maxFoodSlides) return selected;
+      selected.push(entry);
+      return selected;
+    }, [])
     .sort((a, b) => a.sortValue - b.sortValue || b.score - a.score || a.fallbackIndex - b.fallbackIndex)
     .map((entry) => entry.slide);
 
