@@ -128,18 +128,17 @@ const EmptySection = ({ title, subtitle, actions }) => (
 const NotesSection = ({ event, onEdit }) => {
   const notes = normalizeEventNotes(event);
   const sectionTitle = 'Parent Notes';
-  const sectionSubtitle = 'Drop-off details, reminders, and things grown-ups should know';
 
   if (notes) {
     return (
-      <Section title={sectionTitle} subtitle={sectionSubtitle} actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null}>
+      <Section title={sectionTitle} actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null}>
         <div className={`rounded-2xl border px-4 py-4 text-sm leading-6 text-gray-700 dark:text-gray-300 ${kidsDetailSurfaceClassName}`}>{notes}</div>
       </Section>
     );
   }
 
   if (typeof onEdit === 'function') {
-    return <EmptySection title={sectionTitle} subtitle={sectionSubtitle} actions={<ActionPill onClick={onEdit}>Add</ActionPill>} />;
+    return <EmptySection title={sectionTitle} actions={<ActionPill onClick={onEdit}>Add</ActionPill>} />;
   }
 
   return null;
@@ -254,10 +253,9 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
 
       <div className="relative space-y-5 px-6 py-6 sm:px-7">
         {activity ? (
-          <Section
-            title="Main Activity"
-            subtitle="What the kids will be doing"
-            actions={onUpdateEventData && openEditor ? (
+        <Section
+          title="Main Activity"
+          actions={onUpdateEventData && openEditor ? (
               <ActionPill
                 onClick={() =>
                   openEditor({
@@ -292,10 +290,9 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
             </div>
           </Section>
         ) : (
-          <EmptySection
-            title="Main Activity"
-            subtitle="No activity details added yet."
-            actions={onUpdateEventData && openEditor ? (
+        <EmptySection
+          title="Main Activity"
+          actions={onUpdateEventData && openEditor ? (
               <ActionPill
                 onClick={() =>
                   openEditor({
@@ -322,7 +319,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
 
         <Section
           title="Parent Notes"
-          subtitle={parentRequired ? 'Parents should stay' : 'Drop-off friendly'}
           actions={onUpdateEventData && openEditor ? (
             <ActionPill
               onClick={() =>

@@ -122,18 +122,17 @@ const EmptySection = ({ title, subtitle, actions }) => (
 const NotesSection = ({ event, onEdit }) => {
   const notes = normalizeEventNotes(event);
   const sectionTitle = 'Hangout Notes';
-  const sectionSubtitle = 'Anything everyone should know before meeting up';
 
   if (notes) {
     return (
-      <Section title={sectionTitle} subtitle={sectionSubtitle} actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null}>
+      <Section title={sectionTitle} actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null}>
         <div className={`rounded-2xl border px-4 py-4 text-sm leading-6 text-gray-700 dark:text-gray-300 ${hangoutDetailSurfaceClassName}`}>{notes}</div>
       </Section>
     );
   }
 
   if (typeof onEdit === 'function') {
-    return <EmptySection title={sectionTitle} subtitle={sectionSubtitle} actions={<ActionPill onClick={onEdit}>Add</ActionPill>} />;
+    return <EmptySection title={sectionTitle} actions={<ActionPill onClick={onEdit}>Add</ActionPill>} />;
   }
 
   return null;
@@ -282,7 +281,6 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
       <div className="relative space-y-5 px-6 py-6 sm:px-7">
         <Section
           title="The Plan"
-          subtitle={reservationName ? `Table under: ${reservationName}` : 'Walk-in or meetup spot'}
           actions={onUpdateEventData && openEditor ? (
             <ActionPill
               onClick={() =>

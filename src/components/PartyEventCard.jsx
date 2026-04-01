@@ -225,7 +225,6 @@ const EmptySection = ({ title, subtitle, actions }) => (
 const NotesSection = ({ event, onEdit, onUpdateEventData, openEditor }) => {
   const notes = normalizeEventNotes(event);
   const sectionTitle = 'Party Notes';
-  const emptySubtitle = 'Add house rules, parking info, or anything guests should know.';
   const openNotesEditor =
     onUpdateEventData && openEditor
       ? () =>
@@ -251,7 +250,7 @@ const NotesSection = ({ event, onEdit, onUpdateEventData, openEditor }) => {
 
   if (notes) {
     return (
-      <Section title={sectionTitle} subtitle="House rules, parking, and the vibe" actions={typeof openNotesEditor === 'function' ? <ActionPill onClick={openNotesEditor}>Edit</ActionPill> : null}>
+      <Section title={sectionTitle} actions={typeof openNotesEditor === 'function' ? <ActionPill onClick={openNotesEditor}>Edit</ActionPill> : null}>
         <div className="relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 px-4 py-4 text-sm leading-6 text-gray-700 dark:border-white/10 dark:bg-white/[0.045] dark:text-gray-300">
           <PartyTileConfetti />
           <div className="relative">{notes}</div>
@@ -261,7 +260,7 @@ const NotesSection = ({ event, onEdit, onUpdateEventData, openEditor }) => {
   }
 
   if (typeof openNotesEditor === 'function') {
-    return <EmptySection title={sectionTitle} subtitle={emptySubtitle} actions={<ActionPill onClick={openNotesEditor}>Add</ActionPill>} />;
+    return <EmptySection title={sectionTitle} actions={<ActionPill onClick={openNotesEditor}>Add</ActionPill>} />;
   }
 
   return null;

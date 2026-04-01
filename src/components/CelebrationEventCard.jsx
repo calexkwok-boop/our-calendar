@@ -212,22 +212,17 @@ const NotesSection = ({ event, onEdit, tone }) => {
     : tone?.kind === 'wedding'
       ? 'Celebration Notes'
       : 'Event Notes';
-  const sectionSubtitle = tone?.kind === 'baby'
-    ? 'Registry reminders, arrival tips, and sweet little details'
-    : tone?.kind === 'wedding'
-      ? 'Ceremony details, timing notes, and guest reminders'
-      : 'Everything guests should know before they arrive';
 
   if (notes) {
     return (
-      <Section title={sectionTitle} subtitle={sectionSubtitle} actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null} tone={tone}>
+      <Section title={sectionTitle} actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null} tone={tone}>
         <div className={`rounded-2xl border px-4 py-4 text-sm leading-6 ${tone?.detailSurface || 'border-fuchsia-100 bg-white dark:border-white/10 dark:bg-white/[0.05]'} text-gray-700 dark:text-gray-300`}>{notes}</div>
       </Section>
     );
   }
 
   if (typeof onEdit === 'function') {
-    return <EmptySection title={sectionTitle} subtitle={sectionSubtitle} actions={<ActionPill onClick={onEdit}>Add</ActionPill>} tone={tone} />;
+    return <EmptySection title={sectionTitle} actions={<ActionPill onClick={onEdit}>Add</ActionPill>} tone={tone} />;
   }
 
   return null;
@@ -424,10 +419,9 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
             </div>
           </a>
         ) : (
-          <EmptySection
-            title="Gift Registry"
-            subtitle="No registry linked yet."
-            tone={tone}
+        <EmptySection
+          title="Gift Registry"
+          tone={tone}
             actions={onUpdateEventData && openEditor ? (
               <ActionPill
                 onClick={() =>
@@ -448,7 +442,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
 
         <Section
           title="Event Details"
-          subtitle={dressCode ? `Dress code: ${dressCode}` : 'Details for the celebration'}
           tone={tone}
           actions={onUpdateEventData && openEditor ? (
             <ActionPill
@@ -486,7 +479,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
         {schedule.length > 0 ? (
           <Section
             title="Schedule"
-            subtitle={`${schedule.length} item${schedule.length === 1 ? '' : 's'} planned`}
             tone={tone}
             actions={onUpdateEventData && openEditor ? (
               <ActionPill
@@ -535,7 +527,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
         ) : (
           <EmptySection
             title="Schedule"
-            subtitle="No timeline added yet."
             tone={tone}
             actions={onUpdateEventData && openEditor ? (
               <ActionPill

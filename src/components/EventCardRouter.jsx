@@ -846,7 +846,6 @@ const NotesSection = ({ event, onEdit }) => {
     return (
       <EmptySection
         title="Notes"
-        subtitle="No notes added yet."
         actions={<ActionPill onClick={onEdit}>Add</ActionPill>}
       />
     );
@@ -859,7 +858,7 @@ const InviteeRow = ({ event, label = 'Invited' }) => {
   const invitees = Array.isArray(event?.invitees) ? event.invitees : [];
 
   return (
-    <Section title={label} subtitle={`${invitees.length} ${invitees.length === 1 ? 'person' : 'people'}`}>
+    <Section title={label}>
       <div className="flex flex-wrap gap-2.5">
         {invitees.length === 0 ? (
           <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-4 py-3.5 text-sm text-gray-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-400">
@@ -998,7 +997,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
       {registryLink ? (
         <Section
           title="Gift Registry"
-          subtitle="Guests can open the registry directly."
           actions={(
             <>
               <ActionPill href={registryLink}>Open registry</ActionPill>
@@ -1030,7 +1028,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
       ) : (
         <EmptySection
           title="Gift Registry"
-          subtitle="No registry or gift link added yet."
           actions={onUpdateEventData && openEditor ? (
             <ActionPill
               onClick={() => openEditor({
@@ -1055,7 +1052,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
       {schedule.length > 0 ? (
         <Section
           title="Schedule"
-          subtitle={`${schedule.length} timeline item${schedule.length === 1 ? '' : 's'}`}
           actions={onUpdateEventData && openEditor ? (
             <ActionPill
               onClick={() => openEditor({
@@ -1100,7 +1096,6 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
       ) : (
         <EmptySection
           title="Schedule"
-          subtitle="No timeline added yet."
           actions={onUpdateEventData && openEditor ? (
             <ActionPill
               onClick={() => openEditor({
@@ -1168,7 +1163,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
       {activity ? (
         <Section
           title="Main Activity"
-          subtitle="What the kids will be doing"
           actions={onUpdateEventData && openEditor ? (
             <ActionPill
               onClick={() => openEditor({
@@ -1193,7 +1187,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
       ) : (
         <EmptySection
           title="Main Activity"
-          subtitle="No activity details added yet."
           actions={onUpdateEventData && openEditor ? (
             <ActionPill
               onClick={() => openEditor({
@@ -1217,7 +1210,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
 
       <Section
         title="Parent Notes"
-        subtitle={parentRequired ? 'Parents should stay' : 'Drop-off friendly'}
         actions={onUpdateEventData && openEditor ? (
           <ActionPill
             onClick={() => openEditor({
@@ -1287,7 +1279,6 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
     >
       <Section
         title="Plan"
-        subtitle={reservationName ? `Reservation under ${reservationName}` : 'No reservation note yet'}
         actions={onUpdateEventData && openEditor ? (
           <ActionPill
             onClick={() => openEditor({
