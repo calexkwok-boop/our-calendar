@@ -395,7 +395,7 @@ export default function TripHighlightReel({
       </div>
 
       {/* PREMIUM PROGRESS BAR - Subtle line */}
-      <div className="absolute bottom-20 left-0 right-0 px-12">
+      <div className="absolute bottom-28 left-0 right-0 px-12">
         <div className="h-0.5 overflow-hidden rounded-full bg-white/20">
           <div
             className="h-full bg-white shadow-sm shadow-white/50 transition-all duration-300 ease-out"
@@ -959,6 +959,11 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   rankedPhotoCandidates.forEach((entry) => {
     if (selectedEntries.length >= targetPhotoSlideCount) return;
     if (isFoodPhotoHighlight(entry.slide)) return;
+    trySelectEntry(entry, { requireVisibleStory: false, requireFoodCaption: false });
+  });
+
+  rankedPhotoCandidates.forEach((entry) => {
+    if (selectedEntries.length >= targetPhotoSlideCount) return;
     trySelectEntry(entry, { requireVisibleStory: false, requireFoodCaption: false });
   });
 
