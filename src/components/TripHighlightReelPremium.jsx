@@ -42,12 +42,42 @@ const PHOTO_TREATMENTS = Object.freeze({
     vignette: 'radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.10) 100%)',
     kenBurns: 'zoom-out',
   },
+  hotel: {
+    filter: 'contrast(1.01) saturate(0.98) brightness(1.0) sepia(0.02)',
+    vignette: 'radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.14) 100%)',
+    kenBurns: 'zoom-out',
+  },
   people: {
     filter: 'saturate(1.06) contrast(1.00) brightness(1.01)',
     vignette: 'radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.08) 100%)',
     kenBurns: 'zoom-in-slow',
   },
 });
+
+const FOOD_HIGHLIGHT_PATTERN = /(food|restaurant|breakfast|brunch|lunch|dinner|coffee|cafe|dessert|bakery|meal|drink|cocktail)/i;
+const HOTEL_HIGHLIGHT_PATTERN = /(hotel|resort|inn|suite|stay|check-in|check in|lobby|room|villa|airbnb)/i;
+
+const hasMeaningfulLocation = (value) => Boolean(String(value || '').trim());
+
+const getPhotoLocationCaptionMeta = (highlight) => {
+  const location = String(highlight?.location || '').trim();
+  if (!hasMeaningfulLocation(location)) return null;
+
+  const haystack = [
+    String(highlight?.mood || ''),
+    String(highlight?.caption || ''),
+    String(highlight?.eyebrow || ''),
+    location,
+  ].join(' ');
+
+  if (String(highlight?.mood || '').trim().toLowerCase() === 'food' || FOOD_HIGHLIGHT_PATTERN.test(haystack)) {
+    return { label: 'Food Stop', location };
+  }
+  if (String(highlight?.mood || '').trim().toLowerCase() === 'hotel' || HOTEL_HIGHLIGHT_PATTERN.test(haystack)) {
+    return { label: 'Stay', location };
+  }
+  return null;
+};
 
 export default function TripHighlightReel({
   trip,
@@ -424,8 +454,7 @@ function TitleSlide({ highlight }) {
 function PhotoSlide({ highlight }) {
   const treatment = PHOTO_TREATMENTS[highlight.mood] || PHOTO_TREATMENTS.scenic;
   const caption = String(highlight.caption || '').trim();
-  const location = String(highlight.location || '').trim();
-  const showFoodLocationCaption = highlight.mood === 'food' && Boolean(location);
+  const locationCaptionMeta = getPhotoLocationCaptionMeta(highlight);
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black">
@@ -457,14 +486,14 @@ function PhotoSlide({ highlight }) {
         />
       </div>
 
-      {showFoodLocationCaption ? (
+      {locationCaptionMeta ? (
         <div className="absolute inset-x-5 bottom-8 flex justify-center sm:inset-x-8 sm:bottom-10">
           <div className="max-w-[min(34rem,92vw)] rounded-[24px] border border-white/18 bg-black/42 px-5 py-3 text-center text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl">
             <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-white/72">
-              <span>Food Stop</span>
+              <span>{locationCaptionMeta.label}</span>
             </div>
             <div className="mt-2 text-[15px] font-medium text-white/96 sm:text-[17px]">
-              {location}
+              {locationCaptionMeta.location}
             </div>
           </div>
         </div>
@@ -1092,7 +1121,7 @@ const normalizeEventPhotos = (photos) => (
 );
 
 const pickDefaultTrackId = (events, groupRatingsByEventId, currentUserId) => {
-  const scores = { scenic: 0, nightlife: 0, food: 0, reflective: 0 };
+  const scores = { scenic: 0, nightlife: 0, food: 0, reflective: 0, hotel: 0 };
   (Array.isArray(events) ? events : []).forEach((event) => {
     const title = String(event?.title || '').toLowerCase();
     const location = String(event?.location || '').toLowerCase();
@@ -1102,7 +1131,8 @@ const pickDefaultTrackId = (events, groupRatingsByEventId, currentUserId) => {
     const rating = getEffectiveRating(event, groupRatingsByEventId, currentUserId);
     if (/(sunset|sunrise|view|beach|coast|mountain|lake|hike|museum|landmark|scenic)/.test(haystack)) scores.scenic += 2 + rating * 0.2;
     if (/(bar|club|cocktail|night|dance|party|dj|late)/.test(haystack)) scores.nightlife += 2 + rating * 0.2;
-    if (/(food|restaurant|breakfast|brunch|lunch|dinner|coffee|cafe|dessert|bakery)/.test(haystack)) scores.food += 2 + rating * 0.2;
+    if (FOOD_HIGHLIGHT_PATTERN.test(haystack)) scores.food += 2 + rating * 0.2;
+    if (HOTEL_HIGHLIGHT_PATTERN.test(haystack)) scores.hotel += 2 + rating * 0.2;
     if (/(spa|quiet|journal|walk|park|morning|reflect|temple|cathedral)/.test(haystack)) scores.reflective += 2 + rating * 0.2;
   });
   const topVibe = Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] || 'scenic';
@@ -1128,7 +1158,8 @@ const inferVisualMood = (event) => {
     ...(Array.isArray(event?.tags) ? event.tags : []),
   ].join(' ').toLowerCase();
   if (/(bar|club|cocktail|night|dance|party|dj|late)/.test(haystack)) return 'nightlife';
-  if (/(food|restaurant|breakfast|brunch|lunch|dinner|coffee|cafe|dessert|bakery)/.test(haystack)) return 'food';
+  if (FOOD_HIGHLIGHT_PATTERN.test(haystack)) return 'food';
+  if (HOTEL_HIGHLIGHT_PATTERN.test(haystack)) return 'hotel';
   if (/(spa|quiet|journal|walk|park|morning|reflect|temple|cathedral)/.test(haystack)) return 'reflective';
   return 'scenic';
 };
@@ -1137,6 +1168,7 @@ const getTextTreatment = ({ event }) => {
   const mood = inferVisualMood(event);
   if (mood === 'nightlife') return { background: 'linear-gradient(135deg, #581c87 0%, #0f172a 100%)' };
   if (mood === 'food') return { background: 'linear-gradient(135deg, #f97316 0%, #be185d 100%)' };
+  if (mood === 'hotel') return { background: 'linear-gradient(135deg, #0f766e 0%, #1e3a8a 100%)' };
   if (mood === 'reflective') return { background: 'linear-gradient(135deg, #334155 0%, #0f172a 100%)' };
   return { background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' };
 };
