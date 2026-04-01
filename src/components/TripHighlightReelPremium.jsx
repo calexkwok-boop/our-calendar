@@ -196,6 +196,7 @@ export default function TripHighlightReel({
   events = [],
   groupRatingsByEventId = {},
   currentUserId,
+  selectedPhotoMode = false,
   onClose,
   onShare,
   onPublish,
@@ -215,10 +216,8 @@ export default function TripHighlightReel({
 
   // Build highlights with intelligent slide generation
   const highlights = useMemo(() => {
-    // Your existing buildScoredMoments, buildPremiumSlides, etc. logic here
-    // For now, using placeholder
-    return buildHighlightSlides(trip, tripPhotos, events, groupRatingsByEventId, currentUserId);
-  }, [trip, tripPhotos, events, groupRatingsByEventId, currentUserId]);
+    return buildHighlightSlides(trip, tripPhotos, events, groupRatingsByEventId, currentUserId, { selectedPhotoMode });
+  }, [trip, tripPhotos, events, groupRatingsByEventId, currentUserId, selectedPhotoMode]);
 
   const safeHighlights = useMemo(() => (
     Array.isArray(highlights) && highlights.length > 0 ? highlights : buildEmergencySlides(trip)
@@ -692,9 +691,9 @@ function StatBubble({ icon, value, label, large }) {
   );
 }
 
-const buildHighlightSlides = (trip, tripPhotos, events, groupRatingsByEventId, currentUserId) => {
+const buildHighlightSlides = (trip, tripPhotos, events, groupRatingsByEventId, currentUserId, options = {}) => {
   const normalizedMoments = buildScoredMoments(events, groupRatingsByEventId, currentUserId);
-  const slides = buildPremiumSlides(trip, normalizedMoments, events, tripPhotos);
+  const slides = buildPremiumSlides(trip, normalizedMoments, events, tripPhotos, options);
   if (Array.isArray(slides) && slides.length > 0) return slides;
   const fallbackSlides = buildFallbackSlides(trip, events, tripPhotos);
   return Array.isArray(fallbackSlides) && fallbackSlides.length > 0 ? fallbackSlides : buildEmergencySlides(trip);
@@ -753,11 +752,12 @@ const buildScoredMoments = (events, groupRatingsByEventId, currentUserId) => (
     .sort((a, b) => b.score - a.score)
 );
 
-const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
+const buildPremiumSlides = (trip, moments, events, tripPhotos, options = {}) => {
   const safeMoments = Array.isArray(moments) ? moments.filter(Boolean) : [];
   const memoryMoments = buildMemoryMoments(tripPhotos);
-  const targetPhotoSlideCount = 25;
-  const maxFoodSlides = 4;
+  const isSelectedPhotoMode = Boolean(options?.selectedPhotoMode);
+  const targetPhotoSlideCount = isSelectedPhotoMode ? 28 : 25;
+  const maxFoodSlides = isSelectedPhotoMode ? 6 : 4;
   const coverPhoto = memoryMoments[0]?.photo?.url
     || safeMoments.find((moment) => moment.photos[0]?.url)?.photos[0]?.url
     || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200';
@@ -989,12 +989,21 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   rankedPhotoCandidates.forEach((entry) => {
     if (selectedEntries.length >= targetPhotoSlideCount) return;
     if (isFoodPhotoHighlight(entry.slide)) return;
-    trySelectEntry(entry, { requireVisibleStory: true, requireFoodCaption: false, allowUncaptionedNonPeople: false });
+    trySelectEntry(entry, {
+      requireVisibleStory: !isSelectedPhotoMode,
+      requireFoodCaption: false,
+      allowUncaptionedNonPeople: isSelectedPhotoMode,
+    });
   });
 
   rankedPhotoCandidates.forEach((entry) => {
     if (selectedEntries.length >= targetPhotoSlideCount) return;
-    trySelectEntry(entry, { requireVisibleStory: false, requireFoodCaption: false, peopleOnly: true, allowUncaptionedNonPeople: true });
+    trySelectEntry(entry, {
+      requireVisibleStory: false,
+      requireFoodCaption: !isSelectedPhotoMode,
+      peopleOnly: !isSelectedPhotoMode,
+      allowUncaptionedNonPeople: isSelectedPhotoMode,
+    });
   });
 
   const selectedPhotoSlides = selectedEntries

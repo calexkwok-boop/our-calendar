@@ -2335,6 +2335,7 @@ function App() {
   const [tripHighlightsSlides, setTripHighlightsSlides] = useState([]);
   const [showTripHighlightsModal, setShowTripHighlightsModal] = useState(false);
   const [tripHighlightsOpenToken, setTripHighlightsOpenToken] = useState(0);
+  const [tripHighlightSelectedPhotoIds, setTripHighlightSelectedPhotoIds] = useState([]);
   const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
   const [deletedPhotosNoteId, setDeletedPhotosNoteId] = useState(null);
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline' | 'users'
@@ -18051,9 +18052,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   };
   const openTripHighlights = () => {
     if (!activeSubCalendar) return;
+    setTripHighlightSelectedPhotoIds([]);
     setTripHighlightsSlides([]);
     setTripHighlightsOpenToken((prev) => prev + 1);
     setShowTripHighlightsModal(true);
+  };
+  const openTripHighlightsFromSelectedPhotos = () => {
+    if (!activeSubCalendar) return;
+    const selected = (tripPhotos || []).filter((photo) => selectedPhotoIds.includes(photo.id));
+    if (selected.length === 0) return;
+    setTripHighlightSelectedPhotoIds(selected.map((photo) => String(photo?.id || '')).filter(Boolean));
+    setTripHighlightsSlides([]);
+    setTripHighlightsOpenToken((prev) => prev + 1);
+    setShowTripHighlightsModal(true);
+    closePhotoSelectionMode();
   };
   const shareTripHighlightsWithFriends = async () => {
     const tripId = String(activeSubCalendar?.id || '').trim();
@@ -18193,18 +18205,30 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       endDate: getSubCalEndRaw(activeSubCalendar),
     };
   }, [activeSubCalendar]);
+  const tripHighlightSourcePhotos = useMemo(() => {
+    const selectedIds = new Set((tripHighlightSelectedPhotoIds || []).map((id) => String(id || '')).filter(Boolean));
+    if (selectedIds.size === 0) return tripPhotos || [];
+    return (tripPhotos || []).filter((photo) => selectedIds.has(String(photo?.id || '')));
+  }, [tripPhotos, tripHighlightSelectedPhotoIds]);
   const tripHighlightEvents = useMemo(() => (
-    Object.entries(subCalendarEvents || {}).flatMap(([dk, arr]) => (
-      (arr || []).map((ev) => ({
-        ...ev,
-        date: dk,
-        rating: Number(subCalEventRatings[ev.id] || 0),
-        tags: subCalEventTagsMap[ev.id] || [],
-        review: String(subCalEventReviews[ev.id] || ''),
-        photos: (tripPhotos || []).filter((photo) => String(photo?.event_id || '') === String(ev?.id || '')),
-      }))
-    ))
-  ), [subCalendarEvents, subCalEventRatings, subCalEventTagsMap, subCalEventReviews, tripPhotos]);
+    (() => {
+      const selectedIds = new Set((tripHighlightSelectedPhotoIds || []).map((id) => String(id || '')).filter(Boolean));
+      const shouldFilterPhotos = selectedIds.size > 0;
+      return Object.entries(subCalendarEvents || {}).flatMap(([dk, arr]) => (
+        (arr || []).map((ev) => ({
+          ...ev,
+          date: dk,
+          rating: Number(subCalEventRatings[ev.id] || 0),
+          tags: subCalEventTagsMap[ev.id] || [],
+          review: String(subCalEventReviews[ev.id] || ''),
+          photos: (tripPhotos || []).filter((photo) => (
+            String(photo?.event_id || '') === String(ev?.id || '')
+            && (!shouldFilterPhotos || selectedIds.has(String(photo?.id || '')))
+          )),
+        }))
+      ));
+    })()
+  ), [subCalendarEvents, subCalEventRatings, subCalEventTagsMap, subCalEventReviews, tripPhotos, tripHighlightSelectedPhotoIds]);
   const parseNotificationTimestamp = (value) => {
     const raw = String(value || '').trim();
     if (!raw) return null;
@@ -28358,11 +28382,15 @@ transform: translateY(0);
       <TripHighlightReel
         key={`${String(activeSubCalendar?.id || 'trip')}-${tripHighlightsOpenToken}`}
         trip={tripHighlightTrip}
-        tripPhotos={tripPhotos}
+        tripPhotos={tripHighlightSourcePhotos}
         events={tripHighlightEvents}
         groupRatingsByEventId={subCalEventGroupRatings}
         currentUserId={user?.id}
-        onClose={() => setShowTripHighlightsModal(false)}
+        selectedPhotoMode={tripHighlightSelectedPhotoIds.length > 0}
+        onClose={() => {
+          setShowTripHighlightsModal(false);
+          setTripHighlightSelectedPhotoIds([]);
+        }}
         onShare={(slides) => {
           setTripHighlightsSlides(Array.isArray(slides) ? slides : []);
           shareTripHighlightsWithFriends();
@@ -29848,6 +29876,13 @@ transform: translateY(0);
                       Attach to event
                     </button>
                   )}
+                  <button
+                    onClick={openTripHighlightsFromSelectedPhotos}
+                    disabled={selectedPhotoIds.length === 0}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-500 text-white disabled:opacity-40"
+                  >
+                    Create Highlight Reel
+                  </button>
                   <button
                     onClick={saveSelectedPhotosToDevice}
                     disabled={selectedPhotoIds.length === 0}
