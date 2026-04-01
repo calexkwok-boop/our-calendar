@@ -163,6 +163,22 @@ const buildEventPhotoHighlight = ({ moment, photo, photoIndex, copy }) => {
   };
 };
 
+const getPhotoGroupPriorityBoost = (photo) => {
+  const peopleCount = Number(
+    photo?.peopleCount
+    || photo?.faceCount
+    || (Array.isArray(photo?.people) ? photo.people.length : 0)
+    || (Array.isArray(photo?.taggedPeople) ? photo.taggedPeople.length : 0)
+    || (Array.isArray(photo?.tagged_people) ? photo.tagged_people.length : 0)
+    || 0
+  );
+  if (peopleCount >= 4) return 20;
+  if (peopleCount === 3) return 16;
+  if (peopleCount === 2) return 12;
+  if (photo?.hasPeople) return 6;
+  return 0;
+};
+
 const hasMeaningfulPhotoStory = (highlight) => {
   const caption = String(highlight?.caption || '').trim();
   const eyebrow = String(highlight?.eyebrow || '').trim();
@@ -803,7 +819,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
       rating: 0,
       mood: leadMemory.photo?.hasPeople ? 'people' : 'reflective',
     }, {
-      score: Number(leadMemory.score || 0) + 12,
+      score: Number(leadMemory.score || 0) + 12 + getPhotoGroupPriorityBoost(leadMemory.photo),
       date: leadMemory.photo?.date,
       fallbackIndex: 0,
     });
@@ -839,7 +855,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         rating: 0,
         mood: memory.photo?.hasPeople ? 'people' : (index % 2 === 0 ? 'reflective' : 'scenic'),
       }, {
-        score: Number(memory.score || 0),
+        score: Number(memory.score || 0) + getPhotoGroupPriorityBoost(memory.photo),
         date: memory.photo?.date,
         fallbackIndex: index + 1,
       });
@@ -855,7 +871,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
           rating: 0,
           mood: extraMemory.photo?.hasPeople ? 'people' : 'scenic',
         }, {
-          score: Number(extraMemory.score || 0) - 1,
+          score: Number(extraMemory.score || 0) - 1 + getPhotoGroupPriorityBoost(extraMemory.photo),
           date: extraMemory.photo?.date,
           fallbackIndex: index + 20,
         });
@@ -873,7 +889,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         photoIndex: 0,
         copy,
       }), {
-        score: Number(moment.score || 0) + 6 - getFoodPhotoPenalty(moment, 0),
+        score: Number(moment.score || 0) + 6 - getFoodPhotoPenalty(moment, 0) + getPhotoGroupPriorityBoost(moment.photos[0]),
         date: moment.event?.date || moment.photos[0]?.date || moment.photos[0]?.created_at || moment.photos[0]?.createdAt,
         time: moment.event?.time,
         fallbackIndex: index + 40,
@@ -885,7 +901,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
           photoIndex: photoIndex + 1,
           copy,
         }), {
-          score: Number(moment.score || 0) - (photoIndex + 1) * 1.5 - getFoodPhotoPenalty(moment, photoIndex + 1),
+          score: Number(moment.score || 0) - (photoIndex + 1) * 1.5 - getFoodPhotoPenalty(moment, photoIndex + 1) + getPhotoGroupPriorityBoost(photo),
           date: photo?.date || photo?.created_at || photo?.createdAt || moment.event?.date,
           time: moment.event?.time,
           fallbackIndex: index + 60 + photoIndex,
@@ -914,7 +930,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
       rating: 0,
       mood: memory.photo?.hasPeople ? 'people' : 'scenic',
     }, {
-      score: Number(memory.score || 0) - 2,
+      score: Number(memory.score || 0) - 2 + getPhotoGroupPriorityBoost(memory.photo),
       date: memory.photo?.date,
       fallbackIndex: index + 100,
     });
@@ -929,7 +945,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
         photoIndex,
         copy,
       }), {
-        score: Number(moment.score || 0) - photoIndex - getFoodPhotoPenalty(moment, photoIndex),
+        score: Number(moment.score || 0) - photoIndex - getFoodPhotoPenalty(moment, photoIndex) + getPhotoGroupPriorityBoost(photo),
         date: photo?.date || photo?.created_at || photo?.createdAt || moment.event?.date,
         time: moment.event?.time,
         fallbackIndex: index + 140 + photoIndex,
@@ -948,7 +964,10 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
     if (selectedPhotoUrls.has(entry.slide.photo)) return false;
 
     const isFoodSlide = isFoodPhotoHighlight(entry.slide);
+    const slideMood = String(entry.slide?.mood || '').trim().toLowerCase();
     if (options.requireVisibleStory && !hasMeaningfulPhotoStory(entry.slide)) return false;
+    if (options.peopleOnly && slideMood !== 'people') return false;
+    if (!options.allowUncaptionedNonPeople && slideMood !== 'people' && !getPhotoLocationCaptionMeta(entry.slide)) return false;
     if (isFoodSlide && options.requireFoodCaption && !getPhotoLocationCaptionMeta(entry.slide)) return false;
     if (isFoodSlide && foodSlideCount >= maxFoodSlides) return false;
 
@@ -959,23 +978,23 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
   };
 
   rankedPhotoCandidates.forEach((entry) => {
-    trySelectEntry(entry, { requireVisibleStory: true, requireFoodCaption: true });
+    trySelectEntry(entry, { requireVisibleStory: true, requireFoodCaption: true, allowUncaptionedNonPeople: false });
   });
 
   rankedPhotoCandidates.forEach((entry) => {
     if (selectedEntries.length >= targetPhotoSlideCount) return;
-    trySelectEntry(entry, { requireVisibleStory: false, requireFoodCaption: true });
+    trySelectEntry(entry, { requireVisibleStory: false, requireFoodCaption: true, peopleOnly: true, allowUncaptionedNonPeople: true });
   });
 
   rankedPhotoCandidates.forEach((entry) => {
     if (selectedEntries.length >= targetPhotoSlideCount) return;
     if (isFoodPhotoHighlight(entry.slide)) return;
-    trySelectEntry(entry, { requireVisibleStory: false, requireFoodCaption: false });
+    trySelectEntry(entry, { requireVisibleStory: true, requireFoodCaption: false, allowUncaptionedNonPeople: false });
   });
 
   rankedPhotoCandidates.forEach((entry) => {
     if (selectedEntries.length >= targetPhotoSlideCount) return;
-    trySelectEntry(entry, { requireVisibleStory: false, requireFoodCaption: false });
+    trySelectEntry(entry, { requireVisibleStory: false, requireFoodCaption: false, peopleOnly: true, allowUncaptionedNonPeople: true });
   });
 
   const selectedPhotoSlides = selectedEntries
@@ -986,16 +1005,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
     slides.push(...selectedPhotoSlides);
   }
 
-  if (topMemoryMoments[0]) {
-    slides.push({
-      type: 'spotlight',
-      eyebrow: 'Favorite Photo',
-      title: topMemoryMoments[0].title,
-      caption: 'The kind of memory you keep coming back to.',
-      subcopy: topMemoryMoments[0].subcopy,
-      background: 'linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%)',
-    });
-  } else if (favoriteMoment) {
+  if (favoriteMoment) {
     slides.push({
       type: 'spotlight',
       eyebrow: 'Favorite Moment',
