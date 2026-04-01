@@ -122,16 +122,23 @@ const resolvePhotoSpecificLocation = (photo) => {
 const buildEventPhotoHighlight = ({ moment, photo, photoIndex, copy }) => {
   const isLeadPhoto = photoIndex === 0;
   const photoSpecificLocation = resolvePhotoSpecificLocation(photo);
-  const fallbackLocation = isLeadPhoto ? String(moment?.event?.location || '').trim() : '';
-  const resolvedLocation = photoSpecificLocation || fallbackLocation;
-  const resolvedMood = isLeadPhoto
-    ? moment?.mood
-    : (photo?.hasPeople ? 'people' : (photoSpecificLocation ? inferVisualMood({
+  const inferredPhotoMood = photo?.hasPeople
+    ? 'people'
+    : inferVisualMood({
         title: '',
         location: photoSpecificLocation,
         review: String(photo?.caption || '').trim(),
         tags: Array.isArray(photo?.tags) ? photo.tags : [],
-      }) : 'scenic'));
+      });
+  const resolvedMood = isLeadPhoto
+    ? ((photoSpecificLocation || String(photo?.caption || '').trim() || (Array.isArray(photo?.tags) && photo.tags.length > 0))
+        ? inferredPhotoMood
+        : (moment?.mood || 'scenic'))
+    : inferredPhotoMood;
+  const fallbackLocation = isLeadPhoto && ['food', 'hotel'].includes(String(resolvedMood || '').trim().toLowerCase())
+    ? String(moment?.event?.location || '').trim()
+    : '';
+  const resolvedLocation = photoSpecificLocation || fallbackLocation;
 
   return {
     type: 'photo',
@@ -564,7 +571,7 @@ function PhotoSlide({ highlight }) {
       </div>
 
       {locationCaptionMeta ? (
-        <div className="absolute inset-x-5 bottom-44 flex justify-center sm:inset-x-8 sm:bottom-48">
+        <div className="absolute inset-x-5 bottom-48 flex justify-center sm:inset-x-8 sm:bottom-52">
           <div className="max-w-[min(34rem,92vw)] rounded-[24px] border border-white/18 bg-black/42 px-5 py-3 text-center text-white shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl">
             <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-white/72">
               <span role="img" aria-label="Location pin">📍</span>
@@ -849,16 +856,12 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
     const primaryPhoto = moment.photos[0]?.url;
     const copy = buildEventCopy(moment, index);
     if (primaryPhoto) {
-      pushPhotoCandidate({
-        type: 'photo',
-        photo: primaryPhoto,
-        caption: copy.title,
-        subcopy: copy.subcopy,
-        eyebrow: copy.eyebrow,
-        location: moment.event?.location || '',
-        rating: moment.rating,
-        mood: moment.mood,
-      }, {
+      pushPhotoCandidate(buildEventPhotoHighlight({
+        moment,
+        photo: moment.photos[0],
+        photoIndex: 0,
+        copy,
+      }), {
         score: Number(moment.score || 0) + 6 - getFoodPhotoPenalty(moment, 0),
         date: moment.event?.date || moment.photos[0]?.date || moment.photos[0]?.created_at || moment.photos[0]?.createdAt,
         time: moment.event?.time,
