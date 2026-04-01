@@ -395,7 +395,7 @@ export default function TripHighlightReel({
       </div>
 
       {/* PREMIUM PROGRESS BAR - Subtle line */}
-      <div className="absolute bottom-16 left-0 right-0 px-12">
+      <div className="absolute bottom-20 left-0 right-0 px-12">
         <div className="h-0.5 overflow-hidden rounded-full bg-white/20">
           <div
             className="h-full bg-white shadow-sm shadow-white/50 transition-all duration-300 ease-out"
@@ -440,7 +440,7 @@ export default function TripHighlightReel({
         </div>
 
         {/* Slide counter - Editorial typography */}
-        <div className="mt-6 text-center">
+        <div className="mt-8 text-center">
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
             {currentSlide + 1} of {safeHighlights.length}
           </div>
@@ -928,16 +928,41 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos) => {
 
   const rankedPhotoCandidates = Array.from(candidateByUrl.values())
     .sort((a, b) => b.score - a.score || a.sortValue - b.sortValue || a.fallbackIndex - b.fallbackIndex);
-  const selectedPhotoSlides = rankedPhotoCandidates
-    .reduce((selected, entry) => {
-      if (selected.length >= targetPhotoSlideCount) return selected;
-      if (!hasMeaningfulPhotoStory(entry.slide)) return selected;
-      if (isFoodPhotoHighlight(entry.slide) && !getPhotoLocationCaptionMeta(entry.slide)) return selected;
-      const foodCount = selected.reduce((count, item) => count + (isFoodPhotoHighlight(item.slide) ? 1 : 0), 0);
-      if (isFoodPhotoHighlight(entry.slide) && foodCount >= maxFoodSlides) return selected;
-      selected.push(entry);
-      return selected;
-    }, [])
+  const selectedEntries = [];
+  const selectedPhotoUrls = new Set();
+  let foodSlideCount = 0;
+  const trySelectEntry = (entry, options = {}) => {
+    if (!entry?.slide?.photo) return false;
+    if (selectedEntries.length >= targetPhotoSlideCount) return false;
+    if (selectedPhotoUrls.has(entry.slide.photo)) return false;
+
+    const isFoodSlide = isFoodPhotoHighlight(entry.slide);
+    if (options.requireVisibleStory && !hasMeaningfulPhotoStory(entry.slide)) return false;
+    if (isFoodSlide && options.requireFoodCaption && !getPhotoLocationCaptionMeta(entry.slide)) return false;
+    if (isFoodSlide && foodSlideCount >= maxFoodSlides) return false;
+
+    selectedEntries.push(entry);
+    selectedPhotoUrls.add(entry.slide.photo);
+    if (isFoodSlide) foodSlideCount += 1;
+    return true;
+  };
+
+  rankedPhotoCandidates.forEach((entry) => {
+    trySelectEntry(entry, { requireVisibleStory: true, requireFoodCaption: true });
+  });
+
+  rankedPhotoCandidates.forEach((entry) => {
+    if (selectedEntries.length >= targetPhotoSlideCount) return;
+    trySelectEntry(entry, { requireVisibleStory: false, requireFoodCaption: true });
+  });
+
+  rankedPhotoCandidates.forEach((entry) => {
+    if (selectedEntries.length >= targetPhotoSlideCount) return;
+    if (isFoodPhotoHighlight(entry.slide)) return;
+    trySelectEntry(entry, { requireVisibleStory: false, requireFoodCaption: false });
+  });
+
+  const selectedPhotoSlides = selectedEntries
     .sort((a, b) => a.sortValue - b.sortValue || b.score - a.score || a.fallbackIndex - b.fallbackIndex)
     .map((entry) => entry.slide);
 
