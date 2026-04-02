@@ -756,7 +756,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos, options = {}) => 
   const safeMoments = Array.isArray(moments) ? moments.filter(Boolean) : [];
   const memoryMoments = buildMemoryMoments(tripPhotos);
   const isSelectedPhotoMode = Boolean(options?.selectedPhotoMode);
-  const targetPhotoSlideCount = isSelectedPhotoMode ? 28 : 25;
+  const targetPhotoSlideCount = 25;
   const maxFoodSlides = isSelectedPhotoMode ? 6 : 4;
   const coverPhoto = memoryMoments[0]?.photo?.url
     || safeMoments.find((moment) => moment.photos[0]?.url)?.photos[0]?.url
@@ -798,7 +798,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos, options = {}) => 
     }
   };
 
-  const slides = [
+  const slides = isSelectedPhotoMode ? [] : [
     {
       type: 'title',
       title: trip?.title || 'Trip Highlights',
@@ -823,7 +823,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos, options = {}) => 
       date: leadMemory.photo?.date,
       fallbackIndex: 0,
     });
-  } else if (scenicMoment) {
+  } else if (scenicMoment && !isSelectedPhotoMode) {
     slides.push({
       type: 'chapter',
       eyebrow: 'Opening Scene',

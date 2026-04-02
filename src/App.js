@@ -232,18 +232,45 @@ const requestR2TripPhotoUploads = async (files) => {
   if (!payloadFiles.length) {
     throw new Error('No files were prepared for upload.');
   }
-  const { data, error } = await supabase.functions.invoke('r2-trip-photos', {
-    body: {
+  let sessionData = await supabase.auth.getSession();
+  let session = sessionData?.data?.session || null;
+  const expiresAtSeconds = Number(session?.expires_at || 0);
+  const expiresSoon = expiresAtSeconds && (expiresAtSeconds * 1000) < (Date.now() + 60 * 1000);
+  if (!session || expiresSoon) {
+    const refreshed = await supabase.auth.refreshSession();
+    session = refreshed?.data?.session || session;
+  }
+  const accessToken = String(session?.access_token || '').trim();
+  const anonKey = String(process.env.REACT_APP_SUPABASE_ANON_KEY || '').trim();
+  if (!accessToken) {
+    throw new Error('Please sign in again before uploading photos.');
+  }
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/r2-trip-photos`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(anonKey ? { Authorization: `Bearer ${anonKey}` } : {}),
+      'x-supabase-auth': `Bearer ${accessToken}`,
+      ...(anonKey ? { apikey: anonKey } : {}),
+    },
+    body: JSON.stringify({
       action: 'createUploadUrls',
       files: payloadFiles,
-    },
+    }),
   });
-  if (error) {
-    throw new Error(error.message || 'Could not prepare R2 upload.');
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  if (!response.ok) {
+    const responseMessage = String(data?.error || data?.message || '').trim();
+    throw new Error(responseMessage || `Could not prepare R2 upload (${response.status}).`);
   }
   const uploadTargets = Array.isArray(data?.files) ? data.files : [];
   if (!uploadTargets.length) {
-    throw new Error('R2 upload setup returned no files.');
+    throw new Error(String(data?.error || '').trim() || 'R2 upload setup returned no files.');
   }
   return uploadTargets;
 };
@@ -276,14 +303,41 @@ const deleteTripPhotoFilesFromR2 = async (paths) => {
     ? paths.map((path) => String(path || '').trim()).filter(Boolean)
     : [];
   if (!normalizedPaths.length) return;
-  const { error } = await supabase.functions.invoke('r2-trip-photos', {
-    body: {
+  let sessionData = await supabase.auth.getSession();
+  let session = sessionData?.data?.session || null;
+  const expiresAtSeconds = Number(session?.expires_at || 0);
+  const expiresSoon = expiresAtSeconds && (expiresAtSeconds * 1000) < (Date.now() + 60 * 1000);
+  if (!session || expiresSoon) {
+    const refreshed = await supabase.auth.refreshSession();
+    session = refreshed?.data?.session || session;
+  }
+  const accessToken = String(session?.access_token || '').trim();
+  const anonKey = String(process.env.REACT_APP_SUPABASE_ANON_KEY || '').trim();
+  if (!accessToken) {
+    console.warn('R2 delete skipped: no authenticated session.');
+    return;
+  }
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/r2-trip-photos`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(anonKey ? { Authorization: `Bearer ${anonKey}` } : {}),
+      'x-supabase-auth': `Bearer ${accessToken}`,
+      ...(anonKey ? { apikey: anonKey } : {}),
+    },
+    body: JSON.stringify({
       action: 'deleteObjects',
       paths: normalizedPaths,
-    },
+    }),
   });
-  if (error) {
-    console.warn('R2 delete warning:', error.message || error);
+  if (!response.ok) {
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+    console.warn('R2 delete warning:', String(data?.error || data?.message || '').trim() || response.status);
   }
 };
 
@@ -2488,6 +2542,9 @@ function App() {
   const [showTripHighlightsModal, setShowTripHighlightsModal] = useState(false);
   const [tripHighlightsOpenToken, setTripHighlightsOpenToken] = useState(0);
   const [tripHighlightSelectedPhotoIds, setTripHighlightSelectedPhotoIds] = useState([]);
+  const [tripHighlightDefaultPhotoIds, setTripHighlightDefaultPhotoIds] = useState([]);
+  const [tripHighlightSelectionMode, setTripHighlightSelectionMode] = useState(false);
+  const [tripHighlightReelNoteId, setTripHighlightReelNoteId] = useState(null);
   const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
   const [deletedPhotosNoteId, setDeletedPhotosNoteId] = useState(null);
   const [photoView, setPhotoView] = useState('grid'); // 'grid' | 'timeline' | 'users'
@@ -2556,6 +2613,7 @@ function App() {
   const TRIP_CHAT_MESSAGE_NOTE_TEXT = '__TRIP_CHAT_MESSAGE_V1__';
   const DELETED_PHOTOS_NOTE_TEXT = '__DELETED_PHOTOS_V1__';
   const TRIP_COVER_PHOTO_NOTE_TEXT = '__TRIP_COVER_PHOTO_V1__';
+  const TRIP_HIGHLIGHT_REEL_NOTE_TEXT = '__TRIP_HIGHLIGHT_REEL_V1__';
   const AUTO_MERGE_SHARED_LAYERS = false;
   const getDeletedPhotosLocalKey = (subCalId) => `subcal-deleted-photos-${subCalId}`;
   const getRemovedTripMembersLocalKey = (subCalId) => `subcal-removed-members-${subCalId}`;
@@ -4686,6 +4744,8 @@ function App() {
       let loadedDeletedPhotosNoteId = null;
       let loadedTripCoverPhoto = null;
       let loadedTripCoverPhotoNoteId = null;
+      let loadedTripHighlightDefaultPhotoIds = [];
+      let loadedTripHighlightReelNoteId = null;
       (data || []).forEach((n) => {
         let parsedChecklist = [];
         try {
@@ -4747,6 +4807,16 @@ function App() {
             : null;
           return;
         }
+        if (n.text === TRIP_HIGHLIGHT_REEL_NOTE_TEXT) {
+          loadedTripHighlightReelNoteId = n.id;
+          const parsed = (parsedChecklist && typeof parsedChecklist === 'object' && !Array.isArray(parsedChecklist))
+            ? parsedChecklist
+            : {};
+          loadedTripHighlightDefaultPhotoIds = Array.isArray(parsed?.photoIds)
+            ? parsed.photoIds.map((id) => String(id || '').trim()).filter(Boolean).slice(0, 25)
+            : [];
+          return;
+        }
         visibleNotes.push({ ...n, checklist: parsedChecklist });
       });
       setSubCalNotes(visibleNotes);
@@ -4763,6 +4833,8 @@ function App() {
       setDeletedPhotosNoteId(loadedDeletedPhotosNoteId);
       setTripCoverPhoto(loadedTripCoverPhoto && loadedTripCoverPhoto.url ? loadedTripCoverPhoto : null);
       setTripCoverPhotoNoteId(loadedTripCoverPhotoNoteId);
+      setTripHighlightDefaultPhotoIds(loadedTripHighlightDefaultPhotoIds);
+      setTripHighlightReelNoteId(loadedTripHighlightReelNoteId);
       return {
         deletedPhotoIds: mergedDeletedPhotoIds,
         tripCoverPhoto: loadedTripCoverPhoto && loadedTripCoverPhoto.url ? loadedTripCoverPhoto : null,
@@ -5563,11 +5635,25 @@ function App() {
   }, [tripPhotoReactionPickerId]);
 
   const toggleSelectedPhoto = (photoId) => {
-    setSelectedPhotoIds(prev => prev.includes(photoId) ? prev.filter(id => id !== photoId) : [...prev, photoId]);
+    const normalizedPhotoId = String(photoId || '').trim();
+    if (!normalizedPhotoId) return;
+    setSelectedPhotoIds(prev => {
+      if (prev.includes(normalizedPhotoId)) {
+        return prev.filter(id => id !== normalizedPhotoId);
+      }
+      if (tripHighlightSelectionMode && prev.length >= 25) {
+        setPhotoUploadError(true);
+        setPhotoUploadMessage('Choose up to 25 photos for a custom highlight reel.');
+        return prev;
+      }
+      setPhotoUploadError(false);
+      return [...prev, normalizedPhotoId];
+    });
   };
 
   const selectAllTripPhotos = () => {
-    setSelectedPhotoIds((tripPhotos || []).map((photo) => String(photo?.id || '')).filter(Boolean));
+    const allPhotoIds = (tripPhotos || []).map((photo) => String(photo?.id || '')).filter(Boolean);
+    setSelectedPhotoIds(tripHighlightSelectionMode ? allPhotoIds.slice(0, 25) : allPhotoIds);
   };
 
   const clearSelectedTripPhotos = () => {
@@ -5577,6 +5663,7 @@ function App() {
   const closePhotoSelectionMode = () => {
     setIsPhotoSelectionMode(false);
     setSelectedPhotoIds([]);
+    setTripHighlightSelectionMode(false);
   };
 
   const saveSelectedPhotosToDevice = async () => {
@@ -18280,22 +18367,93 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       firstTime,
     };
   };
+  const openTripHighlightSelectionMode = () => {
+    setPhotoDeleteMode(false);
+    setIsPhotoSelectionMode(true);
+    setTripHighlightSelectionMode(true);
+    setSelectedPhotoIds((tripHighlightDefaultPhotoIds || []).slice(0, 25));
+    setPhotoUploadError(false);
+    setPhotoUploadMessage('Choose up to 25 photos for your default trip highlight reel.');
+  };
   const openTripHighlights = () => {
     if (!activeSubCalendar) return;
-    setTripHighlightSelectedPhotoIds([]);
+    const savedSelection = (tripHighlightDefaultPhotoIds || [])
+      .map((id) => String(id || '').trim())
+      .filter((id) => (tripPhotos || []).some((photo) => String(photo?.id || '') === id));
+    setTripHighlightSelectedPhotoIds(savedSelection);
     setTripHighlightsSlides([]);
     setTripHighlightsOpenToken((prev) => prev + 1);
     setShowTripHighlightsModal(true);
   };
+  const saveTripHighlightDefaultSelection = async (photoIds) => {
+    if (!assertCanEditSubCalendar('save the trip highlight reel')) return false;
+    if (!activeSubCalendar) return false;
+    const normalizedPhotoIds = Array.from(new Set(
+      (photoIds || []).map((id) => String(id || '').trim()).filter(Boolean)
+    )).slice(0, 25);
+    const payload = {
+      checklist: JSON.stringify({
+        photoIds: normalizedPhotoIds,
+        updatedAt: new Date().toISOString(),
+      }),
+    };
+    if (tripHighlightReelNoteId) {
+      const { error } = await supabase.from('sub_calendar_notes').update(payload).eq('id', tripHighlightReelNoteId);
+      if (error) {
+        console.error('Trip highlight reel update failed:', error);
+        return false;
+      }
+    } else {
+      const row = {
+        id: `screel_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        sub_calendar_id: activeSubCalendar.id,
+        text: TRIP_HIGHLIGHT_REEL_NOTE_TEXT,
+        checklist: payload.checklist,
+        created_by: currentUser,
+        user_id: user?.id,
+        created_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from('sub_calendar_notes').insert(row);
+      if (error) {
+        console.error('Trip highlight reel insert failed:', error);
+        return false;
+      }
+      setTripHighlightReelNoteId(row.id);
+    }
+    setTripHighlightDefaultPhotoIds(normalizedPhotoIds);
+    return true;
+  };
   const openTripHighlightsFromSelectedPhotos = () => {
     if (!activeSubCalendar) return;
-    const selected = (tripPhotos || []).filter((photo) => selectedPhotoIds.includes(photo.id));
+    const selectedSet = new Set((selectedPhotoIds || []).map((id) => String(id || '')).filter(Boolean));
+    const selected = (tripPhotos || []).filter((photo) => selectedSet.has(String(photo?.id || '')));
     if (selected.length === 0) return;
-    setTripHighlightSelectedPhotoIds(selected.map((photo) => String(photo?.id || '')).filter(Boolean));
-    setTripHighlightsSlides([]);
-    setTripHighlightsOpenToken((prev) => prev + 1);
-    setShowTripHighlightsModal(true);
-    closePhotoSelectionMode();
+    const selectedIds = selected.map((photo) => String(photo?.id || '')).filter(Boolean).slice(0, 25);
+    const openCustomReel = async () => {
+      setTripHighlightSelectedPhotoIds(selectedIds);
+      setTripHighlightsSlides([]);
+      setTripHighlightsOpenToken((prev) => prev + 1);
+      setShowTripHighlightsModal(true);
+      closePhotoSelectionMode();
+    };
+    const persistThenOpen = async () => {
+      const existing = JSON.stringify((tripHighlightDefaultPhotoIds || []).slice(0, 25));
+      const next = JSON.stringify(selectedIds);
+      if (existing !== next && tripHighlightDefaultPhotoIds.length > 0) {
+        const shouldOverwrite = await showAppConfirm(
+          'Replace this trip’s saved highlight reel with your newly selected photos?',
+          { confirmLabel: 'Overwrite', cancelLabel: 'Keep Current Reel' }
+        );
+        if (!shouldOverwrite) return;
+      }
+      const saved = await saveTripHighlightDefaultSelection(selectedIds);
+      if (!saved) {
+        alert('Could not save this custom highlight reel right now.');
+        return;
+      }
+      await openCustomReel();
+    };
+    persistThenOpen();
   };
   const shareTripHighlightsWithFriends = async () => {
     const tripId = String(activeSubCalendar?.id || '').trim();
@@ -30082,13 +30240,15 @@ transform: translateY(0);
               </button>
               {isPhotoSelectionMode ? (
                 <>
-                  {photoEventId && (
+                  {(photoEventId || tripHighlightSelectionMode) && (
                     <div className="basis-full text-xs text-purple-600 dark:text-purple-300 font-medium">
-                      Choose existing trip photos below, or upload new ones from your phone for this experience.
+                      {tripHighlightSelectionMode
+                        ? 'Choose up to 25 photos. This custom reel will become the default highlight reel for this trip.'
+                        : 'Choose existing trip photos below, or upload new ones from your phone for this experience.'}
                     </div>
                   )}
                   <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
-                    {selectedPhotoIds.length} selected
+                    {selectedPhotoIds.length} selected{tripHighlightSelectionMode ? ' / 25' : ''}
                   </span>
                   <button
                     onClick={selectedPhotoIds.length === tripPhotos.length ? clearSelectedTripPhotos : selectAllTripPhotos}
@@ -30111,7 +30271,7 @@ transform: translateY(0);
                     disabled={selectedPhotoIds.length === 0}
                     className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-500 text-white disabled:opacity-40"
                   >
-                    Create Highlight Reel
+                    {tripHighlightSelectionMode ? 'Save & Open Reel' : 'Create Highlight Reel'}
                   </button>
                   <button
                     onClick={saveSelectedPhotosToDevice}
@@ -30147,11 +30307,19 @@ transform: translateY(0);
                     onClick={() => {
                       setPhotoDeleteMode(false);
                       setIsPhotoSelectionMode(true);
+                      setTripHighlightSelectionMode(false);
                       setSelectedPhotoIds([]);
                     }}
                     className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
                   >
                     Select
+                  </button>
+                  <button
+                    onClick={openTripHighlightSelectionMode}
+                    disabled={tripPhotos.length === 0}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-500 text-white disabled:opacity-40"
+                  >
+                    {tripHighlightDefaultPhotoIds.length > 0 ? 'Edit Highlight Reel' : 'Create Highlight Reel'}
                   </button>
                   <button
                     type="button"

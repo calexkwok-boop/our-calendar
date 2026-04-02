@@ -3,7 +3,7 @@ import { AwsClient } from "npm:aws4fetch@1.0.20";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-auth",
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -23,12 +23,12 @@ const json = (body: unknown, status = 200) =>
   });
 
 const getAuthenticatedUser = async (req: Request) => {
-  const authHeader = req.headers.get("Authorization") || "";
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !authHeader) return null;
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data, error } = await supabase.auth.getUser();
+  const authHeader = req.headers.get("x-supabase-auth") || req.headers.get("Authorization") || "";
+  const anonKey = req.headers.get("apikey") || "";
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!SUPABASE_URL || !anonKey || !token) return null;
+  const supabase = createClient(SUPABASE_URL, anonKey);
+  const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) return null;
   return data.user;
 };
@@ -55,14 +55,23 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error("r2-trip-photos: missing Supabase env vars");
     return json({ ok: false, error: "Supabase env vars are missing." }, 500);
   }
   if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET || !R2_PUBLIC_BASE_URL) {
+    console.error("r2-trip-photos: missing R2 env vars", {
+      hasAccountId: Boolean(R2_ACCOUNT_ID),
+      hasAccessKeyId: Boolean(R2_ACCESS_KEY_ID),
+      hasSecretAccessKey: Boolean(R2_SECRET_ACCESS_KEY),
+      hasBucket: Boolean(R2_BUCKET),
+      hasPublicBaseUrl: Boolean(R2_PUBLIC_BASE_URL),
+    });
     return json({ ok: false, error: "R2 env vars are missing." }, 500);
   }
 
   const user = await getAuthenticatedUser(req);
   if (!user?.id) {
+    console.error("r2-trip-photos: unauthorized request");
     return json({ ok: false, error: "Unauthorized" }, 401);
   }
 
@@ -72,6 +81,12 @@ Deno.serve(async (req) => {
   } catch {}
 
   const action = safeString(payload?.action);
+  console.log("r2-trip-photos: request received", {
+    action,
+    userId: safeString(user.id),
+    fileCount: Array.isArray(payload?.files) ? payload.files.length : 0,
+    pathCount: Array.isArray(payload?.paths) ? payload.paths.length : 0,
+  });
   const aws = getAwsClient();
 
   try {
@@ -114,6 +129,11 @@ Deno.serve(async (req) => {
 
     return json({ ok: false, error: "Unknown action." }, 400);
   } catch (error) {
+    console.error("r2-trip-photos: request failed", {
+      action,
+      message: safeString((error as Error)?.message || error || "Unknown error"),
+      stack: safeString((error as Error)?.stack || ""),
+    });
     return json({ ok: false, error: safeString((error as Error)?.message || error || "Unknown error") }, 500);
   }
 });
