@@ -481,6 +481,24 @@ const hydrateR2TripPhotoDisplayUrls = async (photos = []) => {
   }
 };
 
+const hydrateR2PhotoLikeArray = async (photos = []) => {
+  const safePhotos = Array.isArray(photos) ? photos : [];
+  if (!safePhotos.length) return [];
+  const normalizedPhotos = safePhotos.map((photo, index) => {
+    if (photo && typeof photo === 'object' && !Array.isArray(photo)) {
+      return normalizeTripPhotoRecord(photo);
+    }
+    const url = String(photo || '').trim();
+    return normalizeTripPhotoRecord({
+      id: `review-photo-${index}`,
+      url,
+      medium_url: url,
+      original_url: url,
+    });
+  });
+  return hydrateR2TripPhotoDisplayUrls(normalizedPhotos);
+};
+
 const deleteTripPhotoFilesFromR2 = async (paths) => {
   const normalizedPaths = Array.isArray(paths)
     ? paths.map((path) => String(path || '').trim()).filter(Boolean)
@@ -2779,8 +2797,12 @@ function App() {
           .limit(2000);
         if (error) { console.error('Failed to load event_ratings', error); return; }
         if (canceled) return;
+        const hydratedRows = await Promise.all((data || []).map(async (row) => ({
+          ...row,
+          photos: await hydrateR2PhotoLikeArray(Array.isArray(row?.photos) ? row.photos : []),
+        })));
         const byEvent = {};
-        (data || []).forEach((row) => {
+        hydratedRows.forEach((row) => {
           const eid = String(row?.event_id || '').trim();
           if (!eid) return;
           if (!byEvent[eid]) byEvent[eid] = [];
@@ -31550,6 +31572,7 @@ transform: translateY(0);
     // Group ratings actions
     const onAddGroupRating = async (eventId, data) => {
       if (!activeSubCalendar?.id || !user?.id) return;
+      const normalizedPhotos = await hydrateR2PhotoLikeArray(Array.isArray(data?.photos) ? data.photos : []);
       const payload = {
         sub_calendar_id: activeSubCalendar.id,
         event_id: eventId,
@@ -31558,7 +31581,7 @@ transform: translateY(0);
         review_text: String(data?.reviewText || '').trim() || null,
         is_public: data?.isPublic !== false,
         would_return: typeof data?.wouldReturn === 'boolean' ? data.wouldReturn : null,
-        photos: Array.isArray(data?.photos) ? data.photos : [],
+        photos: normalizedPhotos,
       };
       const { data: row, error } = await supabase
         .from('event_ratings')
@@ -31591,7 +31614,7 @@ transform: translateY(0);
           reviewText: String(row.review_text || ''),
           isPublic: row.is_public !== false,
           wouldReturn: typeof row.would_return === 'boolean' ? row.would_return : null,
-          photos: Array.isArray(row.photos) ? row.photos : [],
+          photos: normalizedPhotos,
           createdAt: row.created_at,
         });
         return { ...(prev || {}), [key]: arr };
@@ -31599,12 +31622,15 @@ transform: translateY(0);
     };
     const onUpdateGroupRating = async (eventId, ratingId, updates) => {
       if (!ratingId) return;
+      const normalizedPhotos = updates?.photos !== undefined
+        ? await hydrateR2PhotoLikeArray(Array.isArray(updates.photos) ? updates.photos : [])
+        : null;
       const patch = {};
       if (updates?.rating !== undefined) patch.rating = Number(updates.rating || 0);
       if (updates?.reviewText !== undefined) patch.review_text = String(updates.reviewText || '').trim() || null;
       if (updates?.isPublic !== undefined) patch.is_public = !!updates.isPublic;
       if (updates?.wouldReturn !== undefined) patch.would_return = typeof updates.wouldReturn === 'boolean' ? updates.wouldReturn : null;
-      if (updates?.photos !== undefined) patch.photos = Array.isArray(updates.photos) ? updates.photos : [];
+      if (updates?.photos !== undefined) patch.photos = normalizedPhotos;
       const { data: row, error } = await supabase
         .from('event_ratings')
         .update(patch)
@@ -31623,7 +31649,7 @@ transform: translateY(0);
             reviewText: String(row.review_text || ''),
             isPublic: row.is_public !== false,
             wouldReturn: typeof row.would_return === 'boolean' ? row.would_return : null,
-            photos: Array.isArray(row.photos) ? row.photos : [],
+            photos: normalizedPhotos || arr[idx]?.photos || [],
           };
         }
         return { ...(prev || {}), [key]: arr };
