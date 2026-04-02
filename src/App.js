@@ -95,6 +95,109 @@ const canvasToBlobAsync = (canvas, type, quality) => new Promise((resolve) => {
   canvas.toBlob(resolve, type, quality);
 });
 
+const readJpegExifDateTimeOriginal = async (file) => {
+  if (!file || !String(file?.type || '').toLowerCase().includes('jpeg')) return null;
+  try {
+    const buffer = await file.arrayBuffer();
+    const view = new DataView(buffer);
+    if (view.byteLength < 4 || view.getUint16(0) !== 0xFFD8) return null;
+
+    let offset = 2;
+    while (offset + 4 < view.byteLength) {
+      if (view.getUint8(offset) !== 0xFF) break;
+      const marker = view.getUint8(offset + 1);
+      if (marker === 0xDA || marker === 0xD9) break;
+      const segmentLength = view.getUint16(offset + 2, false);
+      if (segmentLength < 2 || offset + 2 + segmentLength > view.byteLength) break;
+
+      if (marker === 0xE1) {
+        const exifStart = offset + 4;
+        if (exifStart + 6 > view.byteLength) break;
+        const exifHeader = String.fromCharCode(
+          view.getUint8(exifStart),
+          view.getUint8(exifStart + 1),
+          view.getUint8(exifStart + 2),
+          view.getUint8(exifStart + 3)
+        );
+        if (exifHeader !== 'Exif') break;
+
+        const tiffOffset = exifStart + 6;
+        const littleEndian = view.getUint16(tiffOffset, false) === 0x4949;
+        const getUint16At = (pos) => view.getUint16(pos, littleEndian);
+        const getUint32At = (pos) => view.getUint32(pos, littleEndian);
+        const getAsciiValue = (valueOffset, count) => {
+          const chars = [];
+          for (let i = 0; i < count - 1; i += 1) {
+            const code = view.getUint8(valueOffset + i);
+            if (!code) break;
+            chars.push(String.fromCharCode(code));
+          }
+          return chars.join('');
+        };
+        const readIfd = (ifdAbsoluteOffset) => {
+          if (!ifdAbsoluteOffset || ifdAbsoluteOffset + 2 > view.byteLength) return null;
+          const entryCount = getUint16At(ifdAbsoluteOffset);
+          for (let entryIndex = 0; entryIndex < entryCount; entryIndex += 1) {
+            const entryOffset = ifdAbsoluteOffset + 2 + (entryIndex * 12);
+            if (entryOffset + 12 > view.byteLength) return null;
+            const tag = getUint16At(entryOffset);
+            const type = getUint16At(entryOffset + 2);
+            const count = getUint32At(entryOffset + 4);
+            const valueOrOffset = entryOffset + 8;
+            const valueAbsoluteOffset = type === 2 && count > 4
+              ? tiffOffset + getUint32At(valueOrOffset)
+              : valueOrOffset;
+            if ((tag === 0x9003 || tag === 0x0132) && type === 2 && count >= 8 && valueAbsoluteOffset + count <= view.byteLength) {
+              return getAsciiValue(valueAbsoluteOffset, count);
+            }
+            if (tag === 0x8769) {
+              const subIfdOffset = tiffOffset + getUint32At(valueOrOffset);
+              const nested = readIfd(subIfdOffset);
+              if (nested) return nested;
+            }
+          }
+          return null;
+        };
+
+        const firstIfdOffset = tiffOffset + getUint32At(tiffOffset + 4);
+        return readIfd(firstIfdOffset);
+      }
+
+      offset += 2 + segmentLength;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const parseExifDateStringToIso = (value) => {
+  const normalized = String(value || '').trim();
+  const match = normalized.match(/^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
+  if (!match) return '';
+  const [, year, month, day, hour, minute, second] = match;
+  const localDate = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    Number(second)
+  );
+  return Number.isNaN(localDate.getTime()) ? '' : localDate.toISOString();
+};
+
+const getPhotoTakenAtIso = async (file) => {
+  const exifDate = parseExifDateStringToIso(await readJpegExifDateTimeOriginal(file));
+  if (exifDate) return exifDate;
+  const fileLastModified = Number(file?.lastModified || 0);
+  if (fileLastModified > 0) {
+    const fallbackDate = new Date(fileLastModified);
+    if (!Number.isNaN(fallbackDate.getTime())) return fallbackDate.toISOString();
+  }
+  return '';
+};
+
 const resizeImageFile = async (file, {
   maxWidth,
   maxHeight,
@@ -4969,6 +5072,8 @@ function App() {
     setPhotoUploadError(false);
     setPhotoUploadMessage('');
     try {
+      const takenAtIso = await getPhotoTakenAtIso(file);
+      const takenAtDateKey = takenAtIso ? getDateKey(new Date(takenAtIso)) : '';
       const photoBasePath = `${activeSubCalendar.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
       const mainFilename = buildTripPhotoVariantPath(photoBasePath, 'main');
       const thumbFilename = buildTripPhotoVariantPath(photoBasePath, 'thumb');
@@ -5072,7 +5177,7 @@ function App() {
         id: `ph_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
         sub_calendar_id: activeSubCalendar.id,
         event_id: eventId || null,
-        date: date || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null),
+        date: takenAtDateKey || date || null,
         local_preview_url: URL.createObjectURL(mainFile),
         local_thumbnail_preview_url: URL.createObjectURL(thumbFile),
         url: mainUrl,
@@ -5081,7 +5186,7 @@ function App() {
         caption: caption || null,
         uploaded_by: currentUser,
         user_id: user.id,
-        created_at: new Date().toISOString(),
+        created_at: takenAtIso || new Date().toISOString(),
       });
       let insertPayload = {
         id: photo.id,
@@ -5842,7 +5947,7 @@ function App() {
         file,
         null,
         photoEventId,
-        photoDate || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null)
+        photoDate || null
       );
       if (uploadedPhoto) successCount += 1;
     }
