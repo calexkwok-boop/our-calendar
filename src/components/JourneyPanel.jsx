@@ -27,7 +27,6 @@ export default function JourneyPanel({
   journeyHomeCtaLabel,
   journeyCoachLabel,
   journeyProgressText,
-  journeyQuote,
   journeySupportLabel,
   onClick,
   onCtaClick,
@@ -38,11 +37,6 @@ export default function JourneyPanel({
   darkMode = false,
 }) {
   const panelClickHandler = primaryJourneyGoal ? onClick : onCtaClick;
-  const quoteText = getRenderableText(journeyQuote);
-  const quoteSource =
-    journeyQuote && typeof journeyQuote === 'object'
-      ? String(journeyQuote.source || '').trim()
-      : '';
   const coachText = getRenderableText(journeyCoachLabel);
   const journeyAccent = '#f59e0b';
   const journeyAccentStrong = '#f97316';
@@ -120,23 +114,6 @@ export default function JourneyPanel({
           className="absolute -right-10 -top-10 h-16 w-16 rounded-full blur-3xl pointer-events-none"
           style={glowStyle}
         />
-
-        <div className="relative z-10 mb-2.5">
-          <div
-            className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.22em]"
-            style={accentTextStyle}
-          >
-            Today&apos;s Inspiration
-          </div>
-          <blockquote className="text-[15px] sm:text-base font-serif italic text-gray-800 dark:text-gray-100 leading-snug">
-            &quot;{quoteText}&quot;
-          </blockquote>
-          {quoteSource ? (
-            <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-              {quoteSource}
-            </div>
-          ) : null}
-        </div>
 
         {primaryJourneyGoal ? (
           <div className="relative z-10 space-y-2">
