@@ -5056,10 +5056,11 @@ function App() {
       });
       let insertPayload = photo;
       let { error: dbError } = await supabase.from('trip_photos').insert(insertPayload);
-      if (dbError && /column .*thumbnail_url|column .*medium_url|schema cache/i.test(String(dbError?.message || ''))) {
+      if (dbError && /column .*thumbnail_url|column .*medium_url|column .*original_url|schema cache/i.test(String(dbError?.message || ''))) {
         insertPayload = { ...photo };
         delete insertPayload.thumbnail_url;
         delete insertPayload.medium_url;
+        delete insertPayload.original_url;
         dbError = (await supabase.from('trip_photos').insert(insertPayload)).error;
       }
       if (dbError) {
