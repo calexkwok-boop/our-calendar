@@ -2817,7 +2817,12 @@ function App() {
       const raw = localStorage.getItem(getTripPhotosCacheLocalKey(subCalId));
       const parsed = raw ? JSON.parse(raw) : [];
       return Array.isArray(parsed)
-        ? parsed.filter((row) => row && typeof row === 'object').map((row) => normalizeTripPhotoRecord(row))
+        ? parsed.filter((row) => row && typeof row === 'object').map((row) => {
+          const nextRow = { ...row };
+          delete nextRow.local_preview_url;
+          delete nextRow.local_thumbnail_preview_url;
+          return normalizeTripPhotoRecord(nextRow);
+        })
         : [];
     } catch {
       return [];
@@ -2829,7 +2834,16 @@ function App() {
         getTripPhotosCacheLocalKey(subCalId),
         JSON.stringify(
           Array.isArray(rows)
-            ? rows.filter((row) => row && typeof row === 'object').map((row) => normalizeTripPhotoRecord(row))
+            ? rows
+              .filter((row) => row && typeof row === 'object')
+              .map((row) => {
+                const normalized = normalizeTripPhotoRecord(row);
+                if (!normalized || typeof normalized !== 'object') return normalized;
+                const cacheSafeRow = { ...normalized };
+                delete cacheSafeRow.local_preview_url;
+                delete cacheSafeRow.local_thumbnail_preview_url;
+                return cacheSafeRow;
+              })
             : []
         )
       );
