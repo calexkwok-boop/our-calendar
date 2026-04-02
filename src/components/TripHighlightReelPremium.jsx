@@ -907,7 +907,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos, options = {}) => 
           fallbackIndex: index + 60 + photoIndex,
         });
       });
-    } else {
+    } else if (!isSelectedPhotoMode) {
       slides.push({
         type: 'spotlight',
         eyebrow: copy.eyebrow,
