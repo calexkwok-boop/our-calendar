@@ -449,12 +449,22 @@ const normalizeTripPhotoRecord = (photo) => {
 };
 
 const getTripPhotoThumbnailUrl = (photo) => String(
-  photo?.thumbnail_url
-  || photo?.thumb_url
-  || photo?.medium_url
-  || photo?.url
-  || photo?.original_url
-  || ''
+  (() => {
+    const thumbnailUrl = String(photo?.thumbnail_url || photo?.thumb_url || '').trim();
+    const mediumUrl = String(photo?.medium_url || '').trim();
+    const mainUrl = String(photo?.url || '').trim();
+    const originalUrl = String(photo?.original_url || '').trim();
+    const isR2Photo = Boolean(
+      getR2TripPhotoStorageLocation(thumbnailUrl)
+      || getR2TripPhotoStorageLocation(mediumUrl)
+      || getR2TripPhotoStorageLocation(mainUrl)
+      || getR2TripPhotoStorageLocation(originalUrl)
+    );
+    if (isR2Photo) {
+      return mediumUrl || mainUrl || originalUrl || thumbnailUrl || '';
+    }
+    return thumbnailUrl || mediumUrl || mainUrl || originalUrl || '';
+  })()
 ).trim();
 
 const getTripPhotoFallbackUrl = (photo) => String(
@@ -18856,6 +18866,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         return;
       } catch (videoError) {
         console.warn('Trip highlight video export unavailable; falling back to images.', videoError);
+        alert('This browser could not export the highlight reel as a video yet, so only the source photos can be saved here right now.');
       }
 
       const files = [];
