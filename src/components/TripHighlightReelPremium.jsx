@@ -284,14 +284,21 @@ export default function TripHighlightReel({
       setCurrentSlide(0);
     }
     setIsPlaying(nextPlaying);
-    
+  };
+
+  useEffect(() => {
     if (!audioRef.current) return;
-    if (nextPlaying && musicEnabled && audioAvailable) {
+    if (!audioAvailable) {
+      audioRef.current.pause();
+      return;
+    }
+    audioRef.current.load();
+    if (isPlaying && musicEnabled) {
       audioRef.current.play().catch(() => {});
     } else {
       audioRef.current.pause();
     }
-  };
+  }, [isPlaying, musicEnabled, audioAvailable, selectedTrackId]);
 
   const handleNext = () => {
     if (currentSlide < safeHighlights.length - 1) {
@@ -311,7 +318,7 @@ export default function TripHighlightReel({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
       {/* Audio */}
-      <audio ref={audioRef} loop onError={() => setAudioAvailable(false)}>
+      <audio ref={audioRef} loop playsInline preload="auto" onError={() => setAudioAvailable(false)}>
         <source src={selectedTrack.file} type="audio/mpeg" />
       </audio>
 
@@ -411,7 +418,7 @@ export default function TripHighlightReel({
       </div>
 
       {/* PREMIUM PROGRESS BAR - Subtle line */}
-      <div className="absolute bottom-12 left-0 right-0 px-12">
+      <div className="absolute bottom-8 left-0 right-0 px-12">
         <div className="h-0.5 overflow-hidden rounded-full bg-white/20">
           <div
             className="h-full bg-white shadow-sm shadow-white/50 transition-all duration-300 ease-out"
@@ -421,8 +428,8 @@ export default function TripHighlightReel({
       </div>
 
       {/* PREMIUM PLAYBACK CONTROLS */}
-      <div className="absolute bottom-0 left-0 right-0 px-6 pb-3 pt-8 bg-gradient-to-t from-black/82 via-black/40 to-transparent"
-           style={{ paddingBottom: 'max(0.75rem, calc(env(safe-area-inset-bottom) + 0.55rem))' }}>
+      <div className="absolute bottom-0 left-0 right-0 px-6 pb-2 pt-6 bg-gradient-to-t from-black/88 via-black/42 to-transparent"
+           style={{ paddingBottom: 'max(0.4rem, calc(env(safe-area-inset-bottom) + 0.3rem))' }}>
         <div className="flex items-center justify-center gap-6">
           {/* Previous */}
           <button

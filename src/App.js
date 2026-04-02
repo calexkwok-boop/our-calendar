@@ -18374,6 +18374,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setSelectedPhotoIds((tripHighlightDefaultPhotoIds || []).slice(0, 25));
     setPhotoUploadError(false);
     setPhotoUploadMessage('Choose up to 25 photos for your default trip highlight reel.');
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
   };
   const beginTripHighlightSelectionFromCurrentSelection = () => {
     setPhotoDeleteMode(false);
