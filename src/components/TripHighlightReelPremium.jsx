@@ -1008,7 +1008,16 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos, options = {}) => 
 
   const selectedPhotoSlides = selectedEntries
     .sort((a, b) => a.sortValue - b.sortValue || b.score - a.score || a.fallbackIndex - b.fallbackIndex)
-    .map((entry) => entry.slide);
+    .map((entry) => (
+      isSelectedPhotoMode
+        ? {
+            ...entry.slide,
+            caption: '',
+            subcopy: '',
+            eyebrow: '',
+          }
+        : entry.slide
+    ));
 
   if (selectedPhotoSlides.length > 0) {
     slides.push(...selectedPhotoSlides);
