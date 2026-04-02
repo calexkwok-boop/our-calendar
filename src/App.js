@@ -2827,14 +2827,20 @@ function App() {
     return () => { canceled = true; };
   }, [activeSubCalendar?.id, subCalTab]);
 
-  const [shareMyLocation, setShareMyLocation] = useState(() => localStorage.getItem('subcal-share-location') === 'true');
+  const [shareMyLocation, setShareMyLocation] = useState(false);
   const [memberLocations, setMemberLocations] = useState({});
   const subCalLocationChannelRef = useRef(null);
   const subCalGeoWatchRef = useRef(null);
-  const [shareLayerLocation, setShareLayerLocation] = useState(() => localStorage.getItem('layer-share-location') === 'true');
+  const [shareLayerLocation, setShareLayerLocation] = useState(false);
   const [layerMemberLocations, setLayerMemberLocations] = useState({});
   const layerLocationChannelRef = useRef(null);
   const layerGeoWatchRef = useRef(null);
+  useEffect(() => {
+    try {
+      localStorage.removeItem('subcal-share-location');
+      localStorage.removeItem('layer-share-location');
+    } catch {}
+  }, []);
   const [tripPhotos, setTripPhotos] = useState([]);
   const [tripCoverPhoto, setTripCoverPhoto] = useState(null);
   const [tripCoverPhotoNoteId, setTripCoverPhotoNoteId] = useState(null);
@@ -24692,7 +24698,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                           if (toggleDisabled) return;
                           const next = !shareLayerLocation;
                           setShareLayerLocation(next);
-                          localStorage.setItem('layer-share-location', next.toString());
                         }}
                         disabled={toggleDisabled}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareLayerLocation && !toggleDisabled ? 'bg-green-500' : 'bg-gray-300'} ${toggleDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -31959,7 +31964,6 @@ transform: translateY(0);
                     onClick={() => {
                       const next = !shareMyLocation;
                       setShareMyLocation(next);
-                      localStorage.setItem('subcal-share-location', next.toString());
                     }}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareMyLocation && sharingWindowOpen ? 'bg-green-500' : 'bg-gray-300'}`}
                     title="Share my location with trip members"
