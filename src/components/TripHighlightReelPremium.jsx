@@ -349,7 +349,7 @@ export default function TripHighlightReel({
       {/* PREMIUM TOP BAR - Glassmorphism with blur */}
       <div className="absolute top-0 left-0 right-0 z-30 px-6 pb-5 pt-8 bg-gradient-to-b from-black/72 via-black/34 to-transparent"
            style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1.5rem))' }}>
-        <div className="grid grid-cols-[auto_auto_minmax(8.75rem,10rem)_auto_auto] items-center justify-between gap-2.5 sm:gap-3">
+        <div className="mx-auto grid w-fit grid-cols-[auto_auto_minmax(8.75rem,10rem)_auto_auto] items-center gap-2.5 sm:gap-3">
           {/* Close Button - Elevated design */}
           <button
             onClick={onClose}
@@ -418,7 +418,9 @@ export default function TripHighlightReel({
           <div className="relative" ref={shareMenuRef}>
             <button
               onClick={() => setShowShareMenu(!showShareMenu)}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10 ${
+                showShareMenu ? 'bg-black/62' : 'bg-black/40'
+              }`}
             >
               <Share2 className="h-5 w-5" />
             </button>
