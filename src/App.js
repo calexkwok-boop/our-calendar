@@ -401,6 +401,86 @@ const uploadTripPhotoFileToR2 = async (path, file) => {
   return { url: publicUrl, path };
 };
 
+const requestR2TripPhotoReadUrls = async (paths) => {
+  const normalizedPaths = Array.isArray(paths)
+    ? Array.from(new Set(paths.map((path) => String(path || '').trim()).filter(Boolean)))
+    : [];
+  if (!normalizedPaths.length) return [];
+  let sessionData = await supabase.auth.getSession();
+  let session = sessionData?.data?.session || null;
+  const expiresAtSeconds = Number(session?.expires_at || 0);
+  const expiresSoon = expiresAtSeconds && (expiresAtSeconds * 1000) < (Date.now() + 60 * 1000);
+  if (!session || expiresSoon) {
+    const refreshed = await supabase.auth.refreshSession();
+    session = refreshed?.data?.session || session;
+  }
+  const accessToken = String(session?.access_token || '').trim();
+  const anonKey = String(process.env.REACT_APP_SUPABASE_ANON_KEY || '').trim();
+  if (!accessToken) {
+    throw new Error('Please sign in again before loading photos.');
+  }
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/r2-trip-photos`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(anonKey ? { Authorization: `Bearer ${anonKey}` } : {}),
+      ...(anonKey ? { apikey: anonKey } : {}),
+      'x-supabase-auth': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      action: 'createReadUrls',
+      paths: normalizedPaths,
+    }),
+  });
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  if (!response.ok) {
+    throw new Error(String(data?.error || data?.message || `Could not prepare R2 image URLs (${response.status}).`).trim());
+  }
+  return Array.isArray(data?.files) ? data.files : [];
+};
+
+const hydrateR2TripPhotoDisplayUrls = async (photos = []) => {
+  const safePhotos = Array.isArray(photos) ? photos : [];
+  const uniquePaths = Array.from(new Set(
+    safePhotos.flatMap((photo) => [
+      getR2TripPhotoStorageLocation(photo?.thumbnail_url)?.path,
+      getR2TripPhotoStorageLocation(photo?.medium_url)?.path,
+      getR2TripPhotoStorageLocation(photo?.url)?.path,
+      getR2TripPhotoStorageLocation(photo?.original_url)?.path,
+    ].filter(Boolean))
+  ));
+  if (!uniquePaths.length) return safePhotos;
+  try {
+    const signedFiles = await requestR2TripPhotoReadUrls(uniquePaths);
+    const readUrlByPath = new Map(
+      signedFiles
+        .map((entry) => [String(entry?.path || '').trim(), String(entry?.readUrl || '').trim()])
+        .filter(([path, readUrl]) => path && readUrl)
+    );
+    return safePhotos.map((photo) => {
+      const thumbnailPath = getR2TripPhotoStorageLocation(photo?.thumbnail_url)?.path;
+      const mediumPath = getR2TripPhotoStorageLocation(photo?.medium_url)?.path;
+      const mainPath = getR2TripPhotoStorageLocation(photo?.url)?.path;
+      const originalPath = getR2TripPhotoStorageLocation(photo?.original_url)?.path;
+      return {
+        ...photo,
+        resolved_thumbnail_url: (thumbnailPath && readUrlByPath.get(thumbnailPath)) || '',
+        resolved_medium_url: (mediumPath && readUrlByPath.get(mediumPath)) || '',
+        resolved_url: (mainPath && readUrlByPath.get(mainPath)) || '',
+        resolved_original_url: (originalPath && readUrlByPath.get(originalPath)) || '',
+      };
+    });
+  } catch (error) {
+    console.warn('R2 signed photo read URLs failed; falling back to persisted URLs.', error);
+    return safePhotos;
+  }
+};
+
 const deleteTripPhotoFilesFromR2 = async (paths) => {
   const normalizedPaths = Array.isArray(paths)
     ? paths.map((path) => String(path || '').trim()).filter(Boolean)
@@ -557,6 +637,13 @@ const normalizeTripPhotoRecord = (photo) => {
 
 const getTripPhotoThumbnailUrl = (photo) => String(
   (() => {
+    const resolvedThumbnailUrl = String(photo?.resolved_thumbnail_url || '').trim();
+    const resolvedMediumUrl = String(photo?.resolved_medium_url || '').trim();
+    const resolvedMainUrl = String(photo?.resolved_url || '').trim();
+    const resolvedOriginalUrl = String(photo?.resolved_original_url || '').trim();
+    if (resolvedThumbnailUrl || resolvedMediumUrl || resolvedMainUrl || resolvedOriginalUrl) {
+      return resolvedThumbnailUrl || resolvedMediumUrl || resolvedMainUrl || resolvedOriginalUrl || '';
+    }
     const thumbnailUrl = String(photo?.thumbnail_url || photo?.thumb_url || '').trim();
     const mediumUrl = String(photo?.medium_url || '').trim();
     const mainUrl = String(photo?.url || '').trim();
@@ -584,6 +671,9 @@ const getTripPhotoThumbnailUrl = (photo) => String(
 
 const getTripPhotoFallbackUrl = (photo) => String(
   photo?.local_preview_url
+  || photo?.resolved_original_url
+  || photo?.resolved_medium_url
+  || photo?.resolved_url
   || photo?.original_url
   || photo?.medium_url
   || photo?.url
@@ -2821,6 +2911,10 @@ function App() {
           const nextRow = { ...row };
           delete nextRow.local_preview_url;
           delete nextRow.local_thumbnail_preview_url;
+          delete nextRow.resolved_thumbnail_url;
+          delete nextRow.resolved_medium_url;
+          delete nextRow.resolved_url;
+          delete nextRow.resolved_original_url;
           return normalizeTripPhotoRecord(nextRow);
         })
         : [];
@@ -2842,6 +2936,10 @@ function App() {
                 const cacheSafeRow = { ...normalized };
                 delete cacheSafeRow.local_preview_url;
                 delete cacheSafeRow.local_thumbnail_preview_url;
+                delete cacheSafeRow.resolved_thumbnail_url;
+                delete cacheSafeRow.resolved_medium_url;
+                delete cacheSafeRow.resolved_url;
+                delete cacheSafeRow.resolved_original_url;
                 return cacheSafeRow;
               })
             : []
@@ -5024,7 +5122,7 @@ function App() {
       const filtered = (data || [])
         .filter(p => !deletedSet.has(String(p.id)))
         .map((photo) => normalizeTripPhotoRecord(photo));
-      return filtered;
+      return await hydrateR2TripPhotoDisplayUrls(filtered);
     } catch (e) { console.error(e); }
     return [];
   };

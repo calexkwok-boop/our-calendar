@@ -43,36 +43,86 @@ const HIGHLIGHT_REEL_TRACKS = Object.freeze([
 // Premium photo treatments with professional color grading
 const PHOTO_TREATMENTS = Object.freeze({
   scenic: {
-    filter: 'saturate(0.98) contrast(0.94) brightness(1.04) sepia(0.14) hue-rotate(-6deg)',
-    vignette: 'radial-gradient(circle at 50% 42%, rgba(255,224,196,0.12) 0%, transparent 36%, rgba(0,0,0,0.24) 100%)',
+    filter: 'saturate(1.08) contrast(0.88) brightness(1.12) sepia(0.06) hue-rotate(-3deg)',
+    vignette: `
+      radial-gradient(circle at 50% 42%, rgba(255,224,196,0.12) 0%, transparent 36%, rgba(0,0,0,0.24) 100%),
+      radial-gradient(ellipse at 50% 20%, rgba(255,245,220,0.35) 0%, transparent 60%)
+    `,
+    overlays: [
+      { type: 'bloom', color: 'rgba(255,240,200,0.15)' },
+      { type: 'filmGrain', opacity: 0.08 },
+      { type: 'colorSplit', teal: 'rgba(0,180,180,0.06)', orange: 'rgba(255,160,100,0.08)' },
+    ],
     kenBurns: 'zoom-pan',
   },
   food: {
-    filter: 'saturate(0.94) contrast(0.95) brightness(1.06) sepia(0.18) hue-rotate(-8deg)',
-    vignette: 'radial-gradient(circle at 42% 38%, rgba(255,214,170,0.16) 0%, transparent 34%, rgba(0,0,0,0.2) 100%)',
+    filter: 'saturate(1.08) contrast(0.88) brightness(1.12) sepia(0.06) hue-rotate(-3deg)',
+    vignette: `
+      radial-gradient(circle at 50% 42%, rgba(255,224,196,0.12) 0%, transparent 36%, rgba(0,0,0,0.24) 100%),
+      radial-gradient(ellipse at 50% 20%, rgba(255,245,220,0.35) 0%, transparent 60%)
+    `,
+    overlays: [
+      { type: 'bloom', color: 'rgba(255,240,200,0.15)' },
+      { type: 'filmGrain', opacity: 0.08 },
+      { type: 'colorSplit', teal: 'rgba(0,180,180,0.06)', orange: 'rgba(255,160,100,0.08)' },
+    ],
     kenBurns: 'zoom-in',
   },
   nightlife: {
-    filter: 'contrast(0.98) saturate(0.92) brightness(0.96) sepia(0.08) hue-rotate(-10deg)',
-    vignette: 'radial-gradient(circle at center, rgba(255,190,170,0.1) 0%, transparent 34%, rgba(0,0,0,0.34) 100%)',
+    filter: 'saturate(1.08) contrast(0.88) brightness(1.12) sepia(0.06) hue-rotate(-3deg)',
+    vignette: `
+      radial-gradient(circle at 50% 42%, rgba(255,224,196,0.12) 0%, transparent 36%, rgba(0,0,0,0.24) 100%),
+      radial-gradient(ellipse at 50% 20%, rgba(255,245,220,0.35) 0%, transparent 60%)
+    `,
+    overlays: [
+      { type: 'bloom', color: 'rgba(255,240,200,0.15)' },
+      { type: 'filmGrain', opacity: 0.08 },
+      { type: 'colorSplit', teal: 'rgba(0,180,180,0.06)', orange: 'rgba(255,160,100,0.08)' },
+    ],
     kenBurns: 'pan-right',
   },
   reflective: {
-    filter: 'contrast(0.9) saturate(0.84) brightness(1.07) sepia(0.12) hue-rotate(-4deg)',
-    vignette: 'radial-gradient(circle at center, rgba(255,233,214,0.12) 0%, transparent 35%, rgba(0,0,0,0.16) 100%)',
+    filter: 'saturate(1.08) contrast(0.88) brightness(1.12) sepia(0.06) hue-rotate(-3deg)',
+    vignette: `
+      radial-gradient(circle at 50% 42%, rgba(255,224,196,0.12) 0%, transparent 36%, rgba(0,0,0,0.24) 100%),
+      radial-gradient(ellipse at 50% 20%, rgba(255,245,220,0.35) 0%, transparent 60%)
+    `,
+    overlays: [
+      { type: 'bloom', color: 'rgba(255,240,200,0.15)' },
+      { type: 'filmGrain', opacity: 0.08 },
+      { type: 'colorSplit', teal: 'rgba(0,180,180,0.06)', orange: 'rgba(255,160,100,0.08)' },
+    ],
     kenBurns: 'zoom-out',
   },
   hotel: {
-    filter: 'contrast(0.95) saturate(0.9) brightness(1.04) sepia(0.1) hue-rotate(-4deg)',
-    vignette: 'radial-gradient(circle at center, rgba(255,229,206,0.1) 0%, transparent 35%, rgba(0,0,0,0.2) 100%)',
+    filter: 'saturate(1.08) contrast(0.88) brightness(1.12) sepia(0.06) hue-rotate(-3deg)',
+    vignette: `
+      radial-gradient(circle at 50% 42%, rgba(255,224,196,0.12) 0%, transparent 36%, rgba(0,0,0,0.24) 100%),
+      radial-gradient(ellipse at 50% 20%, rgba(255,245,220,0.35) 0%, transparent 60%)
+    `,
+    overlays: [
+      { type: 'bloom', color: 'rgba(255,240,200,0.15)' },
+      { type: 'filmGrain', opacity: 0.08 },
+      { type: 'colorSplit', teal: 'rgba(0,180,180,0.06)', orange: 'rgba(255,160,100,0.08)' },
+    ],
     kenBurns: 'zoom-out',
   },
   people: {
-    filter: 'saturate(0.96) contrast(0.93) brightness(1.06) sepia(0.13) hue-rotate(-6deg)',
-    vignette: 'radial-gradient(circle at 50% 40%, rgba(255,224,206,0.14) 0%, transparent 36%, rgba(0,0,0,0.16) 100%)',
+    filter: 'saturate(1.08) contrast(0.88) brightness(1.12) sepia(0.06) hue-rotate(-3deg)',
+    vignette: `
+      radial-gradient(circle at 50% 42%, rgba(255,224,196,0.12) 0%, transparent 36%, rgba(0,0,0,0.24) 100%),
+      radial-gradient(ellipse at 50% 20%, rgba(255,245,220,0.35) 0%, transparent 60%)
+    `,
+    overlays: [
+      { type: 'bloom', color: 'rgba(255,240,200,0.15)' },
+      { type: 'filmGrain', opacity: 0.08 },
+      { type: 'colorSplit', teal: 'rgba(0,180,180,0.06)', orange: 'rgba(255,160,100,0.08)' },
+    ],
     kenBurns: 'zoom-in-slow',
   },
 });
+
+const FILM_GRAIN_DATA_URL = 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27160%27 height=%27160%27 viewBox=%270 0 160 160%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%271.15%27 numOctaves=%272%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27160%27 height=%27160%27 filter=%27url(%23n)%27 opacity=%270.55%27/%3E%3C/svg%3E")';
 
 const FOOD_HIGHLIGHT_PATTERN = /(food|restaurant|breakfast|brunch|lunch|dinner|coffee|cafe|dessert|bakery|meal|drink|cocktail)/i;
 const HOTEL_HIGHLIGHT_PATTERN = /(hotel|resort|inn|suite|stay|check-in|check in|lobby|room|villa|airbnb)/i;
@@ -628,6 +678,9 @@ function PhotoSlide({ highlight }) {
   const treatment = PHOTO_TREATMENTS[highlight.mood] || PHOTO_TREATMENTS.scenic;
   const caption = String(highlight.caption || '').trim();
   const locationCaptionMeta = getPhotoLocationCaptionMeta(highlight);
+  const bloomOverlay = (treatment.overlays || []).find((overlay) => overlay?.type === 'bloom');
+  const grainOverlay = (treatment.overlays || []).find((overlay) => overlay?.type === 'filmGrain');
+  const colorSplitOverlay = (treatment.overlays || []).find((overlay) => overlay?.type === 'colorSplit');
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black">
@@ -644,14 +697,32 @@ function PhotoSlide({ highlight }) {
           className="absolute inset-0"
           style={{ background: treatment.vignette }}
         />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,233,214,0.16),transparent_34%),linear-gradient(180deg,rgba(255,231,214,0.08),transparent_36%,rgba(14,10,12,0.18)_100%)]" />
-        <div
-          className="absolute inset-0 opacity-[0.18] mix-blend-screen"
-          style={{
-            backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27160%27 height=%27160%27 viewBox=%270 0 160 160%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%271.15%27 numOctaves=%272%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27160%27 height=%27160%27 filter=%27url(%23n)%27 opacity=%270.55%27/%3E%3C/svg%3E")',
-            backgroundSize: '180px 180px',
-          }}
-        />
+        {bloomOverlay ? (
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(circle at 50% 18%, ${bloomOverlay.color} 0%, transparent 58%)`,
+            }}
+          />
+        ) : null}
+        {colorSplitOverlay ? (
+          <div
+            className="absolute inset-0 mix-blend-screen"
+            style={{
+              background: `linear-gradient(115deg, ${colorSplitOverlay.teal} 0%, transparent 42%, transparent 60%, ${colorSplitOverlay.orange} 100%)`,
+            }}
+          />
+        ) : null}
+        {grainOverlay ? (
+          <div
+            className="absolute inset-0 mix-blend-screen"
+            style={{
+              opacity: grainOverlay.opacity,
+              backgroundImage: FILM_GRAIN_DATA_URL,
+              backgroundSize: '180px 180px',
+            }}
+          />
+        ) : null}
         <div className="absolute inset-0 bg-gradient-to-b from-black/22 via-transparent to-black/62" />
       </div>
 

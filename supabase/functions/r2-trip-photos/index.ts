@@ -127,6 +127,23 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === "createReadUrls") {
+      const paths = Array.isArray(payload?.paths)
+        ? payload.paths.map((value: unknown) => safeString(value)).filter(Boolean)
+        : [];
+      const signedFiles = await Promise.all(paths.map(async (path: string) => {
+        const signedRequest = await aws.sign(getObjectUrl(path), {
+          method: "GET",
+          aws: { signQuery: true },
+        });
+        return {
+          path,
+          readUrl: signedRequest.url,
+        };
+      }));
+      return json({ ok: true, files: signedFiles });
+    }
+
     return json({ ok: false, error: "Unknown action." }, 400);
   } catch (error) {
     console.error("r2-trip-photos: request failed", {
