@@ -385,7 +385,7 @@ export default function TripHighlightReel({
       </div>
 
       {/* PREMIUM PROGRESS BAR - Subtle line */}
-      <div className="absolute bottom-24 left-0 right-0 px-12">
+      <div className="absolute bottom-16 left-0 right-0 px-12">
         <div className="h-0.5 overflow-hidden rounded-full bg-white/20">
           <div
             className="h-full bg-white shadow-sm shadow-white/50 transition-all duration-300 ease-out"
@@ -395,8 +395,8 @@ export default function TripHighlightReel({
       </div>
 
       {/* PREMIUM PLAYBACK CONTROLS */}
-      <div className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-5 bg-gradient-to-t from-black/74 via-black/34 to-transparent"
-           style={{ paddingBottom: 'max(2rem, calc(env(safe-area-inset-bottom) + 1.5rem))' }}>
+      <div className="absolute bottom-0 left-0 right-0 px-6 pb-5 pt-10 bg-gradient-to-t from-black/82 via-black/40 to-transparent"
+           style={{ paddingBottom: 'max(1.25rem, calc(env(safe-area-inset-bottom) + 0.9rem))' }}>
         <div className="flex items-center justify-center gap-6">
           {/* Previous */}
           <button
@@ -430,7 +430,7 @@ export default function TripHighlightReel({
         </div>
 
         {/* Slide counter - Editorial typography */}
-        <div className="mt-8 text-center">
+        <div className="mt-6 text-center">
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
             {currentSlide + 1} of {safeHighlights.length}
           </div>
