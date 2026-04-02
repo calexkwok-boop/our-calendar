@@ -5054,13 +5054,34 @@ function App() {
         user_id: user.id,
         created_at: new Date().toISOString(),
       });
-      let insertPayload = photo;
+      let insertPayload = {
+        id: photo.id,
+        sub_calendar_id: photo.sub_calendar_id,
+        event_id: photo.event_id,
+        date: photo.date,
+        url: photo.url,
+        medium_url: photo.medium_url,
+        thumbnail_url: photo.thumbnail_url,
+        caption: photo.caption,
+        uploaded_by: photo.uploaded_by,
+        user_id: photo.user_id,
+        created_at: photo.created_at,
+      };
       let { error: dbError } = await supabase.from('trip_photos').insert(insertPayload);
       if (dbError && /column .*thumbnail_url|column .*medium_url|column .*original_url|schema cache/i.test(String(dbError?.message || ''))) {
-        insertPayload = { ...photo };
+        insertPayload = {
+          id: photo.id,
+          sub_calendar_id: photo.sub_calendar_id,
+          event_id: photo.event_id,
+          date: photo.date,
+          url: photo.url,
+          caption: photo.caption,
+          uploaded_by: photo.uploaded_by,
+          user_id: photo.user_id,
+          created_at: photo.created_at,
+        };
         delete insertPayload.thumbnail_url;
         delete insertPayload.medium_url;
-        delete insertPayload.original_url;
         dbError = (await supabase.from('trip_photos').insert(insertPayload)).error;
       }
       if (dbError) {
