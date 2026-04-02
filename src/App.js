@@ -441,6 +441,7 @@ const normalizeTripPhotoRecord = (photo) => {
   );
   return {
     ...photo,
+    original_url: normalizeTripPhotoUrl(photo?.original_url || normalizedUrl),
     url: normalizedMediumUrl || normalizedUrl,
     medium_url: normalizedMediumUrl || normalizedUrl,
     thumbnail_url: normalizedThumbnailUrl,
@@ -450,6 +451,14 @@ const normalizeTripPhotoRecord = (photo) => {
 const getTripPhotoThumbnailUrl = (photo) => String(
   photo?.thumbnail_url
   || photo?.thumb_url
+  || photo?.medium_url
+  || photo?.url
+  || photo?.original_url
+  || ''
+).trim();
+
+const getTripPhotoFallbackUrl = (photo) => String(
+  photo?.original_url
   || photo?.medium_url
   || photo?.url
   || ''
@@ -30835,7 +30844,7 @@ transform: translateY(0);
                           >
                             <img
                               src={previewUrl}
-                              data-fallback-src={String(photo?.url || '').trim()}
+                              data-fallback-src={getTripPhotoFallbackUrl(photo)}
                               alt={photo.caption || 'Trip photo'}
                               className="h-full w-full object-cover"
                               loading={index < 6 ? 'eager' : 'lazy'}
@@ -30954,7 +30963,7 @@ transform: translateY(0);
                           >
                             <img
                               src={displayUrl}
-                              data-fallback-src={String(photo?.url || '').trim()}
+                              data-fallback-src={getTripPhotoFallbackUrl(photo)}
                               alt={photo.caption || 'Trip photo'}
                               className="h-72 w-full object-cover"
                               loading={index === 0 ? 'eager' : 'lazy'}
@@ -31082,7 +31091,7 @@ transform: translateY(0);
                         >
                           <img
                             src={previewUrl}
-                            data-fallback-src={String(photo?.url || '').trim()}
+                            data-fallback-src={getTripPhotoFallbackUrl(photo)}
                             alt={photo.caption || 'Trip photo'}
                             className="h-full w-full object-cover"
                             loading={index < 6 ? 'eager' : 'lazy'}
