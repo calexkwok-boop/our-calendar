@@ -1014,6 +1014,10 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos, options = {}) => 
     slides.push(...selectedPhotoSlides);
   }
 
+  if (isSelectedPhotoMode) {
+    return slides;
+  }
+
   if (favoriteMoment) {
     slides.push({
       type: 'spotlight',
