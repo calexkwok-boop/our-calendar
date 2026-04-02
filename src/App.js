@@ -413,6 +413,8 @@ const buildTripPhotoTransformedUrl = (url, transform) => {
 
 const normalizeTripPhotoRecord = (photo) => {
   if (!photo || typeof photo !== 'object') return photo;
+  const localPreviewUrl = String(photo?.local_preview_url || '').trim();
+  const localThumbnailPreviewUrl = String(photo?.local_thumbnail_preview_url || '').trim();
   const normalizedUrl = normalizeTripPhotoUrl(photo?.url);
   const transformedThumbUrl = buildTripPhotoTransformedUrl(normalizedUrl, {
     width: 480,
@@ -441,6 +443,8 @@ const normalizeTripPhotoRecord = (photo) => {
   );
   return {
     ...photo,
+    local_preview_url: localPreviewUrl,
+    local_thumbnail_preview_url: localThumbnailPreviewUrl,
     original_url: normalizeTripPhotoUrl(photo?.original_url || normalizedUrl),
     url: normalizedMediumUrl || normalizedUrl,
     medium_url: normalizedMediumUrl || normalizedUrl,
@@ -460,6 +464,14 @@ const getTripPhotoThumbnailUrl = (photo) => String(
       || getR2TripPhotoStorageLocation(mainUrl)
       || getR2TripPhotoStorageLocation(originalUrl)
     );
+    const localThumbnailPreviewUrl = String(photo?.local_thumbnail_preview_url || '').trim();
+    const localPreviewUrl = String(photo?.local_preview_url || '').trim();
+    if (localThumbnailPreviewUrl) {
+      return localThumbnailPreviewUrl;
+    }
+    if (localPreviewUrl) {
+      return localPreviewUrl;
+    }
     if (isR2Photo) {
       return mediumUrl || mainUrl || originalUrl || thumbnailUrl || '';
     }
@@ -468,11 +480,26 @@ const getTripPhotoThumbnailUrl = (photo) => String(
 ).trim();
 
 const getTripPhotoFallbackUrl = (photo) => String(
-  photo?.original_url
+  photo?.local_preview_url
+  || photo?.original_url
   || photo?.medium_url
   || photo?.url
   || ''
 ).trim();
+
+const getTripPhotoChronologicalValue = (photo, fallbackIndex = 0) => {
+  const createdAt = Date.parse(String(photo?.created_at || photo?.createdAt || '').trim());
+  if (Number.isFinite(createdAt) && createdAt > 0) return createdAt;
+  return fallbackIndex;
+};
+
+const sortTripPhotosChronologically = (photos = []) => (
+  [...(Array.isArray(photos) ? photos : [])].sort((a, b) => {
+    const diff = getTripPhotoChronologicalValue(a) - getTripPhotoChronologicalValue(b);
+    if (diff !== 0) return diff;
+    return String(a?.id || '').localeCompare(String(b?.id || ''));
+  })
+);
 
 const handleTripPhotoImageError = (event) => {
   const fallbackUrl = String(event?.currentTarget?.dataset?.fallbackSrc || '').trim();
@@ -5046,6 +5073,8 @@ function App() {
         sub_calendar_id: activeSubCalendar.id,
         event_id: eventId || null,
         date: date || (subCalSelectedDate ? getDateKey(subCalSelectedDate) : null),
+        local_preview_url: URL.createObjectURL(mainFile),
+        local_thumbnail_preview_url: URL.createObjectURL(thumbFile),
         url: mainUrl,
         medium_url: mainUrl,
         thumbnail_url: uploadedThumb ? thumbUrl : '',
@@ -30846,6 +30875,7 @@ transform: translateY(0);
                     byDate[d].push(p);
                   });
                   return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b)).map(([date, photos]) => {
+                    const orderedPhotos = sortTripPhotosChronologically(photos);
                     return (
                     <div key={date} className="mb-6">
                       <div className="mb-2 flex w-full items-center justify-between gap-3 rounded-2xl border border-gray-200/80 bg-white/75 px-3 py-2 text-left backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.04]">
@@ -30856,7 +30886,7 @@ transform: translateY(0);
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
-                        {photos.map((photo, index) => {
+                        {orderedPhotos.map((photo, index) => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
                           const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
                           const hasPhotoReactions = Object.keys(photoReactions).length > 0;
@@ -30964,6 +30994,7 @@ transform: translateY(0);
                     byDate[d].push(p);
                   });
                   return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b)).map(([date, photos]) => {
+                    const orderedPhotos = sortTripPhotosChronologically(photos);
                     return (
                     <div key={date} className="relative pl-6 border-l-2 border-purple-200 dark:border-purple-800">
                       {/* Date marker */}
@@ -30984,7 +31015,7 @@ transform: translateY(0);
                         </div>
                       </div>
                       <div className="space-y-4">
-                        {photos.map((photo, index) => {
+                        {orderedPhotos.map((photo, index) => {
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
                           const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
                           const isPhotoReactionPickerOpen = tripPhotoReactionPickerId === String(photo.id || '');
