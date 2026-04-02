@@ -298,21 +298,21 @@ export default function TripHighlightReel({
       {/* PREMIUM TOP BAR - Glassmorphism with blur */}
       <div className="absolute top-0 left-0 right-0 z-30 px-6 pb-5 pt-8 bg-gradient-to-b from-black/72 via-black/34 to-transparent"
            style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1.5rem))' }}>
-        <div className="flex items-center justify-between">
+        <div className="grid grid-cols-[auto_1fr] items-center gap-4 sm:gap-6">
           {/* Close Button - Elevated design */}
           <button
             onClick={onClose}
-            className="group flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
+            className="group flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
           >
             <X className="h-5 w-5 transition-transform group-hover:rotate-90" />
           </button>
 
           {/* Controls - Premium pill design */}
-          <div className="flex gap-2.5">
+          <div className="flex items-center justify-end gap-3 sm:gap-4">
             {/* Music Toggle */}
             <button
               onClick={() => setMusicEnabled(!musicEnabled)}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
             >
               <Music className={`h-5 w-5 transition-opacity ${musicEnabled ? 'opacity-100' : 'opacity-40'}`} />
             </button>
@@ -320,7 +320,7 @@ export default function TripHighlightReel({
             {/* Download */}
             <button
               onClick={() => onSave && onSave(safeHighlights)}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
             >
               <Download className="h-5 w-5" />
             </button>
@@ -329,7 +329,7 @@ export default function TripHighlightReel({
             <div className="relative" ref={shareMenuRef}>
               <button
                 onClick={() => setShowShareMenu(!showShareMenu)}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-black backdrop-blur-xl transition-all hover:bg-white hover:scale-105 active:scale-95 shadow-lg shadow-white/20"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/90 text-black backdrop-blur-xl transition-all hover:bg-white hover:scale-105 active:scale-95 shadow-lg shadow-white/20"
               >
                 <Share2 className="h-5 w-5" />
               </button>

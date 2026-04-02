@@ -18539,6 +18539,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         });
         return;
       }
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [files[0]] })) {
+        await navigator.share({
+          files: [files[0]],
+          title: `${String(activeSubCalendar?.name || 'Trip').trim()} Highlight`,
+          text: 'Your browser can save one highlight image at a time from the share sheet.',
+        });
+        return;
+      }
+      alert(`Saving ${files.length} highlight image${files.length === 1 ? '' : 's'} to your device...`);
       files.forEach((file, idx) => {
         const url = URL.createObjectURL(file);
         setTimeout(() => {
