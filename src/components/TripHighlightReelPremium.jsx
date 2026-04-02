@@ -217,7 +217,9 @@ export default function TripHighlightReel({
   groupRatingsByEventId = {},
   currentUserId,
   selectedPhotoMode = false,
+  initialTrackId = '',
   onClose,
+  onTrackChange,
   onShare,
   onPublish,
   onSave,
@@ -227,7 +229,11 @@ export default function TripHighlightReel({
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showMusicMenu, setShowMusicMenu] = useState(false);
-  const [selectedTrackId, setSelectedTrackId] = useState(HIGHLIGHT_REEL_TRACKS[0].id);
+  const [selectedTrackId, setSelectedTrackId] = useState(() => (
+    HIGHLIGHT_REEL_TRACKS.some((track) => track.id === initialTrackId)
+      ? initialTrackId
+      : HIGHLIGHT_REEL_TRACKS[0].id
+  ));
   const [audioAvailable, setAudioAvailable] = useState(true);
   const intervalRef = useRef(null);
   const audioRef = useRef(null);
@@ -257,16 +263,12 @@ export default function TripHighlightReel({
   // Auto-advance with variable timing
   useEffect(() => {
     if (!isPlaying || safeHighlights.length <= 1) return;
+    if (currentSlide >= safeHighlights.length - 1) return;
 
     const currentDuration = getSlideDuration(safeHighlights[currentSlide]);
     
     intervalRef.current = setTimeout(() => {
-      if (currentSlide >= safeHighlights.length - 1) {
-        setIsPlaying(false);
-        if (audioRef.current) audioRef.current.pause();
-      } else {
-        advanceSlide();
-      }
+      advanceSlide();
     }, currentDuration);
 
     return () => {
@@ -299,6 +301,11 @@ export default function TripHighlightReel({
       audioRef.current.pause();
     }
   }, [isPlaying, musicEnabled, audioAvailable, selectedTrackId]);
+
+  useEffect(() => {
+    if (!HIGHLIGHT_REEL_TRACKS.some((track) => track.id === initialTrackId)) return;
+    setSelectedTrackId(initialTrackId);
+  }, [initialTrackId]);
 
   useEffect(() => {
     const handlePointerDown = (event) => {
@@ -342,7 +349,7 @@ export default function TripHighlightReel({
       {/* PREMIUM TOP BAR - Glassmorphism with blur */}
       <div className="absolute top-0 left-0 right-0 z-30 px-6 pb-5 pt-8 bg-gradient-to-b from-black/72 via-black/34 to-transparent"
            style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1.5rem))' }}>
-        <div className="flex items-center justify-between gap-3 sm:gap-4">
+        <div className="grid grid-cols-[auto_auto_minmax(8.75rem,10rem)_auto_auto] items-center justify-between gap-2.5 sm:gap-3">
           {/* Close Button - Elevated design */}
           <button
             onClick={onClose}
@@ -351,96 +358,95 @@ export default function TripHighlightReel({
             <X className="h-5 w-5 transition-transform group-hover:rotate-90" />
           </button>
 
-          <div className="flex flex-1 items-center justify-center gap-2.5 sm:gap-3">
-            {/* Music Toggle */}
+          {/* Music Toggle */}
+          <button
+            onClick={() => setMusicEnabled(!musicEnabled)}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
+          >
+            <Music className={`h-5 w-5 transition-opacity ${musicEnabled ? 'opacity-100' : 'opacity-40'}`} />
+          </button>
+
+          <div className="relative w-full" ref={musicMenuRef}>
             <button
-              onClick={() => setMusicEnabled(!musicEnabled)}
+              type="button"
+              onClick={() => setShowMusicMenu((prev) => !prev)}
+              className="w-full truncate rounded-full border border-white/14 bg-black/40 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-white/92 backdrop-blur-xl transition-all hover:bg-black/56 sm:text-[11px]"
+            >
+              {selectedTrack.label}
+            </button>
+            {showMusicMenu && (
+              <div className="absolute left-1/2 mt-3 w-44 -translate-x-1/2 overflow-hidden rounded-3xl border border-white/10 bg-black/82 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
+                {HIGHLIGHT_REEL_TRACKS.map((track) => {
+                  const active = track.id === selectedTrackId;
+                  return (
+                    <button
+                      key={track.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTrackId(track.id);
+                        setMusicEnabled(true);
+                        setAudioAvailable(true);
+                        setShowMusicMenu(false);
+                        onTrackChange && onTrackChange(track.id);
+                      }}
+                      className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-all ${
+                        active ? 'bg-white/10 text-white' : 'text-white/78 hover:bg-white/8 hover:text-white'
+                      }`}
+                    >
+                      <span className="font-semibold">{track.label}</span>
+                      {active ? <Music className="h-4 w-4" /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Download */}
+          <button
+            onClick={() => onSave && onSave({
+              slides: safeHighlights,
+              trackFile: selectedTrack.file,
+              trackLabel: selectedTrack.label,
+            })}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
+          >
+            <Download className="h-5 w-5" />
+          </button>
+
+          {/* Share - Premium dropdown */}
+          <div className="relative" ref={shareMenuRef}>
+            <button
+              onClick={() => setShowShareMenu(!showShareMenu)}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
             >
-              <Music className={`h-5 w-5 transition-opacity ${musicEnabled ? 'opacity-100' : 'opacity-40'}`} />
+              <Share2 className="h-5 w-5" />
             </button>
-
-            <div className="relative" ref={musicMenuRef}>
-              <button
-                type="button"
-                onClick={() => setShowMusicMenu((prev) => !prev)}
-                className="max-w-[8.75rem] truncate rounded-full border border-white/12 bg-black/32 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-white/72 backdrop-blur-xl transition-all hover:bg-black/44 sm:max-w-[10rem] sm:text-[11px]"
-              >
-                {selectedTrack.label}
-              </button>
-              {showMusicMenu && (
-                <div className="absolute left-1/2 mt-3 w-44 -translate-x-1/2 overflow-hidden rounded-3xl border border-white/10 bg-black/82 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
-                  {HIGHLIGHT_REEL_TRACKS.map((track) => {
-                    const active = track.id === selectedTrackId;
-                    return (
-                      <button
-                        key={track.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedTrackId(track.id);
-                          setMusicEnabled(true);
-                          setAudioAvailable(true);
-                          setShowMusicMenu(false);
-                        }}
-                        className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-all ${
-                          active ? 'bg-white/10 text-white' : 'text-white/78 hover:bg-white/8 hover:text-white'
-                        }`}
-                      >
-                        <span className="font-semibold">{track.label}</span>
-                        {active ? <Music className="h-4 w-4" /> : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Download */}
-            <button
-              onClick={() => onSave && onSave({
-                slides: safeHighlights,
-                trackFile: selectedTrack.file,
-                trackLabel: selectedTrack.label,
-              })}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
-            >
-              <Download className="h-5 w-5" />
-            </button>
-
-            {/* Share - Premium dropdown */}
-            <div className="relative" ref={shareMenuRef}>
-              <button
-                onClick={() => setShowShareMenu(!showShareMenu)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/90 text-black backdrop-blur-xl transition-all hover:bg-white hover:scale-105 active:scale-95 shadow-lg shadow-white/20"
-              >
-                <Share2 className="h-5 w-5" />
-              </button>
-              
-              {showShareMenu && (
-                <div className="absolute right-0 mt-3 w-56 overflow-hidden rounded-3xl border border-white/10 bg-black/80 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
-                  <button
-                    onClick={() => {
-                      onShare && onShare(safeHighlights);
-                      setShowShareMenu(false);
-                    }}
-                    className="flex w-full items-center justify-between px-5 py-4 text-left text-white/80 transition-all hover:bg-white/8 hover:text-white"
-                  >
-                    <span className="font-semibold">Share with Friends</span>
-                    <Share2 className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      onPublish && onPublish(safeHighlights);
-                      setShowShareMenu(false);
-                    }}
-                    className="flex w-full items-center justify-between px-5 py-4 text-left text-white/80 transition-all hover:bg-white/8 hover:text-white"
-                  >
-                    <span className="font-semibold">Publish to Explore</span>
-                    <Sparkles className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-            </div>
+            
+            {showShareMenu && (
+              <div className="absolute right-0 mt-3 w-56 overflow-hidden rounded-3xl border border-white/10 bg-black/80 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
+                <button
+                  onClick={() => {
+                    onShare && onShare(safeHighlights);
+                    setShowShareMenu(false);
+                  }}
+                  className="flex w-full items-center justify-between px-5 py-4 text-left text-white/80 transition-all hover:bg-white/8 hover:text-white"
+                >
+                  <span className="font-semibold">Share with Friends</span>
+                  <Share2 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    onPublish && onPublish(safeHighlights);
+                    setShowShareMenu(false);
+                  }}
+                  className="flex w-full items-center justify-between px-5 py-4 text-left text-white/80 transition-all hover:bg-white/8 hover:text-white"
+                >
+                  <span className="font-semibold">Publish to Explore</span>
+                  <Sparkles className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

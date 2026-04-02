@@ -2543,6 +2543,7 @@ function App() {
   const [tripHighlightsOpenToken, setTripHighlightsOpenToken] = useState(0);
   const [tripHighlightSelectedPhotoIds, setTripHighlightSelectedPhotoIds] = useState([]);
   const [tripHighlightDefaultPhotoIds, setTripHighlightDefaultPhotoIds] = useState([]);
+  const [tripHighlightDefaultTrackId, setTripHighlightDefaultTrackId] = useState('');
   const [tripHighlightSelectionMode, setTripHighlightSelectionMode] = useState(false);
   const [tripHighlightReelNoteId, setTripHighlightReelNoteId] = useState(null);
   const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
@@ -4745,6 +4746,7 @@ function App() {
       let loadedTripCoverPhoto = null;
       let loadedTripCoverPhotoNoteId = null;
       let loadedTripHighlightDefaultPhotoIds = [];
+      let loadedTripHighlightDefaultTrackId = '';
       let loadedTripHighlightReelNoteId = null;
       (data || []).forEach((n) => {
         let parsedChecklist = [];
@@ -4815,6 +4817,7 @@ function App() {
           loadedTripHighlightDefaultPhotoIds = Array.isArray(parsed?.photoIds)
             ? parsed.photoIds.map((id) => String(id || '').trim()).filter(Boolean).slice(0, 25)
             : [];
+          loadedTripHighlightDefaultTrackId = String(parsed?.trackId || '').trim();
           return;
         }
         visibleNotes.push({ ...n, checklist: parsedChecklist });
@@ -4834,6 +4837,7 @@ function App() {
       setTripCoverPhoto(loadedTripCoverPhoto && loadedTripCoverPhoto.url ? loadedTripCoverPhoto : null);
       setTripCoverPhotoNoteId(loadedTripCoverPhotoNoteId);
       setTripHighlightDefaultPhotoIds(loadedTripHighlightDefaultPhotoIds);
+      setTripHighlightDefaultTrackId(loadedTripHighlightDefaultTrackId);
       setTripHighlightReelNoteId(loadedTripHighlightReelNoteId);
       return {
         deletedPhotoIds: mergedDeletedPhotoIds,
@@ -18398,15 +18402,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setTripHighlightsOpenToken((prev) => prev + 1);
     setShowTripHighlightsModal(true);
   };
-  const saveTripHighlightDefaultSelection = async (photoIds) => {
+  const saveTripHighlightDefaultSelection = async (photoIds, trackIdOverride = null) => {
     if (!assertCanEditSubCalendar('save the trip highlight reel')) return false;
     if (!activeSubCalendar) return false;
     const normalizedPhotoIds = Array.from(new Set(
       (photoIds || []).map((id) => String(id || '').trim()).filter(Boolean)
     )).slice(0, 25);
+    const normalizedTrackId = String(trackIdOverride == null ? tripHighlightDefaultTrackId : trackIdOverride || '').trim();
     const payload = {
       checklist: JSON.stringify({
         photoIds: normalizedPhotoIds,
+        trackId: normalizedTrackId,
         updatedAt: new Date().toISOString(),
       }),
     };
@@ -18434,6 +18440,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       setTripHighlightReelNoteId(row.id);
     }
     setTripHighlightDefaultPhotoIds(normalizedPhotoIds);
+    setTripHighlightDefaultTrackId(normalizedTrackId);
     return true;
   };
   const openTripHighlightsFromSelectedPhotos = () => {
@@ -18467,6 +18474,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       await openCustomReel();
     };
     persistThenOpen();
+  };
+  const handleTripHighlightTrackChange = async (trackId) => {
+    const normalizedTrackId = String(trackId || '').trim();
+    setTripHighlightDefaultTrackId(normalizedTrackId);
+    if (!activeSubCalendar || !normalizedTrackId) return;
+    const preferredPhotoIds = (tripHighlightSelectedPhotoIds || []).length > 0
+      ? tripHighlightSelectedPhotoIds
+      : tripHighlightDefaultPhotoIds;
+    await saveTripHighlightDefaultSelection(preferredPhotoIds, normalizedTrackId);
   };
   const shareTripHighlightsWithFriends = async () => {
     const tripId = String(activeSubCalendar?.id || '').trim();
@@ -29139,10 +29155,12 @@ transform: translateY(0);
         groupRatingsByEventId={subCalEventGroupRatings}
         currentUserId={user?.id}
         selectedPhotoMode={tripHighlightSelectedPhotoIds.length > 0}
+        initialTrackId={tripHighlightDefaultTrackId}
         onClose={() => {
           setShowTripHighlightsModal(false);
           setTripHighlightSelectedPhotoIds([]);
         }}
+        onTrackChange={handleTripHighlightTrackChange}
         onShare={(slides) => {
           setTripHighlightsSlides(Array.isArray(slides) ? slides : []);
           shareTripHighlightsWithFriends();
