@@ -300,6 +300,23 @@ export default function TripHighlightReel({
     }
   }, [isPlaying, musicEnabled, audioAvailable, selectedTrackId]);
 
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(event.target)) {
+        setShowShareMenu(false);
+      }
+      if (musicMenuRef.current && !musicMenuRef.current.contains(event.target)) {
+        setShowMusicMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, []);
+
   const handleNext = () => {
     if (currentSlide < safeHighlights.length - 1) {
       advanceSlide();
@@ -325,7 +342,7 @@ export default function TripHighlightReel({
       {/* PREMIUM TOP BAR - Glassmorphism with blur */}
       <div className="absolute top-0 left-0 right-0 z-30 px-6 pb-5 pt-8 bg-gradient-to-b from-black/72 via-black/34 to-transparent"
            style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1.5rem))' }}>
-        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 sm:gap-4">
+        <div className="flex items-center justify-between gap-3 sm:gap-4">
           {/* Close Button - Elevated design */}
           <button
             onClick={onClose}
@@ -334,14 +351,7 @@ export default function TripHighlightReel({
             <X className="h-5 w-5 transition-transform group-hover:rotate-90" />
           </button>
 
-          <div className="flex justify-center">
-            <div className="max-w-[8.75rem] truncate rounded-full border border-white/12 bg-black/32 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-white/72 backdrop-blur-xl sm:max-w-[10rem] sm:text-[11px]">
-              {selectedTrack.label}
-            </div>
-          </div>
-
-          {/* Controls - Premium pill design */}
-          <div className="flex items-center justify-end gap-2.5 sm:gap-3">
+          <div className="flex flex-1 items-center justify-center gap-2.5 sm:gap-3">
             {/* Music Toggle */}
             <button
               onClick={() => setMusicEnabled(!musicEnabled)}
@@ -349,6 +359,41 @@ export default function TripHighlightReel({
             >
               <Music className={`h-5 w-5 transition-opacity ${musicEnabled ? 'opacity-100' : 'opacity-40'}`} />
             </button>
+
+            <div className="relative" ref={musicMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowMusicMenu((prev) => !prev)}
+                className="max-w-[8.75rem] truncate rounded-full border border-white/12 bg-black/32 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-white/72 backdrop-blur-xl transition-all hover:bg-black/44 sm:max-w-[10rem] sm:text-[11px]"
+              >
+                {selectedTrack.label}
+              </button>
+              {showMusicMenu && (
+                <div className="absolute left-1/2 mt-3 w-44 -translate-x-1/2 overflow-hidden rounded-3xl border border-white/10 bg-black/82 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
+                  {HIGHLIGHT_REEL_TRACKS.map((track) => {
+                    const active = track.id === selectedTrackId;
+                    return (
+                      <button
+                        key={track.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedTrackId(track.id);
+                          setMusicEnabled(true);
+                          setAudioAvailable(true);
+                          setShowMusicMenu(false);
+                        }}
+                        className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition-all ${
+                          active ? 'bg-white/10 text-white' : 'text-white/78 hover:bg-white/8 hover:text-white'
+                        }`}
+                      >
+                        <span className="font-semibold">{track.label}</span>
+                        {active ? <Music className="h-4 w-4" /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Download */}
             <button
@@ -428,8 +473,8 @@ export default function TripHighlightReel({
       </div>
 
       {/* PREMIUM PLAYBACK CONTROLS */}
-      <div className="absolute bottom-0 left-0 right-0 px-6 pb-2 pt-6 bg-gradient-to-t from-black/88 via-black/42 to-transparent"
-           style={{ paddingBottom: 'max(0.4rem, calc(env(safe-area-inset-bottom) + 0.3rem))' }}>
+      <div className="absolute bottom-0 left-0 right-0 px-6 pb-1 pt-5 bg-gradient-to-t from-black/88 via-black/42 to-transparent"
+           style={{ paddingBottom: 'max(0.2rem, calc(env(safe-area-inset-bottom) + 0.15rem))' }}>
         <div className="flex items-center justify-center gap-6">
           {/* Previous */}
           <button
@@ -809,7 +854,7 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos, options = {}) => 
   const slides = isSelectedPhotoMode ? [] : [
     {
       type: 'title',
-      title: trip?.title || 'Trip Highlights',
+      title: String(trip?.location || '').trim() || trip?.title || 'Trip Highlights',
       subtitle: formatTripDates(trip?.startDate, trip?.endDate),
       background: coverPhoto,
     },
