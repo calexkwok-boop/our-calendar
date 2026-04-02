@@ -32486,10 +32486,12 @@ transform: translateY(0);
               <X className="w-5 h-5" />
             </button>
             <img
-              src={lightboxPhoto.url}
+              src={getTripPhotoDisplayUrl(lightboxPhoto)}
+              data-fallback-src={getTripPhotoFallbackUrl(lightboxPhoto)}
               alt={lightboxPhoto.caption || ''}
               className="max-w-full max-h-[80vh] rounded-xl object-contain"
               onClick={e => e.stopPropagation()}
+              onError={handleTripPhotoImageError}
             />
             <div className="mt-3 text-center"     onClick={e => e.stopPropagation()}
   >
