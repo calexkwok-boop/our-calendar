@@ -23624,7 +23624,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               />
             </div>
           ) : null}
-          {bottomNavTab === 'home' && (
+          {['home', 'events', 'trips', 'explore'].includes(String(bottomNavTab || '')) && (
             <div className="absolute inset-0 z-[25] pointer-events-none">
 
               {/* Icon — top left, opens account */}
@@ -26595,52 +26595,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         <div className="grid grid-cols-1 gap-4">
-          {['events', 'trips', 'explore'].includes(String(bottomNavTab || '')) && (
-            <div className="flex items-center justify-between gap-3 px-1">
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowCalendarSwitcher((prev) => !prev);
-                  }}
-                  className="flex items-center gap-3 rounded-2xl border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.05] px-3 py-2 shadow-sm backdrop-blur-sm hover:bg-white/90 dark:hover:bg-white/[0.08] transition-all"
-                  title="Calendars & account"
-                >
-                  <UserProfileAvatar
-                    photoUrl={currentUserProfilePhotoUrl}
-                    userId={user?.id}
-                    label={currentUserProfileLabel}
-                    sizeClass="w-9 h-9"
-                    roundedClass="rounded-xl"
-                    textClass="text-sm"
-                  />
-                  <div className="min-w-0 text-left">
-                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                      {currentUser || 'Your account'}
-                    </div>
-                    <div className="text-[11px] text-gray-500 dark:text-gray-400">
-                      Calendars & account
-                    </div>
-                  </div>
-                </button>
-                {canManageActiveLayer && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openLayerMediaMenu();
-                    }}
-                    className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700"
-                    title="Edit profile photo"
-                  >
-                    <Camera className="w-3 h-3 text-gray-600 dark:text-gray-300" />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          {false && (showHomeCalendarOverview || preferCalendarHome) && (
+        {false && (showHomeCalendarOverview || preferCalendarHome) && (
                     <div className={`${bottomNavTab !== 'home' ? 'hidden' : ''} relative overflow-hidden rounded-3xl shadow-2xl p-4 sm:p-6 ${calendarView === 'agenda' ? 'bg-gray-50 dark:bg-gray-900' : 'bg-gradient-to-br from-white via-purple-50/20 to-pink-50/20 dark:from-gray-900 dark:via-purple-900/5 dark:to-pink-900/5'}`} >
             <div className="relative z-10">
 
