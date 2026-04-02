@@ -23311,6 +23311,33 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                               </button>
                             )}
                           </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => previousItineraryDate && setSubCalSelectedDate(previousItineraryDate)}
+                              disabled={!previousItineraryDate}
+                              className="rounded-full border border-purple-200/80 bg-white/80 px-3 py-1.5 text-xs font-semibold text-purple-600 transition disabled:cursor-not-allowed disabled:opacity-35 dark:border-purple-400/20 dark:bg-white/5 dark:text-purple-200"
+                            >
+                              Previous day
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => nextItineraryDate && setSubCalSelectedDate(nextItineraryDate)}
+                              disabled={!nextItineraryDate}
+                              className="rounded-full border border-purple-200/80 bg-white/80 px-3 py-1.5 text-xs font-semibold text-purple-600 transition disabled:cursor-not-allowed disabled:opacity-35 dark:border-purple-400/20 dark:bg-white/5 dark:text-purple-200"
+                            >
+                              Next day
+                            </button>
+                            {canJumpToTodayInTrip && (
+                              <button
+                                type="button"
+                                onClick={() => setSubCalSelectedDate(new Date(`${todayDateKey}T00:00:00`))}
+                                className="rounded-full border border-gray-200/90 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
+                              >
+                                Jump to today
+                              </button>
+                            )}
+                          </div>
                         </div>
                         <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
                           {formatNotificationTime(item.createdAt)}
@@ -29444,6 +29471,12 @@ transform: translateY(0);
         {/* Day content */}
         {subCalTab === 'itinerary' && subCalSelectedDate && (() => {
           const dk = getDateKey(subCalSelectedDate);
+          const itineraryDates = getSubCalDates(activeSubCalendar);
+          const selectedDateIndex = itineraryDates.findIndex((date) => getDateKey(date) === dk);
+          const previousItineraryDate = selectedDateIndex > 0 ? itineraryDates[selectedDateIndex - 1] : null;
+          const nextItineraryDate = selectedDateIndex >= 0 && selectedDateIndex < itineraryDates.length - 1 ? itineraryDates[selectedDateIndex + 1] : null;
+          const todayDateKey = getDateKey(new Date());
+          const canJumpToTodayInTrip = itineraryDates.some((date) => getDateKey(date) === todayDateKey) && todayDateKey !== dk;
           const dayEvents = (subCalendarEvents[dk] || []).sort((a, b) => {
             if (!a.time) return 1;
             if (!b.time) return -1;
