@@ -317,42 +317,6 @@ export default function TripHighlightReel({
               <Music className={`h-5 w-5 transition-opacity ${musicEnabled ? 'opacity-100' : 'opacity-40'}`} />
             </button>
 
-            {/* Track Selector - Premium dropdown */}
-            <div className="relative" ref={musicMenuRef}>
-              <button
-                onClick={() => setShowMusicMenu(!showMusicMenu)}
-                className="flex h-11 items-center gap-2 rounded-full bg-black/40 px-4 text-xs font-bold uppercase tracking-[0.12em] text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
-              >
-                <Music className="h-4 w-4" />
-                <span>{selectedTrack.label}</span>
-              </button>
-              
-              {showMusicMenu && (
-                <div className="absolute right-0 mt-3 w-64 overflow-hidden rounded-3xl border border-white/10 bg-black/80 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
-                  <div className="border-b border-white/10 px-5 py-4">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">Soundtrack</div>
-                  </div>
-                  {HIGHLIGHT_REEL_TRACKS.map((track) => (
-                    <button
-                      key={track.id}
-                      onClick={() => {
-                        setSelectedTrackId(track.id);
-                        setShowMusicMenu(false);
-                      }}
-                      className={`flex w-full items-center justify-between px-5 py-4 transition-all ${
-                        track.id === selectedTrackId
-                          ? 'bg-white/15 text-white'
-                          : 'text-white/80 hover:bg-white/8 hover:text-white'
-                      }`}
-                    >
-                      <span className="font-semibold">{track.label}</span>
-                      <span className="text-[10px] uppercase tracking-[0.14em] text-white/50">{track.vibe}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Download */}
             <button
               onClick={() => onSave && onSave(safeHighlights)}
@@ -756,6 +720,17 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos, options = {}) => 
   const safeMoments = Array.isArray(moments) ? moments.filter(Boolean) : [];
   const memoryMoments = buildMemoryMoments(tripPhotos);
   const isSelectedPhotoMode = Boolean(options?.selectedPhotoMode);
+  if (isSelectedPhotoMode) {
+    return (Array.isArray(tripPhotos) ? tripPhotos : [])
+      .filter((photo) => photo && typeof photo === 'object' && String(photo?.url || '').trim())
+      .map((photo, index) => ({
+        photo,
+        sortValue: getDirectPhotoSortValue(photo, index),
+      }))
+      .sort((a, b) => a.sortValue - b.sortValue)
+      .slice(0, 25)
+      .map(({ photo }) => buildDirectSelectedPhotoSlide(photo));
+  }
   const targetPhotoSlideCount = 25;
   const maxFoodSlides = isSelectedPhotoMode ? 6 : 4;
   const coverPhoto = memoryMoments[0]?.photo?.url
@@ -1054,6 +1029,38 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos, options = {}) => 
   });
 
   return slides;
+};
+
+const getDirectPhotoSortValue = (photo, fallbackIndex = 0) => {
+  const rawDate = String(photo?.date || photo?.created_at || photo?.createdAt || '').trim();
+  if (!rawDate) return Number.MAX_SAFE_INTEGER - 100000 + fallbackIndex;
+  const parsed = new Date(rawDate.includes('T') ? rawDate : `${rawDate}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return Number.MAX_SAFE_INTEGER - 100000 + fallbackIndex;
+  return parsed.getTime();
+};
+
+const buildDirectSelectedPhotoSlide = (photo) => {
+  const resolvedLocation = resolvePhotoSpecificLocation(photo);
+  const inferredMood = photo?.hasPeople
+    ? 'people'
+    : inferVisualMood({
+        title: '',
+        location: resolvedLocation,
+        review: String(photo?.caption || '').trim(),
+        tags: Array.isArray(photo?.tags) ? photo.tags : [],
+      });
+  return {
+    type: 'photo',
+    photo: String(photo?.url || '').trim(),
+    caption: '',
+    subcopy: '',
+    eyebrow: '',
+    location: resolvedLocation,
+    eventLocation: '',
+    rating: 0,
+    mood: inferredMood,
+    eventMood: '',
+  };
 };
 
 const buildMemoryMoments = (tripPhotos) => (
