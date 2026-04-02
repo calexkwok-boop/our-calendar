@@ -680,6 +680,17 @@ const getTripPhotoFallbackUrl = (photo) => String(
   || ''
 ).trim();
 
+const getTripPhotoDisplayUrl = (photo) => String(
+  photo?.local_preview_url
+  || photo?.resolved_medium_url
+  || photo?.resolved_url
+  || photo?.resolved_original_url
+  || photo?.medium_url
+  || photo?.url
+  || photo?.original_url
+  || ''
+).trim();
+
 const getTripPhotoChronologicalValue = (photo, fallbackIndex = 0) => {
   const createdAt = Date.parse(String(photo?.created_at || photo?.createdAt || '').trim());
   if (Number.isFinite(createdAt) && createdAt > 0) return createdAt;
@@ -3794,9 +3805,10 @@ function App() {
       merged.push(...(rows || []));
     }
     const deduped = merged.filter((row, index, arr) => arr.findIndex((candidate) => String(candidate?.id) === String(row?.id)) === index);
-    setTripPhotos(deduped);
-    writeLocalTripPhotosCache(subCal?.id, deduped);
-    return deduped;
+    const ordered = sortTripPhotosChronologically(deduped);
+    setTripPhotos(ordered);
+    writeLocalTripPhotosCache(subCal?.id, ordered);
+    return ordered;
   };
 
   const loadSubCalendarMembers = async (subCalId) => {
@@ -5337,7 +5349,7 @@ function App() {
         return null;
       }
       setTripPhotos(prev => {
-        const next = [...prev, photo];
+        const next = sortTripPhotosChronologically([...prev, photo]);
         writeLocalTripPhotosCache(activeSubCalendar.id, next);
         return next;
       });
@@ -30349,7 +30361,7 @@ transform: translateY(0);
                           title="View event photo"
                         >
                           <img
-                            src={getEventPhotos(event.id)[0].url}
+                            src={getTripPhotoDisplayUrl(getEventPhotos(event.id)[0])}
                             alt=""
                             className="h-28 w-full rounded-2xl object-cover"
                           />
@@ -30646,7 +30658,7 @@ transform: translateY(0);
                                       title="View event photo"
                                     >
                                       <img
-                                        src={getEventPhotos(event.id)[0].url}
+                                        src={getTripPhotoDisplayUrl(getEventPhotos(event.id)[0])}
                                         alt=""
                                         className="w-12 h-12 rounded-lg object-cover border border-purple-200 dark:border-purple-700"
                                       />
@@ -30794,7 +30806,7 @@ transform: translateY(0);
                             title="View event photo"
                           >
                             <img
-                              src={getEventPhotos(event.id)[0].url}
+                              src={getTripPhotoDisplayUrl(getEventPhotos(event.id)[0])}
                               alt=""
                               className="w-9 h-9 rounded-md object-cover border border-gray-200 dark:border-gray-600"
                             />
@@ -31236,7 +31248,7 @@ transform: translateY(0);
                           const isSelectedPhoto = selectedPhotoIds.includes(photo.id);
                           const photoReactions = tripPhotoReactionsById[String(photo.id || '')] || {};
                           const isPhotoReactionPickerOpen = tripPhotoReactionPickerId === String(photo.id || '');
-                          const displayUrl = String(photo?.medium_url || photo?.url || '').trim();
+                          const displayUrl = getTripPhotoDisplayUrl(photo);
                           return (
                           <div
                             key={photo.id}

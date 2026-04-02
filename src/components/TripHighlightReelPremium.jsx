@@ -598,24 +598,24 @@ export default function TripHighlightReel({
         
         /* Ken Burns variations */
         @keyframes zoom-pan {
-          from { transform: scale(1) translate(0, 0); }
-          to { transform: scale(1.15) translate(-3%, -2%); }
+          from { transform: scale(1.01) translate(0, 0); }
+          to { transform: scale(1.13) translate(0, 0); }
         }
         @keyframes zoom-in {
-          from { transform: scale(1); }
-          to { transform: scale(1.12); }
+          from { transform: scale(1.01) translate(0, 0); }
+          to { transform: scale(1.11) translate(0, 0); }
         }
         @keyframes pan-right {
-          from { transform: scale(1.08) translateX(0); }
-          to { transform: scale(1.08) translateX(-4%); }
+          from { transform: scale(1.03) translate(0, 0); }
+          to { transform: scale(1.11) translate(0, 0); }
         }
         @keyframes zoom-out {
-          from { transform: scale(1.15); }
-          to { transform: scale(1); }
+          from { transform: scale(1.12) translate(0, 0); }
+          to { transform: scale(1.01) translate(0, 0); }
         }
         @keyframes zoom-in-slow {
-          from { transform: scale(1); }
-          to { transform: scale(1.08); }
+          from { transform: scale(1.01) translate(0, 0); }
+          to { transform: scale(1.08) translate(0, 0); }
         }
       `}</style>
     </div>
