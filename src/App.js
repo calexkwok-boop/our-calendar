@@ -18502,8 +18502,296 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       alert('Could not share trip highlights right now.');
     }
   };
+  const getTripHighlightSlideDuration = (slide) => {
+    if (slide?.type === 'photo') return 4500;
+    if (slide?.type === 'title') return 3500;
+    if (slide?.type === 'chapter') return 3000;
+    if (slide?.type === 'spotlight') return 4000;
+    if (slide?.type === 'stats') return 5000;
+    if (slide?.type === 'text') return 3500;
+    return 4000;
+  };
+  const getTripHighlightExportDuration = (slide) => {
+    if (slide?.type === 'photo') return 2200;
+    return Math.min(1800, getTripHighlightSlideDuration(slide));
+  };
+  const chooseTripHighlightExportMimeType = () => {
+    if (typeof MediaRecorder === 'undefined') return '';
+    const candidates = [
+      'video/mp4;codecs=h264,aac',
+      'video/mp4',
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+    ];
+    return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || '';
+  };
+  const loadTripHighlightExportImage = (url) => new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Failed to load image: ${url}`));
+    image.src = url;
+  });
+  const drawTripHighlightCoverImage = (ctx, image, width, height) => {
+    const imageRatio = image.width / image.height;
+    const frameRatio = width / height;
+    let drawWidth = width;
+    let drawHeight = height;
+    let drawX = 0;
+    let drawY = 0;
+    if (imageRatio > frameRatio) {
+      drawWidth = height * imageRatio;
+      drawHeight = height;
+      drawX = (width - drawWidth) / 2;
+    } else {
+      drawWidth = width;
+      drawHeight = width / imageRatio;
+      drawY = (height - drawHeight) / 2;
+    }
+    ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+  };
+  const drawTripHighlightContainImage = (ctx, image, x, y, width, height) => {
+    const imageRatio = image.width / image.height;
+    const frameRatio = width / height;
+    let drawWidth = width;
+    let drawHeight = height;
+    let drawX = x;
+    let drawY = y;
+    if (imageRatio > frameRatio) {
+      drawHeight = width / imageRatio;
+      drawY = y + ((height - drawHeight) / 2);
+    } else {
+      drawWidth = height * imageRatio;
+      drawX = x + ((width - drawWidth) / 2);
+    }
+    ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+  };
+  const drawTripHighlightWrappedText = (ctx, text, x, y, maxWidth, lineHeight) => {
+    const value = String(text || '').trim();
+    if (!value) return y;
+    const words = value.split(/\s+/).filter(Boolean);
+    const lines = [];
+    let currentLine = '';
+    words.forEach((word) => {
+      const nextLine = currentLine ? `${currentLine} ${word}` : word;
+      if (!currentLine || ctx.measureText(nextLine).width <= maxWidth) {
+        currentLine = nextLine;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    });
+    if (currentLine) lines.push(currentLine);
+    lines.forEach((line, index) => {
+      ctx.fillText(line, x, y + (index * lineHeight));
+    });
+    return y + (lines.length * lineHeight);
+  };
+  const renderTripHighlightExportFrame = ({ ctx, canvas, slide, progress, imageCache }) => {
+    const width = canvas.width;
+    const height = canvas.height;
+    const centerX = width / 2;
+    const title = String(slide?.title || '').trim();
+    const subtitle = String(slide?.subtitle || '').trim();
+    const caption = String(slide?.caption || '').trim();
+    const eyebrow = String(slide?.eyebrow || '').trim();
+    const location = String(slide?.location || '').trim();
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, width, height);
+
+    if (slide?.type === 'photo') {
+      const image = imageCache.get(String(slide?.photo || '').trim());
+      if (image) {
+        ctx.save();
+        ctx.filter = 'blur(18px) brightness(0.55)';
+        drawTripHighlightCoverImage(ctx, image, width, height);
+        ctx.restore();
+        const frameWidth = width * 0.88;
+        const frameHeight = height * 0.72;
+        const frameX = (width - frameWidth) / 2;
+        const frameY = (height - frameHeight) / 2;
+        const scale = 1 + (progress * 0.05);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(frameX, frameY, frameWidth, frameHeight);
+        ctx.clip();
+        const scaledWidth = frameWidth * scale;
+        const scaledHeight = frameHeight * scale;
+        drawTripHighlightContainImage(
+          ctx,
+          image,
+          frameX - ((scaledWidth - frameWidth) / 2),
+          frameY - ((scaledHeight - frameHeight) / 2),
+          scaledWidth,
+          scaledHeight
+        );
+        ctx.restore();
+      }
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.fillRect(0, 0, width, height);
+      if (location) {
+        const pillWidth = Math.min(width * 0.78, 520);
+        const pillX = (width - pillWidth) / 2;
+        const pillY = height - 290;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.fillRect(pillX, pillY, pillWidth, 92);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(255,255,255,0.72)';
+        ctx.font = '600 24px system-ui';
+        ctx.fillText('Location', centerX, pillY + 28);
+        ctx.fillStyle = '#fff';
+        ctx.font = '500 32px system-ui';
+        drawTripHighlightWrappedText(ctx, location, centerX, pillY + 62, pillWidth - 48, 36);
+      }
+      return;
+    }
+
+    const backgroundImage = imageCache.get(String(slide?.background || '').trim());
+    if (backgroundImage) {
+      ctx.save();
+      ctx.filter = 'brightness(0.62)';
+      drawTripHighlightCoverImage(ctx, backgroundImage, width, height);
+      ctx.restore();
+    } else {
+      const gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, '#111827');
+      gradient.addColorStop(1, '#020617');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+    }
+    ctx.fillStyle = 'rgba(0,0,0,0.40)';
+    ctx.fillRect(0, 0, width, height);
+    ctx.textAlign = 'center';
+    let textY = height * 0.36;
+    if (eyebrow) {
+      ctx.fillStyle = 'rgba(255,255,255,0.70)';
+      ctx.font = '700 24px system-ui';
+      ctx.fillText(eyebrow.toUpperCase(), centerX, textY);
+      textY += 50;
+    }
+    if (title) {
+      ctx.fillStyle = '#fff';
+      ctx.font = '700 70px system-ui';
+      textY = drawTripHighlightWrappedText(ctx, title, centerX, textY, width * 0.78, 78) + 18;
+    }
+    if (caption && caption !== title) {
+      ctx.fillStyle = 'rgba(255,255,255,0.94)';
+      ctx.font = '600 38px system-ui';
+      textY = drawTripHighlightWrappedText(ctx, caption, centerX, textY, width * 0.74, 46) + 14;
+    }
+    if (subtitle) {
+      ctx.fillStyle = 'rgba(255,255,255,0.82)';
+      ctx.font = '500 30px system-ui';
+      drawTripHighlightWrappedText(ctx, subtitle, centerX, textY, width * 0.7, 38);
+    }
+  };
+  const exportTripHighlightsVideoFile = async ({ slides = [], trackFile = '', tripName = '' }) => {
+    if (typeof document === 'undefined' || typeof window === 'undefined' || typeof MediaRecorder === 'undefined') {
+      throw new Error('Video export is not supported on this device.');
+    }
+    const mimeType = chooseTripHighlightExportMimeType();
+    if (!mimeType) throw new Error('This browser cannot export highlight videos yet.');
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 720;
+    canvas.height = 1280;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not prepare the reel exporter.');
+
+    const imageUrls = Array.from(new Set(
+      (slides || [])
+        .flatMap((slide) => [String(slide?.photo || '').trim(), String(slide?.background || '').trim()])
+        .filter(Boolean)
+    ));
+    const imageEntries = await Promise.all(imageUrls.map(async (url) => {
+      try {
+        return [url, await loadTripHighlightExportImage(url)];
+      } catch (error) {
+        return [url, null];
+      }
+    }));
+    const imageCache = new Map(imageEntries.filter((entry) => entry[1]));
+
+    const frameRate = 30;
+    const videoStream = canvas.captureStream(frameRate);
+    const combinedStream = new MediaStream(videoStream.getVideoTracks());
+    let audioContext = null;
+    let audioSource = null;
+    let decodedAudio = null;
+    try {
+      const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+      if (trackFile && AudioContextCtor) {
+        audioContext = new AudioContextCtor();
+        const trackResponse = await fetch(trackFile);
+        const trackBuffer = await trackResponse.arrayBuffer();
+        decodedAudio = await audioContext.decodeAudioData(trackBuffer.slice(0));
+        const destination = audioContext.createMediaStreamDestination();
+        audioSource = audioContext.createBufferSource();
+        audioSource.buffer = decodedAudio;
+        audioSource.loop = true;
+        audioSource.connect(destination);
+        destination.stream.getAudioTracks().forEach((track) => combinedStream.addTrack(track));
+      }
+    } catch (error) {
+      console.warn('Trip highlight audio export unavailable; continuing without audio.', error);
+    }
+
+    const chunks = [];
+    const recorder = new MediaRecorder(combinedStream, {
+      mimeType,
+      videoBitsPerSecond: 7000000,
+    });
+    recorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) chunks.push(event.data);
+    };
+    const stopPromise = new Promise((resolve) => {
+      recorder.onstop = resolve;
+    });
+    recorder.start();
+
+    if (audioContext && audioSource && decodedAudio) {
+      if (audioContext.state === 'suspended') await audioContext.resume();
+      audioSource.start(0);
+    }
+
+    const nextFrame = () => new Promise((resolve) => window.requestAnimationFrame(resolve));
+    for (let index = 0; index < slides.length; index += 1) {
+      const slide = slides[index];
+      const duration = getTripHighlightExportDuration(slide);
+      const startTime = performance.now();
+      while ((performance.now() - startTime) < duration) {
+        const progress = Math.min(1, (performance.now() - startTime) / duration);
+        renderTripHighlightExportFrame({ ctx, canvas, slide, progress, imageCache });
+        await nextFrame();
+      }
+    }
+    await nextFrame();
+    recorder.stop();
+    await stopPromise;
+
+    if (audioSource) {
+      try { audioSource.stop(); } catch (error) {}
+    }
+    if (audioContext) {
+      try { await audioContext.close(); } catch (error) {}
+    }
+
+    const blob = new Blob(chunks, { type: mimeType });
+    if (!blob.size) throw new Error('The exported reel video was empty.');
+    const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const safeTripName = String(tripName || 'trip-highlights')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'trip-highlights';
+    return new File([blob], `${safeTripName}-highlight-reel.${extension}`, { type: mimeType });
+  };
   const saveTripHighlightsToDevice = async (slidesArg = []) => {
-    const sourceSlides = Array.isArray(slidesArg) && slidesArg.length > 0 ? slidesArg : tripHighlightsSlides;
+    const payload = Array.isArray(slidesArg) ? { slides: slidesArg } : (slidesArg || {});
+    const sourceSlides = Array.isArray(payload?.slides) && payload.slides.length > 0 ? payload.slides : tripHighlightsSlides;
+    const trackFile = String(payload?.trackFile || '').trim();
     const highlightImages = Array.from(new Set(
       (sourceSlides || [])
         .flatMap((slide) => [
@@ -18518,6 +18806,33 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
     try {
+      try {
+        const reelFile = await exportTripHighlightsVideoFile({
+          slides: sourceSlides,
+          trackFile,
+          tripName: String(activeSubCalendar?.name || 'trip-highlights'),
+        });
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [reelFile] })) {
+          await navigator.share({
+            files: [reelFile],
+            title: `${String(activeSubCalendar?.name || 'Trip').trim()} Highlight Reel`,
+            text: 'Save trip highlight reel',
+          });
+          return;
+        }
+        const reelUrl = URL.createObjectURL(reelFile);
+        const anchor = document.createElement('a');
+        anchor.href = reelUrl;
+        anchor.download = reelFile.name;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(reelUrl), 2000);
+        return;
+      } catch (videoError) {
+        console.warn('Trip highlight video export unavailable; falling back to images.', videoError);
+      }
+
       const files = [];
       for (let i = 0; i < highlightImages.length; i += 1) {
         const imageUrl = highlightImages[i];
@@ -28836,9 +29151,10 @@ transform: translateY(0);
           setTripHighlightsSlides(Array.isArray(slides) ? slides : []);
           prepareTripHighlightsForExplore(slides);
         }}
-        onSave={(slides) => {
-          setTripHighlightsSlides(Array.isArray(slides) ? slides : []);
-          saveTripHighlightsToDevice(slides);
+        onSave={(payload) => {
+          const slides = Array.isArray(payload) ? payload : (Array.isArray(payload?.slides) ? payload.slides : []);
+          setTripHighlightsSlides(slides);
+          saveTripHighlightsToDevice(payload);
         }}
       />
     )}

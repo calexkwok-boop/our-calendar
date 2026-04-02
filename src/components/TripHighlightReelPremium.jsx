@@ -397,7 +397,11 @@ export default function TripHighlightReel({
 
             {/* Download */}
             <button
-              onClick={() => onSave && onSave(safeHighlights)}
+              onClick={() => onSave && onSave({
+                slides: safeHighlights,
+                trackFile: selectedTrack.file,
+                trackLabel: selectedTrack.label,
+              })}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl transition-all hover:bg-black/60 hover:scale-105 active:scale-95 ring-1 ring-white/10"
             >
               <Download className="h-5 w-5" />
