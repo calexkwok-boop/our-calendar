@@ -18375,6 +18375,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setPhotoUploadError(false);
     setPhotoUploadMessage('Choose up to 25 photos for your default trip highlight reel.');
   };
+  const beginTripHighlightSelectionFromCurrentSelection = () => {
+    setPhotoDeleteMode(false);
+    setIsPhotoSelectionMode(true);
+    setTripHighlightSelectionMode(true);
+    setSelectedPhotoIds((prev) => prev.slice(0, 25));
+    setPhotoUploadError(false);
+    setPhotoUploadMessage('Choose up to 25 photos for your default trip highlight reel.');
+  };
   const openTripHighlights = () => {
     if (!activeSubCalendar) return;
     const savedSelection = (tripHighlightDefaultPhotoIds || [])
@@ -30267,7 +30275,7 @@ transform: translateY(0);
                     </button>
                   )}
                   <button
-                    onClick={openTripHighlightsFromSelectedPhotos}
+                    onClick={tripHighlightSelectionMode ? openTripHighlightsFromSelectedPhotos : beginTripHighlightSelectionFromCurrentSelection}
                     disabled={selectedPhotoIds.length === 0}
                     className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-500 text-white disabled:opacity-40"
                   >
