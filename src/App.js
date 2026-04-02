@@ -1250,27 +1250,41 @@ const calculateJourneyGoalStreak = (entries, goalId) => {
 const generateUuid = () => uuidv4();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
-const getProfilePhotoCacheKey = (userId) => `our-calendar-profile-photo:${String(userId || '').trim()}`;
-const readCachedProfilePhotoUrl = (userId) => {
+const getProfilePhotoCacheKey = (suffix) => `our-calendar-profile-photo:${String(suffix || '').trim()}`;
+const getProfilePhotoCacheKeys = (userLike) => {
+  const raw = typeof userLike === 'object' && userLike
+    ? userLike
+    : { id: userLike };
+  const keys = [
+    getProfilePhotoCacheKey(String(raw?.id || '').trim()),
+    getProfilePhotoCacheKey(String(raw?.email || '').trim().toLowerCase()),
+    getProfilePhotoCacheKey(String(raw?.phone || '').trim()),
+    getProfilePhotoCacheKey('last'),
+  ].filter((value, index, array) => value && !value.endsWith(':') && array.indexOf(value) === index);
+  return keys;
+};
+const readCachedProfilePhotoUrl = (userLike) => {
   if (typeof window === 'undefined') return '';
-  const key = getProfilePhotoCacheKey(userId);
-  if (!key || key.endsWith(':')) return '';
   try {
-    return String(window.localStorage.getItem(key) || '').trim();
+    for (const key of getProfilePhotoCacheKeys(userLike)) {
+      const cached = String(window.localStorage.getItem(key) || '').trim();
+      if (cached) return cached;
+    }
   } catch {
     return '';
   }
+  return '';
 };
-const writeCachedProfilePhotoUrl = (userId, photoUrl) => {
+const writeCachedProfilePhotoUrl = (userLike, photoUrl) => {
   if (typeof window === 'undefined') return;
-  const key = getProfilePhotoCacheKey(userId);
-  if (!key || key.endsWith(':')) return;
   try {
     const normalizedPhotoUrl = String(photoUrl || '').trim();
-    if (normalizedPhotoUrl) {
-      window.localStorage.setItem(key, normalizedPhotoUrl);
-    } else {
-      window.localStorage.removeItem(key);
+    for (const key of getProfilePhotoCacheKeys(userLike)) {
+      if (normalizedPhotoUrl) {
+        window.localStorage.setItem(key, normalizedPhotoUrl);
+      } else {
+        window.localStorage.removeItem(key);
+      }
     }
   } catch {}
 };
@@ -1302,7 +1316,7 @@ const getUserProfilePhotoUrl = (authUser) => {
     authUser?.avatar_url,
     authUser?.picture,
     ...identityCandidates,
-    readCachedProfilePhotoUrl(authUser?.id || ''),
+    readCachedProfilePhotoUrl(authUser),
   ];
   for (const candidate of candidates) {
     const url = String(candidate || '').trim();
@@ -1325,9 +1339,23 @@ const mergeAuthUserPreservingProfilePhoto = (nextAuthUser, previousAuthUser, pre
 
   return {
     ...nextAuthUser,
+    avatar_url: fallbackPhotoUrl,
+    picture: fallbackPhotoUrl,
     user_metadata: {
       ...(nextAuthUser?.user_metadata || {}),
       avatar_url: fallbackPhotoUrl,
+      avatarUrl: fallbackPhotoUrl,
+      picture: fallbackPhotoUrl,
+      photo_url: fallbackPhotoUrl,
+      photoURL: fallbackPhotoUrl,
+    },
+    raw_user_meta_data: {
+      ...(nextAuthUser?.raw_user_meta_data || {}),
+      avatar_url: fallbackPhotoUrl,
+      avatarUrl: fallbackPhotoUrl,
+      picture: fallbackPhotoUrl,
+      photo_url: fallbackPhotoUrl,
+      photoURL: fallbackPhotoUrl,
     },
   };
 };
@@ -1340,7 +1368,7 @@ const UserProfileAvatar = ({
   borderClass = 'border border-purple-200 dark:border-gray-600',
   textClass = 'text-sm',
 }) => {
-  const cachedPhotoUrl = readCachedProfilePhotoUrl(userId);
+  const cachedPhotoUrl = readCachedProfilePhotoUrl({ id: userId });
   const preferredPhotoUrl = String(photoUrl || cachedPhotoUrl || '').trim();
   const [displayPhotoUrl, setDisplayPhotoUrl] = React.useState(preferredPhotoUrl);
   React.useEffect(() => {
