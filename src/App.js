@@ -30725,7 +30725,7 @@ transform: translateY(0);
                 <button
                   type="button"
                   onClick={openTripHighlights}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 dark:bg-purple-500/15 dark:text-purple-200 dark:border-purple-400/30 dark:hover:bg-purple-500/25"
+                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 px-3.5 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(124,58,237,0.24)] transition-transform hover:scale-[1.01]"
                 >
                   Watch Highlight Reel
                 </button>
