@@ -43,33 +43,33 @@ const HIGHLIGHT_REEL_TRACKS = Object.freeze([
 // Premium photo treatments with professional color grading
 const PHOTO_TREATMENTS = Object.freeze({
   scenic: {
-    filter: 'saturate(1.08) contrast(1.04) brightness(0.96)',
-    vignette: 'radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.15) 100%)',
+    filter: 'saturate(0.98) contrast(0.94) brightness(1.04) sepia(0.14) hue-rotate(-6deg)',
+    vignette: 'radial-gradient(circle at 50% 42%, rgba(255,224,196,0.12) 0%, transparent 36%, rgba(0,0,0,0.24) 100%)',
     kenBurns: 'zoom-pan',
   },
   food: {
-    filter: 'saturate(1.12) contrast(1.02) brightness(1.02) sepia(0.05)',
-    vignette: 'radial-gradient(circle at 40% 40%, transparent 0%, rgba(0,0,0,0.12) 100%)',
+    filter: 'saturate(0.94) contrast(0.95) brightness(1.06) sepia(0.18) hue-rotate(-8deg)',
+    vignette: 'radial-gradient(circle at 42% 38%, rgba(255,214,170,0.16) 0%, transparent 34%, rgba(0,0,0,0.2) 100%)',
     kenBurns: 'zoom-in',
   },
   nightlife: {
-    filter: 'contrast(1.10) saturate(1.15) brightness(0.90) hue-rotate(-4deg)',
-    vignette: 'radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.25) 100%)',
+    filter: 'contrast(0.98) saturate(0.92) brightness(0.96) sepia(0.08) hue-rotate(-10deg)',
+    vignette: 'radial-gradient(circle at center, rgba(255,190,170,0.1) 0%, transparent 34%, rgba(0,0,0,0.34) 100%)',
     kenBurns: 'pan-right',
   },
   reflective: {
-    filter: 'contrast(0.96) saturate(0.92) brightness(1.03)',
-    vignette: 'radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.10) 100%)',
+    filter: 'contrast(0.9) saturate(0.84) brightness(1.07) sepia(0.12) hue-rotate(-4deg)',
+    vignette: 'radial-gradient(circle at center, rgba(255,233,214,0.12) 0%, transparent 35%, rgba(0,0,0,0.16) 100%)',
     kenBurns: 'zoom-out',
   },
   hotel: {
-    filter: 'contrast(1.01) saturate(0.98) brightness(1.0) sepia(0.02)',
-    vignette: 'radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.14) 100%)',
+    filter: 'contrast(0.95) saturate(0.9) brightness(1.04) sepia(0.1) hue-rotate(-4deg)',
+    vignette: 'radial-gradient(circle at center, rgba(255,229,206,0.1) 0%, transparent 35%, rgba(0,0,0,0.2) 100%)',
     kenBurns: 'zoom-out',
   },
   people: {
-    filter: 'saturate(1.06) contrast(1.00) brightness(1.01)',
-    vignette: 'radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.08) 100%)',
+    filter: 'saturate(0.96) contrast(0.93) brightness(1.06) sepia(0.13) hue-rotate(-6deg)',
+    vignette: 'radial-gradient(circle at 50% 40%, rgba(255,224,206,0.14) 0%, transparent 36%, rgba(0,0,0,0.16) 100%)',
     kenBurns: 'zoom-in-slow',
   },
 });
@@ -644,6 +644,14 @@ function PhotoSlide({ highlight }) {
           className="absolute inset-0"
           style={{ background: treatment.vignette }}
         />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,233,214,0.16),transparent_34%),linear-gradient(180deg,rgba(255,231,214,0.08),transparent_36%,rgba(14,10,12,0.18)_100%)]" />
+        <div
+          className="absolute inset-0 opacity-[0.18] mix-blend-screen"
+          style={{
+            backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27160%27 height=%27160%27 viewBox=%270 0 160 160%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%271.15%27 numOctaves=%272%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27160%27 height=%27160%27 filter=%27url(%23n)%27 opacity=%270.55%27/%3E%3C/svg%3E")',
+            backgroundSize: '180px 180px',
+          }}
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-black/22 via-transparent to-black/62" />
       </div>
 
@@ -653,7 +661,7 @@ function PhotoSlide({ highlight }) {
           alt={caption || 'Trip highlight'}
           className="h-full w-full object-contain"
           style={{
-            filter: treatment.filter,
+            filter: `${treatment.filter} blur(0.35px)`,
             animation: `${treatment.kenBurns} 20s ease-out forwards`,
           }}
         />
