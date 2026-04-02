@@ -239,6 +239,7 @@ export default function TripHighlightReel({
   const audioRef = useRef(null);
   const shareMenuRef = useRef(null);
   const musicMenuRef = useRef(null);
+  const lastSyncedTrackIdRef = useRef('');
 
   // Build highlights with intelligent slide generation
   const highlights = useMemo(() => {
@@ -305,7 +306,15 @@ export default function TripHighlightReel({
   useEffect(() => {
     if (!HIGHLIGHT_REEL_TRACKS.some((track) => track.id === initialTrackId)) return;
     setSelectedTrackId(initialTrackId);
+    lastSyncedTrackIdRef.current = initialTrackId;
   }, [initialTrackId]);
+
+  useEffect(() => {
+    if (!selectedTrackId || typeof onTrackChange !== 'function') return;
+    if (lastSyncedTrackIdRef.current === selectedTrackId) return;
+    lastSyncedTrackIdRef.current = selectedTrackId;
+    onTrackChange(selectedTrackId);
+  }, [selectedTrackId, onTrackChange]);
 
   useEffect(() => {
     const handlePointerDown = (event) => {
@@ -370,7 +379,7 @@ export default function TripHighlightReel({
             <button
               type="button"
               onClick={() => setShowMusicMenu((prev) => !prev)}
-              className="w-full truncate rounded-full border border-white/14 bg-black/40 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-white/92 backdrop-blur-xl transition-all hover:bg-black/56 sm:text-[11px]"
+              className="w-full truncate rounded-full border border-white/14 bg-black/40 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-white backdrop-blur-xl transition-all hover:bg-black/56 sm:text-[11px]"
             >
               {selectedTrack.label}
             </button>

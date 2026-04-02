@@ -18377,7 +18377,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setTripHighlightSelectionMode(true);
     setSelectedPhotoIds((tripHighlightDefaultPhotoIds || []).slice(0, 25));
     setPhotoUploadError(false);
-    setPhotoUploadMessage('Choose up to 25 photos for your default trip highlight reel.');
+    setPhotoUploadMessage('');
     if (typeof window !== 'undefined') {
       window.requestAnimationFrame(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -18390,7 +18390,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setTripHighlightSelectionMode(true);
     setSelectedPhotoIds((prev) => prev.slice(0, 25));
     setPhotoUploadError(false);
-    setPhotoUploadMessage('Choose up to 25 photos for your default trip highlight reel.');
+    setPhotoUploadMessage('');
   };
   const openTripHighlights = () => {
     if (!activeSubCalendar) return;
@@ -30717,11 +30717,19 @@ transform: translateY(0);
                   </button>
                 </>
               )}
-              {photoUploadMessage && (
+              {photoUploadMessage ? (
                 <span className={`text-xs ${photoUploadError ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
                   {photoUploadMessage}
                 </span>
-              )}
+              ) : (!isPhotoSelectionMode && !photoDeleteMode && tripHighlightDefaultPhotoIds.length > 0) ? (
+                <button
+                  type="button"
+                  onClick={openTripHighlights}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 dark:bg-purple-500/15 dark:text-purple-200 dark:border-purple-400/30 dark:hover:bg-purple-500/25"
+                >
+                  Watch Highlight Reel
+                </button>
+              ) : null}
                 <div className="relative ml-auto">
                   <button
                     onClick={() => setShowPhotoSortMenu((prev) => !prev)}
