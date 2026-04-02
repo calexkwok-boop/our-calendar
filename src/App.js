@@ -30356,13 +30356,6 @@ transform: translateY(0);
                     Select
                   </button>
                   <button
-                    onClick={openTripHighlightSelectionMode}
-                    disabled={tripPhotos.length === 0}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-500 text-white disabled:opacity-40"
-                  >
-                    {tripHighlightDefaultPhotoIds.length > 0 ? 'Edit Highlight Reel' : 'Create Highlight Reel'}
-                  </button>
-                  <button
                     type="button"
                     onClick={() => {
                       setIsPhotoSelectionMode(false);
@@ -30857,10 +30850,6 @@ transform: translateY(0);
       console.log('Voice note saved for event', eventId, audioBlob?.size);
       alert('Saved voice note for this event');
     };
-    const onShareHighlights = () => {
-      try { openTripHighlights(); } catch (e) { console.error(e); }
-    };
-
     // Group ratings actions
     const onAddGroupRating = async (eventId, data) => {
       if (!activeSubCalendar?.id || !user?.id) return;
@@ -31055,7 +31044,6 @@ transform: translateY(0);
           onAddVoiceNote={onAddVoiceNote}
           onAddTags={onAddTags}
           onAddReview={onAddReview}
-          onShareHighlights={onShareHighlights}
           groupRatingsByEventId={subCalEventGroupRatings}
           onAddGroupRating={onAddGroupRating}
           onUpdateGroupRating={onUpdateGroupRating}

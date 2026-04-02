@@ -6,7 +6,7 @@
 
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Star, Camera, Sparkles, TrendingUp, Award, Flame, Share2 } from 'lucide-react';
+import { Star, Camera, Sparkles, TrendingUp, Award, Flame } from 'lucide-react';
 import GroupRatingDisplay from './GroupRatingDisplay';
 
 const getViewerGroupRating = (eventId, groupRatingsByEventId = {}, currentUserId = '') => (
@@ -43,7 +43,6 @@ const TripRatingSystem = ({
   onAddVoiceNote,
   onAddTags,
   onAddReview,
-  onShareHighlights,
   // Group ratings
   groupRatingsByEventId = {},
   onAddGroupRating,
@@ -131,7 +130,6 @@ const TripRatingSystem = ({
           events={events}
           groupRatingsByEventId={groupRatingsByEventId}
           currentUserId={user?.id}
-          onShare={onShareHighlights}
           darkMode={darkMode}
         />
       )}
@@ -674,7 +672,7 @@ const ReviewsListView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
 // TRIP HIGHLIGHTS VIEW
 // ============================================================================
 
-const TripHighlightsView = ({ trip, events, groupRatingsByEventId = {}, currentUserId, onShare, darkMode }) => {
+const TripHighlightsView = ({ trip, events, groupRatingsByEventId = {}, currentUserId, darkMode }) => {
   const ratedEvents = (events || [])
     .filter((event) => isEventReviewedByViewer(event, groupRatingsByEventId, currentUserId))
     .map((event) => ({
@@ -741,15 +739,6 @@ const TripHighlightsView = ({ trip, events, groupRatingsByEventId = {}, currentU
         />
       )}
       
-      {/* Share button */}
-      <button
-        onClick={onShare}
-        className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 
-                 text-white font-bold text-lg hover:shadow-xl transition-all
-                 flex items-center justify-center gap-2">
-        <Share2 className="w-5 h-5" />
-        Create Trip Highlights
-      </button>
     </div>
   );
 };
