@@ -30792,18 +30792,18 @@ transform: translateY(0);
                 ))}
               </div>
             )}
+            {!isPhotoSelectionMode && !photoDeleteMode && tripPhotos.length > 0 && (
+              <div className="px-4 pb-8 pt-2">
+                <button
+                  type="button"
+                  onClick={openTripHighlightSelectionMode}
+                  className="flex w-full items-center justify-center rounded-[28px] bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 px-5 py-4 text-base font-semibold text-white shadow-[0_16px_40px_rgba(124,58,237,0.28)] transition-transform hover:scale-[1.01]"
+                >
+                  {tripHighlightDefaultPhotoIds.length > 0 ? 'Edit Highlight Reel' : 'Create Highlight Reel'}
+                </button>
+              </div>
+            )}
           </div>
-          {!isPhotoSelectionMode && !photoDeleteMode && tripPhotos.length > 0 && (
-            <div className="px-4 pb-8 pt-2">
-              <button
-                type="button"
-                onClick={openTripHighlightSelectionMode}
-                className="flex w-full items-center justify-center rounded-[28px] bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 px-5 py-4 text-base font-semibold text-white shadow-[0_16px_40px_rgba(124,58,237,0.28)] transition-transform hover:scale-[1.01]"
-              >
-                {tripHighlightDefaultPhotoIds.length > 0 ? 'Edit Highlight Reel' : 'Create Highlight Reel'}
-              </button>
-            </div>
-          )}
         )}
 
           {/* Ratings tab */}
