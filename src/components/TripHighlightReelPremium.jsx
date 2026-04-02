@@ -810,8 +810,11 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos, options = {}) => 
   const safeMoments = Array.isArray(moments) ? moments.filter(Boolean) : [];
   const memoryMoments = buildMemoryMoments(tripPhotos);
   const isSelectedPhotoMode = Boolean(options?.selectedPhotoMode);
+  const coverPhoto = memoryMoments[0]?.photo?.url
+    || safeMoments.find((moment) => moment.photos[0]?.url)?.photos[0]?.url
+    || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200';
   if (isSelectedPhotoMode) {
-    return (Array.isArray(tripPhotos) ? tripPhotos : [])
+    const photoSlides = (Array.isArray(tripPhotos) ? tripPhotos : [])
       .filter((photo) => photo && typeof photo === 'object' && String(photo?.url || '').trim())
       .map((photo, index) => ({
         photo,
@@ -820,12 +823,18 @@ const buildPremiumSlides = (trip, moments, events, tripPhotos, options = {}) => 
       .sort((a, b) => a.sortValue - b.sortValue)
       .slice(0, 25)
       .map(({ photo }) => buildDirectSelectedPhotoSlide(photo));
+    return [
+      {
+        type: 'title',
+        title: String(trip?.location || '').trim() || trip?.title || trip?.name || 'Trip Highlights',
+        subtitle: formatTripDates(trip?.startDate, trip?.endDate),
+        background: coverPhoto,
+      },
+      ...photoSlides,
+    ];
   }
   const targetPhotoSlideCount = 25;
   const maxFoodSlides = isSelectedPhotoMode ? 6 : 4;
-  const coverPhoto = memoryMoments[0]?.photo?.url
-    || safeMoments.find((moment) => moment.photos[0]?.url)?.photos[0]?.url
-    || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200';
   const topMoments = safeMoments.slice(0, 14);
   const topMemoryMoments = memoryMoments.slice(0, 14);
   const scenicMoment = topMoments.find((moment) => moment.mood === 'scenic');
