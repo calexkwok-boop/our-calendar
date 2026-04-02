@@ -179,6 +179,8 @@ export default function DateDetailsCardEnhanced({
     () => WE_EVENT_TEMPLATES.find((template) => template.id === weEventCategory) || null,
     [weEventCategory]
   );
+  const normalizedSelectedTime = parseTimeInput(selectedTime);
+  const canSaveEvent = Boolean(eventTitle.trim() && normalizedSelectedTime);
   const accent = (themeAccentButtonStyle && themeAccentButtonStyle.backgroundColor) || '#a855f7';
   const selectedDateKey = getDateKey(selectedDate);
 
@@ -302,15 +304,14 @@ export default function DateDetailsCardEnhanced({
   };
 
   const handleSave = async () => {
-    const normalizedTime = parseTimeInput(selectedTime);
-    if (!eventTitle.trim() || !normalizedTime) return;
+    if (!eventTitle.trim() || !normalizedSelectedTime) return;
     const eventData = {
       type: eventType,
       category: weEventCategory,
       title: eventTitle.trim(),
       location: location.trim(),
       date: selectedDate,
-      time: normalizedTime,
+      time: normalizedSelectedTime,
       invitees: eventType === 'we' ? invitees.filter((invitee) => invitee.selected) : [],
     };
 
@@ -383,7 +384,12 @@ export default function DateDetailsCardEnhanced({
 
                 <button
                   type="button"
-                  onClick={() => setEventType('me')}
+                  onClick={() => {
+                    setEventType('me');
+                    if (!selectedTime) {
+                      setSelectedTime('9:00 AM');
+                    }
+                  }}
                   className={`w-full rounded-2xl border p-5 text-left transition-all hover:shadow-md ${darkMode ? 'border-blue-400/25 bg-gradient-to-br from-blue-500/10 to-indigo-500/10' : 'border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50'}`}
                 >
                   <div className="flex items-center gap-4">
@@ -578,6 +584,9 @@ export default function DateDetailsCardEnhanced({
                       style={{ width: '100%' }}
                     />
                   </div>
+                  {!normalizedSelectedTime ? (
+                    <p className={`mt-2 text-xs ${mutedText}`}>Add a time to create the event.</p>
+                  ) : null}
                 </div>
 
                 {eventType === 'we' ? (
@@ -677,15 +686,15 @@ export default function DateDetailsCardEnhanced({
                 <button
                   type="button"
                   onClick={handleSave}
-                  disabled={!eventTitle.trim() || !parseTimeInput(selectedTime)}
+                  disabled={!canSaveEvent}
                   className={`w-full rounded-2xl py-4 text-lg font-bold text-white transition-all shadow-sm disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none ${
                     eventType === 'me'
                       ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700'
                       : ''
                   }`}
-                  style={eventType === 'me'
+                  style={canSaveEvent && eventType === 'me'
                     ? themeAccentButtonStyle
-                    : {
+                    : canSaveEvent ? {
                         ...(themeAccentButtonStyle || {}),
                         background: themeAccentButtonStyle?.backgroundColor
                           ? `linear-gradient(90deg, ${themeAccentButtonStyle.backgroundColor} 0%, ${hexToRgba(themeAccentButtonStyle.backgroundColor, 0.78)} 100%)`

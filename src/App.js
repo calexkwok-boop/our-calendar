@@ -7520,11 +7520,17 @@ function App() {
     if (!showDateDetailModal) return undefined;
     const previousOverflow = document.body.style.overflow;
     const previousTouchAction = document.body.style.touchAction;
+    const previousDocOverflow = document.documentElement.style.overflow;
+    const previousDocTouchAction = document.documentElement.style.touchAction;
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.touchAction = 'none';
     return () => {
       document.body.style.overflow = previousOverflow;
       document.body.style.touchAction = previousTouchAction;
+      document.documentElement.style.overflow = previousDocOverflow;
+      document.documentElement.style.touchAction = previousDocTouchAction;
     };
   }, [showDateDetailModal]);
   useEffect(() => {
@@ -26122,6 +26128,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
         >
           ⚙️ Account settings & sharing
+        </button>
+        <button
+          onClick={() => {
+            setShowCalendarSwitcher(false);
+            setShowCategoryEditor(true);
+          }}
+          className="w-full mt-2 text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+        >
+          Label Categories
         </button>
       </div>
     </div>
