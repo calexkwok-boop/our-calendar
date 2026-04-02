@@ -5,6 +5,17 @@ import {
   MessageCircle, Camera, Users, X, Eye, EyeOff 
 } from 'lucide-react';
 
+const getReviewPhotoSrc = (photo) => String(
+  photo?.resolved_medium_url
+  || photo?.resolved_url
+  || photo?.resolved_original_url
+  || photo?.medium_url
+  || photo?.url
+  || photo?.original_url
+  || photo
+  || ''
+).trim();
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -203,7 +214,7 @@ const YourRatingCard = ({ rating, onEdit, onDelete, darkMode }) => {
           {rating.photos.map((photo, idx) => (
             <img
               key={idx}
-              src={photo}
+              src={getReviewPhotoSrc(photo)}
               alt={`Photo ${idx + 1}`}
               className="w-20 h-20 rounded-lg object-cover"
             />
@@ -358,7 +369,7 @@ const IndividualRatings = ({ ratings, currentUserId, darkMode }) => {
                 {rating.photos.map((photo, idx) => (
                   <img
                     key={idx}
-                    src={photo}
+                    src={getReviewPhotoSrc(photo)}
                     alt={`Photo ${idx + 1}`}
                     className="w-16 h-16 rounded-lg object-cover"
                   />

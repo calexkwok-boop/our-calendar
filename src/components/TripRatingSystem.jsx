@@ -9,6 +9,17 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Star, Camera, Sparkles, TrendingUp, Award, Flame } from 'lucide-react';
 import GroupRatingDisplay from './GroupRatingDisplay';
 
+const getReviewPhotoSrc = (photo) => String(
+  photo?.resolved_medium_url
+  || photo?.resolved_url
+  || photo?.resolved_original_url
+  || photo?.medium_url
+  || photo?.url
+  || photo?.original_url
+  || photo
+  || ''
+).trim();
+
 const getViewerGroupRating = (eventId, groupRatingsByEventId = {}, currentUserId = '') => (
   (groupRatingsByEventId[String(eventId || '')] || []).find(
     (rating) => String(rating?.userId || '') === String(currentUserId || '')
@@ -463,7 +474,7 @@ const EventRatingCard = ({ event, onRate,   onAddPhoto, onAddVoiceNote,
               {Array.isArray(event.photos) && event.photos.length > 0 && (
                 <div className="mb-3 grid grid-cols-4 gap-2">
                   {event.photos.slice(0, 8).map((url, idx) => (
-                    <img key={idx} src={url} alt="" className="w-full h-24 object-contain rounded-lg bg-gray-100 dark:bg-gray-700" />
+                    <img key={idx} src={getReviewPhotoSrc(url)} alt="" className="w-full h-24 object-contain rounded-lg bg-gray-100 dark:bg-gray-700" />
                   ))}
                 </div>
               )}

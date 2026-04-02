@@ -188,13 +188,13 @@ const parseExifDateStringToIso = (value) => {
 };
 
 const getPhotoTakenAtIso = async (file) => {
-  const exifDate = parseExifDateStringToIso(await readJpegExifDateTimeOriginal(file));
-  if (exifDate) return exifDate;
   const fileLastModified = Number(file?.lastModified || 0);
   if (fileLastModified > 0) {
     const fallbackDate = new Date(fileLastModified);
     if (!Number.isNaN(fallbackDate.getTime())) return fallbackDate.toISOString();
   }
+  const exifDate = parseExifDateStringToIso(await readJpegExifDateTimeOriginal(file));
+  if (exifDate) return exifDate;
   return '';
 };
 
@@ -31471,7 +31471,7 @@ transform: translateY(0);
       const evId = String(p?.event_id || '').trim();
       if (!evId) return acc;
       if (!acc[evId]) acc[evId] = [];
-      const url = String(p?.url || '').trim();
+      const url = getTripPhotoDisplayUrl(p);
       if (url) acc[evId].push(url);
       return acc;
     }, {});
