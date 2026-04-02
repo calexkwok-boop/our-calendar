@@ -118,7 +118,7 @@ const TripRatingSystem = ({
       )}
       
       {activeView === 'reviews' && (
-        <ReviewsListView
+        <ReviewsPriorityListView
           events={events}
           onRateEvent={onRateEvent}
           onAddPhoto={onAddPhoto}
@@ -679,6 +679,90 @@ const ReviewsListView = ({ events, onRateEvent,   onAddPhoto, onAddVoiceNote,
   );
 };
 
+const ReviewsPriorityListView = ({ events, onRateEvent, onAddPhoto, onAddVoiceNote,
+  onAddTags, onAddReview, groupRatingsByEventId = {}, onAddGroupRating, onUpdateGroupRating, onDeleteGroupRating, currentUserId, darkMode, focusEventId = null }) => {
+  const unratedEvents = (events || [])
+    .filter((event) => event && !isEventReviewedByViewer(event, groupRatingsByEventId, currentUserId))
+    .sort((a, b) => {
+      const dateDiff = new Date(a.date) - new Date(b.date);
+      if (dateDiff !== 0) return dateDiff;
+      return String(a.time || '').localeCompare(String(b.time || ''));
+    });
+  const ratedEvents = (events || [])
+    .filter((event) => event && isEventReviewedByViewer(event, groupRatingsByEventId, currentUserId))
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (unratedEvents.length === 0 && ratedEvents.length === 0) {
+    return (
+      <div className="space-y-3">
+        <div className="text-center py-16">
+          <div className="text-6xl mb-3">Reviews</div>
+          <div className="text-gray-600 dark:text-gray-400">Rate something from Daily Recap and it will appear here.</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {unratedEvents.length > 0 && (
+        <div className="space-y-3">
+          <div className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+            Still to review
+          </div>
+          {unratedEvents.map((event) => (
+            <EventRatingCard
+              deferPersistOnStar
+              key={event.id}
+              event={event}
+              onRate={onRateEvent}
+              onAddPhoto={onAddPhoto}
+              onAddVoiceNote={onAddVoiceNote}
+              onAddTags={onAddTags}
+              onAddReview={onAddReview}
+              groupRatings={groupRatingsByEventId[String(event.id || '')] || []}
+              currentUserId={currentUserId}
+              onAddGroupRating={onAddGroupRating}
+              onUpdateGroupRating={onUpdateGroupRating}
+              onDeleteGroupRating={onDeleteGroupRating}
+              darkMode={darkMode}
+              defaultExpanded={String(event.id || '') === String(focusEventId || '')}
+            />
+          ))}
+        </div>
+      )}
+
+      {ratedEvents.length > 0 && (
+        <div className="space-y-3">
+          {unratedEvents.length > 0 && (
+            <div className="px-1 pt-2 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+              Reviewed
+            </div>
+          )}
+          {ratedEvents.map((event) => (
+            <EventRatingCard
+              key={event.id}
+              event={event}
+              onRate={onRateEvent}
+              onAddPhoto={onAddPhoto}
+              onAddVoiceNote={onAddVoiceNote}
+              onAddTags={onAddTags}
+              onAddReview={onAddReview}
+              groupRatings={groupRatingsByEventId[String(event.id || '')] || []}
+              currentUserId={currentUserId}
+              onAddGroupRating={onAddGroupRating}
+              onUpdateGroupRating={onUpdateGroupRating}
+              onDeleteGroupRating={onDeleteGroupRating}
+              darkMode={darkMode}
+              defaultExpanded={String(event.id || '') === String(focusEventId || '')}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ============================================================================
 // TRIP HIGHLIGHTS VIEW
 // ============================================================================
@@ -1016,17 +1100,23 @@ const BadgesView = ({ userStats, darkMode }) => {
       target: 5,
     },
     {
-      id: 'voice_master',
+      id: 'critic',
       emoji: '🎤',
-      title: 'Voice Master',
-      description: 'Add 10 voice notes',
-      unlocked: (userStats.voiceNotes || 0) >= 10,
-      progress: userStats.voiceNotes || 0,
+      title: 'Critic',
+      description: 'Write 10 reviews',
+      unlocked: (userStats.totalReviews || 0) >= 10,
+      progress: userStats.totalReviews || 0,
       target: 10,
     },
   ];
+
+  const displayBadges = badges.map((badge) => (
+    badge.id === 'critic'
+      ? { ...badge, emoji: '📝' }
+      : badge
+  ));
   
-  const unlockedCount = badges.filter(b => b.unlocked).length;
+  const unlockedCount = displayBadges.filter(b => b.unlocked).length;
   
   return (
     <div className="space-y-6">
@@ -1037,7 +1127,7 @@ const BadgesView = ({ userStats, darkMode }) => {
           Your Badges
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          {unlockedCount} of {badges.length} unlocked
+          {unlockedCount} of {displayBadges.length} unlocked
         </p>
       </div>
       
@@ -1046,14 +1136,14 @@ const BadgesView = ({ userStats, darkMode }) => {
         <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 transition-all duration-500"
-            style={{ width: `${(unlockedCount / badges.length) * 100}%` }}
+            style={{ width: `${(unlockedCount / displayBadges.length) * 100}%` }}
           />
         </div>
       </div>
       
       {/* Badges grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {badges.map(badge => (
+        {displayBadges.map(badge => (
           <BadgeCard key={badge.id} badge={badge} darkMode={darkMode} />
         ))}
       </div>

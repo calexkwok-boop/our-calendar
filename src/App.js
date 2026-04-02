@@ -1269,6 +1269,30 @@ const generateUuid = () => uuidv4();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
 const getProfilePhotoCacheKey = (suffix) => `our-calendar-profile-photo:${String(suffix || '').trim()}`;
+const getTripSelectedDateStorageKey = (userId, subCalId) => `our-calendar-trip-selected-date:${String(userId || '').trim()}:${String(subCalId || '').trim()}`;
+const readStoredTripSelectedDateKey = (userId, subCalId) => {
+  if (typeof window === 'undefined') return '';
+  const key = getTripSelectedDateStorageKey(userId, subCalId);
+  if (!key || key.endsWith(':')) return '';
+  try {
+    return String(window.localStorage.getItem(key) || '').trim();
+  } catch {
+    return '';
+  }
+};
+const writeStoredTripSelectedDateKey = (userId, subCalId, dateKey) => {
+  if (typeof window === 'undefined') return;
+  const key = getTripSelectedDateStorageKey(userId, subCalId);
+  if (!key || key.endsWith(':')) return;
+  try {
+    const normalized = String(dateKey || '').trim();
+    if (normalized) {
+      window.localStorage.setItem(key, normalized);
+    } else {
+      window.localStorage.removeItem(key);
+    }
+  } catch {}
+};
 const getProfilePhotoCacheKeys = (userLike) => {
   const raw = typeof userLike === 'object' && userLike
     ? userLike
@@ -4663,13 +4687,20 @@ function App() {
     const todayWithinTrip = startTs !== null && endTs !== null && todayTs !== null
       && todayTs >= startTs
       && todayTs <= endTs;
-    const selectedDateKey = todayWithinTrip
-      ? todayKey
-      : (
-        itineraryDateKeys[0]
-        || photoDateKeys[0]
-        || getSubCalStartRaw(sc)
-      );
+    const storedDateKey = readStoredTripSelectedDateKey(user?.id, sc?.id);
+    const storedDateTs = toDateOnlyTs(storedDateKey);
+    const storedDateWithinTrip = storedDateTs !== null && startTs !== null && endTs !== null
+      && storedDateTs >= startTs
+      && storedDateTs <= endTs;
+    const selectedDateKey = storedDateWithinTrip
+      ? storedDateKey
+      : todayWithinTrip
+        ? todayKey
+        : (
+          itineraryDateKeys[0]
+          || photoDateKeys[0]
+          || getSubCalStartRaw(sc)
+        );
     setSubCalSelectedDate(new Date(`${selectedDateKey}T00:00:00`));
   };
 
@@ -5210,6 +5241,14 @@ function App() {
     const targetLeft = Math.max(0, strip.scrollLeft + (buttonRect.left - stripRect.left) - 16);
     strip.scrollTo({ left: targetLeft, behavior: 'smooth' });
   }, [activeSubCalendar?.id, subCalSelectedDate]);
+
+  useEffect(() => {
+    const subCalId = String(activeSubCalendar?.id || '').trim();
+    const userId = String(user?.id || '').trim();
+    const selectedKey = subCalSelectedDate ? getDateKey(subCalSelectedDate) : '';
+    if (!subCalId || !userId || !selectedKey) return;
+    writeStoredTripSelectedDateKey(userId, subCalId, selectedKey);
+  }, [activeSubCalendar?.id, subCalSelectedDate, user?.id]);
 
   useEffect(() => {
     const subCalId = String(activeSubCalendar?.id || '').trim();
