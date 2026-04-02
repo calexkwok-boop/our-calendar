@@ -14,10 +14,30 @@ import { Download, Music, Play, Pause, Share2, Sparkles, X, ChevronLeft, Chevron
  */
 
 const HIGHLIGHT_REEL_TRACKS = Object.freeze([
-  { id: 'cinematic-sunrise', label: 'Cinematic', vibe: 'scenic', file: '/music/highlight-cinematic.mp3' },
-  { id: 'city-lights', label: 'Upbeat', vibe: 'nightlife', file: '/music/highlight-upbeat.mp3' },
-  { id: 'golden-hour', label: 'Chill', vibe: 'food', file: '/music/highlight-chill.mp3' },
-  { id: 'soft-postcard', label: 'Reflective', vibe: 'reflective', file: '/music/highlight-reflective.mp3' },
+  {
+    id: 'mountain-cinematic',
+    label: 'Cinematic',
+    vibe: 'scenic',
+    file: '/music/the_mountain-no-copyright-music-443583.mp3',
+  },
+  {
+    id: 'joyinsound-chill',
+    label: 'Chill',
+    vibe: 'food',
+    file: '/music/joyinsound-chill-no-copyright-music-403416.mp3',
+  },
+  {
+    id: 'audiodollar-upbeat',
+    label: 'Upbeat',
+    vibe: 'nightlife',
+    file: '/music/audiodollar-no-copyright-music-it-no-copyright-music-482203.mp3',
+  },
+  {
+    id: 'paulyudin-reflective',
+    label: 'Reflective',
+    vibe: 'reflective',
+    file: '/music/paulyudin-no-copyright-music-482400.mp3',
+  },
 ]);
 
 // Premium photo treatments with professional color grading
@@ -298,7 +318,7 @@ export default function TripHighlightReel({
       {/* PREMIUM TOP BAR - Glassmorphism with blur */}
       <div className="absolute top-0 left-0 right-0 z-30 px-6 pb-5 pt-8 bg-gradient-to-b from-black/72 via-black/34 to-transparent"
            style={{ paddingTop: 'max(2rem, calc(env(safe-area-inset-top) + 1.5rem))' }}>
-        <div className="grid grid-cols-[auto_1fr] items-center gap-4 sm:gap-6">
+        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 sm:gap-4">
           {/* Close Button - Elevated design */}
           <button
             onClick={onClose}
@@ -307,8 +327,14 @@ export default function TripHighlightReel({
             <X className="h-5 w-5 transition-transform group-hover:rotate-90" />
           </button>
 
+          <div className="flex justify-center">
+            <div className="max-w-[8.75rem] truncate rounded-full border border-white/12 bg-black/32 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-white/72 backdrop-blur-xl sm:max-w-[10rem] sm:text-[11px]">
+              {selectedTrack.label}
+            </div>
+          </div>
+
           {/* Controls - Premium pill design */}
-          <div className="flex items-center justify-end gap-3 sm:gap-4">
+          <div className="flex items-center justify-end gap-2.5 sm:gap-3">
             {/* Music Toggle */}
             <button
               onClick={() => setMusicEnabled(!musicEnabled)}
@@ -385,7 +411,7 @@ export default function TripHighlightReel({
       </div>
 
       {/* PREMIUM PROGRESS BAR - Subtle line */}
-      <div className="absolute bottom-16 left-0 right-0 px-12">
+      <div className="absolute bottom-12 left-0 right-0 px-12">
         <div className="h-0.5 overflow-hidden rounded-full bg-white/20">
           <div
             className="h-full bg-white shadow-sm shadow-white/50 transition-all duration-300 ease-out"
@@ -395,8 +421,8 @@ export default function TripHighlightReel({
       </div>
 
       {/* PREMIUM PLAYBACK CONTROLS */}
-      <div className="absolute bottom-0 left-0 right-0 px-6 pb-5 pt-10 bg-gradient-to-t from-black/82 via-black/40 to-transparent"
-           style={{ paddingBottom: 'max(1.25rem, calc(env(safe-area-inset-bottom) + 0.9rem))' }}>
+      <div className="absolute bottom-0 left-0 right-0 px-6 pb-3 pt-8 bg-gradient-to-t from-black/82 via-black/40 to-transparent"
+           style={{ paddingBottom: 'max(0.75rem, calc(env(safe-area-inset-bottom) + 0.55rem))' }}>
         <div className="flex items-center justify-center gap-6">
           {/* Previous */}
           <button
@@ -430,7 +456,7 @@ export default function TripHighlightReel({
         </div>
 
         {/* Slide counter - Editorial typography */}
-        <div className="mt-6 text-center">
+        <div className="mt-7 text-center">
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
             {currentSlide + 1} of {safeHighlights.length}
           </div>
