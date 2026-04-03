@@ -1352,12 +1352,74 @@ export default function PopupEventPanel({
     }
   };
   const handleCopyLink = () => { navigator.clipboard.writeText(`${window.location.origin}?popup=${event.id}`).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
-
+  const popupEventCardCategory = resolveEventCardCategory(event || {});
+  const isSportsPopupEvent = popupEventCardCategory === 'sports';
+  const weEventPanelTheme = (() => {
+    switch (popupEventCardCategory) {
+      case 'kids':
+        return {
+          borderLight: 'rgba(251,191,36,0.34)',
+          borderDark: 'rgba(251,191,36,0.22)',
+          backgroundLight: 'linear-gradient(180deg, rgba(255,251,235,0.99) 0%, rgba(240,249,255,0.98) 100%)',
+          backgroundDark: 'linear-gradient(180deg, rgba(43,35,23,0.98) 0%, rgba(22,37,58,0.98) 100%)',
+          headerFrom: '#f59e0b',
+          headerTo: '#38bdf8',
+          tabActiveLight: 'rgba(255,255,255,0.78)',
+          tabActiveDark: 'rgba(251,191,36,0.14)',
+        };
+      case 'hangout':
+        return {
+          borderLight: 'rgba(34,211,238,0.34)',
+          borderDark: 'rgba(34,211,238,0.22)',
+          backgroundLight: 'linear-gradient(180deg, rgba(236,254,255,0.99) 0%, rgba(239,246,255,0.98) 100%)',
+          backgroundDark: 'linear-gradient(180deg, rgba(24,37,45,0.98) 0%, rgba(19,34,50,0.98) 100%)',
+          headerFrom: '#06b6d4',
+          headerTo: '#38bdf8',
+          tabActiveLight: 'rgba(255,255,255,0.8)',
+          tabActiveDark: 'rgba(34,211,238,0.14)',
+        };
+      case 'celebration':
+        return {
+          borderLight: 'rgba(244,114,182,0.32)',
+          borderDark: 'rgba(244,114,182,0.2)',
+          backgroundLight: 'linear-gradient(180deg, rgba(255,241,242,0.99) 0%, rgba(255,247,237,0.98) 100%)',
+          backgroundDark: 'linear-gradient(180deg, rgba(41,26,34,0.98) 0%, rgba(42,35,24,0.98) 100%)',
+          headerFrom: '#f43f5e',
+          headerTo: '#f59e0b',
+          tabActiveLight: 'rgba(255,255,255,0.8)',
+          tabActiveDark: 'rgba(244,114,182,0.14)',
+        };
+      case 'party':
+        return {
+          borderLight: 'rgba(217,70,239,0.3)',
+          borderDark: 'rgba(217,70,239,0.2)',
+          backgroundLight: 'linear-gradient(180deg, rgba(253,244,255,0.99) 0%, rgba(236,254,255,0.98) 100%)',
+          backgroundDark: 'linear-gradient(180deg, rgba(32,22,46,0.98) 0%, rgba(22,35,58,0.98) 100%)',
+          headerFrom: '#d946ef',
+          headerTo: '#06b6d4',
+          tabActiveLight: 'rgba(255,255,255,0.8)',
+          tabActiveDark: 'rgba(217,70,239,0.14)',
+        };
+      default:
+        return {
+          borderLight: 'rgba(15,23,42,0.05)',
+          borderDark: 'rgba(255,255,255,0.06)',
+          backgroundLight: 'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,252,0.98) 100%)',
+          backgroundDark: 'linear-gradient(180deg, rgba(17,24,39,0.98) 0%, rgba(15,23,42,0.98) 100%)',
+          headerFrom: accent,
+          headerTo: `${accent}cc`,
+          tabActiveLight: 'rgba(255,255,255,0.72)',
+          tabActiveDark: 'rgba(255,255,255,0.06)',
+        };
+    }
+  })();
   const panelStyle = {
     borderRadius: 28,
     overflow: 'hidden',
-    border: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(15,23,42,0.05)',
-    background: darkMode ? 'linear-gradient(180deg, rgba(17,24,39,0.98) 0%, rgba(15,23,42,0.98) 100%)' : 'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,250,252,0.98) 100%)',
+    border: darkMode
+      ? `1px solid ${weEventPanelTheme.borderDark}`
+      : `1px solid ${weEventPanelTheme.borderLight}`,
+    background: darkMode ? weEventPanelTheme.backgroundDark : weEventPanelTheme.backgroundLight,
     boxShadow: darkMode ? '0 24px 56px rgba(2,6,23,0.46)' : '0 24px 56px rgba(15,23,42,0.18)',
     maxHeight: '100%',
     height: '100%',
@@ -1365,7 +1427,7 @@ export default function PopupEventPanel({
     flexDirection: 'column',
   };
   const headerStyle = {
-    background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 100%)`,
+    background: `linear-gradient(135deg, ${weEventPanelTheme.headerFrom} 0%, ${weEventPanelTheme.headerTo} 100%)`,
     padding: '18px 20px 16px',
     position: 'relative',
     overflow: 'hidden',
@@ -1417,8 +1479,6 @@ export default function PopupEventPanel({
   const hostMember = members.find((m) => m.role === 'host');
   const cohostMembers = sortedMembers.filter((m) => m.role === 'cohost');
   const isLegacyInvalidEvent = !isUuid(event.id);
-  const popupEventCardCategory = resolveEventCardCategory(event);
-  const isSportsPopupEvent = popupEventCardCategory === 'sports';
   const attendeeLabel = isSportsPopupEvent ? 'players' : 'guests';
   const joinLabel = isSportsPopupEvent ? 'Join Event' : 'RSVP';
   const joiningLabel = isSportsPopupEvent ? 'Joining...' : 'Saving RSVP...';
@@ -1515,7 +1575,9 @@ export default function PopupEventPanel({
               background: 'transparent', color: activeScreen === id ? accent : secondaryText,
               borderBottom: activeScreen === id ? `2px solid ${accent}` : '2px solid transparent', transition: 'all 0.15s', whiteSpace: 'nowrap',
               borderTopLeftRadius: 12, borderTopRightRadius: 12,
-              backgroundColor: activeScreen === id ? (darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.72)') : 'transparent' }}>
+              backgroundColor: activeScreen === id
+                ? (darkMode ? weEventPanelTheme.tabActiveDark : weEventPanelTheme.tabActiveLight)
+                : 'transparent' }}>
             {emoji} {label}
           </button>
         ))}
