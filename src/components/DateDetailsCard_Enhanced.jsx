@@ -699,7 +699,7 @@ export default function DateDetailsCardEnhanced({
                         background: themeAccentButtonStyle?.backgroundColor
                           ? `linear-gradient(90deg, ${themeAccentButtonStyle.backgroundColor} 0%, ${hexToRgba(themeAccentButtonStyle.backgroundColor, 0.78)} 100%)`
                           : undefined,
-                      }}
+                      } : undefined}
                 >
                   Create {eventType === 'we' ? 'We' : 'Me'} Event
                 </button>
