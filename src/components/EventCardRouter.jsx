@@ -716,6 +716,19 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                           <input
                             type="file"
                             accept="image/*"
+                            className="hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              void handleImageSelected(field.key, file);
+                              event.target.value = '';
+                            }}
+                          />
+                          {uploadingImageField === field.key ? 'Uploading…' : (draft[field.key] ? 'Choose photo' : 'Upload photo')}
+                        </label>
+                        <label className={`inline-flex cursor-pointer items-center justify-center rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.optionIdle}`}>
+                          <input
+                            type="file"
+                            accept="image/*"
                             capture="environment"
                             className="hidden"
                             onChange={(event) => {
@@ -724,7 +737,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                               event.target.value = '';
                             }}
                           />
-                          {uploadingImageField === field.key ? 'Uploading…' : (draft[field.key] ? 'Change photo' : 'Upload photo')}
+                          {uploadingImageField === field.key ? 'Uploading…' : 'Take photo'}
                         </label>
                         <button
                           type="button"
@@ -740,20 +753,35 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                       <div className={`rounded-[22px] border border-dashed px-4 py-8 text-center text-sm ${editorTheme.empty}`}>
                         Take a photo or choose one from your phone.
                       </div>
-                      <label className={`inline-flex cursor-pointer items-center justify-center rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.addChip}`}>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          className="hidden"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            void handleImageSelected(field.key, file);
-                            event.target.value = '';
-                          }}
-                        />
-                        {uploadingImageField === field.key ? 'Uploading…' : 'Upload photo'}
-                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <label className={`inline-flex cursor-pointer items-center justify-center rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.addChip}`}>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              void handleImageSelected(field.key, file);
+                              event.target.value = '';
+                            }}
+                          />
+                          {uploadingImageField === field.key ? 'Uploading…' : 'Choose photo'}
+                        </label>
+                        <label className={`inline-flex cursor-pointer items-center justify-center rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.optionIdle}`}>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              void handleImageSelected(field.key, file);
+                              event.target.value = '';
+                            }}
+                          />
+                          {uploadingImageField === field.key ? 'Uploading…' : 'Take photo'}
+                        </label>
+                      </div>
                     </div>
                   )}
                 </div>
