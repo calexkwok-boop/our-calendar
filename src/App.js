@@ -31230,7 +31230,11 @@ transform: translateY(0);
                     if (!byDate[d]) byDate[d] = [];
                     byDate[d].push(p);
                   });
-                  return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b)).map(([date, photos]) => {
+                  return Object.entries(byDate).sort(([a], [b]) => {
+                    if (a === 'unlinked') return 1;
+                    if (b === 'unlinked') return -1;
+                    return b.localeCompare(a);
+                  }).map(([date, photos]) => {
                     const orderedPhotos = sortTripPhotosChronologically(photos);
                     return (
                     <div key={date} className="mb-6">
@@ -31349,7 +31353,11 @@ transform: translateY(0);
                     if (!byDate[d]) byDate[d] = [];
                     byDate[d].push(p);
                   });
-                  return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b)).map(([date, photos]) => {
+                  return Object.entries(byDate).sort(([a], [b]) => {
+                    if (a === 'unlinked') return 1;
+                    if (b === 'unlinked') return -1;
+                    return b.localeCompare(a);
+                  }).map(([date, photos]) => {
                     const orderedPhotos = sortTripPhotosChronologically(photos);
                     return (
                     <div key={date} className="relative pl-6 border-l-2 border-purple-200 dark:border-purple-800">
