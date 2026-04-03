@@ -261,7 +261,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
           variant: 'celebration',
           title: coverImageUrl ? 'Change Cover Photo' : 'Add Cover Photo',
           fields: [
-            { key: 'coverImageUrl', label: 'Cover photo URL', value: coverImageUrl, placeholder: 'https://images.example.com/invitation-photo.jpg' },
+            { key: 'coverImageUrl', label: 'Cover photo', type: 'image-upload', value: coverImageUrl },
           ],
           onSave: (values) => onUpdateEventData({ coverImageUrl: String(values.coverImageUrl || '').trim() || null }),
         })

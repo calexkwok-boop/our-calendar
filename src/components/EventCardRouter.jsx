@@ -6,6 +6,22 @@ import KidsEventCardView from './KidsEventCard';
 import HangoutEventCardView from './HangoutEventCard';
 
 export const resolveEventCardCategory = (event) => {
+  const popupSubtype = [
+    event?.popupSubtype,
+    event?.popup_subtype,
+    event?.popupMetadata?.category,
+    event?.popup_metadata?.category,
+    event?.event_data?.popupSubtype,
+    event?.event_data?.popup_subtype,
+    event?.event_data?.category,
+  ]
+    .map((value) => String(value || '').trim().toLowerCase())
+    .find((value) => ['sports', 'party', 'celebration', 'hangout', 'kids', 'custom'].includes(value));
+
+  if (popupSubtype) {
+    return popupSubtype;
+  }
+
   const explicit = String(event?.category || '').trim().toLowerCase();
   if (['sports', 'party', 'celebration', 'hangout', 'kids', 'custom'].includes(explicit)) {
     return explicit;
@@ -13,6 +29,13 @@ export const resolveEventCardCategory = (event) => {
 
   const text = [
     event?.category,
+    event?.popupSubtype,
+    event?.popup_subtype,
+    event?.popupMetadata?.category,
+    event?.popup_metadata?.category,
+    event?.event_data?.popupSubtype,
+    event?.event_data?.popup_subtype,
+    event?.event_data?.category,
     event?.description,
     event?.title,
     event?.activity,
@@ -355,6 +378,7 @@ const PlacesAutocompleteField = ({ value, onChange, placeholder, inputClassName,
 const EventEditorModal = ({ config, onClose, onSave }) => {
   const [draft, setDraft] = useState({});
   const [saving, setSaving] = useState(false);
+  const [uploadingImageField, setUploadingImageField] = useState('');
   const editorVariant = String(config?.variant || '').trim().toLowerCase();
   const isPartyEditor = editorVariant === 'party';
   const editorTheme = editorVariant === 'kids'
@@ -510,6 +534,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
     if (!config) {
       setDraft({});
       setSaving(false);
+      setUploadingImageField('');
       return;
     }
     const nextDraft = {};
@@ -526,12 +551,49 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
     });
     setDraft(nextDraft);
     setSaving(false);
+    setUploadingImageField('');
   }, [config]);
 
   if (!config) return null;
 
   const setFieldValue = (key, value) => {
     setDraft((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleImageSelected = async (fieldKey, file) => {
+    if (!file) return;
+    setUploadingImageField(fieldKey);
+    try {
+      const imageUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Could not read image.'));
+        reader.readAsDataURL(file);
+      });
+
+      const img = await new Promise((resolve, reject) => {
+        const nextImage = new Image();
+        nextImage.onload = () => resolve(nextImage);
+        nextImage.onerror = () => reject(new Error('Could not load image.'));
+        nextImage.src = imageUrl;
+      });
+
+      const maxDimension = 1600;
+      const ratio = Math.min(1, maxDimension / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round((img.naturalWidth || 1) * ratio));
+      canvas.height = Math.max(1, Math.round((img.naturalHeight || 1) * ratio));
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Could not prepare image.');
+      context.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const compressedUrl = canvas.toDataURL('image/jpeg', 0.86);
+      setFieldValue(fieldKey, compressedUrl);
+    } catch (error) {
+      console.error('Event cover photo prep failed:', error);
+      alert(error?.message || 'Could not prepare this image.');
+    } finally {
+      setUploadingImageField('');
+    }
   };
 
   const handleAddGuestRow = (key) => {
@@ -638,6 +700,63 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   placeholder={field.placeholder || ''}
                   className={`min-h-[112px] w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
                 />
+              ) : field.type === 'image-upload' ? (
+                <div className={`rounded-[24px] border p-3 ${editorTheme.panel}`}>
+                  {draft[field.key] ? (
+                    <div className="space-y-3">
+                      <div className="relative overflow-hidden rounded-[22px] border border-white/40 bg-white/70 dark:border-white/10 dark:bg-white/[0.04]">
+                        <img
+                          src={draft[field.key]}
+                          alt={field.label}
+                          className="h-44 w-full object-cover"
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <label className={`inline-flex cursor-pointer items-center justify-center rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.addChip}`}>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              void handleImageSelected(field.key, file);
+                              event.target.value = '';
+                            }}
+                          />
+                          {uploadingImageField === field.key ? 'Uploading…' : (draft[field.key] ? 'Change photo' : 'Upload photo')}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setFieldValue(field.key, '')}
+                          className={`inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.remove}`}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className={`rounded-[22px] border border-dashed px-4 py-8 text-center text-sm ${editorTheme.empty}`}>
+                        Take a photo or choose one from your phone.
+                      </div>
+                      <label className={`inline-flex cursor-pointer items-center justify-center rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] transition ${editorAccent.addChip}`}>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            void handleImageSelected(field.key, file);
+                            event.target.value = '';
+                          }}
+                        />
+                        {uploadingImageField === field.key ? 'Uploading…' : 'Upload photo'}
+                      </label>
+                    </div>
+                  )}
+                </div>
               ) : field.type === 'guest-list' ? (
                 <div className={`rounded-[24px] border p-3 ${editorTheme.panel}`}>
                   <div className="space-y-3">
@@ -1366,7 +1485,7 @@ const EventCardRouter = ({ event, onEditBasics, ...props }) => {
         fields: [
           { key: 'title', label: 'Event title', value: String(event?.title || '').trim(), placeholder: 'Game Night @ Home' },
           { key: 'location', label: 'Location', value: String(event?.location || '').trim(), placeholder: 'Home, rooftop, park...' },
-          { key: 'coverImageUrl', label: 'Cover photo URL', value: normalizeEventCoverImage(event), placeholder: 'https://images.example.com/invitation-photo.jpg' },
+          { key: 'coverImageUrl', label: 'Cover photo', type: 'image-upload', value: normalizeEventCoverImage(event) },
           { key: 'description', label: 'Notes', type: 'textarea', rows: 5, value: normalizeEventNotes(event), placeholder: 'Add anything guests should know.' },
         ],
         onSave: (values) => onEditBasics({
