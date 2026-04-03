@@ -2936,6 +2936,9 @@ function App() {
       if (!grouped[value]) grouped[value] = { label, photos: [] };
       grouped[value].photos.push(photo);
     });
+    Object.values(grouped).forEach((group) => {
+      group.photos = sortTripPhotosChronologically(group.photos).reverse();
+    });
     return Object.values(grouped).sort((a, b) => a.label.localeCompare(b.label));
   }, [tripPhotos]);
   const EXPENSE_LEDGER_NOTE_TEXT = '__EXPENSE_LEDGER_V1__';
@@ -31130,14 +31133,29 @@ transform: translateY(0);
                 <span className={`text-xs ${photoUploadError ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
                   {photoUploadMessage}
                 </span>
-              ) : (!isPhotoSelectionMode && !photoDeleteMode && tripHighlightDefaultPhotoIds.length > 0) ? (
-                <button
-                  type="button"
-                  onClick={openTripHighlights}
-                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 px-3.5 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(124,58,237,0.24)] transition-transform hover:scale-[1.01]"
-                >
-                  Watch Highlight Reel
-                </button>
+              ) : (!isPhotoSelectionMode && !photoDeleteMode && tripPhotos.length > 0) ? (
+                <div className="flex items-center gap-2">
+                  {tripHighlightDefaultPhotoIds.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={openTripHighlights}
+                      className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 px-3.5 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(124,58,237,0.24)] transition-transform hover:scale-[1.01]"
+                    >
+                      Watch Highlight Reel
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={openTripHighlightSelectionMode}
+                    className={`inline-flex items-center justify-center rounded-full border px-3 py-2 text-[11px] font-semibold transition-colors ${
+                      tripHighlightDefaultPhotoIds.length > 0
+                        ? 'border-purple-200 bg-white text-purple-700 hover:bg-purple-50 dark:border-purple-500/30 dark:bg-gray-800 dark:text-purple-200 dark:hover:bg-purple-500/10'
+                        : 'bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 text-white shadow-[0_10px_24px_rgba(124,58,237,0.24)]'
+                    }`}
+                  >
+                    {tripHighlightDefaultPhotoIds.length > 0 ? 'Edit Highlight Reel' : 'Create Highlight Reel'}
+                  </button>
+                </div>
               ) : null}
                 <div className="relative ml-auto">
                   <button
@@ -31557,17 +31575,6 @@ transform: translateY(0);
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-            {!isPhotoSelectionMode && !photoDeleteMode && tripPhotos.length > 0 && (
-              <div className="px-4 pb-8 pt-2">
-                <button
-                  type="button"
-                  onClick={openTripHighlightSelectionMode}
-                  className="flex w-full items-center justify-center rounded-[28px] bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 px-5 py-4 text-base font-semibold text-white shadow-[0_16px_40px_rgba(124,58,237,0.28)] transition-transform hover:scale-[1.01]"
-                >
-                  {tripHighlightDefaultPhotoIds.length > 0 ? 'Edit Highlight Reel' : 'Create Highlight Reel'}
-                </button>
               </div>
             )}
           </div>
