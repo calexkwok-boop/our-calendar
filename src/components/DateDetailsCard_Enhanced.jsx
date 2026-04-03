@@ -693,7 +693,7 @@ export default function DateDetailsCardEnhanced({
                   </div>
                 ) : null}
 
-                {eventType === 'me' ? (
+                {(eventType === 'me' || eventType === 'we') ? (
                   <div>
                     <button
                       type="button"
@@ -798,118 +798,6 @@ export default function DateDetailsCardEnhanced({
                                 style={recurrence === option.value ? themeAccentButtonStyle : undefined}
                               >
                                 {option.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {eventType === 'me' ? (
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setShowAdvancedSettings((prev) => !prev)}
-                      className={`w-full px-4 py-3 rounded-2xl text-sm font-semibold flex items-center justify-between transition-all ${
-                        darkMode
-                          ? 'border border-white/10 bg-white/[0.04] text-white/85 hover:bg-white/[0.07]'
-                          : 'border border-gray-200 bg-gray-50/90 text-gray-700 hover:bg-white'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <Settings className="w-4 h-4" />
-                        Additional Settings
-                      </span>
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showAdvancedSettings ? 'rotate-180' : ''}`} />
-                    </button>
-                    {showAdvancedSettings ? (
-                      <div
-                        className="mt-3 p-4 rounded-[22px] space-y-4 border"
-                        style={{
-                          borderColor: accentBorderColor,
-                          background: darkMode
-                            ? `linear-gradient(135deg, ${hexToRgba(accent, 0.12)} 0%, rgba(15,23,42,0.82) 100%)`
-                            : `linear-gradient(135deg, ${hexToRgba(accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)`,
-                        }}
-                      >
-                        <div>
-                          <label className={`mb-2 block text-xs font-semibold uppercase tracking-[0.18em] ${mutedText}`}>
-                            Category
-                          </label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {Object.entries(categories).filter(([key]) => key !== 'popup_event').map(([key, cat]) => (
-                              <button
-                                key={key}
-                                type="button"
-                                onClick={() => setSelectedCategory?.(key)}
-                                className={`px-3 py-2 rounded-2xl text-xs font-semibold transition-all ${
-                                  selectedCategory === key
-                                    ? `${cat.color} text-white shadow-sm scale-[1.02]`
-                                    : `${cat.lightBg} ${cat.text} hover:shadow-sm hover:scale-[1.01]`
-                                }`}
-                              >
-                                {cat.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <label className={`mb-2 block text-xs font-semibold uppercase tracking-[0.18em] ${mutedText}`}>
-                            Event Properties
-                          </label>
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setIsPrivate?.(!isPrivate)}
-                              className={`px-3 py-2.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
-                                isPrivate
-                                  ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md'
-                                  : 'border border-gray-200/90 bg-white/85 text-gray-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-gray-300'
-                              }`}
-                            >
-                              <Lock className="w-4 h-4" />
-                              {isPrivate ? 'Private' : 'Shared'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setIsUrgent?.(!isUrgent)}
-                              className={`px-3 py-2.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
-                                isUrgent
-                                  ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md'
-                                  : 'border border-gray-200/90 bg-white/85 text-gray-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-gray-300'
-                              }`}
-                            >
-                              <AlertTriangle className="w-4 h-4" />
-                              {isUrgent ? 'Urgent' : 'Normal'}
-                            </button>
-                          </div>
-                        </div>
-                        <div>
-                          <label className={`mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] ${mutedText}`}>
-                            <Repeat className="w-3.5 h-3.5" />
-                            Recurrence
-                          </label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {[
-                              { value: 'once', label: 'One-time' },
-                              { value: 'weekly', label: 'Weekly' },
-                              { value: 'monthly', label: 'Monthly' },
-                              { value: 'annual', label: 'Annual' },
-                            ].map((opt) => (
-                              <button
-                                key={opt.value}
-                                type="button"
-                                onClick={() => setRecurrence?.(opt.value)}
-                                className={`px-3 py-2.5 rounded-2xl text-sm font-semibold transition-all ${
-                                  recurrence === opt.value
-                                    ? 'text-white shadow-sm scale-[1.02]'
-                                    : 'border border-gray-200/90 bg-white/85 text-gray-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-gray-300'
-                                }`}
-                                style={recurrence === opt.value ? themeAccentButtonStyle : undefined}
-                              >
-                                {opt.label}
                               </button>
                             ))}
                           </div>
