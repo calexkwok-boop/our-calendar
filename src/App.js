@@ -31070,7 +31070,7 @@ transform: translateY(0);
                   <button
                     onClick={tripHighlightSelectionMode ? openTripHighlightsFromSelectedPhotos : beginTripHighlightSelectionFromCurrentSelection}
                     disabled={selectedPhotoIds.length === 0}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-500 text-white disabled:opacity-40"
+                    className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 px-3 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(124,58,237,0.24)] transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {tripHighlightSelectionMode ? 'Save & Open Reel' : 'Create Highlight Reel'}
                   </button>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Clock, Lock, Repeat, User } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Clock, Lock, Repeat, Settings, User } from 'lucide-react';
 
 const DEFAULT_PARTNER = { name: 'Calendar Partner', avatar: '👤' };
 
@@ -154,6 +154,14 @@ export default function DateDetailsCardEnhanced({
   popupEventMaxPeopleDraft,
   setPopupEventMaxPeopleDraft,
   categories = {},
+  selectedCategory = 'other',
+  setSelectedCategory,
+  isPrivate = false,
+  setIsPrivate,
+  isUrgent = false,
+  setIsUrgent,
+  recurrence = 'once',
+  setRecurrence,
   darkMode = false,
   themeAccentButtonStyle,
   themeAccentHeadingStyle,
@@ -173,6 +181,7 @@ export default function DateDetailsCardEnhanced({
   const [selectedTime, setSelectedTime] = useState('');
   const [invitees, setInvitees] = useState([{ id: 'partner', ...calendarPartner, selected: true }]);
   const [showAddPeople, setShowAddPeople] = useState(false);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const currentTemplate = useMemo(
@@ -194,6 +203,7 @@ export default function DateDetailsCardEnhanced({
       setSelectedTime('');
       setInvitees([{ id: 'partner', ...calendarPartner, selected: true }]);
       setShowAddPeople(false);
+      setShowAdvancedSettings(false);
       setSearchQuery('');
     }
   }, [calendarPartner, isOpen]);
@@ -324,21 +334,21 @@ export default function DateDetailsCardEnhanced({
     if (typeof handleQuickAdd === 'function') {
       const combinedTitle = eventData.location ? `${eventData.title} @ ${eventData.location}` : eventData.title;
       const categoryOverride = buildCategoryOverride(eventType, weEventCategory, eventData.title, categories);
-      if (eventType === 'we') {
+        if (eventType === 'we') {
         try { setIsPopupEventDraft?.(true); } catch {}
         if (!String(popupEventMaxPeopleDraft || '').trim()) {
           setPopupEventMaxPeopleDraft?.('10');
         }
       }
-      const result = await handleQuickAdd({
-        titleOverride: combinedTitle,
-        time: eventData.time || null,
-        directCreate: true,
-        isPopupEvent: eventType === 'we',
-        categoryOverride,
-        popupSubtype: eventType === 'we' ? (eventData.category || null) : null,
-        popupMetadata: eventType === 'we' ? buildWeEventMetadata(eventData.category) : {},
-        locationOverride: eventData.location || '',
+        const result = await handleQuickAdd({
+          titleOverride: combinedTitle,
+          time: eventData.time || null,
+          directCreate: true,
+          isPopupEvent: eventType === 'we',
+          categoryOverride: eventType === 'me' ? (selectedCategory || 'other') : categoryOverride,
+          popupSubtype: eventType === 'we' ? (eventData.category || null) : null,
+          popupMetadata: eventType === 'we' ? buildWeEventMetadata(eventData.category) : {},
+          locationOverride: eventData.location || '',
         description: eventType === 'we' && currentTemplate ? `${currentTemplate.label} We Event` : '',
       });
       if (result?.ok || result === true) {
@@ -683,6 +693,120 @@ export default function DateDetailsCardEnhanced({
                   </div>
                 ) : null}
 
+                {eventType === 'me' ? (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedSettings((prev) => !prev)}
+                      className={`w-full rounded-2xl border px-4 py-3 text-sm font-semibold transition-all ${
+                        darkMode
+                          ? 'border-white/10 bg-white/[0.04] text-white/85 hover:bg-white/[0.07]'
+                          : 'border-gray-200 bg-gray-50/90 text-gray-700 hover:bg-white'
+                      }`}
+                    >
+                      <span className="flex items-center justify-between gap-3">
+                        <span className="flex items-center gap-2">
+                          <Settings className="h-4 w-4" />
+                          Additional Settings
+                        </span>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${showAdvancedSettings ? 'rotate-180' : ''}`} />
+                      </span>
+                    </button>
+                    {showAdvancedSettings ? (
+                      <div
+                        className="mt-3 space-y-4 rounded-[22px] border p-4"
+                        style={{
+                          borderColor: accentBorderColor,
+                          background: darkMode
+                            ? `linear-gradient(135deg, ${hexToRgba(accent, 0.12)} 0%, rgba(15,23,42,0.82) 100%)`
+                            : `linear-gradient(135deg, ${hexToRgba(accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)`,
+                        }}
+                      >
+                        <div>
+                          <label className={`mb-2 block text-xs font-semibold uppercase tracking-[0.18em] ${mutedText}`}>
+                            Category
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {Object.entries(categories).filter(([key]) => key !== 'popup_event').map(([key, cat]) => (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => setSelectedCategory?.(key)}
+                                className={`rounded-2xl px-3 py-2 text-xs font-semibold transition-all ${
+                                  selectedCategory === key
+                                    ? `${cat.color} text-white shadow-sm scale-[1.02]`
+                                    : `${cat.lightBg} ${cat.text} hover:shadow-sm hover:scale-[1.01]`
+                                }`}
+                              >
+                                {cat.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className={`mb-2 block text-xs font-semibold uppercase tracking-[0.18em] ${mutedText}`}>
+                            Event Properties
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsPrivate?.(!isPrivate)}
+                              className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
+                                isPrivate
+                                  ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md'
+                                  : 'border border-gray-200/90 bg-white/85 text-gray-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-gray-300'
+                              }`}
+                            >
+                              <Lock className="h-4 w-4" />
+                              {isPrivate ? 'Private' : 'Shared'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setIsUrgent?.(!isUrgent)}
+                              className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
+                                isUrgent
+                                  ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md'
+                                  : 'border border-gray-200/90 bg-white/85 text-gray-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-gray-300'
+                              }`}
+                            >
+                              <AlertTriangle className="h-4 w-4" />
+                              {isUrgent ? 'Urgent' : 'Normal'}
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className={`mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] ${mutedText}`}>
+                            <Repeat className="h-3.5 w-3.5" />
+                            Recurrence
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { value: 'once', label: 'One-time' },
+                              { value: 'weekly', label: 'Weekly' },
+                              { value: 'monthly', label: 'Monthly' },
+                              { value: 'annual', label: 'Annual' },
+                            ].map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => setRecurrence?.(option.value)}
+                                className={`rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
+                                  recurrence === option.value
+                                    ? 'text-white shadow-sm scale-[1.02]'
+                                    : 'border border-gray-200/90 bg-white/85 text-gray-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-gray-300'
+                                }`}
+                                style={recurrence === option.value ? themeAccentButtonStyle : undefined}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 <button
                   type="button"
                   onClick={handleSave}
@@ -867,18 +991,34 @@ export default function DateDetailsCardEnhanced({
                           ) : null}
 
                           {editingEvent === event.id ? (
-                            <div className="space-y-2">
+                            <div
+                              className="space-y-3 rounded-[22px] border p-3.5 shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+                              style={{
+                                borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.75)',
+                                background: darkMode
+                                  ? 'linear-gradient(180deg, rgba(15,23,42,0.92) 0%, rgba(15,23,42,0.82) 100%)'
+                                  : 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.96) 100%)',
+                                backdropFilter: 'blur(14px)',
+                              }}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <div className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${mutedText}`}>Edit Event</div>
+                                  <div className={`mt-1 text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Refine the details</div>
+                                </div>
+                                <div className="h-9 w-9 rounded-full" style={{ background: categoryGlass.accent, opacity: 0.18 }} />
+                              </div>
                               <input
                                 type="text"
                                 defaultValue={event.title}
                                 onBlur={(blurEvent) => handleUpdateEventField(event.date, event.id, { title: blurEvent.target.value })}
-                                className="w-full rounded-lg border-2 border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                className="w-full rounded-2xl border border-gray-200/90 bg-white/90 px-3.5 py-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-purple-300 focus:ring-2 focus:ring-purple-200 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10"
                                 autoFocus
                               />
                               <input
                                 type="text"
                                 defaultValue={event.time || ''}
-                                placeholder="e.g. 3:00 PM"
+                                placeholder="Time"
                                 onBlur={(blurEvent) => {
                                   const val = blurEvent.target.value.trim();
                                   if (!val) {
@@ -896,7 +1036,7 @@ export default function DateDetailsCardEnhanced({
                                     time: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
                                   });
                                 }}
-                                className="w-full rounded-lg border-2 border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                className="w-full rounded-2xl border border-gray-200/90 bg-white/90 px-3.5 py-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-purple-300 focus:ring-2 focus:ring-purple-200 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10"
                               />
                               {PlacesAutocomplete ? (
                                 <PlacesAutocomplete
@@ -907,33 +1047,33 @@ export default function DateDetailsCardEnhanced({
                                     }
                                   }}
                                   placeholder="📍 Add location (optional)"
-                                  className="w-full rounded-lg border-2 border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                  className="w-full rounded-2xl border border-gray-200/90 bg-white/90 px-3.5 py-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-purple-300 focus:ring-2 focus:ring-purple-200 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10"
                                 />
                               ) : null}
                               <textarea
                                 defaultValue={event.description || ''}
                                 onBlur={(blurEvent) => handleUpdateEventField(event.date, event.id, { description: blurEvent.target.value })}
-                                placeholder="Add description"
+                                placeholder="Add notes"
                                 rows={3}
-                                className="w-full resize-none rounded-lg border-2 border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                className="w-full resize-none rounded-2xl border border-gray-200/90 bg-white/90 px-3.5 py-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-purple-300 focus:ring-2 focus:ring-purple-200 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10"
                               />
                               <select
                                 defaultValue={event.category || 'other'}
                                 onChange={(changeEvent) => handleUpdateEventField(event.date, event.id, { category: changeEvent.target.value })}
-                                className="w-full rounded-lg border-2 border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                className="w-full rounded-2xl border border-gray-200/90 bg-white/90 px-3.5 py-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-purple-300 focus:ring-2 focus:ring-purple-200 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10"
                               >
                                 {Object.entries(categories).map(([key, cat]) => (
                                   <option key={key} value={key}>{cat.label}</option>
                                 ))}
                               </select>
-                              <div className="flex gap-2">
+                              <div className="grid grid-cols-2 gap-2">
                                 <button
                                   type="button"
                                   onClick={(clickEvent) => {
                                     clickEvent.stopPropagation();
                                     handleUpdateEventField(event.date, event.id, { isPrivate: !event.isPrivate });
                                   }}
-                                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-all ${event.isPrivate ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'}`}
+                                  className={`flex items-center justify-center gap-1.5 rounded-2xl px-3 py-2.5 text-xs font-semibold transition-all ${event.isPrivate ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md' : 'border border-gray-200/90 bg-white/85 text-gray-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-gray-300'}`}
                                 >
                                   <Lock className="h-3 w-3" />
                                   {event.isPrivate ? 'Private' : 'Shared'}
@@ -944,13 +1084,13 @@ export default function DateDetailsCardEnhanced({
                                     clickEvent.stopPropagation();
                                     handleUpdateEventField(event.date, event.id, { isUrgent: !event.isUrgent });
                                   }}
-                                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-all ${event.isUrgent ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'}`}
+                                  className={`flex items-center justify-center gap-1.5 rounded-2xl px-3 py-2.5 text-xs font-semibold transition-all ${event.isUrgent ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md' : 'border border-gray-200/90 bg-white/85 text-gray-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-gray-300'}`}
                                 >
                                   <AlertTriangle className="h-3 w-3" />
                                   {event.isUrgent ? 'Urgent' : 'Normal'}
                                 </button>
                               </div>
-                              <label className="flex items-center gap-2 text-sm dark:text-gray-300">
+                              <label className={`flex items-center gap-2 rounded-2xl border px-3.5 py-3 text-sm ${darkMode ? 'border-white/10 bg-white/[0.04] text-gray-200' : 'border-gray-200/90 bg-white/80 text-gray-700'}`}>
                                 <input
                                   type="checkbox"
                                   defaultChecked={event.isAnnual}
@@ -969,7 +1109,7 @@ export default function DateDetailsCardEnhanced({
                                   clickEvent.stopPropagation();
                                   setEditingEvent?.(null);
                                 }}
-                                className="w-full rounded-xl px-3 py-2 text-sm font-medium text-white"
+                                className="w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-sm"
                                 style={themeAccentButtonStyle}
                               >
                                 Done
