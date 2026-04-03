@@ -31139,7 +31139,7 @@ transform: translateY(0);
                     <button
                       type="button"
                       onClick={openTripHighlights}
-                      className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 px-3.5 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(124,58,237,0.24)] transition-transform hover:scale-[1.01]"
+                      className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 px-3 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(124,58,237,0.24)] transition-transform hover:scale-[1.01]"
                     >
                       Watch Highlight Reel
                     </button>
@@ -31147,13 +31147,9 @@ transform: translateY(0);
                   <button
                     type="button"
                     onClick={openTripHighlightSelectionMode}
-                    className={`inline-flex items-center justify-center rounded-full border px-3 py-2 text-[11px] font-semibold transition-colors ${
-                      tripHighlightDefaultPhotoIds.length > 0
-                        ? 'border-purple-200 bg-white text-purple-700 hover:bg-purple-50 dark:border-purple-500/30 dark:bg-gray-800 dark:text-purple-200 dark:hover:bg-purple-500/10'
-                        : 'bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 text-white shadow-[0_10px_24px_rgba(124,58,237,0.24)]'
-                    }`}
+                    className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-500 px-3 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(124,58,237,0.24)] transition-transform hover:scale-[1.01]"
                   >
-                    {tripHighlightDefaultPhotoIds.length > 0 ? 'Edit Highlight Reel' : 'Create Highlight Reel'}
+                    {tripHighlightDefaultPhotoIds.length > 0 ? 'Edit Reel' : 'Create Reel'}
                   </button>
                 </div>
               ) : null}
