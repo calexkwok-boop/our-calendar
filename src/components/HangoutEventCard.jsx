@@ -77,7 +77,7 @@ const CameraIcon = () => (
 );
 
 const ActionPill = ({ href, onClick, children }) => {
-  const className = 'inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200 bg-white/92 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/75 hover:shadow-md active:scale-[0.98] dark:border-white/10 dark:bg-white/5 dark:text-fuchsia-200 dark:hover:bg-white/10';
+  const className = 'inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-white/92 px-3.5 py-1.5 text-xs font-semibold text-cyan-700 shadow-sm transition-all hover:border-cyan-300 hover:bg-cyan-50/75 hover:shadow-md active:scale-[0.98] dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200 dark:hover:bg-white/10';
 
   if (href) {
     return (
@@ -211,19 +211,19 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
         {(props.onEdit || props.onDelete) ? (
           <div className="absolute right-6 top-5 z-10 flex items-center gap-2 sm:right-7">
             {props.onEdit ? (
-              <button className="rounded-full border-2 border-gray-200 bg-white/95 p-2.5 text-gray-500 shadow-sm transition-all hover:border-gray-300 hover:text-gray-900 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white" onClick={props.onEdit} type="button">
+              <button className="rounded-full border-2 border-cyan-200 bg-white/95 p-2.5 text-cyan-600 shadow-sm transition-all hover:border-cyan-300 hover:text-cyan-800 hover:shadow-md dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200 dark:hover:bg-white/10 dark:hover:text-white" onClick={props.onEdit} type="button">
                 <EditIcon />
               </button>
             ) : null}
             {props.onDelete ? (
-              <button className="rounded-full border-2 border-gray-200 bg-white/95 p-2.5 text-gray-500 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:border-red-400/20 dark:hover:bg-red-500/10 dark:hover:text-red-400" onClick={props.onDelete} type="button">
+              <button className="rounded-full border-2 border-cyan-200 bg-white/95 p-2.5 text-cyan-600 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200 dark:hover:border-red-400/20 dark:hover:bg-red-500/10 dark:hover:text-red-400" onClick={props.onDelete} type="button">
                 <TrashIcon />
               </button>
             ) : null}
           </div>
         ) : null}
 
-        <div className="relative mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 bg-white/78 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:bg-[rgba(38,28,57,0.72)] dark:backdrop-blur-[12px]">
+        <div className="relative mx-auto max-w-[30rem] rounded-[28px] border border-cyan-200/80 bg-white/78 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-cyan-400/15 dark:bg-[rgba(24,37,45,0.72)] dark:backdrop-blur-[12px]">
           {typeof openCoverEditor === 'function' ? (
             <button
               type="button"
@@ -235,7 +235,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
             </button>
           ) : null}
           <div className="mb-3 flex items-center justify-center">
-            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-fuchsia-700 dark:text-fuchsia-200">
+            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-cyan-700 dark:text-cyan-100">
               You're Invited
             </div>
           </div>
@@ -264,7 +264,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
             {event?.title || 'Untitled hangout'}
           </h3>
 
-          <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent dark:via-cyan-300/80" />
+          <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-cyan-400 to-transparent dark:via-cyan-300/80" />
 
           <div className="mt-4 space-y-2 text-[15px] text-gray-600 dark:text-gray-300">
             <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>

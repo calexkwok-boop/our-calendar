@@ -172,7 +172,7 @@ const CameraIcon = () => (
 );
 
 const ActionPill = ({ href, onClick, children }) => {
-  const className = 'inline-flex items-center gap-1.5 rounded-full border-2 border-gray-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 hover:shadow-md active:scale-[0.98] dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10';
+  const className = 'inline-flex items-center gap-1.5 rounded-full border-2 border-fuchsia-200 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/80 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:bg-white/12 dark:hover:text-white';
 
   if (href) {
     return (
@@ -437,7 +437,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           <div className="absolute right-6 top-6 z-10 flex items-center gap-2">
             {props.onEdit ? (
               <button
-                className="rounded-full border-2 border-gray-200 bg-white/95 p-2.5 text-gray-500 shadow-sm transition-all hover:border-gray-300 hover:text-gray-900 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
+                className="rounded-full border-2 border-fuchsia-200 bg-white/95 p-2.5 text-fuchsia-600 shadow-sm transition-all hover:border-fuchsia-300 hover:text-fuchsia-800 hover:shadow-md dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:bg-white/12 dark:hover:text-white"
                 onClick={props.onEdit}
                 type="button"
               >
@@ -446,7 +446,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
             ) : null}
             {props.onDelete ? (
               <button
-                className="rounded-full border-2 border-gray-200 bg-white/95 p-2.5 text-gray-500 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:border-red-400/20 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                className="rounded-full border-2 border-fuchsia-200 bg-white/95 p-2.5 text-fuchsia-600 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:border-red-400/20 dark:hover:bg-red-500/10 dark:hover:text-red-400"
                 onClick={props.onDelete}
                 type="button"
               >
@@ -476,7 +476,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
             <div className="absolute right-[4.7rem] top-[5rem] h-7 w-px bg-gradient-to-b from-violet-200/55 to-transparent" />
           </div>
           <div className="mb-3 flex items-center justify-center">
-            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-fuchsia-700 dark:text-fuchsia-200">
+            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-fuchsia-700 dark:text-fuchsia-100">
               You're Invited
             </div>
           </div>
