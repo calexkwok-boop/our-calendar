@@ -221,7 +221,7 @@ const buildEventPhotoHighlight = ({ moment, photo, photoIndex, copy }) => {
 
   return {
     type: 'photo',
-    photo: photo?.url,
+    photo: getHighlightReelPhotoUrl(photo),
     caption: isLeadPhoto ? copy.title : '',
     subcopy: copy.subcopy,
     eyebrow: isLeadPhoto ? copy.eyebrow : '',
@@ -1238,7 +1238,7 @@ const buildDirectSelectedPhotoSlide = (photo) => {
       });
   return {
     type: 'photo',
-    photo: String(photo?.url || '').trim(),
+    photo: getHighlightReelPhotoUrl(photo),
     caption: '',
     subcopy: '',
     eyebrow: '',
@@ -1254,7 +1254,7 @@ const buildMemoryMoments = (tripPhotos) => (
   (Array.isArray(tripPhotos) ? tripPhotos : [])
     .map((photo, index) => {
       if (!photo || typeof photo !== 'object') return null;
-      const url = String(photo.url || photo.src || photo.photoUrl || '').trim();
+      const url = getHighlightReelPhotoUrl(photo);
       if (!url) return null;
       const normalizedPhoto = {
         ...photo,
@@ -1319,11 +1319,11 @@ const formatMemoryMeta = (photo) => {
 };
 
 const buildFallbackSlides = (trip, events, tripPhotos) => {
-  const albumPhotos = (Array.isArray(tripPhotos) ? tripPhotos : []).filter((photo) => String(photo?.url || '').trim());
-  const firstAlbumPhoto = albumPhotos[0]?.url || '';
+  const albumPhotos = (Array.isArray(tripPhotos) ? tripPhotos : []).filter((photo) => getHighlightReelPhotoUrl(photo));
+  const firstAlbumPhoto = getHighlightReelPhotoUrl(albumPhotos[0]);
   const firstEventPhoto = (Array.isArray(events) ? events : [])
     .flatMap((event) => normalizeEventPhotos(event?.photos || event?.photoUrls || []))
-    .find((photo) => photo?.url)?.url || '';
+    .find((photo) => getHighlightReelPhotoUrl(photo))?.url || '';
   const coverPhoto = firstAlbumPhoto || firstEventPhoto || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200';
   const totalPhotos = albumPhotos.length > 0
     ? albumPhotos.length
@@ -1445,6 +1445,18 @@ const estimateTripDays = (trip, events) => {
   return Math.max(1, uniqueDates.size || 1);
 };
 
+const getHighlightReelPhotoUrl = (photo) => String(
+  photo?.resolved_medium_url
+  || photo?.resolved_thumbnail_url
+  || photo?.medium_url
+  || photo?.thumbnail_url
+  || photo?.url
+  || photo?.src
+  || photo?.photoUrl
+  || photo?.original_url
+  || ''
+).trim();
+
 const getEffectiveRating = (event, groupRatingsByEventId, currentUserId) => {
   const localRating = Number(event?.rating || 0);
   if (localRating > 0) return localRating;
@@ -1461,7 +1473,7 @@ const normalizeEventPhotos = (photos) => (
         return url ? { id: `photo-${index}`, url, hasPeople: false } : null;
       }
       if (photo && typeof photo === 'object') {
-        const url = String(photo.url || photo.src || '').trim();
+        const url = getHighlightReelPhotoUrl(photo);
         return url ? { ...photo, url, hasPeople: Boolean(photo.hasPeople) } : null;
       }
       return null;
