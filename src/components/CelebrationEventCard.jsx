@@ -309,7 +309,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
   return (
     <div className={`group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br ${tone.kind === 'baby' ? 'from-white via-stone-50/65 to-rose-50/45' : tone.kind === 'wedding' ? 'from-white via-white to-amber-50/18' : 'from-white via-rose-50/60 to-cyan-50/60'} shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:bg-gradient-to-br ${tone.kind === 'baby' ? 'dark:from-[#241f1a] dark:via-[#1d1916] dark:to-[#181410] dark:shadow-[0_24px_80px_rgba(120,113,108,0.12)]' : tone.kind === 'wedding' ? 'dark:from-[#201a12] dark:via-[#17130f] dark:to-[#120f0b] dark:shadow-[0_24px_80px_rgba(245,158,11,0.10)]' : 'dark:from-[#171320] dark:via-[#201930] dark:to-[#111a2b] dark:shadow-[0_24px_80px_rgba(236,72,153,0.12)]'}`}>
       <style>{animationStyles}</style>
-      {coverImageUrl ? (
+      {coverImageUrl && tone.kind !== 'wedding' ? (
         <>
           <div
             className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.34] saturate-[1.08] contrast-[1.02]"
@@ -335,22 +335,8 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
             <div className="absolute left-[28%] top-[100%] h-1.5 w-1.5 rounded-full bg-gradient-to-br from-amber-100 to-rose-100 opacity-30 dark:opacity-16" style={{ animation: 'celebration-rise-bubble 13s ease-in infinite 1.5s' }} />
             <div className="absolute left-[68%] top-[100%] h-2 w-2 rounded-full bg-gradient-to-br from-stone-100 to-amber-100 opacity-26 dark:opacity-14" style={{ animation: 'celebration-rise-bubble 9.5s ease-in infinite 2.8s' }} />
           </>
-        ) : tone.kind === 'wedding' ? (
-          <>
-            <div className="absolute left-[12%] top-[14%] text-[2.2rem] opacity-60 dark:opacity-46" style={{ animation: 'celebration-gentle-float 6s ease-in-out infinite' }}>{tone.motifA}</div>
-            <div className="absolute right-[14%] top-[18%] text-[2rem] opacity-52 dark:opacity-38" style={{ animation: 'celebration-gentle-float 7.4s ease-in-out infinite 1s' }}>{tone.motifB}</div>
-            <div className="absolute left-[74%] top-[70%] text-[2.1rem] opacity-56 dark:opacity-42" style={{ animation: 'celebration-gentle-float 6.7s ease-in-out infinite 0.4s' }}>{tone.motifC}</div>
-            <div className="absolute left-[42%] top-[9%] text-[1.95rem] opacity-48 dark:opacity-34" style={{ animation: 'celebration-gentle-float 8.3s ease-in-out infinite 1.4s' }}>🤍</div>
-            <div className="absolute right-[9%] top-[47%] text-[1.85rem] opacity-42 dark:opacity-28" style={{ animation: 'celebration-gentle-float 7.8s ease-in-out infinite 0.7s' }}>✨</div>
-            <div className="absolute left-[16%] top-[60%] text-[1.8rem] opacity-44 dark:opacity-28" style={{ animation: 'celebration-gentle-float 8.9s ease-in-out infinite 1.2s' }}>🥂</div>
-            <div className="absolute left-[15%] top-[100%] h-2 w-2 rounded-full bg-gradient-to-br from-amber-200 to-yellow-200 opacity-30 dark:opacity-15" style={{ animation: 'celebration-rise-bubble 12s ease-in infinite' }} />
-            <div className="absolute left-[35%] top-[100%] h-1.5 w-1.5 rounded-full bg-gradient-to-br from-yellow-200 to-amber-200 opacity-35 dark:opacity-18" style={{ animation: 'celebration-rise-bubble 10s ease-in infinite 2s' }} />
-            <div className="absolute left-[55%] top-[100%] h-2.5 w-2.5 rounded-full bg-gradient-to-br from-yellow-100 to-amber-200 opacity-25 dark:opacity-13" style={{ animation: 'celebration-rise-bubble 14s ease-in infinite 4s' }} />
-            <div className="absolute left-[75%] top-[100%] h-2 w-2 rounded-full bg-gradient-to-br from-amber-200 to-yellow-100 opacity-28 dark:opacity-14" style={{ animation: 'celebration-rise-bubble 11s ease-in infinite 1s' }} />
-            <div className="absolute left-[24%] top-[100%] h-1.5 w-1.5 rounded-full bg-gradient-to-br from-yellow-100 to-amber-100 opacity-28 dark:opacity-15" style={{ animation: 'celebration-rise-bubble 13.2s ease-in infinite 1.7s' }} />
-            <div className="absolute left-[64%] top-[100%] h-2 w-2 rounded-full bg-gradient-to-br from-amber-100 to-white opacity-24 dark:opacity-12" style={{ animation: 'celebration-rise-bubble 9.8s ease-in infinite 2.5s' }} />
-          </>
-        ) : (
+        ) : tone.kind === 'wedding' ? null : (
+          
           <>
             <div className="absolute left-[12%] top-[15%] text-[2.15rem] opacity-62 dark:opacity-46" style={{ animation: 'celebration-gentle-float 6.4s ease-in-out infinite' }}>{tone.motifA}</div>
             <div className="absolute right-[12%] top-[17%] text-[1.95rem] opacity-56 dark:opacity-40" style={{ animation: 'celebration-gentle-float 7.1s ease-in-out infinite 0.9s' }}>{tone.motifB}</div>
@@ -368,13 +354,17 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
         )}
       </div>
 
-      <div className={`pointer-events-none absolute -right-12 -top-12 h-32 w-32 rotate-45 ${tone.kind === 'baby' ? 'bg-gradient-to-br from-stone-300/18 to-rose-200/10 dark:from-stone-500/10 dark:to-rose-500/5' : tone.kind === 'wedding' ? 'bg-gradient-to-br from-amber-300/18 to-yellow-300/10 dark:from-amber-500/10 dark:to-yellow-500/6' : 'bg-gradient-to-br from-rose-400/20 to-pink-400/10 dark:from-rose-500/10 dark:to-pink-500/5'}`} style={{ animation: 'celebration-shimmer 3s ease-in-out infinite' }} />
+      {tone.kind !== 'wedding' ? (
+        <div className={`pointer-events-none absolute -right-12 -top-12 h-32 w-32 rotate-45 ${tone.kind === 'baby' ? 'bg-gradient-to-br from-stone-300/18 to-rose-200/10 dark:from-stone-500/10 dark:to-rose-500/5' : 'bg-gradient-to-br from-rose-400/20 to-pink-400/10 dark:from-rose-500/10 dark:to-pink-500/5'}`} style={{ animation: 'celebration-shimmer 3s ease-in-out infinite' }} />
+      ) : null}
 
-      <div className="pointer-events-none absolute inset-0">
-        <div className={`absolute left-[20%] top-[25%] h-1 w-1 rotate-45 ${tone.kind === 'baby' ? 'bg-stone-400' : tone.kind === 'wedding' ? 'bg-amber-400' : 'bg-rose-400'} opacity-60 dark:opacity-30`} style={{ animation: 'celebration-twinkle 4s ease-in-out infinite' }} />
-        <div className={`absolute right-[25%] top-[60%] h-1.5 w-1.5 rotate-12 ${tone.kind === 'baby' ? 'bg-rose-300' : tone.kind === 'wedding' ? 'bg-yellow-400' : 'bg-pink-400'} opacity-50 dark:opacity-25`} style={{ animation: 'celebration-twinkle 3.5s ease-in-out infinite 1s' }} />
-        <div className={`absolute left-[70%] top-[40%] h-1 w-1 rotate-[30deg] ${tone.kind === 'baby' ? 'bg-amber-400' : tone.kind === 'wedding' ? 'bg-amber-400' : 'bg-orange-400'} opacity-55 dark:opacity-28`} style={{ animation: 'celebration-twinkle 4.5s ease-in-out infinite 2s' }} />
-      </div>
+      {tone.kind !== 'wedding' ? (
+        <div className="pointer-events-none absolute inset-0">
+          <div className={`absolute left-[20%] top-[25%] h-1 w-1 rotate-45 ${tone.kind === 'baby' ? 'bg-stone-400' : 'bg-rose-400'} opacity-60 dark:opacity-30`} style={{ animation: 'celebration-twinkle 4s ease-in-out infinite' }} />
+          <div className={`absolute right-[25%] top-[60%] h-1.5 w-1.5 rotate-12 ${tone.kind === 'baby' ? 'bg-rose-300' : 'bg-pink-400'} opacity-50 dark:opacity-25`} style={{ animation: 'celebration-twinkle 3.5s ease-in-out infinite 1s' }} />
+          <div className={`absolute left-[70%] top-[40%] h-1 w-1 rotate-[30deg] ${tone.kind === 'baby' ? 'bg-amber-400' : 'bg-orange-400'} opacity-55 dark:opacity-28`} style={{ animation: 'celebration-twinkle 4.5s ease-in-out infinite 2s' }} />
+        </div>
+      ) : null}
 
       <div className="relative px-6 py-7 sm:px-7">
         {(props.onEdit || props.onDelete) ? (
@@ -393,7 +383,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
         ) : null}
 
         <div className={`relative mx-auto max-w-[30rem] rounded-[28px] border px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:backdrop-blur-[12px] ${tone.sectionBorder || 'border-rose-200/80 dark:border-rose-400/15'} ${coverImageUrl ? 'bg-white/74' : 'bg-white/88'} ${tone.kind === 'baby' ? (coverImageUrl ? 'dark:bg-[rgba(23,34,48,0.68)]' : 'dark:bg-[rgba(23,34,48,0.76)]') : tone.kind === 'wedding' ? (coverImageUrl ? 'dark:bg-[rgba(30,24,18,0.72)]' : 'dark:bg-[rgba(30,24,18,0.82)]') : (coverImageUrl ? 'dark:bg-[rgba(38,28,57,0.68)]' : 'dark:bg-[rgba(38,28,57,0.76)]')}`}>
-          {coverImageUrl ? (
+          {coverImageUrl && tone.kind !== 'wedding' ? (
             <>
               <div
                 className="pointer-events-none absolute inset-0 rounded-[28px] bg-cover bg-center opacity-[0.42]"

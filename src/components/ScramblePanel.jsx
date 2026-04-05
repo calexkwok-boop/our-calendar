@@ -248,6 +248,9 @@ const actionSecondary = {
   color: T.text,
   boxShadow: 'none',
   border: `2px solid ${T.border}`,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
 };
 
 const emptyState = {
@@ -901,7 +904,7 @@ function ScramblePanel({
             Pickleball <span style={{ color: T.neon1 }}>Scramble</span>
           </h3>
           <div style={heroSub}>
-            Pure randomness. Every round reshuffles the deck.
+            Random pairings every round with the stats tracked. May the odds be ever in your favor!
           </div>
           <button
             type="button"
@@ -917,10 +920,6 @@ function ScramblePanel({
         </div>
 
         <div style={{ padding: '0 14px 18px' }}>
-          <div style={infoBar}>
-            Random pairings every round with the stats tracked. May the odds be ever in your favor!
-          </div>
-
           <div style={{ marginTop: 14 }}>
             <div style={segRow}>
               <button
@@ -1038,7 +1037,7 @@ function ScramblePanel({
                   : ' - needs at least 4 players'}
               </div>
               {signups.length > 0 && (
-                <div style={{ fontSize: 11, color: T.muted, marginTop: 8, lineHeight: 1.6 }}>
+                <div style={{ fontSize: 11, color: T.text, marginTop: 8, lineHeight: 1.6 }}>
                   {signups.map((row) => row.displayName || 'Member').join(', ')}
                 </div>
               )}
@@ -1168,7 +1167,7 @@ function ScramblePanel({
               )}
 
               <div style={{ display: 'grid', gap: 10 }}>
-                {podium.length > 0 && (
+                {tournament?.status === 'completed' && podium.length > 0 && (
                   <CelebrationPodium
                     rows={podium}
                     currentUserId={currentUserId}
@@ -1251,4 +1250,3 @@ function ScramblePanel({
 }
 
 export default ScramblePanel;
-

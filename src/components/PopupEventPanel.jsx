@@ -8,6 +8,7 @@ import {
 import EventCardRouter, { resolveEventCardCategory } from './EventCardRouter';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const POPUP_NO_MAX_SENTINEL = 1000000;
 const isUuid = (value) => UUID_RE.test(String(value || '').trim());
 const getPopupManualPlayersStorageKey = (eventId) => `popup-manual-players:${String(eventId || '').trim()}`;
 const readPopupManualPlayers = (eventId) => {
@@ -835,11 +836,12 @@ export default function PopupEventPanel({
   const isCohost = myMember?.role === 'cohost';
   const isHostOrCohost = isHost || isCohost;
   const isMember = Boolean(myMember);
-  const isFull = event && members.length >= (event.max_players || 99);
+  const currentNoMax = Number(event?.max_players || 0) >= POPUP_NO_MAX_SENTINEL;
+  const isFull = event && !currentNoMax && members.length >= (event.max_players || 99);
 
   useEffect(() => {
-    setCapacityDraft(String(Math.max(1, Number(event?.max_players || 10))));
-  }, [event?.max_players]);
+    setCapacityDraft(currentNoMax ? String(POPUP_NO_MAX_SENTINEL) : String(Math.max(1, Number(event?.max_players || 10))));
+  }, [currentNoMax, event?.max_players]);
 
   useEffect(() => {
     const storageKey = getPopupRoleOverridesStorageKey(event?.id || initialEventId);
@@ -1203,7 +1205,10 @@ export default function PopupEventPanel({
   };
   const handleSaveCapacity = async () => {
     if (!isHost || !isUuid(event?.id)) return;
-    const nextMax = Math.max(memberCount || 1, Number.parseInt(String(capacityDraft || '').trim(), 10) || 0);
+    const parsedDraft = Number.parseInt(String(capacityDraft || '').trim(), 10) || 0;
+    const nextMax = parsedDraft >= POPUP_NO_MAX_SENTINEL
+      ? POPUP_NO_MAX_SENTINEL
+      : Math.max(memberCount || 1, parsedDraft);
     if (!Number.isFinite(nextMax) || nextMax < Math.max(memberCount || 1, 1)) {
       setCapacityError(`Player limit must be at least ${Math.max(memberCount || 1, 1)}.`);
       return;
@@ -1664,11 +1669,13 @@ export default function PopupEventPanel({
                   <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: accent, marginBottom: 2 }}>
                     {isSportsPopupEvent ? 'Player limit' : 'Guest limit'}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: primaryText }}>{memberCount} / {event.max_players} {attendeeLabel}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: primaryText }}>
+                    {currentNoMax ? `${memberCount} joined (no max)` : `${memberCount} / ${event.max_players} ${attendeeLabel}`}
+                  </div>
                 </div>
                 {!editingCapacity ? (
                   <button
-                    onClick={() => { setCapacityDraft(String(Math.max(memberCount || 1, Number(event?.max_players || 10)))); setCapacityError(''); setEditingCapacity(true); }}
+                    onClick={() => { setCapacityDraft(currentNoMax ? String(POPUP_NO_MAX_SENTINEL) : String(Math.max(memberCount || 1, Number(event?.max_players || 10)))); setCapacityError(''); setEditingCapacity(true); }}
                     style={{ padding: '8px 12px', borderRadius: 999, fontSize: 12, fontWeight: 800, border: `1px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#fff', color: primaryText, cursor: 'pointer' }}
                   >
                     Edit
@@ -1679,10 +1686,30 @@ export default function PopupEventPanel({
                       type="number"
                       min={Math.max(memberCount || 1, 1)}
                       max={99}
-                      value={capacityDraft}
+                      value={Number(capacityDraft || 0) >= POPUP_NO_MAX_SENTINEL ? '' : capacityDraft}
                       onChange={(e) => { setCapacityDraft(e.target.value); if (capacityError) setCapacityError(''); }}
+                      placeholder={Number(capacityDraft || 0) >= POPUP_NO_MAX_SENTINEL ? 'No max' : undefined}
+                      disabled={Number(capacityDraft || 0) >= POPUP_NO_MAX_SENTINEL}
                       style={{ width: 72, padding: '8px 10px', borderRadius: 12, border: `1.5px solid ${border}`, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', color: primaryText, outline: 'none', fontSize: 13, fontWeight: 700 }}
                     />
+                    <button
+                      type="button"
+                      onClick={() => { setCapacityDraft(String(POPUP_NO_MAX_SENTINEL)); if (capacityError) setCapacityError(''); }}
+                      disabled={capacityBusy}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: 999,
+                        fontSize: 12,
+                        fontWeight: 800,
+                        border: `1px solid ${Number(capacityDraft || 0) >= POPUP_NO_MAX_SENTINEL ? accent : border}`,
+                        background: Number(capacityDraft || 0) >= POPUP_NO_MAX_SENTINEL ? (darkMode ? 'rgba(255,255,255,0.12)' : `${accent}14`) : (darkMode ? 'rgba(255,255,255,0.05)' : '#fff'),
+                        color: Number(capacityDraft || 0) >= POPUP_NO_MAX_SENTINEL ? accent : primaryText,
+                        cursor: capacityBusy ? 'default' : 'pointer',
+                        opacity: capacityBusy ? 0.7 : 1,
+                      }}
+                    >
+                      No max
+                    </button>
                     <button
                       onClick={handleSaveCapacity}
                       disabled={capacityBusy}
@@ -1692,7 +1719,7 @@ export default function PopupEventPanel({
                       {capacityBusy ? 'Saving...' : 'Save'}
                     </button>
                     <button
-                      onClick={() => { setEditingCapacity(false); setCapacityDraft(String(Math.max(1, Number(event?.max_players || 10)))); setCapacityError(''); }}
+                      onClick={() => { setEditingCapacity(false); setCapacityDraft(currentNoMax ? String(POPUP_NO_MAX_SENTINEL) : String(Math.max(1, Number(event?.max_players || 10)))); setCapacityError(''); }}
                       style={{ padding: '8px 12px', borderRadius: 999, fontSize: 12, fontWeight: 800, border: 'none', background: 'transparent', color: secondaryText, cursor: 'pointer' }}
                     >
                       Cancel
@@ -1702,7 +1729,9 @@ export default function PopupEventPanel({
               </div>
               {editingCapacity && (
                 <div style={{ fontSize: 11, color: secondaryText }}>
-                  Set the max number of {attendeeLabel}. Minimum: {Math.max(memberCount || 1, 1)}.
+                  {Number(capacityDraft || 0) >= POPUP_NO_MAX_SENTINEL
+                    ? `Anyone can join until you decide to cap the ${attendeeLabel} later.`
+                    : `Set the max number of ${attendeeLabel}. Minimum: ${Math.max(memberCount || 1, 1)}.`}
                 </div>
               )}
               {capacityError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 8 }}>{capacityError}</div>}
