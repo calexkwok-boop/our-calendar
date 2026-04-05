@@ -942,7 +942,7 @@ function RoundRobinPanel({
                     {hasEnoughPlayers ? '' : ` - needs at least ${teamsOf === 1 ? 2 : 4} players`}
                   </div>
                   {(selectedRoundRobinEntry.signups || []).length > 0 && (
-                    <div style={{ fontSize: 11, color: T.muted, marginTop: 8, lineHeight: 1.6 }}>
+                    <div style={{ fontSize: 11, color: T.text, marginTop: 8, lineHeight: 1.6 }}>
                       {(selectedRoundRobinEntry.signups || []).map((row) => row.displayName || 'Member').join(', ')}
                     </div>
                   )}

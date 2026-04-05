@@ -902,7 +902,7 @@ function GauntletPanel({
                   : ' - needs at least 4 players'}
               </div>
               {signups.length > 0 && (
-                <div style={{ fontSize: 11, color: T.muted, marginTop: 8, lineHeight: 1.6 }}>
+                <div style={{ fontSize: 11, color: T.text, marginTop: 8, lineHeight: 1.6 }}>
                   {signups.map((row) => row.displayName || 'Member').join(', ')}
                 </div>
               )}
