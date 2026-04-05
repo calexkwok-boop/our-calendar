@@ -19503,6 +19503,48 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (eventsTabHideRecurring && (event?.isAnnual || (event?.recurrence && event.recurrence !== 'once'))) return false;
     return true;
   });
+  const getWeEventDisplayBadge = (event, popupMeta) => {
+    const normalizedCategory = String(event?.category || '').trim().toLowerCase();
+    const normalizedSubtype = String(
+      event?.popupSubtype
+      || event?.popup_subtype
+      || event?.event_data?.popupSubtype
+      || event?.event_data?.popup_subtype
+      || ''
+    ).trim().toLowerCase();
+    const isWeEventLike = Boolean(popupMeta)
+      || normalizedCategory === 'popup_event'
+      || ['party', 'celebration', 'hangout', 'kids', 'custom', 'sports'].includes(normalizedCategory)
+      || ['party', 'celebration', 'hangout', 'kids', 'custom', 'sports'].includes(normalizedSubtype);
+    if (!isWeEventLike) return null;
+    const text = [event?.title, event?.description]
+      .map((value) => String(value || '').trim().toLowerCase())
+      .filter(Boolean)
+      .join(' ');
+
+    if (/(birthday|holiday|party|potluck|game night|house party|dance)/.test(text)) {
+      return { icon: '🥳', label: 'We Event', className: 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-200' };
+    }
+    if (/\bwedding\b/.test(text)) {
+      return { icon: '💍', label: 'We Event', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200' };
+    }
+    if (/\bbaby shower\b/.test(text)) {
+      return { icon: '👶', label: 'We Event', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200' };
+    }
+    if (/(engagement|bridal|graduation|anniversary|celebration)/.test(text)) {
+      return { icon: '🎈', label: 'We Event', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200' };
+    }
+    if (/(playdate|kids|child|children|school|family)/.test(text)) {
+      return { icon: '🎈', label: 'We Event', className: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200' };
+    }
+    if (/\bcoffee\b/.test(text)) {
+      return { icon: '☕', label: 'We Event', className: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-200' };
+    }
+    if (/(brunch|dinner|drinks|movie|hangout|lunch|bbq)/.test(text)) {
+      return { icon: '🎉', label: 'We Event', className: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-200' };
+    }
+    return { icon: '🎉', label: 'We Event', className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200' };
+  };
   const activeTrips = [...tabTrips]
     .filter(sc => {
       const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
@@ -27046,6 +27088,7 @@ transform: translateY(0);
                       <div className="flex flex-col gap-1 overflow-hidden">
                         {dateEvents.slice(0, 4).map(event => {
                           const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                          const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
                           const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
                           const cat = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
                           if (event.isHoliday) return (
@@ -27063,6 +27106,7 @@ transform: translateY(0);
                             >
                               {event.time && <span className="opacity-80 mr-1">{formatTime(event.time)}</span>}
                               {event.isPrivate && '🔒 '}
+                              {weEventBadge ? `${weEventBadge.icon} ` : ''}
                               {event.title}
                             </div>
                           );
@@ -27091,6 +27135,7 @@ transform: translateY(0);
                       lastDateKey = dk;
 
                       const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                      const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
                       const popupCard = (userTabPopupEvents || []).find((row) => String(row?.id || '') === String(event?.id || '')) || null;
                       const isPopupEvent = Boolean(popupMeta || popupCard) || event.category === 'popup_event';
                       const category = categories[isPopupEvent ? 'popup_event' : (event.category || 'other')] || categories.other;
@@ -27432,10 +27477,11 @@ transform: translateY(0);
               ) : (
                 selectedEvents.map(event => {
                   const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                  const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
                   const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
                   const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
-                  const categoryLabel = popupMeta ? 'We Event' : (category?.label || 'Other');
-                  const isWeEvent = Boolean(popupMeta);
+                  const categoryLabel = weEventBadge ? 'We Event' : (category?.label || 'Other');
+                  const isWeEvent = Boolean(weEventBadge);
                   const categoryGlass = CATEGORY_GLASS[effectiveCategoryKey] || CATEGORY_GLASS.other;
                   const eventCardStyle = isWeEvent
                     ? (darkMode
@@ -27644,7 +27690,7 @@ transform: translateY(0);
                           <div className="flex-1 pr-6">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${category.color} text-white`}>
-                                {categoryLabel}
+                                {weEventBadge ? `${weEventBadge.icon} ${categoryLabel}` : categoryLabel}
                               </span>
                               {event.isUrgent && (
                                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white animate-pulse flex items-center gap-1">
@@ -27668,7 +27714,10 @@ transform: translateY(0);
                                 </div>
                               )}
                             </div>
-                            <div className="font-medium mb-1" style={eventCardTitleStyle}>{event.title}</div>
+                            <div className="font-medium mb-1" style={eventCardTitleStyle}>
+                              {weEventBadge ? `${weEventBadge.icon} ` : ''}
+                              {event.title}
+                            </div>
                             {event.location && (
                               <button
                                 type="button"
@@ -27937,6 +27986,7 @@ transform: translateY(0);
                     {filteredUpcomingUserTabEvents.map(event => {
                       const upcomingEventRowKey = `${String(event.id || '')}:${String(event.date || event.dateKey || '')}`;
                       const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                      const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
                       const signups = popupSignupsByEventId[String(event.id || '')] || [];
                       const maxPeople = popupMeta ? Number(popupMeta.maxPeople || 0) : 0;
                       const spotsLeft = maxPeople - signups.length;
@@ -27986,7 +28036,12 @@ transform: translateY(0);
                                   {event.time ? ` · ${formatTime ? formatTime(event.time) : event.time}` : ''}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-1 mt-1">
-                                  {popupMeta && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">Pop-up</span>}
+                                  {weEventBadge ? (
+                                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${weEventBadge.className}`}>
+                                      <span aria-hidden="true">{weEventBadge.icon}</span>
+                                      <span>{weEventBadge.label}</span>
+                                    </span>
+                                  ) : null}
                                   {(event.isAnnual || (event.recurrence && event.recurrence !== 'once')) && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">Recurring</span>}
                                   {(() => {
                                     const eventLayer = visibleLayerCalendars.find((layer) => String(layer?.id || '') === String(event?.layerId || event?.layer_id || '')) || null;
@@ -30321,7 +30376,10 @@ transform: translateY(0);
                     </div>
                   </div>
                 );
-                const renderPlanCard = (event) => (
+                const renderPlanCard = (event) => {
+                  const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
+                  const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
+                  return (
                   <div key={event.id}>
                     {subCalEditingEvent === event.id ? (
                       <div
@@ -30403,7 +30461,18 @@ transform: translateY(0);
                     <div className="rounded-3xl border border-white/10 bg-white/75 p-3 shadow-sm dark:bg-slate-900/70">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium text-[15px] text-gray-900 dark:text-gray-100">{event.title}</div>
+                          <div className="font-medium text-[15px] text-gray-900 dark:text-gray-100">
+                            {weEventBadge ? `${weEventBadge.icon} ` : ''}
+                            {event.title}
+                          </div>
+                          {weEventBadge ? (
+                            <div className="mt-1">
+                              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${weEventBadge.className}`}>
+                                <span aria-hidden="true">{weEventBadge.icon}</span>
+                                <span>{weEventBadge.label}</span>
+                              </span>
+                            </div>
+                          ) : null}
                           {(event.time || event.endTime) && (
                             <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-1 text-xs text-purple-700 dark:text-purple-300">
                               <Clock className="w-3 h-3" />
@@ -30461,6 +30530,7 @@ transform: translateY(0);
                     )}
                   </div>
                 );
+                };
 
                 return (
                   <div className="space-y-4">

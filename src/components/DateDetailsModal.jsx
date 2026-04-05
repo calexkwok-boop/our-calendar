@@ -2,6 +2,33 @@
 import React, { useState } from 'react';
 import { X, Lock, AlertTriangle, Repeat, Settings, ChevronDown, Clock, User } from 'lucide-react';
 
+const getWeEventDisplayBadge = (event, popupMeta) => {
+  const normalizedCategory = String(
+    popupMeta?.category
+    || popupMeta?.popupSubtype
+    || event?.popupSubtype
+    || event?.event_data?.category
+    || event?.event_data?.popupSubtype
+    || event?.category
+    || ''
+  ).trim().toLowerCase();
+  const text = `${event?.title || ''} ${event?.description || ''}`.toLowerCase();
+  const isWeEventLike = Boolean(popupMeta)
+    || normalizedCategory === 'popup_event'
+    || ['party', 'celebration', 'hangout', 'kids', 'custom', 'sports'].includes(normalizedCategory)
+    || /\b(birthday|party|wedding|shower|celebration|engagement|graduation|hangout|brunch|coffee|drinks|playdate|kids event|game night|sports)\b/.test(text);
+
+  if (!isWeEventLike) return null;
+  if (/\bbirthday|party|holiday|game night\b/.test(text) || normalizedCategory === 'party') return { icon: '🥳', label: 'We Event' };
+  if (/\bwedding\b/.test(text)) return { icon: '💍', label: 'We Event' };
+  if (/\bbaby shower\b/.test(text)) return { icon: '👶', label: 'We Event' };
+  if (normalizedCategory === 'celebration' || /\b(engagement|shower|graduation|celebration)\b/.test(text)) return { icon: '🎈', label: 'We Event' };
+  if (normalizedCategory === 'kids' || /\b(playdate|kids|school|family)\b/.test(text)) return { icon: '🎈', label: 'We Event' };
+  if (/\bcoffee\b/.test(text)) return { icon: '☕', label: 'We Event' };
+  if (normalizedCategory === 'hangout' || /\b(hangout|brunch|drinks|movie)\b/.test(text)) return { icon: '🎉', label: 'We Event' };
+  return { icon: '🎉', label: 'We Event' };
+};
+
 const DateDetailsModal = ({
   // Visibility
   isOpen,
@@ -415,7 +442,8 @@ const DateDetailsModal = ({
             ) : (
               selectedEvents.map(event => {
                 const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
-                const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
+                const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
+                const effectiveCategoryKey = weEventBadge ? 'popup_event' : (event.category || 'other');
                 const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
                 const categoryGlass = CATEGORY_GLASS[effectiveCategoryKey] || CATEGORY_GLASS.other;
                 const popupSignups = popupMeta ? (popupSignupsByEventId[String(event.id || '')] || []) : [];
@@ -451,7 +479,7 @@ const DateDetailsModal = ({
                 }
                 
                 // Pop-up Event Card (Redesigned)
-                if (popupMeta) {
+                if (weEventBadge) {
                   return (
                     <div
                       key={event.id}

@@ -52,7 +52,7 @@ const getCardBackdropUrl = (event) => {
   ];
   return candidates
     .map((value) => String(value || '').trim())
-    .find((value) => /^https?:\/\//i.test(value)) || '';
+    .find((value) => /^(https?:\/\/|data:image\/|blob:)/i.test(value)) || '';
 };
 
 const buildMapHref = (location) =>
@@ -76,8 +76,10 @@ const CameraIcon = () => (
   </svg>
 );
 
-const ActionPill = ({ href, onClick, children }) => {
-  const className = 'inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-white/92 px-3.5 py-1.5 text-xs font-semibold text-cyan-700 shadow-sm transition-all hover:border-cyan-300 hover:bg-cyan-50/75 hover:shadow-md active:scale-[0.98] dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200 dark:hover:bg-white/10';
+const ActionPill = ({ href, onClick, children, subdued = false }) => {
+  const className = subdued
+    ? 'inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-white/88 px-3 py-1.25 text-[11px] font-medium text-cyan-700 shadow-sm transition-all hover:border-cyan-300 hover:bg-cyan-50/70 hover:shadow-md active:scale-[0.98] dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200 dark:hover:bg-white/10'
+    : 'inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-white/92 px-3.5 py-1.5 text-xs font-semibold text-cyan-700 shadow-sm transition-all hover:border-cyan-300 hover:bg-cyan-50/75 hover:shadow-md active:scale-[0.98] dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200 dark:hover:bg-white/10';
 
   if (href) {
     return (
@@ -161,11 +163,34 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
   const duration = String(event?.expectedDuration || '').trim();
   const reservationName = String(event?.reservationName || '').trim();
   const billSplitting = String(event?.billSplitting || 'separate').trim();
+  const titleText = String(event?.title || '').trim();
+  const shouldShowLocationLine = Boolean(event?.location);
   const billText = billSplitting === 'split'
     ? 'Split evenly'
     : billSplitting === 'host'
       ? 'Host pays'
       : 'Separate checks';
+  const openHeaderEditor =
+    onUpdateEventData && openEditor
+      ? () =>
+          openEditor({
+            variant: 'hangout',
+            title: 'Invitation',
+            fields: [
+              { key: 'title', label: 'Title', value: titleText, placeholder: 'Coffee Hangout' },
+              { key: 'date', label: 'Date', value: String(event?.date || '').trim(), placeholder: '2026-04-12' },
+              { key: 'time', label: 'Time', value: String(event?.time || '').trim(), placeholder: '7:00 PM' },
+              { key: 'location', label: 'Location', type: 'location', value: String(event?.location || '').trim(), placeholder: 'Search venue...' },
+            ],
+            onSave: (values) =>
+              onUpdateEventData({
+                title: String(values.title || '').trim(),
+                date: String(values.date || '').trim(),
+                time: String(values.time || '').trim(),
+                location: String(values.location || '').trim(),
+              }),
+          })
+      : onEdit;
   const coverImageUrl = getCardBackdropUrl(event);
   const openCoverEditor = onUpdateEventData && openEditor
     ? () =>
@@ -185,23 +210,35 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
       {coverImageUrl ? (
         <>
           <div
-            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.2] saturate-[1.04]"
+            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.35] saturate-[1.08] contrast-[1.02]"
             style={{ backgroundImage: `url(${coverImageUrl})` }}
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/80 via-cyan-50/70 to-sky-50/74 dark:from-[#171320]/88 dark:via-[#1d1a30]/84 dark:to-[#111a2b]/88" />
+          <div className={`pointer-events-none absolute inset-0 ${coverImageUrl ? 'bg-gradient-to-br from-white/18 via-cyan-50/10 to-sky-50/10 dark:from-[#171320]/34 dark:via-[#1d1a30]/22 dark:to-[#111a2b]/28' : 'bg-gradient-to-br from-white/80 via-cyan-50/70 to-sky-50/74 dark:from-[#171320]/88 dark:via-[#1d1a30]/84 dark:to-[#111a2b]/88'}`} />
         </>
       ) : null}
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-[9%] top-[12%] text-[2.35rem] opacity-66 dark:opacity-46" style={{ animation: 'hangout-gentle-wobble 8s ease-in-out infinite' }}>☕</div>
+        <div className="absolute right-[12%] top-[10%] text-[2.05rem] opacity-58 dark:opacity-40" style={{ animation: 'hangout-gentle-wobble 7.2s ease-in-out infinite 0.8s' }}>🥐</div>
+        <div className="absolute left-[38%] top-[8%] text-[1.9rem] opacity-48 dark:opacity-32" style={{ animation: 'hangout-gentle-wobble 8.6s ease-in-out infinite 1.4s' }}>💬</div>
+        <div className="absolute right-[8%] top-[44%] text-[1.85rem] opacity-46 dark:opacity-30" style={{ animation: 'hangout-gentle-wobble 7.8s ease-in-out infinite 0.5s' }}>✨</div>
+        <div className="absolute left-[74%] top-[68%] text-[1.95rem] opacity-52 dark:opacity-34" style={{ animation: 'hangout-gentle-wobble 8.3s ease-in-out infinite 1.1s' }}>🕯️</div>
+        <div className="absolute left-[11%] top-[66%] text-[1.85rem] opacity-44 dark:opacity-28" style={{ animation: 'hangout-gentle-wobble 7.6s ease-in-out infinite 1.7s' }}>🍷</div>
         <div className="absolute left-[20%] top-[100%] h-16 w-1 rounded-full bg-gradient-to-t from-cyan-200/40 to-transparent blur-sm dark:from-cyan-400/20" style={{ animation: 'hangout-rise-steam 6s ease-in infinite' }} />
         <div className="absolute left-[22%] top-[100%] h-20 w-1 rounded-full bg-gradient-to-t from-sky-200/30 to-transparent blur-sm dark:from-sky-400/15" style={{ animation: 'hangout-rise-steam 7s ease-in infinite 1s' }} />
         <div className="absolute left-[24%] top-[100%] h-14 w-1 rounded-full bg-gradient-to-t from-cyan-200/35 to-transparent blur-sm dark:from-cyan-400/18" style={{ animation: 'hangout-rise-steam 6.5s ease-in infinite 2s' }} />
+        <div className="absolute left-[64%] top-[100%] h-16 w-1 rounded-full bg-gradient-to-t from-cyan-200/28 to-transparent blur-sm dark:from-cyan-400/16" style={{ animation: 'hangout-rise-steam 7.3s ease-in infinite 0.7s' }} />
+        <div className="absolute left-[68%] top-[100%] h-13 w-1 rounded-full bg-gradient-to-t from-sky-200/24 to-transparent blur-sm dark:from-sky-400/14" style={{ animation: 'hangout-rise-steam 6.1s ease-in infinite 1.8s' }} />
       </div>
 
       <div className="pointer-events-none absolute inset-0">
         <svg className="absolute left-[10%] top-[30%] h-8 w-8 opacity-10 dark:opacity-5" viewBox="0 0 40 40">
           <path d="M5,20 Q10,10 15,20 T25,20 T35,20" stroke="currentColor" strokeWidth="2" fill="none" className="text-cyan-400" />
         </svg>
+        <div className="absolute left-[26%] top-[24%] h-2.5 w-5 rotate-[18deg] rounded-full bg-cyan-200/70 dark:bg-cyan-300/20" />
+        <div className="absolute right-[17%] top-[58%] h-2.5 w-2.5 rotate-45 rounded-sm bg-sky-200/70 dark:bg-sky-300/20" />
+        <div className="absolute left-[72%] top-[28%] h-3.5 w-1.5 rotate-[30deg] rounded-full bg-amber-200/65 dark:bg-amber-300/18" />
+        <div className="absolute left-[48%] top-[72%] h-2.5 w-2.5 rounded-full bg-cyan-200/65 dark:bg-cyan-300/18" />
       </div>
 
       <div className="pointer-events-none absolute -left-12 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-gradient-to-r from-cyan-300/20 to-transparent blur-3xl dark:from-cyan-400/10" />
@@ -223,7 +260,17 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
           </div>
         ) : null}
 
-        <div className="relative mx-auto max-w-[30rem] rounded-[28px] border border-cyan-200/80 bg-white/78 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-cyan-400/15 dark:bg-[rgba(24,37,45,0.72)] dark:backdrop-blur-[12px]">
+        <div className={`relative mx-auto max-w-[30rem] rounded-[28px] border border-cyan-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-cyan-400/15 dark:backdrop-blur-[12px] ${coverImageUrl ? 'bg-white/68 dark:bg-[rgba(24,37,45,0.68)]' : 'bg-white/82 dark:bg-[rgba(24,37,45,0.76)]'}`}>
+          {coverImageUrl ? (
+            <>
+              <div
+                className="pointer-events-none absolute inset-0 rounded-[28px] bg-cover bg-center opacity-[0.42]"
+                style={{ backgroundImage: `url(${coverImageUrl})` }}
+              />
+              <div className="pointer-events-none absolute left-5 right-5 top-5 h-[58%] rounded-[24px] bg-white/16 blur-md dark:bg-black/10" />
+              <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/28 via-white/12 to-cyan-50/10 dark:from-[#1f313c]/22 dark:via-[#1d2339]/12 dark:to-sky-500/[0.08]" />
+            </>
+          ) : null}
           {typeof openCoverEditor === 'function' ? (
             <button
               type="button"
@@ -234,45 +281,60 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
               <CameraIcon />
             </button>
           ) : null}
-          <div className="mb-3 flex items-center justify-center">
-            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-cyan-700 dark:text-cyan-100">
-              You're Invited
+          <div className="mx-auto max-w-[24rem] rounded-[22px] border border-white/60 bg-white/48 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-white/10 dark:bg-black/14">
+            <div className="mb-3 flex items-center justify-center">
+              <div className="text-[15px] font-semibold text-cyan-700 dark:text-cyan-200">
+                You're Invited
+              </div>
+            </div>
+
+            <div className="mb-4 flex flex-wrap items-center justify-center gap-2.5">
+              {duration ? (
+                <span className="rounded-full border border-cyan-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200">
+                  ~{duration}
+                </span>
+              ) : null}
+            </div>
+
+            {typeof openHeaderEditor === 'function' ? (
+              <button
+                type="button"
+                onClick={openHeaderEditor}
+                className="mx-auto block rounded-2xl px-2 py-1 text-center transition-colors hover:bg-white/30 dark:hover:bg-white/5"
+              >
+                <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
+                  {event?.title || 'Untitled hangout'}
+                </h3>
+              </button>
+            ) : (
+              <h3 className="relative text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
+                {event?.title || 'Untitled hangout'}
+              </h3>
+            )}
+
+            <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-cyan-400 to-transparent dark:via-cyan-300/80" />
+
+            <div className="mt-4 space-y-2 text-[15px] text-gray-700 dark:text-gray-200">
+              {typeof openHeaderEditor === 'function' ? (
+                <button
+                  type="button"
+                  onClick={openHeaderEditor}
+                  className="mx-auto block rounded-2xl px-3 py-1.5 transition-colors hover:bg-white/30 dark:hover:bg-white/5"
+                >
+                  <div className="font-normal">{formatEventDateTime(event?.date, event?.time)}</div>
+                  {shouldShowLocationLine ? <div className="mt-1 font-normal">{event.location}</div> : null}
+                </button>
+              ) : (
+                <>
+                  <div className="font-normal">{formatEventDateTime(event?.date, event?.time)}</div>
+                  {shouldShowLocationLine ? <div className="font-normal">{event.location}</div> : null}
+                </>
+              )}
             </div>
           </div>
 
-          <div className="mb-4 flex flex-wrap items-center justify-center gap-2.5">
-            <span
-              className="relative inline-flex h-12 w-12 items-center justify-center rounded-[18px] border-2 border-cyan-200 bg-gradient-to-br from-cyan-100 to-sky-100 text-2xl shadow-lg shadow-cyan-200/30 transition-transform group-hover:scale-110 dark:border-cyan-400/20 dark:from-cyan-500/15 dark:to-sky-500/15 dark:shadow-cyan-500/10"
-              style={{ animation: 'hangout-gentle-wobble 3s ease-in-out infinite' }}
-            >
-              Coffee
-              <div className="absolute -top-1 left-1/2 h-3 w-0.5 -translate-x-1/2 rounded-full bg-cyan-300/40 blur-[1px] dark:bg-cyan-400/20" style={{ animation: 'hangout-rise-mini-steam 2s ease-in infinite' }} />
-            </span>
-
-            <span className="rounded-full bg-gradient-to-br from-cyan-100 to-cyan-200 px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em] text-cyan-800 shadow-sm dark:from-cyan-500/15 dark:to-cyan-600/15 dark:text-cyan-200">
-              Hangout
-            </span>
-
-            {duration ? (
-              <span className="rounded-full border-2 border-cyan-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200">
-                ~{duration}
-              </span>
-            ) : null}
-          </div>
-
-          <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
-            {event?.title || 'Untitled hangout'}
-          </h3>
-
-          <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-cyan-400 to-transparent dark:via-cyan-300/80" />
-
-          <div className="mt-4 space-y-2 text-[15px] text-gray-600 dark:text-gray-300">
-            <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>
-            {event?.location ? <div className="font-medium">{event.location}</div> : null}
-          </div>
-
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
-            {event?.location ? <ActionPill href={buildMapHref(event.location)}>View map</ActionPill> : null}
+            {event?.location ? <ActionPill href={buildMapHref(event.location)} subdued>View map</ActionPill> : null}
           </div>
         </div>
       </div>

@@ -20,6 +20,47 @@ const hexToRgba = (hex, alpha = 1) => {
   }
 };
 
+const getWeEventDisplayBadge = (event, popupMeta) => {
+  const normalizedCategory = String(
+    popupMeta?.category
+    || popupMeta?.popupSubtype
+    || event?.popupSubtype
+    || event?.event_data?.category
+    || event?.event_data?.popupSubtype
+    || event?.category
+    || ''
+  ).trim().toLowerCase();
+  const text = `${event?.title || ''} ${event?.description || ''}`.toLowerCase();
+  const isWeEventLike = Boolean(popupMeta)
+    || normalizedCategory === 'popup_event'
+    || ['party', 'celebration', 'hangout', 'kids', 'custom', 'sports'].includes(normalizedCategory)
+    || /\b(birthday|party|wedding|shower|celebration|engagement|graduation|hangout|brunch|coffee|drinks|playdate|kids event|game night|sports)\b/.test(text);
+
+  if (!isWeEventLike) return null;
+  if (normalizedCategory === 'party' || /\b(party|birthday|holiday|game night)\b/.test(text)) {
+    return { icon: '🥳', label: 'We Event' };
+  }
+  if (/\bwedding\b/.test(text)) {
+    return { icon: '💍', label: 'We Event' };
+  }
+  if (/\bbaby shower\b/.test(text)) {
+    return { icon: '👶', label: 'We Event' };
+  }
+  if (normalizedCategory === 'celebration' || /\b(engagement|shower|graduation|celebration)\b/.test(text)) {
+    return { icon: '🎈', label: 'We Event' };
+  }
+  if (normalizedCategory === 'kids' || /\b(playdate|kids|school|family)\b/.test(text)) {
+    return { icon: '🎈', label: 'We Event' };
+  }
+  if (/\bcoffee\b/.test(text)) {
+    return { icon: '☕', label: 'We Event' };
+  }
+  if (normalizedCategory === 'hangout' || /\b(hangout|brunch|drinks|movie)\b/.test(text)) {
+    return { icon: '🎉', label: 'We Event' };
+  }
+  return { icon: '🎉', label: 'We Event' };
+};
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -963,10 +1004,11 @@ const SelectedDateDetails = ({
         <div className="space-y-3 mb-4">
           {events.map((event, idx) => {
             const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
-            const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
+            const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
+            const effectiveCategoryKey = weEventBadge ? 'popup_event' : (event.category || 'other');
             const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
-            const categoryLabel = popupMeta ? 'We Event' : (category?.label || 'Other');
-            const isWeEvent = Boolean(popupMeta);
+            const categoryLabel = weEventBadge ? `${weEventBadge.icon} We Event` : (category?.label || 'Other');
+            const isWeEvent = Boolean(weEventBadge);
             const canDeleteThisEvent = canDeleteEventInActiveLayer?.(event);
             const eventSwipeKey = `${String(event.date || selectedDateKey || '')}:${String(event.id || '')}`;
             const rowOffset = eventSwipeDrag?.id === eventSwipeKey ? eventSwipeDrag.offset : (swipedEventKey === eventSwipeKey ? -88 : 0);
@@ -1050,7 +1092,7 @@ const SelectedDateDetails = ({
                     </span>
                   </div>
                   <div className="font-semibold text-base text-gray-900 dark:text-white mb-1">
-                    {event.title}
+                    {weEventBadge ? `${weEventBadge.icon} ` : ''}{event.title}
                   </div>
                   {event.location && (
                     <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">

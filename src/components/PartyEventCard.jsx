@@ -27,7 +27,7 @@ const formatEventDateTime = (date, time) => {
   return `${dateStr} at ${timeStr}`;
 };
 
-const isProbablyUrl = (value) => /^https?:\/\//i.test(String(value || '').trim());
+const isProbablyUrl = (value) => /^(https?:\/\/|data:image\/|blob:)/i.test(String(value || '').trim());
 const getCardBackdropUrl = (event) => {
   const candidates = [
     event?.coverImageUrl,
@@ -171,8 +171,10 @@ const CameraIcon = () => (
   </svg>
 );
 
-const ActionPill = ({ href, onClick, children }) => {
-  const className = 'inline-flex items-center gap-1.5 rounded-full border-2 border-fuchsia-200 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/80 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:bg-white/12 dark:hover:text-white';
+const ActionPill = ({ href, onClick, children, subdued = false }) => {
+  const className = subdued
+    ? 'inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200 bg-white/88 px-3 py-1.25 text-[11px] font-medium text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/70 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:bg-white/12 dark:hover:text-white'
+    : 'inline-flex items-center gap-1.5 rounded-full border-2 border-fuchsia-200 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/80 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:bg-white/12 dark:hover:text-white';
 
   if (href) {
     return (
@@ -355,7 +357,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
             className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.22] saturate-[1.05]"
             style={{ backgroundImage: `url(${coverImageUrl})` }}
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/78 via-rose-50/68 to-cyan-50/70 dark:from-[#15111f]/88 dark:via-[#1b1930]/84 dark:to-[#0f1727]/88" />
+          <div className={`pointer-events-none absolute inset-0 ${coverImageUrl ? 'bg-gradient-to-br from-white/34 via-rose-50/22 to-cyan-50/24 dark:from-[#15111f]/48 dark:via-[#1b1930]/38 dark:to-[#0f1727]/46' : 'bg-gradient-to-br from-white/78 via-rose-50/68 to-cyan-50/70 dark:from-[#15111f]/88 dark:via-[#1b1930]/84 dark:to-[#0f1727]/88'}`} />
         </>
       ) : null}
 
@@ -432,7 +434,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         <div className="absolute right-[9%] top-[62%] h-3.5 w-3.5 rotate-[35deg] rounded-sm bg-red-400 opacity-82 dark:opacity-82" style={{ animation: 'party-card-float 8.8s ease-in-out infinite 0.9s' }} />
       </div>
 
-      <div className="relative border-b-2 border-fuchsia-200/70 bg-gradient-to-br from-white via-rose-50/40 to-cyan-50/45 px-6 py-6 dark:border-fuchsia-400/15 dark:bg-gradient-to-br dark:from-[#211533] dark:via-[#1c2740] dark:to-[#19162d] sm:px-7">
+      <div className={`relative border-b-2 border-fuchsia-200/70 px-6 py-6 dark:border-fuchsia-400/15 sm:px-7 ${coverImageUrl ? 'bg-gradient-to-br from-white/42 via-rose-50/24 to-cyan-50/28 dark:bg-gradient-to-br dark:from-[#211533]/52 dark:via-[#1c2740]/44 dark:to-[#19162d]/50' : 'bg-gradient-to-br from-white via-rose-50/40 to-cyan-50/45 dark:bg-gradient-to-br dark:from-[#211533] dark:via-[#1c2740] dark:to-[#19162d]'}`}>
         {(props.onEdit || props.onDelete) ? (
           <div className="absolute right-6 top-6 z-10 flex items-center gap-2">
             {props.onEdit ? (
@@ -456,7 +458,17 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           </div>
         ) : null}
 
-        <div className="relative mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 bg-white/78 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:bg-[rgba(38,28,57,0.72)] dark:backdrop-blur-[12px]">
+        <div className={`relative mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:backdrop-blur-[12px] ${coverImageUrl ? 'bg-white/68 dark:bg-[rgba(38,28,57,0.68)]' : 'bg-white/82 dark:bg-[rgba(38,28,57,0.76)]'}`}>
+          {coverImageUrl ? (
+            <>
+              <div
+                className="pointer-events-none absolute inset-0 rounded-[28px] bg-cover bg-center opacity-[0.28]"
+                style={{ backgroundImage: `url(${coverImageUrl})` }}
+              />
+              <div className="pointer-events-none absolute left-5 right-5 top-5 h-[58%] rounded-[24px] bg-white/36 blur-xl dark:bg-black/18" />
+              <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/48 via-white/26 to-fuchsia-50/22 dark:from-[#2a1d3e]/38 dark:via-[#231933]/24 dark:to-cyan-500/[0.12]" />
+            </>
+          ) : null}
           {typeof openCoverEditor === 'function' ? (
             <button
               type="button"
@@ -475,58 +487,60 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
             <div className="absolute right-16 top-12 h-12 w-9 rounded-full bg-gradient-to-b from-violet-200/35 to-violet-500/45 blur-[0.2px]" style={{ animation: 'party-card-bob 6.9s ease-in-out infinite 1.2s' }} />
             <div className="absolute right-[4.7rem] top-[5rem] h-7 w-px bg-gradient-to-b from-violet-200/55 to-transparent" />
           </div>
-          <div className="mb-3 flex items-center justify-center">
-            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-fuchsia-700 dark:text-fuchsia-100">
-              You're Invited
+          <div className="mx-auto max-w-[24rem] rounded-[22px] border border-white/60 bg-white/48 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-white/10 dark:bg-black/14">
+            <div className="mb-3 flex items-center justify-center">
+              <div className="text-[15px] font-semibold text-fuchsia-700 dark:text-fuchsia-200">
+                You're Invited
+              </div>
             </div>
-          </div>
 
-          {typeof openHeaderEditor === 'function' ? (
-            <button
-              type="button"
-              onClick={openHeaderEditor}
-              className="mx-auto block rounded-2xl px-2 py-1 text-center transition-colors hover:bg-white/30 dark:hover:bg-white/5"
-            >
-              <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
-                {event?.title || 'Untitled party'}
-              </h3>
-            </button>
-          ) : (
-            <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
-              {event?.title || 'Untitled party'}
-            </h3>
-          )}
-
-          <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent dark:via-cyan-300/80" />
-
-          <div className="mt-4 space-y-2 text-[15px] text-gray-600 dark:text-gray-300">
             {typeof openHeaderEditor === 'function' ? (
               <button
                 type="button"
                 onClick={openHeaderEditor}
-                className="mx-auto block rounded-2xl px-3 py-1.5 transition-colors hover:bg-white/30 dark:hover:bg-white/5"
+                className="mx-auto block rounded-2xl px-2 py-1 text-center transition-colors hover:bg-white/30 dark:hover:bg-white/5"
               >
-                <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>
-                {shouldShowLocationLine ? <div className="mt-1 font-medium">{event.location}</div> : null}
+                <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
+                  {event?.title || 'Untitled party'}
+                </h3>
               </button>
             ) : (
-              <>
-                <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>
-                {shouldShowLocationLine ? <div className="font-medium">{event.location}</div> : null}
-              </>
+              <h3 className="relative text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
+                {event?.title || 'Untitled party'}
+              </h3>
             )}
-            {theme ? (
-              <div className="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-fuchsia-700 dark:border-fuchsia-400/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-200">
-                {theme}
-              </div>
-            ) : null}
-          </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
-            <span className="rounded-full border border-cyan-200 bg-cyan-50/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-cyan-500/10 dark:text-cyan-200">
-              {plusOnesAllowed ? 'Plus-Ones Welcome' : 'Invite Only'}
-            </span>
-            {event?.location ? <ActionPill href={buildMapHref(event.location)}>View map</ActionPill> : null}
+            <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent dark:via-cyan-300/80" />
+
+            <div className="mt-4 space-y-2 text-[15px] text-gray-700 dark:text-gray-200">
+              {typeof openHeaderEditor === 'function' ? (
+                <button
+                  type="button"
+                  onClick={openHeaderEditor}
+                  className="mx-auto block rounded-2xl px-3 py-1.5 transition-colors hover:bg-white/30 dark:hover:bg-white/5"
+                >
+                  <div className="font-normal">{formatEventDateTime(event?.date, event?.time)}</div>
+                  {shouldShowLocationLine ? <div className="mt-1 font-normal">{event.location}</div> : null}
+                </button>
+              ) : (
+                <>
+                  <div className="font-normal">{formatEventDateTime(event?.date, event?.time)}</div>
+                  {shouldShowLocationLine ? <div className="font-normal">{event.location}</div> : null}
+                </>
+              )}
+              {theme ? (
+                <div className="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50/70 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-fuchsia-700 dark:border-fuchsia-400/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-200">
+                  {theme}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+              <span className="rounded-full border border-cyan-200 bg-cyan-50/88 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-cyan-500/12 dark:text-cyan-200">
+                {plusOnesAllowed ? 'Plus-Ones Welcome' : 'Invite Only'}
+              </span>
+              {event?.location ? <ActionPill href={buildMapHref(event.location)} subdued>View map</ActionPill> : null}
+            </div>
           </div>
         </div>
       </div>

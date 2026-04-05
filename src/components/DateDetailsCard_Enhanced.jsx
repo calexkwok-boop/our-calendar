@@ -118,6 +118,47 @@ const buildWeEventMetadata = (category) => {
   }
 };
 
+const getWeEventDisplayBadge = (event, popupMeta) => {
+  const normalizedCategory = String(
+    popupMeta?.category
+    || popupMeta?.popupSubtype
+    || event?.popupSubtype
+    || event?.event_data?.category
+    || event?.event_data?.popupSubtype
+    || event?.category
+    || ''
+  ).trim().toLowerCase();
+  const text = `${event?.title || ''} ${event?.description || ''}`.toLowerCase();
+  const isWeEventLike = Boolean(popupMeta)
+    || normalizedCategory === 'popup_event'
+    || ['party', 'celebration', 'hangout', 'kids', 'custom', 'sports'].includes(normalizedCategory)
+    || /\b(birthday|party|wedding|shower|celebration|engagement|graduation|hangout|brunch|coffee|drinks|playdate|kids event|game night|sports)\b/.test(text);
+
+  if (!isWeEventLike) return null;
+  if (normalizedCategory === 'party' || /\b(party|birthday|holiday|game night)\b/.test(text)) {
+    return { icon: '🥳', label: 'We Event', className: 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-200' };
+  }
+  if (/\bwedding\b/.test(text)) {
+    return { icon: '💍', label: 'We Event', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200' };
+  }
+  if (/\bbaby shower\b/.test(text)) {
+    return { icon: '👶', label: 'We Event', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200' };
+  }
+  if (normalizedCategory === 'celebration' || /\b(engagement|shower|graduation|celebration)\b/.test(text)) {
+    return { icon: '🎈', label: 'We Event', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200' };
+  }
+  if (normalizedCategory === 'kids' || /\b(playdate|kids|school|family)\b/.test(text)) {
+    return { icon: '🎈', label: 'We Event', className: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200' };
+  }
+  if (/\bcoffee\b/.test(text)) {
+    return { icon: '☕', label: 'We Event', className: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-200' };
+  }
+  if (normalizedCategory === 'hangout' || /\b(hangout|brunch|drinks|movie)\b/.test(text)) {
+    return { icon: '🎉', label: 'We Event', className: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-200' };
+  }
+  return { icon: '🎉', label: 'We Event', className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200' };
+};
+
 const baseInputClassName = 'w-full min-w-0 rounded-xl border px-4 py-3 text-base transition-all outline-none';
 
 export default function DateDetailsCardEnhanced({
@@ -169,6 +210,7 @@ export default function DateDetailsCardEnhanced({
   CATEGORY_GLASS = {},
   editingEvent,
   setEditingEvent,
+  setSelectedPopupEventPanelId,
   PlacesAutocomplete,
   handleLocationLinkClick = () => {},
   calendarPartner = DEFAULT_PARTNER,
@@ -189,6 +231,7 @@ export default function DateDetailsCardEnhanced({
     [weEventCategory]
   );
   const normalizedSelectedTime = parseTimeInput(selectedTime);
+  const popupNoMaxDraft = Number(popupEventMaxPeopleDraft || 0) >= POPUP_NO_MAX_SENTINEL;
   const canSaveEvent = Boolean(eventTitle.trim() && normalizedSelectedTime);
   const accent = (themeAccentButtonStyle && themeAccentButtonStyle.backgroundColor) || '#a855f7';
   const selectedDateKey = getDateKey(selectedDate);
@@ -332,7 +375,6 @@ export default function DateDetailsCardEnhanced({
     }
 
     if (typeof handleQuickAdd === 'function') {
-      const combinedTitle = eventData.location ? `${eventData.title} @ ${eventData.location}` : eventData.title;
       const categoryOverride = buildCategoryOverride(eventType, weEventCategory, eventData.title, categories);
         if (eventType === 'we') {
         try { setIsPopupEventDraft?.(true); } catch {}
@@ -341,7 +383,7 @@ export default function DateDetailsCardEnhanced({
         }
       }
         const result = await handleQuickAdd({
-          titleOverride: combinedTitle,
+          titleOverride: eventData.title,
           time: eventData.time || null,
           directCreate: true,
           isPopupEvent: eventType === 'we',
@@ -603,6 +645,31 @@ export default function DateDetailsCardEnhanced({
                   <div>
                     <label className={`mb-2 block text-sm font-semibold ${labelText}`}>Max people</label>
                     <div className="rounded-2xl border p-4" style={themedWeSectionStyle}>
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPopupEventMaxPeopleDraft?.(popupNoMaxDraft ? '10' : String(POPUP_NO_MAX_SENTINEL))}
+                          className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                            popupNoMaxDraft
+                              ? 'text-white shadow-sm'
+                              : (darkMode
+                                  ? 'border border-white/10 bg-white/[0.05] text-white/80 hover:bg-white/[0.08]'
+                                  : 'border border-gray-200 bg-white/88 text-gray-700 hover:bg-gray-50')
+                          }`}
+                          style={popupNoMaxDraft ? themeAccentButtonStyle : undefined}
+                        >
+                          <span
+                            className={`inline-flex h-4 w-4 items-center justify-center rounded-[5px] border text-[11px] ${
+                              popupNoMaxDraft
+                                ? 'border-white/70 bg-white/15 text-white'
+                                : (darkMode ? 'border-white/30 text-transparent' : 'border-gray-300 text-transparent')
+                            }`}
+                          >
+                            ✓
+                          </span>
+                          No max
+                        </button>
+                      </div>
                       <div className="flex items-center gap-3">
                         <input
                           type="range"
@@ -611,6 +678,7 @@ export default function DateDetailsCardEnhanced({
                           step={1}
                           value={Math.max(2, parseInt(String(popupEventMaxPeopleDraft || '10'), 10) || 10)}
                           onChange={(event) => setPopupEventMaxPeopleDraft?.(String(event.target.value))}
+                          disabled={popupNoMaxDraft}
                           className="flex-1"
                           style={{ accentColor: accent }}
                         />
@@ -618,12 +686,16 @@ export default function DateDetailsCardEnhanced({
                           type="number"
                           min={2}
                           max={99}
-                          value={popupEventMaxPeopleDraft}
+                          value={popupNoMaxDraft ? '' : popupEventMaxPeopleDraft}
                           onChange={(event) => setPopupEventMaxPeopleDraft?.(String(Math.max(2, parseInt(String(event.target.value || '2'), 10) || 2)))}
+                          disabled={popupNoMaxDraft}
+                          placeholder={popupNoMaxDraft ? 'No max' : undefined}
                           className={`${inputSurface} w-20 py-2 text-center text-sm font-semibold`}
                         />
                       </div>
-                      <p className={`mt-2 text-xs ${mutedText}`}>Set the guest limit before creating the event.</p>
+                      <p className={`mt-2 text-xs ${mutedText}`}>
+                        {popupNoMaxDraft ? 'Anyone can join until you decide to cap it later.' : 'Set the guest limit before creating the event.'}
+                      </p>
                     </div>
                   </div>
                 ) : null}
@@ -844,7 +916,8 @@ export default function DateDetailsCardEnhanced({
               ) : (
                 selectedEvents.map((event) => {
                   const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
-                  const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
+                  const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
+                  const effectiveCategoryKey = weEventBadge ? 'popup_event' : (event.category || 'other');
                   const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other || { label: 'Other', color: 'bg-gray-500' };
                   const categoryGlass = CATEGORY_GLASS[effectiveCategoryKey] || CATEGORY_GLASS.other || { from: '#f3f4f6', to: '#fafafa', accent: 'linear-gradient(180deg,#9ca3af,#6b7280)' };
                   const popupSignups = popupMeta ? (popupSignupsByEventId[String(event.id || '')] || []) : [];
@@ -859,17 +932,19 @@ export default function DateDetailsCardEnhanced({
                   const rowOffset = eventSwipeDrag.id === eventSwipeKey ? eventSwipeDrag.offset : (swipedEventKey === eventSwipeKey ? -88 : 0);
                   const isDeleteRevealed = rowOffset < 0;
 
-                  if (popupMeta) {
+                  if (weEventBadge) {
                     return (
                       <div
                         key={event.id}
                         className="cursor-pointer rounded-2xl border-2 border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:border-rose-700 dark:from-rose-900/20 dark:to-pink-900/10"
+                        onClick={() => setSelectedPopupEventPanelId?.(String(event.id || ''))}
                       >
                         <div className="mb-3 flex items-start justify-between">
                           <div className="flex-1 pr-4">
                             <div className="mb-1 flex items-center gap-2">
                               <span className="text-xl">🎉</span>
                               <h4 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{event.title}</h4>
+                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${weEventBadge.className}`}>{weEventBadge.icon} {weEventBadge.label}</span>
                             </div>
                             <div className={`flex items-center gap-2 text-sm ${mutedText}`}>
                               {event.time ? (
@@ -880,7 +955,7 @@ export default function DateDetailsCardEnhanced({
                               ) : null}
                               <span className="flex items-center gap-1">
                                 <User className="h-3.5 w-3.5" />
-                                {popupSignups.length}{popupNoMax ? ' joined' : `/${popupMeta.maxPeople} spots`}
+                                {popupSignups.length}{popupMeta ? (popupNoMax ? ' joined' : `/${popupMeta.maxPeople} spots`) : ' invited'}
                               </span>
                             </div>
                             {event.location ? (
@@ -1004,9 +1079,7 @@ export default function DateDetailsCardEnhanced({
                               <div className="flex items-center justify-between gap-3">
                                 <div>
                                   <div className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${mutedText}`}>Edit Event</div>
-                                  <div className={`mt-1 text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Refine the details</div>
                                 </div>
-                                <div className="h-9 w-9 rounded-full" style={{ background: categoryGlass.accent, opacity: 0.18 }} />
                               </div>
                               <input
                                 type="text"
@@ -1119,7 +1192,7 @@ export default function DateDetailsCardEnhanced({
                             <div className="flex items-start justify-between">
                               <div className="flex-1 pr-6">
                                 <div className="mb-1 flex flex-wrap items-center gap-2">
-                                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium text-white ${category.color}`}>{effectiveCategoryKey === 'popup_event' ? 'We Event' : category.label}</span>
+                                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium text-white ${category.color}`}>{weEventBadge ? `${weEventBadge.icon} We Event` : category.label}</span>
                                   {event.isUrgent ? (
                                     <span className="flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white animate-pulse">
                                       <AlertTriangle className="h-3 w-3" />

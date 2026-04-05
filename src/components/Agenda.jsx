@@ -16,6 +16,33 @@ const hexToRgba = (hex, alpha = 1) => {
   }
 };
 
+const getWeEventDisplayBadge = (event, popupMeta) => {
+  const normalizedCategory = String(
+    popupMeta?.category
+    || popupMeta?.popupSubtype
+    || event?.popupSubtype
+    || event?.event_data?.category
+    || event?.event_data?.popupSubtype
+    || event?.category
+    || ''
+  ).trim().toLowerCase();
+  const text = `${event?.title || ''} ${event?.description || ''}`.toLowerCase();
+  const isWeEventLike = Boolean(popupMeta)
+    || normalizedCategory === 'popup_event'
+    || ['party', 'celebration', 'hangout', 'kids', 'custom', 'sports'].includes(normalizedCategory)
+    || /\b(birthday|party|wedding|shower|celebration|engagement|graduation|hangout|brunch|coffee|drinks|playdate|kids event|game night|sports)\b/.test(text);
+
+  if (!isWeEventLike) return null;
+  if (/\bbirthday|party|holiday|game night\b/.test(text) || normalizedCategory === 'party') return { icon: '🥳', label: 'We Event' };
+  if (/\bwedding\b/.test(text)) return { icon: '💍', label: 'We Event' };
+  if (/\bbaby shower\b/.test(text)) return { icon: '👶', label: 'We Event' };
+  if (normalizedCategory === 'celebration' || /\b(engagement|shower|graduation|celebration)\b/.test(text)) return { icon: '🎈', label: 'We Event' };
+  if (normalizedCategory === 'kids' || /\b(playdate|kids|school|family)\b/.test(text)) return { icon: '🎈', label: 'We Event' };
+  if (/\bcoffee\b/.test(text)) return { icon: '☕', label: 'We Event' };
+  if (normalizedCategory === 'hangout' || /\b(hangout|brunch|drinks|movie)\b/.test(text)) return { icon: '🎉', label: 'We Event' };
+  return { icon: '🎉', label: 'We Event' };
+};
+
 export default function Agenda({
   agendaRangeDays,
   setAgendaRangeDays,
@@ -172,7 +199,8 @@ export default function Agenda({
               const showHeader = dk !== lastDateKey;
               lastDateKey = dk;
               const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
-              const effectiveCategoryKey = popupMeta ? 'popup_event' : (event.category || 'other');
+              const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
+              const effectiveCategoryKey = weEventBadge ? 'popup_event' : (event.category || 'other');
               const category = categories[effectiveCategoryKey] || categories.popup_event || categories.other;
               const dateObj = new Date(`${dk}T00:00:00`);
               const isToday = dk === getDateKey(new Date());

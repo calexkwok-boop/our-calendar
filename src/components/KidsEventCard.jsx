@@ -52,7 +52,7 @@ const getCardBackdropUrl = (event) => {
   ];
   return candidates
     .map((value) => String(value || '').trim())
-    .find((value) => /^https?:\/\//i.test(value)) || '';
+    .find((value) => /^(https?:\/\/|data:image\/|blob:)/i.test(value)) || '';
 };
 
 const buildMapHref = (location) =>
@@ -82,8 +82,10 @@ const CameraIcon = () => (
   </svg>
 );
 
-const ActionPill = ({ href, onClick, children }) => {
-  const className = 'inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-white/92 px-3.5 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition-all hover:border-amber-300 hover:bg-amber-50/75 hover:shadow-md active:scale-[0.98] dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200 dark:hover:bg-white/10';
+const ActionPill = ({ href, onClick, children, subdued = false }) => {
+  const className = subdued
+    ? 'inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-white/88 px-3 py-1.25 text-[11px] font-medium text-amber-700 shadow-sm transition-all hover:border-amber-300 hover:bg-amber-50/70 hover:shadow-md active:scale-[0.98] dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200 dark:hover:bg-white/10'
+    : 'inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-white/92 px-3.5 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition-all hover:border-amber-300 hover:bg-amber-50/75 hover:shadow-md active:scale-[0.98] dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200 dark:hover:bg-white/10';
 
   if (href) {
     return (
@@ -150,6 +152,29 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
   const parentRequired = event?.parentRequired !== false;
   const allergenAlerts = Array.isArray(event?.allergenAlerts) ? event.allergenAlerts : [];
   const registryLink = String(event?.registryLink || '').trim();
+  const titleText = String(event?.title || '').trim();
+  const shouldShowLocationLine = Boolean(event?.location);
+  const openHeaderEditor =
+    onUpdateEventData && openEditor
+      ? () =>
+          openEditor({
+            variant: 'kids',
+            title: 'Invitation',
+            fields: [
+              { key: 'title', label: 'Title', value: titleText, placeholder: 'Kids Birthday Party' },
+              { key: 'date', label: 'Date', value: String(event?.date || '').trim(), placeholder: '2026-04-12' },
+              { key: 'time', label: 'Time', value: String(event?.time || '').trim(), placeholder: '2:00 PM' },
+              { key: 'location', label: 'Location', type: 'location', value: String(event?.location || '').trim(), placeholder: 'Search venue...' },
+            ],
+            onSave: (values) =>
+              onUpdateEventData({
+                title: String(values.title || '').trim(),
+                date: String(values.date || '').trim(),
+                time: String(values.time || '').trim(),
+                location: String(values.location || '').trim(),
+              }),
+          })
+      : onEdit;
   const coverImageUrl = getCardBackdropUrl(event);
   const openCoverEditor = onUpdateEventData && openEditor
     ? () =>
@@ -168,10 +193,10 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
       {coverImageUrl ? (
         <>
           <div
-            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.2] saturate-[1.03]"
+            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.36] saturate-[1.08] contrast-[1.02]"
             style={{ backgroundImage: `url(${coverImageUrl})` }}
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/78 via-amber-50/68 to-sky-50/72 dark:from-[#171320]/88 dark:via-[#1d1a30]/84 dark:to-[#111a2b]/88" />
+          <div className={`pointer-events-none absolute inset-0 ${coverImageUrl ? 'bg-gradient-to-br from-white/18 via-amber-50/10 to-sky-50/10 dark:from-[#171320]/34 dark:via-[#1d1a30]/22 dark:to-[#111a2b]/28' : 'bg-gradient-to-br from-white/78 via-amber-50/68 to-sky-50/72 dark:from-[#171320]/88 dark:via-[#1d1a30]/84 dark:to-[#111a2b]/88'}`} />
         </>
       ) : null}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -181,12 +206,19 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
         <div className="absolute left-[76%] top-[62%] text-[1.8rem] opacity-55 dark:opacity-32">🖍️</div>
         <div className="absolute left-[10%] bottom-[14%] text-[1.7rem] opacity-55 dark:opacity-32">🧩</div>
         <div className="absolute left-[14%] bottom-[31%] text-[1.7rem] opacity-42 dark:opacity-24">🎠</div>
+        <div className="absolute left-[38%] top-[8%] text-[1.85rem] opacity-52 dark:opacity-30">🎨</div>
+        <div className="absolute right-[6%] top-[54%] text-[1.75rem] opacity-46 dark:opacity-28">🫧</div>
+        <div className="absolute left-[28%] top-[58%] text-[1.8rem] opacity-44 dark:opacity-28">🎪</div>
+        <div className="absolute left-[62%] top-[22%] text-[1.7rem] opacity-42 dark:opacity-26">⭐</div>
       </div>
 
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[22%] top-[23%] h-2.5 w-2.5 rotate-12 rounded-sm bg-amber-200/70 dark:bg-amber-300/20" />
         <div className="absolute right-[18%] top-[58%] h-2 w-2 rounded-full bg-sky-200/80 dark:bg-sky-300/20" />
         <div className="absolute left-[70%] top-[32%] h-2.5 w-2.5 rotate-45 rounded-sm bg-rose-200/70 dark:bg-rose-300/20" />
+        <div className="absolute left-[42%] top-[18%] h-3 w-5 rotate-[22deg] rounded-full bg-yellow-200/70 dark:bg-yellow-300/18" />
+        <div className="absolute right-[24%] top-[28%] h-2.5 w-2.5 rotate-45 rounded-sm bg-amber-200/70 dark:bg-amber-300/18" />
+        <div className="absolute left-[58%] top-[72%] h-2 w-2 rounded-full bg-pink-200/75 dark:bg-pink-300/18" />
       </div>
 
       <div className="pointer-events-none absolute -left-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-amber-300/18 to-yellow-300/8 blur-2xl dark:from-amber-400/10 dark:to-yellow-400/5" />
@@ -208,7 +240,17 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
           </div>
         ) : null}
 
-        <div className="relative mx-auto max-w-[30rem] rounded-[28px] border border-amber-200/80 bg-white/78 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-amber-400/15 dark:bg-[rgba(43,35,23,0.72)] dark:backdrop-blur-[12px]">
+        <div className={`relative mx-auto max-w-[30rem] rounded-[28px] border border-amber-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-amber-400/15 dark:backdrop-blur-[12px] ${coverImageUrl ? 'bg-white/68 dark:bg-[rgba(43,35,23,0.68)]' : 'bg-white/82 dark:bg-[rgba(43,35,23,0.76)]'}`}>
+          {coverImageUrl ? (
+            <>
+              <div
+                className="pointer-events-none absolute inset-0 rounded-[28px] bg-cover bg-center opacity-[0.44]"
+                style={{ backgroundImage: `url(${coverImageUrl})` }}
+              />
+              <div className="pointer-events-none absolute left-5 right-5 top-5 h-[58%] rounded-[24px] bg-white/16 blur-md dark:bg-black/10" />
+              <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/28 via-white/12 to-amber-50/10 dark:from-[#352919]/22 dark:via-[#2a2037]/12 dark:to-sky-500/[0.08]" />
+            </>
+          ) : null}
           {typeof openCoverEditor === 'function' ? (
             <button
               type="button"
@@ -219,33 +261,60 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
               <CameraIcon />
             </button>
           ) : null}
-          <div className="mb-3 flex items-center justify-center">
-            <div className="text-[11px] font-bold uppercase tracking-[0.32em] text-amber-700 dark:text-amber-100">
-              You're Invited
+          <div className="mx-auto max-w-[24rem] rounded-[22px] border border-white/60 bg-white/48 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-white/10 dark:bg-black/14">
+            <div className="mb-3 flex items-center justify-center">
+              <div className="text-[15px] font-semibold text-amber-700 dark:text-amber-200">
+                You're Invited
+              </div>
+            </div>
+
+            <div className="mb-4 flex flex-wrap items-center justify-center gap-2.5">
+              {ageRange ? (
+                <span className="rounded-full border border-amber-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-amber-700 shadow-sm dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200">
+                  Ages {ageRange}
+                </span>
+              ) : null}
+            </div>
+
+            {typeof openHeaderEditor === 'function' ? (
+              <button
+                type="button"
+                onClick={openHeaderEditor}
+                className="mx-auto block rounded-2xl px-2 py-1 text-center transition-colors hover:bg-white/30 dark:hover:bg-white/5"
+              >
+                <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
+                  {event?.title || 'Untitled kids event'}
+                </h3>
+              </button>
+            ) : (
+              <h3 className="relative text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
+                {event?.title || 'Untitled kids event'}
+              </h3>
+            )}
+
+            <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-amber-400 to-transparent dark:via-sky-300/80" />
+
+            <div className="mt-4 space-y-2 text-[15px] text-gray-700 dark:text-gray-200">
+              {typeof openHeaderEditor === 'function' ? (
+                <button
+                  type="button"
+                  onClick={openHeaderEditor}
+                  className="mx-auto block rounded-2xl px-3 py-1.5 transition-colors hover:bg-white/30 dark:hover:bg-white/5"
+                >
+                  <div className="font-normal">{formatEventDateTime(event?.date, event?.time)}</div>
+                  {shouldShowLocationLine ? <div className="mt-1 font-normal">{event.location}</div> : null}
+                </button>
+              ) : (
+                <>
+                  <div className="font-normal">{formatEventDateTime(event?.date, event?.time)}</div>
+                  {shouldShowLocationLine ? <div className="font-normal">{event.location}</div> : null}
+                </>
+              )}
             </div>
           </div>
 
-          <div className="mb-4 flex flex-wrap items-center justify-center gap-2.5">
-            {ageRange ? (
-              <span className="rounded-full border-2 border-amber-200 bg-white/90 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200">
-                Ages {ageRange}
-              </span>
-            ) : null}
-          </div>
-
-          <h3 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.04em] text-gray-950 dark:text-white sm:text-[36px]">
-            {event?.title || 'Untitled kids event'}
-          </h3>
-
-          <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-amber-400 to-transparent dark:via-sky-300/80" />
-
-          <div className="mt-4 space-y-2 text-[15px] text-gray-600 dark:text-gray-300">
-            <div className="font-medium">{formatEventDateTime(event?.date, event?.time)}</div>
-            {event?.location ? <div className="font-medium">{event.location}</div> : null}
-          </div>
-
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
-            {event?.location ? <ActionPill href={buildMapHref(event.location)}>View map</ActionPill> : null}
+            {event?.location ? <ActionPill href={buildMapHref(event.location)} subdued>View map</ActionPill> : null}
           </div>
         </div>
       </div>
