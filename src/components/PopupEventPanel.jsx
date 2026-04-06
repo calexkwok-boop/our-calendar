@@ -644,13 +644,13 @@ const GameModeLauncher = ({ event, members, accent, darkMode, border, softBg, bt
           {members.map((m) => (
             <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
               background: m.role === 'host' ? 'rgba(251,191,36,0.15)' : (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
-              color: m.role === 'host' ? '#f59e0b' : 'var(--color-text-secondary)' }}>
+              color: m.role === 'host' ? '#f59e0b' : (darkMode ? '#ffffff' : 'var(--color-text-secondary)') }}>
               {m.role === 'host' && <Crown style={{ width: 10, height: 10 }} />}
               {m.display_name}
             </div>
           ))}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 8 }}>
+        <div style={{ fontSize: 11, color: darkMode ? '#ffffff' : 'var(--color-text-secondary)', marginTop: 8 }}>
           {playerCount} player{playerCount !== 1 ? 's' : ''} · {Math.floor(playerCount / 2)} possible doubles teams
         </div>
       </div>
