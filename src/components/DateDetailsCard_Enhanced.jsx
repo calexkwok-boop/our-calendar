@@ -219,6 +219,7 @@ export default function DateDetailsCardEnhanced({
   const [weEventCategory, setWeEventCategory] = useState(null);
   const [eventTitle, setEventTitle] = useState('');
   const [location, setLocation] = useState('');
+  const [locationCoords, setLocationCoords] = useState({ lat: null, lng: null });
   const [locationSuggestions, setLocationSuggestions] = useState([]);
   const [selectedTime, setSelectedTime] = useState('');
   const [invitees, setInvitees] = useState([{ id: 'partner', ...calendarPartner, selected: true }]);
@@ -242,6 +243,7 @@ export default function DateDetailsCardEnhanced({
       setWeEventCategory(null);
       setEventTitle('');
       setLocation('');
+      setLocationCoords({ lat: null, lng: null });
       setLocationSuggestions([]);
       setSelectedTime('');
       setInvitees([{ id: 'partner', ...calendarPartner, selected: true }]);
@@ -309,15 +311,43 @@ export default function DateDetailsCardEnhanced({
     }
   };
 
-  const selectLocation = (place) => {
-    setLocation(String(place?.description || '').trim());
+  const selectLocation = async (place) => {
+    const nextLocation = String(place?.description || place?.structured_formatting?.main_text || '').trim();
+    setLocation(nextLocation);
     setLocationSuggestions([]);
+    if (!place?.place_id || !window.google?.maps?.places) {
+      setLocationCoords({ lat: null, lng: null });
+      return;
+    }
+    try {
+      const service = new window.google.maps.places.PlacesService(document.createElement('div'));
+      service.getDetails(
+        { placeId: place.place_id, fields: ['geometry', 'formatted_address', 'name'] },
+        (details, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && details?.geometry?.location) {
+            setLocation(details.formatted_address || details.name || nextLocation);
+            setLocationCoords({
+              lat: details.geometry.location.lat(),
+              lng: details.geometry.location.lng(),
+            });
+            return;
+          }
+          setLocationCoords({ lat: null, lng: null });
+        }
+      );
+    } catch {
+      setLocationCoords({ lat: null, lng: null });
+    }
   };
 
   const useCurrentLocation = () => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition((position) => {
       setLocation(`Current location (${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)})`);
+      setLocationCoords({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
       setLocationSuggestions([]);
     });
   };
@@ -358,14 +388,16 @@ export default function DateDetailsCardEnhanced({
 
   const handleSave = async () => {
     if (!eventTitle.trim() || !normalizedSelectedTime) return;
-    const eventData = {
-      type: eventType,
-      category: weEventCategory,
-      title: eventTitle.trim(),
-      location: location.trim(),
-      date: selectedDate,
-      time: normalizedSelectedTime,
-      invitees: eventType === 'we' ? invitees.filter((invitee) => invitee.selected) : [],
+      const eventData = {
+        type: eventType,
+        category: weEventCategory,
+        title: eventTitle.trim(),
+        location: location.trim(),
+        locationLat: locationCoords.lat,
+        locationLng: locationCoords.lng,
+        date: selectedDate,
+        time: normalizedSelectedTime,
+        invitees: eventType === 'we' ? invitees.filter((invitee) => invitee.selected) : [],
     };
 
     if (typeof onSaveEvent === 'function') {
@@ -391,8 +423,10 @@ export default function DateDetailsCardEnhanced({
           popupSubtype: eventType === 'we' ? (eventData.category || null) : null,
           popupMetadata: eventType === 'we' ? buildWeEventMetadata(eventData.category) : {},
           locationOverride: eventData.location || '',
-        description: eventType === 'we' && currentTemplate ? `${currentTemplate.label} We Event` : '',
-      });
+          locationLat: eventData.locationLat,
+          locationLng: eventData.locationLng,
+          description: eventType === 'we' && currentTemplate ? `${currentTemplate.label} We Event` : '',
+        });
       if (result?.ok || result === true) {
         handleClose();
       }
@@ -576,7 +610,10 @@ export default function DateDetailsCardEnhanced({
                     <input
                       type="text"
                       value={location}
-                      onChange={(event) => handleLocationSearch(event.target.value)}
+                      onChange={(event) => {
+                        setLocationCoords({ lat: null, lng: null });
+                        handleLocationSearch(event.target.value);
+                      }}
                       placeholder="Search for a place..."
                       className={inputSurface}
                     />

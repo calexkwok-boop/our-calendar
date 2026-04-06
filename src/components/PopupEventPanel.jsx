@@ -59,6 +59,22 @@ const ROLE_COLORS = {
   player: { bg: '#f3f4f6', text: '#374151', dark_bg: 'rgba(255,255,255,0.08)',dark_text: '#9ca3af' },
 };
 const ROLE_ICONS = { host: Crown, cohost: Shield, player: null };
+const DARK_MAP_STYLES = [
+  { elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#e2e8f0' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0f172a' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#163047' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#334155' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1e293b' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#f8fafc' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#475569' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#334155' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#223046' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0b2942' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#bfdbfe' }] },
+];
 
 const Avatar = ({ name, size = 32, accent, role, darkMode }) => {
   const colors = ROLE_COLORS[role || 'player'];
@@ -481,30 +497,55 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
   const mapInstanceRef = useRef(null);
   const markersRef = useRef({});
   const watchIdRef = useRef(null);
+  const fallbackCenterRef = useRef({ lat: 37.7749, lng: -122.4194 });
   const [sharing, setSharing] = useState(false);
   const [locations, setLocations] = useState([]);
   const [geoError, setGeoError] = useState('');
   const [mapReady, setMapReady] = useState(false);
+  const hasEventCoordinates = Number.isFinite(Number(event?.location_lat)) && Number.isFinite(Number(event?.location_lng));
+
+  useEffect(() => {
+    if (hasEventCoordinates || typeof navigator === 'undefined' || !navigator.geolocation) return undefined;
+    let cancelled = false;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (cancelled) return;
+        const nextCenter = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        fallbackCenterRef.current = nextCenter;
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.setCenter(nextCenter);
+        }
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 60000, timeout: 8000 }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [hasEventCoordinates]);
 
   // Init Google Map
   useEffect(() => {
     if (!mapRef.current || !window.google?.maps || mapInstanceRef.current) return;
-    const center = event.location_lat && event.location_lng
-      ? { lat: event.location_lat, lng: event.location_lng }
-      : { lat: 37.7749, lng: -122.4194 };
+    const center = hasEventCoordinates
+      ? { lat: Number(event.location_lat), lng: Number(event.location_lng) }
+      : fallbackCenterRef.current;
     mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
       center, zoom: 15,
       disableDefaultUI: true, zoomControl: true,
-      styles: darkMode ? [{ elementType: 'geometry', stylers: [{ color: '#1d2c4d' }] }, { elementType: 'labels.text.fill', stylers: [{ color: '#8ec3b9' }] }] : [],
+      styles: darkMode ? DARK_MAP_STYLES : [],
     });
     // Venue marker
-    if (event.location_lat && event.location_lng) {
+    if (hasEventCoordinates) {
       new window.google.maps.Marker({ position: center, map: mapInstanceRef.current,
         icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: accent, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
         title: event.location || 'Venue' });
     }
     setMapReady(true);
-  }, [mapRef.current]);
+  }, [accent, darkMode, event.location, event.location_lat, event.location_lng, hasEventCoordinates, mapRef.current]);
 
   // Load + realtime locations
   const loadLocations = useCallback(async () => {

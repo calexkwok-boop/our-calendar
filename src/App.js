@@ -17253,6 +17253,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           date: dateKey,
           time: pendingEventDraft.isMultiDay ? null : (time || null),
           location: pendingEventDraft.location || null,
+          location_lat: pendingEventDraft.locationLat ?? null,
+          location_lng: pendingEventDraft.locationLng ?? null,
           max_players: maxPeople,
         is_public: !isPrivate,
         event_data: {
@@ -17301,6 +17303,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       popupMaxPeople: parsedMax,
       description: String(options?.description || '').trim(),
       location: String(options?.locationOverride || '').trim(),
+      locationLat: Number.isFinite(Number(options?.locationLat)) ? Number(options.locationLat) : null,
+      locationLng: Number.isFinite(Number(options?.locationLng)) ? Number(options.locationLng) : null,
       popupSubtype: String(options?.popupSubtype || '').trim() || null,
       popupMetadata: options?.popupMetadata && typeof options.popupMetadata === 'object' ? options.popupMetadata : {},
       categoryOverride: String(options?.categoryOverride || '').trim() || null,
