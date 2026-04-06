@@ -146,6 +146,25 @@ const NotesSection = ({ event, onEdit }) => {
   return null;
 };
 
+const animationStyles = `
+@keyframes party-card-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(8deg); }
+}
+@keyframes party-card-twinkle {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.18; transform: scale(0.85); }
+}
+@keyframes party-card-sway {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-5px); }
+}
+@keyframes party-card-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
+`;
+
 const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props }) => {
   const ageRange = String(event?.ageRange || '').trim();
   const activity = String(event?.activity || '').trim();
@@ -190,10 +209,11 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
 
   return (
     <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/60 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:from-[#171320] dark:via-[#1d1a30] dark:to-[#111a2b] dark:shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+      <style>{animationStyles}</style>
       {coverImageUrl ? (
         <>
           <div
-            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.36] saturate-[1.08] contrast-[1.02]"
+            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.43] saturate-[1.12] contrast-[1.04]"
             style={{ backgroundImage: `url(${coverImageUrl})` }}
           />
           <div className={`pointer-events-none absolute inset-0 ${coverImageUrl ? 'bg-gradient-to-br from-white/18 via-amber-50/10 to-sky-50/10 dark:from-[#171320]/34 dark:via-[#1d1a30]/22 dark:to-[#111a2b]/28' : 'bg-gradient-to-br from-white/78 via-amber-50/68 to-sky-50/72 dark:from-[#171320]/88 dark:via-[#1d1a30]/84 dark:to-[#111a2b]/88'}`} />
@@ -210,6 +230,11 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
         <div className="absolute right-[6%] top-[54%] text-[1.75rem] opacity-46 dark:opacity-28">🫧</div>
         <div className="absolute left-[28%] top-[58%] text-[1.8rem] opacity-44 dark:opacity-28">🎪</div>
         <div className="absolute left-[62%] top-[22%] text-[1.7rem] opacity-42 dark:opacity-26">⭐</div>
+
+        <div className="absolute right-[24%] top-[8%] text-[1.8rem] opacity-44 dark:opacity-28">🎉</div>
+        <div className="absolute left-[8%] top-[42%] text-[1.75rem] opacity-42 dark:opacity-24">✨</div>
+        <div className="absolute left-[56%] top-[18%] text-[1.7rem] opacity-40 dark:opacity-24">🌈</div>
+        <div className="absolute left-[84%] top-[30%] text-[1.8rem] opacity-44 dark:opacity-28">🎊</div>
       </div>
 
       <div className="pointer-events-none absolute inset-0">
@@ -223,6 +248,22 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
 
       <div className="pointer-events-none absolute -left-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-amber-300/18 to-yellow-300/8 blur-2xl dark:from-amber-400/10 dark:to-yellow-400/5" />
       <div className="pointer-events-none absolute -bottom-8 -right-8 h-32 w-32 rounded-full bg-gradient-to-br from-sky-300/16 to-cyan-300/8 blur-2xl dark:from-sky-400/10 dark:to-cyan-400/5" />
+
+      <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-42 dark:opacity-26">
+        <div className="absolute left-6 top-12 text-[2.8rem] opacity-80 drop-shadow-[0_10px_22px_rgba(236,72,153,0.22)] dark:opacity-70" style={{ animation: 'party-card-float 8.6s ease-in-out infinite 0.2s' }}>🥂</div>
+        <div className="absolute right-28 top-10 text-[2.4rem] opacity-75 drop-shadow-[0_10px_20px_rgba(6,182,212,0.2)] dark:opacity-68" style={{ animation: 'party-card-float 7.8s ease-in-out infinite 1.1s' }}>🎉</div>
+        <div className="absolute left-[38%] top-6 text-[2.2rem] opacity-70 drop-shadow-[0_10px_18px_rgba(139,92,246,0.18)] dark:opacity-64" style={{ animation: 'party-card-float 9.2s ease-in-out infinite 0.7s' }}>🎊</div>
+        <div className="absolute right-8 top-[8.5rem] text-[2.6rem] opacity-72 drop-shadow-[0_10px_22px_rgba(251,191,36,0.2)] dark:opacity-68" style={{ animation: 'party-card-float 8.1s ease-in-out infinite 1.8s' }}>🍾</div>
+        <div className="absolute left-[8%] top-[52%] text-[2.5rem] opacity-68 drop-shadow-[0_10px_20px_rgba(251,191,36,0.22)] dark:opacity-64" style={{ animation: 'party-card-float 8.9s ease-in-out infinite 1.4s' }}>🍾</div>
+        <div className="absolute right-[18%] top-[72%] text-[2.2rem] opacity-72 drop-shadow-[0_10px_20px_rgba(244,63,94,0.2)] dark:opacity-66" style={{ animation: 'party-card-float 9.5s ease-in-out infinite 0.9s' }}>🥂</div>
+        <div className="absolute left-[62%] top-[12%] text-[2rem] opacity-72 drop-shadow-[0_10px_18px_rgba(217,70,239,0.18)] dark:opacity-66" style={{ animation: 'party-card-float 7.4s ease-in-out infinite 1.5s' }}>🎉</div>
+        <div className="absolute left-[74%] top-[48%] text-[2rem] opacity-66 drop-shadow-[0_10px_18px_rgba(6,182,212,0.18)] dark:opacity-62" style={{ animation: 'party-card-float 8.7s ease-in-out infinite 0.6s' }}>🎊</div>
+        <div className="absolute left-[12%] top-[32%] h-10 w-24 rounded-full border-t-[5px] border-dashed border-fuchsia-300/90 opacity-80 dark:border-fuchsia-300/60 dark:opacity-60" style={{ transform: 'rotate(-12deg)', animation: 'party-card-sway 7.4s ease-in-out infinite' }} />
+        <div className="absolute right-[14%] top-[34%] h-10 w-24 rounded-full border-t-[5px] border-dashed border-cyan-300/90 opacity-80 dark:border-cyan-300/60 dark:opacity-60" style={{ transform: 'rotate(14deg)', animation: 'party-card-sway 8.2s ease-in-out infinite 0.9s' }} />
+        <div className="absolute left-[28%] top-[73%] h-10 w-28 rounded-full border-t-[5px] border-dashed border-amber-300/90 opacity-75 dark:border-amber-300/55 dark:opacity-58" style={{ transform: 'rotate(10deg)', animation: 'party-card-sway 8.8s ease-in-out infinite 0.6s' }} />
+        <div className="absolute left-[52%] top-[28%] h-12 w-32 rounded-full border-t-[5px] border-dashed border-violet-300/90 opacity-78 dark:border-violet-300/55 dark:opacity-58" style={{ transform: 'rotate(-8deg)', animation: 'party-card-sway 7.8s ease-in-out infinite 1.2s' }} />
+        <div className="absolute right-[24%] top-[82%] h-10 w-24 rounded-full border-t-[5px] border-dashed border-rose-300/90 opacity-75 dark:border-rose-300/55 dark:opacity-56" style={{ transform: 'rotate(-14deg)', animation: 'party-card-sway 8.6s ease-in-out infinite 0.4s' }} />
+      </div>
 
       <div className="relative px-6 py-7 sm:px-7">
         {(props.onEdit || props.onDelete) ? (
@@ -244,10 +285,10 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
           {coverImageUrl ? (
             <>
               <div
-                className="pointer-events-none absolute inset-0 rounded-[28px] bg-cover bg-center opacity-[0.44]"
+                className="pointer-events-none absolute inset-0 rounded-[28px] bg-cover bg-center opacity-[0.5]"
                 style={{ backgroundImage: `url(${coverImageUrl})` }}
               />
-              <div className="pointer-events-none absolute left-5 right-5 top-5 h-[58%] rounded-[24px] bg-white/16 blur-md dark:bg-black/10" />
+              <div className="pointer-events-none absolute left-5 right-5 top-5 h-[58%] rounded-[24px] bg-white/36 blur-xl dark:bg-black/18" />
               <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/28 via-white/12 to-amber-50/10 dark:from-[#352919]/22 dark:via-[#2a2037]/12 dark:to-sky-500/[0.08]" />
             </>
           ) : null}
@@ -474,3 +515,4 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
 };
 
 export default KidsEventCard;
+

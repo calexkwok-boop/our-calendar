@@ -69,6 +69,47 @@ const parseScheduleItems = (value) =>
     })
     .filter((entry) => entry.time || entry.activity);
 
+const buildRegistryOptions = (kind) => {
+  const common = [
+    {
+      id: 'amazon',
+      label: 'Amazon Registry',
+      kind: 'amazon',
+      href: 'https://www.amazon.com/baby-reg/benefits/summary',
+      className: 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-white/15 dark:bg-white/[0.06] dark:text-white dark:hover:bg-white/[0.1]',
+    },
+    {
+      id: 'target',
+      label: 'Target Registry',
+      kind: 'target',
+      href: 'https://www.target.com/gift-registry/',
+      className: 'border-red-300 bg-red-50 text-red-600 hover:border-red-400 hover:bg-red-100 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/15',
+    },
+    {
+      id: 'babylist',
+      label: 'Babylist',
+      kind: 'babylist',
+      href: 'https://www.babylist.com/',
+      className: 'border-teal-300 bg-teal-50 text-teal-700 hover:border-teal-400 hover:bg-teal-100 dark:border-teal-400/20 dark:bg-teal-500/10 dark:text-teal-200 dark:hover:bg-teal-500/15',
+    },
+  ];
+
+  if (kind === 'baby') {
+    return [
+      ...common,
+      {
+        id: 'buybuybaby',
+        label: 'buybuy BABY',
+        kind: 'buybuybaby',
+        href: 'https://www.buybuybaby.com/',
+        className: 'border-sky-300 bg-sky-50 text-sky-700 hover:border-sky-400 hover:bg-sky-100 dark:border-sky-400/20 dark:bg-sky-500/10 dark:text-sky-200 dark:hover:bg-sky-500/15',
+      },
+    ];
+  }
+
+  return common;
+};
+
 const resolveCelebrationStyle = (event) => {
   const text = [
     event?.title,
@@ -263,6 +304,22 @@ const animationStyles = `
   0%, 100% { opacity: 0.2; }
   50% { opacity: 0.4; }
 }
+@keyframes party-card-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(8deg); }
+}
+@keyframes party-card-twinkle {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.18; transform: scale(0.85); }
+}
+@keyframes party-card-sway {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-5px); }
+}
+@keyframes party-card-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
 `;
 
 const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props }) => {
@@ -270,6 +327,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
   const registryLink = String(event?.registryLink || '').trim();
   const schedule = Array.isArray(event?.schedule) ? event.schedule : [];
   const tone = resolveCelebrationStyle(event);
+  const registryOptions = buildRegistryOptions(tone.kind);
   const titleText = String(event?.title || '').trim();
   const shouldShowLocationLine = Boolean(event?.location);
   const openHeaderEditor =
@@ -312,57 +370,36 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
       {coverImageUrl && tone.kind !== 'wedding' ? (
         <>
           <div
-            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.34] saturate-[1.08] contrast-[1.02]"
+            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.43] saturate-[1.12] contrast-[1.04]"
             style={{ backgroundImage: `url(${coverImageUrl})` }}
           />
           <div className={`pointer-events-none absolute inset-0 ${coverImageUrl ? (tone.kind === 'baby' ? 'bg-gradient-to-br from-white/20 via-stone-50/10 to-rose-50/10 dark:from-[#241f1a]/34 dark:via-[#1d1916]/22 dark:to-[#181410]/28' : tone.kind === 'wedding' ? 'bg-gradient-to-br from-white/22 via-white/12 to-amber-50/06 dark:from-[#201a12]/34 dark:via-[#17130f]/22 dark:to-[#120f0b]/26' : 'bg-gradient-to-br from-white/18 via-rose-50/10 to-amber-50/10 dark:from-[#171320]/34 dark:via-[#201930]/22 dark:to-[#111a2b]/28') : (tone.kind === 'baby' ? 'bg-gradient-to-br from-white/82 via-stone-50/68 to-rose-50/62 dark:from-[#241f1a]/88 dark:via-[#1d1916]/84 dark:to-[#181410]/88' : tone.kind === 'wedding' ? 'bg-gradient-to-br from-white/90 via-white/78 to-amber-50/28 dark:from-[#201a12]/88 dark:via-[#17130f]/82 dark:to-[#120f0b]/86' : 'bg-gradient-to-br from-white/80 via-rose-50/70 to-amber-50/72 dark:from-[#171320]/88 dark:via-[#201930]/84 dark:to-[#111a2b]/88')}`} />
         </>
       ) : null}
 
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {tone.kind === 'baby' ? (
-          <>
-            <div className="absolute left-[10%] top-[16%] text-[2.2rem] opacity-65 dark:opacity-50" style={{ animation: 'celebration-gentle-float 6s ease-in-out infinite' }}>{tone.motifA}</div>
-            <div className="absolute right-[12%] top-[18%] text-[2rem] opacity-60 dark:opacity-46" style={{ animation: 'celebration-gentle-float 7s ease-in-out infinite 1s' }}>{tone.motifB}</div>
-            <div className="absolute left-[70%] top-[68%] text-[2.1rem] opacity-62 dark:opacity-46" style={{ animation: 'celebration-gentle-float 6.8s ease-in-out infinite 0.5s' }}>{tone.motifC}</div>
-            <div className="absolute left-[34%] top-[10%] text-[2rem] opacity-54 dark:opacity-38" style={{ animation: 'celebration-gentle-float 8.2s ease-in-out infinite 1.6s' }}>🌼</div>
-            <div className="absolute right-[8%] top-[46%] text-[1.95rem] opacity-50 dark:opacity-34" style={{ animation: 'celebration-gentle-float 7.7s ease-in-out infinite 0.8s' }}>🫧</div>
-            <div className="absolute left-[18%] top-[58%] text-[1.9rem] opacity-48 dark:opacity-32" style={{ animation: 'celebration-gentle-float 8.8s ease-in-out infinite 1.1s' }}>🎀</div>
-            <div className="absolute left-[18%] top-[100%] h-2 w-2 rounded-full bg-gradient-to-br from-stone-200 to-rose-100 opacity-30 dark:opacity-15" style={{ animation: 'celebration-rise-bubble 12s ease-in infinite' }} />
-            <div className="absolute left-[38%] top-[100%] h-1.5 w-1.5 rounded-full bg-gradient-to-br from-rose-100 to-stone-200 opacity-35 dark:opacity-18" style={{ animation: 'celebration-rise-bubble 10s ease-in infinite 2s' }} />
-            <div className="absolute left-[58%] top-[100%] h-2.5 w-2.5 rounded-full bg-gradient-to-br from-amber-200 to-stone-200 opacity-25 dark:opacity-13" style={{ animation: 'celebration-rise-bubble 14s ease-in infinite 4s' }} />
-            <div className="absolute left-[78%] top-[100%] h-2 w-2 rounded-full bg-gradient-to-br from-stone-200 to-amber-200 opacity-28 dark:opacity-14" style={{ animation: 'celebration-rise-bubble 11s ease-in infinite 1s' }} />
-            <div className="absolute left-[28%] top-[100%] h-1.5 w-1.5 rounded-full bg-gradient-to-br from-amber-100 to-rose-100 opacity-30 dark:opacity-16" style={{ animation: 'celebration-rise-bubble 13s ease-in infinite 1.5s' }} />
-            <div className="absolute left-[68%] top-[100%] h-2 w-2 rounded-full bg-gradient-to-br from-stone-100 to-amber-100 opacity-26 dark:opacity-14" style={{ animation: 'celebration-rise-bubble 9.5s ease-in infinite 2.8s' }} />
-          </>
-        ) : tone.kind === 'wedding' ? null : (
-          
-          <>
-            <div className="absolute left-[12%] top-[15%] text-[2.15rem] opacity-62 dark:opacity-46" style={{ animation: 'celebration-gentle-float 6.4s ease-in-out infinite' }}>{tone.motifA}</div>
-            <div className="absolute right-[12%] top-[17%] text-[1.95rem] opacity-56 dark:opacity-40" style={{ animation: 'celebration-gentle-float 7.1s ease-in-out infinite 0.9s' }}>{tone.motifB}</div>
-            <div className="absolute left-[72%] top-[67%] text-[2rem] opacity-54 dark:opacity-38" style={{ animation: 'celebration-gentle-float 6.8s ease-in-out infinite 0.5s' }}>{tone.motifC}</div>
-            <div className="absolute left-[38%] top-[10%] text-[1.9rem] opacity-46 dark:opacity-32" style={{ animation: 'celebration-gentle-float 8.6s ease-in-out infinite 1.3s' }}>🎊</div>
-            <div className="absolute right-[7%] top-[48%] text-[1.8rem] opacity-44 dark:opacity-30" style={{ animation: 'celebration-gentle-float 7.9s ease-in-out infinite 0.6s' }}>💫</div>
-            <div className="absolute left-[15%] top-[100%] h-2 w-2 rounded-full bg-gradient-to-br from-rose-200 to-pink-200 opacity-30 dark:opacity-15" style={{ animation: 'celebration-rise-bubble 12s ease-in infinite' }} />
-            <div className="absolute left-[35%] top-[100%] h-1.5 w-1.5 rounded-full bg-gradient-to-br from-pink-200 to-rose-200 opacity-35 dark:opacity-18" style={{ animation: 'celebration-rise-bubble 10s ease-in infinite 2s' }} />
-            <div className="absolute left-[55%] top-[100%] h-2.5 w-2.5 rounded-full bg-gradient-to-br from-orange-200 to-rose-200 opacity-25 dark:opacity-13" style={{ animation: 'celebration-rise-bubble 14s ease-in infinite 4s' }} />
-            <div className="absolute left-[75%] top-[100%] h-2 w-2 rounded-full bg-gradient-to-br from-rose-200 to-orange-200 opacity-28 dark:opacity-14" style={{ animation: 'celebration-rise-bubble 11s ease-in infinite 1s' }} />
-            <div className="absolute left-[25%] top-[100%] h-1 w-1 rounded-full bg-gradient-to-br from-pink-300 to-rose-300 opacity-40 dark:opacity-20" style={{ animation: 'celebration-rise-bubble 9s ease-in infinite 5s' }} />
-            <div className="absolute left-[65%] top-[100%] h-1.5 w-1.5 rounded-full bg-gradient-to-br from-rose-300 to-pink-300 opacity-32 dark:opacity-16" style={{ animation: 'celebration-rise-bubble 13s ease-in infinite 3s' }} />
-            <div className="absolute left-[48%] top-[100%] h-1.5 w-1.5 rounded-full bg-gradient-to-br from-orange-100 to-pink-100 opacity-30 dark:opacity-16" style={{ animation: 'celebration-rise-bubble 11.6s ease-in infinite 1.4s' }} />
-          </>
-        )}
-      </div>
-
       {tone.kind !== 'wedding' ? (
-        <div className={`pointer-events-none absolute -right-12 -top-12 h-32 w-32 rotate-45 ${tone.kind === 'baby' ? 'bg-gradient-to-br from-stone-300/18 to-rose-200/10 dark:from-stone-500/10 dark:to-rose-500/5' : 'bg-gradient-to-br from-rose-400/20 to-pink-400/10 dark:from-rose-500/10 dark:to-pink-500/5'}`} style={{ animation: 'celebration-shimmer 3s ease-in-out infinite' }} />
-      ) : null}
-
-      {tone.kind !== 'wedding' ? (
-        <div className="pointer-events-none absolute inset-0">
-          <div className={`absolute left-[20%] top-[25%] h-1 w-1 rotate-45 ${tone.kind === 'baby' ? 'bg-stone-400' : 'bg-rose-400'} opacity-60 dark:opacity-30`} style={{ animation: 'celebration-twinkle 4s ease-in-out infinite' }} />
-          <div className={`absolute right-[25%] top-[60%] h-1.5 w-1.5 rotate-12 ${tone.kind === 'baby' ? 'bg-rose-300' : 'bg-pink-400'} opacity-50 dark:opacity-25`} style={{ animation: 'celebration-twinkle 3.5s ease-in-out infinite 1s' }} />
-          <div className={`absolute left-[70%] top-[40%] h-1 w-1 rotate-[30deg] ${tone.kind === 'baby' ? 'bg-amber-400' : 'bg-orange-400'} opacity-55 dark:opacity-28`} style={{ animation: 'celebration-twinkle 4.5s ease-in-out infinite 2s' }} />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-42 dark:opacity-26">
+          <div className="absolute left-6 top-12 text-[2.8rem] opacity-80 drop-shadow-[0_10px_22px_rgba(236,72,153,0.22)] dark:opacity-70" style={{ animation: 'party-card-float 8.6s ease-in-out infinite 0.2s' }}>🥂</div>
+          <div className="absolute right-28 top-10 text-[2.4rem] opacity-75 drop-shadow-[0_10px_20px_rgba(6,182,212,0.2)] dark:opacity-68" style={{ animation: 'party-card-float 7.8s ease-in-out infinite 1.1s' }}>🎉</div>
+          <div className="absolute left-[38%] top-6 text-[2.2rem] opacity-70 drop-shadow-[0_10px_18px_rgba(139,92,246,0.18)] dark:opacity-64" style={{ animation: 'party-card-float 9.2s ease-in-out infinite 0.7s' }}>🎊</div>
+          <div className="absolute right-8 top-[8.5rem] text-[2.6rem] opacity-72 drop-shadow-[0_10px_22px_rgba(251,191,36,0.2)] dark:opacity-68" style={{ animation: 'party-card-float 8.1s ease-in-out infinite 1.8s' }}>🍾</div>
+          <div className="absolute left-[8%] top-[52%] text-[2.5rem] opacity-68 drop-shadow-[0_10px_20px_rgba(251,191,36,0.22)] dark:opacity-64" style={{ animation: 'party-card-float 8.9s ease-in-out infinite 1.4s' }}>🍾</div>
+          <div className="absolute right-[18%] top-[72%] text-[2.2rem] opacity-72 drop-shadow-[0_10px_20px_rgba(244,63,94,0.2)] dark:opacity-66" style={{ animation: 'party-card-float 9.5s ease-in-out infinite 0.9s' }}>🥂</div>
+          <div className="absolute left-[62%] top-[12%] text-[2rem] opacity-72 drop-shadow-[0_10px_18px_rgba(217,70,239,0.18)] dark:opacity-66" style={{ animation: 'party-card-float 7.4s ease-in-out infinite 1.5s' }}>🎉</div>
+          <div className="absolute left-[74%] top-[48%] text-[2rem] opacity-66 drop-shadow-[0_10px_18px_rgba(6,182,212,0.18)] dark:opacity-62" style={{ animation: 'party-card-float 8.7s ease-in-out infinite 0.6s' }}>🎊</div>
+          <div className="absolute left-[12%] top-[32%] h-10 w-24 rounded-full border-t-[5px] border-dashed border-fuchsia-300/90 opacity-80 dark:border-fuchsia-300/60 dark:opacity-60" style={{ transform: 'rotate(-12deg)', animation: 'party-card-sway 7.4s ease-in-out infinite' }} />
+          <div className="absolute right-[14%] top-[34%] h-10 w-24 rounded-full border-t-[5px] border-dashed border-cyan-300/90 opacity-80 dark:border-cyan-300/60 dark:opacity-60" style={{ transform: 'rotate(14deg)', animation: 'party-card-sway 8.2s ease-in-out infinite 0.9s' }} />
+          <div className="absolute left-[28%] top-[73%] h-10 w-28 rounded-full border-t-[5px] border-dashed border-amber-300/90 opacity-75 dark:border-amber-300/55 dark:opacity-58" style={{ transform: 'rotate(10deg)', animation: 'party-card-sway 8.8s ease-in-out infinite 0.6s' }} />
+          <div className="absolute left-[52%] top-[28%] h-12 w-32 rounded-full border-t-[5px] border-dashed border-violet-300/90 opacity-78 dark:border-violet-300/55 dark:opacity-58" style={{ transform: 'rotate(-8deg)', animation: 'party-card-sway 7.8s ease-in-out infinite 1.2s' }} />
+          <div className="absolute right-[24%] top-[82%] h-10 w-24 rounded-full border-t-[5px] border-dashed border-rose-300/90 opacity-75 dark:border-rose-300/55 dark:opacity-56" style={{ transform: 'rotate(-14deg)', animation: 'party-card-sway 8.6s ease-in-out infinite 0.4s' }} />
+          <div className="absolute -left-3 top-20 h-44 w-[4.75rem]" style={{ animation: 'party-card-bob 5.5s ease-in-out infinite' }}>
+            <div className="mx-auto h-28 w-[4.75rem] rounded-full bg-gradient-to-b from-fuchsia-300 to-pink-500 opacity-90 shadow-[0_18px_44px_rgba(236,72,153,0.28)] dark:opacity-88" />
+            <div className="mx-auto h-16 w-px bg-gradient-to-b from-pink-300/75 to-transparent dark:from-pink-300/45" />
+          </div>
+          <div className="absolute right-2 top-14 h-40 w-16" style={{ animation: 'party-card-bob 6.3s ease-in-out infinite 0.7s' }}>
+            <div className="mx-auto h-24 w-16 rounded-full bg-gradient-to-b from-sky-200 to-cyan-500 opacity-84 shadow-[0_18px_44px_rgba(6,182,212,0.24)] dark:opacity-82" />
+            <div className="mx-auto h-16 w-px bg-gradient-to-b from-cyan-300/75 to-transparent dark:from-cyan-300/45" />
+          </div>
         </div>
       ) : null}
 
@@ -386,10 +423,10 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
           {coverImageUrl && tone.kind !== 'wedding' ? (
             <>
               <div
-                className="pointer-events-none absolute inset-0 rounded-[28px] bg-cover bg-center opacity-[0.42]"
+                className="pointer-events-none absolute inset-0 rounded-[28px] bg-cover bg-center opacity-[0.48]"
                 style={{ backgroundImage: `url(${coverImageUrl})` }}
               />
-              <div className="pointer-events-none absolute left-5 right-5 top-5 h-[58%] rounded-[24px] bg-white/16 blur-md dark:bg-black/10" />
+              <div className="pointer-events-none absolute left-5 right-5 top-5 h-[58%] rounded-[24px] bg-white/36 blur-xl dark:bg-black/18" />
               <div className={`pointer-events-none absolute inset-0 rounded-[28px] ${tone.kind === 'baby' ? 'bg-gradient-to-br from-white/28 via-white/12 to-sky-50/10 dark:from-[#341e28]/22 dark:via-[#2b2038]/12 dark:to-sky-500/[0.08]' : tone.kind === 'wedding' ? 'bg-gradient-to-br from-white/32 via-white/16 to-amber-50/06 dark:from-[#241d16]/22 dark:via-[#1d1711]/12 dark:to-yellow-500/[0.06]' : 'bg-gradient-to-br from-white/28 via-white/12 to-rose-50/10 dark:from-[#341e28]/22 dark:via-[#2b2038]/12 dark:to-amber-500/[0.08]'}`} />
             </>
           ) : null}
@@ -499,7 +536,14 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
                   openEditor({
                     variant: 'celebration',
                     title: 'Add Gift Registry',
-                    fields: [{ key: 'registryLink', label: 'Registry URL', value: '', placeholder: 'https://...' }],
+                    fields: [{
+                      key: 'registryLink',
+                      label: 'Registry URL',
+                      type: 'registry-link',
+                      value: '',
+                      placeholder: 'Paste a registry link...',
+                      registryOptions,
+                    }],
                     onSave: (values) => onUpdateEventData({ registryLink: String(values.registryLink || '').trim() }),
                   })
                 }
@@ -531,7 +575,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
         >
           <div className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm ${tone?.detailSurface || 'border-fuchsia-100/80 bg-white/88 dark:border-white/10 dark:bg-white/[0.045]'}`}>
             <div className="flex items-start gap-3">
-              {tone.kind !== 'wedding' ? (
+              {!['wedding', 'baby'].includes(tone.kind) ? (
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-sm font-semibold ${tone.kind === 'baby' ? 'from-stone-100 to-amber-50 text-stone-700 dark:from-stone-500/15 dark:to-amber-500/12 dark:text-stone-100' : 'from-rose-100 to-pink-100 text-rose-700 dark:from-rose-500/15 dark:to-pink-500/15 dark:text-rose-200'}`}>
                   Style
                 </div>
@@ -635,3 +679,4 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
 };
 
 export default CelebrationEventCard;
+

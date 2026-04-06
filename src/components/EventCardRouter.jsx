@@ -102,6 +102,131 @@ const detectPlaylistService = (value) => {
   }
   return null;
 };
+const SpotifyIcon = ({ className = 'h-5 w-5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" fill="currentColor" />
+    <path d="M7.2 9.3c3.2-1 6.8-.8 9.8.6" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M8.1 12.1c2.5-.8 5.2-.6 7.5.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M9 14.7c1.8-.5 3.8-.4 5.2.4" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" />
+  </svg>
+);
+const AppleMusicIcon = ({ className = 'h-5 w-5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="event-router-apple-music-gradient" x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#ff7aa2" />
+        <stop offset="0.52" stopColor="#fa233b" />
+        <stop offset="1" stopColor="#b3125d" />
+      </linearGradient>
+    </defs>
+    <rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="url(#event-router-apple-music-gradient)" />
+    <path
+      d="M12.98 8.08c.33-.44.56-1.03.5-1.63-.48.03-1.08.34-1.42.79-.31.39-.58 1-.5 1.57.54.04 1.1-.28 1.42-.73Zm1.98 4.92c.01-1.26 1.03-1.86 1.08-1.89-.59-.86-1.49-.98-1.81-1-.78-.08-1.52.47-1.91.47-.39 0-.98-.46-1.61-.45-.83.01-1.6.49-2.02 1.23-.86 1.49-.22 3.71.62 4.93.41.59.89 1.26 1.53 1.23.61-.02.84-.39 1.58-.39.74 0 .95.39 1.58.38.65-.01 1.06-.59 1.46-1.18.47-.69.66-1.36.67-1.39-.01-.01-1.27-.49-1.28-1.94Z"
+      fill="#fff"
+    />
+  </svg>
+);
+const AmazonRegistryIcon = ({ className = 'h-5 w-5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M14.86 15.7c-.23-.29-.38-.76-.44-1.13-.73.88-1.77 1.43-3.03 1.43-1.83 0-3.08-1.06-3.08-2.7 0-1.95 1.59-3.11 4.3-3.11.48 0 .94.03 1.48.1v-.36c0-1.31-.81-2.03-2.31-2.03-1.01 0-2 .24-2.93.71l-.38-1.24c1.04-.54 2.18-.82 3.47-.82 2.38 0 3.68 1.12 3.68 3.2v3.27c0 .95.14 1.53.53 2.14l-1.29.54Zm-.79-4.2a7.2 7.2 0 00-1.3-.12c-1.94 0-3 .67-3 1.85 0 .95.65 1.55 1.7 1.55.94 0 1.92-.63 2.6-1.65v-1.63Z"
+      fill="#221F1F"
+    />
+    <path
+      d="M6.2 17.22c2.62 1.34 6.54 1.5 9.7.45 1.03-.33 1.88-.8 2.63-1.34"
+      stroke="#FFAA0D"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M16.9 18.08l2.18-.5-.47 1.86"
+      stroke="#FFAA0D"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+const TargetRegistryIcon = ({ className = 'h-5 w-5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2.2" />
+    <circle cx="12" cy="12" r="3.2" fill="currentColor" />
+  </svg>
+);
+const BabylistRegistryIcon = ({ className = 'h-5 w-5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M12 20s-6-3.7-6-9a3.5 3.5 0 016-2.2A3.5 3.5 0 0118 11c0 5.3-6 9-6 9Z" fill="currentColor" />
+  </svg>
+);
+const BuyBuyBabyRegistryIcon = ({ className = 'h-5 w-5' }) => (
+  <span className={`${className} inline-flex items-center justify-center text-[8px] font-black uppercase tracking-[0.08em] leading-none`}>
+    bbb
+  </span>
+);
+const RegistryOptionIcon = ({ kind, className }) => {
+  switch (kind) {
+    case 'amazon':
+      return <AmazonRegistryIcon className={className} />;
+    case 'target':
+      return <TargetRegistryIcon className={className} />;
+    case 'babylist':
+      return <BabylistRegistryIcon className={className} />;
+    case 'buybuybaby':
+      return <BuyBuyBabyRegistryIcon className={className} />;
+    default:
+      return null;
+  }
+};
+const buildCelebrationRegistryOptions = (event) => {
+  const text = [
+    event?.title,
+    event?.description,
+    event?.category,
+    event?.dressCode,
+  ]
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean)
+    .join(' ');
+
+  const common = [
+    {
+      id: 'amazon',
+      label: 'Amazon Registry',
+      kind: 'amazon',
+      href: 'https://www.amazon.com/baby-reg/benefits/summary',
+      className: 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-white/15 dark:bg-white/[0.06] dark:text-white dark:hover:bg-white/[0.1]',
+    },
+    {
+      id: 'target',
+      label: 'Target Registry',
+      kind: 'target',
+      href: 'https://www.target.com/gift-registry/',
+      className: 'border-red-300 bg-red-50 text-red-600 hover:border-red-400 hover:bg-red-100 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/15',
+    },
+    {
+      id: 'babylist',
+      label: 'Babylist',
+      kind: 'babylist',
+      href: 'https://www.babylist.com/',
+      className: 'border-teal-300 bg-teal-50 text-teal-700 hover:border-teal-400 hover:bg-teal-100 dark:border-teal-400/20 dark:bg-teal-500/10 dark:text-teal-200 dark:hover:bg-teal-500/15',
+    },
+  ];
+
+  if (/(baby shower|baby sprinkle|gender reveal|new baby|welcome baby|mom to be)/.test(text)) {
+    return [
+      ...common,
+      {
+        id: 'buybuybaby',
+        label: 'buybuy BABY',
+        kind: 'buybuybaby',
+        href: 'https://www.buybuybaby.com/',
+        className: 'border-sky-300 bg-sky-50 text-sky-700 hover:border-sky-400 hover:bg-sky-100 dark:border-sky-400/20 dark:bg-sky-500/10 dark:text-sky-200 dark:hover:bg-sky-500/15',
+      },
+    ];
+  }
+
+  return common;
+};
 const normalizeEventNotes = (event) => {
   const rawNotes = String(event?.description || '').trim();
   if (!rawNotes) return '';
@@ -117,13 +242,13 @@ const normalizeEventNotes = (event) => {
 const normalizeEventCoverImage = (event) => {
   const candidates = [
     event?.coverImageUrl,
-    event?.cover_image_url,
-    event?.backgroundImageUrl,
-    event?.background_image_url,
     event?.event_data?.coverImageUrl,
     event?.event_data?.cover_image_url,
+    event?.backgroundImageUrl,
     event?.event_data?.backgroundImageUrl,
     event?.event_data?.background_image_url,
+    event?.cover_image_url,
+    event?.background_image_url,
   ];
   return candidates
     .map((value) => String(value || '').trim())
@@ -554,6 +679,27 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
     setUploadingImageField('');
   }, [config]);
 
+  useEffect(() => {
+    if (!config || typeof document === 'undefined') return undefined;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyOverscroll = document.body.style.overscrollBehavior;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior;
+
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.overscrollBehavior = 'none';
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.overscrollBehavior = previousBodyOverscroll;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscroll;
+    };
+  }, [config]);
+
   if (!config) return null;
 
   const setFieldValue = (key, value) => {
@@ -691,7 +837,9 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
         <div className={`space-y-4 overflow-y-auto px-5 py-5 ${editorTheme.body}`}>
           {(config.fields || []).map((field) => (
             <label key={field.key} className="block">
-              <div className={`mb-1.5 text-[12px] font-bold uppercase tracking-[0.16em] ${editorTheme.label}`}>{field.label}</div>
+              {field.type !== 'music-link' ? (
+                <div className={`mb-1.5 text-[12px] font-bold uppercase tracking-[0.16em] ${editorTheme.label}`}>{field.label}</div>
+              ) : null}
               {field.type === 'textarea' ? (
                 <textarea
                   value={draft[field.key] ?? ''}
@@ -700,6 +848,66 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
                   placeholder={field.placeholder || ''}
                   className={`min-h-[112px] w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
                 />
+              ) : field.type === 'music-link' ? (
+                <div className={`space-y-3 rounded-[24px] border p-3 ${editorTheme.panel}`}>
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={field.spotifyHref || 'https://open.spotify.com/'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(event) => event.stopPropagation()}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-[#1DB954] shadow-sm transition hover:border-emerald-400 hover:bg-emerald-100 hover:shadow-md dark:border-emerald-400/25 dark:bg-emerald-500/10 dark:text-[#86efac] dark:hover:bg-emerald-500/15"
+                      title="Open Spotify"
+                      aria-label="Open Spotify"
+                    >
+                      <SpotifyIcon className="h-5 w-5" />
+                    </a>
+                    <a
+                      href={field.appleMusicHref || 'https://music.apple.com/'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(event) => event.stopPropagation()}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-rose-300 bg-rose-50 text-rose-600 shadow-sm transition hover:border-rose-400 hover:bg-rose-100 hover:shadow-md dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-500/15"
+                      title="Open Apple Music"
+                      aria-label="Open Apple Music"
+                    >
+                      <AppleMusicIcon className="h-5 w-5" />
+                    </a>
+                  </div>
+                  <input
+                    type="text"
+                    value={draft[field.key] ?? ''}
+                    onChange={(event) => setFieldValue(field.key, event.target.value)}
+                    placeholder={field.placeholder || ''}
+                    className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                  />
+                </div>
+              ) : field.type === 'registry-link' ? (
+                <div className={`space-y-3 rounded-[24px] border p-3 ${editorTheme.panel}`}>
+                  <div className="flex flex-wrap gap-2">
+                    {(Array.isArray(field.registryOptions) ? field.registryOptions : []).map((option) => (
+                      <a
+                        key={option.id || option.href || option.label}
+                        href={option.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(event) => event.stopPropagation()}
+                        className={`inline-flex h-11 w-11 items-center justify-center rounded-full border shadow-sm transition hover:shadow-md ${option.className || 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-white/15 dark:bg-white/[0.06] dark:text-white dark:hover:bg-white/[0.1]'}`}
+                        title={option.label}
+                        aria-label={option.label}
+                      >
+                        <RegistryOptionIcon kind={option.kind} className="h-5 w-5" />
+                      </a>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    value={draft[field.key] ?? ''}
+                    onChange={(event) => setFieldValue(field.key, event.target.value)}
+                    placeholder={field.placeholder || ''}
+                    className={`w-full rounded-2xl border px-4 py-3 text-[15px] outline-none transition ${editorTheme.input}`}
+                  />
+                </div>
               ) : field.type === 'image-upload' ? (
                 (() => {
                   const inputId = `event-editor-image-${field.key}`;
@@ -1108,6 +1316,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
   const dressCode = String(event?.dressCode || '').trim();
   const registryLink = String(event?.registryLink || '').trim();
   const schedule = Array.isArray(event?.schedule) ? event.schedule : [];
+  const registryOptions = buildCelebrationRegistryOptions(event);
 
   return (
     <CardShell
@@ -1137,7 +1346,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
                   onClick={() => openEditor({
                     title: 'Edit Celebration Details',
                     fields: [
-                      { key: 'registryLink', label: 'Registry link', value: registryLink, placeholder: 'https://...' },
+                      { key: 'registryLink', label: 'Registry link', type: 'registry-link', value: registryLink, placeholder: 'Paste a registry link...', registryOptions },
                       { key: 'dressCode', label: 'Dress code', value: dressCode, placeholder: 'Cocktail, garden, festive...' },
                     ],
                     onSave: (values) => onUpdateEventData({
@@ -1164,7 +1373,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
               onClick={() => openEditor({
                 title: 'Add Registry',
                 fields: [
-                  { key: 'registryLink', label: 'Registry link', value: '', placeholder: 'https://...' },
+                  { key: 'registryLink', label: 'Registry link', type: 'registry-link', value: '', placeholder: 'Paste a registry link...', registryOptions },
                   { key: 'dressCode', label: 'Dress code', value: dressCode, placeholder: 'Cocktail, garden, festive...' },
                 ],
                 onSave: (values) => onUpdateEventData({

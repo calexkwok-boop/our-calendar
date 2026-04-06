@@ -239,11 +239,9 @@ const DateDetailsModal = ({
   const createWeEvent = async () => {
     const base = String(quickEntry || '').trim();
     if (!base) return;
-    const loc = String(quickLocation || '').trim();
-    const combined = loc ? `${base} @ ${loc}` : base;
     try { setIsPopupEventDraft?.(true); } catch {}
     const result = await handleQuickAdd({
-      titleOverride: combined,
+      titleOverride: base,
       time: parseTimeInput(weEventTime) || null,
       directCreate: true,
       isPopupEvent: true,
@@ -256,7 +254,7 @@ const DateDetailsModal = ({
       const shareLink = typeof window !== 'undefined' ? `${window.location.origin}?popup=${createdEventId}` : '';
       setInviteCardEvent({
         id: createdEventId,
-        title: combined,
+        title: base,
         time: weEventTime || null,
         shareLink,
       });

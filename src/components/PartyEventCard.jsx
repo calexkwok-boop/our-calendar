@@ -31,13 +31,13 @@ const isProbablyUrl = (value) => /^(https?:\/\/|data:image\/|blob:)/i.test(Strin
 const getCardBackdropUrl = (event) => {
   const candidates = [
     event?.coverImageUrl,
-    event?.cover_image_url,
-    event?.backgroundImageUrl,
-    event?.background_image_url,
     event?.event_data?.coverImageUrl,
     event?.event_data?.cover_image_url,
+    event?.backgroundImageUrl,
     event?.event_data?.backgroundImageUrl,
     event?.event_data?.background_image_url,
+    event?.cover_image_url,
+    event?.background_image_url,
   ];
   return candidates
     .map((value) => String(value || '').trim())
@@ -354,10 +354,10 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
       {coverImageUrl ? (
         <>
           <div
-            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.22] saturate-[1.05]"
+            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.5] saturate-[1.12] contrast-[1.03]"
             style={{ backgroundImage: `url(${coverImageUrl})` }}
           />
-          <div className={`pointer-events-none absolute inset-0 ${coverImageUrl ? 'bg-gradient-to-br from-white/34 via-rose-50/22 to-cyan-50/24 dark:from-[#15111f]/48 dark:via-[#1b1930]/38 dark:to-[#0f1727]/46' : 'bg-gradient-to-br from-white/78 via-rose-50/68 to-cyan-50/70 dark:from-[#15111f]/88 dark:via-[#1b1930]/84 dark:to-[#0f1727]/88'}`} />
+          <div className={`pointer-events-none absolute inset-0 ${coverImageUrl ? 'bg-gradient-to-br from-white/22 via-rose-50/12 to-cyan-50/14 dark:from-[#15111f]/34 dark:via-[#1b1930]/24 dark:to-[#0f1727]/32' : 'bg-gradient-to-br from-white/78 via-rose-50/68 to-cyan-50/70 dark:from-[#15111f]/88 dark:via-[#1b1930]/84 dark:to-[#0f1727]/88'}`} />
         </>
       ) : null}
 
@@ -434,7 +434,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
         <div className="absolute right-[9%] top-[62%] h-3.5 w-3.5 rotate-[35deg] rounded-sm bg-red-400 opacity-82 dark:opacity-82" style={{ animation: 'party-card-float 8.8s ease-in-out infinite 0.9s' }} />
       </div>
 
-      <div className={`relative border-b-2 border-fuchsia-200/70 px-6 py-6 dark:border-fuchsia-400/15 sm:px-7 ${coverImageUrl ? 'bg-gradient-to-br from-white/42 via-rose-50/24 to-cyan-50/28 dark:bg-gradient-to-br dark:from-[#211533]/52 dark:via-[#1c2740]/44 dark:to-[#19162d]/50' : 'bg-gradient-to-br from-white via-rose-50/40 to-cyan-50/45 dark:bg-gradient-to-br dark:from-[#211533] dark:via-[#1c2740] dark:to-[#19162d]'}`}>
+      <div className={`relative border-b-2 border-fuchsia-200/70 px-6 py-6 dark:border-fuchsia-400/15 sm:px-7 ${coverImageUrl ? 'bg-white/6 dark:bg-white/[0.03]' : 'bg-gradient-to-br from-white via-rose-50/40 to-cyan-50/45 dark:bg-gradient-to-br dark:from-[#211533] dark:via-[#1c2740] dark:to-[#19162d]'}`}>
         {(props.onEdit || props.onDelete) ? (
           <div className="absolute right-6 top-6 z-10 flex items-center gap-2">
             {props.onEdit ? (
@@ -458,17 +458,7 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
           </div>
         ) : null}
 
-        <div className={`relative mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:backdrop-blur-[12px] ${coverImageUrl ? 'bg-white/68 dark:bg-[rgba(38,28,57,0.68)]' : 'bg-white/82 dark:bg-[rgba(38,28,57,0.76)]'}`}>
-          {coverImageUrl ? (
-            <>
-              <div
-                className="pointer-events-none absolute inset-0 rounded-[28px] bg-cover bg-center opacity-[0.28]"
-                style={{ backgroundImage: `url(${coverImageUrl})` }}
-              />
-              <div className="pointer-events-none absolute left-5 right-5 top-5 h-[58%] rounded-[24px] bg-white/36 blur-xl dark:bg-black/18" />
-              <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/48 via-white/26 to-fuchsia-50/22 dark:from-[#2a1d3e]/38 dark:via-[#231933]/24 dark:to-cyan-500/[0.12]" />
-            </>
-          ) : null}
+        <div className={`relative mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:backdrop-blur-[12px] ${coverImageUrl ? 'bg-white/42 dark:bg-[rgba(38,28,57,0.44)]' : 'bg-white/82 dark:bg-[rgba(38,28,57,0.76)]'}`}>
           {typeof openCoverEditor === 'function' ? (
             <button
               type="button"
@@ -649,14 +639,22 @@ const PartyEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props
               onClick={
                 onUpdateEventData && openEditor
                   ? () =>
-                      openEditor({
-                        variant: 'party',
-                        title: 'Music',
-                        fields: [
-                          { key: 'musicPlaylist', label: 'Playlist or mood', value: musicPlaylist, placeholder: 'Spotify link, Apple Music, or a vibe note...' },
-                        ],
-                        onSave: (values) =>
-                          onUpdateEventData({
+                        openEditor({
+                          variant: 'party',
+                          title: 'Music',
+                          fields: [
+                          {
+                            key: 'musicPlaylist',
+                            label: 'Music link',
+                            type: 'music-link',
+                            value: musicPlaylist,
+                            placeholder: 'Paste a Spotify or Apple Music link...',
+                            spotifyHref: 'https://open.spotify.com/',
+                            appleMusicHref: 'https://music.apple.com/',
+                          },
+                          ],
+                          onSave: (values) =>
+                            onUpdateEventData({
                             musicPlaylist: String(values.musicPlaylist || '').trim(),
                           }),
                       })

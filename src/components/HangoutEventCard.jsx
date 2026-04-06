@@ -157,6 +157,22 @@ const animationStyles = `
   25% { transform: rotate(-2deg); }
   75% { transform: rotate(2deg); }
 }
+@keyframes party-card-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(8deg); }
+}
+@keyframes party-card-twinkle {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.18; transform: scale(0.85); }
+}
+@keyframes party-card-sway {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-5px); }
+}
+@keyframes party-card-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
 `;
 
 const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props }) => {
@@ -207,43 +223,6 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
   return (
     <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/60 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:from-[#171320] dark:via-[#1d1a30] dark:to-[#111a2b] dark:shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
       <style>{animationStyles}</style>
-      {coverImageUrl ? (
-        <>
-          <div
-            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.35] saturate-[1.08] contrast-[1.02]"
-            style={{ backgroundImage: `url(${coverImageUrl})` }}
-          />
-          <div className={`pointer-events-none absolute inset-0 ${coverImageUrl ? 'bg-gradient-to-br from-white/18 via-cyan-50/10 to-sky-50/10 dark:from-[#171320]/34 dark:via-[#1d1a30]/22 dark:to-[#111a2b]/28' : 'bg-gradient-to-br from-white/80 via-cyan-50/70 to-sky-50/74 dark:from-[#171320]/88 dark:via-[#1d1a30]/84 dark:to-[#111a2b]/88'}`} />
-        </>
-      ) : null}
-
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[9%] top-[12%] text-[2.35rem] opacity-66 dark:opacity-46" style={{ animation: 'hangout-gentle-wobble 8s ease-in-out infinite' }}>☕</div>
-        <div className="absolute right-[12%] top-[10%] text-[2.05rem] opacity-58 dark:opacity-40" style={{ animation: 'hangout-gentle-wobble 7.2s ease-in-out infinite 0.8s' }}>🥐</div>
-        <div className="absolute left-[38%] top-[8%] text-[1.9rem] opacity-48 dark:opacity-32" style={{ animation: 'hangout-gentle-wobble 8.6s ease-in-out infinite 1.4s' }}>💬</div>
-        <div className="absolute right-[8%] top-[44%] text-[1.85rem] opacity-46 dark:opacity-30" style={{ animation: 'hangout-gentle-wobble 7.8s ease-in-out infinite 0.5s' }}>✨</div>
-        <div className="absolute left-[74%] top-[68%] text-[1.95rem] opacity-52 dark:opacity-34" style={{ animation: 'hangout-gentle-wobble 8.3s ease-in-out infinite 1.1s' }}>🕯️</div>
-        <div className="absolute left-[11%] top-[66%] text-[1.85rem] opacity-44 dark:opacity-28" style={{ animation: 'hangout-gentle-wobble 7.6s ease-in-out infinite 1.7s' }}>🍷</div>
-        <div className="absolute left-[20%] top-[100%] h-16 w-1 rounded-full bg-gradient-to-t from-cyan-200/40 to-transparent blur-sm dark:from-cyan-400/20" style={{ animation: 'hangout-rise-steam 6s ease-in infinite' }} />
-        <div className="absolute left-[22%] top-[100%] h-20 w-1 rounded-full bg-gradient-to-t from-sky-200/30 to-transparent blur-sm dark:from-sky-400/15" style={{ animation: 'hangout-rise-steam 7s ease-in infinite 1s' }} />
-        <div className="absolute left-[24%] top-[100%] h-14 w-1 rounded-full bg-gradient-to-t from-cyan-200/35 to-transparent blur-sm dark:from-cyan-400/18" style={{ animation: 'hangout-rise-steam 6.5s ease-in infinite 2s' }} />
-        <div className="absolute left-[64%] top-[100%] h-16 w-1 rounded-full bg-gradient-to-t from-cyan-200/28 to-transparent blur-sm dark:from-cyan-400/16" style={{ animation: 'hangout-rise-steam 7.3s ease-in infinite 0.7s' }} />
-        <div className="absolute left-[68%] top-[100%] h-13 w-1 rounded-full bg-gradient-to-t from-sky-200/24 to-transparent blur-sm dark:from-sky-400/14" style={{ animation: 'hangout-rise-steam 6.1s ease-in infinite 1.8s' }} />
-      </div>
-
-      <div className="pointer-events-none absolute inset-0">
-        <svg className="absolute left-[10%] top-[30%] h-8 w-8 opacity-10 dark:opacity-5" viewBox="0 0 40 40">
-          <path d="M5,20 Q10,10 15,20 T25,20 T35,20" stroke="currentColor" strokeWidth="2" fill="none" className="text-cyan-400" />
-        </svg>
-        <div className="absolute left-[26%] top-[24%] h-2.5 w-5 rotate-[18deg] rounded-full bg-cyan-200/70 dark:bg-cyan-300/20" />
-        <div className="absolute right-[17%] top-[58%] h-2.5 w-2.5 rotate-45 rounded-sm bg-sky-200/70 dark:bg-sky-300/20" />
-        <div className="absolute left-[72%] top-[28%] h-3.5 w-1.5 rotate-[30deg] rounded-full bg-amber-200/65 dark:bg-amber-300/18" />
-        <div className="absolute left-[48%] top-[72%] h-2.5 w-2.5 rounded-full bg-cyan-200/65 dark:bg-cyan-300/18" />
-      </div>
-
-      <div className="pointer-events-none absolute -left-12 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-gradient-to-r from-cyan-300/20 to-transparent blur-3xl dark:from-cyan-400/10" />
-      <div className="pointer-events-none absolute -right-12 top-1/3 h-32 w-32 -translate-y-1/2 rounded-full bg-gradient-to-l from-sky-300/20 to-transparent blur-3xl dark:from-sky-400/10" />
-
       <div className="relative px-6 py-7 sm:px-7">
         {(props.onEdit || props.onDelete) ? (
           <div className="absolute right-6 top-5 z-10 flex items-center gap-2 sm:right-7">
@@ -261,16 +240,6 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
         ) : null}
 
         <div className={`relative mx-auto max-w-[30rem] rounded-[28px] border border-cyan-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-cyan-400/15 dark:backdrop-blur-[12px] ${coverImageUrl ? 'bg-white/68 dark:bg-[rgba(24,37,45,0.68)]' : 'bg-white/82 dark:bg-[rgba(24,37,45,0.76)]'}`}>
-          {coverImageUrl ? (
-            <>
-              <div
-                className="pointer-events-none absolute inset-0 rounded-[28px] bg-cover bg-center opacity-[0.42]"
-                style={{ backgroundImage: `url(${coverImageUrl})` }}
-              />
-              <div className="pointer-events-none absolute left-5 right-5 top-5 h-[58%] rounded-[24px] bg-white/16 blur-md dark:bg-black/10" />
-              <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/28 via-white/12 to-cyan-50/10 dark:from-[#1f313c]/22 dark:via-[#1d2339]/12 dark:to-sky-500/[0.08]" />
-            </>
-          ) : null}
           {typeof openCoverEditor === 'function' ? (
             <button
               type="button"
@@ -282,12 +251,6 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
             </button>
           ) : null}
           <div className="mx-auto max-w-[24rem] rounded-[22px] border border-white/60 bg-white/48 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-white/10 dark:bg-black/14">
-            <div className="mb-3 flex items-center justify-center">
-              <div className="text-[15px] font-semibold text-cyan-700 dark:text-cyan-200">
-                You're Invited
-              </div>
-            </div>
-
             <div className="mb-4 flex flex-wrap items-center justify-center gap-2.5">
               {duration ? (
                 <span className="rounded-full border border-cyan-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200">
@@ -418,3 +381,4 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
 };
 
 export default HangoutEventCard;
+
