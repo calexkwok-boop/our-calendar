@@ -2316,6 +2316,58 @@ const deriveRoundRobinStandings = (tournament) => {
   ));
 };
 
+const buildRoundRobinRoundsForTournament = (participants, teamsOf = 2, completedRoundCount = 0) => {
+  const safeParticipants = [...(Array.isArray(participants) ? participants : [])].filter((participant) => String(participant?.id || '').trim());
+  if (safeParticipants.length < Math.max(2, Number(teamsOf || 2) * 2)) return [];
+  const teams = [];
+  if (Number(teamsOf || 2) === 1) {
+    safeParticipants.forEach((participant, index) => {
+      teams.push({ id: `team-${index}`, members: [participant] });
+    });
+  } else {
+    for (let index = 0; index + 1 < safeParticipants.length; index += 2) {
+      teams.push({ id: `team-${index}`, members: [safeParticipants[index], safeParticipants[index + 1]] });
+    }
+    if (safeParticipants.length % 2 !== 0) {
+      teams.push({ id: 'team-solo', members: [safeParticipants[safeParticipants.length - 1]] });
+    }
+  }
+  if (teams.length < 2) return [];
+  const slots = teams.length % 2 === 0 ? [...teams] : [...teams, { id: 'bye', members: [], isBye: true }];
+  const slotCount = slots.length;
+  const rounds = [];
+  const fixed = slots[0];
+  const rotating = slots.slice(1);
+  for (let roundIndex = 0; roundIndex < slotCount - 1; roundIndex += 1) {
+    const current = [fixed, ...rotating];
+    const matches = [];
+    for (let matchIndex = 0; matchIndex < slotCount / 2; matchIndex += 1) {
+      const teamA = current[matchIndex];
+      const teamB = current[slotCount - 1 - matchIndex];
+      if (teamA?.isBye || teamB?.isBye) continue;
+      const absoluteRoundIndex = completedRoundCount + roundIndex;
+      matches.push({
+        id: `rr-r${absoluteRoundIndex}-m${matchIndex}`,
+        round: absoluteRoundIndex,
+        teamA,
+        teamB,
+        scoreA: '',
+        scoreB: '',
+        completed: false,
+      });
+    }
+    if (matches.length > 0) {
+      rounds.push({
+        index: completedRoundCount + roundIndex,
+        matches,
+        finalizedAt: null,
+      });
+    }
+    rotating.unshift(rotating.pop());
+  }
+  return rounds;
+};
+
 const parseManualScrambleRoster = (value) => {
   const seen = new Set();
   return String(value || '')
@@ -22123,6 +22175,52 @@ function parseManualRoundRobinRoster(value) {
     });
     setGauntletError('');
   };
+  const removeGauntletParticipantFromTournament = (eventId, participantId) => {
+    const normalizedEventId = String(eventId || '').trim();
+    const normalizedParticipantId = String(participantId || '').trim();
+    if (!normalizedEventId || !normalizedParticipantId) return;
+    setLayerGauntlets((prev) => {
+      const tournament = prev?.[normalizedEventId];
+      if (!tournament) return prev;
+      const remainingParticipants = (tournament.participants || []).filter((participant) => String(participant?.id || '').trim() !== normalizedParticipantId);
+      if (remainingParticipants.length === (tournament.participants || []).length) return prev;
+      const remainingParticipantOrder = (tournament.participantOrder || []).map((id) => String(id || '').trim()).filter((id) => id && id !== normalizedParticipantId);
+      const finalizedRounds = (tournament.rounds || []).filter((round) => round?.finalizedAt);
+      const participantsById = remainingParticipants.reduce((acc, participant) => {
+        const id = String(participant?.id || '').trim();
+        if (!id) return acc;
+        acc[id] = participant;
+        return acc;
+      }, {});
+      const roundsCompleted = finalizedRounds.length;
+      const totalRounds = Math.max(1, Number(tournament?.totalRounds || 1));
+      const nextByeCursor = finalizedRounds.reduce((sum, round) => sum + Number((round?.byeIds || []).length || 0), 0);
+      const canContinue = remainingParticipants.length >= 4 && roundsCompleted < totalRounds;
+      const nextRound = canContinue
+        ? buildGauntletRoundFromOrder({
+            participantOrder: remainingParticipantOrder,
+            participantsById,
+            roundIndex: roundsCompleted,
+            byeCursor: nextByeCursor,
+            existingRounds: finalizedRounds,
+          })
+        : null;
+      const nextTournament = {
+        ...tournament,
+        participants: remainingParticipants,
+        participantOrder: remainingParticipantOrder,
+        byeCursor: nextByeCursor,
+        rounds: nextRound ? [...finalizedRounds, nextRound] : finalizedRounds,
+        status: nextRound ? 'active' : 'completed',
+        completedAt: nextRound ? null : new Date().toISOString(),
+      };
+      return {
+        ...(prev || {}),
+        [normalizedEventId]: nextTournament,
+      };
+    });
+    setGauntletError('');
+  };
   const startScrambleTournament = () => {
     const normalizedEventId = useManualScrambleRoster ? '__manual__' : String(selectedScrambleEventId || '').trim();
     if (!normalizedEventId) {
@@ -22243,6 +22341,42 @@ function parseManualRoundRobinRoster(value) {
     });
     setScrambleError('');
   };
+  const removeScrambleParticipantFromTournament = (eventId, participantId) => {
+    const normalizedEventId = String(eventId || '').trim();
+    const normalizedParticipantId = String(participantId || '').trim();
+    if (!normalizedEventId || !normalizedParticipantId) return;
+    setLayerScrambles((prev) => {
+      const tournament = prev?.[normalizedEventId];
+      if (!tournament) return prev;
+      const remainingParticipants = (tournament.participants || []).filter((participant) => String(participant?.id || '').trim() !== normalizedParticipantId);
+      if (remainingParticipants.length === (tournament.participants || []).length) return prev;
+      const remainingParticipantIds = remainingParticipants.map((participant) => String(participant?.id || '').trim()).filter(Boolean);
+      const finalizedRounds = (tournament.rounds || []).filter((round) => round?.finalizedAt);
+      const roundsCompleted = finalizedRounds.length;
+      const totalRounds = Math.max(1, Number(tournament?.totalRounds || 1));
+      const canContinue = remainingParticipants.length >= 4 && roundsCompleted < totalRounds;
+      const nextRound = canContinue
+        ? buildScrambleRound({
+            participantIds: remainingParticipantIds,
+            roundIndex: roundsCompleted,
+            courtCount: tournament?.courtCount || scrambleCourtCount,
+            existingRounds: finalizedRounds,
+          })
+        : null;
+      return {
+        ...(prev || {}),
+        [normalizedEventId]: {
+          ...tournament,
+          participants: remainingParticipants,
+          participantIds: remainingParticipantIds,
+          rounds: nextRound ? [...finalizedRounds, nextRound] : finalizedRounds,
+          status: nextRound ? 'active' : 'completed',
+          completedAt: nextRound ? null : new Date().toISOString(),
+        },
+      };
+    });
+    setScrambleError('');
+  };
   const startRoundRobinTournament = (eventId, restart = false, teamsOf = 2) => {
   const normalizedEventId = useManualRoundRobinRoster ? '__manual__' : String(eventId || selectedRoundRobinEventId || '').trim();
   if (!normalizedEventId) {
@@ -22344,6 +22478,38 @@ const resetRoundRobinTournament = (eventId) => {
     const next = { ...(prev || {}) };
     delete next[normalizedEventId];
     return next;
+  });
+  setRoundRobinError('');
+};
+
+const removeRoundRobinParticipantFromTournament = (eventId, participantId) => {
+  const normalizedEventId = String(eventId || '').trim();
+  const normalizedParticipantId = String(participantId || '').trim();
+  if (!normalizedEventId || !normalizedParticipantId) return;
+  setLayerRoundRobins((prev) => {
+    const tournament = prev?.[normalizedEventId];
+    if (!tournament) return prev;
+    const remainingParticipants = (tournament.participants || []).filter((participant) => String(participant?.id || '').trim() !== normalizedParticipantId);
+    if (remainingParticipants.length === (tournament.participants || []).length) return prev;
+    const teamsOf = Math.max(1, Number(tournament?.teamsOf || 2));
+    const minimumPlayers = teamsOf === 1 ? 2 : 4;
+    const finalizedRounds = (tournament.rounds || []).filter((round) => (round?.matches || []).length > 0 && (round.matches || []).every((match) => match?.completed));
+    const futureRounds = remainingParticipants.length >= minimumPlayers
+      ? buildRoundRobinRoundsForTournament(remainingParticipants, teamsOf, finalizedRounds.length)
+      : [];
+    const nextRounds = [...finalizedRounds, ...futureRounds];
+    const allDone = nextRounds.length > 0 && nextRounds.every((round) => (round.matches || []).every((match) => match?.completed));
+    return {
+      ...(prev || {}),
+      [normalizedEventId]: {
+        ...tournament,
+        participants: remainingParticipants,
+        sourceSignature: buildRoundRobinSourceSignature(remainingParticipants),
+        rounds: nextRounds,
+        status: allDone || futureRounds.length === 0 ? 'completed' : 'active',
+        completedAt: allDone || futureRounds.length === 0 ? new Date().toISOString() : null,
+      },
+    };
   });
   setRoundRobinError('');
 };
@@ -25934,6 +26100,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 setShowGauntletPanel={setShowGauntletPanel}
                 setUseManualGauntletRoster={setUseManualGauntletRoster}
                 startGauntletTournament={startGauntletTournament}
+                removeGauntletParticipantFromTournament={removeGauntletParticipantFromTournament}
                 themeAccentBorder={themeAccentBorder}
                 themeAccentHeadingStyle={themeAccentHeadingStyle}
                 updateGauntletCourtScore={updateGauntletCourtScore}
@@ -25970,7 +26137,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
       <RoundRobinPanel
         onClose={() => setShowRoundRobinPanel(false)}
-        participants={selectedRoundRobinParticipants}
+        participants={activeRoundRobinTournament?.participants?.length ? activeRoundRobinTournament.participants : selectedRoundRobinParticipants}
         eligibleRoundRobinEvents={eligibleRoundRobinEvents}
         selectedRoundRobinEventId={selectedRoundRobinEventId}
         setSelectedRoundRobinEventId={setSelectedRoundRobinEventId}
@@ -25996,6 +26163,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         roundRobinError={roundRobinError}
         startRoundRobinTournament={() => startRoundRobinTournament(roundRobinTournamentKey, false, roundRobinTeamsOf)}
         resetRoundRobinTournament={resetRoundRobinTournament}
+        removeRoundRobinParticipantFromTournament={removeRoundRobinParticipantFromTournament}
         updateRoundRobinMatchScore={updateRoundRobinMatchScore}
         completeRoundRobinMatch={finalizeRoundRobinMatch}
       />
@@ -26037,6 +26205,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         setScrambleCourtCount={setScrambleCourtCount}
         scrambleError={scrambleError}
         startScrambleTournament={startScrambleTournament}
+        removeScrambleParticipantFromTournament={removeScrambleParticipantFromTournament}
         tournament={scrambleTournament}
         rounds={scrambleRounds}
         totalRounds={Number(scrambleTournament?.totalRounds || scrambleRoundsCount || 1)}

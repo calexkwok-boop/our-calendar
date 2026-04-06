@@ -735,6 +735,7 @@ function RoundRobinPanel({
   completeRoundRobinMatch,
   standings,
   resetRoundRobinTournament,
+  removeRoundRobinParticipantFromTournament,
   roundRobinError,
   tid,
 }) {
@@ -980,6 +981,43 @@ function RoundRobinPanel({
                   Standings
                 </button>
               </div>
+
+              {Array.isArray(participants) && participants.length > 0 && (
+                <div style={rosterCard}>
+                  <div style={rosterHeader}>
+                    <div style={rosterTitleStyle}>Session Roster</div>
+                    <span style={rosterCountBadge}>{participants.length} active</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: T.sub, marginTop: 6 }}>
+                    If someone leaves mid-session, remove them here and the remaining rounds will be rebuilt for the active roster.
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                    {participants.map((participant) => (
+                      <button
+                        key={`round-robin-active-${participant.id}`}
+                        type="button"
+                        onClick={() => removeRoundRobinParticipantFromTournament?.(tid, participant.id)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          borderRadius: 999,
+                          border: `1px solid ${T.border}`,
+                          background: 'rgba(255,255,255,0.05)',
+                          color: T.text,
+                          padding: '7px 12px',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <span>{participant.displayName || 'Player'}</span>
+                        <span style={{ color: T.red }}>Leave</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {activeTab === 'matches' && (
                 <div style={{ marginTop: 14 }}>

@@ -60,20 +60,18 @@ const ROLE_COLORS = {
 };
 const ROLE_ICONS = { host: Crown, cohost: Shield, player: null };
 const DARK_MAP_STYLES = [
-  { elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#e2e8f0' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#0f172a' }] },
-  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
-  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#163047' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#334155' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1e293b' }] },
-  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#f8fafc' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#475569' }] },
-  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#334155' }] },
-  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#223046' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0b2942' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#bfdbfe' }] },
+  { elementType: 'geometry', stylers: [{ color: '#152033' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#dbeafe' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#152033' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#334155' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#cbd5e1' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1f3b52' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#314158' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#3b4d67' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#4b6385' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'transit', elementType: 'labels.text.fill', stylers: [{ color: '#bfdbfe' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#12324d' }] },
 ];
 
 const Avatar = ({ name, size = 32, accent, role, darkMode }) => {
@@ -533,11 +531,25 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     const center = hasEventCoordinates
       ? { lat: Number(event.location_lat), lng: Number(event.location_lng) }
       : fallbackCenterRef.current;
-    mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-      center, zoom: 15,
-      disableDefaultUI: true, zoomControl: true,
-      styles: darkMode ? DARK_MAP_STYLES : [],
-    });
+    try {
+      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+        center,
+        zoom: 15,
+        disableDefaultUI: true,
+        zoomControl: true,
+        mapTypeId: 'roadmap',
+        styles: darkMode ? DARK_MAP_STYLES : undefined,
+      });
+    } catch (error) {
+      console.warn('LiveMap style init failed, retrying without custom styles:', error);
+      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+        center,
+        zoom: 15,
+        disableDefaultUI: true,
+        zoomControl: true,
+        mapTypeId: 'roadmap',
+      });
+    }
     // Venue marker
     if (hasEventCoordinates) {
       new window.google.maps.Marker({ position: center, map: mapInstanceRef.current,

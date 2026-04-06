@@ -756,6 +756,7 @@ function ScramblePanel({
   setScrambleCourtCount,
   scrambleError,
   startScrambleTournament,
+  removeScrambleParticipantFromTournament,
   tournament,
   rounds,
   totalRounds,
@@ -1071,6 +1072,43 @@ function ScramblePanel({
                   </button>
                 </div>
               </div>
+
+              {Array.isArray(tournament?.participants) && tournament.participants.length > 0 && (
+                <div style={rosterCard}>
+                  <div style={rosterHeader}>
+                    <div style={rosterTitleStyle}>Session Roster</div>
+                    <span style={rosterCountBadge}>{tournament.participants.length} active</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: T.sub, marginTop: 6 }}>
+                    If someone leaves, remove them here and we&apos;ll rebuild the remaining rounds around the active roster.
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                    {tournament.participants.map((participant) => (
+                      <button
+                        key={`scramble-active-${participant.id}`}
+                        type="button"
+                        onClick={() => removeScrambleParticipantFromTournament?.(tournamentKey, participant.id)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          borderRadius: 999,
+                          border: `2px solid ${T.border}`,
+                          background: 'rgba(0,0,0,0.32)',
+                          color: T.text,
+                          padding: '7px 12px',
+                          fontSize: 11,
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <span>{participant.displayName || 'Player'}</span>
+                        <span style={{ color: T.neon2 }}>Leave</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {activeRound && Array.isArray(activeRound.byeIds) && activeRound.byeIds.length > 0 && (
                 <div style={byeCardStyle}>
