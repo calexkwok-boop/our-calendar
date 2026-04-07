@@ -243,6 +243,36 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
           onSave: (values) => onUpdateEventData({ coverImageUrl: String(values.coverImageUrl || '').trim() || null }),
         })
     : null;
+  const openPlanEditor = onUpdateEventData && openEditor
+    ? () =>
+        openEditor({
+          variant: 'hangout',
+          title: 'Edit Plan',
+          fields: [
+            { key: 'reservationName', label: 'Reservation name', value: reservationName, placeholder: 'Smith' },
+            { key: 'expectedDuration', label: 'Expected duration', value: duration, placeholder: '2 hours' },
+            {
+              key: 'billSplitting',
+              label: 'Bill style',
+              type: 'select',
+              value: billSplitting,
+              options: [
+                { value: 'separate', label: 'Separate checks' },
+                { value: 'split', label: 'Split evenly' },
+                { value: 'host', label: 'Host pays' },
+              ],
+            },
+          ],
+          onSave: (values) =>
+            onUpdateEventData({
+              reservationName: String(values.reservationName || '').trim(),
+              expectedDuration: String(values.expectedDuration || '').trim(),
+              billSplitting: ['separate', 'split', 'host'].includes(String(values.billSplitting || '').trim())
+                ? String(values.billSplitting || '').trim()
+                : 'separate',
+            }),
+        })
+    : null;
 
   return (
     <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/60 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:from-[#171320] dark:via-[#1d1a30] dark:to-[#111a2b] dark:shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
@@ -365,52 +395,52 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
       <div className="relative space-y-5 px-6 py-6 sm:px-7">
         <Section
           title="The Plan"
-          actions={onUpdateEventData && openEditor ? (
-            <ActionPill
-              onClick={() =>
-                openEditor({
-                  variant: 'hangout',
-                  title: 'Edit Plan',
-                  fields: [
-                    { key: 'reservationName', label: 'Reservation name', value: reservationName, placeholder: 'Smith' },
-                    { key: 'expectedDuration', label: 'Expected duration', value: duration, placeholder: '2 hours' },
-                    { key: 'billSplitting', label: 'Bill style', value: billSplitting, placeholder: 'separate, split, or host' },
-                  ],
-                  onSave: (values) =>
-                    onUpdateEventData({
-                      reservationName: String(values.reservationName || '').trim(),
-                      expectedDuration: String(values.expectedDuration || '').trim(),
-                      billSplitting: ['separate', 'split', 'host'].includes(String(values.billSplitting || '').trim())
-                        ? String(values.billSplitting || '').trim()
-                        : 'separate',
-                    }),
-                })
-              }
-            >
+          actions={openPlanEditor ? (
+            <ActionPill onClick={openPlanEditor}>
               Edit
             </ActionPill>
           ) : null}
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <div className={`group/card relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 ${hangoutDetailSurfaceClassName}`}>
-              <div className="pointer-events-none absolute right-3 top-3 text-3xl opacity-10 transition-all group-hover/card:opacity-20 group-hover/card:scale-110">
+              <div className="pointer-events-none absolute right-3 top-3 text-3xl opacity-22 transition-all group-hover/card:opacity-30 group-hover/card:scale-110 dark:opacity-16 dark:group-hover/card:opacity-24">
                 📋
               </div>
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-cyan-700 dark:text-cyan-300">Reservation</div>
+                  {openPlanEditor ? (
+                    <button
+                      type="button"
+                      onClick={openPlanEditor}
+                      className="mb-1 rounded-md text-xs font-bold uppercase tracking-[0.14em] text-cyan-700 transition hover:text-cyan-800 dark:text-cyan-300 dark:hover:text-cyan-200"
+                    >
+                      Reservation
+                    </button>
+                  ) : (
+                    <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-cyan-700 dark:text-cyan-300">Reservation</div>
+                  )}
                   <div className="text-sm font-semibold text-gray-900 dark:text-white">{reservationName || 'Walk-in'}</div>
                 </div>
               </div>
             </div>
 
             <div className={`group/card relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 ${hangoutDetailSurfaceClassName}`}>
-              <div className="pointer-events-none absolute right-3 top-3 text-3xl opacity-10 transition-all group-hover/card:opacity-20 group-hover/card:scale-110">
+              <div className="pointer-events-none absolute right-3 top-3 text-3xl opacity-22 transition-all group-hover/card:opacity-30 group-hover/card:scale-110 dark:opacity-16 dark:group-hover/card:opacity-24">
                 💰
               </div>
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-sky-700 dark:text-sky-300">Bill</div>
+                  {openPlanEditor ? (
+                    <button
+                      type="button"
+                      onClick={openPlanEditor}
+                      className="mb-1 rounded-md text-xs font-bold uppercase tracking-[0.14em] text-sky-700 transition hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200"
+                    >
+                      Bill
+                    </button>
+                  ) : (
+                    <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-sky-700 dark:text-sky-300">Bill</div>
+                  )}
                   <div className="text-sm font-semibold text-gray-900 dark:text-white">{billText}</div>
                 </div>
               </div>
