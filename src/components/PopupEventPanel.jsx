@@ -46,6 +46,16 @@ const isValidLatLng = (lat, lng) => {
   return true;
 };
 
+const hexToRgba = (hex, alpha = 1) => {
+  const value = String(hex || '').trim().replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(value)) return `rgba(99,102,241,${alpha})`;
+  const int = parseInt(value, 16);
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 const formatPopupCapacityLabel = (memberCount, maxPlayers, attendeeLabel) => {
   const singularLabel = attendeeLabel === 'players' ? 'player' : 'guest';
   const noMax = Number(maxPlayers || 0) >= POPUP_NO_MAX_SENTINEL;
@@ -72,20 +82,25 @@ const formatMsgTime = (ts) => {
 
 const ROLE_COLORS = {
   host:   { bg: '#fef3c7', text: '#92400e', dark_bg: 'rgba(251,191,36,0.2)',  dark_text: '#fbbf24' },
-  cohost: { bg: '#ede9fe', text: '#5b21b6', dark_bg: 'rgba(167,139,250,0.2)', dark_text: '#a78bfa' },
   player: { bg: '#f3f4f6', text: '#374151', dark_bg: 'rgba(255,255,255,0.08)',dark_text: '#9ca3af' },
 };
 const ROLE_ICONS = { host: Crown, cohost: Shield, player: null };
 const Avatar = ({ name, size = 32, accent, role, darkMode }) => {
-  const colors = ROLE_COLORS[role || 'player'];
+  const colors = ROLE_COLORS[role || 'player'] || ROLE_COLORS.player;
+  const cohostBg = darkMode ? hexToRgba(accent, 0.22) : hexToRgba(accent, 0.12);
+  const cohostBorder = hexToRgba(accent, darkMode ? 0.62 : 0.28);
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: role === 'host' || role === 'cohost' ? (darkMode ? colors.dark_bg : colors.bg) : `${accent}22`,
-      border: `2px solid ${role === 'host' ? '#fbbf24' : role === 'cohost' ? '#a78bfa' : accent + '44'}`,
+      background: role === 'host'
+        ? (darkMode ? colors.dark_bg : colors.bg)
+        : role === 'cohost'
+          ? cohostBg
+          : `${accent}22`,
+      border: `2px solid ${role === 'host' ? '#fbbf24' : role === 'cohost' ? cohostBorder : accent + '44'}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.36, fontWeight: 900,
-      color: role === 'host' ? '#f59e0b' : role === 'cohost' ? '#8b5cf6' : accent,
+      color: role === 'host' ? '#f59e0b' : accent,
       letterSpacing: '-0.02em',
     }}>
       {initials(name)}
@@ -255,8 +270,8 @@ const RosterRow = ({ member, isMe, isHost, accent, darkMode, onKick, onPromote, 
           {member.display_name}{isMe && <span style={{ fontSize: 10, color: darkMode ? '#cbd5e1' : 'var(--color-text-secondary)', fontWeight: 500, marginLeft: 4 }}>(you)</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-          {RoleIcon && <RoleIcon style={{ width: 10, height: 10, color: member.role === 'host' ? '#f59e0b' : '#8b5cf6' }} />}
-          <span style={{ fontSize: 10, fontWeight: 700, color: member.role === 'host' ? '#f59e0b' : member.role === 'cohost' ? '#a78bfa' : (darkMode ? '#cbd5e1' : 'var(--color-text-secondary)') }}>
+          {RoleIcon && <RoleIcon style={{ width: 10, height: 10, color: member.role === 'host' ? '#f59e0b' : accent }} />}
+          <span style={{ fontSize: 10, fontWeight: 700, color: member.role === 'host' ? '#f59e0b' : member.role === 'cohost' ? accent : (darkMode ? '#cbd5e1' : 'var(--color-text-secondary)') }}>
             {member.role === 'host' ? 'Host' : member.role === 'cohost' ? 'Co-host' : attendeeRoleLabel}
           </span>
         </div>
@@ -266,7 +281,7 @@ const RosterRow = ({ member, isMe, isHost, accent, darkMode, onKick, onPromote, 
           <button onClick={() => setMenuOpen(!menuOpen)} style={{ padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: secondaryText }}>•••</button>
           {menuOpen && (
             <div style={{ position: 'absolute', right: 0, top: '110%', zIndex: 50, minWidth: 150, borderRadius: 12, background: darkMode ? '#1f2937' : '#fff', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', overflow: 'hidden' }}>
-              {member.role === 'player' && <button onClick={() => { onPromote(member); setMenuOpen(false); }} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color: '#8b5cf6', fontSize: 12, fontWeight: 700, textAlign: 'left' }}><Shield style={{ width: 13, height: 13 }} />Make co-host</button>}
+              {member.role === 'player' && <button onClick={() => { onPromote(member); setMenuOpen(false); }} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color: accent, fontSize: 12, fontWeight: 700, textAlign: 'left' }}><Shield style={{ width: 13, height: 13 }} />Make co-host</button>}
               {member.role === 'cohost' && <button onClick={() => { onDemote(member); setMenuOpen(false); }} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color: secondaryText, fontSize: 12, fontWeight: 700, textAlign: 'left' }}><UserMinus style={{ width: 13, height: 13 }} />Remove co-host</button>}
               <button onClick={() => { onKick(member); setMenuOpen(false); }} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', border: 'none', background: 'transparent', color: '#ef4444', fontSize: 12, fontWeight: 700, textAlign: 'left' }}><UserMinus style={{ width: 13, height: 13 }} />Kick player</button>
             </div>
@@ -430,8 +445,8 @@ const ChatRoom = ({ eventId, supabase, user, displayName, accent, darkMode, bord
               <div style={{ maxWidth: '72%', display: 'flex', flexDirection: 'column', alignItems: me ? 'flex-end' : 'flex-start' }}>
                 {msg.isFirst && !me && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: role === 'host' ? '#f59e0b' : role === 'cohost' ? '#8b5cf6' : accent }}>{msg.display_name}</span>
-                    {role !== 'player' && <span style={{ fontSize: 9, fontWeight: 900, padding: '1px 5px', borderRadius: 999, background: role === 'host' ? 'rgba(251,191,36,0.2)' : 'rgba(139,92,246,0.2)', color: role === 'host' ? '#f59e0b' : '#8b5cf6' }}>{role}</span>}
+                    <span style={{ fontSize: 11, fontWeight: 800, color: role === 'host' ? '#f59e0b' : accent }}>{msg.display_name}</span>
+                    {role !== 'player' && <span style={{ fontSize: 9, fontWeight: 900, padding: '1px 5px', borderRadius: 999, background: role === 'host' ? 'rgba(251,191,36,0.2)' : hexToRgba(accent, 0.2), color: role === 'host' ? '#f59e0b' : accent }}>{role}</span>}
                   </div>
                 )}
                 <div style={{ padding: '8px 12px', borderRadius: me ? '18px 18px 4px 18px' : '18px 18px 18px 4px', fontSize: 13, lineHeight: 1.5, fontWeight: 500,
@@ -709,7 +724,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
           position: pos, map: mapInstanceRef.current,
           label: { text: label, color: '#fff', fontWeight: '900', fontSize: '11px' },
           icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 16,
-            fillColor: isMe ? accent : (member?.role === 'host' ? '#f59e0b' : '#6366f1'),
+            fillColor: isMe ? accent : (member?.role === 'host' ? '#f59e0b' : accent),
             fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
           title: loc.display_name,
           zIndex: isMe ? 10 : 1,
@@ -920,6 +935,14 @@ export default function PopupEventPanel({
   const softBg = darkMode ? `${accent}18` : `${accent}0d`;
   const cardBg = darkMode ? 'rgba(255,255,255,0.05)' : '#fff';
   const border = `${accent}30`;
+  const themeBackgroundFrom = activeLayerPageTheme?.backgroundFrom || accent;
+  const themeBackgroundVia = activeLayerPageTheme?.backgroundVia || accent;
+  const themeBackgroundTo = activeLayerPageTheme?.backgroundTo || accent;
+  const activeTabText = darkMode ? '#f8fafc' : (btnFg === '#111827' ? '#111827' : accent);
+  const activeTabBackground = darkMode
+    ? `linear-gradient(135deg, ${hexToRgba(themeBackgroundFrom, 0.32)} 0%, ${hexToRgba(themeBackgroundVia, 0.22)} 52%, ${hexToRgba(themeBackgroundTo, 0.28)} 100%)`
+    : `linear-gradient(135deg, ${hexToRgba(themeBackgroundFrom, 0.16)} 0%, ${hexToRgba(themeBackgroundVia, 0.12)} 52%, ${hexToRgba(themeBackgroundTo, 0.18)} 100%)`;
+  const activeTabBorder = darkMode ? hexToRgba(accent, 0.72) : hexToRgba(accent, 0.34);
   const effectiveDisplayName = String(displayName || '').trim()
     || (typeof resolveHandleLikeLabel === 'function'
       ? resolveHandleLikeLabel(user?.email || user?.phone || 'Player', user?.id)
@@ -1771,12 +1794,13 @@ export default function PopupEventPanel({
         {visibleTabs.map(({ id, label, emoji }) => (
           <button key={id} onClick={() => setScreen(id)}
             style={{ flex: 1, minWidth: 56, padding: '12px 8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer', border: 'none',
-              background: 'transparent', color: activeScreen === id ? accent : secondaryText,
-              borderBottom: activeScreen === id ? `2px solid ${accent}` : '2px solid transparent', transition: 'all 0.15s', whiteSpace: 'nowrap',
+              background: activeScreen === id ? activeTabBackground : 'transparent',
+              color: activeScreen === id ? activeTabText : secondaryText,
+              borderBottom: activeScreen === id ? `2px solid ${activeTabBorder}` : '2px solid transparent', transition: 'all 0.15s', whiteSpace: 'nowrap',
               borderTopLeftRadius: 12, borderTopRightRadius: 12,
-              backgroundColor: activeScreen === id
-                ? (darkMode ? weEventPanelTheme.tabActiveDark : weEventPanelTheme.tabActiveLight)
-                : 'transparent' }}>
+              boxShadow: activeScreen === id
+                ? (darkMode ? `0 10px 24px ${hexToRgba(accent, 0.18)}` : `0 10px 22px ${hexToRgba(accent, 0.1)}`)
+                : 'none' }}>
             {emoji} {label}
           </button>
         ))}
@@ -1848,10 +1872,10 @@ export default function PopupEventPanel({
               {cohostMembers.map((member) => (
                 <div
                   key={`cohost-summary-${member.id || member.user_id}`}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 999, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.24)' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 999, background: hexToRgba(accent, 0.12), border: `1px solid ${hexToRgba(accent, 0.24)}` }}
                 >
-                  <Shield style={{ width: 12, height: 12, color: '#8b5cf6' }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed' }}>{member.display_name}</span>
+                  <Shield style={{ width: 12, height: 12, color: accent }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: accent }}>{member.display_name}</span>
                 </div>
               ))}
             </div>

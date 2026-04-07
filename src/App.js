@@ -1592,6 +1592,15 @@ const PICKLEBALL_559_DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
   'notifications',
   'categories',
 ]);
+const PICKLEBALL_559_PAGE_THEME = Object.freeze({
+  matchTitle: false,
+  accent: '#16a34a',
+  backgroundFrom: '#ecfdf5',
+  backgroundVia: '#d1fae5',
+  backgroundTo: '#dcfce7',
+  coverOpacity: 0.82,
+  publicMemberPostsRequireApproval: true,
+});
 const WIDGET_SPAWN_SLOTS = Object.freeze({
   account: { x: 10, y: 80 },
   notifications: { x: 20, y: 80 },
@@ -2665,6 +2674,7 @@ function App() {
   const [inAppNotifications, setInAppNotifications] = useState([]);
   const [pendingTripInvites, setPendingTripInvites] = useState([]);
   const seenInAppNotificationKeysRef = useRef(new Set());
+  const seenInAppNotificationSignaturesRef = useRef(new Set());
   const dismissedCalendarInviteIdsRef = useRef(new Set());
   const inAppSyncCursorRef = useRef({ events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null, tripInvites: null });
   const seenExpenseIdsRef = useRef(new Set());
@@ -8680,13 +8690,23 @@ useEffect(() => {
     fontSize: `${getLayerTitleFontSizePx(activeLayerTitleStyle, 13, 'monthYearScale')}px`,
     lineHeight: 1.1,
   };
-  const activeLayerPageTheme = useMemo(
-    () => normalizeLayerPageTheme(activeLayer?.page_theme, activeLayerTitleStyle),
-    [activeLayer?.page_theme, activeLayerTitleStyle]
-  );
   const activeLayerNameKey = String(activeLayer?.name || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '');
+  const activeLayerPageTheme = useMemo(() => {
+    const normalizedTheme = normalizeLayerPageTheme(activeLayer?.page_theme, activeLayerTitleStyle);
+    if (activeLayerNameKey !== '559pickleball') return normalizedTheme;
+    const rawTheme = activeLayer?.page_theme;
+    const hasExplicitTheme = Boolean(
+      rawTheme
+      && typeof rawTheme === 'object'
+      && Object.keys(rawTheme).length > 0
+    ) || (typeof rawTheme === 'string' && String(rawTheme || '').trim() && String(rawTheme || '').trim() !== '{}');
+    const looksLikeDefaultPurple = normalizedTheme.accent === DEFAULT_LAYER_PAGE_THEME.accent;
+    return !hasExplicitTheme || looksLikeDefaultPurple
+      ? { ...normalizedTheme, ...PICKLEBALL_559_PAGE_THEME }
+      : normalizedTheme;
+  }, [activeLayer?.page_theme, activeLayerNameKey, activeLayerTitleStyle]);
   const useLegacyEllieMilesTheme = activeLayerNameKey === 'elliemiles';
   const hasActiveLayerHeaderCover = Boolean(String(activeLayer?.header_bg_url || '').trim());
   const isCoverTapToRevealMode = !coverHeaderControlsVisible;
@@ -14435,6 +14455,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     if (!user?.id) {
       seenInAppNotificationKeysRef.current = new Set();
+      seenInAppNotificationSignaturesRef.current = new Set();
       dismissedCalendarInviteIdsRef.current = new Set();
       seenExpenseIdsRef.current = new Set();
       inAppSyncCursorRef.current = { events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null, tripInvites: null };
@@ -14458,6 +14479,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         target: (item?.target && typeof item.target === 'object') ? item.target : null,
       })).filter(item => item.key && item.message) : [];
       seenInAppNotificationKeysRef.current = new Set(normalized.map(item => item.key));
+      seenInAppNotificationSignaturesRef.current = new Set(
+        normalized.map((item) => [
+          String(item.type || 'update').trim().toLowerCase(),
+          String(item.message || '').trim(),
+          String(item?.target?.layerId || '').trim(),
+          String(item?.target?.eventId || '').trim(),
+          String(item?.target?.listId || '').trim(),
+          String(item?.target?.listItemId || '').trim(),
+          String(item?.target?.subCalendarId || '').trim(),
+          String(item?.target?.dateKey || '').trim(),
+          String(item?.target?.panel || '').trim(),
+        ].join('|'))
+      );
       setInAppNotifications(normalized);
       const cursorRaw = localStorage.getItem(cursorKey);
       const parsedCursor = cursorRaw ? JSON.parse(cursorRaw) : null;
@@ -14479,6 +14513,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       };
     } catch {
       seenInAppNotificationKeysRef.current = new Set();
+      seenInAppNotificationSignaturesRef.current = new Set();
       dismissedCalendarInviteIdsRef.current = new Set();
       seenExpenseIdsRef.current = new Set();
       const fallbackTs = new Date(Date.now() - (5 * 60 * 1000)).toISOString();
@@ -15980,11 +16015,35 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const addInAppNotification = ({ key, type, message, createdAt, target = null }) => {
     if (!key || !message) return;
     const normalizedKey = String(key);
+    const normalizedSignature = [
+      String(type || 'update').trim().toLowerCase(),
+      String(message || '').trim(),
+      String(target?.layerId || '').trim(),
+      String(target?.eventId || '').trim(),
+      String(target?.listId || '').trim(),
+      String(target?.listItemId || '').trim(),
+      String(target?.subCalendarId || '').trim(),
+      String(target?.dateKey || '').trim(),
+      String(target?.panel || '').trim(),
+    ].join('|');
     if (seenInAppNotificationKeysRef.current.has(normalizedKey)) return;
+    if (seenInAppNotificationSignaturesRef.current.has(normalizedSignature)) return;
     seenInAppNotificationKeysRef.current.add(normalizedKey);
+    seenInAppNotificationSignaturesRef.current.add(normalizedSignature);
     maybeSendInAppSystemNotification(type, normalizedKey, message);
     setInAppNotifications(prev => {
       if (prev.some(n => n.key === normalizedKey)) return prev;
+      if (prev.some((n) => [
+        String(n.type || 'update').trim().toLowerCase(),
+        String(n.message || '').trim(),
+        String(n?.target?.layerId || '').trim(),
+        String(n?.target?.eventId || '').trim(),
+        String(n?.target?.listId || '').trim(),
+        String(n?.target?.listItemId || '').trim(),
+        String(n?.target?.subCalendarId || '').trim(),
+        String(n?.target?.dateKey || '').trim(),
+        String(n?.target?.panel || '').trim(),
+      ].join('|') === normalizedSignature)) return prev;
       const next = [{
         id: `ian_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         key: normalizedKey,
@@ -16003,6 +16062,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const normalizedSubCalId = String(subCalendarId || '').trim();
     const normalizedShareId = String(shareId || '').trim();
     const removedKeys = [];
+    const removedSignatures = [];
     setInAppNotifications(prev => prev.filter((item) => {
       const key = String(item?.key || '');
       let shouldRemove = false;
@@ -16012,9 +16072,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         shouldRemove = key.startsWith(`calendar_invite:${normalizedShareId}:`);
       }
       if (shouldRemove && key) removedKeys.push(key);
+      if (shouldRemove) {
+        removedSignatures.push([
+          String(item?.type || 'update').trim().toLowerCase(),
+          String(item?.message || '').trim(),
+          String(item?.target?.layerId || '').trim(),
+          String(item?.target?.eventId || '').trim(),
+          String(item?.target?.listId || '').trim(),
+          String(item?.target?.listItemId || '').trim(),
+          String(item?.target?.subCalendarId || '').trim(),
+          String(item?.target?.dateKey || '').trim(),
+          String(item?.target?.panel || '').trim(),
+        ].join('|'));
+      }
       return !shouldRemove;
     }));
     removedKeys.forEach((key) => seenInAppNotificationKeysRef.current.delete(key));
+    removedSignatures.forEach((signature) => seenInAppNotificationSignaturesRef.current.delete(signature));
   };
 
   const markCalendarInviteDismissed = (shareId) => {
@@ -28233,8 +28307,10 @@ transform: translateY(0);
                         ).trim().toLowerCase();
                         return normalizedCategory === 'sports' || normalizedSubtype === 'sports' ? 'players' : 'guests';
                       })();
+                      const attendeeSingularLabel = attendeeLabel === 'players' ? 'player' : 'guest';
+                      const popupNoMax = maxPeople >= POPUP_NO_MAX_SENTINEL;
                       const spotsLeft = maxPeople - signups.length;
-                      const isFull = maxPeople > 0 && spotsLeft <= 0;
+                      const isFull = !popupNoMax && maxPeople > 0 && spotsLeft <= 0;
                       const joined = signups.some(s => String(s.userId || '') === String(user?.id || ''));
                       const canDeleteThisEvent = canDeleteEventInActiveLayer(event);
                       const eventSwipeKey = `popup-tab:${String(event.date || event.dateKey || '')}:${String(event.id || '')}`;
@@ -28317,7 +28393,11 @@ transform: translateY(0);
                                       {joined ? '✓ Joined' : isFull ? 'Full' : 'Open'}
                                     </span>
                                     {maxPeople > 0 && (
-                                      <span className="text-[10px] text-gray-400 dark:text-gray-500">{signups.length}/{maxPeople} {attendeeLabel}</span>
+                                      <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                                        {popupNoMax
+                                          ? `${signups.length} ${signups.length === 1 ? attendeeSingularLabel : attendeeLabel} joined`
+                                          : `${signups.length}/${maxPeople} ${attendeeLabel}`}
+                                      </span>
                                     )}
                                   </>
                                 ) : null}
