@@ -36,6 +36,16 @@ const writePopupManualPlayers = (eventId, players) => {
   } catch {}
 };
 
+const isValidLatLng = (lat, lng) => {
+  const numLat = Number(lat);
+  const numLng = Number(lng);
+  if (!Number.isFinite(numLat) || !Number.isFinite(numLng)) return false;
+  if (numLat < -90 || numLat > 90 || numLng < -180 || numLng > 180) return false;
+  // Treat the null-island sentinel as invalid for event venue coordinates.
+  if (Math.abs(numLat) < 0.000001 && Math.abs(numLng) < 0.000001) return false;
+  return true;
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -489,7 +499,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
   const [geoError, setGeoError] = useState('');
   const [mapReady, setMapReady] = useState(false);
   const [mapFailed, setMapFailed] = useState(Boolean(typeof window !== 'undefined' && window.googleMapsAuthFailed));
-  const hasEventCoordinates = Number.isFinite(Number(event?.location_lat)) && Number.isFinite(Number(event?.location_lng));
+  const hasEventCoordinates = isValidLatLng(event?.location_lat, event?.location_lng);
   const sharedSelfLocation = locations.find((loc) => loc.user_id === user?.id) || null;
   const mapHref = event?.location
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(event.location || '').trim())}`
