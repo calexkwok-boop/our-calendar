@@ -515,6 +515,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
   const eventMarkerRef = useRef(null);
   const currentUserMarkerRef = useRef(null);
   const manualZoomRef = useRef(false);
+  const zoomLevelRef = useRef(15);
   const fallbackCenterRef = useRef({ lat: 37.7749, lng: -122.4194 });
   const [sharing, setSharing] = useState(false);
   const [locations, setLocations] = useState([]);
@@ -549,6 +550,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     if (points.length === 1) {
       map.setCenter(points[0]);
       if (!manualZoomRef.current) {
+        zoomLevelRef.current = 15;
         map.setZoom(15);
       }
       return;
@@ -559,6 +561,12 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     const bounds = new window.google.maps.LatLngBounds();
     points.forEach((point) => bounds.extend(point));
     map.fitBounds(bounds, 48);
+    window.setTimeout(() => {
+      const fittedZoom = Number(map.getZoom?.());
+      if (Number.isFinite(fittedZoom)) {
+        zoomLevelRef.current = fittedZoom;
+      }
+    }, 0);
   }, [currentPosition, event.location_lat, event.location_lng, hasEventCoordinates, sharedSelfLocation]);
 
   useEffect(() => {
@@ -621,6 +629,15 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
           disableDefaultUI: true,
           zoomControl: false,
           mapTypeId: 'roadmap',
+        });
+      }
+      zoomLevelRef.current = 15;
+      if (typeof mapInstanceRef.current?.addListener === 'function') {
+        mapInstanceRef.current.addListener('zoom_changed', () => {
+          const nextZoom = Number(mapInstanceRef.current?.getZoom?.());
+          if (Number.isFinite(nextZoom)) {
+            zoomLevelRef.current = nextZoom;
+          }
         });
       }
       window.setTimeout(() => {
@@ -779,8 +796,11 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     const map = mapInstanceRef.current;
     if (!map || typeof map.getZoom !== 'function' || typeof map.setZoom !== 'function') return;
     manualZoomRef.current = true;
-    const currentZoom = Number(map.getZoom?.() || 15);
+    const currentZoom = Number.isFinite(Number(zoomLevelRef.current))
+      ? Number(zoomLevelRef.current)
+      : Number(map.getZoom?.() || 15);
     const nextZoom = Math.max(2, Math.min(21, currentZoom + delta));
+    zoomLevelRef.current = nextZoom;
     map.setZoom(nextZoom);
   };
 

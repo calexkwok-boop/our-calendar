@@ -269,9 +269,9 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
           💬
         </div>
         
-        {/* Gradient mesh orbs */}
-        <div className="absolute -left-24 top-[20%] h-64 w-64 rounded-full bg-gradient-to-br from-cyan-300/26 to-blue-400/18 blur-[34px] dark:from-cyan-500/18 dark:to-blue-600/10" style={{ animation: 'hangout-pulse-glow 8s ease-in-out infinite' }} />
-        <div className="absolute -right-20 bottom-[15%] h-56 w-56 rounded-full bg-gradient-to-tl from-fuchsia-300/22 to-pink-400/14 blur-[30px] dark:from-fuchsia-500/14 dark:to-pink-600/8" style={{ animation: 'hangout-pulse-glow 7s ease-in-out infinite 2s' }} />
+        {/* Sharper ambient shapes */}
+        <div className="absolute -left-20 top-[18%] h-48 w-48 rounded-full border border-cyan-200/55 bg-gradient-to-br from-cyan-200/20 to-blue-300/12 dark:border-cyan-400/18 dark:from-cyan-400/10 dark:to-blue-500/6" style={{ animation: 'hangout-pulse-glow 8s ease-in-out infinite' }} />
+        <div className="absolute right-0 bottom-[14%] h-40 w-40 rounded-[38%] border border-fuchsia-200/45 bg-gradient-to-tl from-fuchsia-200/18 to-pink-300/10 dark:border-fuchsia-400/16 dark:from-fuchsia-400/8 dark:to-pink-500/5" style={{ animation: 'hangout-pulse-glow 7s ease-in-out infinite 2s' }} />
       </div>
 
       <div className="relative px-6 py-7 sm:px-7">
@@ -290,7 +290,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
           </div>
         ) : null}
 
-        <div className={`group/header relative mx-auto max-w-[30rem] overflow-hidden rounded-[28px] border border-cyan-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] transition-all hover:shadow-[0_20px_50px_rgba(15,23,42,0.12)] dark:border-cyan-400/15 dark:backdrop-blur-[12px] ${coverImageUrl ? 'bg-white/68 dark:bg-[rgba(24,37,45,0.68)]' : 'bg-white/82 dark:bg-[rgba(24,37,45,0.76)]'}`}>
+        <div className={`group/header relative mx-auto max-w-[30rem] overflow-hidden rounded-[28px] border border-cyan-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[2px] transition-all hover:shadow-[0_20px_50px_rgba(15,23,42,0.12)] dark:border-cyan-400/15 dark:backdrop-blur-[3px] ${coverImageUrl ? 'bg-white/76 dark:bg-[rgba(24,37,45,0.8)]' : 'bg-white/88 dark:bg-[rgba(24,37,45,0.84)]'}`}>
           
           {/* Shimmer effect on hover */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-500 group-hover/header:opacity-100">
@@ -310,7 +310,7 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
               <CameraIcon />
             </button>
           ) : null}
-          <div className="relative mx-auto max-w-[24rem] rounded-[22px] border border-white/60 bg-white/48 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-white/10 dark:bg-black/14">
+          <div className="relative mx-auto max-w-[24rem] rounded-[22px] border border-white/70 bg-white/72 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-[1px] dark:border-white/12 dark:bg-[rgba(2,6,23,0.28)]">
             <div className="mb-4 flex flex-wrap items-center justify-center gap-2.5">
               {duration ? (
                 <span className="animate-in fade-in slide-in-from-top-2 duration-500 rounded-full border border-cyan-200 bg-gradient-to-br from-white/90 to-cyan-50/70 px-3 py-1.5 text-[11px] font-medium text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-gradient-to-br dark:from-white/5 dark:to-cyan-500/10 dark:text-cyan-200">
