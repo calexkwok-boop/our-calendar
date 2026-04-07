@@ -250,28 +250,28 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
       
       {/* Floating emoji decorations */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[8%] top-[15%] text-4xl opacity-34 drop-shadow-[0_8px_18px_rgba(8,145,178,0.14)] dark:opacity-20" style={{ animation: 'hangout-float-drift 8s ease-in-out infinite' }}>
+        <div className="absolute left-[8%] top-[15%] text-4xl opacity-52 drop-shadow-[0_4px_8px_rgba(8,145,178,0.12)] dark:opacity-34" style={{ animation: 'hangout-float-drift 8s ease-in-out infinite' }}>
           ☕
         </div>
-        <div className="absolute right-[12%] top-[25%] text-3xl opacity-32 drop-shadow-[0_8px_18px_rgba(14,116,144,0.14)] dark:opacity-19" style={{ animation: 'hangout-float-drift 7s ease-in-out infinite 1s' }}>
+        <div className="absolute right-[12%] top-[25%] text-3xl opacity-48 drop-shadow-[0_4px_8px_rgba(14,116,144,0.12)] dark:opacity-30" style={{ animation: 'hangout-float-drift 7s ease-in-out infinite 1s' }}>
           🎮
         </div>
-        <div className="absolute left-[15%] bottom-[20%] text-3xl opacity-32 drop-shadow-[0_8px_18px_rgba(8,145,178,0.14)] dark:opacity-19" style={{ animation: 'hangout-float-drift 9s ease-in-out infinite 2s' }}>
+        <div className="absolute left-[15%] bottom-[20%] text-3xl opacity-48 drop-shadow-[0_4px_8px_rgba(8,145,178,0.12)] dark:opacity-30" style={{ animation: 'hangout-float-drift 9s ease-in-out infinite 2s' }}>
           🎸
         </div>
-        <div className="absolute right-[10%] bottom-[30%] text-4xl opacity-34 drop-shadow-[0_8px_18px_rgba(59,130,246,0.14)] dark:opacity-20" style={{ animation: 'hangout-float-drift 6.5s ease-in-out infinite 0.5s' }}>
+        <div className="absolute right-[10%] bottom-[30%] text-4xl opacity-52 drop-shadow-[0_4px_8px_rgba(59,130,246,0.12)] dark:opacity-34" style={{ animation: 'hangout-float-drift 6.5s ease-in-out infinite 0.5s' }}>
           🍕
         </div>
-        <div className="absolute left-[45%] top-[10%] text-2xl opacity-24 drop-shadow-[0_6px_14px_rgba(125,211,252,0.14)] dark:opacity-14" style={{ animation: 'hangout-bounce-subtle 4s ease-in-out infinite' }}>
+        <div className="absolute left-[45%] top-[10%] text-2xl opacity-36 drop-shadow-[0_3px_6px_rgba(125,211,252,0.12)] dark:opacity-24" style={{ animation: 'hangout-bounce-subtle 4s ease-in-out infinite' }}>
           ✨
         </div>
-        <div className="absolute right-[40%] bottom-[15%] text-2xl opacity-24 drop-shadow-[0_6px_14px_rgba(34,197,94,0.14)] dark:opacity-14" style={{ animation: 'hangout-bounce-subtle 5s ease-in-out infinite 1.5s' }}>
+        <div className="absolute right-[40%] bottom-[15%] text-2xl opacity-36 drop-shadow-[0_3px_6px_rgba(34,197,94,0.12)] dark:opacity-24" style={{ animation: 'hangout-bounce-subtle 5s ease-in-out infinite 1.5s' }}>
           💬
         </div>
         
         {/* Gradient mesh orbs */}
-        <div className="absolute -left-24 top-[20%] h-64 w-64 rounded-full bg-gradient-to-br from-cyan-300/34 to-blue-400/24 blur-[56px] dark:from-cyan-500/24 dark:to-blue-600/14" style={{ animation: 'hangout-pulse-glow 8s ease-in-out infinite' }} />
-        <div className="absolute -right-20 bottom-[15%] h-56 w-56 rounded-full bg-gradient-to-tl from-fuchsia-300/28 to-pink-400/18 blur-[52px] dark:from-fuchsia-500/18 dark:to-pink-600/10" style={{ animation: 'hangout-pulse-glow 7s ease-in-out infinite 2s' }} />
+        <div className="absolute -left-24 top-[20%] h-64 w-64 rounded-full bg-gradient-to-br from-cyan-300/26 to-blue-400/18 blur-[34px] dark:from-cyan-500/18 dark:to-blue-600/10" style={{ animation: 'hangout-pulse-glow 8s ease-in-out infinite' }} />
+        <div className="absolute -right-20 bottom-[15%] h-56 w-56 rounded-full bg-gradient-to-tl from-fuchsia-300/22 to-pink-400/14 blur-[30px] dark:from-fuchsia-500/14 dark:to-pink-600/8" style={{ animation: 'hangout-pulse-glow 7s ease-in-out infinite 2s' }} />
       </div>
 
       <div className="relative px-6 py-7 sm:px-7">

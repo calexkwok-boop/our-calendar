@@ -817,7 +817,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
           <div style={{ position: 'absolute', right: 12, top: 12, display: 'flex', flexDirection: 'column', gap: 8, zIndex: 3 }}>
             <button
               type="button"
-              onClick={() => adjustZoom(1)}
+              onClick={() => adjustZoom(-1)}
               style={{
                 width: 38,
                 height: 38,
@@ -837,7 +837,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
             </button>
             <button
               type="button"
-              onClick={() => adjustZoom(-1)}
+              onClick={() => adjustZoom(1)}
               style={{
                 width: 38,
                 height: 38,
