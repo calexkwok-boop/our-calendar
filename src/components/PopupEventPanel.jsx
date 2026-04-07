@@ -514,6 +514,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
   const watchIdRef = useRef(null);
   const eventMarkerRef = useRef(null);
   const currentUserMarkerRef = useRef(null);
+  const manualZoomRef = useRef(false);
   const fallbackCenterRef = useRef({ lat: 37.7749, lng: -122.4194 });
   const [sharing, setSharing] = useState(false);
   const [locations, setLocations] = useState([]);
@@ -536,8 +537,10 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     if (hasEventCoordinates) {
       points.push({ lat: Number(event.location_lat), lng: Number(event.location_lng) });
     }
-    if (currentPosition && !sharedSelfLocation) {
+    if (currentPosition) {
       points.push(currentPosition);
+    } else if (sharedSelfLocation && Number.isFinite(Number(sharedSelfLocation.lat)) && Number.isFinite(Number(sharedSelfLocation.lng))) {
+      points.push({ lat: Number(sharedSelfLocation.lat), lng: Number(sharedSelfLocation.lng) });
     }
     if (points.length === 0) {
       map.setCenter(fallbackCenterRef.current);
@@ -545,7 +548,12 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     }
     if (points.length === 1) {
       map.setCenter(points[0]);
-      map.setZoom(15);
+      if (!manualZoomRef.current) {
+        map.setZoom(15);
+      }
+      return;
+    }
+    if (manualZoomRef.current) {
       return;
     }
     const bounds = new window.google.maps.LatLngBounds();
@@ -662,7 +670,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
       eventMarkerRef.current = null;
     }
 
-    if (currentPosition && !sharedSelfLocation) {
+    if (currentPosition) {
       if (currentUserMarkerRef.current) {
         currentUserMarkerRef.current.setPosition(currentPosition);
         currentUserMarkerRef.current.setMap(mapInstanceRef.current);
@@ -716,6 +724,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
       const pos = { lat: loc.lat, lng: loc.lng };
       const member = members.find((m) => m.user_id === loc.user_id);
       const isMe = loc.user_id === user?.id;
+      if (isMe) return;
       if (markersRef.current[loc.user_id]) {
         markersRef.current[loc.user_id].setPosition(pos);
       } else {
@@ -731,11 +740,15 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
         });
       }
     });
+    if (user?.id && markersRef.current[user.id]) {
+      markersRef.current[user.id].setMap(null);
+      delete markersRef.current[user.id];
+    }
     // Remove stale markers
     Object.keys(markersRef.current).forEach((uid) => {
       if (!seen.has(uid)) { markersRef.current[uid].setMap(null); delete markersRef.current[uid]; }
     });
-  }, [locations, mapReady]);
+  }, [locations, mapReady, user?.id]);
 
   const startSharing = () => {
     if (!navigator.geolocation) { setGeoError('Geolocation not supported on this device.'); return; }
@@ -765,6 +778,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
   const adjustZoom = (delta) => {
     const map = mapInstanceRef.current;
     if (!map || typeof map.getZoom !== 'function' || typeof map.setZoom !== 'function') return;
+    manualZoomRef.current = true;
     const currentZoom = Number(map.getZoom?.() || 15);
     const nextZoom = Math.max(2, Math.min(21, currentZoom + delta));
     map.setZoom(nextZoom);
