@@ -2631,6 +2631,7 @@ function App() {
   const saveTimeoutRef = useRef(null);
   const saveRequestIdRef = useRef(0);
   const holidayCleanupRunRef = useRef(new Set());
+  const lastKnownTodayKeyRef = useRef('');
   const dateTapTimeoutRef = useRef(null);
   const layerMediaInputRef = useRef(null);
   const layerHeaderCardRef = useRef(null);
@@ -2815,6 +2816,7 @@ function App() {
   const [draggingUpcomingTripId, setDraggingUpcomingTripId] = useState(null);
   const [draggingUpcomingPopupId, setDraggingUpcomingPopupId] = useState(null);
   const appPromptResolverRef = useRef(null);
+  const calendarDateStateRef = useRef({ currentDate: null, selectedDate: null });
 
   // Sub-calendar state
   const [subCalendars, setSubCalendars] = useState([]);
@@ -10565,6 +10567,57 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const getDateKey = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   };
+
+  useEffect(() => {
+    calendarDateStateRef.current = {
+      currentDate,
+      selectedDate,
+    };
+  }, [currentDate, selectedDate]);
+
+  useEffect(() => {
+    const syncCalendarDateIfDayRolledOver = () => {
+      const now = new Date();
+      const todayKey = getDateKey(now);
+      if (!todayKey) return;
+
+      const previousTodayKey = String(lastKnownTodayKeyRef.current || '').trim();
+      if (!previousTodayKey) {
+        lastKnownTodayKeyRef.current = todayKey;
+        return;
+      }
+      if (previousTodayKey === todayKey) return;
+
+      lastKnownTodayKeyRef.current = todayKey;
+
+      const currentState = calendarDateStateRef.current || {};
+      const currentDateKey = currentState.currentDate ? getDateKey(currentState.currentDate) : '';
+      const selectedDateKey = currentState.selectedDate ? getDateKey(currentState.selectedDate) : '';
+      const shouldAdvanceCurrentDate = !currentDateKey || currentDateKey === previousTodayKey;
+      const shouldAdvanceSelectedDate = !selectedDateKey || selectedDateKey === previousTodayKey;
+
+      if (shouldAdvanceCurrentDate) setCurrentDate(now);
+      if (shouldAdvanceSelectedDate) setSelectedDate(now);
+    };
+
+    lastKnownTodayKeyRef.current = getDateKey(new Date());
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncCalendarDateIfDayRolledOver();
+      }
+    };
+
+    const intervalId = window.setInterval(syncCalendarDateIfDayRolledOver, 60 * 1000);
+    window.addEventListener('focus', syncCalendarDateIfDayRolledOver);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', syncCalendarDateIfDayRolledOver);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const isSameDay = (date1, date2) => {
     return date1 && date2 &&
