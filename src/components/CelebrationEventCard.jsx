@@ -437,7 +437,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
           </div>
         ) : null}
 
-        <div className={`relative mx-auto max-w-[30rem] rounded-[28px] border px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:backdrop-blur-[12px] ${tone.sectionBorder || 'border-rose-200/80 dark:border-rose-400/15'} ${coverImageUrl ? 'bg-white/74' : 'bg-white/88'} ${tone.kind === 'baby' ? (coverImageUrl ? 'dark:bg-[rgba(23,34,48,0.68)]' : 'dark:bg-[rgba(23,34,48,0.76)]') : tone.kind === 'wedding' ? (coverImageUrl ? 'dark:bg-[rgba(30,24,18,0.72)]' : 'dark:bg-[rgba(30,24,18,0.82)]') : (coverImageUrl ? 'dark:bg-[rgba(38,28,57,0.68)]' : 'dark:bg-[rgba(38,28,57,0.76)]')}`}>
+        <div className={`relative z-10 mx-auto max-w-[30rem] rounded-[28px] border px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:backdrop-blur-[12px] ${tone.sectionBorder || 'border-rose-200/80 dark:border-rose-400/15'} ${coverImageUrl ? 'bg-white/74' : 'bg-white/88'} ${tone.kind === 'baby' ? (coverImageUrl ? 'dark:bg-[rgba(23,34,48,0.68)]' : 'dark:bg-[rgba(23,34,48,0.76)]') : tone.kind === 'wedding' ? (coverImageUrl ? 'dark:bg-[rgba(30,24,18,0.72)]' : 'dark:bg-[rgba(30,24,18,0.82)]') : (coverImageUrl ? 'dark:bg-[rgba(38,28,57,0.68)]' : 'dark:bg-[rgba(38,28,57,0.76)]')}`}>
           {coverImageUrl && tone.kind !== 'wedding' ? (
             <>
               <div
@@ -467,7 +467,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
 
             <div className="mb-4 flex flex-wrap items-center justify-center gap-2.5">
               {dressCode ? (
-                <span className={`rounded-full border px-3 py-1.5 text-[11px] font-medium shadow-sm ${tone.chip}`}>
+                <span className={`rounded-full border px-3 py-1.5 text-[11px] font-medium shadow-sm ${tone.chip} ${tone.kind === 'baby' ? 'bg-white/96 dark:bg-[rgba(28,23,20,0.92)]' : ''}`}>
                   {dressCode}
                 </span>
               ) : null}

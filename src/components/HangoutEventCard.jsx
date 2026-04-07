@@ -141,21 +141,45 @@ const NotesSection = ({ event, onEdit }) => {
 };
 
 const animationStyles = `
-@keyframes hangout-rise-steam {
-  0% { transform: translateY(0) translateX(0) scaleY(1); opacity: 0; }
-  10% { opacity: 0.4; }
-  50% { transform: translateY(-80px) translateX(8px) scaleY(1.2); opacity: 0.3; }
-  100% { transform: translateY(-120px) translateX(15px) scaleY(1.5); opacity: 0; }
+@keyframes hangout-float-drift {
+  0%, 100% { 
+    transform: translateY(0) translateX(0) rotate(0deg); 
+    opacity: 0.7;
+  }
+  25% { 
+    transform: translateY(-12px) translateX(8px) rotate(5deg); 
+    opacity: 0.9;
+  }
+  50% { 
+    transform: translateY(-6px) translateX(-6px) rotate(-3deg); 
+    opacity: 0.85;
+  }
+  75% { 
+    transform: translateY(-14px) translateX(4px) rotate(7deg); 
+    opacity: 0.95;
+  }
 }
-@keyframes hangout-rise-mini-steam {
-  0% { transform: translateY(0) scaleY(1); opacity: 0; }
-  50% { opacity: 0.4; }
-  100% { transform: translateY(-12px) scaleY(1.5); opacity: 0; }
+@keyframes hangout-spin-gentle {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
-@keyframes hangout-gentle-wobble {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-2deg); }
-  75% { transform: rotate(2deg); }
+@keyframes hangout-pulse-glow {
+  0%, 100% { 
+    opacity: 0.4; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7; 
+    transform: scale(1.05);
+  }
+}
+@keyframes hangout-bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes hangout-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 @keyframes party-card-float {
   0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -223,6 +247,33 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
   return (
     <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/60 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:from-[#171320] dark:via-[#1d1a30] dark:to-[#111a2b] dark:shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
       <style>{animationStyles}</style>
+      
+      {/* Floating emoji decorations */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-[8%] top-[15%] text-4xl opacity-20 dark:opacity-10" style={{ animation: 'hangout-float-drift 8s ease-in-out infinite' }}>
+          ☕
+        </div>
+        <div className="absolute right-[12%] top-[25%] text-3xl opacity-20 dark:opacity-10" style={{ animation: 'hangout-float-drift 7s ease-in-out infinite 1s' }}>
+          🎮
+        </div>
+        <div className="absolute left-[15%] bottom-[20%] text-3xl opacity-20 dark:opacity-10" style={{ animation: 'hangout-float-drift 9s ease-in-out infinite 2s' }}>
+          🎸
+        </div>
+        <div className="absolute right-[10%] bottom-[30%] text-4xl opacity-20 dark:opacity-10" style={{ animation: 'hangout-float-drift 6.5s ease-in-out infinite 0.5s' }}>
+          🍕
+        </div>
+        <div className="absolute left-[45%] top-[10%] text-2xl opacity-15 dark:opacity-8" style={{ animation: 'hangout-bounce-subtle 4s ease-in-out infinite' }}>
+          ✨
+        </div>
+        <div className="absolute right-[40%] bottom-[15%] text-2xl opacity-15 dark:opacity-8" style={{ animation: 'hangout-bounce-subtle 5s ease-in-out infinite 1.5s' }}>
+          💬
+        </div>
+        
+        {/* Gradient mesh orbs */}
+        <div className="absolute -left-24 top-[20%] h-64 w-64 rounded-full bg-gradient-to-br from-cyan-300/30 to-blue-400/20 blur-[80px] dark:from-cyan-500/20 dark:to-blue-600/10" style={{ animation: 'hangout-pulse-glow 8s ease-in-out infinite' }} />
+        <div className="absolute -right-20 bottom-[15%] h-56 w-56 rounded-full bg-gradient-to-tl from-fuchsia-300/25 to-pink-400/15 blur-[70px] dark:from-fuchsia-500/15 dark:to-pink-600/8" style={{ animation: 'hangout-pulse-glow 7s ease-in-out infinite 2s' }} />
+      </div>
+
       <div className="relative px-6 py-7 sm:px-7">
         {(props.onEdit || props.onDelete) ? (
           <div className="absolute right-6 top-5 z-10 flex items-center gap-2 sm:right-7">
@@ -239,22 +290,31 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
           </div>
         ) : null}
 
-        <div className={`relative mx-auto max-w-[30rem] rounded-[28px] border border-cyan-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-cyan-400/15 dark:backdrop-blur-[12px] ${coverImageUrl ? 'bg-white/68 dark:bg-[rgba(24,37,45,0.68)]' : 'bg-white/82 dark:bg-[rgba(24,37,45,0.76)]'}`}>
+        <div className={`group/header relative mx-auto max-w-[30rem] overflow-hidden rounded-[28px] border border-cyan-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] transition-all hover:shadow-[0_20px_50px_rgba(15,23,42,0.12)] dark:border-cyan-400/15 dark:backdrop-blur-[12px] ${coverImageUrl ? 'bg-white/68 dark:bg-[rgba(24,37,45,0.68)]' : 'bg-white/82 dark:bg-[rgba(24,37,45,0.76)]'}`}>
+          
+          {/* Shimmer effect on hover */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-0 transition-opacity duration-500 group-hover/header:opacity-100">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent dark:via-white/10" style={{ 
+              backgroundSize: '200% 100%',
+              animation: 'hangout-shimmer 3s linear infinite'
+            }} />
+          </div>
+
           {typeof openCoverEditor === 'function' ? (
             <button
               type="button"
               onClick={openCoverEditor}
-              className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-200 bg-white/92 text-cyan-600 shadow-sm transition hover:border-cyan-300 hover:bg-white hover:text-cyan-700 dark:border-white/10 dark:bg-white/10 dark:text-cyan-200 dark:hover:bg-white/15 dark:hover:text-white"
+              className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-200 bg-white/92 text-cyan-600 shadow-sm transition hover:border-cyan-300 hover:bg-white hover:text-cyan-700 hover:scale-110 dark:border-white/10 dark:bg-white/10 dark:text-cyan-200 dark:hover:bg-white/15 dark:hover:text-white"
               title={coverImageUrl ? 'Change cover photo' : 'Add cover photo'}
             >
               <CameraIcon />
             </button>
           ) : null}
-          <div className="mx-auto max-w-[24rem] rounded-[22px] border border-white/60 bg-white/48 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-white/10 dark:bg-black/14">
+          <div className="relative mx-auto max-w-[24rem] rounded-[22px] border border-white/60 bg-white/48 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-white/10 dark:bg-black/14">
             <div className="mb-4 flex flex-wrap items-center justify-center gap-2.5">
               {duration ? (
-                <span className="rounded-full border border-cyan-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200">
-                  ~{duration}
+                <span className="animate-in fade-in slide-in-from-top-2 duration-500 rounded-full border border-cyan-200 bg-gradient-to-br from-white/90 to-cyan-50/70 px-3 py-1.5 text-[11px] font-medium text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-gradient-to-br dark:from-white/5 dark:to-cyan-500/10 dark:text-cyan-200">
+                  ⏱️ ~{duration}
                 </span>
               ) : null}
             </div>
@@ -332,7 +392,10 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
           ) : null}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className={`group/card relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${hangoutDetailSurfaceClassName}`}>
+            <div className={`group/card relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 ${hangoutDetailSurfaceClassName}`}>
+              <div className="pointer-events-none absolute right-3 top-3 text-3xl opacity-10 transition-all group-hover/card:opacity-20 group-hover/card:scale-110">
+                📋
+              </div>
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-cyan-700 dark:text-cyan-300">Reservation</div>
@@ -341,7 +404,10 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
               </div>
             </div>
 
-            <div className={`group/card relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${hangoutDetailSurfaceClassName}`}>
+            <div className={`group/card relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 ${hangoutDetailSurfaceClassName}`}>
+              <div className="pointer-events-none absolute right-3 top-3 text-3xl opacity-10 transition-all group-hover/card:opacity-20 group-hover/card:scale-110">
+                💰
+              </div>
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-sky-700 dark:text-sky-300">Bill</div>
@@ -353,7 +419,10 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
         </Section>
 
         {duration ? (
-          <div className={`relative overflow-hidden rounded-2xl border p-5 shadow-sm ${hangoutDetailSurfaceClassName}`}>
+          <div className={`group/card relative overflow-hidden rounded-2xl border p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 ${hangoutDetailSurfaceClassName}`}>
+            <div className="pointer-events-none absolute right-4 top-4 text-4xl opacity-10 transition-all group-hover/card:opacity-20 group-hover/card:scale-110">
+              ⏰
+            </div>
             <div className="relative flex items-center gap-3">
               <div className="min-w-0 flex-1">
                 <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-blue-700 dark:text-blue-300">

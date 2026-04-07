@@ -803,7 +803,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
   const modalNode = (
     <div className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/55 p-3 pt-6 pb-6 backdrop-blur-md sm:p-6" onClick={onClose}>
       <form
-        className={`max-h-[min(78dvh,42rem)] w-full max-w-md overflow-hidden rounded-[28px] border shadow-[0_30px_80px_rgba(15,23,42,0.24)] ${editorTheme.shell}`}
+        className={`flex max-h-[min(78dvh,42rem)] w-full max-w-md flex-col overflow-hidden rounded-[28px] border shadow-[0_30px_80px_rgba(15,23,42,0.24)] ${editorTheme.shell}`}
         onClick={(event) => event.stopPropagation()}
         onSubmit={handleSubmit}
       >
@@ -834,7 +834,7 @@ const EventEditorModal = ({ config, onClose, onSave }) => {
           </div>
         </div>
 
-        <div className={`space-y-4 overflow-y-auto px-5 py-5 ${editorTheme.body}`}>
+        <div className={`min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-5 ${editorTheme.body}`}>
           {(config.fields || []).map((field) => (
             <label key={field.key} className="block">
               {field.type !== 'music-link' ? (
@@ -1160,7 +1160,7 @@ const Section = ({ title, subtitle, actions, children }) => (
 
 const EmptySection = ({ title, subtitle, actions }) => (
   <Section title={title} subtitle={subtitle} actions={actions}>
-    <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-3 py-3 text-sm text-gray-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-400">
+    <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-3 py-3 text-sm text-gray-500 dark:border-white/12 dark:bg-white/[0.06] dark:text-gray-300">
       Nothing added yet.
     </div>
   </Section>
@@ -1201,7 +1201,7 @@ const InviteeRow = ({ event, label = 'Invited' }) => {
     <Section title={label}>
       <div className="flex flex-wrap gap-2.5">
         {invitees.length === 0 ? (
-          <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-4 py-3.5 text-sm text-gray-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-400">
+          <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-4 py-3.5 text-sm text-gray-500 dark:border-white/12 dark:bg-white/[0.06] dark:text-gray-300">
             No one has responded yet.
           </div>
         ) : (

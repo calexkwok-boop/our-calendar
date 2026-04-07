@@ -920,7 +920,7 @@ export default function DateDetailsCardEnhanced({
                   type="button"
                   onClick={handleSave}
                   disabled={!canSaveEvent}
-                  className={`w-full rounded-2xl py-4 text-lg font-bold text-white transition-all shadow-sm disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none ${
+                  className={`w-full rounded-2xl py-4 text-lg font-bold text-white transition-all shadow-sm disabled:cursor-not-allowed ${
                     eventType === 'me'
                       ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700'
                       : ''
@@ -932,7 +932,14 @@ export default function DateDetailsCardEnhanced({
                         background: themeAccentButtonStyle?.backgroundColor
                           ? `linear-gradient(90deg, ${themeAccentButtonStyle.backgroundColor} 0%, ${hexToRgba(themeAccentButtonStyle.backgroundColor, 0.78)} 100%)`
                           : undefined,
-                      } : undefined}
+                      } : {
+                        background: darkMode
+                          ? `linear-gradient(90deg, ${hexToRgba(accent, 0.26)} 0%, rgba(51,65,85,0.92) 100%)`
+                          : `linear-gradient(90deg, ${hexToRgba(accent, 0.18)} 0%, rgba(241,245,249,0.96) 100%)`,
+                        color: darkMode ? 'rgba(255,255,255,0.78)' : hexToRgba(accent, 0.72),
+                        boxShadow: 'none',
+                        border: `1px solid ${hexToRgba(accent, darkMode ? 0.24 : 0.16)}`,
+                      }}
                 >
                   Create {eventType === 'we' ? 'We' : 'Me'} Event
                 </button>
