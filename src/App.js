@@ -2866,51 +2866,6 @@ function App() {
   const tripHeaderActionStripRef = useRef(null);
   const subCalTabStripRef = useRef(null);
 
-  useEffect(() => {
-    const node = tripHeaderActionStripRef.current;
-    if (!node) return undefined;
-    const updateTripHeaderActionOverflow = () => {
-      const maxScrollLeft = Math.max(0, node.scrollWidth - node.clientWidth);
-      const hasOverflow = maxScrollLeft > 12;
-      setTripHeaderActionsHasOverflow(hasOverflow);
-      setTripHeaderActionsShowRightHint(hasOverflow && node.scrollLeft < maxScrollLeft - 12);
-    };
-    updateTripHeaderActionOverflow();
-    node.addEventListener('scroll', updateTripHeaderActionOverflow, { passive: true });
-    window.addEventListener('resize', updateTripHeaderActionOverflow);
-    return () => {
-      node.removeEventListener('scroll', updateTripHeaderActionOverflow);
-      window.removeEventListener('resize', updateTripHeaderActionOverflow);
-    };
-  }, [
-    activeSubCalendar?.id,
-    subCalMembers.length,
-    subCalWeatherLocation,
-    subCalWeatherExpanded,
-    subCalNotes.length,
-    canEditCurrentTrip,
-    canGenerateTripHighlights,
-    Object.keys(memberLocations || {}).length,
-  ]);
-
-  useEffect(() => {
-    const node = subCalTabStripRef.current;
-    if (!node) return undefined;
-    const updateSubCalTabOverflow = () => {
-      const maxScrollLeft = Math.max(0, node.scrollWidth - node.clientWidth);
-      const hasOverflow = maxScrollLeft > 12;
-      setSubCalTabsHasOverflow(hasOverflow);
-      setSubCalTabsShowRightHint(hasOverflow && node.scrollLeft < maxScrollLeft - 12);
-    };
-    updateSubCalTabOverflow();
-    node.addEventListener('scroll', updateSubCalTabOverflow, { passive: true });
-    window.addEventListener('resize', updateSubCalTabOverflow);
-    return () => {
-      node.removeEventListener('scroll', updateSubCalTabOverflow);
-      window.removeEventListener('resize', updateSubCalTabOverflow);
-    };
-  }, [activeSubCalendar?.id, tripPhotos.length, subCalTab, tripChatUnreadCounts]);
-
   // Load group ratings for active trip when viewing Ratings tab (depends on subCalTab)
   useEffect(() => {
     if (!activeSubCalendar?.id || subCalTab !== 'ratings') return;
@@ -18851,6 +18806,49 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     && toDateOnlyTs(activeSubCalendar?.end_date) !== null
     && toDateOnlyTs(activeSubCalendar?.end_date) <= todayTs
   );
+  useEffect(() => {
+    const node = tripHeaderActionStripRef.current;
+    if (!node) return undefined;
+    const updateTripHeaderActionOverflow = () => {
+      const maxScrollLeft = Math.max(0, node.scrollWidth - node.clientWidth);
+      const hasOverflow = maxScrollLeft > 12;
+      setTripHeaderActionsHasOverflow(hasOverflow);
+      setTripHeaderActionsShowRightHint(hasOverflow && node.scrollLeft < maxScrollLeft - 12);
+    };
+    updateTripHeaderActionOverflow();
+    node.addEventListener('scroll', updateTripHeaderActionOverflow, { passive: true });
+    window.addEventListener('resize', updateTripHeaderActionOverflow);
+    return () => {
+      node.removeEventListener('scroll', updateTripHeaderActionOverflow);
+      window.removeEventListener('resize', updateTripHeaderActionOverflow);
+    };
+  }, [
+    activeSubCalendar?.id,
+    subCalMembers.length,
+    subCalWeatherLocation,
+    subCalWeatherExpanded,
+    subCalNotes.length,
+    canEditCurrentTrip,
+    canGenerateTripHighlights,
+    Object.keys(memberLocations || {}).length,
+  ]);
+  useEffect(() => {
+    const node = subCalTabStripRef.current;
+    if (!node) return undefined;
+    const updateSubCalTabOverflow = () => {
+      const maxScrollLeft = Math.max(0, node.scrollWidth - node.clientWidth);
+      const hasOverflow = maxScrollLeft > 12;
+      setSubCalTabsHasOverflow(hasOverflow);
+      setSubCalTabsShowRightHint(hasOverflow && node.scrollLeft < maxScrollLeft - 12);
+    };
+    updateSubCalTabOverflow();
+    node.addEventListener('scroll', updateSubCalTabOverflow, { passive: true });
+    window.addEventListener('resize', updateSubCalTabOverflow);
+    return () => {
+      node.removeEventListener('scroll', updateSubCalTabOverflow);
+      window.removeEventListener('resize', updateSubCalTabOverflow);
+    };
+  }, [activeSubCalendar?.id, tripPhotos.length, subCalTab, tripChatUnreadCounts]);
   const TRIP_DAY_SECTIONS = [
     { key: 'morning', label: 'Morning', startHour: 6, endHour: 11, defaultHour: 9, accent: 'from-amber-400/20 to-orange-400/5' },
     { key: 'afternoon', label: 'Afternoon', startHour: 12, endHour: 17, defaultHour: 14, accent: 'from-sky-400/20 to-indigo-400/5' },
