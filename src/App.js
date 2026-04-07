@@ -2856,9 +2856,60 @@ function App() {
   const [subCalAddingSlot, setSubCalAddingSlot] = useState(null); // hour number being added to
   const [subCalNewEventForm, setSubCalNewEventForm] = useState({ title: '', startTime: '', endTime: '', location: '', category: 'other' });
   const [subCalTab, setSubCalTab] = useState('itinerary'); // 'itinerary' | 'expenses' | 'photos' | 'chat'
+  const [tripHeaderActionsHasOverflow, setTripHeaderActionsHasOverflow] = useState(false);
+  const [tripHeaderActionsShowRightHint, setTripHeaderActionsShowRightHint] = useState(false);
+  const [subCalTabsHasOverflow, setSubCalTabsHasOverflow] = useState(false);
+  const [subCalTabsShowRightHint, setSubCalTabsShowRightHint] = useState(false);
   const [ratingsFocusEventId, setRatingsFocusEventId] = useState(null);
   const subCalDateStripRef = useRef(null);
   const subCalDateButtonRefs = useRef({});
+  const tripHeaderActionStripRef = useRef(null);
+  const subCalTabStripRef = useRef(null);
+
+  useEffect(() => {
+    const node = tripHeaderActionStripRef.current;
+    if (!node) return undefined;
+    const updateTripHeaderActionOverflow = () => {
+      const maxScrollLeft = Math.max(0, node.scrollWidth - node.clientWidth);
+      const hasOverflow = maxScrollLeft > 12;
+      setTripHeaderActionsHasOverflow(hasOverflow);
+      setTripHeaderActionsShowRightHint(hasOverflow && node.scrollLeft < maxScrollLeft - 12);
+    };
+    updateTripHeaderActionOverflow();
+    node.addEventListener('scroll', updateTripHeaderActionOverflow, { passive: true });
+    window.addEventListener('resize', updateTripHeaderActionOverflow);
+    return () => {
+      node.removeEventListener('scroll', updateTripHeaderActionOverflow);
+      window.removeEventListener('resize', updateTripHeaderActionOverflow);
+    };
+  }, [
+    activeSubCalendar?.id,
+    subCalMembers.length,
+    subCalWeatherLocation,
+    subCalWeatherExpanded,
+    subCalNotes.length,
+    canEditCurrentTrip,
+    canGenerateTripHighlights,
+    Object.keys(memberLocations || {}).length,
+  ]);
+
+  useEffect(() => {
+    const node = subCalTabStripRef.current;
+    if (!node) return undefined;
+    const updateSubCalTabOverflow = () => {
+      const maxScrollLeft = Math.max(0, node.scrollWidth - node.clientWidth);
+      const hasOverflow = maxScrollLeft > 12;
+      setSubCalTabsHasOverflow(hasOverflow);
+      setSubCalTabsShowRightHint(hasOverflow && node.scrollLeft < maxScrollLeft - 12);
+    };
+    updateSubCalTabOverflow();
+    node.addEventListener('scroll', updateSubCalTabOverflow, { passive: true });
+    window.addEventListener('resize', updateSubCalTabOverflow);
+    return () => {
+      node.removeEventListener('scroll', updateSubCalTabOverflow);
+      window.removeEventListener('resize', updateSubCalTabOverflow);
+    };
+  }, [activeSubCalendar?.id, tripPhotos.length, subCalTab, tripChatUnreadCounts]);
 
   // Load group ratings for active trip when viewing Ratings tab (depends on subCalTab)
   useEffect(() => {
@@ -29841,7 +29892,11 @@ transform: translateY(0);
             </button>
           </div>
 
-          <div className="mt-4 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" ref={weatherAutocompleteRef}>
+          <div className="relative mt-4">
+          <div
+            ref={tripHeaderActionStripRef}
+            className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 pr-10"
+          >
             <button
               onClick={() => setSubCalMembersCollapsed((prev) => !prev)}
               className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm ${tripHeaderPillClassName}`}
@@ -29919,6 +29974,20 @@ transform: translateY(0);
                 </button>
               )}
             </div>
+          </div>
+          {tripHeaderActionsShowRightHint && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pl-6 pr-1">
+              <div className="absolute inset-y-0 right-0 w-24 rounded-r-3xl bg-gradient-to-r from-transparent via-white/75 to-white dark:via-slate-950/70 dark:to-slate-950" />
+              <div className="relative rounded-full border border-purple-200/80 bg-white/95 px-2.5 py-1 text-[11px] font-semibold tracking-[0.01em] text-purple-600 shadow-sm dark:border-purple-400/20 dark:bg-slate-900/95 dark:text-purple-300">
+                More →
+              </div>
+            </div>
+          )}
+          {tripHeaderActionsHasOverflow && !tripHeaderActionsShowRightHint && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-1 pr-6">
+              <div className="absolute inset-y-0 left-0 w-14 rounded-l-3xl bg-gradient-to-r from-white to-transparent dark:from-slate-950 dark:to-transparent" />
+            </div>
+          )}
           </div>
 
           {subCalWeatherExpanded && (
@@ -30358,7 +30427,11 @@ transform: translateY(0);
 
         {/* Softer segmented tab bar */}
         <div className="px-4 pt-3">
-          <div className="flex gap-2 overflow-x-auto whitespace-nowrap rounded-2xl bg-white/60 p-1 dark:bg-white/[0.04]">
+          <div className="relative">
+          <div
+            ref={subCalTabStripRef}
+            className="flex gap-2 overflow-x-auto whitespace-nowrap rounded-2xl bg-white/60 p-1 pr-10 dark:bg-white/[0.04] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
           <button
             onClick={() => setSubCalTab('itinerary')}
             className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${subCalTab === 'itinerary' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
@@ -30414,6 +30487,20 @@ transform: translateY(0);
             onClick={() => setSubCalTab('expenses')}
             className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${subCalTab === 'expenses' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
           >Expenses</button>
+          </div>
+          {subCalTabsShowRightHint && (
+            <div className="pointer-events-none absolute inset-y-1 right-1 flex items-center pl-6 pr-1">
+              <div className="absolute inset-y-0 right-0 w-20 rounded-r-2xl bg-gradient-to-r from-transparent via-white/70 to-white dark:via-slate-950/65 dark:to-slate-950" />
+              <div className="relative rounded-full border border-purple-200/80 bg-white/95 px-2.5 py-1 text-[11px] font-semibold tracking-[0.01em] text-purple-600 shadow-sm dark:border-purple-400/20 dark:bg-slate-900/95 dark:text-purple-300">
+                More →
+              </div>
+            </div>
+          )}
+          {subCalTabsHasOverflow && !subCalTabsShowRightHint && (
+            <div className="pointer-events-none absolute inset-y-1 left-1 flex items-center pl-1 pr-6">
+              <div className="absolute inset-y-0 left-0 w-14 rounded-l-2xl bg-gradient-to-r from-white to-transparent dark:from-slate-950 dark:to-transparent" />
+            </div>
+          )}
           </div>
         </div>
 
