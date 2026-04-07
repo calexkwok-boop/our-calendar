@@ -480,21 +480,49 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
   const mapInstanceRef = useRef(null);
   const markersRef = useRef({});
   const watchIdRef = useRef(null);
+  const eventMarkerRef = useRef(null);
+  const currentUserMarkerRef = useRef(null);
   const fallbackCenterRef = useRef({ lat: 37.7749, lng: -122.4194 });
   const [sharing, setSharing] = useState(false);
   const [locations, setLocations] = useState([]);
+  const [currentPosition, setCurrentPosition] = useState(null);
   const [geoError, setGeoError] = useState('');
   const [mapReady, setMapReady] = useState(false);
   const [mapFailed, setMapFailed] = useState(Boolean(typeof window !== 'undefined' && window.googleMapsAuthFailed));
   const hasEventCoordinates = Number.isFinite(Number(event?.location_lat)) && Number.isFinite(Number(event?.location_lng));
+  const sharedSelfLocation = locations.find((loc) => loc.user_id === user?.id) || null;
   const mapHref = event?.location
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(event.location || '').trim())}`
     : hasEventCoordinates
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${Number(event.location_lat)},${Number(event.location_lng)}`)}`
       : '';
 
+  const syncViewport = useCallback(() => {
+    if (!mapInstanceRef.current || !window.google?.maps) return;
+    const map = mapInstanceRef.current;
+    const points = [];
+    if (hasEventCoordinates) {
+      points.push({ lat: Number(event.location_lat), lng: Number(event.location_lng) });
+    }
+    if (currentPosition && !sharedSelfLocation) {
+      points.push(currentPosition);
+    }
+    if (points.length === 0) {
+      map.setCenter(fallbackCenterRef.current);
+      return;
+    }
+    if (points.length === 1) {
+      map.setCenter(points[0]);
+      map.setZoom(15);
+      return;
+    }
+    const bounds = new window.google.maps.LatLngBounds();
+    points.forEach((point) => bounds.extend(point));
+    map.fitBounds(bounds, 48);
+  }, [currentPosition, event.location_lat, event.location_lng, hasEventCoordinates, sharedSelfLocation]);
+
   useEffect(() => {
-    if (hasEventCoordinates || typeof navigator === 'undefined' || !navigator.geolocation) return undefined;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return undefined;
     let cancelled = false;
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -504,8 +532,9 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
           lng: position.coords.longitude,
         };
         fallbackCenterRef.current = nextCenter;
+        setCurrentPosition(nextCenter);
         if (mapInstanceRef.current) {
-          mapInstanceRef.current.setCenter(nextCenter);
+          syncViewport();
         }
       },
       () => {},
@@ -514,7 +543,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
     return () => {
       cancelled = true;
     };
-  }, [hasEventCoordinates]);
+  }, [syncViewport]);
 
   // Init Google Map
   useEffect(() => {
@@ -535,7 +564,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
       }
       const center = hasEventCoordinates
         ? { lat: Number(event.location_lat), lng: Number(event.location_lng) }
-        : fallbackCenterRef.current;
+        : currentPosition || fallbackCenterRef.current;
       try {
         mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
           center,
@@ -557,21 +586,13 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
       window.setTimeout(() => {
         if (!mapInstanceRef.current || !window.google?.maps?.event) return;
         window.google.maps.event.trigger(mapInstanceRef.current, 'resize');
-        mapInstanceRef.current.setCenter(center);
+        syncViewport();
       }, 250);
       window.setTimeout(() => {
         if (!mapInstanceRef.current || !window.google?.maps?.event) return;
         window.google.maps.event.trigger(mapInstanceRef.current, 'resize');
-        mapInstanceRef.current.setCenter(center);
+        syncViewport();
       }, 900);
-      if (hasEventCoordinates) {
-        new window.google.maps.Marker({
-          position: center,
-          map: mapInstanceRef.current,
-          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: accent, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
-          title: event.location || 'Venue',
-        });
-      }
       setMapReady(true);
     };
 
@@ -581,7 +602,60 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
       cancelled = true;
       if (retryId) window.clearTimeout(retryId);
     };
-  }, [accent, darkMode, event.location, event.location_lat, event.location_lng, hasEventCoordinates]);
+  }, [currentPosition, darkMode, event.location_lat, event.location_lng, hasEventCoordinates, syncViewport]);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current || !mapReady || !window.google?.maps) return;
+    if (hasEventCoordinates) {
+      const eventPosition = { lat: Number(event.location_lat), lng: Number(event.location_lng) };
+      if (eventMarkerRef.current) {
+        eventMarkerRef.current.setPosition(eventPosition);
+      } else {
+        eventMarkerRef.current = new window.google.maps.Marker({
+          position: eventPosition,
+          map: mapInstanceRef.current,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: accent,
+            fillOpacity: 1,
+            strokeColor: '#fff',
+            strokeWeight: 2,
+          },
+          title: event.location || 'Venue',
+        });
+      }
+    } else if (eventMarkerRef.current) {
+      eventMarkerRef.current.setMap(null);
+      eventMarkerRef.current = null;
+    }
+
+    if (currentPosition && !sharedSelfLocation) {
+      if (currentUserMarkerRef.current) {
+        currentUserMarkerRef.current.setPosition(currentPosition);
+        currentUserMarkerRef.current.setMap(mapInstanceRef.current);
+      } else {
+        currentUserMarkerRef.current = new window.google.maps.Marker({
+          position: currentPosition,
+          map: mapInstanceRef.current,
+          title: 'Your location',
+          zIndex: 11,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 9,
+            fillColor: '#2563eb',
+            fillOpacity: 1,
+            strokeColor: '#fff',
+            strokeWeight: 3,
+          },
+        });
+      }
+    } else if (currentUserMarkerRef.current) {
+      currentUserMarkerRef.current.setMap(null);
+    }
+
+    syncViewport();
+  }, [accent, currentPosition, event.location, event.location_lat, event.location_lng, hasEventCoordinates, mapReady, sharedSelfLocation, syncViewport]);
 
   // Load + realtime locations
   const loadLocations = useCallback(async () => {
