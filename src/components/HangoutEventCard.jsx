@@ -334,9 +334,6 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
           <div className="grid gap-3 sm:grid-cols-2">
             <div className={`group/card relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${hangoutDetailSurfaceClassName}`}>
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-100 to-sky-100 text-sm font-semibold text-cyan-700 dark:from-cyan-500/15 dark:to-sky-500/15 dark:text-cyan-200">
-                  Plan
-                </div>
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-cyan-700 dark:text-cyan-300">Reservation</div>
                   <div className="text-sm font-semibold text-gray-900 dark:text-white">{reservationName || 'Walk-in'}</div>
@@ -346,9 +343,6 @@ const HangoutEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...pro
 
             <div className={`group/card relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md ${hangoutDetailSurfaceClassName}`}>
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-blue-100 text-sm font-semibold text-sky-700 dark:from-sky-500/15 dark:to-blue-500/15 dark:text-sky-200">
-                  Bill
-                </div>
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-sky-700 dark:text-sky-300">Bill</div>
                   <div className="text-sm font-semibold text-gray-900 dark:text-white">{billText}</div>

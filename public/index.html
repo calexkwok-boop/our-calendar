@@ -30,8 +30,8 @@
 
     <title>Our Calendar</title>
     <script>
-      function initGoogleMaps() { window.googleMapsReady = true; console.log('Google Maps loaded OK'); }
-      function gm_authFailure() { console.error('Google Maps auth failure — check API key and restrictions'); }
+      function initGoogleMaps() { window.googleMapsReady = true; window.googleMapsAuthFailed = false; console.log('Google Maps loaded OK'); }
+      function gm_authFailure() { window.googleMapsAuthFailed = true; console.error('Google Maps auth failure — check API key and restrictions'); }
     </script>
     <script async defer
       src="https://maps.googleapis.com/maps/api/js?key=%REACT_APP_GOOGLE_MAPS_KEY%&libraries=places&callback=initGoogleMaps&loading=async"

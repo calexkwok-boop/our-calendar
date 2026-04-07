@@ -500,7 +500,13 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
   const [locations, setLocations] = useState([]);
   const [geoError, setGeoError] = useState('');
   const [mapReady, setMapReady] = useState(false);
+  const [mapFailed, setMapFailed] = useState(Boolean(typeof window !== 'undefined' && window.googleMapsAuthFailed));
   const hasEventCoordinates = Number.isFinite(Number(event?.location_lat)) && Number.isFinite(Number(event?.location_lng));
+  const mapHref = event?.location
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(event.location || '').trim())}`
+    : hasEventCoordinates
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${Number(event.location_lat)},${Number(event.location_lng)}`)}`
+      : '';
 
   useEffect(() => {
     if (hasEventCoordinates || typeof navigator === 'undefined' || !navigator.geolocation) return undefined;
@@ -527,37 +533,61 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
 
   // Init Google Map
   useEffect(() => {
-    if (!mapRef.current || !window.google?.maps || mapInstanceRef.current) return;
-    const center = hasEventCoordinates
-      ? { lat: Number(event.location_lat), lng: Number(event.location_lng) }
-      : fallbackCenterRef.current;
-    try {
-      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-        center,
-        zoom: 15,
-        disableDefaultUI: true,
-        zoomControl: true,
-        mapTypeId: 'roadmap',
-        styles: darkMode ? DARK_MAP_STYLES : undefined,
-      });
-    } catch (error) {
-      console.warn('LiveMap style init failed, retrying without custom styles:', error);
-      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-        center,
-        zoom: 15,
-        disableDefaultUI: true,
-        zoomControl: true,
-        mapTypeId: 'roadmap',
-      });
-    }
-    // Venue marker
-    if (hasEventCoordinates) {
-      new window.google.maps.Marker({ position: center, map: mapInstanceRef.current,
-        icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: accent, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
-        title: event.location || 'Venue' });
-    }
-    setMapReady(true);
-  }, [accent, darkMode, event.location, event.location_lat, event.location_lng, hasEventCoordinates, mapRef.current]);
+    if (!mapRef.current || mapInstanceRef.current) return undefined;
+
+    let cancelled = false;
+    let retryId = null;
+
+    const initMap = () => {
+      if (cancelled || !mapRef.current || mapInstanceRef.current) return;
+      if (window.googleMapsAuthFailed) {
+        setMapFailed(true);
+        return;
+      }
+      if (!window.google?.maps) {
+        retryId = window.setTimeout(initMap, 300);
+        return;
+      }
+      const center = hasEventCoordinates
+        ? { lat: Number(event.location_lat), lng: Number(event.location_lng) }
+        : fallbackCenterRef.current;
+      try {
+        mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+          center,
+          zoom: 15,
+          disableDefaultUI: true,
+          zoomControl: true,
+          mapTypeId: 'roadmap',
+          styles: darkMode ? DARK_MAP_STYLES : undefined,
+        });
+      } catch (error) {
+        console.warn('LiveMap style init failed, retrying without custom styles:', error);
+        mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+          center,
+          zoom: 15,
+          disableDefaultUI: true,
+          zoomControl: true,
+          mapTypeId: 'roadmap',
+        });
+      }
+      if (hasEventCoordinates) {
+        new window.google.maps.Marker({
+          position: center,
+          map: mapInstanceRef.current,
+          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: accent, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+          title: event.location || 'Venue',
+        });
+      }
+      setMapReady(true);
+    };
+
+    initMap();
+
+    return () => {
+      cancelled = true;
+      if (retryId) window.clearTimeout(retryId);
+    };
+  }, [accent, darkMode, event.location, event.location_lat, event.location_lng, hasEventCoordinates]);
 
   // Load + realtime locations
   const loadLocations = useCallback(async () => {
@@ -635,7 +665,33 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {/* Map */}
-      <div ref={mapRef} style={{ height: 300, background: darkMode ? '#1d2c4d' : '#e5e7eb' }} />
+      {mapFailed ? (
+        <div style={{ height: 300, background: darkMode ? '#1d2c4d' : '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ width: '100%', maxWidth: 360, borderRadius: 18, border: `1px solid ${border}`, background: softBg, padding: 18, textAlign: 'center' }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: darkMode ? '#fff' : 'var(--color-text-primary)' }}>Map preview unavailable</div>
+            <div style={{ fontSize: 12, lineHeight: 1.5, color: darkMode ? '#cbd5e1' : 'var(--color-text-secondary)', marginTop: 6 }}>
+              Google Maps did not authorize correctly for the embedded preview.
+            </div>
+            {event?.location ? (
+              <div style={{ fontSize: 12, lineHeight: 1.5, color: darkMode ? '#e2e8f0' : 'var(--color-text-primary)', marginTop: 10 }}>
+                {event.location}
+              </div>
+            ) : null}
+            {mapHref ? (
+              <a
+                href={mapHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: 14, padding: '10px 14px', borderRadius: 12, background: accent, color: darkMode ? '#111' : '#fff', fontSize: 12, fontWeight: 800, textDecoration: 'none' }}
+              >
+                Open in Google Maps
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <div ref={mapRef} style={{ height: 300, background: darkMode ? '#1d2c4d' : '#e5e7eb' }} />
+      )}
 
       {/* Controls */}
       <div style={{ padding: '12px 16px', borderTop: `1px solid ${border}`, background: softBg }}>
