@@ -310,6 +310,9 @@ const UnifiedCalendarView = ({
           formatTime={formatTime}
           activeLayerPageTheme={activeLayerPageTheme}
           darkMode={darkMode}
+          canDeleteEventInActiveLayer={canDeleteEventInActiveLayer}
+          handleDeleteEvent={handleDeleteEvent}
+          openRecurringDeletePrompt={openRecurringDeletePrompt}
         />
       )}
       

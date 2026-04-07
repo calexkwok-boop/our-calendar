@@ -68,12 +68,16 @@ export default function Agenda({
   const [swipedEventKey, setSwipedEventKey] = useState(null);
   const [eventSwipeDrag, setEventSwipeDrag] = useState({ id: null, offset: 0 });
   const swipeStartXRef = useRef(0);
+  const swipeStartYRef = useRef(0);
   const swipingKeyRef = useRef(null);
+  const swipeAxisLockRef = useRef(null);
 
   const onSwipeStart = (e, key, canSwipe) => {
     if (!canSwipe) return;
     const touch = e.touches?.[0];
     swipeStartXRef.current = touch?.clientX ?? 0;
+    swipeStartYRef.current = touch?.clientY ?? 0;
+    swipeAxisLockRef.current = null;
     swipingKeyRef.current = key;
     if (swipedEventKey && swipedEventKey !== key) setSwipedEventKey(null);
   };
@@ -81,6 +85,12 @@ export default function Agenda({
     const key = swipingKeyRef.current; if (!key) return;
     const touch = e.touches?.[0]; if (!touch) return;
     const deltaX = touch.clientX - swipeStartXRef.current;
+    const deltaY = touch.clientY - swipeStartYRef.current;
+    if (!swipeAxisLockRef.current) {
+      if (Math.abs(deltaX) < 6 && Math.abs(deltaY) < 6) return;
+      swipeAxisLockRef.current = Math.abs(deltaX) > Math.abs(deltaY) ? 'x' : 'y';
+    }
+    if (swipeAxisLockRef.current !== 'x') return;
     const clamped = Math.max(-88, Math.min(0, deltaX));
     setEventSwipeDrag({ id: key, offset: clamped });
   };
@@ -90,6 +100,28 @@ export default function Agenda({
     setSwipedEventKey(open ? key : null);
     setEventSwipeDrag({ id: null, offset: 0 });
     swipingKeyRef.current = null;
+    swipeAxisLockRef.current = null;
+  };
+
+  const onPointerSwipeStart = (e, key, canSwipe) => {
+    if (!canSwipe) return;
+    swipeStartXRef.current = e.clientX ?? 0;
+    swipeStartYRef.current = e.clientY ?? 0;
+    swipeAxisLockRef.current = null;
+    swipingKeyRef.current = key;
+    if (swipedEventKey && swipedEventKey !== key) setSwipedEventKey(null);
+  };
+  const onPointerSwipeMove = (e) => {
+    const key = swipingKeyRef.current; if (!key) return;
+    const deltaX = (e.clientX ?? 0) - swipeStartXRef.current;
+    const deltaY = (e.clientY ?? 0) - swipeStartYRef.current;
+    if (!swipeAxisLockRef.current) {
+      if (Math.abs(deltaX) < 6 && Math.abs(deltaY) < 6) return;
+      swipeAxisLockRef.current = Math.abs(deltaX) > Math.abs(deltaY) ? 'x' : 'y';
+    }
+    if (swipeAxisLockRef.current !== 'x') return;
+    const clamped = Math.max(-88, Math.min(0, deltaX));
+    setEventSwipeDrag({ id: key, offset: clamped });
   };
 
   return (
@@ -307,9 +339,13 @@ export default function Agenda({
                       onTouchMove={onSwipeMove}
                       onTouchEnd={onSwipeEnd}
                       onTouchCancel={onSwipeEnd}
+                      onPointerDown={(e) => onPointerSwipeStart(e, eventSwipeKey, canDeleteThisEvent)}
+                      onPointerMove={onPointerSwipeMove}
+                      onPointerUp={onSwipeEnd}
+                      onPointerCancel={onSwipeEnd}
                       onClick={() => onEventClick && onEventClick(event)}
                       className="group relative z-10 w-full text-left rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border"
-                      style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(17,24,39,0.12)', transform: `translateX(${rowOffset}px)`, touchAction: 'pan-y' }}
+                      style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(17,24,39,0.12)', transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease', touchAction: 'pan-y' }}
                     >
                     <div className="flex items-center gap-4">
                       {/* Time badge */}
