@@ -27739,6 +27739,17 @@ transform: translateY(0);
                   const popupJoined = popupSignups.some((row) => String(row?.userId || '') === String(user?.id || ''));
                   const popupNoMax = popupMeta ? Number(popupMeta.maxPeople || 0) >= POPUP_NO_MAX_SENTINEL : false;
                   const popupFull = popupMeta ? (!popupNoMax && popupSignups.length >= Number(popupMeta.maxPeople || 1)) : false;
+                  const popupAttendeeLabel = (() => {
+                    const normalizedCategory = String(event?.category || '').trim().toLowerCase();
+                    const normalizedSubtype = String(
+                      event?.popupSubtype
+                      || event?.popup_subtype
+                      || event?.event_data?.popupSubtype
+                      || event?.event_data?.popup_subtype
+                      || ''
+                    ).trim().toLowerCase();
+                    return normalizedCategory === 'sports' || normalizedSubtype === 'sports' ? 'players' : 'guests';
+                  })();
                   const eventLayer = getLayerForEvent(event);
                   const isPublicRegularEvent = Boolean(eventLayer?.is_public) && !popupMeta;
                   const eventRelationshipStatus = getEventRelationshipStatus(event);
@@ -28016,7 +28027,7 @@ transform: translateY(0);
                               <div className="mt-2 p-2 rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20">
                                 <div className="flex items-center justify-between gap-2">
                                   <div className="text-xs font-semibold text-rose-700 dark:text-rose-300">
-                                    Pop-up event: {popupSignups.length}{popupNoMax ? ' joined (no max)' : `/${popupMeta.maxPeople} spots`}
+                                    Pop-up event: {popupNoMax ? `${popupSignups.length} ${popupSignups.length === 1 ? (popupAttendeeLabel === 'players' ? 'player' : 'guest') : popupAttendeeLabel} joined` : `${popupSignups.length}/${popupMeta.maxPeople} ${popupAttendeeLabel}`}
                                   </div>
                                   {popupJoined ? (
                                     <button
@@ -28211,6 +28222,17 @@ transform: translateY(0);
                       const weEventBadge = getWeEventDisplayBadge(event, popupMeta);
                       const signups = popupSignupsByEventId[String(event.id || '')] || [];
                       const maxPeople = popupMeta ? Number(popupMeta.maxPeople || 0) : 0;
+                      const attendeeLabel = (() => {
+                        const normalizedCategory = String(event?.category || '').trim().toLowerCase();
+                        const normalizedSubtype = String(
+                          event?.popupSubtype
+                          || event?.popup_subtype
+                          || event?.event_data?.popupSubtype
+                          || event?.event_data?.popup_subtype
+                          || ''
+                        ).trim().toLowerCase();
+                        return normalizedCategory === 'sports' || normalizedSubtype === 'sports' ? 'players' : 'guests';
+                      })();
                       const spotsLeft = maxPeople - signups.length;
                       const isFull = maxPeople > 0 && spotsLeft <= 0;
                       const joined = signups.some(s => String(s.userId || '') === String(user?.id || ''));
@@ -28295,7 +28317,7 @@ transform: translateY(0);
                                       {joined ? '✓ Joined' : isFull ? 'Full' : 'Open'}
                                     </span>
                                     {maxPeople > 0 && (
-                                      <span className="text-[10px] text-gray-400 dark:text-gray-500">{signups.length}/{maxPeople} players</span>
+                                      <span className="text-[10px] text-gray-400 dark:text-gray-500">{signups.length}/{maxPeople} {attendeeLabel}</span>
                                     )}
                                   </>
                                 ) : null}

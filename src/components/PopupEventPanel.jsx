@@ -46,6 +46,13 @@ const isValidLatLng = (lat, lng) => {
   return true;
 };
 
+const formatPopupCapacityLabel = (memberCount, maxPlayers, attendeeLabel) => {
+  const singularLabel = attendeeLabel === 'players' ? 'player' : 'guest';
+  const noMax = Number(maxPlayers || 0) >= POPUP_NO_MAX_SENTINEL;
+  if (noMax) return `${memberCount} ${memberCount === 1 ? singularLabel : attendeeLabel} joined`;
+  return `${memberCount}/${maxPlayers} ${attendeeLabel}`;
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1732,7 +1739,7 @@ export default function PopupEventPanel({
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Calendar style={{ width: 11, height: 11 }} />{formatDateKeyMMDDYYYY?.(event.date) || event.date}</span>
                 {event.time && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Clock style={{ width: 11, height: 11 }} />{formatTime?.(event.time) || event.time}</span>}
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Users style={{ width: 11, height: 11 }} />{memberCount}/{event.max_players} {attendeeLabel}</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Users style={{ width: 11, height: 11 }} />{formatPopupCapacityLabel(memberCount, event.max_players, attendeeLabel)}</span>
               </div>
             </div>
             <button onClick={(e) => { e.stopPropagation(); onClose?.(); }} style={{ position: 'absolute', top: 0, right: 0, background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 10, padding: 6, cursor: 'pointer' }}>
@@ -1965,11 +1972,11 @@ export default function PopupEventPanel({
       {activeScreen === 'roster' && (
         <div style={{ paddingBottom: 112, flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain' }}>
           <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent }}>{memberCount} / {event.max_players} {attendeeLabel}</div>
+            <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent }}>{currentNoMax ? `${memberCount} ${attendeeLabel}` : `${memberCount} / ${event.max_players} ${attendeeLabel}`}</div>
             <div style={{ flex: 1, height: 4, borderRadius: 999, background: border, margin: '0 12px', overflow: 'hidden' }}>
               <div style={{ height: '100%', borderRadius: 999, background: accent, width: `${Math.min(100, (memberCount / (event.max_players || 1)) * 100)}%`, transition: 'width 0.4s' }} />
             </div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: isFull ? '#f59e0b' : secondaryText }}>{isFull ? 'Full' : `${event.max_players - memberCount} spots left`}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: isFull ? '#f59e0b' : secondaryText }}>{currentNoMax ? 'Unlimited spots' : (isFull ? 'Full' : `${event.max_players - memberCount} spots left`)}</div>
           </div>
           {sortedMembers.map((m) => (
             <React.Fragment key={m.id || m.user_id}>
