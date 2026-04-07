@@ -400,6 +400,24 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
             <div className="mx-auto h-24 w-16 rounded-full bg-gradient-to-b from-sky-200 to-cyan-500 opacity-84 shadow-[0_18px_44px_rgba(6,182,212,0.24)] dark:opacity-82" />
             <div className="mx-auto h-16 w-px bg-gradient-to-b from-cyan-300/75 to-transparent dark:from-cyan-300/45" />
           </div>
+          {tone.kind === 'baby' ? (
+            <>
+              <div className="absolute left-[5%] top-[60%] h-44 w-[4.6rem]" style={{ animation: 'party-card-bob 6.1s ease-in-out infinite 0.5s' }}>
+                <div className="mx-auto h-28 w-[4.6rem] rounded-full bg-gradient-to-b from-rose-100 to-amber-200 opacity-88 shadow-[0_18px_44px_rgba(251,191,36,0.18)] dark:opacity-82" />
+                <div className="mx-auto h-16 w-px bg-gradient-to-b from-stone-300/70 to-transparent dark:from-stone-300/35" />
+              </div>
+              <div className="absolute right-[7%] top-[58%] h-40 w-[4.2rem]" style={{ animation: 'party-card-bob 5.7s ease-in-out infinite 1.1s' }}>
+                <div className="mx-auto h-24 w-[4.2rem] rounded-full bg-gradient-to-b from-stone-100 to-rose-200 opacity-84 shadow-[0_18px_40px_rgba(244,114,182,0.14)] dark:opacity-82" />
+                <div className="mx-auto h-16 w-px bg-gradient-to-b from-stone-300/68 to-transparent dark:from-stone-300/35" />
+              </div>
+              <div className="absolute left-[18%] top-[79%] text-[2.2rem] opacity-70 drop-shadow-[0_10px_18px_rgba(251,191,36,0.16)] dark:opacity-64" style={{ animation: 'party-card-float 8.4s ease-in-out infinite 1.3s' }}>🎈</div>
+              <div className="absolute right-[21%] top-[83%] text-[2.1rem] opacity-68 drop-shadow-[0_10px_18px_rgba(244,114,182,0.16)] dark:opacity-62" style={{ animation: 'party-card-float 9.1s ease-in-out infinite 0.8s' }}>🎉</div>
+              <div className="absolute left-[44%] top-[76%] text-[1.9rem] opacity-64 drop-shadow-[0_10px_16px_rgba(214,211,209,0.18)] dark:opacity-58" style={{ animation: 'party-card-float 7.9s ease-in-out infinite 1.7s' }}>🎊</div>
+              <div className="absolute left-[57%] top-[86%] text-[1.8rem] opacity-62 drop-shadow-[0_10px_16px_rgba(245,158,11,0.16)] dark:opacity-56" style={{ animation: 'party-card-float 8.8s ease-in-out infinite 0.9s' }}>✨</div>
+              <div className="absolute right-[33%] top-[68%] h-10 w-28 rounded-full border-t-[5px] border-dashed border-rose-200/90 opacity-72 dark:border-rose-200/45 dark:opacity-52" style={{ transform: 'rotate(12deg)', animation: 'party-card-sway 8.1s ease-in-out infinite 0.5s' }} />
+              <div className="absolute left-[31%] top-[88%] h-10 w-24 rounded-full border-t-[5px] border-dashed border-amber-200/85 opacity-68 dark:border-amber-200/40 dark:opacity-50" style={{ transform: 'rotate(-10deg)', animation: 'party-card-sway 7.7s ease-in-out infinite 1.1s' }} />
+            </>
+          ) : null}
         </div>
       ) : null}
 

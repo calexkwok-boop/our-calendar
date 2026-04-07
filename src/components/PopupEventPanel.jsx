@@ -59,21 +59,6 @@ const ROLE_COLORS = {
   player: { bg: '#f3f4f6', text: '#374151', dark_bg: 'rgba(255,255,255,0.08)',dark_text: '#9ca3af' },
 };
 const ROLE_ICONS = { host: Crown, cohost: Shield, player: null };
-const DARK_MAP_STYLES = [
-  { elementType: 'geometry', stylers: [{ color: '#152033' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#dbeafe' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#152033' }] },
-  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#334155' }] },
-  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#cbd5e1' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1f3b52' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#314158' }] },
-  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#3b4d67' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#4b6385' }] },
-  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#ffffff' }] },
-  { featureType: 'transit', elementType: 'labels.text.fill', stylers: [{ color: '#bfdbfe' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#12324d' }] },
-];
-
 const Avatar = ({ name, size = 32, accent, role, darkMode }) => {
   const colors = ROLE_COLORS[role || 'player'];
   return (
@@ -558,7 +543,6 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
           disableDefaultUI: true,
           zoomControl: true,
           mapTypeId: 'roadmap',
-          styles: darkMode ? DARK_MAP_STYLES : undefined,
         });
       } catch (error) {
         console.warn('LiveMap style init failed, retrying without custom styles:', error);
@@ -570,6 +554,16 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
           mapTypeId: 'roadmap',
         });
       }
+      window.setTimeout(() => {
+        if (!mapInstanceRef.current || !window.google?.maps?.event) return;
+        window.google.maps.event.trigger(mapInstanceRef.current, 'resize');
+        mapInstanceRef.current.setCenter(center);
+      }, 250);
+      window.setTimeout(() => {
+        if (!mapInstanceRef.current || !window.google?.maps?.event) return;
+        window.google.maps.event.trigger(mapInstanceRef.current, 'resize');
+        mapInstanceRef.current.setCenter(center);
+      }, 900);
       if (hasEventCoordinates) {
         new window.google.maps.Marker({
           position: center,
@@ -690,7 +684,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
           </div>
         </div>
       ) : (
-        <div ref={mapRef} style={{ height: 300, background: darkMode ? '#1d2c4d' : '#e5e7eb' }} />
+        <div ref={mapRef} style={{ height: 300, background: darkMode ? '#0f172a' : '#e5e7eb' }} />
       )}
 
       {/* Controls */}
