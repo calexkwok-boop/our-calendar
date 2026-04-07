@@ -602,7 +602,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
           center,
           zoom: 15,
           disableDefaultUI: true,
-          zoomControl: true,
+          zoomControl: false,
           mapTypeId: 'roadmap',
         });
       } catch (error) {
@@ -611,7 +611,7 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
           center,
           zoom: 15,
           disableDefaultUI: true,
-          zoomControl: true,
+          zoomControl: false,
           mapTypeId: 'roadmap',
         });
       }
@@ -762,6 +762,14 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
 
   useEffect(() => () => { if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current); }, []);
 
+  const adjustZoom = (delta) => {
+    const map = mapInstanceRef.current;
+    if (!map || typeof map.getZoom !== 'function' || typeof map.setZoom !== 'function') return;
+    const currentZoom = Number(map.getZoom?.() || 15);
+    const nextZoom = Math.max(2, Math.min(21, currentZoom + delta));
+    map.setZoom(nextZoom);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {/* Map */}
@@ -790,7 +798,51 @@ const LiveMap = ({ event, supabase, user, displayName, accent, darkMode, border,
           </div>
         </div>
       ) : (
-        <div ref={mapRef} style={{ height: 300, background: darkMode ? '#0f172a' : '#e5e7eb' }} />
+        <div style={{ position: 'relative' }}>
+          <div ref={mapRef} style={{ height: 300, background: darkMode ? '#0f172a' : '#e5e7eb' }} />
+          <div style={{ position: 'absolute', right: 12, top: 12, display: 'flex', flexDirection: 'column', gap: 8, zIndex: 3 }}>
+            <button
+              type="button"
+              onClick={() => adjustZoom(1)}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                border: `1px solid ${border}`,
+                background: darkMode ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.96)',
+                color: darkMode ? '#f8fafc' : 'var(--color-text-primary)',
+                fontSize: 22,
+                fontWeight: 800,
+                lineHeight: 1,
+                boxShadow: darkMode ? '0 10px 24px rgba(2,6,23,0.28)' : '0 10px 24px rgba(15,23,42,0.12)',
+                cursor: 'pointer',
+              }}
+              aria-label="Zoom in"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={() => adjustZoom(-1)}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                border: `1px solid ${border}`,
+                background: darkMode ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.96)',
+                color: darkMode ? '#f8fafc' : 'var(--color-text-primary)',
+                fontSize: 22,
+                fontWeight: 800,
+                lineHeight: 1,
+                boxShadow: darkMode ? '0 10px 24px rgba(2,6,23,0.28)' : '0 10px 24px rgba(15,23,42,0.12)',
+                cursor: 'pointer',
+              }}
+              aria-label="Zoom out"
+            >
+              −
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Controls */}
