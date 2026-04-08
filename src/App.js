@@ -20,6 +20,7 @@ import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
 import TrophyCase, { deriveJourneyTrophyCase } from "./components/TrophyCase";
 import WelcomeCover from "./components/WelcomeCover";
 import ExploreTab from "./components/ExploreTab";
+import MemorySystem from "./components/MemorySystem";
 import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
 import TripHighlightReel from "./components/TripHighlightReel";
@@ -36,6 +37,7 @@ process.env.REACT_APP_SUPABASE_ANON_KEY
 
 const SUPABASE_URL = String(process.env.REACT_APP_SUPABASE_URL || '').trim().replace(/\/+$/, '');
 const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
+const PROFILE_PHOTO_BUCKETS = ['layer-media', 'layer_media', 'trip-photos', 'trip_photos'];
 const TRIP_PHOTO_STORAGE_PROVIDER = String(process.env.REACT_APP_TRIP_PHOTO_STORAGE_PROVIDER || 'supabase').trim().toLowerCase();
 const USE_FIREBASE_TRIP_PHOTO_STORAGE = TRIP_PHOTO_STORAGE_PROVIDER === 'firebase';
 const USE_R2_TRIP_PHOTO_STORAGE = TRIP_PHOTO_STORAGE_PROVIDER === 'r2';
@@ -65,6 +67,37 @@ const normalizeTripPhotoUrl = (value) => {
       '/object/sign/',
     ];
     for (const bucket of TRIP_PHOTO_BUCKETS) {
+      for (const prefix of prefixes) {
+        const marker = `${prefix}${bucket}/`;
+        const idx = parsed.pathname.indexOf(marker);
+        if (idx === -1) continue;
+        const objectPath = normalizeStorageObjectPath(parsed.pathname.slice(idx + marker.length));
+        const origin = SUPABASE_URL || `${parsed.protocol}//${parsed.host}`;
+        return `${origin}/storage/v1/object/public/${bucket}/${objectPath}`;
+      }
+    }
+    if (parsed.pathname !== '/' && /\s/.test(parsed.pathname)) {
+      return `${parsed.origin}${normalizeStorageObjectPath(parsed.pathname)}${parsed.search}${parsed.hash}`;
+    }
+    return parsed.toString();
+  } catch {
+    return encodeURI(raw);
+  }
+};
+
+const normalizeProfilePhotoUrl = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^(data:|blob:)/i.test(raw)) return raw;
+  try {
+    const parsed = new URL(raw, window?.location?.origin || 'http://localhost');
+    const prefixes = [
+      '/storage/v1/object/public/',
+      '/storage/v1/object/sign/',
+      '/object/public/',
+      '/object/sign/',
+    ];
+    for (const bucket of PROFILE_PHOTO_BUCKETS) {
       for (const prefix of prefixes) {
         const marker = `${prefix}${bucket}/`;
         const idx = parsed.pathname.indexOf(marker);
@@ -1293,6 +1326,46 @@ const writeStoredTripSelectedDateKey = (userId, subCalId, dateKey) => {
     }
   } catch {}
 };
+
+const getMemoriesStorageKey = (userId) => `saved-memories-${String(userId || 'guest').trim() || 'guest'}`;
+const PROFILE_PHOTO_OVERRIDE_STORAGE_KEY = 'our-calendar-uploaded-profile-photo';
+
+const readMemoriesState = (userId) => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(getMemoriesStorageKey(userId));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeMemoriesState = (userId, memories) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(getMemoriesStorageKey(userId), JSON.stringify(Array.isArray(memories) ? memories : []));
+  } catch {}
+};
+const readStoredProfilePhotoOverrideUrl = () => {
+  if (typeof window === 'undefined') return '';
+  try {
+    return normalizeProfilePhotoUrl(window.localStorage.getItem(PROFILE_PHOTO_OVERRIDE_STORAGE_KEY) || '');
+  } catch {
+    return '';
+  }
+};
+const writeStoredProfilePhotoOverrideUrl = (photoUrl) => {
+  if (typeof window === 'undefined') return;
+  try {
+    const normalized = normalizeProfilePhotoUrl(photoUrl);
+    if (normalized) {
+      window.localStorage.setItem(PROFILE_PHOTO_OVERRIDE_STORAGE_KEY, normalized);
+    } else {
+      window.localStorage.removeItem(PROFILE_PHOTO_OVERRIDE_STORAGE_KEY);
+    }
+  } catch {}
+};
 const getProfilePhotoCacheKeys = (userLike) => {
   const raw = typeof userLike === 'object' && userLike
     ? userLike
@@ -1320,7 +1393,7 @@ const readCachedProfilePhotoUrl = (userLike) => {
 const writeCachedProfilePhotoUrl = (userLike, photoUrl) => {
   if (typeof window === 'undefined') return;
   try {
-    const normalizedPhotoUrl = String(photoUrl || '').trim();
+    const normalizedPhotoUrl = normalizeProfilePhotoUrl(photoUrl);
     for (const key of getProfilePhotoCacheKeys(userLike)) {
       if (normalizedPhotoUrl) {
         window.localStorage.setItem(key, normalizedPhotoUrl);
@@ -1361,7 +1434,7 @@ const getUserProfilePhotoUrl = (authUser) => {
     readCachedProfilePhotoUrl(authUser),
   ];
   for (const candidate of candidates) {
-    const url = String(candidate || '').trim();
+    const url = normalizeProfilePhotoUrl(candidate);
     if (url) return url;
   }
   return '';
@@ -1410,11 +1483,21 @@ const UserProfileAvatar = ({
   borderClass = 'border border-purple-200 dark:border-gray-600',
   textClass = 'text-sm',
 }) => {
-  const cachedPhotoUrl = readCachedProfilePhotoUrl({ id: userId });
-  const preferredPhotoUrl = String(photoUrl || cachedPhotoUrl || '').trim();
+  const cachedPhotoUrl = normalizeProfilePhotoUrl(readCachedProfilePhotoUrl({ id: userId }));
+  const preferredPhotoUrl = normalizeProfilePhotoUrl(photoUrl || cachedPhotoUrl || '');
   const [displayPhotoUrl, setDisplayPhotoUrl] = React.useState(preferredPhotoUrl);
+  const lastGoodPhotoUrlRef = React.useRef(preferredPhotoUrl);
   React.useEffect(() => {
-    setDisplayPhotoUrl(preferredPhotoUrl);
+    if (preferredPhotoUrl) {
+      lastGoodPhotoUrlRef.current = preferredPhotoUrl;
+      setDisplayPhotoUrl(preferredPhotoUrl);
+      return;
+    }
+    if (lastGoodPhotoUrlRef.current) {
+      setDisplayPhotoUrl(lastGoodPhotoUrlRef.current);
+      return;
+    }
+    setDisplayPhotoUrl('');
   }, [preferredPhotoUrl]);
   const initial = String(label || '?').trim().charAt(0).toUpperCase() || '?';
   if (displayPhotoUrl) {
@@ -1423,8 +1506,14 @@ const UserProfileAvatar = ({
         src={displayPhotoUrl}
         alt="Profile"
         className={`${sizeClass} ${roundedClass} object-cover ${borderClass}`}
+        onLoad={() => {
+          const normalized = String(displayPhotoUrl || '').trim();
+          if (!normalized) return;
+          lastGoodPhotoUrlRef.current = normalized;
+          writeCachedProfilePhotoUrl({ id: userId }, normalized);
+        }}
         onError={() => {
-          const fallbackPhotoUrl = String(cachedPhotoUrl || '').trim();
+          const fallbackPhotoUrl = String(lastGoodPhotoUrlRef.current || cachedPhotoUrl || '').trim();
           if (fallbackPhotoUrl && fallbackPhotoUrl !== displayPhotoUrl) {
             setDisplayPhotoUrl(fallbackPhotoUrl);
             return;
@@ -2680,6 +2769,7 @@ function App() {
   const inAppSyncCursorRef = useRef({ events: null, subCalEvents: null, tripPhotos: null, sharedListItems: null, tripInvites: null });
   const seenExpenseIdsRef = useRef(new Set());
   const attemptedGoogleAvatarFetchRef = useRef(new Set());
+  const attemptedStoredAvatarRecoveryRef = useRef(new Set());
   const [showTimePrompt, setShowTimePrompt] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
   const [showAppPrompt, setShowAppPrompt] = useState(false);
@@ -2754,7 +2844,17 @@ function App() {
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [showDateDetailModal, setShowDateDetailModal] = useState(false);
   const [bottomNavTab, setBottomNavTab] = useState('home');
+  const [profilePhotoOverrideUrl, setProfilePhotoOverrideUrl] = useState(() => (
+    normalizeProfilePhotoUrl(readStoredProfilePhotoOverrideUrl() || readCachedProfilePhotoUrl('last'))
+  ));
   const [journeyState, setJourneyState] = useState(createEmptyJourneyState);
+  const [memories, setMemories] = useState([]);
+  const [memoriesHydratedUserId, setMemoriesHydratedUserId] = useState(null);
+  const [showMemorySystem, setShowMemorySystem] = useState(false);
+  const [memorySystemView, setMemorySystemView] = useState('gallery');
+  const [memorySystemCurrentMemory, setMemorySystemCurrentMemory] = useState(null);
+  const [memoryCreateDraft, setMemoryCreateDraft] = useState(null);
+  const [memoryDraftSourceLabel, setMemoryDraftSourceLabel] = useState('');
   const [showJourneyScreen, setShowJourneyScreen] = useState(false);
   const [showJourneyEntryModal, setShowJourneyEntryModal] = useState(false);
   const [showJourneyGoalModal, setShowJourneyGoalModal] = useState(false);
@@ -3387,6 +3487,34 @@ function App() {
     if (rawPhone) return 'Member';
     return formatHandleForDisplay(raw);
   };
+  const inferKnownFriendlyHandle = (value) => {
+    const raw = String(value || '').trim();
+    const rawEmail = normalizeEmail(raw);
+    if (!rawEmail || !isEmailValue(rawEmail)) return '';
+    const localPart = String(rawEmail.split('@')[0] || '').trim().toLowerCase();
+    if (!localPart) return '';
+    const candidates = [
+      currentUser,
+      ...Object.values(knownHandlesByEmail || {}),
+      ...Object.values(knownHandlesByUserId || {}),
+      ...Object.values(sharedOwnerLabels || {}),
+      ...(chatMembers || []).map((member) => member?.label),
+      ...(calendarChatMessages || []).map((row) => row?.created_by),
+    ]
+      .map((entry) => String(entry || '').trim())
+      .filter((entry) => entry && !isLikelyRawIdentity(entry));
+    let bestMatch = '';
+    candidates.forEach((entry) => {
+      const normalized = String(entry).toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!normalized || normalized.length < 3) return;
+      if (localPart.startsWith(normalized) || normalized.startsWith(localPart)) {
+        if (normalized.length > String(bestMatch).toLowerCase().replace(/[^a-z0-9]/g, '').length) {
+          bestMatch = entry;
+        }
+      }
+    });
+    return bestMatch ? formatHandleForDisplay(bestMatch) : '';
+  };
   const resolveHandleLikeLabel = (value, userId = '') => {
     const raw = String(value || '').trim();
     const uid = String(userId || '').trim();
@@ -3399,6 +3527,8 @@ function App() {
     if (rawEmail) {
       const byEmail = String(knownHandlesByEmail?.[rawEmail] || '').trim();
       if (byEmail) return formatHandleForDisplay(byEmail);
+      const inferred = inferKnownFriendlyHandle(rawEmail);
+      if (inferred) return inferred;
     }
     if (uid && String(user?.id || '').trim() === uid) {
       const selfLabel = String(currentUser || '').trim();
@@ -3964,7 +4094,7 @@ function App() {
     return ordered;
   };
 
-  const loadSubCalendarMembers = async (subCalId) => {
+  const getSubCalendarMembersRoster = async (subCalId) => {
     try {
       const myEmail = normalizeEmail(user?.email);
       const myPhone = normalizePhoneNumber(user?.phone);
@@ -4193,8 +4323,17 @@ function App() {
         return acc;
       }, []);
 
-      setSubCalMembers(dedupedMembers);
-    } catch (e) { console.error(e); }
+      return dedupedMembers;
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  };
+
+  const loadSubCalendarMembers = async (subCalId) => {
+    const dedupedMembers = await getSubCalendarMembersRoster(subCalId);
+    setSubCalMembers(dedupedMembers);
+    return dedupedMembers;
   };
 
   const loadSubCalendarEditAccess = async (subCal) => {
@@ -7706,14 +7845,13 @@ function App() {
   const showHomeCalendarWidgets = bottomNavTab === 'home' && preferCalendarHome;
   const hasOpenWidgetWindow = showControlWidgetAddPanel || Object.values(widgetCardOpenById).some(Boolean);
   useEffect(() => {
-    if (!showHomeCalendarWidgets) return;
     if (!coverHeaderControlsVisible) return;
     if (hasOpenWidgetWindow) return;
     const timeoutId = window.setTimeout(() => {
       setCoverHeaderControlsVisible(false);
     }, 5000);
     return () => window.clearTimeout(timeoutId);
-  }, [showHomeCalendarWidgets, coverHeaderControlsVisible, hasOpenWidgetWindow, coverHeaderControlsInteractionAt]);
+  }, [coverHeaderControlsVisible, hasOpenWidgetWindow, coverHeaderControlsInteractionAt]);
   const getLayerNotesStorageKey = React.useCallback((uid = user?.id, layerId = activeLayerId) => {
     const userKey = String(uid || '').trim();
     const layerKey = String(layerId || '').trim();
@@ -8799,14 +8937,39 @@ useEffect(() => {
     color: darkMode ? '#f3f4f6' : '#111827',
     borderColor: themeAccentBorder,
   };
-  const currentUserProfilePhotoUrl = getUserProfilePhotoUrl(user);
+  const currentUserProfilePhotoUrl = String(
+    getUserProfilePhotoUrl(user)
+    || profilePhotoOverrideUrl
+    || preservedProfilePhotoUrlRef.current
+    || readCachedProfilePhotoUrl(user)
+    || readCachedProfilePhotoUrl(user?.id)
+    || ''
+  ).trim();
   useEffect(() => {
     const nextPhotoUrl = String(currentUserProfilePhotoUrl || '').trim();
     if (nextPhotoUrl) {
       preservedProfilePhotoUrlRef.current = nextPhotoUrl;
+      setProfilePhotoOverrideUrl(nextPhotoUrl);
+      writeStoredProfilePhotoOverrideUrl(nextPhotoUrl);
       writeCachedProfilePhotoUrl(user?.id, nextPhotoUrl);
     }
   }, [currentUserProfilePhotoUrl, user?.id]);
+  useEffect(() => {
+    const userId = String(user?.id || '').trim();
+    if (!userId) return;
+    if (String(currentUserProfilePhotoUrl || '').trim()) return;
+    const cachedPhotoUrl = String(
+      readCachedProfilePhotoUrl(user)
+      || readCachedProfilePhotoUrl(userId)
+      || preservedProfilePhotoUrlRef.current
+      || ''
+    ).trim();
+    if (!cachedPhotoUrl) return;
+    preservedProfilePhotoUrlRef.current = cachedPhotoUrl;
+    setProfilePhotoOverrideUrl(cachedPhotoUrl);
+    writeStoredProfilePhotoOverrideUrl(cachedPhotoUrl);
+    setUser((prev) => mergeAuthUserPreservingProfilePhoto(prev, prev, cachedPhotoUrl));
+  }, [currentUserProfilePhotoUrl, user]);
   useEffect(() => {
     const userId = String(user?.id || '').trim();
     if (!userId) return undefined;
@@ -8842,6 +9005,54 @@ useEffect(() => {
       cancelled = true;
     };
   }, [currentUserProfilePhotoUrl, user?.id]);
+  useEffect(() => {
+    const userId = String(user?.id || '').trim();
+    const layerId = String(activeLayerId || '').trim();
+    const recoveryKey = `${userId}:${layerId}`;
+    if (!userId || !layerId) return undefined;
+    if (String(currentUserProfilePhotoUrl || '').trim()) return undefined;
+    if (attemptedStoredAvatarRecoveryRef.current.has(recoveryKey)) return undefined;
+
+    attemptedStoredAvatarRecoveryRef.current.add(recoveryKey);
+    let cancelled = false;
+
+    const recoverStoredAvatar = async () => {
+      const candidatePrefixes = [
+        `layer-media/${layerId}`,
+        `${layerId}`,
+      ];
+      for (const bucket of PROFILE_PHOTO_BUCKETS) {
+        for (const prefix of candidatePrefixes) {
+          try {
+            const { data, error } = await supabase.storage.from(bucket).list(prefix, {
+              limit: 20,
+              sortBy: { column: 'name', order: 'desc' },
+            });
+            if (error) continue;
+            const iconFile = (data || [])
+              .filter((entry) => /^icon_/i.test(String(entry?.name || '')))
+              .sort((a, b) => Number(new Date(b?.created_at || b?.updated_at || 0)) - Number(new Date(a?.created_at || a?.updated_at || 0)))[0];
+            if (!iconFile) continue;
+            const objectPath = `${prefix}/${String(iconFile.name || '').trim()}`;
+            const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+            const recoveredUrl = normalizeProfilePhotoUrl(urlData?.publicUrl || '');
+            if (!recoveredUrl || cancelled) return;
+            preservedProfilePhotoUrlRef.current = recoveredUrl;
+            setProfilePhotoOverrideUrl(recoveredUrl);
+            writeStoredProfilePhotoOverrideUrl(recoveredUrl);
+            writeCachedProfilePhotoUrl(userId, recoveredUrl);
+            setUser((prev) => mergeAuthUserPreservingProfilePhoto(prev, prev, recoveredUrl));
+            return;
+          } catch {}
+        }
+      }
+    };
+
+    void recoverStoredAvatar();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeLayerId, currentUserProfilePhotoUrl, user?.id]);
   const currentUserProfileLabel = currentUser || user?.email || user?.phone || 'User';
 
   const normalizeLayerRow = (row) => ({
@@ -9408,8 +9619,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
         const nextUser = authData?.user || { ...user, user_metadata: nextMetadata };
         preservedProfilePhotoUrlRef.current = publicUrl;
+        setProfilePhotoOverrideUrl(publicUrl);
+        writeStoredProfilePhotoOverrideUrl(publicUrl);
         writeCachedProfilePhotoUrl(nextUser?.id || user?.id, publicUrl);
-        setUser(nextUser);
+        setUser((prev) => mergeAuthUserPreservingProfilePhoto(nextUser, prev, publicUrl));
         setShowLayerMediaMenu(false);
         return true;
       }
@@ -9909,8 +10122,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
       const nextUser = authData?.user || { ...user, user_metadata: nextMetadata };
       preservedProfilePhotoUrlRef.current = '';
+      setProfilePhotoOverrideUrl('');
+      writeStoredProfilePhotoOverrideUrl('');
       writeCachedProfilePhotoUrl(nextUser?.id || user?.id, '');
-      setUser(nextUser);
+      setUser((prev) => mergeAuthUserPreservingProfilePhoto(nextUser, prev, ''));
       setShowLayerMediaMenu(false);
       return;
     }
@@ -19731,7 +19946,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   })();
   const filteredUpcomingUserTabEvents = upcomingUserTabEvents.filter((event) => {
     const layerId = String(event?.layerId || event?.layer_id || '').trim();
+    const eventTs = toDateOnlyTs(event?.date || event?.dateKey || '');
+    const upcomingWindowEndTs = todayTs + (13 * 24 * 60 * 60 * 1000);
     if ((eventsTabVisibleLayerIds || []).length > 0 && !eventsTabVisibleLayerIds.includes(layerId)) return false;
+    if (eventTs === null || eventTs > upcomingWindowEndTs) return false;
     if (eventsTabHideRecurring && (event?.isAnnual || (event?.recurrence && event.recurrence !== 'once'))) return false;
     return true;
   });
@@ -19777,6 +19995,37 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     return { icon: '🎉', label: 'We Event', className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200' };
   };
+  const eligibleMemoryEvents = Object.values(events || {})
+    .flat()
+    .filter((event, index, arr) => {
+      const eventId = String(event?.id || '').trim();
+      if (!eventId) return false;
+      return arr.findIndex((candidate) => String(candidate?.id || '').trim() === eventId) === index;
+    })
+    .filter((event) => {
+      const dateKey = String(event?.date || event?.dateKey || '').trim();
+      const eventTs = toDateOnlyTs(dateKey);
+      if (eventTs === null || eventTs >= todayTs) return false;
+      const eventId = String(event?.id || '').trim();
+      const popupMeta = popupEventsByEventId[eventId] || null;
+      const isWeEvent = Boolean(getWeEventDisplayBadge(event, popupMeta));
+      const isMeEvent = !popupMeta && !event?.sub_calendar_id && !event?.subCalendarId;
+      if (!isWeEvent && !isMeEvent) return false;
+      if (popupMeta) {
+        const joined = (popupSignupsByEventId[eventId] || []).some((row) => (
+          String(row?.userId || '').trim() === String(user?.id || '').trim()
+        ));
+        const createdByMe = String(popupMeta?.createdByUserId || '').trim() === String(user?.id || '').trim();
+        if (!joined && !createdByMe) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const aTs = toDateOnlyTs(a?.date || a?.dateKey || '') || 0;
+      const bTs = toDateOnlyTs(b?.date || b?.dateKey || '') || 0;
+      if (aTs !== bTs) return bTs - aTs;
+      return String(a?.title || '').localeCompare(String(b?.title || ''));
+    });
   const activeTrips = [...tabTrips]
     .filter(sc => {
       const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
@@ -19790,6 +20039,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return endTs !== null && endTs < todayTs;
     })
     .sort((a, b) => toDateOnlyTs(getSubCalEndRaw(b)) - toDateOnlyTs(getSubCalEndRaw(a)));
+  const eligibleMemoryTrips = archivedTrips;
   const greetingHour = new Date().getHours();
   const homeGreeting = greetingHour < 12 ? 'Good morning' : greetingHour < 18 ? 'Good afternoon' : 'Good evening';
   const homeGreetingEmoji = greetingHour < 18 ? '☀️' : '🌙';
@@ -20020,7 +20270,124 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, journeyState]);
 
   useEffect(() => {
-    const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyTrophyCase || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal || showJourneyWeightTrackerModal;
+    setMemories(readMemoriesState(user?.id));
+    setMemoriesHydratedUserId(String(user?.id || 'guest').trim() || 'guest');
+  }, [user?.id]);
+
+  useEffect(() => {
+    const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
+    if (memoriesHydratedUserId !== currentMemoriesUserId) return;
+    writeMemoriesState(user?.id, memories);
+  }, [user?.id, memories, memoriesHydratedUserId]);
+
+  useEffect(() => {
+    const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
+    if (memoriesHydratedUserId !== currentMemoriesUserId) return;
+    if (!Array.isArray(eligibleMemoryTrips) || eligibleMemoryTrips.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const drafts = await Promise.all(
+        eligibleMemoryTrips.map(async (trip) => {
+          const draft = await buildMemoryDraftFromTrip(trip, { autoGeneratedFromTrip: true });
+          return draft ? { tripId: String(trip?.id || '').trim(), draft } : null;
+        })
+      );
+      if (cancelled) return;
+      setMemories((prev) => {
+        const next = Array.isArray(prev) ? [...prev] : [];
+        let changed = false;
+        drafts.filter(Boolean).forEach(({ tripId, draft }) => {
+          const nextShape = createMemoryRecordShape(draft);
+          if (!nextShape) return;
+          const existingIndex = next.findIndex((memory) => String(memory?.sourceTripId || '').trim() === tripId);
+          if (existingIndex === -1) {
+            next.push(nextShape);
+            changed = true;
+            return;
+          }
+          const existing = next[existingIndex];
+          const merged = {
+            ...existing,
+            taggedPeople: nextShape.taggedPeople,
+            ...(existing?.autoGeneratedFromTrip ? {
+              title: nextShape.title,
+              date: nextShape.date,
+              coverPhoto: nextShape.coverPhoto,
+              photos: nextShape.photos,
+              sourceTripTitle: nextShape.sourceTripTitle,
+              sourceSubCalendarId: nextShape.sourceSubCalendarId,
+              category: nextShape.category,
+              isShared: nextShape.isShared,
+            } : {}),
+            updatedAt: new Date().toISOString(),
+          };
+          const samePhotos = JSON.stringify(existing?.photos || []) === JSON.stringify(merged.photos || []);
+          const samePeople = JSON.stringify(existing?.taggedPeople || []) === JSON.stringify(merged.taggedPeople || []);
+          if (
+            existing?.title !== merged.title
+            || existing?.date !== merged.date
+            || existing?.coverPhoto !== merged.coverPhoto
+            || !samePhotos
+            || !samePeople
+          ) {
+            next[existingIndex] = merged;
+            changed = true;
+          }
+        });
+        if (!changed) return prev;
+        return next.sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)));
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    eligibleMemoryTrips,
+    memoriesHydratedUserId,
+    user?.id,
+    currentUser,
+    currentUserProfilePhotoUrl,
+    knownHandlesByEmail,
+    knownHandlesByUserId,
+    sharedOwnerLabels,
+    chatMembers,
+    calendarChatMessages,
+  ]);
+
+  useEffect(() => {
+    const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
+    if (memoriesHydratedUserId !== currentMemoriesUserId) return;
+    setMemories((prev) => {
+      let changed = false;
+      const next = (Array.isArray(prev) ? prev : []).map((memory) => {
+        if (!String(memory?.sourceTripId || '').trim()) return memory;
+        const taggedPeople = Array.isArray(memory?.taggedPeople) ? memory.taggedPeople : [];
+        const nextPeople = taggedPeople.map((person, index) => {
+          const rawName = String(person?.name || '').trim();
+          const rawId = String(person?.id || '').trim();
+          const resolvedName = String(
+            resolveHandleLikeLabel(rawName || rawId || 'Member', rawId && !rawId.includes('@') ? rawId : '')
+          ).trim() || rawName || rawId || `Person ${index + 1}`;
+          if (resolvedName === rawName) return person;
+          changed = true;
+          return { ...person, name: resolvedName };
+        });
+        return nextPeople === taggedPeople ? memory : { ...memory, taggedPeople: nextPeople };
+      });
+      return changed ? next : prev;
+    });
+  }, [
+    memoriesHydratedUserId,
+    user?.id,
+    knownHandlesByEmail,
+    knownHandlesByUserId,
+    currentUser,
+    chatMembers,
+    calendarChatMessages,
+  ]);
+
+  useEffect(() => {
+    const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyTrophyCase || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal || showJourneyWeightTrackerModal || showMemorySystem;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
     const scrollY = window.scrollY || window.pageYOffset || 0;
     const previousBodyOverflow = document.body.style.overflow;
@@ -20075,7 +20442,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       document.documentElement.style.backgroundImage = previousDocBackgroundImage;
       window.scrollTo(0, scrollY);
     };
-  }, [darkMode, showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyTrophyCase, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal, showJourneyWeightTrackerModal]);
+  }, [darkMode, showJourneyScreen, showJourneyEntryModal, showJourneyGoalModal, showJourneyGoalCreatedPrompt, showJourneyDeleteGoalPrompt, showJourneyLogModal, showJourneyNoteModal, showJourneyTrophyCase, showJourneyRunTrackerModal, showJourneyWorkoutTrackerModal, showJourneyWeightTrackerModal, showMemorySystem]);
 
   useEffect(() => {
     if (!showRoundRobinPanel || typeof document === 'undefined') return undefined;
@@ -23101,7 +23468,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       </div>
     );
   };
-  const controlWidgetAddPanelPortal = showControlWidgetAddPanel && bottomNavTab === 'home' && typeof document !== 'undefined'
+  const controlWidgetAddPanelPortal = showControlWidgetAddPanel && typeof document !== 'undefined'
     ? createPortal(
       <div
         className="fixed inset-0 z-[999] bg-black/45 flex items-end sm:items-center justify-center p-4"
@@ -23650,12 +24017,471 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     );
   };
 
+  const closeMemorySystem = () => {
+    setShowMemorySystem(false);
+    setMemorySystemView('gallery');
+    setMemorySystemCurrentMemory(null);
+    setMemoryCreateDraft(null);
+    setMemoryDraftSourceLabel('');
+  };
+
+  const openMemoriesGallery = () => {
+    setMemorySystemCurrentMemory(null);
+    setMemoryCreateDraft(null);
+    setMemoryDraftSourceLabel('');
+    setMemorySystemView('gallery');
+    setShowMemorySystem(true);
+  };
+
+  const createMemoryFromEvent = async (event) => {
+    const eventId = String(event?.id || '').trim();
+    if (!eventId) return;
+    const popupMeta = popupEventsByEventId[eventId] || null;
+    const participantRows = popupSignupsByEventId[eventId] || [];
+    const people = [];
+    const seenPeople = new Set();
+    participantRows.forEach((person, index) => {
+      const label = String(person?.displayName || person?.name || '').trim();
+      const dedupeKey = `${String(person?.userId || person?.user_id || '').trim()}|${label.toLowerCase()}`;
+      if (!label || seenPeople.has(dedupeKey)) return;
+      seenPeople.add(dedupeKey);
+      people.push({
+        id: String(person?.userId || person?.user_id || person?.memberId || person?.signupId || `person-${index}`),
+        name: label,
+        avatarUrl: normalizeProfilePhotoUrl(
+          person?.photoUrl
+          || person?.photo_url
+          || person?.avatarUrl
+          || person?.avatar_url
+          || ''
+        ),
+      });
+    });
+    const creatorLabel = String(popupMeta?.createdByName || '').trim();
+    if (creatorLabel) {
+      const creatorKey = `${String(popupMeta?.createdByUserId || '').trim()}|${creatorLabel.toLowerCase()}`;
+      if (!seenPeople.has(creatorKey)) {
+        seenPeople.add(creatorKey);
+        people.push({
+          id: String(popupMeta?.createdByUserId || `creator-${eventId}`),
+          name: creatorLabel,
+          avatarUrl: '',
+        });
+      }
+    }
+
+    let photos = [];
+    try {
+      const { data, error } = await supabase
+        .from('trip_photos')
+        .select('id,url,medium_url,thumbnail_url,caption,created_at')
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      photos = (data || []).map((photo, index) => ({
+        id: String(photo?.id || `memory-photo-${index}`),
+        url: normalizeTripPhotoUrl(photo?.medium_url || photo?.url || photo?.thumbnail_url || ''),
+        caption: String(photo?.caption || '').trim(),
+      })).filter((photo) => photo.url);
+    } catch (error) {
+      console.warn('Could not preload event photos for memory creation:', error);
+    }
+
+    setMemorySystemCurrentMemory(null);
+    setMemoryCreateDraft({
+      title: String(event?.title || 'Untitled memory').trim(),
+      description: String(event?.description || '').trim(),
+      date: String(event?.date || event?.dateKey || '').trim() || new Date().toISOString().slice(0, 10),
+      location: String(event?.location || '').trim(),
+      highlights: [''],
+      photos,
+      coverPhoto: photos[0]?.url || '',
+      taggedPeople: people,
+      sourceEventId: eventId,
+      sourceEventTitle: String(event?.title || '').trim(),
+      sourceSubCalendarId: String(event?.sub_calendar_id || event?.subCalendarId || '').trim() || null,
+      category: String(event?.category || '').trim() || 'popup_event',
+      isShared: people.length > 1,
+    });
+    setMemoryDraftSourceLabel(String(event?.title || '').trim());
+    setMemorySystemView('create');
+    setShowMemorySystem(true);
+  };
+
+  async function buildMemoryDraftFromTrip(trip, overrides = {}) {
+    const tripId = String(trip?.id || '').trim();
+    if (!tripId) return null;
+    const memberRows = await getSubCalendarMembersRoster(tripId);
+
+    let normalizedTripPhotos = [];
+    try {
+      const { data, error } = await supabase
+        .from('trip_photos')
+        .select('*')
+        .eq('sub_calendar_id', tripId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      normalizedTripPhotos = await hydrateR2TripPhotoDisplayUrls((data || []).map((photo) => normalizeTripPhotoRecord(photo)));
+    } catch (error) {
+      console.warn('Could not preload trip photos for memory creation:', error);
+    }
+
+    const seenTripPeople = new Set();
+    const seenTripPeopleLabels = new Set();
+    const taggedPeople = [];
+    const addTaggedPerson = (idValue, labelValue, avatarUrlValue = '') => {
+      const label = String(labelValue || '').trim();
+      const id = String(idValue || label || '').trim();
+      const normalizedLabel = label.toLowerCase();
+      const key = `${id}|${normalizedLabel}`;
+      if (!label || seenTripPeople.has(key) || seenTripPeopleLabels.has(normalizedLabel)) return;
+      seenTripPeople.add(key);
+      seenTripPeopleLabels.add(normalizedLabel);
+      taggedPeople.push({
+        id: id || `person-${taggedPeople.length}`,
+        name: label,
+        avatarUrl: normalizeProfilePhotoUrl(avatarUrlValue),
+      });
+    };
+
+    addTaggedPerson(
+      String(user?.id || 'self'),
+      resolveHandleLikeLabel(String(currentUser || user?.email || 'You'), String(user?.id || '')),
+      currentUserProfilePhotoUrl
+    );
+
+    memberRows
+      .filter((member) => {
+        const status = String(member?.status || '').trim().toLowerCase();
+        return !status || status === 'accepted';
+      })
+      .forEach((member, index) => {
+        const memberIdentity = member?.identity || member?.email || member?.phone || member?.shareUserId || member?.id || '';
+        const memberLabel = String(member?.label || resolveHandleLikeLabel(memberIdentity, member?.shareUserId || member?.id || '')).trim();
+        addTaggedPerson(
+          String(member?.user_id || member?.id || memberIdentity || `trip-person-${index}`),
+          memberLabel || 'Traveler',
+          member?.photoUrl || member?.photo_url || member?.avatarUrl || member?.avatar_url || ''
+        );
+      });
+
+    const photos = normalizedTripPhotos
+      .map((photo, index) => ({
+        id: String(photo?.id || `trip-memory-photo-${index}`),
+        url: String(photo?.resolved_medium_url || photo?.medium_url || photo?.resolved_url || photo?.url || photo?.resolved_original_url || photo?.original_url || photo?.thumbnail_url || '').trim(),
+        caption: String(photo?.caption || '').trim(),
+      }))
+      .filter((photo) => photo.url);
+
+    return {
+      id: String(overrides?.id || `trip-memory-${tripId}`),
+      title: String(trip?.name || 'Trip memory').trim(),
+      description: '',
+      date: String(getSubCalEndRaw(trip) || getSubCalStartRaw(trip) || '').trim() || new Date().toISOString().slice(0, 10),
+      location: '',
+      highlights: [''],
+      photos,
+      coverPhoto: photos[0]?.url || '',
+      taggedPeople,
+      sourceTripId: tripId,
+      sourceTripTitle: String(trip?.name || '').trim(),
+      sourceSubCalendarId: tripId,
+      category: 'trip',
+      isShared: taggedPeople.length > 1,
+      autoGeneratedFromTrip: Boolean(overrides?.autoGeneratedFromTrip),
+      ...overrides,
+    };
+  }
+
+  const createMemoryFromTrip = async (trip) => {
+    const tripDraft = await buildMemoryDraftFromTrip(trip, { id: uuidv4(), autoGeneratedFromTrip: false });
+    if (!tripDraft) return;
+    setMemorySystemCurrentMemory(null);
+    setMemoryCreateDraft(tripDraft);
+    setMemoryDraftSourceLabel(String(trip?.name || '').trim());
+    setMemorySystemView('create');
+    setShowMemorySystem(true);
+  };
+
+  function createMemoryRecordShape(memoryData) {
+    if (!memoryData) return null;
+    const nowIso = new Date().toISOString();
+    return {
+      id: String(memoryData?.id || uuidv4()),
+      title: String(memoryData?.title || 'Untitled memory').trim(),
+      description: String(memoryData?.description || '').trim(),
+      highlights: Array.isArray(memoryData?.highlights) ? memoryData.highlights.filter((item) => String(item || '').trim()) : [],
+      photos: Array.isArray(memoryData?.photos)
+        ? memoryData.photos.map((photo, index) => ({
+          id: String(photo?.id || `photo-${index}`),
+          url: String(photo?.url || '').trim(),
+          caption: String(photo?.caption || '').trim(),
+        })).filter((photo) => photo.url)
+        : [],
+      coverPhoto: String(memoryData?.coverPhoto || memoryData?.photos?.[0]?.url || '').trim(),
+      taggedPeople: Array.isArray(memoryData?.taggedPeople) ? memoryData.taggedPeople.map((person, index) => ({
+        id: String(person?.id || `person-${index}`),
+        name: String(person?.name || '').trim(),
+        avatarUrl: normalizeProfilePhotoUrl(
+          person?.avatarUrl
+          || person?.avatar_url
+          || person?.photoUrl
+          || person?.photo_url
+          || ''
+        ),
+      })).filter((person) => person.name) : [],
+      date: String(memoryData?.date || '').trim() || new Date().toISOString().slice(0, 10),
+      location: String(memoryData?.location || '').trim(),
+      sourceEventId: String(memoryData?.sourceEventId || '').trim() || null,
+      sourceEventTitle: String(memoryData?.sourceEventTitle || '').trim() || null,
+      sourceTripId: String(memoryData?.sourceTripId || '').trim() || null,
+      sourceTripTitle: String(memoryData?.sourceTripTitle || '').trim() || null,
+      sourceSubCalendarId: String(memoryData?.sourceSubCalendarId || '').trim() || null,
+      category: String(memoryData?.category || '').trim() || null,
+      autoGeneratedFromTrip: Boolean(memoryData?.autoGeneratedFromTrip),
+      isShared: Boolean(memoryData?.isShared || (memoryData?.taggedPeople || []).length > 1),
+      reactionCount: Number(memoryData?.reactionCount || 0),
+      commentCount: Number(memoryData?.commentCount || 0),
+      viewCount: Number(memoryData?.viewCount || 0),
+      userReaction: memoryData?.userReaction || null,
+      comments: Array.isArray(memoryData?.comments) ? memoryData.comments : [],
+      canEdit: true,
+      createdAt: String(memoryData?.createdAt || nowIso),
+      updatedAt: nowIso,
+    };
+  }
+
+  const createMemoryRecord = (memoryData) => {
+    const nextMemory = createMemoryRecordShape(memoryData);
+    if (!nextMemory) return;
+    setMemories((prev) => [nextMemory, ...prev.filter((memory) => String(memory?.id || '') !== nextMemory.id)]
+      .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0))));
+    setMemoryCreateDraft(null);
+    setMemoryDraftSourceLabel('');
+    setMemorySystemCurrentMemory(nextMemory);
+  };
+
+  const updateMemoryRecord = (memoryId, updater) => {
+    let nextSelected = null;
+    setMemories((prev) => prev.map((memory) => {
+      if (String(memory?.id || '') !== String(memoryId || '')) return memory;
+      const updated = typeof updater === 'function' ? updater(memory) : { ...memory, ...updater };
+      nextSelected = updated;
+      return { ...updated, updatedAt: new Date().toISOString() };
+    }));
+    if (nextSelected) setMemorySystemCurrentMemory(nextSelected);
+  };
+
+  const deleteMemoryRecord = (memoryId) => {
+    setMemories((prev) => prev.filter((memory) => String(memory?.id || '') !== String(memoryId || '')));
+    setMemorySystemCurrentMemory(null);
+  };
+
+  const reactToMemory = async (memoryId, reactionType) => {
+    updateMemoryRecord(memoryId, (memory) => {
+      const hadReaction = Boolean(memory?.userReaction);
+      const nextReaction = memory?.userReaction === reactionType ? null : reactionType;
+      const nextCount = Math.max(0, Number(memory?.reactionCount || 0) + (hadReaction ? -1 : 0) + (nextReaction ? 1 : 0));
+      return {
+        ...memory,
+        userReaction: nextReaction,
+        reactionCount: nextCount,
+      };
+    });
+  };
+
+  const commentOnMemory = async (memoryId, text) => {
+    const commentText = String(text || '').trim();
+    if (!commentText) return;
+    updateMemoryRecord(memoryId, (memory) => {
+      const comments = Array.isArray(memory?.comments) ? memory.comments : [];
+      const nextComment = {
+        id: uuidv4(),
+        userId: String(user?.id || ''),
+        userName: resolveHandleLikeLabel(String(currentUser || user?.email || 'You'), String(user?.id || '')),
+        text: commentText,
+        createdAt: new Date().toISOString(),
+      };
+      return {
+        ...memory,
+        comments: [...comments, nextComment],
+        commentCount: comments.length + 1,
+      };
+    });
+  };
+
+  const shareMemoryRecord = async (memory) => {
+    const shareText = `${memory?.title || 'Memory'} • ${String(memory?.date || '').trim()}`;
+    try {
+      if (navigator?.share) {
+        await navigator.share({ title: memory?.title || 'Memory', text: shareText });
+        return;
+      }
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        alert('Memory details copied to your clipboard.');
+        return;
+      }
+    } catch (error) {
+      console.warn('Memory share failed:', error);
+    }
+  };
+
+  const renderEventsMemoriesPanel = () => {
+    const recentMemoryEvents = eligibleMemoryEvents.slice(0, 3);
+    return (
+      <div className="mb-5 rounded-3xl border border-purple-200/70 dark:border-purple-800/60 bg-gradient-to-br from-white via-purple-50/70 to-pink-50/80 dark:from-slate-900 dark:via-purple-950/30 dark:to-slate-900 p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-xl">
+            <div className="text-[11px] uppercase tracking-[0.24em] text-purple-500 dark:text-purple-300">Memories</div>
+            <h3 className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
+              Save the moments that matter after the event ends
+            </h3>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              Turn your events into keepsakes with photos, tagged people, and a lasting gallery.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              onClick={openMemoriesGallery}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold hover:shadow-lg transition-all"
+            >
+              {memories.length > 0 ? 'Open Memories' : 'Start Memory Gallery'}
+            </button>
+            {recentMemoryEvents.length > 0 && (
+              <button
+                onClick={() => createMemoryFromEvent(recentMemoryEvents[0])}
+                className="px-4 py-2.5 rounded-xl border border-purple-200 dark:border-purple-700 text-sm font-semibold text-purple-700 dark:text-purple-200 hover:bg-purple-100/70 dark:hover:bg-purple-900/30 transition-all"
+              >
+                Create From Event
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-purple-100 dark:border-white/10 p-4">
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
+              {memories.length}
+            </div>
+            <div className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Saved memories
+            </div>
+          </div>
+          <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-purple-100 dark:border-white/10 p-4">
+            <div className="text-2xl font-bold text-pink-600 dark:text-pink-300">
+              {eligibleMemoryEvents.length + eligibleMemoryTrips.length}
+            </div>
+            <div className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Past moments ready
+            </div>
+          </div>
+          <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-purple-100 dark:border-white/10 p-4">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">
+              {memories.reduce((total, memory) => total + (memory.photos?.length || 0), 0)}
+            </div>
+            <div className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Photos preserved
+            </div>
+          </div>
+        </div>
+
+        {recentMemoryEvents.length > 0 ? (
+          <div className="mt-5 space-y-3">
+            {recentMemoryEvents.length > 0 && (
+              <>
+                <div className="text-xs uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+                  Recent events you can save
+                </div>
+                {recentMemoryEvents.map((event) => (
+                  <div
+                    key={`event-${event.id}`}
+                    className="flex flex-col gap-3 rounded-2xl border border-purple-100 dark:border-white/10 bg-white/85 dark:bg-slate-900/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-semibold text-gray-900 dark:text-white truncate">{event.title}</div>
+                      <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {event.location ? ` • ${event.location}` : ''}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => createMemoryFromEvent(event)}
+                      className="shrink-0 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-700 text-sm font-semibold text-purple-700 dark:text-purple-200 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all"
+                    >
+                      Save as Memory
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="mt-5 rounded-2xl border border-dashed border-purple-200 dark:border-purple-700/70 px-4 py-5 text-sm text-gray-600 dark:text-gray-400">
+            Finished Me Events and We Events will show up here once they are ready to save.
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderJourneyPortal = (node) => (typeof document !== 'undefined' ? createPortal(node, document.body) : null);
 
   return (
     <>
     <style>{shakeStyle}</style>
     {controlWidgetAddPanelPortal}
+    {!activeSubCalendar && showMemorySystem && renderJourneyPortal((
+      <div
+        className="fixed inset-0 z-[88] bg-black/60 p-0 sm:p-4 flex items-end sm:items-center justify-center"
+        onClick={closeMemorySystem}
+      >
+        <div
+          className="relative w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-5xl overflow-hidden bg-white dark:bg-slate-950 sm:rounded-[32px] shadow-2xl border border-transparent dark:border-white/10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {memorySystemView !== 'viewer' && (
+            <div className="flex items-start justify-between gap-3 border-b border-gray-200 dark:border-white/10 px-5 py-4">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Memories</div>
+                <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {memorySystemView === 'create'
+                    ? (memoryDraftSourceLabel ? `Create memory from ${memoryDraftSourceLabel}` : 'Create memory')
+                    : 'Your memory gallery'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeMemorySystem}
+                className="rounded-xl p-2 text-gray-500 hover:bg-black/5 dark:text-gray-400 dark:hover:bg-white/5"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+          <div className={`${memorySystemView === 'viewer' ? '' : 'h-[calc(100dvh-4.5rem)] sm:h-auto sm:max-h-[calc(92vh-4.5rem)] overflow-y-auto px-4 py-4 sm:px-6 sm:py-5'}`}>
+            <MemorySystem
+              view={memorySystemView}
+              memories={memories}
+              currentMemory={memorySystemCurrentMemory}
+              createDraft={memoryCreateDraft}
+              onCreateMemory={createMemoryRecord}
+              onUpdateMemory={updateMemoryRecord}
+              onDeleteMemory={deleteMemoryRecord}
+              onAddPhoto={() => {}}
+              onRemovePhoto={() => {}}
+              onTagPerson={() => {}}
+              onRemovePerson={() => {}}
+              onReact={reactToMemory}
+              onComment={commentOnMemory}
+              onShare={shareMemoryRecord}
+              user={user}
+              darkMode={darkMode}
+            />
+          </div>
+        </div>
+      </div>
+    ))}
     {showAppPrompt && (
       <div className="fixed inset-0 z-[95] bg-black/45 flex items-center justify-center p-4">
         <div className="w-full max-w-md rounded-2xl border bg-white dark:bg-gray-800 p-5 shadow-2xl" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.10)' : hexToRgba(activeLayerPageTheme.accent, 0.16) }}>
@@ -24253,39 +25079,37 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
           </div>
           </div>
-          {bottomNavTab === 'home' && (
-            <div className="absolute inset-x-4 sm:inset-x-5 bottom-1 sm:bottom-2 z-20 pointer-events-none">
-              <div className="flex items-center justify-center gap-1.5 pointer-events-auto">
-                {activeControlWidgets.map((widgetId) => {
-                  const meta = getControlWidgetMeta(widgetId);
-                  return (
-                    <button
-                      key={`header-toolbar-${widgetId}`}
-                      onClick={() => handleControlWidgetClick(widgetId)}
-                      disabled={meta.disabled}
-                      title={meta.label}
-                      className={`relative shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border transition-all overflow-visible ${meta.active ? 'border-transparent text-white shadow-sm' : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 backdrop-blur-sm'} ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      style={meta.active ? themeAccentButtonStyle : undefined}
-                    >
-                      <span className="flex items-center justify-center">{meta.icon}</span>
-                      {meta.badge ? (
-                        <span className="absolute -top-1 -right-1 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
-                          {meta.badge}
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setShowControlWidgetAddPanel(true)}
-                  className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-gray-400 dark:hover:border-gray-400 transition-all"
-                  title="Add widgets"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+          <div className="absolute inset-x-4 sm:inset-x-5 bottom-1 sm:bottom-2 z-20 pointer-events-none">
+            <div className="flex items-center justify-center gap-1.5 pointer-events-auto">
+              {activeControlWidgets.map((widgetId) => {
+                const meta = getControlWidgetMeta(widgetId);
+                return (
+                  <button
+                    key={`header-toolbar-${widgetId}`}
+                    onClick={() => handleControlWidgetClick(widgetId)}
+                    disabled={meta.disabled}
+                    title={meta.label}
+                    className={`relative shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border transition-all overflow-visible ${meta.active ? 'border-transparent text-white shadow-sm' : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 backdrop-blur-sm'} ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    style={meta.active ? themeAccentButtonStyle : undefined}
+                  >
+                    <span className="flex items-center justify-center">{meta.icon}</span>
+                    {meta.badge ? (
+                      <span className="absolute -top-1 -right-1 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
+                        {meta.badge}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => setShowControlWidgetAddPanel(true)}
+                className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-gray-400 dark:hover:border-gray-400 transition-all"
+                title="Add widgets"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
             </div>
-          )}
+          </div>
           {isCoverTapToRevealMode ? (
             <>
               <button
@@ -28462,6 +29286,9 @@ transform: translateY(0);
                     })}
                   </div>
                 )}
+                <div className="mt-6">
+                  {renderEventsMemoriesPanel()}
+                </div>
               </>
             )}
 

@@ -1,6 +1,6 @@
 // TripsTab.jsx - Redesigned Trips Tab with visual cards and better UX
 import React, { useState } from 'react';
-import { MapPin, Calendar, Users, ChevronRight, Image, Heart, Trash2, MoreVertical, Plus } from 'lucide-react';
+import { MapPin, Calendar, Users, ChevronRight, Trash2, MoreVertical, Plus } from 'lucide-react';
 import JourneyQuoteDisplay from './JourneyQuoteDisplay';
 import TRAVEL_QUOTES from '../data/travelQuotes';
 
@@ -348,7 +348,7 @@ const TripsTab = ({
           )}
         </div>
       )}
-      
+
       {/* Quick Stats (if has trips) */}
       {!hasNoTrips && (
         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">

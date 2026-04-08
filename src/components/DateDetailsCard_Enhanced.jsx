@@ -986,9 +986,8 @@ export default function DateDetailsCardEnhanced({
                         <div className="mb-3 flex items-start justify-between">
                           <div className="flex-1 pr-4">
                             <div className="mb-1 flex items-center gap-2">
-                              <span className="text-xl">🎉</span>
                               <h4 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{event.title}</h4>
-                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${weEventBadge.className}`}>{weEventBadge.icon} {weEventBadge.label}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${weEventBadge.className}`}>{weEventBadge.label}</span>
                             </div>
                             <div className={`flex items-center gap-2 text-sm ${mutedText}`}>
                               {event.time ? (

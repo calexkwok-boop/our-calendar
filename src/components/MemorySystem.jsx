@@ -1,0 +1,1299 @@
+// MemorySystem.jsx - Complete memory/keepsake system for special events
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  Sparkles, Camera, Heart, MessageCircle, Share2, X,
+  ChevronLeft, ChevronRight, Plus, Check, Eye, Calendar, MapPin, Edit2, Trash2
+} from 'lucide-react';
+
+const createEmptyMemoryDraft = (overrides = {}) => ({
+  title: '',
+  description: '',
+  highlights: [''],
+  photos: [],
+  taggedPeople: [],
+  date: new Date().toISOString().split('T')[0],
+  location: '',
+  coverPhoto: '',
+  ...overrides,
+});
+
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result || ''));
+  reader.onerror = () => reject(new Error('Could not read file.'));
+  reader.readAsDataURL(file);
+});
+
+const getPersonAvatarUrl = (person) => String(
+  person?.avatarUrl
+  || person?.avatar_url
+  || person?.photoUrl
+  || person?.photo_url
+  || ''
+).trim();
+
+const PersonAvatar = ({ person, className = 'w-10 h-10', textClassName = 'text-white font-bold', fallbackClassName = 'bg-purple-500' }) => {
+  const avatarUrl = getPersonAvatarUrl(person);
+  const initial = String(person?.name || '?').trim().charAt(0).toUpperCase() || '?';
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={String(person?.name || 'Person')}
+        className={`${className} rounded-full object-cover`}
+      />
+    );
+  }
+  return (
+    <div className={`${className} rounded-full flex items-center justify-center ${fallbackClassName} ${textClassName}`}>
+      {initial}
+    </div>
+  );
+};
+
+// ============================================================================
+// MAIN MEMORY SYSTEM COMPONENT
+// ============================================================================
+
+const MemorySystem = ({
+  // Current view mode
+  view = 'gallery', // 'gallery' | 'create' | 'viewer'
+  
+  // Data
+  memories = [],
+  currentMemory = null,
+  createDraft = null,
+  
+  // Actions
+  onCreateMemory,
+  onUpdateMemory,
+  onDeleteMemory,
+  onAddPhoto,
+  onRemovePhoto,
+  onTagPerson,
+  onRemovePerson,
+  onReact,
+  onComment,
+  onShare,
+  
+  // User
+  user,
+  
+  // Theme
+  darkMode = false,
+}) => {
+  const [activeView, setActiveView] = useState(view);
+  const [selectedMemory, setSelectedMemory] = useState(currentMemory);
+
+  useEffect(() => {
+    setActiveView(view);
+  }, [view]);
+
+  useEffect(() => {
+    setSelectedMemory(currentMemory);
+  }, [currentMemory]);
+
+  useEffect(() => {
+    if (!selectedMemory?.id) return;
+    const refreshed = (memories || []).find((memory) => String(memory?.id || '') === String(selectedMemory.id || ''));
+    if (refreshed) setSelectedMemory(refreshed);
+  }, [memories, selectedMemory]);
+  
+  return (
+    <div className="memory-system">
+      {activeView === 'gallery' && (
+        <MemoriesGallery
+          memories={memories}
+          onSelectMemory={(memory) => {
+            setSelectedMemory(memory);
+            setActiveView('viewer');
+          }}
+          onCreateNew={() => setActiveView('create')}
+          darkMode={darkMode}
+        />
+      )}
+      
+      {activeView === 'create' && (
+        <MemoryCreator
+          onCancel={() => setActiveView('gallery')}
+          onCreate={(memoryData) => {
+            onCreateMemory(memoryData);
+            setActiveView('gallery');
+          }}
+          onAddPhoto={onAddPhoto}
+          onTagPerson={onTagPerson}
+          user={user}
+          initialData={createDraft}
+          darkMode={darkMode}
+        />
+      )}
+      
+      {activeView === 'viewer' && selectedMemory && (
+        <MemoryViewer
+          memory={selectedMemory}
+          onClose={() => {
+            setSelectedMemory(null);
+            setActiveView('gallery');
+          }}
+          onEdit={() => setActiveView('edit')}
+          onDelete={() => {
+            onDeleteMemory(selectedMemory.id);
+            setActiveView('gallery');
+          }}
+          onReact={onReact}
+          onComment={onComment}
+          onShare={onShare}
+          user={user}
+          darkMode={darkMode}
+        />
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
+// MEMORIES GALLERY VIEW
+// ============================================================================
+
+const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, darkMode }) => {
+  // Group memories by year
+  const memoriesByYear = memories.reduce((acc, memory) => {
+    const year = new Date(memory.date).getFullYear();
+    if (!acc[year]) acc[year] = [];
+    acc[year].push(memory);
+    return acc;
+  }, {});
+  
+  const years = Object.keys(memoriesByYear).sort((a, b) => b - a);
+  
+  return (
+    <div className="memories-gallery space-y-8">
+      {/* Header */}
+      <div className="text-center">
+        <div className="text-5xl mb-3">💫</div>
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          Your Memories
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400">
+          {memories.length} special moment{memories.length !== 1 ? 's' : ''} preserved
+        </p>
+      </div>
+      
+      {/* Create new button */}
+      <button
+        onClick={onCreateNew}
+        className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 
+                   text-white font-bold text-lg hover:shadow-xl transition-all
+                   flex items-center justify-center gap-2">
+        <Sparkles className="w-6 h-6" />
+        Create New Memory
+      </button>
+      
+      {/* Empty state */}
+      {memories.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">🎉</div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            No memories yet
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Preserve your special moments with photos, highlights, and more!
+          </p>
+        </div>
+      )}
+      
+      {/* Timeline */}
+      {years.map(year => (
+        <div key={year}>
+          <h3 className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-4">
+            {year}
+          </h3>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {memoriesByYear[year].map(memory => (
+              <MemoryThumbnail
+                key={memory.id}
+                memory={memory}
+                onClick={() => onSelectMemory(memory)}
+                darkMode={darkMode}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const MemoryThumbnail = ({ memory, onClick, darkMode }) => {
+  const photoCount = memory.photos?.length || 0;
+  const peopleCount = memory.taggedPeople?.length || 0;
+  const reactionCount = memory.reactionCount || 0;
+  
+  return (
+    <button
+      onClick={onClick}
+      className="relative rounded-2xl overflow-hidden aspect-square group cursor-pointer">
+      {/* Cover photo */}
+      {memory.coverPhoto ? (
+        <img 
+          src={memory.coverPhoto} 
+          alt={memory.title}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+        />
+      ) : (
+        <div className="w-full h-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500" />
+      )}
+      
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+      
+      {/* Content */}
+      <div className="absolute inset-0 p-4 flex flex-col justify-end">
+        <h4 className="text-white font-bold text-base mb-1 line-clamp-2">
+          {memory.title}
+        </h4>
+        <p className="text-white/80 text-xs mb-3">
+          {new Date(memory.date).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          })}
+        </p>
+        
+        {/* Stats */}
+        <div className="flex items-center gap-3 text-xs text-white/70">
+          {photoCount > 0 && <span>📸 {photoCount}</span>}
+          {peopleCount > 0 && <span>👥 {peopleCount}</span>}
+          {reactionCount > 0 && <span>💜 {reactionCount}</span>}
+        </div>
+      </div>
+      
+      {/* Badge if shared */}
+      {memory.isShared && (
+        <div className="absolute top-3 right-3 bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+          Shared
+        </div>
+      )}
+    </button>
+  );
+};
+
+// ============================================================================
+// MEMORY CREATOR
+// ============================================================================
+
+const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, darkMode, initialData }) => {
+  const [step, setStep] = useState(1); // 1: basics, 2: photos, 3: people, 4: preview
+  const [memoryData, setMemoryData] = useState(() => createEmptyMemoryDraft(initialData || {}));
+
+  useEffect(() => {
+    setStep(1);
+    setMemoryData(createEmptyMemoryDraft(initialData || {}));
+  }, [initialData]);
+  
+  const handleNext = () => {
+    if (step < 4) setStep(step + 1);
+  };
+  
+  const handleBack = () => {
+    if (step > 1) setStep(step - 1);
+  };
+  
+  const handleCreate = () => {
+    if (!memoryData.title.trim()) {
+      alert('Please add a title for your memory');
+      return;
+    }
+    onCreate({
+      ...memoryData,
+      coverPhoto: memoryData.coverPhoto || memoryData.photos?.[0]?.url || '',
+      highlights: (memoryData.highlights || []).filter((highlight) => String(highlight || '').trim()),
+    });
+  };
+  
+  return (
+    <div className="memory-creator max-w-2xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <button
+          onClick={onCancel}
+          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+          <X className="w-5 h-5" />
+          Cancel
+        </button>
+        
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          Create Memory
+        </h2>
+        
+        <div className="w-16" /> {/* Spacer */}
+      </div>
+      
+      {/* Progress */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          {[1, 2, 3, 4].map(s => (
+            <div key={s} className="flex items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
+                s === step
+                  ? 'bg-purple-600 text-white scale-110'
+                  : s < step
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
+              }`}>
+                {s < step ? <Check className="w-5 h-5" /> : s}
+              </div>
+              {s < 4 && (
+                <div className={`w-12 h-1 mx-2 ${
+                  s < step ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
+                }`} />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+          <span>Details</span>
+          <span>Photos</span>
+          <span>People</span>
+          <span>Preview</span>
+        </div>
+      </div>
+      
+      {/* Steps */}
+      {step === 1 && (
+        <MemoryBasicsStep
+          data={memoryData}
+          onChange={setMemoryData}
+          darkMode={darkMode}
+        />
+      )}
+      
+      {step === 2 && (
+        <MemoryPhotosStep
+          data={memoryData}
+          onChange={setMemoryData}
+          onAddPhoto={onAddPhoto}
+          darkMode={darkMode}
+        />
+      )}
+      
+      {step === 3 && (
+        <MemoryPeopleStep
+          data={memoryData}
+          onChange={setMemoryData}
+          onTagPerson={onTagPerson}
+          darkMode={darkMode}
+        />
+      )}
+      
+      {step === 4 && (
+        <MemoryPreviewStep
+          data={memoryData}
+          darkMode={darkMode}
+        />
+      )}
+      
+      {/* Navigation */}
+      <div className="flex gap-3 mt-8">
+        {step > 1 && (
+          <button
+            onClick={handleBack}
+            className="flex-1 py-3 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 
+                     font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
+            Back
+          </button>
+        )}
+        
+        {step < 4 ? (
+          <button
+            onClick={handleNext}
+            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 
+                     text-white font-semibold hover:shadow-xl transition-all">
+            Next
+          </button>
+        ) : (
+          <button
+            onClick={handleCreate}
+            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 
+                     text-white font-bold hover:shadow-xl transition-all flex items-center justify-center gap-2">
+            <Sparkles className="w-5 h-5" />
+            Create Memory
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Step 1: Basics
+const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
+  const addHighlight = () => {
+    onChange({ ...data, highlights: [...data.highlights, ''] });
+  };
+  
+  const updateHighlight = (index, value) => {
+    const newHighlights = [...data.highlights];
+    newHighlights[index] = value;
+    onChange({ ...data, highlights: newHighlights });
+  };
+  
+  const removeHighlight = (index) => {
+    onChange({ ...data, highlights: data.highlights.filter((_, i) => i !== index) });
+  };
+  
+  return (
+    <div className="space-y-6">
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Tell us about this memory</h3>
+      
+      {/* Title */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          Title *
+        </label>
+        <input
+          type="text"
+          value={data.title}
+          onChange={(e) => onChange({ ...data, title: e.target.value })}
+          placeholder="Emma's 1st Birthday Party"
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
+                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-purple-500 outline-none text-base"
+          style={{ fontSize: '16px' }} // Prevent iOS zoom
+        />
+      </div>
+      
+      {/* Date */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          Date
+        </label>
+        <input
+          type="date"
+          value={data.date}
+          onChange={(e) => onChange({ ...data, date: e.target.value })}
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
+                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-purple-500 outline-none"
+        />
+      </div>
+      
+      {/* Location */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          Location (optional)
+        </label>
+        <input
+          type="text"
+          value={data.location}
+          onChange={(e) => onChange({ ...data, location: e.target.value })}
+          placeholder="Home, Park, Restaurant..."
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
+                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-purple-500 outline-none text-base"
+          style={{ fontSize: '16px' }}
+        />
+      </div>
+      
+      {/* Description */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          Description (optional)
+        </label>
+        <textarea
+          value={data.description}
+          onChange={(e) => onChange({ ...data, description: e.target.value })}
+          placeholder="What made this day special?"
+          rows={4}
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
+                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-purple-500 outline-none resize-none text-base"
+          style={{ fontSize: '16px' }}
+        />
+      </div>
+      
+      {/* Highlights */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          Special Moments (optional)
+        </label>
+        <div className="space-y-2">
+          {data.highlights.map((highlight, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <span className="text-xl">✨</span>
+              <input
+                type="text"
+                value={highlight}
+                onChange={(e) => updateHighlight(index, e.target.value)}
+                placeholder="Emma's first cake bite was hilarious!"
+                className="flex-1 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
+                         bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                         focus:ring-2 focus:ring-purple-500 outline-none text-base"
+                style={{ fontSize: '16px' }}
+              />
+              {data.highlights.length > 1 && (
+                <button
+                  onClick={() => removeHighlight(index)}
+                  className="p-2 text-gray-400 hover:text-red-500">
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={addHighlight}
+          className="mt-3 text-sm text-purple-600 dark:text-purple-400 font-semibold hover:underline">
+          + Add another moment
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Step 2: Photos
+const MemoryPhotosStep = ({ data, onChange, onAddPhoto, darkMode }) => {
+  const fileInputRef = useRef(null);
+  
+  const handleAddPhotos = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    const newPhotos = await Promise.all(
+      files.map(async (file) => {
+        const url = await readFileAsDataUrl(file);
+        return {
+          id: Date.now() + Math.random(),
+          url,
+          caption: '',
+          fileName: file.name || 'Photo',
+        };
+      })
+    );
+    
+    onChange({ ...data, photos: [...data.photos, ...newPhotos] });
+  };
+  
+  const removePhoto = (photoId) => {
+    onChange({ ...data, photos: data.photos.filter(p => p.id !== photoId) });
+  };
+  
+  const updatePhotoCaption = (photoId, caption) => {
+    onChange({
+      ...data,
+      photos: data.photos.map(p => p.id === photoId ? { ...p, caption } : p)
+    });
+  };
+  
+  const setCoverPhoto = (photoId) => {
+    const photo = data.photos.find(p => p.id === photoId);
+    onChange({ ...data, coverPhoto: photo.url });
+  };
+  
+  return (
+    <div className="space-y-6">
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add photos from this day</h3>
+      
+      {/* Upload button */}
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        className="w-full py-6 rounded-2xl border-2 border-dashed border-purple-300 dark:border-purple-700 
+                 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 
+                 transition-all flex flex-col items-center justify-center gap-2">
+        <Camera className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+        <span className="font-semibold text-purple-700 dark:text-purple-300">
+          Add Photos
+        </span>
+        <span className="text-sm text-purple-600 dark:text-purple-400">
+          Tap to select from your device
+        </span>
+      </button>
+      
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleAddPhotos}
+        className="hidden"
+      />
+      
+      {/* Photo grid */}
+      {data.photos.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {data.photos.length} photo{data.photos.length !== 1 ? 's' : ''} added
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            {data.photos.map((photo, index) => (
+              <div key={photo.id} className="relative group">
+                <img
+                  src={photo.url}
+                  alt={`Photo ${index + 1}`}
+                  className="w-full aspect-square object-cover rounded-xl"
+                />
+                
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 rounded-xl transition-all" />
+                
+                {/* Actions */}
+                <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => setCoverPhoto(photo.id)}
+                    className="p-2 bg-white rounded-full hover:bg-gray-100 transition-all"
+                    title="Set as cover">
+                    <Sparkles className="w-4 h-4 text-purple-600" />
+                  </button>
+                  <button
+                    onClick={() => removePhoto(photo.id)}
+                    className="p-2 bg-white rounded-full hover:bg-red-50 transition-all"
+                    title="Remove">
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                  </button>
+                </div>
+                
+                {/* Cover badge */}
+                {data.coverPhoto === photo.url && (
+                  <div className="absolute top-2 left-2 bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+                    Cover
+                  </div>
+                )}
+                
+                {/* Caption */}
+                <input
+                  type="text"
+                  value={photo.caption}
+                  onChange={(e) => updatePhotoCaption(photo.id, e.target.value)}
+                  placeholder="Add caption (optional)"
+                  className="absolute bottom-2 left-2 right-2 px-3 py-1.5 rounded-lg 
+                           bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm
+                           text-sm text-gray-900 dark:text-white border-0 outline-none
+                           focus:ring-2 focus:ring-purple-500"
+                  style={{ fontSize: '14px' }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Step 3: People
+const MemoryPeopleStep = ({ data, onChange, onTagPerson, darkMode }) => {
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newPersonName, setNewPersonName] = useState('');
+  
+  const addPerson = () => {
+    if (!newPersonName.trim()) return;
+    
+    const newPerson = {
+      id: Date.now(),
+      name: newPersonName.trim(),
+      avatar: null, // Could generate initials avatar
+    };
+    
+    onChange({ ...data, taggedPeople: [...data.taggedPeople, newPerson] });
+    setNewPersonName('');
+    setShowAddForm(false);
+  };
+  
+  const removePerson = (personId) => {
+    onChange({ ...data, taggedPeople: data.taggedPeople.filter(p => p.id !== personId) });
+  };
+  
+  return (
+    <div className="space-y-6">
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Who was there?</h3>
+      
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Tag people to share this memory with them and let them add photos too!
+      </p>
+      
+      {/* Add person button */}
+      {!showAddForm ? (
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="w-full py-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 
+                   hover:border-purple-400 dark:hover:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20
+                   transition-all flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
+          <Plus className="w-5 h-5" />
+          <span className="font-semibold">Add Person</span>
+        </button>
+      ) : (
+        <div className="space-y-3">
+          <input
+            autoFocus
+            type="text"
+            value={newPersonName}
+            onChange={(e) => setNewPersonName(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && addPerson()}
+            placeholder="Enter name..."
+            className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
+                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-purple-500 outline-none text-base"
+            style={{ fontSize: '16px' }}
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={addPerson}
+              className="flex-1 py-2 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700">
+              Add
+            </button>
+            <button
+              onClick={() => {
+                setShowAddForm(false);
+                setNewPersonName('');
+              }}
+              className="px-4 py-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Tagged people */}
+      {data.taggedPeople.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            {data.taggedPeople.length} person{data.taggedPeople.length !== 1 ? 's' : ''} tagged
+          </p>
+          
+          <div className="space-y-2">
+            {data.taggedPeople.map(person => (
+              <div
+                key={person.id}
+                className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 
+                         border border-gray-200 dark:border-gray-700">
+                <PersonAvatar person={person} />
+                <span className="flex-1 font-medium text-gray-900 dark:text-white">
+                  {person.name}
+                </span>
+                <button
+                  onClick={() => removePerson(person.id)}
+                  className="p-2 text-gray-400 hover:text-red-500">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Step 4: Preview
+const MemoryPreviewStep = ({ data, darkMode }) => {
+  return (
+    <div className="space-y-6">
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Preview your memory</h3>
+      
+      <div className="rounded-2xl overflow-hidden border-2 border-purple-200 dark:border-purple-800">
+        {/* Cover */}
+        <div className="relative h-48">
+          {data.coverPhoto ? (
+            <img src={data.coverPhoto} alt={data.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+          
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-6">
+            <h2 className="text-2xl font-bold mb-2">{data.title}</h2>
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                {new Date(data.date).toLocaleDateString('en-US', { 
+                  month: 'long', 
+                  day: 'numeric', 
+                  year: 'numeric' 
+                })}
+              </div>
+              {data.location && (
+                <>
+                  <span>•</span>
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {data.location}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Content */}
+        <div className="p-6 space-y-4 bg-white dark:bg-gray-800">
+          {/* Description */}
+          {data.description && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                About
+              </h4>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                {data.description}
+              </p>
+            </div>
+          )}
+          
+          {/* Highlights */}
+          {data.highlights.filter(h => h.trim()).length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Special Moments
+              </h4>
+              <div className="space-y-2">
+                {data.highlights.filter(h => h.trim()).map((highlight, idx) => (
+                  <div key={idx} className="flex items-start gap-2">
+                    <span className="text-lg">✨</span>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{highlight}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Photos */}
+          {data.photos.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Photos ({data.photos.length})
+              </h4>
+              <div className="grid grid-cols-3 gap-2">
+                {data.photos.slice(0, 6).map((photo, idx) => (
+                  <img
+                    key={photo.id}
+                    src={photo.url}
+                    alt={`Photo ${idx + 1}`}
+                    className="aspect-square object-cover rounded-lg"
+                  />
+                ))}
+                {data.photos.length > 6 && (
+                  <div className="aspect-square rounded-lg bg-gray-100 dark:bg-gray-700 
+                                flex items-center justify-center">
+                    <span className="text-sm font-bold text-gray-600 dark:text-gray-400">
+                      +{data.photos.length - 6}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* People */}
+          {data.taggedPeople.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Who Was There
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {data.taggedPeople.map(person => (
+                  <div key={person.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full 
+                                                  bg-purple-100 dark:bg-purple-900/30">
+                    <PersonAvatar
+                      person={person}
+                      className="w-6 h-6"
+                      textClassName="text-white text-xs font-bold"
+                    />
+                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                      {person.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// MEMORY VIEWER
+// ============================================================================
+
+const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, onShare, user, darkMode }) => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [showComments, setShowComments] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [userReaction, setUserReaction] = useState(memory.userReaction || null);
+  
+  const slides = [
+    { type: 'cover', data: memory },
+    ...memory.photos.map(photo => ({ type: 'photo', data: photo })),
+    ...(memory.highlights?.filter(h => h.trim()).length > 0 ? [{ type: 'highlights', data: memory.highlights }] : []),
+    ...(memory.taggedPeople?.length > 0 ? [{ type: 'people', data: memory.taggedPeople }] : []),
+  ];
+  
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+  
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+  
+  const handleReact = async (reactionType) => {
+    setUserReaction(reactionType);
+    await onReact(memory.id, reactionType);
+  };
+  
+  const handleComment = async () => {
+    if (!newComment.trim()) return;
+    await onComment(memory.id, newComment.trim());
+    setNewComment('');
+  };
+  
+  return (
+    <div className="memory-viewer fixed inset-0 z-50 bg-black">
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/80 to-transparent">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all">
+            <X className="w-6 h-6 text-white" />
+          </button>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onShare(memory)}
+              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all">
+              <Share2 className="w-5 h-5 text-white" />
+            </button>
+            
+            {memory.canEdit && (
+              <button
+                onClick={onEdit}
+                className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all">
+                <Edit2 className="w-5 h-5 text-white" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Slideshow */}
+      <div className="relative w-full h-full flex items-center justify-center">
+        {slides.map((slide, idx) => (
+          <div
+            key={idx}
+            className={`absolute inset-0 transition-opacity duration-500 ${
+              idx === currentSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}>
+            {slide.type === 'cover' && <CoverSlide memory={slide.data} />}
+            {slide.type === 'photo' && <PhotoSlide photo={slide.data} />}
+            {slide.type === 'highlights' && <HighlightsSlide highlights={slide.data} memory={memory} />}
+            {slide.type === 'people' && <PeopleSlide people={slide.data} memory={memory} />}
+          </div>
+        ))}
+        
+        {/* Navigation */}
+        {slides.length > 1 && (
+          <>
+            <button
+              onClick={prevSlide}
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full 
+                       bg-white/20 hover:bg-white/30 transition-all z-10">
+              <ChevronLeft className="w-6 h-6 text-white" />
+            </button>
+            
+            <button
+              onClick={nextSlide}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full 
+                       bg-white/20 hover:bg-white/30 transition-all z-10">
+              <ChevronRight className="w-6 h-6 text-white" />
+            </button>
+            
+            {/* Dots */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+              {slides.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    idx === currentSlide ? 'bg-white w-8' : 'bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+      
+      {/* Bottom actions */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+        <div className="flex items-center justify-around">
+          <ReactionButton
+            icon={<Heart className="w-6 h-6" />}
+            count={memory.reactionCount || 0}
+            active={userReaction === 'love'}
+            onClick={() => handleReact('love')}
+          />
+          
+          <ReactionButton
+            icon={<MessageCircle className="w-6 h-6" />}
+            count={memory.commentCount || 0}
+            onClick={() => setShowComments(true)}
+          />
+          
+          <ReactionButton
+            icon={<Eye className="w-6 h-6" />}
+            count={memory.viewCount || 0}
+            disabled
+          />
+        </div>
+      </div>
+      
+      {/* Comments sheet */}
+      {showComments && (
+        <CommentsSheet
+          memory={memory}
+          onClose={() => setShowComments(false)}
+          newComment={newComment}
+          setNewComment={setNewComment}
+          onSubmit={handleComment}
+          darkMode={darkMode}
+        />
+      )}
+    </div>
+  );
+};
+
+const CoverSlide = ({ memory }) => (
+  <div className="w-full h-full relative">
+    {memory.coverPhoto ? (
+      <img src={memory.coverPhoto} alt={memory.title} className="w-full h-full object-cover" />
+    ) : (
+      <div className="w-full h-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500" />
+    )}
+    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+    
+    <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-8">
+      <h1 className="text-4xl font-bold mb-4">{memory.title}</h1>
+      <div className="flex items-center gap-4 text-lg mb-2">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-5 h-5" />
+          {new Date(memory.date).toLocaleDateString('en-US', { 
+            month: 'long', 
+            day: 'numeric', 
+            year: 'numeric' 
+          })}
+        </div>
+        {memory.location && (
+          <>
+            <span>•</span>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-5 h-5" />
+              {memory.location}
+            </div>
+          </>
+        )}
+      </div>
+      {memory.taggedPeople?.length > 0 && (
+        <div className="flex items-center gap-2 mt-4">
+          {memory.taggedPeople.slice(0, 5).map((person, idx) => (
+            <div key={person.id} className="border-2 border-white rounded-full overflow-hidden">
+              <PersonAvatar person={person} className="w-12 h-12" />
+            </div>
+          ))}
+          {memory.taggedPeople.length > 5 && (
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center 
+                          text-white font-bold border-2 border-white">
+              +{memory.taggedPeople.length - 5}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+const PhotoSlide = ({ photo }) => (
+  <div className="w-full h-full relative flex items-center justify-center bg-black">
+    <img src={photo.url} alt={photo.caption} className="max-w-full max-h-full object-contain" />
+    {photo.caption && (
+      <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 to-transparent">
+        <p className="text-white text-center">{photo.caption}</p>
+      </div>
+    )}
+  </div>
+);
+
+const HighlightsSlide = ({ highlights, memory }) => (
+  <div className="w-full h-full flex items-center justify-center p-8 bg-gradient-to-br from-purple-900 to-pink-900">
+    <div className="max-w-2xl w-full">
+      <h2 className="text-4xl font-bold text-white text-center mb-8">Special Moments</h2>
+      <div className="space-y-6">
+        {highlights.filter(h => h.trim()).map((highlight, idx) => (
+          <div key={idx} className="flex items-start gap-4 bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+            <span className="text-3xl">✨</span>
+            <p className="text-xl text-white flex-1">{highlight}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const PeopleSlide = ({ people, memory }) => (
+  <div className="w-full h-full flex items-center justify-center p-8 bg-gradient-to-br from-blue-900 to-cyan-900">
+    <div className="max-w-2xl w-full">
+      <h2 className="text-4xl font-bold text-white text-center mb-8">Who Was There</h2>
+      <div className="grid grid-cols-3 gap-6">
+        {people.map(person => (
+          <div key={person.id} className="text-center">
+            <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm 
+                          flex items-center justify-center text-white text-3xl font-bold mx-auto mb-3 
+                          border-4 border-white/30">
+              {person.name.charAt(0).toUpperCase()}
+            </div>
+            <p className="text-white font-semibold">{person.name}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const ReactionButton = ({ icon, count, active, onClick, disabled }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`flex flex-col items-center gap-1 transition-all ${
+      disabled ? 'opacity-50 cursor-default' : active ? 'text-pink-500' : 'text-white hover:scale-110'
+    }`}>
+    {icon}
+    {count > 0 && (
+      <span className="text-xs font-bold">{count > 999 ? '999+' : count}</span>
+    )}
+  </button>
+);
+
+const CommentsSheet = ({ memory, onClose, newComment, setNewComment, onSubmit, darkMode }) => (
+  <div className="fixed inset-0 z-50 flex items-end" onClick={onClose}>
+    <div
+      className="w-full max-h-[80vh] bg-white dark:bg-gray-900 rounded-t-3xl overflow-hidden"
+      onClick={(e) => e.stopPropagation()}>
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            Comments ({memory.comments?.length || 0})
+          </h3>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+      
+      {/* Comments list */}
+      <div className="overflow-y-auto max-h-[50vh] p-4 space-y-4">
+        {memory.comments?.map(comment => (
+          <div key={comment.id} className="flex gap-3">
+            <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center 
+                          text-white font-bold shrink-0">
+              {comment.userName.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1">
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2">
+                <p className="font-semibold text-sm text-gray-900 dark:text-white">
+                  {comment.userName}
+                </p>
+                <p className="text-gray-700 dark:text-gray-300">{comment.text}</p>
+              </div>
+              <p className="text-xs text-gray-500 mt-1 ml-4">
+                {new Date(comment.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        ))}
+        
+        {(!memory.comments || memory.comments.length === 0) && (
+          <div className="text-center py-8 text-gray-500">
+            No comments yet. Be the first!
+          </div>
+        )}
+      </div>
+      
+      {/* Input */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && onSubmit()}
+            placeholder="Add a comment..."
+            className="flex-1 px-4 py-2 rounded-full border border-gray-300 dark:border-gray-600 
+                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white outline-none text-base"
+            style={{ fontSize: '16px' }}
+          />
+          <button
+            onClick={onSubmit}
+            disabled={!newComment.trim()}
+            className="px-6 py-2 rounded-full bg-purple-600 text-white font-semibold 
+                     hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ============================================================================
+// UTILITY COMPONENTS
+// ============================================================================
+
+// Prompt to create memory after event
+const CreateMemoryPrompt = ({ event, onCreateMemory, onDismiss }) => (
+  <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 
+                border-2 border-purple-200 dark:border-purple-800 p-4 mb-4">
+    <div className="flex items-start gap-3 mb-3">
+      <Sparkles className="w-6 h-6 text-purple-600 dark:text-purple-400 shrink-0 mt-1" />
+      <div className="flex-1">
+        <h4 className="font-bold text-purple-900 dark:text-purple-100 mb-1">
+          Turn this into a Memory?
+        </h4>
+        <p className="text-sm text-purple-700 dark:text-purple-300">
+          Preserve "{event.title}" forever with photos, highlights, and more!
+        </p>
+      </div>
+    </div>
+    
+    <div className="flex gap-2">
+      <button
+        onClick={onCreateMemory}
+        className="flex-1 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 
+                 text-white font-semibold hover:shadow-lg transition-all">
+        ✨ Create Memory
+      </button>
+      <button
+        onClick={onDismiss}
+        className="px-4 py-2 rounded-xl bg-white dark:bg-gray-800 
+                 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+        Later
+      </button>
+    </div>
+  </div>
+);
+
+// ============================================================================
+// EXPORT
+// ============================================================================
+
+export default MemorySystem;
+export {
+  MemoriesGallery,
+  MemoryCreator,
+  MemoryViewer,
+  CreateMemoryPrompt,
+  MemoryThumbnail,
+};

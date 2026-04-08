@@ -136,7 +136,7 @@ const resolveCelebrationStyle = (event) => {
       empty: 'border-stone-200 bg-stone-50/70 text-stone-700 dark:border-stone-300/30 dark:bg-[rgba(28,24,20,0.82)] dark:text-stone-100 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]',
       invitee: 'border-stone-200 dark:border-stone-400/14',
       detailLabel: 'text-stone-700 dark:text-stone-200',
-      detailSurface: 'border-stone-100 bg-white dark:border-stone-500/10 dark:bg-white/5',
+      detailSurface: 'border-stone-100 bg-white dark:border-stone-300/18 dark:bg-[rgba(28,24,20,0.92)]',
       timeline: 'from-stone-200 via-rose-100 to-amber-200 dark:from-stone-500/20 dark:via-rose-500/12 dark:to-amber-500/16',
       motifA: '🧸',
       motifB: '✨',

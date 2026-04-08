@@ -493,7 +493,6 @@ const DateDetailsModal = ({
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 pr-4">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xl">🎉</span>
                             <h4 className="font-semibold text-gray-900 dark:text-white text-base">
                               {event.title}
                             </h4>
