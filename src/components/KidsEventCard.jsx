@@ -61,6 +61,30 @@ const normalizeList = (value) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const buildKidsRegistryOptions = () => ([
+  {
+    id: 'amazon',
+    label: 'Amazon Registry',
+    kind: 'amazon',
+    href: 'https://www.amazon.com/registries',
+    className: 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-white/15 dark:bg-white/[0.06] dark:text-white dark:hover:bg-white/[0.1]',
+  },
+  {
+    id: 'target',
+    label: 'Target Registry',
+    kind: 'target',
+    href: 'https://www.target.com/gift-registry/',
+    className: 'border-red-300 bg-red-50 text-red-600 hover:border-red-400 hover:bg-red-100 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/15',
+  },
+  {
+    id: 'walmart',
+    label: 'Walmart Toys',
+    kind: 'walmart',
+    href: 'https://www.walmart.com/shop/toys',
+    className: 'border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-400 hover:bg-blue-100 dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/15',
+  },
+]);
+
 const EditIcon = () => (
   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -206,6 +230,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
   const parentRequired = event?.parentRequired !== false;
   const allergenAlerts = Array.isArray(event?.allergenAlerts) ? event.allergenAlerts : [];
   const registryLink = String(event?.registryLink || '').trim();
+  const registryOptions = buildKidsRegistryOptions();
   const titleText = String(event?.title || '').trim();
   const shouldShowLocationLine = Boolean(event?.location);
   const coverImageUrl = getCardBackdropUrl(event);
@@ -253,6 +278,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
               type: 'registry-link',
               value: registryLink,
               placeholder: 'Paste a registry link...',
+              registryOptions,
             },
           ],
           onSave: (values) => onUpdateEventData({ registryLink: String(values.registryLink || '').trim() }),
@@ -445,6 +471,13 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
               <ActionPill href={registryLink}>Open registry</ActionPill>
             )}
           >
+            <div className="mb-4 flex flex-wrap gap-2.5">
+              {registryOptions.map((option) => (
+                <ActionPill key={option.id} href={option.href}>
+                  {option.label}
+                </ActionPill>
+              ))}
+            </div>
             <a
               href={registryLink}
               target="_blank"
@@ -471,7 +504,19 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
             </a>
           </Section>
         ) : (
-          <EmptySection title="Gift Registry" actions={openRegistryEditor ? <ActionPill onClick={openRegistryEditor}>Add</ActionPill> : null} />
+          <Section title="Gift Registry" actions={openRegistryEditor ? <ActionPill onClick={openRegistryEditor}>Add</ActionPill> : null}>
+            <div className="mb-4 flex flex-wrap gap-2.5">
+              {registryOptions.map((option) => (
+                <ActionPill key={option.id} href={option.href}>
+                  {option.label}
+                </ActionPill>
+              ))}
+            </div>
+            <div className="relative overflow-hidden rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
+              <PartyTileConfetti />
+              <div className="relative">Add a custom registry link or use one of the quick shop buttons above.</div>
+            </div>
+          </Section>
         )}
 
         <Section
