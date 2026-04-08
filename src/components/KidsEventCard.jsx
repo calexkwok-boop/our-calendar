@@ -31,14 +31,11 @@ const normalizeEventNotes = (event) => {
   const rawNotes = String(event?.description || '').trim();
   if (!rawNotes) return '';
   const normalized = rawNotes.toLowerCase().replace(/\s+/g, ' ').trim();
-  if (/^(party|kids event|celebration|hangout|custom|sports)( we event)?$/.test(normalized)) {
-    return '';
-  }
-  if (/^[a-z ]+ we event$/.test(normalized)) {
-    return '';
-  }
+  if (/^(party|kids event|celebration|hangout|custom|sports)( we event)?$/.test(normalized)) return '';
+  if (/^[a-z ]+ we event$/.test(normalized)) return '';
   return rawNotes;
 };
+
 const getCardBackdropUrl = (event) => {
   const candidates = [
     event?.coverImageUrl,
@@ -75,6 +72,7 @@ const TrashIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
   </svg>
 );
+
 const CameraIcon = () => (
   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.75 8.75h2.6l1.35-2h6.6l1.35 2h2.6a1.5 1.5 0 011.5 1.5v7a1.5 1.5 0 01-1.5 1.5H4.75a1.5 1.5 0 01-1.5-1.5v-7a1.5 1.5 0 011.5-1.5Z" />
@@ -84,8 +82,8 @@ const CameraIcon = () => (
 
 const ActionPill = ({ href, onClick, children, subdued = false }) => {
   const className = subdued
-    ? 'inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-white/88 px-3 py-1.25 text-[11px] font-medium text-amber-700 shadow-sm transition-all hover:border-amber-300 hover:bg-amber-50/70 hover:shadow-md active:scale-[0.98] dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200 dark:hover:bg-white/10'
-    : 'inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-white/92 px-3.5 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition-all hover:border-amber-300 hover:bg-amber-50/75 hover:shadow-md active:scale-[0.98] dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200 dark:hover:bg-white/10';
+    ? 'inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200 bg-white/88 px-3 py-1.25 text-[11px] font-medium text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/70 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:bg-white/12 dark:hover:text-white'
+    : 'inline-flex items-center gap-1.5 rounded-full border-2 border-fuchsia-200 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/80 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:bg-white/12 dark:hover:text-white';
 
   if (href) {
     return (
@@ -102,12 +100,19 @@ const ActionPill = ({ href, onClick, children, subdued = false }) => {
   );
 };
 
-const kidsSectionClassName = 'rounded-[22px] border border-amber-200/75 bg-gradient-to-br from-white via-amber-50/88 to-sky-50/70 p-5 shadow-[0_12px_30px_rgba(251,191,36,0.10)] backdrop-blur-sm transition-all hover:shadow-[0_18px_40px_rgba(56,189,248,0.12)] dark:border-amber-400/18 dark:bg-gradient-to-br dark:from-white/[0.07] dark:via-amber-500/[0.05] dark:to-sky-500/[0.05] dark:hover:bg-white/[0.08]';
-const kidsDetailSurfaceClassName = 'border-amber-200/75 bg-white/88 dark:border-amber-400/16 dark:bg-white/[0.05]';
-const kidsEmptyClassName = 'border-amber-200/75 bg-amber-50/75 text-amber-800 dark:border-amber-400/16 dark:bg-amber-500/8 dark:text-amber-100';
+const PartyTileConfetti = () => (
+  <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-55 dark:opacity-40">
+    <div className="absolute left-3 top-3 h-2.5 w-2.5 rotate-12 rounded-sm bg-fuchsia-300/80 dark:bg-fuchsia-300/55" />
+    <div className="absolute right-5 top-4 h-3 w-1.5 rotate-[28deg] rounded-full bg-cyan-300/80 dark:bg-cyan-300/55" />
+    <div className="absolute left-[22%] top-[58%] h-2 w-4 rotate-[22deg] rounded-full bg-pink-300/75 dark:bg-pink-300/50" />
+    <div className="absolute right-[28%] top-[62%] h-2.5 w-2.5 rotate-45 bg-sky-300/80 dark:bg-sky-300/55" />
+    <div className="absolute left-[58%] top-[20%] h-1.5 w-5 rotate-[-18deg] rounded-full bg-fuchsia-200/75 dark:bg-fuchsia-200/45" />
+    <div className="absolute left-[70%] top-[70%] h-3 w-1.5 rotate-[40deg] rounded-full bg-cyan-200/80 dark:bg-cyan-200/50" />
+  </div>
+);
 
 const Section = ({ title, subtitle, actions, children }) => (
-  <div className={`group/section ${kidsSectionClassName}`}>
+  <div className="group/section rounded-[22px] border border-fuchsia-100/80 bg-white/96 p-5 shadow-[0_10px_26px_rgba(15,23,42,0.05)] backdrop-blur-sm transition-all hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/[0.06] dark:shadow-none dark:hover:bg-white/[0.09]">
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-bold text-gray-900 dark:text-white">{title}</div>
@@ -121,26 +126,48 @@ const Section = ({ title, subtitle, actions, children }) => (
 
 const EmptySection = ({ title, subtitle, actions }) => (
   <Section title={title} subtitle={subtitle} actions={actions}>
-    <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${kidsEmptyClassName}`}>
-      Nothing added yet.
+    <div className="relative overflow-hidden rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
+      <PartyTileConfetti />
+      <div className="relative">Nothing added yet.</div>
     </div>
   </Section>
 );
 
-const NotesSection = ({ event, onEdit }) => {
+const NotesSection = ({ event, onEdit, onUpdateEventData, openEditor }) => {
   const notes = normalizeEventNotes(event);
-  const sectionTitle = 'Parent Notes';
+  const openNotesEditor =
+    onUpdateEventData && openEditor
+      ? () =>
+          openEditor({
+            variant: 'kids',
+            title: 'Parent Notes',
+            fields: [
+              {
+                key: 'description',
+                label: 'Notes',
+                type: 'textarea',
+                rows: 6,
+                value: notes,
+                placeholder: 'Add anything parents should know before drop-off or pickup...',
+              },
+            ],
+            onSave: (values) => onUpdateEventData({ description: String(values.description || '').trim() }),
+          })
+      : onEdit;
 
   if (notes) {
     return (
-      <Section title={sectionTitle} actions={typeof onEdit === 'function' ? <ActionPill onClick={onEdit}>Edit</ActionPill> : null}>
-        <div className={`rounded-2xl border px-4 py-4 text-sm leading-6 text-gray-700 dark:text-gray-300 ${kidsDetailSurfaceClassName}`}>{notes}</div>
+      <Section title="Parent Notes" actions={typeof openNotesEditor === 'function' ? <ActionPill onClick={openNotesEditor}>Edit</ActionPill> : null}>
+        <div className="relative overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 px-4 py-4 text-sm leading-6 text-gray-700 dark:border-white/10 dark:bg-white/[0.045] dark:text-gray-300">
+          <PartyTileConfetti />
+          <div className="relative">{notes}</div>
+        </div>
       </Section>
     );
   }
 
-  if (typeof onEdit === 'function') {
-    return <EmptySection title={sectionTitle} actions={<ActionPill onClick={onEdit}>Add</ActionPill>} />;
+  if (typeof openNotesEditor === 'function') {
+    return <EmptySection title="Parent Notes" actions={<ActionPill onClick={openNotesEditor}>Add</ActionPill>} />;
   }
 
   return null;
@@ -167,12 +194,12 @@ const animationStyles = `
 
 const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props }) => {
   const ageRange = String(event?.ageRange || '').trim();
-  const activity = String(event?.activity || '').trim();
   const parentRequired = event?.parentRequired !== false;
   const allergenAlerts = Array.isArray(event?.allergenAlerts) ? event.allergenAlerts : [];
   const registryLink = String(event?.registryLink || '').trim();
   const titleText = String(event?.title || '').trim();
   const shouldShowLocationLine = Boolean(event?.location);
+  const coverImageUrl = getCardBackdropUrl(event);
   const openHeaderEditor =
     onUpdateEventData && openEditor
       ? () =>
@@ -194,7 +221,6 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
               }),
           })
       : onEdit;
-  const coverImageUrl = getCardBackdropUrl(event);
   const openCoverEditor = onUpdateEventData && openEditor
     ? () =>
         openEditor({
@@ -206,48 +232,36 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
           onSave: (values) => onUpdateEventData({ coverImageUrl: String(values.coverImageUrl || '').trim() || null }),
         })
     : null;
+  const openRegistryEditor = onUpdateEventData && openEditor
+    ? () =>
+        openEditor({
+          variant: 'kids',
+          title: registryLink ? 'Edit Gift Registry' : 'Add Gift Registry',
+          fields: [
+            {
+              key: 'registryLink',
+              label: 'Registry link',
+              type: 'registry-link',
+              value: registryLink,
+              placeholder: 'Paste a registry link...',
+            },
+          ],
+          onSave: (values) => onUpdateEventData({ registryLink: String(values.registryLink || '').trim() }),
+        })
+    : null;
 
   return (
-    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/60 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:from-[#171320] dark:via-[#1d1a30] dark:to-[#111a2b] dark:shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+    <div className="group relative w-full overflow-hidden rounded-[32px] border-2 border-fuchsia-200/80 bg-gradient-to-br from-white via-rose-50/55 to-cyan-50/60 shadow-[0_24px_80px_rgba(15,23,42,0.08)] transition-all duration-300 hover:shadow-[0_28px_100px_rgba(15,23,42,0.12)] dark:border-fuchsia-400/20 dark:bg-gradient-to-br dark:from-[#15111f] dark:via-[#1b1930] dark:to-[#0f1727] dark:shadow-[0_24px_80px_rgba(0,0,0,0.38)]">
       <style>{animationStyles}</style>
       {coverImageUrl ? (
         <>
           <div
-            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.43] saturate-[1.12] contrast-[1.04]"
+            className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.5] saturate-[1.12] contrast-[1.03]"
             style={{ backgroundImage: `url(${coverImageUrl})` }}
           />
-          <div className={`pointer-events-none absolute inset-0 ${coverImageUrl ? 'bg-gradient-to-br from-white/18 via-amber-50/10 to-sky-50/10 dark:from-[#171320]/34 dark:via-[#1d1a30]/22 dark:to-[#111a2b]/28' : 'bg-gradient-to-br from-white/78 via-amber-50/68 to-sky-50/72 dark:from-[#171320]/88 dark:via-[#1d1a30]/84 dark:to-[#111a2b]/88'}`} />
+          <div className={`pointer-events-none absolute inset-0 ${coverImageUrl ? 'bg-gradient-to-br from-white/22 via-rose-50/12 to-cyan-50/14 dark:from-[#15111f]/34 dark:via-[#1b1930]/24 dark:to-[#0f1727]/32' : 'bg-gradient-to-br from-white/78 via-rose-50/68 to-cyan-50/70 dark:from-[#15111f]/88 dark:via-[#1b1930]/84 dark:to-[#0f1727]/88'}`} />
         </>
       ) : null}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-[7%] top-[11%] text-[1.9rem] opacity-65 dark:opacity-38">🎈</div>
-        <div className="absolute right-[10%] top-[12%] text-[1.8rem] opacity-60 dark:opacity-34">🧸</div>
-        <div className="absolute right-[18%] top-[31%] text-[1.85rem] opacity-45 dark:opacity-26">🎠</div>
-        <div className="absolute left-[76%] top-[62%] text-[1.8rem] opacity-55 dark:opacity-32">🖍️</div>
-        <div className="absolute left-[10%] bottom-[14%] text-[1.7rem] opacity-55 dark:opacity-32">🧩</div>
-        <div className="absolute left-[14%] bottom-[31%] text-[1.7rem] opacity-42 dark:opacity-24">🎠</div>
-        <div className="absolute left-[38%] top-[8%] text-[1.85rem] opacity-52 dark:opacity-30">🎨</div>
-        <div className="absolute right-[6%] top-[54%] text-[1.75rem] opacity-46 dark:opacity-28">🫧</div>
-        <div className="absolute left-[28%] top-[58%] text-[1.8rem] opacity-44 dark:opacity-28">🎪</div>
-        <div className="absolute left-[62%] top-[22%] text-[1.7rem] opacity-42 dark:opacity-26">⭐</div>
-
-        <div className="absolute right-[24%] top-[8%] text-[1.8rem] opacity-44 dark:opacity-28">🎉</div>
-        <div className="absolute left-[8%] top-[42%] text-[1.75rem] opacity-42 dark:opacity-24">✨</div>
-        <div className="absolute left-[56%] top-[18%] text-[1.7rem] opacity-40 dark:opacity-24">🌈</div>
-        <div className="absolute left-[84%] top-[30%] text-[1.8rem] opacity-44 dark:opacity-28">🎊</div>
-      </div>
-
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-[22%] top-[23%] h-2.5 w-2.5 rotate-12 rounded-sm bg-amber-200/70 dark:bg-amber-300/20" />
-        <div className="absolute right-[18%] top-[58%] h-2 w-2 rounded-full bg-sky-200/80 dark:bg-sky-300/20" />
-        <div className="absolute left-[70%] top-[32%] h-2.5 w-2.5 rotate-45 rounded-sm bg-rose-200/70 dark:bg-rose-300/20" />
-        <div className="absolute left-[42%] top-[18%] h-3 w-5 rotate-[22deg] rounded-full bg-yellow-200/70 dark:bg-yellow-300/18" />
-        <div className="absolute right-[24%] top-[28%] h-2.5 w-2.5 rotate-45 rounded-sm bg-amber-200/70 dark:bg-amber-300/18" />
-        <div className="absolute left-[58%] top-[72%] h-2 w-2 rounded-full bg-pink-200/75 dark:bg-pink-300/18" />
-      </div>
-
-      <div className="pointer-events-none absolute -left-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-amber-300/18 to-yellow-300/8 blur-2xl dark:from-amber-400/10 dark:to-yellow-400/5" />
-      <div className="pointer-events-none absolute -bottom-8 -right-8 h-32 w-32 rounded-full bg-gradient-to-br from-sky-300/16 to-cyan-300/8 blur-2xl dark:from-sky-400/10 dark:to-cyan-400/5" />
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-42 dark:opacity-26">
         <div className="absolute left-6 top-12 text-[2.8rem] opacity-80 drop-shadow-[0_10px_22px_rgba(236,72,153,0.22)] dark:opacity-70" style={{ animation: 'party-card-float 8.6s ease-in-out infinite 0.2s' }}>🥂</div>
@@ -265,53 +279,57 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
         <div className="absolute right-[24%] top-[82%] h-10 w-24 rounded-full border-t-[5px] border-dashed border-rose-300/90 opacity-75 dark:border-rose-300/55 dark:opacity-56" style={{ transform: 'rotate(-14deg)', animation: 'party-card-sway 8.6s ease-in-out infinite 0.4s' }} />
       </div>
 
-      <div className="relative px-6 py-7 sm:px-7">
+      <div className={`relative border-b-2 border-fuchsia-200/70 px-6 py-6 dark:border-fuchsia-400/15 sm:px-7 ${coverImageUrl ? 'bg-white/6 dark:bg-white/[0.03]' : 'bg-gradient-to-br from-white via-rose-50/40 to-cyan-50/45 dark:bg-gradient-to-br dark:from-[#211533] dark:via-[#1c2740] dark:to-[#19162d]'}`}>
         {(props.onEdit || props.onDelete) ? (
-          <div className="absolute right-6 top-5 z-10 flex items-center gap-2 sm:right-7">
+          <div className="absolute right-6 top-6 z-10 flex items-center gap-2">
             {props.onEdit ? (
-              <button className="rounded-full border-2 border-amber-200 bg-white/95 p-2.5 text-amber-600 shadow-sm transition-all hover:border-amber-300 hover:text-amber-800 hover:shadow-md dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200 dark:hover:bg-white/10 dark:hover:text-white" onClick={props.onEdit} type="button">
+              <button
+                className="rounded-full border-2 border-fuchsia-200 bg-white/95 p-2.5 text-fuchsia-600 shadow-sm transition-all hover:border-fuchsia-300 hover:text-fuchsia-800 hover:shadow-md dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:bg-white/12 dark:hover:text-white"
+                onClick={props.onEdit}
+                type="button"
+              >
                 <EditIcon />
               </button>
             ) : null}
             {props.onDelete ? (
-              <button className="rounded-full border-2 border-amber-200 bg-white/95 p-2.5 text-amber-600 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200 dark:hover:border-red-400/20 dark:hover:bg-red-500/10 dark:hover:text-red-400" onClick={props.onDelete} type="button">
+              <button
+                className="rounded-full border-2 border-fuchsia-200 bg-white/95 p-2.5 text-fuchsia-600 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:border-red-400/20 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                onClick={props.onDelete}
+                type="button"
+              >
                 <TrashIcon />
               </button>
             ) : null}
           </div>
         ) : null}
 
-        <div className={`relative mx-auto max-w-[30rem] rounded-[28px] border border-amber-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-amber-400/15 dark:backdrop-blur-[12px] ${coverImageUrl ? 'bg-white/68 dark:bg-[rgba(43,35,23,0.68)]' : 'bg-white/82 dark:bg-[rgba(43,35,23,0.76)]'}`}>
-          {coverImageUrl ? (
-            <>
-              <div
-                className="pointer-events-none absolute inset-0 rounded-[28px] bg-cover bg-center opacity-[0.5]"
-                style={{ backgroundImage: `url(${coverImageUrl})` }}
-              />
-              <div className="pointer-events-none absolute left-5 right-5 top-5 h-[58%] rounded-[24px] bg-white/36 blur-xl dark:bg-black/18" />
-              <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/28 via-white/12 to-amber-50/10 dark:from-[#352919]/22 dark:via-[#2a2037]/12 dark:to-sky-500/[0.08]" />
-            </>
-          ) : null}
+        <div className={`relative mx-auto max-w-[30rem] rounded-[28px] border border-fuchsia-200/80 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-[10px] dark:border-fuchsia-400/15 dark:backdrop-blur-[12px] ${coverImageUrl ? 'bg-white/42 dark:bg-[rgba(38,28,57,0.44)]' : 'bg-white/82 dark:bg-[rgba(38,28,57,0.76)]'}`}>
           {typeof openCoverEditor === 'function' ? (
             <button
               type="button"
               onClick={openCoverEditor}
-              className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-200 bg-white/92 text-amber-600 shadow-sm transition hover:border-amber-300 hover:bg-white hover:text-amber-700 dark:border-white/10 dark:bg-white/10 dark:text-amber-200 dark:hover:bg-white/15 dark:hover:text-white"
+              className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-fuchsia-200 bg-white/92 text-fuchsia-600 shadow-sm transition hover:border-fuchsia-300 hover:bg-white hover:text-fuchsia-700 dark:border-white/10 dark:bg-white/10 dark:text-fuchsia-200 dark:hover:bg-white/15 dark:hover:text-white"
               title={coverImageUrl ? 'Change cover photo' : 'Add cover photo'}
             >
               <CameraIcon />
             </button>
           ) : null}
+          <div className="pointer-events-none absolute inset-0 hidden overflow-hidden dark:block">
+            <div className="absolute -left-2 top-6 h-16 w-11 rounded-full bg-gradient-to-b from-fuchsia-300/45 to-pink-500/55 blur-[0.2px]" />
+            <div className="absolute left-4 top-[4.5rem] h-10 w-px bg-gradient-to-b from-fuchsia-200/70 to-transparent" />
+            <div className="absolute right-3 top-5 h-14 w-10 rounded-full bg-gradient-to-b from-cyan-200/40 to-cyan-500/55 blur-[0.2px]" />
+            <div className="absolute right-7 top-[4.1rem] h-9 w-px bg-gradient-to-b from-cyan-200/60 to-transparent" />
+          </div>
           <div className="mx-auto max-w-[24rem] rounded-[22px] border border-white/60 bg-white/48 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-white/10 dark:bg-black/14">
             <div className="mb-3 flex items-center justify-center">
-              <div className="text-[15px] font-semibold text-amber-700 dark:text-amber-200">
+              <div className="text-[15px] font-semibold text-fuchsia-700 dark:text-fuchsia-200">
                 You're Invited
               </div>
             </div>
 
             <div className="mb-4 flex flex-wrap items-center justify-center gap-2.5">
               {ageRange ? (
-                <span className="rounded-full border border-amber-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-amber-700 shadow-sm dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-200">
+                <span className="inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-50/70 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-fuchsia-700 dark:border-fuchsia-400/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-200">
                   Ages {ageRange}
                 </span>
               ) : null}
@@ -333,7 +351,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
               </h3>
             )}
 
-            <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-amber-400 to-transparent dark:via-sky-300/80" />
+            <div className="mx-auto mt-4 h-px w-24 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent dark:via-cyan-300/80" />
 
             <div className="mt-4 space-y-2 text-[15px] text-gray-700 dark:text-gray-200">
               {typeof openHeaderEditor === 'function' ? (
@@ -348,80 +366,61 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
               ) : (
                 <>
                   <div className="font-normal">{formatEventDateTime(event?.date, event?.time)}</div>
-                  {shouldShowLocationLine ? <div className="font-normal">{event.location}</div> : null}
+                  {shouldShowLocationLine ? <div className="mt-1 font-normal">{event.location}</div> : null}
                 </>
               )}
             </div>
-          </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
-            {event?.location ? <ActionPill href={buildMapHref(event.location)} subdued>View map</ActionPill> : null}
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+              <span className="rounded-full border border-cyan-200 bg-cyan-50/88 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-cyan-500/12 dark:text-cyan-200">
+                {parentRequired ? 'Parents Stay' : 'Drop-Off OK'}
+              </span>
+              {event?.location ? <ActionPill href={buildMapHref(event.location)} subdued>View map</ActionPill> : null}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="relative space-y-5 px-6 py-6 sm:px-7">
-        {activity ? (
-        <Section
-          title="Main Activity"
-          actions={onUpdateEventData && openEditor ? (
-              <ActionPill
-                onClick={() =>
-                  openEditor({
-                    variant: 'kids',
-                    title: 'Edit Activity',
-                    fields: [
-                      { key: 'activity', label: 'Activity', value: activity, placeholder: 'Face painting, bounce house...' },
-                      { key: 'ageRange', label: 'Age range', value: ageRange, placeholder: '5-8' },
-                    ],
-                    onSave: (values) =>
-                      onUpdateEventData({
-                        activity: String(values.activity || '').trim(),
-                        ageRange: String(values.ageRange || '').trim(),
-                      }),
-                  })
-                }
-              >
-                Edit
-              </ActionPill>
-            ) : null}
+        {registryLink ? (
+          <Section
+            title="Gift Registry"
+            actions={openRegistryEditor ? (
+              <>
+                <ActionPill href={registryLink}>Open registry</ActionPill>
+                <ActionPill onClick={openRegistryEditor}>Edit</ActionPill>
+              </>
+            ) : (
+              <ActionPill href={registryLink}>Open registry</ActionPill>
+            )}
           >
-            <div className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm ${kidsDetailSurfaceClassName}`}>
-              <div className="relative flex items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-yellow-100 text-sm font-semibold text-amber-700 shadow-sm dark:from-amber-500/15 dark:to-yellow-500/15 dark:text-amber-200">
-                  Fun
+            <a
+              href={registryLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group/gift relative block overflow-hidden rounded-2xl border border-fuchsia-100/80 bg-white/88 p-5 shadow-md transition-all hover:scale-[1.02] hover:shadow-lg dark:border-fuchsia-500/10 dark:bg-white/[0.045] dark:hover:border-fuchsia-500/20"
+            >
+              <PartyTileConfetti />
+              <div className="relative flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-100 to-pink-100 text-sm font-semibold text-fuchsia-700 shadow-sm transition-transform group-hover/gift:scale-105 dark:from-fuchsia-500/20 dark:to-pink-500/20 dark:text-fuchsia-200">
+                  🎁
                 </div>
-                <div className="min-w-0 flex-1 pt-1">
-                  <div className="text-sm font-bold text-gray-900 dark:text-white">{activity}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 text-sm font-bold uppercase tracking-[0.14em] text-fuchsia-700 dark:text-fuchsia-300">
+                    Gift Registry
+                  </div>
+                  <div className="text-[15px] font-semibold text-gray-900 dark:text-white">
+                    See what they would love
+                  </div>
                 </div>
+                <svg className="h-6 w-6 shrink-0 text-fuchsia-600 transition-transform group-hover/gift:translate-x-1 dark:text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </div>
-            </div>
+            </a>
           </Section>
         ) : (
-        <EmptySection
-          title="Main Activity"
-          actions={onUpdateEventData && openEditor ? (
-              <ActionPill
-                onClick={() =>
-                  openEditor({
-                    variant: 'kids',
-                    title: 'Add Activity',
-                    fields: [
-                      { key: 'activity', label: 'Activity', value: '', placeholder: 'Face painting, bounce house...' },
-                      { key: 'ageRange', label: 'Age range', value: ageRange, placeholder: '5-8' },
-                    ],
-                    onSave: (values) =>
-                      onUpdateEventData({
-                        activity: String(values.activity || '').trim(),
-                        ageRange: String(values.ageRange || '').trim(),
-                      }),
-                  })
-                }
-              >
-                Add
-              </ActionPill>
-            ) : null}
-          />
+          <EmptySection title="Gift Registry" actions={openRegistryEditor ? <ActionPill onClick={openRegistryEditor}>Add</ActionPill> : null} />
         )}
 
         <Section
@@ -449,70 +448,29 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
           ) : null}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm ${kidsDetailSurfaceClassName}`}>
-              <div className="flex items-start gap-2.5">
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1 text-xs font-bold uppercase tracking-[0.14em] text-sky-700 dark:text-sky-300">Supervision</div>
-                  <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {parentRequired ? 'Parents stay' : 'Drop-off OK'}
-                  </div>
-                </div>
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-cyan-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-cyan-400/20">
+              <PartyTileConfetti />
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">Supervision</div>
+              <div className="relative mt-2 text-sm font-semibold text-gray-900 dark:text-white">
+                {parentRequired ? 'Parents stay' : 'Drop-off OK'}
               </div>
             </div>
-
-            <div className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm ${
-              allergenAlerts.length > 0
-                ? kidsDetailSurfaceClassName
-                : kidsDetailSurfaceClassName
-            }`}>
-              <div className="flex items-start gap-2.5">
-                <div className="min-w-0 flex-1">
-                  <div className={`mb-1 text-xs font-bold uppercase tracking-[0.14em] ${
-                    allergenAlerts.length > 0 ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'
-                  }`}>
-                    Allergies
-                  </div>
-                  <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {allergenAlerts.length > 0 ? `No ${allergenAlerts.join(', ')}` : 'None noted'}
-                  </div>
-                </div>
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200/85 bg-white/93 px-4 py-4 text-left backdrop-blur-md transition-all hover:border-fuchsia-200 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/55 dark:hover:border-fuchsia-400/20">
+              <PartyTileConfetti />
+              <div className={`text-[11px] font-bold uppercase tracking-[0.18em] ${allergenAlerts.length > 0 ? 'text-rose-600 dark:text-rose-300' : 'text-emerald-600 dark:text-emerald-300'}`}>
+                Allergies
+              </div>
+              <div className="relative mt-2 text-sm font-semibold text-gray-900 dark:text-white">
+                {allergenAlerts.length > 0 ? `No ${allergenAlerts.join(', ')}` : 'None noted'}
               </div>
             </div>
           </div>
         </Section>
 
-        {registryLink ? (
-          <a
-            href={registryLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`group/gift relative block overflow-hidden rounded-2xl border p-5 shadow-md transition-all hover:scale-[1.02] hover:shadow-lg ${kidsDetailSurfaceClassName}`}
-          >
-            <div className="relative flex items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 text-sm font-semibold text-purple-700 shadow-sm transition-transform group-hover/gift:scale-105 dark:from-purple-500/20 dark:to-pink-500/20 dark:text-purple-200">
-                🎁
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="mb-1 text-sm font-bold uppercase tracking-[0.14em] text-purple-700 dark:text-purple-300">
-                  Birthday Wishlist
-                </div>
-                <div className="text-[15px] font-semibold text-gray-900 dark:text-white">
-                  See what they would love
-                </div>
-              </div>
-              <svg className="h-6 w-6 shrink-0 text-purple-600 transition-transform group-hover/gift:translate-x-1 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </a>
-        ) : null}
-
-        <NotesSection event={event} onEdit={onEdit} />
-
+        <NotesSection event={event} onEdit={onEdit} onUpdateEventData={onUpdateEventData} openEditor={openEditor} />
       </div>
     </div>
   );
 };
 
 export default KidsEventCard;
-
