@@ -132,9 +132,17 @@ const RegistryLogoMark = ({ kind }) => {
   }
 
   return (
-    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[7px] font-black uppercase tracking-[0.08em] text-white">
-      W
-    </div>
+    <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect width="24" height="24" rx="6" fill="#1459D9" />
+      <g fill="#FFC220" transform="translate(12 12)">
+        <rect x="-1.55" y="-8.4" width="3.1" height="6.6" rx="1.55" />
+        <rect x="-1.55" y="-8.4" width="3.1" height="6.6" rx="1.55" transform="rotate(60)" />
+        <rect x="-1.55" y="-8.4" width="3.1" height="6.6" rx="1.55" transform="rotate(120)" />
+        <rect x="-1.55" y="-8.4" width="3.1" height="6.6" rx="1.55" transform="rotate(180)" />
+        <rect x="-1.55" y="-8.4" width="3.1" height="6.6" rx="1.55" transform="rotate(240)" />
+        <rect x="-1.55" y="-8.4" width="3.1" height="6.6" rx="1.55" transform="rotate(300)" />
+      </g>
+    </svg>
   );
 };
 
@@ -153,8 +161,8 @@ const RegistryLogoLink = ({ option }) => (
 
 const ActionPill = ({ href, onClick, children, subdued = false }) => {
   const className = subdued
-    ? 'inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200 bg-white/88 px-3 py-1.25 text-[11px] font-medium text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/70 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-300/35 dark:bg-slate-950/65 dark:text-fuchsia-100 dark:shadow-[0_8px_18px_rgba(0,0,0,0.28)] dark:hover:border-fuchsia-200/55 dark:hover:bg-fuchsia-400/14 dark:hover:text-white'
-    : 'inline-flex items-center gap-1.5 rounded-full border-2 border-fuchsia-200 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/80 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-300/35 dark:bg-slate-950/72 dark:text-fuchsia-100 dark:shadow-[0_10px_22px_rgba(0,0,0,0.3)] dark:hover:border-fuchsia-200/55 dark:hover:bg-fuchsia-400/16 dark:hover:text-white';
+    ? 'inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200 bg-white/88 px-3 py-1.25 text-[11px] font-medium text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/70 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-200/45 dark:bg-[linear-gradient(135deg,rgba(91,33,182,0.34),rgba(30,41,59,0.92))] dark:text-fuchsia-50 dark:shadow-[0_10px_24px_rgba(0,0,0,0.34)] dark:hover:border-fuchsia-100/70 dark:hover:bg-[linear-gradient(135deg,rgba(192,38,211,0.30),rgba(45,27,77,0.96))] dark:hover:text-white'
+    : 'inline-flex items-center gap-1.5 rounded-full border-2 border-fuchsia-200 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/80 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-200/50 dark:bg-[linear-gradient(135deg,rgba(126,34,206,0.38),rgba(30,41,59,0.96))] dark:text-fuchsia-50 dark:shadow-[0_12px_28px_rgba(0,0,0,0.36)] dark:hover:border-fuchsia-100/75 dark:hover:bg-[linear-gradient(135deg,rgba(217,70,239,0.34),rgba(60,28,102,0.98))] dark:hover:text-white';
 
   if (href) {
     return (

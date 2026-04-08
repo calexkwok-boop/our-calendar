@@ -98,7 +98,7 @@ const ActionPill = ({ href, onClick, children, subdued = false }) => {
 
 const hangoutSectionClassName = 'rounded-[22px] border border-cyan-200/75 bg-gradient-to-br from-white via-cyan-50/88 to-sky-50/72 p-5 shadow-[0_12px_30px_rgba(34,211,238,0.10)] backdrop-blur-sm transition-all hover:shadow-[0_18px_40px_rgba(59,130,246,0.12)] dark:border-cyan-400/18 dark:bg-gradient-to-br dark:from-white/[0.07] dark:via-cyan-500/[0.05] dark:to-sky-500/[0.05] dark:hover:bg-white/[0.08]';
 const hangoutDetailSurfaceClassName = 'border-cyan-200/75 bg-white/88 dark:border-cyan-400/16 dark:bg-white/[0.05]';
-const hangoutEmptyClassName = 'border-cyan-200/75 bg-cyan-50/75 text-cyan-800 dark:border-cyan-400/16 dark:bg-cyan-500/8 dark:text-cyan-100';
+const hangoutEmptyClassName = 'border-cyan-200/75 bg-cyan-50/75 text-cyan-800 dark:border-cyan-300/30 dark:bg-[rgba(16,29,37,0.84)] dark:text-cyan-100 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]';
 
 const Section = ({ title, subtitle, actions, children }) => (
   <div className={`group/section ${hangoutSectionClassName}`}>
