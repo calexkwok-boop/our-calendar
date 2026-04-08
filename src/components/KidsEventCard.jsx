@@ -104,10 +104,57 @@ const CameraIcon = () => (
   </svg>
 );
 
+const RegistryLogoMark = ({ kind }) => {
+  if (kind === 'amazon') {
+    return (
+      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path
+          d="M14.86 15.7c-.23-.29-.38-.76-.44-1.13-.73.88-1.77 1.43-3.03 1.43-1.83 0-3.08-1.06-3.08-2.7 0-1.95 1.59-3.11 4.3-3.11.48 0 .94.03 1.48.1v-.36c0-1.31-.81-2.03-2.31-2.03-1.01 0-2 .24-2.93.71l-.38-1.24c1.04-.54 2.18-.82 3.47-.82 2.38 0 3.68 1.12 3.68 3.2v3.27c0 .95.14 1.53.53 2.14l-1.29.54Z"
+          fill="#111827"
+        />
+        <path
+          d="M6.2 17.22c2.62 1.34 6.54 1.5 9.7.45 1.03-.33 1.88-.8 2.63-1.34"
+          stroke="#FF9900"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
+  if (kind === 'target') {
+    return (
+      <svg className="h-6 w-6 text-red-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="2.6" />
+        <circle cx="12" cy="12" r="3.1" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  return (
+    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[7px] font-black uppercase tracking-[0.08em] text-white">
+      W
+    </div>
+  );
+};
+
+const RegistryLogoLink = ({ option }) => (
+  <a
+    href={option.href}
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label={option.label}
+    title={option.label}
+    className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-fuchsia-200/80 bg-white/92 shadow-sm transition-all hover:-translate-y-0.5 hover:border-fuchsia-300 hover:shadow-md dark:border-white/12 dark:bg-white/[0.08] dark:hover:bg-white/[0.12]"
+  >
+    <RegistryLogoMark kind={option.kind} />
+  </a>
+);
+
 const ActionPill = ({ href, onClick, children, subdued = false }) => {
   const className = subdued
-    ? 'inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200 bg-white/88 px-3 py-1.25 text-[11px] font-medium text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/70 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:bg-white/12 dark:hover:text-white'
-    : 'inline-flex items-center gap-1.5 rounded-full border-2 border-fuchsia-200 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/80 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-400/20 dark:bg-white/8 dark:text-fuchsia-200 dark:hover:bg-white/12 dark:hover:text-white';
+    ? 'inline-flex items-center gap-1.5 rounded-full border border-fuchsia-200 bg-white/88 px-3 py-1.25 text-[11px] font-medium text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/70 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-300/35 dark:bg-slate-950/65 dark:text-fuchsia-100 dark:shadow-[0_8px_18px_rgba(0,0,0,0.28)] dark:hover:border-fuchsia-200/55 dark:hover:bg-fuchsia-400/14 dark:hover:text-white'
+    : 'inline-flex items-center gap-1.5 rounded-full border-2 border-fuchsia-200 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-fuchsia-700 shadow-sm transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/80 hover:text-fuchsia-800 hover:shadow-md active:scale-[0.98] dark:border-fuchsia-300/35 dark:bg-slate-950/72 dark:text-fuchsia-100 dark:shadow-[0_10px_22px_rgba(0,0,0,0.3)] dark:hover:border-fuchsia-200/55 dark:hover:bg-fuchsia-400/16 dark:hover:text-white';
 
   if (href) {
     return (
@@ -473,9 +520,7 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
           >
             <div className="mb-4 flex flex-wrap gap-2.5">
               {registryOptions.map((option) => (
-                <ActionPill key={option.id} href={option.href}>
-                  {option.label}
-                </ActionPill>
+                <RegistryLogoLink key={option.id} option={option} />
               ))}
             </div>
             <a
@@ -504,18 +549,27 @@ const KidsEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ...props 
             </a>
           </Section>
         ) : (
-          <Section title="Gift Registry" actions={openRegistryEditor ? <ActionPill onClick={openRegistryEditor}>Add</ActionPill> : null}>
+          <Section title="Gift Registry">
             <div className="mb-4 flex flex-wrap gap-2.5">
               {registryOptions.map((option) => (
-                <ActionPill key={option.id} href={option.href}>
-                  {option.label}
-                </ActionPill>
+                <RegistryLogoLink key={option.id} option={option} />
               ))}
             </div>
-            <div className="relative overflow-hidden rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
-              <PartyTileConfetti />
-              <div className="relative">Add a custom registry link or use one of the quick shop buttons above.</div>
-            </div>
+            {openRegistryEditor ? (
+              <button
+                type="button"
+                onClick={openRegistryEditor}
+                className="relative block w-full overflow-hidden rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-left text-sm text-slate-600 transition-all hover:border-fuchsia-300 hover:bg-fuchsia-50/60 hover:text-fuchsia-800 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:border-fuchsia-300/35 dark:hover:bg-fuchsia-400/10 dark:hover:text-fuchsia-100"
+              >
+                <PartyTileConfetti />
+                <div className="relative font-medium">Add a custom registry link</div>
+              </button>
+            ) : (
+              <div className="relative overflow-hidden rounded-2xl border border-dashed border-fuchsia-100 bg-white px-4 py-4 text-sm text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300">
+                <PartyTileConfetti />
+                <div className="relative">Add a custom registry link</div>
+              </div>
+            )}
           </Section>
         )}
 

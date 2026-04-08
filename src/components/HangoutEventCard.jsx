@@ -78,8 +78,8 @@ const CameraIcon = () => (
 
 const ActionPill = ({ href, onClick, children, subdued = false }) => {
   const className = subdued
-    ? 'inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-white/88 px-3 py-1.25 text-[11px] font-medium text-cyan-700 shadow-sm transition-all hover:border-cyan-300 hover:bg-cyan-50/70 hover:shadow-md active:scale-[0.98] dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200 dark:hover:bg-white/10'
-    : 'inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-white/92 px-3.5 py-1.5 text-xs font-semibold text-cyan-700 shadow-sm transition-all hover:border-cyan-300 hover:bg-cyan-50/75 hover:shadow-md active:scale-[0.98] dark:border-cyan-400/20 dark:bg-white/5 dark:text-cyan-200 dark:hover:bg-white/10';
+    ? 'inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-white/88 px-3 py-1.25 text-[11px] font-medium text-cyan-700 shadow-sm transition-all hover:border-cyan-300 hover:bg-cyan-50/70 hover:shadow-md active:scale-[0.98] dark:border-cyan-300/35 dark:bg-slate-950/65 dark:text-cyan-100 dark:shadow-[0_8px_18px_rgba(0,0,0,0.28)] dark:hover:border-cyan-200/55 dark:hover:bg-cyan-400/14 dark:hover:text-white'
+    : 'inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-white/92 px-3.5 py-1.5 text-xs font-semibold text-cyan-700 shadow-sm transition-all hover:border-cyan-300 hover:bg-cyan-50/75 hover:shadow-md active:scale-[0.98] dark:border-cyan-300/35 dark:bg-slate-950/72 dark:text-cyan-100 dark:shadow-[0_10px_22px_rgba(0,0,0,0.3)] dark:hover:border-cyan-200/55 dark:hover:bg-cyan-400/16 dark:hover:text-white';
 
   if (href) {
     return (

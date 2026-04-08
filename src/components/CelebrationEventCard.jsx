@@ -133,7 +133,7 @@ const resolveCelebrationStyle = (event) => {
       chip: 'border-stone-200 bg-white/92 text-stone-700 dark:border-stone-400/20 dark:bg-white/5 dark:text-stone-100',
       sectionBorder: 'border-stone-200/70 dark:border-stone-400/14',
       sectionShadow: 'shadow-[0_12px_30px_rgba(120,113,108,0.10)] hover:shadow-[0_18px_40px_rgba(120,113,108,0.16)]',
-      empty: 'border-stone-200 bg-stone-50/70 text-stone-700 dark:border-stone-400/16 dark:bg-stone-500/8 dark:text-stone-100',
+      empty: 'border-stone-200 bg-stone-50/70 text-stone-700 dark:border-stone-300/30 dark:bg-[rgba(28,24,20,0.82)] dark:text-stone-100 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]',
       invitee: 'border-stone-200 dark:border-stone-400/14',
       detailLabel: 'text-stone-700 dark:text-stone-200',
       detailSurface: 'border-stone-100 bg-white dark:border-stone-500/10 dark:bg-white/5',
@@ -156,7 +156,7 @@ const resolveCelebrationStyle = (event) => {
       chip: 'border-amber-200 bg-white/92 text-amber-700 dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-100',
       sectionBorder: 'border-amber-200/70 dark:border-amber-400/14',
       sectionShadow: 'shadow-[0_12px_30px_rgba(245,158,11,0.10)] hover:shadow-[0_18px_40px_rgba(245,158,11,0.14)]',
-      empty: 'border-amber-200 bg-amber-50/70 text-amber-700 dark:border-amber-400/16 dark:bg-amber-500/8 dark:text-amber-100',
+      empty: 'border-amber-200 bg-amber-50/70 text-amber-700 dark:border-amber-300/30 dark:bg-[rgba(35,26,18,0.84)] dark:text-amber-100 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]',
       invitee: 'border-amber-200 dark:border-amber-400/14',
       detailLabel: 'text-amber-700 dark:text-amber-200',
       detailSurface: 'border-amber-100 bg-white dark:border-amber-500/10 dark:bg-white/[0.04]',
@@ -178,7 +178,7 @@ const resolveCelebrationStyle = (event) => {
     chip: 'border-rose-200 bg-white/90 text-rose-700 dark:border-rose-400/20 dark:bg-white/5 dark:text-rose-200',
     sectionBorder: 'border-rose-200/70 dark:border-rose-400/14',
     sectionShadow: 'shadow-[0_12px_30px_rgba(244,63,94,0.09)] hover:shadow-[0_18px_40px_rgba(244,63,94,0.14)]',
-    empty: 'border-rose-200 bg-rose-50/70 text-rose-700 dark:border-rose-400/16 dark:bg-rose-500/8 dark:text-rose-200',
+    empty: 'border-rose-200 bg-rose-50/70 text-rose-700 dark:border-rose-300/30 dark:bg-[rgba(36,20,31,0.84)] dark:text-rose-100 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]',
     invitee: 'border-rose-200 dark:border-rose-400/14',
     detailLabel: 'text-rose-600 dark:text-rose-300',
     detailSurface: 'border-rose-100 bg-white dark:border-rose-500/10 dark:bg-white/5',
@@ -207,24 +207,79 @@ const CameraIcon = () => (
   </svg>
 );
 
+const RegistryLogoMark = ({ kind }) => {
+  if (kind === 'amazon') {
+    return (
+      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path
+          d="M14.86 15.7c-.23-.29-.38-.76-.44-1.13-.73.88-1.77 1.43-3.03 1.43-1.83 0-3.08-1.06-3.08-2.7 0-1.95 1.59-3.11 4.3-3.11.48 0 .94.03 1.48.1v-.36c0-1.31-.81-2.03-2.31-2.03-1.01 0-2 .24-2.93.71l-.38-1.24c1.04-.54 2.18-.82 3.47-.82 2.38 0 3.68 1.12 3.68 3.2v3.27c0 .95.14 1.53.53 2.14l-1.29.54Z"
+          fill="#111827"
+        />
+        <path
+          d="M6.2 17.22c2.62 1.34 6.54 1.5 9.7.45 1.03-.33 1.88-.8 2.63-1.34"
+          stroke="#FF9900"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
+  if (kind === 'target') {
+    return (
+      <svg className="h-6 w-6 text-red-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="2.6" />
+        <circle cx="12" cy="12" r="3.1" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  if (kind === 'babylist') {
+    return (
+      <svg className="h-6 w-6 text-teal-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 20s-6-3.7-6-9a3.5 3.5 0 016-2.2A3.5 3.5 0 0118 11c0 5.3-6 9-6 9Z" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  return (
+    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-[7px] font-black uppercase tracking-[0.08em] text-white">
+      BBB
+    </div>
+  );
+};
+
+const RegistryLogoLink = ({ option }) => (
+  <a
+    href={option.href}
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label={option.label}
+    title={option.label}
+    className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-200/80 bg-white/92 shadow-sm transition-all hover:-translate-y-0.5 hover:border-rose-300 hover:shadow-md dark:border-white/12 dark:bg-white/[0.08] dark:hover:bg-white/[0.12]"
+  >
+    <RegistryLogoMark kind={option.kind} />
+  </a>
+);
+
 const ActionPill = ({ href, onClick, children, subdued = false, tone = null }) => {
   const palette = tone?.kind === 'wedding'
     ? {
-        base: 'border-amber-200 bg-white/92 text-amber-700 dark:border-amber-400/20 dark:bg-white/5 dark:text-amber-100',
-        hover: 'hover:border-amber-300 hover:bg-amber-50/75 hover:text-amber-800 dark:hover:bg-white/10',
+        base: 'border-amber-200 bg-white/92 text-amber-700 dark:border-amber-300/35 dark:bg-slate-950/72 dark:text-amber-100',
+        hover: 'hover:border-amber-300 hover:bg-amber-50/75 hover:text-amber-800 dark:hover:border-amber-200/55 dark:hover:bg-amber-400/14 dark:hover:text-white',
       }
     : tone?.kind === 'baby'
       ? {
-          base: 'border-stone-200 bg-white/92 text-stone-700 dark:border-stone-400/20 dark:bg-white/5 dark:text-stone-100',
-          hover: 'hover:border-stone-300 hover:bg-stone-50/75 hover:text-stone-800 dark:hover:bg-white/10',
+          base: 'border-stone-200 bg-white/92 text-stone-700 dark:border-stone-300/35 dark:bg-slate-950/72 dark:text-stone-100',
+          hover: 'hover:border-stone-300 hover:bg-stone-50/75 hover:text-stone-800 dark:hover:border-stone-200/55 dark:hover:bg-stone-300/14 dark:hover:text-white',
         }
       : {
-          base: 'border-rose-200 bg-white/92 text-rose-700 dark:border-rose-400/20 dark:bg-white/5 dark:text-rose-200',
-          hover: 'hover:border-rose-300 hover:bg-rose-50/75 hover:text-rose-800 dark:hover:bg-white/10',
+          base: 'border-rose-200 bg-white/92 text-rose-700 dark:border-rose-300/35 dark:bg-slate-950/72 dark:text-rose-100',
+          hover: 'hover:border-rose-300 hover:bg-rose-50/75 hover:text-rose-800 dark:hover:border-rose-200/55 dark:hover:bg-rose-400/14 dark:hover:text-white',
         };
   const className = subdued
-    ? `inline-flex items-center gap-1.5 rounded-full border px-3 py-1.25 text-[11px] font-medium shadow-sm transition-all hover:shadow-md active:scale-[0.98] ${palette.base} ${palette.hover}`
-    : `inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold shadow-sm transition-all hover:shadow-md active:scale-[0.98] ${palette.base} ${palette.hover}`;
+    ? `inline-flex items-center gap-1.5 rounded-full border px-3 py-1.25 text-[11px] font-medium shadow-sm transition-all hover:shadow-md active:scale-[0.98] dark:shadow-[0_8px_18px_rgba(0,0,0,0.28)] ${palette.base} ${palette.hover}`
+    : `inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold shadow-sm transition-all hover:shadow-md active:scale-[0.98] dark:shadow-[0_10px_22px_rgba(0,0,0,0.3)] ${palette.base} ${palette.hover}`;
 
   if (href) {
     return (
@@ -254,11 +309,13 @@ const Section = ({ title, subtitle, actions, children, tone }) => (
   </div>
 );
 
-const EmptySection = ({ title, subtitle, actions, tone }) => (
+const EmptySection = ({ title, subtitle, actions, tone, children }) => (
   <Section title={title} subtitle={subtitle} actions={actions} tone={tone}>
-    <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${tone?.empty || 'border-fuchsia-100 bg-white text-slate-600 dark:border-white/12 dark:bg-white/[0.04] dark:text-slate-300'}`}>
-      Nothing added yet.
-    </div>
+    {children || (
+      <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${tone?.empty || 'border-fuchsia-100 bg-white text-slate-600 dark:border-white/15 dark:bg-slate-950/70 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]'}`}>
+        Nothing added yet.
+      </div>
+    )}
   </Section>
 );
 
@@ -518,38 +575,81 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
 
       <div className="relative space-y-5 px-6 py-6 sm:px-7">
         {registryLink ? (
-          <a
-            href={registryLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`group/gift relative block overflow-hidden rounded-2xl border p-5 shadow-md transition-all hover:scale-[1.02] hover:shadow-lg ${tone?.detailSurface || 'border-fuchsia-200/80 bg-white/88 dark:border-white/10 dark:bg-white/[0.045]'}`}
+          <Section
+            title="Gift Registry"
+            tone={tone}
+            actions={(
+              <>
+                <ActionPill href={registryLink} tone={tone}>Open registry</ActionPill>
+                {onUpdateEventData && openEditor ? (
+                  <ActionPill
+                    tone={tone}
+                    onClick={() =>
+                      openEditor({
+                        variant: 'celebration',
+                        title: 'Edit Gift Registry',
+                        fields: [{
+                          key: 'registryLink',
+                          label: 'Registry URL',
+                          type: 'registry-link',
+                          value: registryLink,
+                          placeholder: 'Paste a registry link...',
+                          registryOptions,
+                        }],
+                        onSave: (values) => onUpdateEventData({ registryLink: String(values.registryLink || '').trim() }),
+                      })
+                    }
+                  >
+                    Edit
+                  </ActionPill>
+                ) : null}
+              </>
+            )}
           >
-            <div className="pointer-events-none absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-white/30 to-transparent opacity-0 transition-opacity group-hover/gift:opacity-100 dark:from-white/10" />
-
-            <div className="relative flex items-center gap-4">
-              <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-xl shadow-sm transition-transform group-hover/gift:scale-110 ${tone.kind === 'wedding' ? 'from-amber-100 to-yellow-100 dark:from-amber-500/20 dark:to-yellow-500/20' : 'from-rose-200 to-pink-200 dark:from-rose-500/20 dark:to-pink-500/20'}`}>
-                Gift
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className={`mb-1 text-sm font-bold uppercase tracking-[0.14em] ${tone.kind === 'wedding' ? 'text-amber-700 dark:text-amber-200' : 'text-rose-700 dark:text-rose-300'}`}>
-                  Gift Registry
-                </div>
-                <div className="text-[15px] font-semibold text-gray-900 dark:text-white">
-                  View gifts and shop the registry
-                </div>
-              </div>
-              <svg className={`h-6 w-6 shrink-0 transition-transform group-hover/gift:translate-x-1 ${tone.kind === 'wedding' ? 'text-amber-600 dark:text-amber-200' : 'text-rose-600 dark:text-rose-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+            <div className="mb-4 flex flex-wrap gap-2.5">
+              {registryOptions.map((option) => (
+                <RegistryLogoLink key={option.id} option={option} />
+              ))}
             </div>
-          </a>
+            <a
+              href={registryLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`group/gift relative block overflow-hidden rounded-2xl border p-5 shadow-md transition-all hover:scale-[1.02] hover:shadow-lg ${tone?.detailSurface || 'border-fuchsia-200/80 bg-white/88 dark:border-white/10 dark:bg-white/[0.045]'}`}
+            >
+              <div className="pointer-events-none absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-white/30 to-transparent opacity-0 transition-opacity group-hover/gift:opacity-100 dark:from-white/10" />
+
+              <div className="relative flex items-center gap-4">
+                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-xl shadow-sm transition-transform group-hover/gift:scale-110 ${tone.kind === 'wedding' ? 'from-amber-100 to-yellow-100 dark:from-amber-500/20 dark:to-yellow-500/20' : 'from-rose-200 to-pink-200 dark:from-rose-500/20 dark:to-pink-500/20'}`}>
+                  Gift
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className={`mb-1 text-sm font-bold uppercase tracking-[0.14em] ${tone.kind === 'wedding' ? 'text-amber-700 dark:text-amber-200' : 'text-rose-700 dark:text-rose-300'}`}>
+                    Gift Registry
+                  </div>
+                  <div className="text-[15px] font-semibold text-gray-900 dark:text-white">
+                    View gifts and shop the registry
+                  </div>
+                </div>
+                <svg className={`h-6 w-6 shrink-0 transition-transform group-hover/gift:translate-x-1 ${tone.kind === 'wedding' ? 'text-amber-600 dark:text-amber-200' : 'text-rose-600 dark:text-rose-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </a>
+          </Section>
         ) : (
-        <EmptySection
-          title="Gift Registry"
-          tone={tone}
-            actions={onUpdateEventData && openEditor ? (
-              <ActionPill
-                tone={tone}
+          <EmptySection
+            title="Gift Registry"
+            tone={tone}
+          >
+            <div className="mb-4 flex flex-wrap gap-2.5">
+              {registryOptions.map((option) => (
+                <RegistryLogoLink key={option.id} option={option} />
+              ))}
+            </div>
+            {onUpdateEventData && openEditor ? (
+              <button
+                type="button"
                 onClick={() =>
                   openEditor({
                     variant: 'celebration',
@@ -565,11 +665,16 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
                     onSave: (values) => onUpdateEventData({ registryLink: String(values.registryLink || '').trim() }),
                   })
                 }
+                className={`relative block w-full overflow-hidden rounded-2xl border border-dashed px-4 py-4 text-left text-sm font-medium transition-all ${tone?.empty || 'border-fuchsia-100 bg-white text-slate-600 dark:border-white/15 dark:bg-slate-950/70 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]'} ${tone.kind === 'wedding' ? 'hover:border-amber-300 hover:bg-amber-50/55 hover:text-amber-800 dark:hover:border-amber-200/45 dark:hover:bg-amber-400/10 dark:hover:text-white' : tone.kind === 'baby' ? 'hover:border-stone-300 hover:bg-stone-50/60 hover:text-stone-800 dark:hover:border-stone-200/45 dark:hover:bg-stone-300/10 dark:hover:text-white' : 'hover:border-rose-300 hover:bg-rose-50/60 hover:text-rose-800 dark:hover:border-rose-200/45 dark:hover:bg-rose-400/10 dark:hover:text-white'}`}
               >
-                Add
-              </ActionPill>
-            ) : null}
-          />
+                Add custom registry link
+              </button>
+            ) : (
+              <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${tone?.empty || 'border-fuchsia-100 bg-white text-slate-600 dark:border-white/15 dark:bg-slate-950/70 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]'}`}>
+                Add custom registry link
+              </div>
+            )}
+          </EmptySection>
         )}
 
         <Section
