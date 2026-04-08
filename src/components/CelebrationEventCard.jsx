@@ -242,6 +242,22 @@ const RegistryLogoMark = ({ kind }) => {
     );
   }
 
+  if (kind === 'walmart') {
+    return (
+      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect width="24" height="24" rx="6" fill="#1459D9" />
+        <g fill="#FFC220" transform="translate(12 12)">
+          <rect x="-1.55" y="-8.4" width="3.1" height="6.6" rx="1.55" />
+          <rect x="-1.55" y="-8.4" width="3.1" height="6.6" rx="1.55" transform="rotate(60)" />
+          <rect x="-1.55" y="-8.4" width="3.1" height="6.6" rx="1.55" transform="rotate(120)" />
+          <rect x="-1.55" y="-8.4" width="3.1" height="6.6" rx="1.55" transform="rotate(180)" />
+          <rect x="-1.55" y="-8.4" width="3.1" height="6.6" rx="1.55" transform="rotate(240)" />
+          <rect x="-1.55" y="-8.4" width="3.1" height="6.6" rx="1.55" transform="rotate(300)" />
+        </g>
+      </svg>
+    );
+  }
+
   return (
     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-[7px] font-black uppercase tracking-[0.08em] text-white">
       BBB
