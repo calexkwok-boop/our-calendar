@@ -589,7 +589,7 @@ const CelebrationEventCard = ({ event, onUpdateEventData, onEdit, openEditor, ..
         </div>
       </div>
 
-      <div className="relative space-y-5 px-6 py-6 sm:px-7">
+      <div className="relative z-10 space-y-5 px-6 py-6 sm:px-7">
         {registryLink ? (
           <Section
             title="Gift Registry"
