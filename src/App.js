@@ -20139,22 +20139,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const start = new Date(today);
     start.setHours(0, 0, 0, 0);
     start.setDate(start.getDate() - 1);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 7);
+    const visibleDateKeys = Array.from({ length: 7 }, (_, index) => {
+      const slotDate = new Date(start);
+      slotDate.setDate(start.getDate() + index);
+      return slotDate.toISOString().slice(0, 10);
+    });
+    const visibleDateKeySet = new Set(visibleDateKeys);
     return [...homeResolvedMemories]
       .filter((memory) => {
         const rawDate = String(memory?.date || memory?.createdAt || '').trim();
-        if (!rawDate) return false;
-        const date = new Date(rawDate);
-        return !Number.isNaN(date.getTime()) && date >= start && date < end;
+        const memoryDateKey = rawDate.slice(0, 10);
+        return Boolean(memoryDateKey) && visibleDateKeySet.has(memoryDateKey);
       })
-      .sort((a, b) => Number(new Date(a?.date || a?.createdAt || 0)) - Number(new Date(b?.date || b?.createdAt || 0)))
-      .slice(0, 7)
+      .sort((a, b) => {
+        const aIndex = visibleDateKeys.indexOf(String(a?.date || a?.createdAt || '').trim().slice(0, 10));
+        const bIndex = visibleDateKeys.indexOf(String(b?.date || b?.createdAt || '').trim().slice(0, 10));
+        if (aIndex !== bIndex) return aIndex - bIndex;
+        return Number(new Date(a?.createdAt || a?.date || 0)) - Number(new Date(b?.createdAt || b?.date || 0));
+      })
       .map((memory) => ({
         ...memory,
         id: String(memory?.id || ''),
         title: String(memory?.title || 'Untitled memory').trim(),
-        date: String(memory?.date || memory?.createdAt || '').trim(),
+        date: String(memory?.date || memory?.createdAt || '').trim().slice(0, 10),
         photoUrl: String(memory?.coverPhoto || memory?.photos?.[0]?.url || '').trim(),
       }))
       .filter((memory) => memory.id && memory.photoUrl);
