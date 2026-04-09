@@ -2850,6 +2850,7 @@ function App() {
   const [journeyState, setJourneyState] = useState(createEmptyJourneyState);
   const [memories, setMemories] = useState([]);
   const [memoriesHydratedUserId, setMemoriesHydratedUserId] = useState(null);
+  const [memoryTripRosterById, setMemoryTripRosterById] = useState({});
   const [showMemorySystem, setShowMemorySystem] = useState(false);
   const [memorySystemView, setMemorySystemView] = useState('gallery');
   const [memorySystemCurrentMemory, setMemorySystemCurrentMemory] = useState(null);
@@ -11249,6 +11250,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       .trim()
       .toLowerCase()
       .replace(/^us\s*holiday[:\s-]*/i, '')
+      .replace(/^public\s*holiday[:\s-]*/i, '')
       .replace(/[^a-z0-9]/g, '');
     const isAllDayLike = (event) => {
       const time = String(event?.time || '').trim();
@@ -20387,6 +20389,42 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   ]);
 
   useEffect(() => {
+    const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
+    if (memoriesHydratedUserId !== currentMemoriesUserId) return;
+    const tripIds = Array.from(new Set(
+      (Array.isArray(memories) ? memories : [])
+        .map((memory) => String(memory?.sourceTripId || '').trim())
+        .filter(Boolean)
+    ));
+    if (tripIds.length === 0) {
+      setMemoryTripRosterById({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const rosterEntries = await Promise.all(tripIds.map(async (tripId) => {
+        const roster = await getSubCalendarMembersRoster(tripId);
+        return [tripId, Array.isArray(roster) ? roster : []];
+      }));
+      if (cancelled) return;
+      setMemoryTripRosterById(Object.fromEntries(rosterEntries));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    memories,
+    memoriesHydratedUserId,
+    user?.id,
+    currentUser,
+    knownHandlesByEmail,
+    knownHandlesByUserId,
+    sharedOwnerLabels,
+    chatMembers,
+    calendarChatMessages,
+  ]);
+
+  useEffect(() => {
     const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyTrophyCase || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal || showJourneyWeightTrackerModal || showMemorySystem;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
     const scrollY = window.scrollY || window.pageYOffset || 0;
@@ -24425,6 +24463,61 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     );
   };
 
+  const memoryTripSelfPerson = useMemo(() => ({
+    id: String(user?.id || 'self'),
+    name: resolveHandleLikeLabel(String(currentUser || user?.email || 'You'), String(user?.id || '')),
+    avatarUrl: normalizeProfilePhotoUrl(currentUserProfilePhotoUrl),
+  }), [user?.id, user?.email, currentUser, currentUserProfilePhotoUrl]);
+
+  const applyTripRosterToMemory = React.useCallback((memory) => {
+    const tripId = String(memory?.sourceTripId || '').trim();
+    if (!tripId) return memory;
+    const roster = Array.isArray(memoryTripRosterById?.[tripId]) ? memoryTripRosterById[tripId] : [];
+    if (roster.length === 0) return memory;
+    const seenLabels = new Set();
+    const nextPeople = [];
+    const pushPerson = (person) => {
+      const label = String(person?.name || '').trim();
+      const normalizedLabel = label.toLowerCase();
+      if (!label || seenLabels.has(normalizedLabel)) return;
+      seenLabels.add(normalizedLabel);
+      nextPeople.push(person);
+    };
+    pushPerson(memoryTripSelfPerson);
+    roster.forEach((member, index) => {
+      const memberIdentity = member?.identity || member?.email || member?.phone || member?.shareUserId || member?.id || '';
+      const memberLabel = String(member?.label || resolveHandleLikeLabel(memberIdentity, member?.shareUserId || member?.id || '')).trim();
+      pushPerson({
+        id: String(member?.user_id || member?.id || memberIdentity || `trip-person-${index}`),
+        name: memberLabel || 'Traveler',
+        avatarUrl: normalizeProfilePhotoUrl(
+          member?.photoUrl
+          || member?.photo_url
+          || member?.avatarUrl
+          || member?.avatar_url
+          || ''
+        ),
+      });
+    });
+    return {
+      ...memory,
+      taggedPeople: nextPeople,
+    };
+  }, [memoryTripRosterById, memoryTripSelfPerson]);
+
+  const memorySystemMemories = useMemo(
+    () => (Array.isArray(memories) ? memories.map((memory) => applyTripRosterToMemory(memory)) : []),
+    [memories, applyTripRosterToMemory]
+  );
+  const memorySystemCurrentMemoryResolved = useMemo(
+    () => (memorySystemCurrentMemory ? applyTripRosterToMemory(memorySystemCurrentMemory) : null),
+    [memorySystemCurrentMemory, applyTripRosterToMemory]
+  );
+  const memorySystemCreateDraftResolved = useMemo(
+    () => (memoryCreateDraft ? applyTripRosterToMemory(memoryCreateDraft) : null),
+    [memoryCreateDraft, applyTripRosterToMemory]
+  );
+
   const renderJourneyPortal = (node) => (typeof document !== 'undefined' ? createPortal(node, document.body) : null);
 
   return (
@@ -24433,11 +24526,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {controlWidgetAddPanelPortal}
     {!activeSubCalendar && showMemorySystem && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[88] bg-black/60 p-0 sm:p-4 flex items-end sm:items-center justify-center"
+        className="fixed inset-0 z-[88] bg-black/60 px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4 flex items-end sm:items-center justify-center"
         onClick={closeMemorySystem}
       >
         <div
-          className="relative w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-5xl overflow-hidden bg-white dark:bg-slate-950 sm:rounded-[32px] shadow-2xl border border-transparent dark:border-white/10"
+          className="relative w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-5xl overflow-hidden bg-white dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10"
           onClick={(e) => e.stopPropagation()}
         >
           {memorySystemView !== 'viewer' && (

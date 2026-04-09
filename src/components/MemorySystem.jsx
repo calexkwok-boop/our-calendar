@@ -167,14 +167,14 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, darkMode }) =>
   const years = Object.keys(memoriesByYear).sort((a, b) => b - a);
   
   return (
-    <div className="memories-gallery space-y-8">
+    <div className="memories-gallery space-y-6">
       {/* Header */}
       <div className="text-center">
-        <div className="text-5xl mb-3">💫</div>
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <div className="text-4xl mb-2">💫</div>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1.5">
           Your Memories
         </h2>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           {memories.length} special moment{memories.length !== 1 ? 's' : ''} preserved
         </p>
       </div>
@@ -182,8 +182,8 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, darkMode }) =>
       {/* Create new button */}
       <button
         onClick={onCreateNew}
-        className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 
-                   text-white font-bold text-lg hover:shadow-xl transition-all
+        className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 
+                   text-white font-bold text-base hover:shadow-xl transition-all
                    flex items-center justify-center gap-2">
         <Sparkles className="w-6 h-6" />
         Create New Memory
