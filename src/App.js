@@ -1329,7 +1329,64 @@ const writeStoredTripSelectedDateKey = (userId, subCalId, dateKey) => {
 };
 
 const getMemoriesStorageKey = (userId) => `saved-memories-${String(userId || 'guest').trim() || 'guest'}`;
+const MEMORIES_DB_NAME = 'our-calendar-memories-db';
+const MEMORIES_STORE_NAME = 'memories';
 const PROFILE_PHOTO_OVERRIDE_STORAGE_KEY = 'our-calendar-uploaded-profile-photo';
+
+const openMemoriesDb = () => new Promise((resolve, reject) => {
+  if (typeof window === 'undefined' || !window.indexedDB) {
+    resolve(null);
+    return;
+  }
+  try {
+    const request = window.indexedDB.open(MEMORIES_DB_NAME, 1);
+    request.onerror = () => reject(request.error || new Error('Could not open memories database.'));
+    request.onsuccess = () => resolve(request.result || null);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(MEMORIES_STORE_NAME)) {
+        db.createObjectStore(MEMORIES_STORE_NAME);
+      }
+    };
+  } catch (error) {
+    reject(error);
+  }
+});
+
+const readMemoriesIndexedDb = async (userId) => {
+  const key = getMemoriesStorageKey(userId);
+  try {
+    const db = await openMemoriesDb();
+    if (!db) return [];
+    const result = await new Promise((resolve, reject) => {
+      const tx = db.transaction(MEMORIES_STORE_NAME, 'readonly');
+      const store = tx.objectStore(MEMORIES_STORE_NAME);
+      const request = store.get(key);
+      request.onerror = () => reject(request.error || new Error('Could not read memories.'));
+      request.onsuccess = () => resolve(request.result);
+    });
+    db.close();
+    return Array.isArray(result) ? result : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeMemoriesIndexedDb = async (userId, memories) => {
+  const key = getMemoriesStorageKey(userId);
+  try {
+    const db = await openMemoriesDb();
+    if (!db) return;
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(MEMORIES_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(MEMORIES_STORE_NAME);
+      const request = store.put(Array.isArray(memories) ? memories : [], key);
+      request.onerror = () => reject(request.error || new Error('Could not write memories.'));
+      request.onsuccess = () => resolve();
+    });
+    db.close();
+  } catch {}
+};
 
 const readMemoriesState = (userId) => {
   if (typeof window === 'undefined') return [];
@@ -1347,6 +1404,11 @@ const writeMemoriesState = (userId, memories) => {
   try {
     localStorage.setItem(getMemoriesStorageKey(userId), JSON.stringify(Array.isArray(memories) ? memories : []));
   } catch {}
+};
+
+const persistMemoriesState = (userId, memories) => {
+  writeMemoriesState(userId, memories);
+  void writeMemoriesIndexedDb(userId, memories);
 };
 
 const mergePersistedMemories = (...memoryLists) => {
@@ -20423,22 +20485,36 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
-    const savedForCurrentUser = readMemoriesState(user?.id);
-    if (currentMemoriesUserId !== 'guest') {
-      const guestMemories = readMemoriesState('guest');
-      const merged = mergePersistedMemories(savedForCurrentUser, guestMemories);
-      setMemories(merged);
-      writeMemoriesState(user?.id, merged);
-    } else {
-      setMemories(savedForCurrentUser);
-    }
-    setMemoriesHydratedUserId(currentMemoriesUserId);
+    let cancelled = false;
+    (async () => {
+      const savedForCurrentUser = mergePersistedMemories(
+        await readMemoriesIndexedDb(user?.id),
+        readMemoriesState(user?.id)
+      );
+      if (currentMemoriesUserId !== 'guest') {
+        const guestMemories = mergePersistedMemories(
+          await readMemoriesIndexedDb('guest'),
+          readMemoriesState('guest')
+        );
+        const merged = mergePersistedMemories(savedForCurrentUser, guestMemories);
+        if (cancelled) return;
+        setMemories(merged);
+        persistMemoriesState(user?.id, merged);
+      } else {
+        if (cancelled) return;
+        setMemories(savedForCurrentUser);
+      }
+      if (!cancelled) setMemoriesHydratedUserId(currentMemoriesUserId);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     if (memoriesHydratedUserId !== currentMemoriesUserId) return;
-    writeMemoriesState(user?.id, memories);
+    persistMemoriesState(user?.id, memories);
   }, [user?.id, memories, memoriesHydratedUserId]);
 
   useEffect(() => {
@@ -24532,7 +24608,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setMemories((prev) => {
       const nextMemories = [nextMemory, ...prev.filter((memory) => String(memory?.id || '') !== nextMemory.id)]
         .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)));
-      writeMemoriesState(user?.id, nextMemories);
+      persistMemoriesState(user?.id, nextMemories);
       return nextMemories;
     });
     setMemoryCreateDraft(null);
@@ -24549,7 +24625,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         nextSelected = updated;
         return { ...updated, updatedAt: new Date().toISOString() };
       });
-      writeMemoriesState(user?.id, nextMemories);
+      persistMemoriesState(user?.id, nextMemories);
       return nextMemories;
     });
     if (nextSelected) setMemorySystemCurrentMemory(nextSelected);
@@ -24558,7 +24634,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const deleteMemoryRecord = (memoryId) => {
     setMemories((prev) => {
       const nextMemories = prev.filter((memory) => String(memory?.id || '') !== String(memoryId || ''));
-      writeMemoriesState(user?.id, nextMemories);
+      persistMemoriesState(user?.id, nextMemories);
       return nextMemories;
     });
     setMemorySystemCurrentMemory(null);

@@ -173,7 +173,9 @@ const ScrapbookHomePage = ({
         </div>
 
         {/* Moments This Week - Polaroid film strip */}
-        <div className="mt-6 rounded-[28px] border border-black/10 dark:border-white/10 bg-gradient-to-br from-white/95 via-amber-50/40 to-white/90 dark:from-slate-900/80 dark:via-amber-900/10 dark:to-slate-900/75 p-5 shadow-lg">
+        <div className="relative mt-6 overflow-hidden rounded-[28px] border border-black/5 dark:border-white/8 bg-gradient-to-br from-white/95 via-amber-50/40 to-white/90 dark:from-slate-900/80 dark:via-amber-900/10 dark:to-slate-900/75 p-5 shadow-lg">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-amber-200/35 via-rose-100/18 to-transparent dark:from-amber-300/10 dark:via-violet-300/6 dark:to-transparent" />
+          <div className="pointer-events-none absolute inset-0 rounded-[28px] ring-1 ring-white/35 dark:ring-white/6" />
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Camera className="w-4 h-4 text-amber-600 dark:text-amber-400" />
