@@ -24843,7 +24843,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {homeAddEventModal}
     {!activeSubCalendar && showMemorySystem && memorySystemView === 'create' && renderJourneyPortal((
       <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[88] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm`}
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[88] flex items-end justify-center p-4 bg-black/60 backdrop-blur-sm`}
       >
         <div className="absolute inset-0" onClick={closeMemorySystem} />
         <div
