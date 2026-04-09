@@ -465,6 +465,21 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
   }, [initialData, autoCreateOnPhotoAdd]);
   
   const handleNext = () => {
+    if (step === 1 && photoOnlyMode) {
+      if (!Array.isArray(memoryData.photos) || memoryData.photos.length === 0) return;
+      const d = new Date(String(memoryData.date || ''));
+      const draftTitle = String(memoryData.title || '').trim()
+        || (Number.isNaN(d.getTime())
+          ? 'Moment'
+          : `Moment · ${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`);
+      onCreate({
+        ...memoryData,
+        title: draftTitle,
+        coverPhoto: memoryData.coverPhoto || memoryData.photos?.[0]?.url || '',
+        highlights: (memoryData.highlights || []).filter((h) => String(h || '').trim()),
+      });
+      return;
+    }
     if (step < 4) setStep(step + 1);
   };
   
@@ -484,9 +499,9 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
     });
   };
 
-  // Auto-create when launched from Polaroids and photos are added (one-tap save)
+  // Photo-only save now happens on Next, not immediately on upload.
   useEffect(() => {
-    if (!photoOnlyMode) return;
+    return;
     if (typeof onAddPhoto === 'function') return; // parent handles quick save
     if (autoCreatedRef.current) return;
     if (step !== 1) return;
@@ -822,7 +837,7 @@ const MemoryPhotosStep = ({
             : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-slate-900'
         }`}
       >
-        <div className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded border transition-all ${
+        <div className={`mt-0.5 flex h-5 min-h-[1.25rem] w-5 min-w-[1.25rem] items-center justify-center rounded-md border transition-all ${
           photoOnlyMode
             ? 'border-purple-600 bg-purple-600 text-white'
             : 'border-gray-300 bg-white text-transparent dark:border-gray-600 dark:bg-slate-800'
