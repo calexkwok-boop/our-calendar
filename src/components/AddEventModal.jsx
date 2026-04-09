@@ -122,8 +122,11 @@ const AddEventModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(2rem,calc(env(safe-area-inset-top)+1.5rem))] sm:pt-4 pb-0 sm:pb-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(2rem,calc(env(safe-area-inset-top)+1.5rem))] sm:pt-4 pb-0 sm:pb-4"
+      style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.72)' : 'rgba(0, 0, 0, 0.6)' }}
+    >
+      <div className="absolute inset-0 backdrop-blur-sm" onClick={onClose} />
 
         <div
           className="relative w-full max-w-lg max-h-[calc(100dvh-env(safe-area-inset-top)-2rem)] sm:max-h-[calc(100vh-2rem)] rounded-t-3xl rounded-b-none sm:rounded-3xl shadow-2xl overflow-hidden border-t border-transparent dark:border-white/10 flex flex-col bg-white dark:bg-slate-950"
@@ -133,7 +136,10 @@ const AddEventModal = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-        <div className="relative p-6 pb-5 border-b border-gray-200 dark:border-gray-700">
+        <div
+          className="relative p-6 pb-5 border-b border-gray-200 dark:border-gray-700"
+          style={{ backgroundColor: darkMode ? 'rgb(15 23 42)' : '#ffffff' }}
+        >
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500" />
 
           <div className="flex items-start justify-between gap-4">
@@ -164,6 +170,7 @@ const AddEventModal = ({
         <div
           className="flex-1 min-h-0 px-6 pt-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] space-y-5 overflow-y-auto"
           style={{
+            backgroundColor: darkMode ? 'rgb(15 23 42)' : '#ffffff',
             WebkitOverflowScrolling: 'touch',
             overscrollBehaviorY: 'contain',
             touchAction: 'pan-y',
