@@ -345,38 +345,6 @@ const UnifiedCalendarView = ({
         />
       )}
 
-      <div className="mt-4 mb-10 sm:mb-6">
-        <JourneyPanel
-          journeyHomeCtaLabel={journeyHomeCtaLabel}
-          journeyCoachLabel={journeyCoachLabel}
-          journeyProgressText={primaryJourneyProgressText}
-          journeyQuote={journeyQuote}
-          journeySupportLabel={journeySupportLabel}
-          onClick={onOpenJourney}
-          onCtaClick={onJourneyCtaClick}
-          primaryJourneyGoal={primaryJourneyGoal}
-          primaryJourneyGoalProgress={primaryJourneyGoalProgress}
-          primaryJourneyLoggedToday={primaryJourneyLoggedToday}
-          accent={accent}
-          darkMode={darkMode}
-        />
-      </div>
-
-      {/* Trips starter (under Today's schedule) */}
-      {typeof onStartTrip === 'function' && (
-        <div className="mt-4 rounded-3xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-5 shadow-xl border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Trips</h3>
-            <button
-              onClick={onStartTrip}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:shadow-lg hover:shadow-blue-500/25"
-            >
-              + Start Trip
-            </button>
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">Plan a new trip from your selected dates.</div>
-        </div>
-      )}
     </div>
   );
 };
@@ -392,24 +360,6 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, onScrollToT
     if (hour < 17) return '🌤️';
     if (hour < 20) return '🌆';
     return '🌙';
-  };
-  
-  const getTimeBasedGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    if (hour < 20) return 'Good evening';
-    return 'Good night';
-  };
-  
-  const getDisplayName = () => {
-    const rawFirst = userName || '';
-    const meta = user?.user_metadata || {};
-    const rawFallback = meta.handle || meta.username || user?.display_name || user?.full_name || user?.name || user?.email || '';
-    const raw = String(rawFirst || rawFallback).trim();
-    if (!raw) return 'there';
-    if (raw.includes('@')) return raw.split('@')[0];
-    return raw;
   };
   
   return (
@@ -429,13 +379,10 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, onScrollToT
             {getTimeBasedEmoji()}
           </span>
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${hexToRgba(accent, 1)} 0%, ${hexToRgba(accent, 0.66)} 100%)` }}>
-              {`${getTimeBasedGreeting()} ${getDisplayName()}!`}
-            </h2>
             <button
               type="button"
               onClick={() => onScrollToTodaySchedule?.()}
-              className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </button>
