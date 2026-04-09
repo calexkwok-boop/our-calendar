@@ -163,7 +163,7 @@ const AddEventModal = ({
         </div>
 
         <div
-          className="flex-1 min-h-0 px-6 pt-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] space-y-5 overflow-y-auto"
+          className="min-h-0 px-6 pt-6 pb-6 space-y-5 overflow-y-auto"
           style={{
             WebkitOverflowScrolling: 'touch',
             overscrollBehaviorY: 'contain',
