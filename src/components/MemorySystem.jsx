@@ -1012,7 +1012,7 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
             </button>
             
             {/* Dots */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-2 z-10">
               {slides.map((_, idx) => (
                 <button
                   key={idx}
@@ -1028,7 +1028,7 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
       </div>
       
       {/* Bottom actions */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+      <div className="absolute bottom-0 left-0 right-0 px-4 pt-10 pb-4 bg-gradient-to-t from-black/80 to-transparent">
         <div className="flex items-center justify-around">
           <ReactionButton
             icon={<Heart className="w-6 h-6" />}

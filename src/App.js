@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown, Share2, Trophy } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown, Share2, Trophy, Home, Compass } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
@@ -20095,11 +20095,65 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }));
   const homeTodayPlanCount = overviewTodayEvents.length;
   const homeUpcomingEventCount = filteredUpcomingUserTabEvents.length;
-  const homeRecentMemory = [...(Array.isArray(memories) ? memories : [])]
+  const homeResolvedMemories = Array.isArray(memories) ? memories : [];
+  const homeRecentMemory = [...homeResolvedMemories]
     .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)))[0] || null;
-  const homeMemoryPhotoCount = (Array.isArray(memories) ? memories : []).reduce((total, memory) => total + (memory?.photos?.length || 0), 0);
+  const homeMemoryPhotoCount = homeResolvedMemories.reduce((total, memory) => total + (memory?.photos?.length || 0), 0);
   const homeMemoryReadyCount = eligibleMemoryEvents.length;
   const homeMemoryOpportunities = eligibleMemoryEvents.slice(0, 2);
+  const homeMomentsThisWeek = (() => {
+    const today = new Date();
+    const start = new Date(today);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - start.getDay());
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return [...homeResolvedMemories]
+      .filter((memory) => {
+        const rawDate = String(memory?.date || memory?.createdAt || '').trim();
+        if (!rawDate) return false;
+        const date = new Date(rawDate);
+        return !Number.isNaN(date.getTime()) && date >= start && date < end;
+      })
+      .sort((a, b) => Number(new Date(a?.date || a?.createdAt || 0)) - Number(new Date(b?.date || b?.createdAt || 0)))
+      .slice(0, 7)
+      .map((memory) => ({
+        id: String(memory?.id || ''),
+        title: String(memory?.title || 'Untitled memory').trim(),
+        date: String(memory?.date || memory?.createdAt || '').trim(),
+        photoUrl: String(memory?.coverPhoto || memory?.photos?.[0]?.url || '').trim(),
+      }))
+      .filter((memory) => memory.id && memory.photoUrl);
+  })();
+  const homeOnThisDayMemory = (() => {
+    const today = new Date();
+    const month = today.getMonth();
+    const day = today.getDate();
+    const currentYear = today.getFullYear();
+    const match = [...homeResolvedMemories]
+      .filter((memory) => {
+        const rawDate = String(memory?.date || '').trim();
+        if (!rawDate) return false;
+        const date = new Date(rawDate);
+        return !Number.isNaN(date.getTime())
+          && date.getMonth() === month
+          && date.getDate() === day
+          && date.getFullYear() < currentYear
+          && String(memory?.coverPhoto || memory?.photos?.[0]?.url || '').trim();
+      })
+      .sort((a, b) => Number(new Date(b?.date || 0)) - Number(new Date(a?.date || 0)))[0];
+    if (!match) return null;
+    const matchDate = new Date(match.date);
+    const yearsAgo = Math.max(1, currentYear - matchDate.getFullYear());
+    return {
+      id: String(match?.id || ''),
+      title: String(match?.title || 'Untitled memory').trim(),
+      date: String(match?.date || '').trim(),
+      photoUrl: String(match?.coverPhoto || match?.photos?.[0]?.url || '').trim(),
+      yearsAgo,
+      label: 'On This Day',
+    };
+  })();
   const sortedJourneyGoals = [...(journeyState?.goals || [])].sort((a, b) => {
     const aPinned = a?.pinned ? 0 : 1;
     const bPinned = b?.pinned ? 0 : 1;
@@ -24132,6 +24186,39 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setShowMemorySystem(true);
   };
 
+  const openQuickMemoryCapture = () => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const todayMemoryLocation = (
+      overviewTodayEvents
+        .map((event) => String(event?.location || '').trim())
+        .find(Boolean)
+      || activeTrips
+        .map((trip) => String(trip?.weather_location || trip?.location || trip?.name || '').trim())
+        .find(Boolean)
+      || ''
+    );
+    setMemorySystemCurrentMemory(null);
+    setMemoryDraftSourceLabel('today');
+    setMemoryCreateDraft({
+      title: '',
+      description: '',
+      date: todayIso,
+      location: todayMemoryLocation,
+      highlights: [''],
+      photos: [],
+      coverPhoto: '',
+      taggedPeople: [{
+        id: String(user?.id || 'self'),
+        name: resolveHandleLikeLabel(String(currentUser || user?.email || 'You'), String(user?.id || '')),
+        avatarUrl: normalizeProfilePhotoUrl(currentUserProfilePhotoUrl),
+      }],
+      category: 'memory',
+      isShared: false,
+    });
+    setMemorySystemView('create');
+    setShowMemorySystem(true);
+  };
+
   const createMemoryFromEvent = async (event) => {
     const eventId = String(event?.id || '').trim();
     if (!eventId) return;
@@ -27676,6 +27763,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             primaryJourneyLoggedToday={primaryJourneyLoggedToday}
             todayPlanCount={homeTodayPlanCount}
             upcomingEventCount={homeUpcomingEventCount}
+            momentsThisWeek={homeMomentsThisWeek}
+            onThisDayMemory={homeOnThisDayMemory}
             onShowCalendarView={openCalendarTab}
             onAddEvent={openHomeAddEventModal}
             onAddPlan={(index) => {
@@ -27705,6 +27794,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onCreateMemoryFromEvent={createMemoryFromEvent}
             onOpenJourney={openJourneyTab}
             onOpenExplore={() => setBottomNavTab('explore')}
+            onCaptureQuickMoment={openQuickMemoryCapture}
             themeAccentButtonStyle={themeAccentButtonStyle}
             themeAccentHeadingStyle={themeAccentHeadingStyle}
             themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
@@ -29761,41 +29851,51 @@ transform: translateY(0);
             </div>
           )}
 
-          <div className="grid grid-cols-5 gap-1.5 p-1.5 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
+          <div className="grid grid-cols-5 gap-1 p-1 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
             <button
               onClick={() => { setBottomNavTab('home'); setShowDateDetailModal(false); setShowJourneyScreen(false); }}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'home' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              title="Home"
+              aria-label="Home"
+              className={`min-w-0 px-1 py-2 rounded-xl flex items-center justify-center transition-all ${bottomNavTab === 'home' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
               style={bottomNavTab === 'home' ? bottomNavActiveTabStyle : undefined}
             >
-              Home
+              <Home className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
             <button
               onClick={openCalendarTab}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'calendar' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              title="Calendar"
+              aria-label="Calendar"
+              className={`min-w-0 px-1 py-2 rounded-xl flex items-center justify-center transition-all ${bottomNavTab === 'calendar' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
               style={bottomNavTab === 'calendar' ? bottomNavActiveTabStyle : undefined}
             >
-              Calendar
+              <Calendar className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
             <button
               onClick={() => { setBottomNavTab('events'); setShowDateDetailModal(false); setShowJourneyScreen(false); }}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'events' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              title="Events"
+              aria-label="Events"
+              className={`min-w-0 px-1 py-2 rounded-xl flex items-center justify-center transition-all ${bottomNavTab === 'events' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
               style={bottomNavTab === 'events' ? bottomNavActiveTabStyle : undefined}
             >
-              Events
+              <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
             <button
               onClick={openJourneyTab}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'journey' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              title="Journey"
+              aria-label="Journey"
+              className={`min-w-0 px-1 py-2 rounded-xl flex items-center justify-center transition-all ${bottomNavTab === 'journey' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
               style={bottomNavTab === 'journey' ? bottomNavActiveTabStyle : undefined}
             >
-              Journey
+              <Trophy className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
             <button
               onClick={() => { setBottomNavTab('explore'); setShowDateDetailModal(false); setShowJourneyScreen(false); }}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'explore' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              title="Explore"
+              aria-label="Explore"
+              className={`min-w-0 px-1 py-2 rounded-xl flex items-center justify-center transition-all ${bottomNavTab === 'explore' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
               style={bottomNavTab === 'explore' ? bottomNavActiveTabStyle : undefined}
             >
-              Explore
+              <Compass className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
           </div>
         </div>

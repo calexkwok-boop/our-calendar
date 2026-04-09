@@ -37,6 +37,16 @@ const getMemoryCover = (memory) => String(
   || ''
 ).trim();
 
+const getDaysOfWeek = () => {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const today = new Date().getDay();
+  return days.map((day, index) => ({
+    label: day,
+    isToday: index === today,
+    dayIndex: index,
+  }));
+};
+
 const ScrapbookHomePage = ({
   darkMode = false,
   greeting = 'Good day',
@@ -57,6 +67,8 @@ const ScrapbookHomePage = ({
   primaryJourneyLoggedToday = false,
   todayPlanCount = 0,
   upcomingEventCount = 0,
+  momentsThisWeek = [], // Array of { date, photoUrl, title, id }
+  onThisDayMemory = null, // { date, photoUrl, title, id, yearsAgo, label }
   onShowCalendarView,
   onAddEvent,
   onAddPlan,
@@ -70,6 +82,7 @@ const ScrapbookHomePage = ({
   onCreateMemoryFromEvent,
   onOpenJourney,
   onOpenExplore,
+  onCaptureQuickMoment,
   themeAccentHeadingStyle,
   themeAccentEllieChipButtonStyle,
   themeAccentTextStyle,
@@ -80,7 +93,17 @@ const ScrapbookHomePage = ({
   const memoryCover = getMemoryCover(recentMemory);
 
   return (
-    <div className="space-y-4 mb-4">
+    <>
+      <style>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+      <div className="space-y-4 mb-4">
       {!hasAnythingToShow && (
         <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-5">
           <div className="text-base font-semibold text-gray-900 dark:text-gray-100">Start your scrapbook</div>
@@ -129,6 +152,139 @@ const ScrapbookHomePage = ({
             </button>
           </div>
         </div>
+
+        {/* Moments This Week - Polaroid film strip */}
+        <div className="mt-6 rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-white/95 via-amber-50/40 to-white/90 dark:from-slate-900/80 dark:via-amber-900/10 dark:to-slate-900/75 p-5 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Camera className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-gray-700 dark:text-gray-300">Moments This Week</h3>
+            </div>
+            {momentsThisWeek.length > 0 && (
+              <div className="text-xs text-amber-600 dark:text-amber-400 font-medium">{momentsThisWeek.length} captured</div>
+            )}
+          </div>
+
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+            {getDaysOfWeek().map((day) => {
+              const momentForDay = momentsThisWeek.find(m => {
+                const momentDate = new Date(m.date);
+                return !isNaN(momentDate.getTime()) && momentDate.getDay() === day.dayIndex;
+              });
+
+              return (
+                <div
+                  key={day.label}
+                  className="flex-shrink-0 w-28 group"
+                >
+                  {/* Polaroid frame */}
+                  <div className={`relative rounded-lg overflow-hidden transition-all ${
+                    momentForDay 
+                      ? 'bg-white dark:bg-white/10 shadow-md hover:shadow-xl hover:-translate-y-1 cursor-pointer' 
+                      : 'bg-white/60 dark:bg-white/5 border-2 border-dashed border-gray-300/50 dark:border-gray-600/30'
+                  }`}>
+                    {/* Photo or empty state */}
+                    <div className="aspect-square relative">
+                      {momentForDay ? (
+                        <button
+                          onClick={() => onOpenMemory?.(momentForDay)}
+                          className="w-full h-full"
+                        >
+                          <div
+                            className="w-full h-full bg-cover bg-center"
+                            style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
+                          />
+                        </button>
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-600">
+                          {day.isToday ? (
+                            <button
+                              onClick={onCaptureQuickMoment}
+                              className="flex flex-col items-center justify-center w-full h-full hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
+                            >
+                              <Plus className="w-6 h-6 mb-1" />
+                              <span className="text-[10px] font-medium">Add</span>
+                            </button>
+                          ) : (
+                            <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300/60 dark:border-gray-600/40" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Polaroid bottom strip with day label */}
+                    <div className={`px-2 py-1.5 text-center ${
+                      momentForDay ? 'bg-white dark:bg-white/10' : 'bg-white/40 dark:bg-white/5'
+                    }`}>
+                      <div className={`text-[11px] font-semibold ${
+                        day.isToday 
+                          ? 'text-amber-600 dark:text-amber-400' 
+                          : momentForDay
+                            ? 'text-gray-700 dark:text-gray-300'
+                            : 'text-gray-400 dark:text-gray-600'
+                      }`}>
+                        {day.isToday ? 'Today' : day.label}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {momentsThisWeek.length === 0 && (
+            <div className="mt-4 text-center">
+              <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+                A blank week is an invitation ✨
+              </p>
+              <button
+                onClick={onCaptureQuickMoment}
+                className="mt-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all"
+                style={themeAccentEllieChipButtonStyle}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5" />
+                  Capture something today
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* On This Day - Throwback section */}
+        {onThisDayMemory && (
+          <div className="mt-5 rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-violet-50/60 via-white/90 to-fuchsia-50/50 dark:from-violet-950/30 dark:via-slate-900/80 dark:to-fuchsia-950/20 p-5 shadow-lg">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-gray-700 dark:text-gray-300">
+                {onThisDayMemory.label || 'On This Day'}
+              </h3>
+            </div>
+
+            <button
+              onClick={() => onOpenMemory?.(onThisDayMemory)}
+              className="w-full overflow-hidden rounded-[20px] border border-white/50 dark:border-white/10 bg-white/90 dark:bg-white/5 text-left transition-all hover:bg-white dark:hover:bg-white/10 hover:shadow-xl hover:-translate-y-1"
+            >
+              <div className="h-40 w-full bg-cover bg-center relative" style={{ backgroundImage: `url(${onThisDayMemory.photoUrl})` }}>
+                {onThisDayMemory.yearsAgo && (
+                  <div className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm">
+                    <span className="text-xs font-bold text-white">
+                      {onThisDayMemory.yearsAgo} {onThisDayMemory.yearsAgo === 1 ? 'year' : 'years'} ago
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                <div className="text-base font-semibold text-gray-900 dark:text-white">
+                  {onThisDayMemory.title}
+                </div>
+                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {formatDisplayDate(onThisDayMemory.date)}
+                </div>
+              </div>
+            </button>
+          </div>
+        )}
 
         <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
           <button
@@ -447,7 +603,8 @@ const ScrapbookHomePage = ({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
