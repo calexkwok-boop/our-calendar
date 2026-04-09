@@ -24524,8 +24524,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const createMemoryRecord = (memoryData) => {
     const nextMemory = createMemoryRecordShape(memoryData);
     if (!nextMemory) return;
-    setMemories((prev) => [nextMemory, ...prev.filter((memory) => String(memory?.id || '') !== nextMemory.id)]
-      .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0))));
+    setMemories((prev) => {
+      const nextMemories = [nextMemory, ...prev.filter((memory) => String(memory?.id || '') !== nextMemory.id)]
+        .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)));
+      writeMemoriesState(user?.id, nextMemories);
+      return nextMemories;
+    });
     setMemoryCreateDraft(null);
     setMemoryDraftSourceLabel('');
     setMemorySystemCurrentMemory(nextMemory);
@@ -24533,17 +24537,25 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
   const updateMemoryRecord = (memoryId, updater) => {
     let nextSelected = null;
-    setMemories((prev) => prev.map((memory) => {
-      if (String(memory?.id || '') !== String(memoryId || '')) return memory;
-      const updated = typeof updater === 'function' ? updater(memory) : { ...memory, ...updater };
-      nextSelected = updated;
-      return { ...updated, updatedAt: new Date().toISOString() };
-    }));
+    setMemories((prev) => {
+      const nextMemories = prev.map((memory) => {
+        if (String(memory?.id || '') !== String(memoryId || '')) return memory;
+        const updated = typeof updater === 'function' ? updater(memory) : { ...memory, ...updater };
+        nextSelected = updated;
+        return { ...updated, updatedAt: new Date().toISOString() };
+      });
+      writeMemoriesState(user?.id, nextMemories);
+      return nextMemories;
+    });
     if (nextSelected) setMemorySystemCurrentMemory(nextSelected);
   };
 
   const deleteMemoryRecord = (memoryId) => {
-    setMemories((prev) => prev.filter((memory) => String(memory?.id || '') !== String(memoryId || '')));
+    setMemories((prev) => {
+      const nextMemories = prev.filter((memory) => String(memory?.id || '') !== String(memoryId || ''));
+      writeMemoriesState(user?.id, nextMemories);
+      return nextMemories;
+    });
     setMemorySystemCurrentMemory(null);
   };
 
