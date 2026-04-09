@@ -412,13 +412,15 @@ const MemoryThumbnail = ({ memory, onClick, darkMode }) => {
 // MEMORY CREATOR
 // ============================================================================
 
-export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, darkMode, initialData }) => {
+export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, darkMode, initialData, autoCreateOnPhotoAdd = false }) => {
   const [step, setStep] = useState(1); // 1: photos, 2: details, 3: people, 4: preview
   const [memoryData, setMemoryData] = useState(() => createEmptyMemoryDraft(initialData || {}));
+  const autoCreatedRef = useRef(false);
 
   useEffect(() => {
     setStep(1);
     setMemoryData(createEmptyMemoryDraft(initialData || {}));
+    autoCreatedRef.current = false;
   }, [initialData]);
   
   const handleNext = () => {
@@ -440,6 +442,30 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
       highlights: (memoryData.highlights || []).filter((highlight) => String(highlight || '').trim()),
     });
   };
+
+  // Auto-create when launched from Polaroids and photos are added (one-tap save)
+  useEffect(() => {
+    if (!autoCreateOnPhotoAdd) return;
+    if (autoCreatedRef.current) return;
+    if (step !== 1) return;
+    if (!Array.isArray(memoryData.photos) || memoryData.photos.length === 0) return;
+
+    const formatDefaultTitle = (dateStr) => {
+      const d = new Date(String(dateStr || ''));
+      if (Number.isNaN(d.getTime())) return 'Moment';
+      return `Moment · ${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
+    };
+
+    const draftTitle = String(memoryData.title || '').trim() || formatDefaultTitle(memoryData.date);
+    const quick = {
+      ...memoryData,
+      title: draftTitle,
+      coverPhoto: memoryData.coverPhoto || memoryData.photos?.[0]?.url || '',
+      highlights: (memoryData.highlights || []).filter((h) => String(h || '').trim()),
+    };
+    autoCreatedRef.current = true;
+    onCreate(quick);
+  }, [autoCreateOnPhotoAdd, step, memoryData.photos, memoryData.coverPhoto, memoryData.title, memoryData.date, memoryData.highlights, onCreate]);
   
   return (
     <div className="memory-creator w-full">
