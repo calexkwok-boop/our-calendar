@@ -24751,7 +24751,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       >
         <div className="absolute inset-0" onClick={closeMemorySystem} />
         <div
-          className="relative w-full max-w-lg max-h-[min(88dvh,44rem)] rounded-[28px] shadow-2xl overflow-hidden border border-white/40 dark:border-white/10 flex flex-col bg-white dark:bg-slate-950"
+          className="relative w-full max-w-lg max-h-[min(88dvh,44rem)] overflow-y-auto overscroll-contain rounded-[28px] shadow-2xl border border-white/40 dark:border-white/10 bg-white dark:bg-slate-950"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-start justify-between gap-3 border-b border-gray-200 dark:border-white/10 px-6 py-5">
@@ -24769,7 +24769,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-6 py-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] sm:pb-6 bg-white dark:bg-slate-950">
+          <div className="relative z-10 px-6 py-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] sm:pb-6 bg-white dark:bg-slate-950">
             <MemorySystem
               view={memorySystemView}
               memories={memorySystemMemories}
