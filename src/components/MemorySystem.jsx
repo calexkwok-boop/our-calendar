@@ -313,23 +313,7 @@ const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, dark
   };
   
   return (
-    <div className="memory-creator max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={onCancel}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-          <X className="w-5 h-5" />
-          Cancel
-        </button>
-        
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-          Create a Memory
-        </h2>
-        
-        <div className="w-16" /> {/* Spacer */}
-      </div>
-      
+    <div className="memory-creator max-w-2xl mx-auto pb-24">
       {/* Progress */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
@@ -395,7 +379,8 @@ const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, dark
       )}
       
       {/* Navigation */}
-      <div className="flex gap-3 mt-8">
+      <div className="sticky bottom-0 z-10 mt-8 -mx-2 px-2 pb-2 pt-3 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-950 dark:via-slate-950/95 dark:to-transparent">
+        <div className="flex gap-3">
         {step > 1 && (
           <button
             onClick={handleBack}
@@ -421,6 +406,7 @@ const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, dark
             Create a Memory
           </button>
         )}
+        </div>
       </div>
     </div>
   );

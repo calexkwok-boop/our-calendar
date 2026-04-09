@@ -52,12 +52,23 @@ const getVisualPreviewUrl = (item) => String(
 
 const getDaysOfWeek = () => {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const today = new Date().getDay();
-  return days.map((day, index) => ({
-    label: day,
-    isToday: index === today,
-    dayIndex: index,
-  }));
+  const today = new Date();
+  const todayIndex = today.getDay();
+  const startOfWeek = new Date(today);
+  startOfWeek.setHours(0, 0, 0, 0);
+  startOfWeek.setDate(today.getDate() - todayIndex);
+  return days.map((day, index) => {
+    const date = new Date(startOfWeek);
+    date.setDate(startOfWeek.getDate() + index);
+    const dateKey = date.toISOString().slice(0, 10);
+    return {
+      label: day,
+      isToday: index === todayIndex,
+      isPastOrToday: index <= todayIndex,
+      dayIndex: index,
+      dateKey,
+    };
+  });
 };
 
 const ScrapbookHomePage = ({
@@ -145,8 +156,7 @@ const ScrapbookHomePage = ({
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
             <button
               onClick={onAddEvent}
-              className="px-3 py-2 rounded-2xl text-sm font-semibold transition-all"
-              style={themeAccentEllieChipButtonStyle}
+              className="px-3 py-2 rounded-2xl text-sm font-semibold transition-all border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.08] text-gray-900 dark:text-white hover:bg-white dark:hover:bg-white/[0.12]"
             >
               <span className="inline-flex items-center gap-2"><Plus className="w-4 h-4" />Add event</span>
             </button>
@@ -215,13 +225,13 @@ const ScrapbookHomePage = ({
                         </button>
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-600">
-                          {day.isToday ? (
+                          {day.isPastOrToday ? (
                             <button
-                              onClick={onCaptureQuickMoment}
+                              onClick={() => onCaptureQuickMoment?.(day.dateKey)}
                               className="flex flex-col items-center justify-center w-full h-full hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
                             >
                               <Plus className="w-6 h-6 mb-1" />
-                              <span className="text-[10px] font-medium">Add</span>
+                              <span className="text-[10px] font-medium">{day.isToday ? 'Add' : 'Backfill'}</span>
                             </button>
                           ) : (
                             <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300/60 dark:border-gray-600/40" />

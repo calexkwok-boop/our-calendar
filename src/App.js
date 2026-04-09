@@ -24219,24 +24219,32 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setShowMemorySystem(true);
   };
 
-  const openQuickMemoryCapture = () => {
+  const openQuickMemoryCapture = (dateOverride = '') => {
+    const selectedDate = String(dateOverride || '').trim();
     const todayIso = new Date().toISOString().slice(0, 10);
-    const todayMemoryLocation = (
-      overviewTodayEvents
+    const targetDate = selectedDate || todayIso;
+    const targetDayEvents = (events || []).filter((event) => String(event?.date || event?.dateKey || '').trim() === targetDate);
+    const selectedMemoryLocation = (
+      targetDayEvents
         .map((event) => String(event?.location || '').trim())
         .find(Boolean)
-      || activeTrips
-        .map((trip) => String(trip?.weather_location || trip?.location || trip?.name || '').trim())
-        .find(Boolean)
+      || (targetDate === todayIso
+        ? activeTrips
+          .map((trip) => String(trip?.weather_location || trip?.location || trip?.name || '').trim())
+          .find(Boolean)
+        : '')
       || ''
     );
+    const sourceLabel = targetDate === todayIso
+      ? 'today'
+      : new Date(`${targetDate}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
     setMemorySystemCurrentMemory(null);
-    setMemoryDraftSourceLabel('today');
+    setMemoryDraftSourceLabel(sourceLabel);
     setMemoryCreateDraft({
       title: '',
       description: '',
-      date: todayIso,
-      location: todayMemoryLocation,
+      date: targetDate,
+      location: selectedMemoryLocation,
       highlights: [''],
       photos: [],
       coverPhoto: '',
@@ -24711,7 +24719,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Memories</div>
                 <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {memorySystemView === 'create'
-                    ? (memoryDraftSourceLabel ? `Create a memory from ${memoryDraftSourceLabel}` : 'Create a memory')
+                    ? 'Create a memory'
                     : 'Your memory gallery'}
                 </div>
               </div>
