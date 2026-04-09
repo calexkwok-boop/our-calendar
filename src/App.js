@@ -24463,13 +24463,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     );
   };
 
-  const memoryTripSelfPerson = useMemo(() => ({
+  const memoryTripSelfPerson = {
     id: String(user?.id || 'self'),
     name: resolveHandleLikeLabel(String(currentUser || user?.email || 'You'), String(user?.id || '')),
     avatarUrl: normalizeProfilePhotoUrl(currentUserProfilePhotoUrl),
-  }), [user?.id, user?.email, currentUser, currentUserProfilePhotoUrl]);
+  };
 
-  const applyTripRosterToMemory = React.useCallback((memory) => {
+  const applyTripRosterToMemory = (memory) => {
     const tripId = String(memory?.sourceTripId || '').trim();
     if (!tripId) return memory;
     const roster = Array.isArray(memoryTripRosterById?.[tripId]) ? memoryTripRosterById[tripId] : [];
@@ -24503,20 +24503,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       ...memory,
       taggedPeople: nextPeople,
     };
-  }, [memoryTripRosterById, memoryTripSelfPerson]);
+  };
 
-  const memorySystemMemories = useMemo(
-    () => (Array.isArray(memories) ? memories.map((memory) => applyTripRosterToMemory(memory)) : []),
-    [memories, applyTripRosterToMemory]
-  );
-  const memorySystemCurrentMemoryResolved = useMemo(
-    () => (memorySystemCurrentMemory ? applyTripRosterToMemory(memorySystemCurrentMemory) : null),
-    [memorySystemCurrentMemory, applyTripRosterToMemory]
-  );
-  const memorySystemCreateDraftResolved = useMemo(
-    () => (memoryCreateDraft ? applyTripRosterToMemory(memoryCreateDraft) : null),
-    [memoryCreateDraft, applyTripRosterToMemory]
-  );
+  const memorySystemMemories = Array.isArray(memories) ? memories.map((memory) => applyTripRosterToMemory(memory)) : [];
+  const memorySystemCurrentMemoryResolved = memorySystemCurrentMemory ? applyTripRosterToMemory(memorySystemCurrentMemory) : null;
+  const memorySystemCreateDraftResolved = memoryCreateDraft ? applyTripRosterToMemory(memoryCreateDraft) : null;
 
   const renderJourneyPortal = (node) => (typeof document !== 'undefined' ? createPortal(node, document.body) : null);
 
@@ -24555,9 +24546,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           <div className={`${memorySystemView === 'viewer' ? '' : 'h-[calc(100dvh-4.5rem)] sm:h-auto sm:max-h-[calc(92vh-4.5rem)] overflow-y-auto px-4 py-4 sm:px-6 sm:py-5'}`}>
             <MemorySystem
               view={memorySystemView}
-              memories={memories}
-              currentMemory={memorySystemCurrentMemory}
-              createDraft={memoryCreateDraft}
+              memories={memorySystemMemories}
+              currentMemory={memorySystemCurrentMemoryResolved}
+              createDraft={memorySystemCreateDraftResolved}
               onCreateMemory={createMemoryRecord}
               onUpdateMemory={updateMemoryRecord}
               onDeleteMemory={deleteMemoryRecord}
