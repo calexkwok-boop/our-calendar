@@ -126,7 +126,7 @@ const AddEventModal = ({
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       <div
-        className="relative w-full min-h-[72dvh] sm:min-h-0 max-w-lg max-h-[calc(100dvh-env(safe-area-inset-top))] sm:max-h-[calc(100vh-2rem)] rounded-t-3xl rounded-b-none sm:rounded-3xl shadow-2xl overflow-hidden border-t border-transparent dark:border-white/10 flex flex-col bg-white dark:bg-slate-950"
+        className="relative w-full max-w-lg max-h-[calc(100dvh-env(safe-area-inset-top))] sm:max-h-[calc(100vh-2rem)] rounded-t-3xl rounded-b-none sm:rounded-3xl shadow-2xl overflow-hidden border-t border-transparent dark:border-white/10 flex flex-col bg-white dark:bg-slate-950"
         style={{
           borderColor: themeAccentBorder,
         }}
