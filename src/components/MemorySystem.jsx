@@ -212,7 +212,7 @@ const MemorySystem = ({
   }, [memories, selectedMemory]);
   
   return (
-    <div className="memory-system">
+    <div className="memory-system h-full">
       {activeView === 'gallery' && (
         <MemoriesGallery
           memories={memories}
@@ -279,7 +279,7 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, darkMode }) =>
   const years = Object.keys(memoriesByYear).sort((a, b) => b - a);
   
   return (
-    <div className="memories-gallery space-y-6">
+    <div className="memories-gallery min-h-full space-y-6 pb-6">
       {/* Header */}
       <div className="text-center">
         <div className="text-4xl mb-2">💫</div>
@@ -585,6 +585,25 @@ const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
           Location (optional)
         </label>
+        <div className="mb-3 flex flex-wrap gap-2">
+          {['Home', 'Work'].map((preset) => {
+            const active = String(data.location || '').trim().toLowerCase() === preset.toLowerCase();
+            return (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => onChange({ ...data, location: preset })}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+                  active
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/25 dark:text-purple-200 dark:hover:bg-purple-900/35'
+                }`}
+              >
+                {preset}
+              </button>
+            );
+          })}
+        </div>
         <MemoryPlacesAutocomplete
           value={data.location}
           onSelect={(nextLocation) => onChange({ ...data, location: nextLocation })}
