@@ -19,7 +19,46 @@ const createEmptyMemoryDraft = (overrides = {}) => ({
 
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
-  reader.onload = () => resolve(String(reader.result || ''));
+  reader.onload = () => {
+    const original = String(reader.result || '');
+    if (!String(file?.type || '').startsWith('image/')) {
+      resolve(original);
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const maxDimension = 1600;
+        const width = Number(img.naturalWidth || img.width || 0);
+        const height = Number(img.naturalHeight || img.height || 0);
+        if (!width || !height) {
+          resolve(original);
+          return;
+        }
+
+        const scale = Math.min(1, maxDimension / Math.max(width, height));
+        const targetWidth = Math.max(1, Math.round(width * scale));
+        const targetHeight = Math.max(1, Math.round(height * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(original);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      } catch {
+        resolve(original);
+      }
+    };
+    img.onerror = () => resolve(original);
+    img.src = original;
+  };
   reader.onerror = () => reject(new Error('Could not read file.'));
   reader.readAsDataURL(file);
 });
