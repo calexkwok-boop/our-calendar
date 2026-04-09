@@ -53,19 +53,19 @@ const getVisualPreviewUrl = (item) => String(
 const getDaysOfWeek = () => {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const today = new Date();
-  const todayIndex = today.getDay();
-  const startOfWeek = new Date(today);
-  startOfWeek.setHours(0, 0, 0, 0);
-  startOfWeek.setDate(today.getDate() - todayIndex);
-  return days.map((day, index) => {
-    const date = new Date(startOfWeek);
-    date.setDate(startOfWeek.getDate() + index);
+  const startDate = new Date(today);
+  startDate.setHours(0, 0, 0, 0);
+  startDate.setDate(today.getDate() - 1);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + index);
     const dateKey = date.toISOString().slice(0, 10);
+    const todayKey = today.toISOString().slice(0, 10);
     return {
-      label: day,
-      isToday: index === todayIndex,
-      isPastOrToday: index <= todayIndex,
-      dayIndex: index,
+      label: days[date.getDay()],
+      isToday: dateKey === todayKey,
+      isPastOrToday: dateKey <= todayKey,
+      dayIndex: date.getDay(),
       dateKey,
     };
   });
@@ -77,7 +77,6 @@ const ScrapbookHomePage = ({
   greetingName = 'there',
   greetingEmoji = '',
   todayLabel = '',
-  todaySections = [],
   tripsPreview = [],
   activeTripIds = [],
   recentMemory = null,
@@ -89,7 +88,6 @@ const ScrapbookHomePage = ({
   primaryJourneyProgressText = '',
   primaryJourneyStreak = 0,
   primaryJourneyLoggedToday = false,
-  todayPlanCount = 0,
   upcomingEventCount = 0,
   momentsThisWeek = [], // Array of { date, photoUrl, title, id }
   onThisDayMemory = null, // { date, photoUrl, title, id, yearsAgo, label }
@@ -99,8 +97,6 @@ const ScrapbookHomePage = ({
   memoryCollagePhotos = [],
   onShowCalendarView,
   onAddEvent,
-  onAddPlan,
-  onOpenEvent,
   onOpenUpcoming,
   onOpenTrip,
   onOpenTripsTab,
@@ -117,7 +113,7 @@ const ScrapbookHomePage = ({
   themeAccentBorder,
 }) => {
   const activeTripIdSet = new Set((activeTripIds || []).map((value) => String(value || '')));
-  const hasAnythingToShow = todayPlanCount > 0 || tripsPreview.length > 0 || memoryCount > 0;
+  const hasAnythingToShow = tripsPreview.length > 0 || memoryCount > 0;
   const memoryCover = getMemoryCover(recentMemory);
   const todaySpotlightPhoto = getVisualPreviewUrl(todaySpotlightEvent);
 
@@ -156,7 +152,7 @@ const ScrapbookHomePage = ({
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
             <button
               onClick={onAddEvent}
-              className="px-3 py-2 rounded-2xl text-sm font-semibold transition-all border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.08] text-gray-900 dark:text-white hover:bg-white dark:hover:bg-white/[0.12]"
+              className="px-3 py-2 rounded-2xl text-sm font-semibold transition-all bg-white/90 dark:bg-white/[0.08] text-gray-900 dark:text-white shadow-[0_8px_20px_rgba(15,23,42,0.06)] dark:shadow-none hover:bg-white dark:hover:bg-white/[0.12]"
             >
               <span className="inline-flex items-center gap-2"><Plus className="w-4 h-4" />Add event</span>
             </button>
@@ -196,8 +192,8 @@ const ScrapbookHomePage = ({
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
             {getDaysOfWeek().map((day) => {
               const momentForDay = momentsThisWeek.find(m => {
-                const momentDate = new Date(m.date);
-                return !isNaN(momentDate.getTime()) && momentDate.getDay() === day.dayIndex;
+                const momentDate = String(m?.date || '').trim().slice(0, 10);
+                return momentDate === day.dateKey;
               });
 
               return (
@@ -205,42 +201,44 @@ const ScrapbookHomePage = ({
                   key={day.label}
                   className="flex-shrink-0 w-28 group"
                 >
-                  {/* Polaroid frame */}
-                  <div className={`relative rounded-lg overflow-hidden transition-all ${
-                    momentForDay 
-                      ? 'bg-white dark:bg-white/10 shadow-md hover:shadow-xl hover:-translate-y-1 cursor-pointer' 
-                      : 'bg-white/60 dark:bg-white/5 border-2 border-dashed border-gray-300/50 dark:border-gray-600/30'
-                  }`}>
-                    {/* Photo or empty state */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (momentForDay) {
+                        onOpenMemory?.(momentForDay);
+                        return;
+                      }
+                      if (day.isPastOrToday) onCaptureQuickMoment?.(day.dateKey);
+                    }}
+                    disabled={!momentForDay && !day.isPastOrToday}
+                    className={`relative block w-full rounded-lg overflow-hidden transition-all ${
+                      momentForDay
+                        ? 'bg-white dark:bg-white/10 shadow-md hover:shadow-xl hover:-translate-y-1 cursor-pointer'
+                        : day.isPastOrToday
+                          ? 'bg-white/60 dark:bg-white/5 border-2 border-dashed border-gray-300/50 dark:border-gray-600/30 hover:bg-white/80 dark:hover:bg-white/[0.08] cursor-pointer'
+                          : 'bg-white/60 dark:bg-white/5 border-2 border-dashed border-gray-300/50 dark:border-gray-600/30 cursor-default'
+                    }`}
+                  >
                     <div className="aspect-square relative">
                       {momentForDay ? (
-                        <button
-                          onClick={() => onOpenMemory?.(momentForDay)}
-                          className="w-full h-full"
-                        >
-                          <div
-                            className="w-full h-full bg-cover bg-center"
-                            style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
-                          />
-                        </button>
+                        <div
+                          className="w-full h-full bg-cover bg-center"
+                          style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
+                        />
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-600">
                           {day.isPastOrToday ? (
-                            <button
-                              onClick={() => onCaptureQuickMoment?.(day.dateKey)}
-                              className="flex flex-col items-center justify-center w-full h-full hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
-                            >
+                            <>
                               <Plus className="w-6 h-6 mb-1" />
-                              <span className="text-[10px] font-medium">{day.isToday ? 'Add' : 'Backfill'}</span>
-                            </button>
+                              <span className="text-[10px] font-medium">+ Add</span>
+                            </>
                           ) : (
                             <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300/60 dark:border-gray-600/40" />
                           )}
                         </div>
                       )}
                     </div>
-                    
-                    {/* Polaroid bottom strip with day label */}
+
                     <div className={`px-2 py-1.5 text-center ${
                       momentForDay ? 'bg-white dark:bg-white/10' : 'bg-white/40 dark:bg-white/5'
                     }`}>
@@ -254,7 +252,7 @@ const ScrapbookHomePage = ({
                         {day.isToday ? 'Today' : day.label}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 </div>
               );
             })}
@@ -317,11 +315,7 @@ const ScrapbookHomePage = ({
         <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           <button
             type="button"
-            onClick={() => {
-              if (typeof document !== 'undefined') {
-                document.getElementById('home-today-chapters')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }
-            }}
+            onClick={onAddEvent}
             className="group rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
           >
             <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">☀️ WHAT'S NEXT TODAY?</div>
@@ -462,80 +456,7 @@ const ScrapbookHomePage = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-4">
-        <div id="home-today-chapters" className="rounded-[28px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-slate-900/65 p-4 sm:p-5 shadow-lg">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Today, told in chapters</div>
-              <h3 className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">Morning, afternoon, and evening</h3>
-            </div>
-            <button
-              onClick={onAddEvent}
-              className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-              style={themeAccentEllieChipButtonStyle}
-            >
-              + Add event
-            </button>
-          </div>
-          <div className="space-y-3">
-            {todaySections.map((section, index) => (
-              <div
-                key={section.key}
-                className={`rounded-[24px] border border-white/40 dark:border-white/10 p-4 ${index === 1 ? 'rotate-[-0.35deg]' : index === 2 ? 'rotate-[0.35deg]' : ''}`}
-                style={{ background: darkMode ? 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(15,23,42,0.78))' : 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96))' }}
-              >
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{section.label}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {section.events.length > 0 ? `${section.events.length} item${section.events.length === 1 ? '' : 's'}` : section.emptyTitle}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => onAddPlan?.(index)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-                    style={themeAccentEllieChipButtonStyle}
-                  >
-                    + Add plan
-                  </button>
-                </div>
-                {section.events.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/20 dark:border-white/10 px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {section.emptyCopy}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {section.events.slice(0, 3).map((event) => (
-                      <button
-                        key={`${section.key}-${event.id}-${event.date}`}
-                        onClick={() => onOpenEvent?.(event)}
-                        className="w-full rounded-2xl border border-white/40 dark:border-white/10 bg-white/80 dark:bg-white/[0.04] px-3 py-3 text-left transition-all hover:bg-white/95 dark:hover:bg-white/[0.08]"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{event.title}</div>
-                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                              <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />{formatDisplayTime(event.time)}</span>
-                              {event.location ? <span className="truncate">{event.location}</span> : null}
-                            </div>
-                          </div>
-                          <ArrowRight className="w-4 h-4 shrink-0 text-gray-400" />
-                        </div>
-                      </button>
-                    ))}
-                    {section.events.length > 3 && (
-                      <div className="px-1 text-xs text-gray-500 dark:text-gray-400">
-                        +{section.events.length - 3} more waiting in today
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-4">
+      <div className="space-y-4">
           <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(254,242,242,0.94),rgba(255,251,235,0.96))] dark:bg-[linear-gradient(135deg,rgba(30,41,59,0.94),rgba(55,48,163,0.18),rgba(15,23,42,0.94))] p-4 sm:p-5 shadow-lg">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -733,7 +654,6 @@ const ScrapbookHomePage = ({
             </div>
           </div>
         </div>
-      </div>
       </div>
     </>
   );

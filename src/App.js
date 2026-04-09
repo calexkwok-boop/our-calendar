@@ -27790,7 +27790,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             greetingName={homeGreetingName}
             greetingEmoji={homeGreetingEmoji}
             todayLabel={new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            todaySections={homeDaySections}
             tripsPreview={homeTripsPreviewCards}
             activeTripIds={activeTrips.map((trip) => String(trip?.id || ''))}
             recentMemory={homeRecentMemory}
@@ -27802,7 +27801,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             primaryJourneyProgressText={primaryJourneyProgressText}
             primaryJourneyStreak={primaryJourneyStreak}
             primaryJourneyLoggedToday={primaryJourneyLoggedToday}
-            todayPlanCount={homeTodayPlanCount}
             upcomingEventCount={homeUpcomingEventCount}
             momentsThisWeek={homeMomentsThisWeek}
             onThisDayMemory={homeOnThisDayMemory}
@@ -27812,18 +27810,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             memoryCollagePhotos={homeMemoryCollagePhotos}
             onShowCalendarView={openCalendarTab}
             onAddEvent={openHomeAddEventModal}
-            onAddPlan={(index) => {
-              const next = new Date();
-              next.setHours(index === 0 ? 9 : index === 1 ? 14 : 19, 0, 0, 0);
-              setSelectedDate(next);
-              setSelectedDates([]);
-              setShowDateDetailModal(true);
-            }}
-            onOpenEvent={(event) => {
-              const popupMeta = popupEventsByEventId[String(event?.id || '')] || null;
-              const popupCard = (userTabPopupEvents || []).find((row) => String(row?.id || '') === String(event?.id || '')) || null;
-              openUserTabEvent(event, popupMeta || popupCard);
-            }}
             onOpenUpcoming={() => {
               setEventsTabView('upcoming');
               setBottomNavTab('events');
