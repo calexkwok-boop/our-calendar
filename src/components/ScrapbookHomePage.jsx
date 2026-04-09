@@ -7,7 +7,6 @@ import {
   Clock,
   Compass,
   Heart,
-  Plane,
   Plus,
   Sparkles,
   Trophy,
@@ -130,7 +129,6 @@ const ScrapbookHomePage = ({
   themeAccentTextStyle,
   themeAccentBorder,
 }) => {
-  const activeTripIdSet = new Set((activeTripIds || []).map((value) => String(value || '')));
   const hasAnythingToShow = tripsPreview.length > 0 || memoryCount > 0;
   const memoryCover = getMemoryCover(recentMemory);
   const todaySpotlightPhoto = getVisualPreviewUrl(todaySpotlightEvent);
@@ -515,58 +513,6 @@ const ScrapbookHomePage = ({
             )}
           </div>
 
-          <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-[linear-gradient(135deg,rgba(240,249,255,0.98),rgba(236,254,255,0.95),rgba(236,253,245,0.96))] dark:bg-[linear-gradient(135deg,rgba(12,74,110,0.2),rgba(15,23,42,0.95),rgba(6,78,59,0.18))] p-4 sm:p-5 shadow-lg">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Trips</div>
-                <h3 className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">Places shaping your year</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={onOpenTripsTab}
-                  className="rounded-xl border border-white/50 dark:border-white/10 bg-white/70 dark:bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-100 transition-all"
-                >
-                  View all
-                </button>
-                <button
-                  onClick={onStartTrip}
-                  className="rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-3 py-1.5 text-xs font-semibold text-white transition-all"
-                >
-                  + Start Trip
-                </button>
-              </div>
-            </div>
-            {tripsPreview.length === 0 ? (
-              <div className="mt-4 rounded-[24px] border border-dashed border-white/30 dark:border-white/10 px-4 py-5 text-sm text-gray-600 dark:text-gray-300">
-                No trips on deck yet. Add one and it can become part of your timeline and your memory gallery later.
-              </div>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {tripsPreview.map((trip, index) => (
-                  <button
-                    key={trip.id || index}
-                    onClick={() => onOpenTrip?.(trip)}
-                    className="w-full rounded-[24px] border border-white/40 dark:border-white/10 bg-white/80 dark:bg-white/[0.04] px-4 py-4 text-left transition-all hover:bg-white/95 dark:hover:bg-white/[0.08]"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                          <Plane className="w-4 h-4 shrink-0" />
-                          <span className="truncate">{trip.name}</span>
-                        </div>
-                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          {formatDisplayDate(trip.startDateLabel || trip.startDate || trip.start)} - {formatDisplayDate(trip.endDateLabel || trip.endDate || trip.end)}
-                        </div>
-                      </div>
-                      <span className="text-xs font-semibold shrink-0" style={themeAccentTextStyle}>
-                        {activeTripIdSet.has(String(trip?.id || '')) ? 'Now' : 'Soon'}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
 
           <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-[linear-gradient(135deg,rgba(250,245,255,0.98),rgba(253,242,248,0.96),rgba(255,255,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(88,28,135,0.2),rgba(15,23,42,0.95),rgba(76,29,149,0.14))] p-4 sm:p-5 shadow-lg">
             <div className="flex items-start justify-between gap-3">
