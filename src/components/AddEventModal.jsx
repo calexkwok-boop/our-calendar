@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Calendar, Clock, MapPin, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -121,7 +122,7 @@ const AddEventModal = ({
     }
   };
 
-  return (
+  const modal = (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4 bg-black/60 backdrop-blur-sm"
     >
@@ -414,6 +415,8 @@ const AddEventModal = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modal, document.body) : modal;
 };
 
 export default AddEventModal;
