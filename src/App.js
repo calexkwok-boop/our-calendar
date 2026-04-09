@@ -24745,7 +24745,55 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     <style>{shakeStyle}</style>
     {controlWidgetAddPanelPortal}
     {homeAddEventModal}
-    {!activeSubCalendar && showMemorySystem && renderJourneyPortal((
+    {!activeSubCalendar && showMemorySystem && memorySystemView === 'create' && renderJourneyPortal((
+      <div
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[88] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm`}
+      >
+        <div className="absolute inset-0" onClick={closeMemorySystem} />
+        <div
+          className="relative w-full max-w-lg max-h-[min(88dvh,44rem)] rounded-[28px] shadow-2xl overflow-hidden border border-white/40 dark:border-white/10 flex flex-col bg-white dark:bg-slate-950"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-start justify-between gap-3 border-b border-gray-200 dark:border-white/10 px-6 py-5">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Memories</div>
+              <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Create a memory
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={closeMemorySystem}
+              className="rounded-xl p-2 text-gray-500 hover:bg-black/5 dark:text-gray-400 dark:hover:bg-white/5"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-6 py-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] sm:pb-6 bg-white dark:bg-slate-950">
+            <MemorySystem
+              view={memorySystemView}
+              memories={memorySystemMemories}
+              currentMemory={memorySystemCurrentMemoryResolved}
+              createDraft={memorySystemCreateDraftResolved}
+              onCreateMemory={createMemoryRecord}
+              onUpdateMemory={updateMemoryRecord}
+              onDeleteMemory={deleteMemoryRecord}
+              onAddPhoto={() => {}}
+              onRemovePhoto={() => {}}
+              onTagPerson={() => {}}
+              onRemovePerson={() => {}}
+              onReact={reactToMemory}
+              onComment={commentOnMemory}
+              onShare={shareMemoryRecord}
+              onCloseSystem={closeMemorySystem}
+              user={user}
+              darkMode={darkMode}
+            />
+          </div>
+        </div>
+      </div>
+    ))}
+    {!activeSubCalendar && showMemorySystem && memorySystemView !== 'create' && renderJourneyPortal((
       <div
         className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[88] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeMemorySystem}
