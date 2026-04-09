@@ -455,12 +455,14 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
   const [step, setStep] = useState(1); // 1: photos, 2: details, 3: people, 4: preview
   const [memoryData, setMemoryData] = useState(() => createEmptyMemoryDraft(initialData || {}));
   const autoCreatedRef = useRef(false);
+  const [photoOnlyMode, setPhotoOnlyMode] = useState(Boolean(autoCreateOnPhotoAdd));
 
   useEffect(() => {
     setStep(1);
     setMemoryData(createEmptyMemoryDraft(initialData || {}));
     autoCreatedRef.current = false;
-  }, [initialData]);
+    setPhotoOnlyMode(Boolean(autoCreateOnPhotoAdd));
+  }, [initialData, autoCreateOnPhotoAdd]);
   
   const handleNext = () => {
     if (step < 4) setStep(step + 1);
@@ -484,7 +486,7 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
 
   // Auto-create when launched from Polaroids and photos are added (one-tap save)
   useEffect(() => {
-    if (!autoCreateOnPhotoAdd) return;
+    if (!photoOnlyMode) return;
     if (typeof onAddPhoto === 'function') return; // parent handles quick save
     if (autoCreatedRef.current) return;
     if (step !== 1) return;
@@ -505,7 +507,7 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
     };
     autoCreatedRef.current = true;
     onCreate(quick);
-  }, [autoCreateOnPhotoAdd, step, memoryData.photos, memoryData.coverPhoto, memoryData.title, memoryData.date, memoryData.highlights, onCreate]);
+  }, [photoOnlyMode, step, memoryData.photos, memoryData.coverPhoto, memoryData.title, memoryData.date, memoryData.highlights, onCreate, onAddPhoto]);
   
   return (
     <div className="memory-creator w-full">
@@ -546,7 +548,9 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
           onChange={setMemoryData}
           onAddPhoto={onAddPhoto}
           darkMode={darkMode}
-          quickSaveOnPhotoAdd={autoCreateOnPhotoAdd}
+          quickSaveOnPhotoAdd={photoOnlyMode}
+          photoOnlyMode={photoOnlyMode}
+          onTogglePhotoOnlyMode={() => setPhotoOnlyMode((prev) => !prev)}
         />
       )}
       
@@ -753,7 +757,15 @@ const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
 };
 
 // Step 1: Photos
-const MemoryPhotosStep = ({ data, onChange, onAddPhoto, darkMode, quickSaveOnPhotoAdd = false }) => {
+const MemoryPhotosStep = ({
+  data,
+  onChange,
+  onAddPhoto,
+  darkMode,
+  quickSaveOnPhotoAdd = false,
+  photoOnlyMode = false,
+  onTogglePhotoOnlyMode,
+}) => {
   const fileInputRef = useRef(null);
   
   const handleAddPhotos = async (e) => {
@@ -800,6 +812,32 @@ const MemoryPhotosStep = ({ data, onChange, onAddPhoto, darkMode, quickSaveOnPho
       <p className="text-sm text-gray-600 dark:text-gray-400">
         Pick the images first, then add the story and details around them.
       </p>
+
+      <button
+        type="button"
+        onClick={() => onTogglePhotoOnlyMode?.()}
+        className={`w-full flex items-start gap-3 rounded-2xl border px-4 py-3 text-left transition-all ${
+          photoOnlyMode
+            ? 'border-purple-300 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/20'
+            : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-slate-900'
+        }`}
+      >
+        <div className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded border transition-all ${
+          photoOnlyMode
+            ? 'border-purple-600 bg-purple-600 text-white'
+            : 'border-gray-300 bg-white text-transparent dark:border-gray-600 dark:bg-slate-800'
+        }`}>
+          <Check className="h-3.5 w-3.5" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-gray-900 dark:text-white">
+            Photo only
+          </div>
+          <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+            Save right after adding photos and skip details, people, and preview.
+          </div>
+        </div>
+      </button>
       
       {/* Upload / cover area */}
       {data.photos.length > 0 ? (

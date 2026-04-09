@@ -24887,10 +24887,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   closeMemorySystem();
                 }
               }}
+              onAddPhoto={undefined}
               onTagPerson={() => {}}
               user={user}
               initialData={memorySystemCreateDraftResolved}
-              autoCreateOnPhotoAdd={true}
               darkMode={darkMode}
             />
           </div>
