@@ -27941,7 +27941,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onConfirmAction={showAppConfirm}
             themeAccentButtonStyle={themeAccentButtonStyle}
             weekPastDaysCount={HOME_MOMENTS_PAST_DAYS}
-            weekFutureDaysCount={HOME_MOMENTS_FUTURE_DAYS}
             themeAccentHeadingStyle={themeAccentHeadingStyle}
             themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
             themeAccentTextStyle={themeAccentTextStyle}

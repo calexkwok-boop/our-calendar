@@ -20160,11 +20160,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const HOME_MOMENTS_FUTURE_DAYS = 0;
   const homeMomentsThisWeek = (() => {
     const today = new Date();
-    const start = new Date(today);
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - HOME_MOMENTS_PAST_DAYS);
-    const total = HOME_MOMENTS_PAST_DAYS + HOME_MOMENTS_FUTURE_DAYS + 1;
-    const visibleDateKeys = Array.from({ length: total }, (_, index) => {
       const slotDate = new Date(start);
       slotDate.setDate(start.getDate() + index);
       return slotDate.toISOString().slice(0, 10);
@@ -27940,8 +27935,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             }}
             onConfirmAction={showAppConfirm}
             themeAccentButtonStyle={themeAccentButtonStyle}
-            weekPastDaysCount={HOME_MOMENTS_PAST_DAYS}
-            weekFutureDaysCount={HOME_MOMENTS_FUTURE_DAYS}
             themeAccentHeadingStyle={themeAccentHeadingStyle}
             themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
             themeAccentTextStyle={themeAccentTextStyle}
