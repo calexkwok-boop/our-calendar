@@ -37,6 +37,19 @@ const getMemoryCover = (memory) => String(
   || ''
 ).trim();
 
+const getVisualPreviewUrl = (item) => String(
+  item?.coverPhoto
+  || item?.photoUrl
+  || item?.photo_url
+  || item?.imageUrl
+  || item?.image_url
+  || item?.thumbnailUrl
+  || item?.thumbnail_url
+  || item?.photos?.[0]?.url
+  || item?.photos?.[0]?.photoUrl
+  || ''
+).trim();
+
 const getDaysOfWeek = () => {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const today = new Date().getDay();
@@ -69,6 +82,10 @@ const ScrapbookHomePage = ({
   upcomingEventCount = 0,
   momentsThisWeek = [], // Array of { date, photoUrl, title, id }
   onThisDayMemory = null, // { date, photoUrl, title, id, yearsAgo, label }
+  todaySpotlightEvent = null,
+  upcomingPreviewEvents = [],
+  tripSpotlight = null,
+  memoryCollagePhotos = [],
   onShowCalendarView,
   onAddEvent,
   onAddPlan,
@@ -91,6 +108,7 @@ const ScrapbookHomePage = ({
   const activeTripIdSet = new Set((activeTripIds || []).map((value) => String(value || '')));
   const hasAnythingToShow = todayPlanCount > 0 || tripsPreview.length > 0 || memoryCount > 0;
   const memoryCover = getMemoryCover(recentMemory);
+  const todaySpotlightPhoto = getVisualPreviewUrl(todaySpotlightEvent);
 
   return (
     <>
@@ -286,7 +304,7 @@ const ScrapbookHomePage = ({
           </div>
         )}
 
-        <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           <button
             type="button"
             onClick={() => {
@@ -294,39 +312,142 @@ const ScrapbookHomePage = ({
                 document.getElementById('home-today-chapters')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }
             }}
-            className="rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+            className="group rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
           >
-            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Today</div>
-            <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{todayPlanCount}</div>
-            <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">plans across your day</div>
+            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">☀️ WHAT'S NEXT TODAY?</div>
+            <div className="mt-3 overflow-hidden rounded-[18px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.05]">
+              {todaySpotlightEvent ? (
+                <>
+                  <div
+                    className="h-28 w-full bg-gradient-to-br from-amber-100 via-rose-50 to-sky-100 dark:from-amber-900/30 dark:via-slate-900 dark:to-sky-900/30 bg-cover bg-center"
+                    style={todaySpotlightPhoto ? { backgroundImage: `url(${todaySpotlightPhoto})` } : undefined}
+                  />
+                  <div className="p-3">
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {todaySpotlightEvent.title}
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {formatDisplayTime(todaySpotlightEvent.time)}{todaySpotlightEvent.location ? ` · ${todaySpotlightEvent.location}` : ''}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex min-h-[152px] flex-col items-start justify-between p-4">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white">Your day is wide open ✨</div>
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Nothing is lined up yet, so you can shape the day however you want.
+                    </div>
+                  </div>
+                  <div
+                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold"
+                    style={themeAccentEllieChipButtonStyle}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add something
+                  </div>
+                </div>
+              )}
+            </div>
           </button>
           <button
             type="button"
             onClick={onOpenUpcoming}
-            className="rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+            className="rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
           >
-            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Upcoming</div>
-            <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{upcomingEventCount}</div>
-            <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">events on deck</div>
+            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">📅 COMING UP THIS WEEK</div>
+            {upcomingPreviewEvents.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                {upcomingPreviewEvents.map((event, index) => (
+                  <div
+                    key={event?.id || `upcoming-${index}`}
+                    className="rounded-[16px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.05] px-3 py-2.5"
+                  >
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {`• ${event?.date ? new Date(event.date).toLocaleDateString('en-US', { weekday: 'long' }) : ''}`}
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {event?.title || 'Untitled event'}
+                      {event?.time ? ` · ${formatDisplayTime(event.time)}` : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-3 flex min-h-[152px] flex-col items-start justify-between rounded-[18px] border border-white/50 dark:border-white/10 bg-white/80 p-4 dark:bg-white/[0.05]">
+                <div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white">Nothing planned yet</div>
+                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Your week is open. Add something to look forward to.
+                  </div>
+                </div>
+                <div
+                  className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold"
+                  style={themeAccentEllieChipButtonStyle}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add event
+                </div>
+              </div>
+            )}
           </button>
           <button
             type="button"
             onClick={onOpenTripsTab}
-            className="rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+            className="rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
           >
-            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Trips</div>
-            <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{tripsPreview.length}</div>
-            <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">adventures in motion</div>
+            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">✈️ YOUR NEXT ADVENTURE</div>
+            {tripSpotlight ? (
+              <div className="mt-3 overflow-hidden rounded-[18px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.05]">
+                <div className="relative h-[152px] w-full bg-gradient-to-br from-sky-200 via-cyan-100 to-emerald-100 dark:from-sky-900/40 dark:via-slate-900 dark:to-emerald-900/30">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.45),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.22),transparent_32%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_32%)]" />
+                  <div className="absolute inset-x-0 bottom-0 px-4 py-4">
+                    <div className="text-lg text-gray-900 dark:text-white truncate" style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive' }}>
+                      {tripSpotlight?.weather_location || tripSpotlight?.name || 'Your next destination'}
+                    </div>
+                    <div className="mt-1 text-xs text-gray-700/80 dark:text-gray-300 truncate">
+                      {formatDisplayDate(tripSpotlight.startDateLabel || tripSpotlight.startDate || tripSpotlight.start)} - {formatDisplayDate(tripSpotlight.endDateLabel || tripSpotlight.endDate || tripSpotlight.end)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3 flex min-h-[152px] flex-col items-start justify-between rounded-[18px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-sky-100 via-cyan-50 to-emerald-100 p-4 dark:from-sky-900/30 dark:via-slate-900 dark:to-emerald-900/20">
+                <div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white">Where do you want to go?</div>
+                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Plan a trip and it will show up here as your next adventure.
+                  </div>
+                </div>
+                <div
+                  className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold"
+                  style={themeAccentEllieChipButtonStyle}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Plan trip
+                </div>
+              </div>
+            )}
           </button>
           <button
             type="button"
             onClick={onOpenMemories}
-            className="rounded-[24px] border p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+            className="rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
             style={{ borderColor: themeAccentBorder, background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.82)' }}
           >
-            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Memories</div>
-            <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{memoryCount}</div>
-            <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{memoryPhotoCount} photos preserved</div>
+            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">💭 LATEST MEMORIES</div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {(memoryCollagePhotos.length > 0 ? memoryCollagePhotos : ['', '', '', '']).slice(0, 4).map((url, index) => (
+                <div
+                  key={`memory-collage-${index}`}
+                  className="h-14 rounded-[14px] border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20 bg-cover bg-center"
+                  style={url ? { backgroundImage: `url(${url})` } : undefined}
+                />
+              ))}
+            </div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {memoryCollagePhotos.length > 0 ? 'A little collage from your gallery' : 'Your saved moments will gather here'}
+            </div>
           </button>
         </div>
       </div>

@@ -20096,9 +20096,42 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const homeTodayPlanCount = overviewTodayEvents.length;
   const homeUpcomingEventCount = filteredUpcomingUserTabEvents.length;
   const homeResolvedMemories = Array.isArray(memories) ? memories : [];
+  const homeTodaySpotlightEvent = [...overviewTodayEvents]
+    .sort((a, b) => {
+      const aTime = String(a?.time || '').trim();
+      const bTime = String(b?.time || '').trim();
+      if (!aTime && !bTime) return 0;
+      if (!aTime) return 1;
+      if (!bTime) return -1;
+      return aTime.localeCompare(bTime);
+    })[0] || null;
+  const homeUpcomingPreviewEvents = filteredUpcomingUserTabEvents.slice(0, 3);
+  const homeTripSpotlight = [...homeTripsPreviewCards]
+    .sort((a, b) => {
+      const aStart = String(a?.startDate || '').trim();
+      const bStart = String(b?.startDate || '').trim();
+      if (!aStart && !bStart) return 0;
+      if (!aStart) return 1;
+      if (!bStart) return -1;
+      return aStart.localeCompare(bStart);
+    })[0] || null;
   const homeRecentMemory = [...homeResolvedMemories]
     .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)))[0] || null;
   const homeMemoryPhotoCount = homeResolvedMemories.reduce((total, memory) => total + (memory?.photos?.length || 0), 0);
+  const homeMemoryCollagePhotos = [...homeResolvedMemories]
+    .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)))
+    .flatMap((memory) => {
+      const urls = [];
+      const cover = String(memory?.coverPhoto || '').trim();
+      if (cover) urls.push(cover);
+      (memory?.photos || []).forEach((photo) => {
+        const url = String(photo?.url || photo?.photoUrl || '').trim();
+        if (url) urls.push(url);
+      });
+      return urls;
+    })
+    .filter((url, index, arr) => url && arr.indexOf(url) === index)
+    .slice(0, 4);
   const homeMemoryReadyCount = eligibleMemoryEvents.length;
   const homeMemoryOpportunities = eligibleMemoryEvents.slice(0, 2);
   const homeMomentsThisWeek = (() => {
@@ -24678,7 +24711,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Memories</div>
                 <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {memorySystemView === 'create'
-                    ? (memoryDraftSourceLabel ? `Create memory from ${memoryDraftSourceLabel}` : 'Create memory')
+                    ? (memoryDraftSourceLabel ? `Create a memory from ${memoryDraftSourceLabel}` : 'Create a memory')
                     : 'Your memory gallery'}
                 </div>
               </div>
@@ -27765,6 +27798,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             upcomingEventCount={homeUpcomingEventCount}
             momentsThisWeek={homeMomentsThisWeek}
             onThisDayMemory={homeOnThisDayMemory}
+            todaySpotlightEvent={homeTodaySpotlightEvent}
+            upcomingPreviewEvents={homeUpcomingPreviewEvents}
+            tripSpotlight={homeTripSpotlight}
+            memoryCollagePhotos={homeMemoryCollagePhotos}
             onShowCalendarView={openCalendarTab}
             onAddEvent={openHomeAddEventModal}
             onAddPlan={(index) => {

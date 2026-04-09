@@ -186,7 +186,7 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, darkMode }) =>
                    text-white font-bold text-base hover:shadow-xl transition-all
                    flex items-center justify-center gap-2">
         <Sparkles className="w-6 h-6" />
-        Create New Memory
+        Create a Memory
       </button>
       
       {/* Empty state */}
@@ -284,7 +284,7 @@ const MemoryThumbnail = ({ memory, onClick, darkMode }) => {
 // ============================================================================
 
 const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, darkMode, initialData }) => {
-  const [step, setStep] = useState(1); // 1: basics, 2: photos, 3: people, 4: preview
+  const [step, setStep] = useState(1); // 1: photos, 2: details, 3: people, 4: preview
   const [memoryData, setMemoryData] = useState(() => createEmptyMemoryDraft(initialData || {}));
 
   useEffect(() => {
@@ -324,7 +324,7 @@ const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, dark
         </button>
         
         <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-          Create Memory
+          Create a Memory
         </h2>
         
         <div className="w-16" /> {/* Spacer */}
@@ -353,8 +353,8 @@ const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, dark
           ))}
         </div>
         <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
-          <span>Details</span>
           <span>Photos</span>
+          <span>Details</span>
           <span>People</span>
           <span>Preview</span>
         </div>
@@ -362,18 +362,18 @@ const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, dark
       
       {/* Steps */}
       {step === 1 && (
-        <MemoryBasicsStep
+        <MemoryPhotosStep
           data={memoryData}
           onChange={setMemoryData}
+          onAddPhoto={onAddPhoto}
           darkMode={darkMode}
         />
       )}
       
       {step === 2 && (
-        <MemoryPhotosStep
+        <MemoryBasicsStep
           data={memoryData}
           onChange={setMemoryData}
-          onAddPhoto={onAddPhoto}
           darkMode={darkMode}
         />
       )}
@@ -418,7 +418,7 @@ const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, dark
             className="flex-1 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 
                      text-white font-bold hover:shadow-xl transition-all flex items-center justify-center gap-2">
             <Sparkles className="w-5 h-5" />
-            Create Memory
+            Create a Memory
           </button>
         )}
       </div>
@@ -426,7 +426,7 @@ const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, dark
   );
 };
 
-// Step 1: Basics
+// Step 2: Details
 const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
   const addHighlight = () => {
     onChange({ ...data, highlights: [...data.highlights, ''] });
@@ -444,7 +444,10 @@ const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
   
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Tell us about this memory</h3>
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add the details after</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Give this moment a title, location, and the little details that make it worth keeping.
+      </p>
       
       {/* Title */}
       <div>
@@ -551,7 +554,7 @@ const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
   );
 };
 
-// Step 2: Photos
+// Step 1: Photos
 const MemoryPhotosStep = ({ data, onChange, onAddPhoto, darkMode }) => {
   const fileInputRef = useRef(null);
   
@@ -592,7 +595,10 @@ const MemoryPhotosStep = ({ data, onChange, onAddPhoto, darkMode }) => {
   
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add photos from this day</h3>
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Start with the photos</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Pick the images first, then add the story and details around them.
+      </p>
       
       {/* Upload button */}
       <button
@@ -1273,7 +1279,7 @@ const CreateMemoryPrompt = ({ event, onCreateMemory, onDismiss }) => (
         onClick={onCreateMemory}
         className="flex-1 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 
                  text-white font-semibold hover:shadow-lg transition-all">
-        ✨ Create Memory
+        ✨ Create a Memory
       </button>
       <button
         onClick={onDismiss}
