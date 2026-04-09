@@ -64,13 +64,14 @@ const getVisualPreviewUrl = (item) => String(
   || ''
 ).trim();
 
-const getDaysOfWeek = () => {
+const getDaysOfWeek = (pastDaysCount = 6, futureDaysCount = 0) => {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const today = new Date();
   const startDate = new Date(today);
   startDate.setHours(0, 0, 0, 0);
-  startDate.setDate(today.getDate() - 1);
-  return Array.from({ length: 7 }, (_, index) => {
+  startDate.setDate(today.getDate() - Math.max(0, Number(pastDaysCount || 0)));
+  const total = Math.max(1, Number(pastDaysCount || 0) + Number(futureDaysCount || 0) + 1);
+  return Array.from({ length: total }, (_, index) => {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + index);
     const dateKey = date.toISOString().slice(0, 10);
@@ -123,6 +124,8 @@ const ScrapbookHomePage = ({
   onAddMomentForDate,
   onDeleteMoment,
   onConfirmAction,
+  weekPastDaysCount = 6,
+  weekFutureDaysCount = 0,
   themeAccentHeadingStyle,
   themeAccentEllieChipButtonStyle,
   themeAccentTextStyle,
@@ -162,7 +165,7 @@ const ScrapbookHomePage = ({
         </div>
 
         {/* Moments This Week - Polaroid film strip */}
-        <div className="mt-6 rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-white/95 via-amber-50/40 to-white/90 dark:from-slate-900/80 dark:via-amber-900/10 dark:to-slate-900/75 p-5 shadow-lg">
+        <div className="mt-6 rounded-[28px] border border-black/10 dark:border-white/10 bg-gradient-to-br from-white/95 via-amber-50/40 to-white/90 dark:from-slate-900/80 dark:via-amber-900/10 dark:to-slate-900/75 p-5 shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Camera className="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -174,7 +177,7 @@ const ScrapbookHomePage = ({
           </div>
 
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-            {getDaysOfWeek().map((day) => {
+            {getDaysOfWeek(weekPastDaysCount, weekFutureDaysCount).map((day) => {
               const momentForDay = momentsThisWeek.find(m => {
                 const momentDate = String(m?.date || '').trim().slice(0, 10);
                 return momentDate === day.dateKey;

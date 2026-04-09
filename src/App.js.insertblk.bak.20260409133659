@@ -20156,13 +20156,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     .slice(0, 4);
   const homeMemoryReadyCount = eligibleMemoryEvents.length;
   const homeMemoryOpportunities = eligibleMemoryEvents.slice(0, 2);
-  const HOME_MOMENTS_PAST_DAYS = 6;
-  const HOME_MOMENTS_FUTURE_DAYS = 0;
   const homeMomentsThisWeek = (() => {
     const today = new Date();
-    start.setDate(start.getDate() - HOME_MOMENTS_PAST_DAYS);
-    const total = HOME_MOMENTS_PAST_DAYS + HOME_MOMENTS_FUTURE_DAYS + 1;
-    const visibleDateKeys = Array.from({ length: total }, (_, index) => {
     const start = new Date(today);
     start.setHours(0, 0, 0, 0);
     start.setDate(start.getDate() - 1);
