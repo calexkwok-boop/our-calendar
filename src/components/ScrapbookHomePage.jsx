@@ -195,8 +195,7 @@ const ScrapbookHomePage = ({
                 return momentDate === day.dateKey;
               });
               const handleMomentSlotPress = (event) => {
-                event.preventDefault();
-                event.stopPropagation();
+                if (event?.stopPropagation) event.stopPropagation();
                 if (momentForDay) {
                   onOpenMemory?.(momentForDay);
                   return;
@@ -211,6 +210,9 @@ const ScrapbookHomePage = ({
                 >
                   <button
                     type="button"
+                    onClick={handleMomentSlotPress}
+                    onMouseUp={handleMomentSlotPress}
+                    onTouchEnd={handleMomentSlotPress}
                     onPointerUp={handleMomentSlotPress}
                     className={`relative block w-full rounded-lg overflow-hidden transition-all ${
                       momentForDay
