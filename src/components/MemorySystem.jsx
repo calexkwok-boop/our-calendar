@@ -442,7 +442,7 @@ const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, dark
   };
   
   return (
-    <div className="memory-creator max-w-2xl mx-auto pb-24">
+    <div className="memory-creator w-full pb-6">
       {/* Progress */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
