@@ -20167,7 +20167,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const visibleDateKeys = Array.from({ length: total }, (_, index) => {
       const slotDate = new Date(start);
       slotDate.setDate(start.getDate() + index);
-      return slotDate.toISOString().slice(0, 10);
+      return getDateKey(slotDate);
     });
     const visibleDateKeySet = new Set(visibleDateKeys);
     return [...homeResolvedMemories]
@@ -24476,19 +24476,24 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   function createMemoryRecordShape(memoryData) {
     if (!memoryData) return null;
     const nowIso = new Date().toISOString();
+    const normalizedPhotos = Array.isArray(memoryData?.photos)
+      ? memoryData.photos.map((photo, index) => ({
+        id: String(photo?.id || `photo-${index}`),
+        url: String(photo?.url || '').trim(),
+        caption: String(photo?.caption || '').trim(),
+      })).filter((photo) => photo.url)
+      : [];
+    const requestedCoverPhoto = String(memoryData?.coverPhoto || normalizedPhotos?.[0]?.url || '').trim();
+    const coverPhoto = requestedCoverPhoto && requestedCoverPhoto !== String(normalizedPhotos?.[0]?.url || '').trim()
+      ? requestedCoverPhoto
+      : '';
     return {
       id: String(memoryData?.id || uuidv4()),
       title: String(memoryData?.title || 'Untitled memory').trim(),
       description: String(memoryData?.description || '').trim(),
       highlights: Array.isArray(memoryData?.highlights) ? memoryData.highlights.filter((item) => String(item || '').trim()) : [],
-      photos: Array.isArray(memoryData?.photos)
-        ? memoryData.photos.map((photo, index) => ({
-          id: String(photo?.id || `photo-${index}`),
-          url: String(photo?.url || '').trim(),
-          caption: String(photo?.caption || '').trim(),
-        })).filter((photo) => photo.url)
-        : [],
-      coverPhoto: String(memoryData?.coverPhoto || memoryData?.photos?.[0]?.url || '').trim(),
+      photos: normalizedPhotos,
+      coverPhoto,
       taggedPeople: Array.isArray(memoryData?.taggedPeople) ? memoryData.taggedPeople.map((person, index) => ({
         id: String(person?.id || `person-${index}`),
         name: String(person?.name || '').trim(),

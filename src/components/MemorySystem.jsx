@@ -29,7 +29,7 @@ const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
       try {
-        const maxDimension = 1600;
+        const maxDimension = 1200;
         const width = Number(img.naturalWidth || img.width || 0);
         const height = Number(img.naturalHeight || img.height || 0);
         if (!width || !height) {
@@ -51,7 +51,7 @@ const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
         }
 
         ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-        resolve(canvas.toDataURL('image/jpeg', 0.82));
+        resolve(canvas.toDataURL('image/jpeg', 0.72));
       } catch {
         resolve(original);
       }

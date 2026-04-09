@@ -64,6 +64,14 @@ const getVisualPreviewUrl = (item) => String(
   || ''
 ).trim();
 
+const toLocalDateKey = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const getDaysOfWeek = (pastDaysCount = 6, futureDaysCount = 0) => {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const today = new Date();
@@ -74,8 +82,8 @@ const getDaysOfWeek = (pastDaysCount = 6, futureDaysCount = 0) => {
   return Array.from({ length: total }, (_, index) => {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + index);
-    const dateKey = date.toISOString().slice(0, 10);
-    const todayKey = today.toISOString().slice(0, 10);
+    const dateKey = toLocalDateKey(date);
+    const todayKey = toLocalDateKey(today);
     return {
       label: days[date.getDay()],
       isToday: dateKey === todayKey,
