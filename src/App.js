@@ -24761,7 +24761,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           onClick={(e) => e.stopPropagation()}
         >
           {memorySystemView !== 'viewer' && (
-            <div className="flex items-start justify-between gap-3 border-b border-gray-200 dark:border-white/10 px-5 py-4">
+            <div className={`flex items-start justify-between gap-3 border-b border-gray-200 dark:border-white/10 ${
+              memorySystemView === 'create' ? 'px-6 py-5' : 'px-5 py-4'
+            }`}>
               <div>
                 <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Memories</div>
                 <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -24782,7 +24784,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           <div className={`${memorySystemView === 'viewer'
             ? 'relative flex-1 min-h-0 overflow-hidden bg-black'
             : memorySystemView === 'create'
-              ? 'flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 bg-white dark:bg-slate-950'
+              ? 'flex-1 min-h-0 overflow-y-auto px-6 py-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] sm:pb-6 bg-white dark:bg-slate-950'
               : 'flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 bg-stone-50 dark:bg-slate-950'}`}>
             <MemorySystem
               view={memorySystemView}

@@ -508,7 +508,7 @@ const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, dark
       )}
       
       {/* Navigation */}
-      <div className="sticky bottom-0 z-10 mt-8 -mx-2 px-2 pb-2 pt-3 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-950 dark:via-slate-950/95 dark:to-transparent">
+      <div className="sticky bottom-0 z-10 mt-8 px-0 pb-0 pt-3 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-950 dark:via-slate-950/95 dark:to-transparent">
         <div className={`flex gap-3 ${step === 4 ? 'items-center' : ''}`}>
         {step > 1 && (
           <button
