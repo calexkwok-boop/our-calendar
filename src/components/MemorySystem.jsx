@@ -1072,9 +1072,9 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
   };
   
   return (
-    <div className="memory-viewer fixed inset-0 z-50 bg-black">
+    <div className="memory-viewer fixed inset-0 z-50 overflow-hidden bg-black" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/80 to-transparent">
+      <div className="absolute top-0 left-0 right-0 z-10 px-4 pt-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] pb-4 bg-gradient-to-b from-black/85 to-transparent">
         <div className="flex items-center justify-between">
           <button
             onClick={onClose}
@@ -1133,7 +1133,7 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
             </button>
             
             {/* Dots */}
-            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+            <div className="absolute bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.5rem))] left-1/2 -translate-x-1/2 flex gap-2 z-10">
               {slides.map((_, idx) => (
                 <button
                   key={idx}
@@ -1149,7 +1149,7 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
       </div>
       
       {/* Bottom actions */}
-      <div className="absolute bottom-0 left-0 right-0 px-4 pt-10 pb-4 bg-gradient-to-t from-black/80 to-transparent">
+      <div className="absolute bottom-0 left-0 right-0 px-4 pt-10 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.75rem))] bg-gradient-to-t from-black via-black/90 to-transparent">
         <div className="flex items-center justify-around">
           <ReactionButton
             icon={<Heart className="w-6 h-6" />}
@@ -1188,13 +1188,13 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
 };
 
 const CoverSlide = ({ memory }) => (
-  <div className="w-full h-full relative">
+  <div className="w-full h-full relative pt-[max(4.75rem,calc(env(safe-area-inset-top)+3.75rem))] pb-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))] px-3">
     {memory.coverPhoto ? (
-      <img src={memory.coverPhoto} alt={memory.title} className="w-full h-full object-cover" />
+      <img src={memory.coverPhoto} alt={memory.title} className="w-full h-full object-cover rounded-[28px]" />
     ) : (
-      <div className="w-full h-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500" />
+      <div className="w-full h-full rounded-[28px] bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500" />
     )}
-    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+    <div className="absolute inset-x-3 top-[max(4.75rem,calc(env(safe-area-inset-top)+3.75rem))] bottom-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))] rounded-[28px] bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
     
     <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-6 py-20 sm:px-8">
       <div className="max-w-2xl">
@@ -1239,10 +1239,10 @@ const CoverSlide = ({ memory }) => (
 );
 
 const PhotoSlide = ({ photo }) => (
-  <div className="w-full h-full relative flex items-center justify-center bg-black">
-    <img src={photo.url} alt={photo.caption} className="max-w-full max-h-full object-contain" />
+  <div className="w-full h-full relative flex items-center justify-center bg-black px-3 pt-[max(4.75rem,calc(env(safe-area-inset-top)+3.75rem))] pb-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))]">
+    <img src={photo.url} alt={photo.caption} className="max-w-full max-h-full rounded-[28px] object-contain" />
     {photo.caption && (
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 to-transparent">
+      <div className="absolute left-3 right-3 bottom-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))] rounded-b-[28px] p-6 bg-gradient-to-t from-black/90 to-transparent">
         <p className="text-white text-center">{photo.caption}</p>
       </div>
     )}

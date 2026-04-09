@@ -20138,7 +20138,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const today = new Date();
     const start = new Date(today);
     start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - start.getDay());
+    start.setDate(start.getDate() - 1);
     const end = new Date(start);
     end.setDate(end.getDate() + 7);
     return [...homeResolvedMemories]
