@@ -1211,13 +1211,13 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
 };
 
 const CoverSlide = ({ memory }) => (
-  <div className="w-full h-full relative pt-[max(4.75rem,calc(env(safe-area-inset-top)+3.75rem))] pb-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))] px-3">
+  <div className="w-full h-full relative pt-[max(4rem,calc(env(safe-area-inset-top)+3rem))] pb-[max(5.25rem,calc(env(safe-area-inset-bottom)+4.25rem))] px-2">
     {memory.coverPhoto ? (
       <img src={memory.coverPhoto} alt={memory.title} className="w-full h-full object-cover rounded-[28px]" />
     ) : (
       <div className="w-full h-full rounded-[28px] bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500" />
     )}
-    <div className="absolute inset-x-3 top-[max(4.75rem,calc(env(safe-area-inset-top)+3.75rem))] bottom-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))] rounded-[28px] bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+    <div className="absolute inset-x-2 top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] bottom-[max(5.25rem,calc(env(safe-area-inset-bottom)+4.25rem))] rounded-[28px] bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
     
     <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-6 py-20 sm:px-8">
       <div className="max-w-2xl">
@@ -1262,10 +1262,10 @@ const CoverSlide = ({ memory }) => (
 );
 
 const PhotoSlide = ({ photo }) => (
-  <div className="w-full h-full relative flex items-center justify-center bg-black px-3 pt-[max(4.75rem,calc(env(safe-area-inset-top)+3.75rem))] pb-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))]">
+  <div className="w-full h-full relative flex items-center justify-center bg-black px-2 pt-[max(4rem,calc(env(safe-area-inset-top)+3rem))] pb-[max(5.25rem,calc(env(safe-area-inset-bottom)+4.25rem))]">
     <img src={photo.url} alt={photo.caption} className="max-w-full max-h-full rounded-[28px] object-contain" />
     {photo.caption && (
-      <div className="absolute left-3 right-3 bottom-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))] rounded-b-[28px] p-6 bg-gradient-to-t from-black/90 to-transparent">
+      <div className="absolute left-2 right-2 bottom-[max(5.25rem,calc(env(safe-area-inset-bottom)+4.25rem))] rounded-b-[28px] p-6 bg-gradient-to-t from-black/90 to-transparent">
         <p className="text-white text-center">{photo.caption}</p>
       </div>
     )}
