@@ -24710,11 +24710,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {controlWidgetAddPanelPortal}
     {!activeSubCalendar && showMemorySystem && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[88] bg-black/60 px-0 sm:px-4 pt-[max(1rem,calc(env(safe-area-inset-top)+0.75rem))] sm:pt-4 pb-0 sm:pb-4 flex items-end sm:items-center justify-center"
+        className="fixed inset-0 z-[88] bg-black/60 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
         onClick={closeMemorySystem}
       >
         <div
-          className="relative flex w-full flex-col h-[calc(100dvh-2.75rem-env(safe-area-inset-top))] sm:h-auto sm:max-h-[88vh] sm:max-w-5xl overflow-hidden bg-stone-50 dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10"
+          className="relative flex w-full max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] sm:max-w-5xl flex-col overflow-hidden bg-white dark:bg-slate-950 rounded-t-[28px] rounded-b-none sm:rounded-[28px] shadow-2xl border-t border-transparent dark:border-white/10"
           onClick={(e) => e.stopPropagation()}
         >
           {memorySystemView !== 'viewer' && (
