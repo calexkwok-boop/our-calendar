@@ -51,6 +51,118 @@ const PersonAvatar = ({ person, className = 'w-10 h-10', textClassName = 'text-w
   );
 };
 
+const MemoryPlacesAutocomplete = ({ value, onSelect, placeholder, darkMode = false }) => {
+  const [input, setInput] = useState(value || '');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const serviceRef = useRef(null);
+  const containerRef = useRef(null);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    setInput(value || '');
+  }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
+  const getService = () => {
+    if (serviceRef.current) return serviceRef.current;
+    if (!window.google?.maps?.places) return null;
+    serviceRef.current = new window.google.maps.places.AutocompleteService();
+    return serviceRef.current;
+  };
+
+  const search = (query) => {
+    clearTimeout(debounceRef.current);
+    if (!query || query.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    debounceRef.current = setTimeout(() => {
+      const service = getService();
+      if (!service) return;
+      service.getPlacePredictions({ input: query }, (predictions, status) => {
+        if (predictions && status === 'OK') {
+          setSuggestions(predictions);
+          setShowSuggestions(true);
+        } else {
+          setSuggestions([]);
+          setShowSuggestions(false);
+        }
+      });
+    }, 200);
+  };
+
+  const commitSelection = (nextValue) => {
+    const normalized = String(nextValue || '').trim();
+    setInput(normalized);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    onSelect(normalized);
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        type="text"
+        value={input}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+          setInput(nextValue);
+          search(nextValue);
+        }}
+        onFocus={() => {
+          if (suggestions.length > 0) setShowSuggestions(true);
+        }}
+        onBlur={() => {
+          setTimeout(() => {
+            setShowSuggestions(false);
+            const normalized = input.trim();
+            if (normalized !== String(value || '').trim()) onSelect(normalized);
+          }, 200);
+        }}
+        placeholder={placeholder || 'Home, Park, Restaurant...'}
+        className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none text-base"
+        style={{ fontSize: '16px' }}
+      />
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800" style={{ zIndex: 9999 }}>
+          {suggestions.map((suggestion) => (
+            <button
+              key={suggestion.place_id}
+              type="button"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                commitSelection(suggestion.description);
+              }}
+              className="w-full border-b border-gray-100 px-3 py-2 text-left text-xs hover:bg-purple-50 dark:border-gray-700 dark:hover:bg-purple-900/30 last:border-0"
+            >
+              <span className="mr-1 text-gray-400">📍</span>
+              <span className="font-medium text-gray-800 dark:text-white">{suggestion.structured_formatting?.main_text}</span>
+              {suggestion.structured_formatting?.secondary_text && (
+                <span className="ml-1 text-gray-400">{suggestion.structured_formatting.secondary_text}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ============================================================================
 // MAIN MEMORY SYSTEM COMPONENT
 // ============================================================================
@@ -473,15 +585,11 @@ const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
           Location (optional)
         </label>
-        <input
-          type="text"
+        <MemoryPlacesAutocomplete
           value={data.location}
-          onChange={(e) => onChange({ ...data, location: e.target.value })}
+          onSelect={(nextLocation) => onChange({ ...data, location: nextLocation })}
           placeholder="Home, Park, Restaurant..."
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
-                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                   focus:ring-2 focus:ring-purple-500 outline-none text-base"
-          style={{ fontSize: '16px' }}
+          darkMode={darkMode}
         />
       </div>
       
