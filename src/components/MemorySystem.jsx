@@ -212,7 +212,11 @@ const MemorySystem = ({
   }, [memories, selectedMemory]);
   
   return (
-    <div className="memory-system relative h-full overflow-hidden bg-black">
+    <div
+      className={`memory-system relative h-full ${
+        activeView === 'viewer' ? 'overflow-hidden bg-black' : ''
+      }`}
+    >
       {activeView === 'gallery' && (
         <MemoriesGallery
           memories={memories}
