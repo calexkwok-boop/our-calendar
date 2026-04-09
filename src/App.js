@@ -20022,6 +20022,22 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       }
       return true;
     })
+    .filter((event, index, arr) => {
+      const dateKey = String(event?.date || event?.dateKey || '').trim();
+      const normalizedTitle = normalizeHolidayLikeTitle(event?.title);
+      const holiday = getHolidayForDate(dateKey);
+      const holidayNames = getHolidayNameSet(holiday);
+      const isHolidayLike = normalizedTitle && (
+        holidayNames.has(normalizedTitle)
+        || isLikelyHolidayTitle(normalizedTitle)
+      );
+      if (!isHolidayLike) return true;
+      return arr.findIndex((candidate) => {
+        const candidateDateKey = String(candidate?.date || candidate?.dateKey || '').trim();
+        const candidateTitle = normalizeHolidayLikeTitle(candidate?.title);
+        return candidateDateKey === dateKey && candidateTitle === normalizedTitle;
+      }) === index;
+    })
     .sort((a, b) => {
       const aTs = toDateOnlyTs(a?.date || a?.dateKey || '') || 0;
       const bTs = toDateOnlyTs(b?.date || b?.dateKey || '') || 0;

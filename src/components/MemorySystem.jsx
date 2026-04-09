@@ -1075,11 +1075,12 @@ const CoverSlide = ({ memory }) => (
     )}
     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
     
-    <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-8">
-      <h1 className="text-4xl font-bold mb-4">{memory.title}</h1>
-      <div className="flex items-center gap-4 text-lg mb-2">
+    <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-6 py-20 sm:px-8">
+      <div className="max-w-2xl">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-3 leading-tight">{memory.title}</h1>
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm sm:text-base mb-2">
         <div className="flex items-center gap-2">
-          <Calendar className="w-5 h-5" />
+          <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
           {new Date(memory.date).toLocaleDateString('en-US', { 
             month: 'long', 
             day: 'numeric', 
@@ -1090,27 +1091,28 @@ const CoverSlide = ({ memory }) => (
           <>
             <span>•</span>
             <div className="flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
+              <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
               {memory.location}
             </div>
           </>
         )}
       </div>
       {memory.taggedPeople?.length > 0 && (
-        <div className="flex items-center gap-2 mt-4">
+        <div className="flex items-center justify-center gap-2 mt-4">
           {memory.taggedPeople.slice(0, 5).map((person, idx) => (
             <div key={person.id} className="border-2 border-white rounded-full overflow-hidden">
-              <PersonAvatar person={person} className="w-12 h-12" />
+              <PersonAvatar person={person} className="w-10 h-10 sm:w-12 sm:h-12" />
             </div>
           ))}
           {memory.taggedPeople.length > 5 && (
-            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center 
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center 
                           text-white font-bold border-2 border-white">
               +{memory.taggedPeople.length - 5}
             </div>
           )}
         </div>
       )}
+      </div>
     </div>
   </div>
 );
@@ -1127,14 +1129,14 @@ const PhotoSlide = ({ photo }) => (
 );
 
 const HighlightsSlide = ({ highlights, memory }) => (
-  <div className="w-full h-full flex items-center justify-center p-8 bg-gradient-to-br from-purple-900 to-pink-900">
+  <div className="w-full h-full flex items-center justify-center p-6 sm:p-8 bg-gradient-to-br from-purple-900 to-pink-900">
     <div className="max-w-2xl w-full">
-      <h2 className="text-4xl font-bold text-white text-center mb-8">Special Moments</h2>
-      <div className="space-y-6">
+      <h2 className="text-2xl sm:text-4xl font-bold text-white text-center mb-6 sm:mb-8">Special Moments</h2>
+      <div className="space-y-4 sm:space-y-6">
         {highlights.filter(h => h.trim()).map((highlight, idx) => (
-          <div key={idx} className="flex items-start gap-4 bg-white/10 backdrop-blur-sm rounded-2xl p-6">
-            <span className="text-3xl">✨</span>
-            <p className="text-xl text-white flex-1">{highlight}</p>
+          <div key={idx} className="flex items-start gap-3 sm:gap-4 bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-6">
+            <span className="text-2xl sm:text-3xl">✨</span>
+            <p className="text-base sm:text-xl text-white flex-1">{highlight}</p>
           </div>
         ))}
       </div>
@@ -1143,18 +1145,16 @@ const HighlightsSlide = ({ highlights, memory }) => (
 );
 
 const PeopleSlide = ({ people, memory }) => (
-  <div className="w-full h-full flex items-center justify-center p-8 bg-gradient-to-br from-blue-900 to-cyan-900">
+  <div className="w-full h-full flex items-center justify-center p-6 sm:p-8 bg-gradient-to-br from-blue-900 to-cyan-900">
     <div className="max-w-2xl w-full">
-      <h2 className="text-4xl font-bold text-white text-center mb-8">Who Was There</h2>
-      <div className="grid grid-cols-3 gap-6">
+      <h2 className="text-2xl sm:text-4xl font-bold text-white text-center mb-6 sm:mb-8">Who Was There</h2>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
         {people.map(person => (
           <div key={person.id} className="text-center">
-            <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm 
-                          flex items-center justify-center text-white text-3xl font-bold mx-auto mb-3 
-                          border-4 border-white/30">
-              {person.name.charAt(0).toUpperCase()}
+            <div className="mx-auto mb-3 w-fit rounded-full border-4 border-white/30 overflow-hidden">
+              <PersonAvatar person={person} className="w-16 h-16 sm:w-24 sm:h-24" textClassName="text-white text-2xl sm:text-3xl font-bold" fallbackClassName="bg-white/20 backdrop-blur-sm" />
             </div>
-            <p className="text-white font-semibold">{person.name}</p>
+            <p className="text-sm sm:text-base text-white font-semibold">{person.name}</p>
           </div>
         ))}
       </div>
