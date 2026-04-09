@@ -138,42 +138,14 @@ const ScrapbookHomePage = ({
       )}
 
       <div className="rounded-[30px] border border-white/50 dark:border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(255,247,237,0.94),rgba(240,249,255,0.94))] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(30,41,59,0.94),rgba(23,37,84,0.92))] p-4 sm:p-5 shadow-xl">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-2xl">
-            <h2 className="mt-2 text-3xl sm:text-4xl font-semibold leading-tight" style={themeAccentHeadingStyle}>
-              {greeting}, {greetingName} {greetingEmoji}
-            </h2>
-            <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">{todayLabel}</div>
-            <p className="mt-3 max-w-xl text-sm sm:text-[15px] text-gray-600 dark:text-gray-300">
-              Your plans, trips, milestones, and memories all live here like chapters in the same story.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
-            <button
-              onClick={onAddEvent}
-              className="px-3 py-2 rounded-2xl text-sm font-semibold transition-all bg-white/90 dark:bg-white/[0.08] text-gray-900 dark:text-white shadow-[0_8px_20px_rgba(15,23,42,0.06)] dark:shadow-none hover:bg-white dark:hover:bg-white/[0.12]"
-            >
-              <span className="inline-flex items-center gap-2"><Plus className="w-4 h-4" />Add event</span>
-            </button>
-            <button
-              onClick={onOpenMemories}
-              className="px-3 py-2 rounded-2xl text-sm font-semibold transition-all border border-white/50 dark:border-white/10 bg-white/70 dark:bg-white/[0.05] text-gray-800 dark:text-gray-100"
-            >
-              <span className="inline-flex items-center gap-2"><BookOpen className="w-4 h-4" />Memories</span>
-            </button>
-            <button
-              onClick={onOpenJourney}
-              className="px-3 py-2 rounded-2xl text-sm font-semibold transition-all border border-white/50 dark:border-white/10 bg-white/70 dark:bg-white/[0.05] text-gray-800 dark:text-gray-100"
-            >
-              <span className="inline-flex items-center gap-2"><Trophy className="w-4 h-4" />Journey</span>
-            </button>
-            <button
-              onClick={onOpenExplore}
-              className="px-3 py-2 rounded-2xl text-sm font-semibold transition-all border border-white/50 dark:border-white/10 bg-white/70 dark:bg-white/[0.05] text-gray-800 dark:text-gray-100"
-            >
-              <span className="inline-flex items-center gap-2"><Compass className="w-4 h-4" />Explore</span>
-            </button>
-          </div>
+        <div className="max-w-2xl">
+          <h2 className="mt-2 text-3xl sm:text-4xl font-semibold leading-tight" style={themeAccentHeadingStyle}>
+            {greeting}, {greetingName} {greetingEmoji}
+          </h2>
+          <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">{todayLabel}</div>
+          <p className="mt-3 max-w-xl text-sm sm:text-[15px] text-gray-600 dark:text-gray-300">
+            Your plans, trips, milestones, and memories all live here like chapters in the same story.
+          </p>
         </div>
 
         {/* Moments This Week - Polaroid film strip */}
@@ -208,29 +180,41 @@ const ScrapbookHomePage = ({
                   key={day.label}
                   className="flex-shrink-0 w-28 group"
                 >
-                  <button
-                    type="button"
-                    onClick={handleMomentSlotPress}
-                    onMouseUp={handleMomentSlotPress}
-                    onTouchEnd={handleMomentSlotPress}
-                    onPointerUp={handleMomentSlotPress}
+                  <div
                     className={`relative block w-full rounded-lg overflow-hidden transition-all ${
                       momentForDay
-                        ? 'bg-white dark:bg-white/10 shadow-md hover:shadow-xl hover:-translate-y-1 cursor-pointer'
-                        : 'bg-white/60 dark:bg-white/5 border-2 border-dashed border-gray-300/50 dark:border-gray-600/30 hover:bg-white/80 dark:hover:bg-white/[0.08] cursor-pointer'
+                        ? 'bg-white dark:bg-white/10 shadow-md hover:shadow-xl hover:-translate-y-1'
+                        : 'bg-white/60 dark:bg-white/5 border-2 border-dashed border-gray-300/50 dark:border-gray-600/30'
                     }`}
-                    style={{ touchAction: 'manipulation' }}
                   >
                     <div className="aspect-square relative">
                       {momentForDay ? (
-                        <div
-                          className="w-full h-full bg-cover bg-center"
-                          style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
-                        />
+                        <button
+                          type="button"
+                          onClick={handleMomentSlotPress}
+                          onMouseUp={handleMomentSlotPress}
+                          onTouchEnd={handleMomentSlotPress}
+                          onPointerUp={handleMomentSlotPress}
+                          className="block w-full h-full cursor-pointer"
+                          style={{ touchAction: 'manipulation' }}
+                        >
+                          <div
+                            className="w-full h-full bg-cover bg-center"
+                            style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
+                          />
+                        </button>
                       ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-600">
+                        <button
+                          type="button"
+                          onClick={handleMomentSlotPress}
+                          onMouseUp={handleMomentSlotPress}
+                          onTouchEnd={handleMomentSlotPress}
+                          onPointerUp={handleMomentSlotPress}
+                          className="flex w-full h-full items-center justify-center text-gray-400 transition-colors hover:bg-white/50 dark:text-gray-600 dark:hover:bg-white/5 cursor-pointer"
+                          style={{ touchAction: 'manipulation' }}
+                        >
                           <Plus className="w-6 h-6" />
-                        </div>
+                        </button>
                       )}
                     </div>
 
@@ -247,7 +231,7 @@ const ScrapbookHomePage = ({
                         {day.isToday ? 'Today' : day.label}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 </div>
               );
             })}
