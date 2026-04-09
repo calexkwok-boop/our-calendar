@@ -380,12 +380,13 @@ const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, dark
       
       {/* Navigation */}
       <div className="sticky bottom-0 z-10 mt-8 -mx-2 px-2 pb-2 pt-3 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-950 dark:via-slate-950/95 dark:to-transparent">
-        <div className="flex gap-3">
+        <div className={`flex gap-3 ${step === 4 ? 'items-center' : ''}`}>
         {step > 1 && (
           <button
             onClick={handleBack}
-            className="flex-1 py-3 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 
-                     font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
+            className={`${step === 4 ? 'w-28 shrink-0' : 'flex-1'} py-3 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 
+                     font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all`}
+          >
             Back
           </button>
         )}
@@ -400,7 +401,7 @@ const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, dark
         ) : (
           <button
             onClick={handleCreate}
-            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 
+            className="flex-1 min-w-0 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 
                      text-white font-bold hover:shadow-xl transition-all flex items-center justify-center gap-2">
             <Sparkles className="w-5 h-5" />
             Create a Memory
@@ -586,20 +587,46 @@ const MemoryPhotosStep = ({ data, onChange, onAddPhoto, darkMode }) => {
         Pick the images first, then add the story and details around them.
       </p>
       
-      {/* Upload button */}
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        className="w-full py-6 rounded-2xl border-2 border-dashed border-purple-300 dark:border-purple-700 
-                 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 
-                 transition-all flex flex-col items-center justify-center gap-2">
-        <Camera className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-        <span className="font-semibold text-purple-700 dark:text-purple-300">
-          Add Photos
-        </span>
-        <span className="text-sm text-purple-600 dark:text-purple-400">
-          Tap to select from your device
-        </span>
-      </button>
+      {/* Upload / cover area */}
+      {data.photos.length > 0 ? (
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="relative block w-full overflow-hidden rounded-2xl border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 text-left transition-all hover:shadow-lg"
+        >
+          <div
+            className="h-56 w-full bg-cover bg-center"
+            style={{ backgroundImage: `url(${data.coverPhoto || data.photos?.[0]?.url || ''})` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-white">
+                {data.photos.length} photo{data.photos.length !== 1 ? 's' : ''} added
+              </div>
+              <div className="mt-1 text-xs text-white/80">
+                Tap here to add more photos
+              </div>
+            </div>
+            <div className="rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-purple-700 shadow-sm">
+              Add more
+            </div>
+          </div>
+        </button>
+      ) : (
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full py-6 rounded-2xl border-2 border-dashed border-purple-300 dark:border-purple-700 
+                   bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 
+                   transition-all flex flex-col items-center justify-center gap-2">
+          <Camera className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+          <span className="font-semibold text-purple-700 dark:text-purple-300">
+            Add Photos
+          </span>
+          <span className="text-sm text-purple-600 dark:text-purple-400">
+            Tap to select from your device
+          </span>
+        </button>
+      )}
       
       <input
         ref={fileInputRef}
@@ -613,12 +640,6 @@ const MemoryPhotosStep = ({ data, onChange, onAddPhoto, darkMode }) => {
       {/* Photo grid */}
       {data.photos.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {data.photos.length} photo{data.photos.length !== 1 ? 's' : ''} added
-            </p>
-          </div>
-          
           <div className="grid grid-cols-2 gap-3">
             {data.photos.map((photo, index) => (
               <div key={photo.id} className="relative group">
