@@ -23759,16 +23759,16 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     typeof document !== 'undefined'
       ? createPortal(
       <div
-        className="fixed inset-0 z-[85] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[85] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={() => {
           if (journeyRunSession?.status !== 'active') closeJourneyRunTrackerModal();
         }}
-        style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+        style={{ minHeight: '100dvh' }}
       >
         <div
-          className="relative overflow-hidden bg-white dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10 p-5 w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
+          className="relative w-full sm:w-[32rem] max-h-[min(88dvh,52rem)] overflow-y-auto overflow-hidden rounded-[28px] border border-white/40 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-950"
           onClick={(e) => e.stopPropagation()}
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px 32px 0 0)' }}
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
         >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -23918,18 +23918,18 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const renderJourneyWorkoutTrackerModal = () => (
     typeof document !== 'undefined'
       ? createPortal(
-      <div
-        className="fixed inset-0 z-[85] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
-        onClick={() => {
-          if (journeyWorkoutSession?.status !== 'active') closeJourneyWorkoutTrackerModal();
-        }}
-        style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
-      >
         <div
-          className="relative overflow-hidden bg-white dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10 p-5 w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
-          onClick={(e) => e.stopPropagation()}
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px 32px 0 0)' }}
+          className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[85] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+          onClick={() => {
+            if (journeyWorkoutSession?.status !== 'active') closeJourneyWorkoutTrackerModal();
+          }}
+          style={{ minHeight: '100dvh' }}
         >
+          <div
+            className="relative w-full sm:w-[32rem] max-h-[min(88dvh,52rem)] overflow-y-auto overflow-hidden rounded-[28px] border border-white/40 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-950"
+            onClick={(e) => e.stopPropagation()}
+            style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+          >
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Workout</div>
@@ -24086,14 +24086,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       typeof document !== 'undefined'
         ? createPortal(
         <div
-          className="fixed inset-0 z-[85] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+          className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[85] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
           onClick={closeJourneyWeightTrackerModal}
-          style={{ backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+          style={{ minHeight: '100dvh' }}
         >
           <div
-            className="relative overflow-hidden bg-white dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10 p-5 w-full sm:w-[32rem] max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto"
+            className="relative w-full sm:w-[32rem] max-h-[min(88dvh,52rem)] overflow-y-auto overflow-hidden rounded-[28px] border border-white/40 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-950"
             onClick={(e) => e.stopPropagation()}
-            style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', clipPath: 'inset(0 round 32px 32px 0 0)' }}
+            style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
           >
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -24751,7 +24751,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         onClick={closeMemorySystem}
       >
         <div
-          className="relative flex w-full max-w-5xl max-h-[min(88dvh,52rem)] flex-col overflow-hidden bg-white dark:bg-slate-950 rounded-[28px] shadow-2xl border border-white/40 dark:border-white/10"
+          className={`relative flex w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-white/40 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950 ${
+            memorySystemView === 'viewer'
+              ? 'h-[min(88dvh,52rem)]'
+              : 'max-h-[min(88dvh,52rem)]'
+          }`}
           onClick={(e) => e.stopPropagation()}
         >
           {memorySystemView !== 'viewer' && (
@@ -27356,37 +27360,46 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             if (debt.balance === 0) debtIdx += 1;
           }
           return (
-            <ExpenseTrackerPanel
-              title="Expense Tracker"
-              subtitle="Track and split shared costs for this layer"
-              onClose={() => setShowExpenseTrackerPanel(false)}
-              darkMode={darkMode}
-              expenseDraft={newLayerExpense}
-              setExpenseDraft={setNewLayerExpense}
-              addExpense={addLayerExpense}
-              totalCents={totalCents}
-              expenses={layerExpenses}
-              deleteExpense={deleteLayerExpense}
-              participants={participants}
-              balances={balances}
-              error={expenseTrackerError}
-              settlements={settlements}
-              getVenmoHandle={getVenmoHandleForIdentity}
-              getCashAppHandle={getCashAppHandleForIdentity}
-              onOpenVenmoPayment={openVenmoPayment}
-              onOpenCashAppPayment={openCashAppPayment}
-              settlementNoteContext="this calendar layer"
-            />
+            <div
+              className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+              onClick={() => setShowExpenseTrackerPanel(false)}
+            >
+              <div
+                className="w-full max-w-4xl max-h-[min(88dvh,52rem)] overflow-y-auto rounded-[28px] border border-white/40 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExpenseTrackerPanel
+                  title="Expense Tracker"
+                  subtitle="Track and split shared costs for this layer"
+                  onClose={() => setShowExpenseTrackerPanel(false)}
+                  darkMode={darkMode}
+                  expenseDraft={newLayerExpense}
+                  setExpenseDraft={setNewLayerExpense}
+                  addExpense={addLayerExpense}
+                  totalCents={totalCents}
+                  expenses={layerExpenses}
+                  deleteExpense={deleteLayerExpense}
+                  participants={participants}
+                  balances={balances}
+                  error={expenseTrackerError}
+                  settlements={settlements}
+                  getVenmoHandle={getVenmoHandleForIdentity}
+                  getCashAppHandle={getCashAppHandleForIdentity}
+                  onOpenVenmoPayment={openVenmoPayment}
+                  onOpenCashAppPayment={openCashAppPayment}
+                  settlementNoteContext="this calendar layer"
+                />
+              </div>
+            </div>
           );
         })()}
 
         {showGauntletPanel && (
           <div
-            className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
-            style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
+            className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
           >
             <div
-              className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
+              className="w-full max-w-3xl max-h-[min(88dvh,52rem)] overflow-y-auto overscroll-contain rounded-[28px]"
               style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
                   onClick={(e) => e.stopPropagation()}
   >
@@ -27433,8 +27446,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
 )} {showRoundRobinPanel && (
   <div
-    className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
-    style={{ minHeight: '100dvh', paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))', touchAction: 'none', overscrollBehavior: 'none' }}
+    className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+    style={{ minHeight: '100dvh', touchAction: 'none', overscrollBehavior: 'none' }}
     onClick={() => setShowRoundRobinPanel(false)}
     onKeyDown={(e) => {
       if (e.key === 'Escape') setShowRoundRobinPanel(false);
@@ -27444,7 +27457,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     tabIndex={-1}
   >
     <div
-      className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
+      className="w-full max-w-3xl max-h-[min(88dvh,52rem)] overflow-y-auto overscroll-contain rounded-[28px]"
       style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
       data-round-robin-scroll="true"
           onClick={(e) => e.stopPropagation()}
@@ -27486,8 +27499,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   </div>
 )} {showScramblePanel && (
   <div
-    className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-4 overflow-hidden flex items-stretch sm:items-center justify-center"
-    style={{ paddingTop: 'max(2.75rem, calc(env(safe-area-inset-top) + 1rem))' }}
+    className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
     onClick={() => setShowScramblePanel(false)}
     onKeyDown={(e) => {
       if (e.key === 'Escape') setShowScramblePanel(false);
@@ -27497,7 +27509,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     tabIndex={-1}
   >
     <div
-      className="w-full h-full max-h-[calc(100vh-2.75rem)] sm:h-auto sm:max-w-3xl sm:max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain"
+      className="w-full max-w-3xl max-h-[min(88dvh,52rem)] overflow-y-auto overscroll-contain rounded-[28px]"
       style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
           onClick={(e) => e.stopPropagation()}
   >
@@ -29848,33 +29860,31 @@ transform: translateY(0);
           </div>
           )}
 
+          <input
+            ref={scanReminderInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleScanReminder(file);
+              e.target.value = '';
+            }}
+          />
+          <input
+            ref={scanReminderUploadInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleScanReminder(file);
+              e.target.value = '';
+            }}
+          />
       </div>
     </div>
-
-    <input
-      ref={scanReminderInputRef}
-      type="file"
-      accept="image/*"
-      capture="environment"
-      className="hidden"
-      onChange={(e) => {
-        const file = e.target.files?.[0];
-        if (file) handleScanReminder(file);
-        e.target.value = '';
-      }}
-    />
-    <input
-      ref={scanReminderUploadInputRef}
-      type="file"
-      accept="image/*"
-      className="hidden"
-      onChange={(e) => {
-        const file = e.target.files?.[0];
-        if (file) handleScanReminder(file);
-        e.target.value = '';
-      }}
-    />
-
     {/* -- Create Sub-Calendar Modal -- */}
     {!activeSubCalendar && (
       <div
@@ -33961,29 +33971,25 @@ transform: translateY(0);
     )}
     {!activeSubCalendar && showJourneyScreen && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[82] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeJourneyTab}
         style={{
           touchAction: 'none',
           overscrollBehavior: 'none',
-          backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined,
           minHeight: '100dvh',
         }}
       >
         <div
-          className="relative overflow-hidden bg-white dark:bg-slate-950 rounded-t-[28px] rounded-b-none sm:rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          className="relative w-full max-w-2xl max-h-[min(88dvh,52rem)] overflow-y-auto overflow-hidden rounded-[28px] border border-white/40 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-950"
           onClick={(e) => e.stopPropagation()}
           style={{
             touchAction: 'pan-y',
             overscrollBehaviorY: 'contain',
             WebkitOverflowScrolling: 'touch',
             backgroundClip: 'padding-box',
-            clipPath: 'inset(0 round 28px 28px 0 0)',
             boxShadow: darkMode
               ? '0 24px 60px rgba(2, 6, 23, 0.62)'
               : undefined,
-            borderBottom: darkMode ? '1px solid rgb(2, 6, 23)' : undefined,
-            marginBottom: darkMode ? '-1px' : undefined,
           }}
         >
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
@@ -34355,12 +34361,12 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyEntryModal && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[84] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[84] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeJourneyEntryModal}
-        style={{ touchAction: 'none', overscrollBehavior: 'none', backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+        style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
       >
         <div
-          className="w-full sm:w-[26rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          className="w-full sm:w-[26rem] max-h-[min(88dvh,52rem)] overflow-y-auto rounded-[28px] border border-white/40 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-950"
           onClick={(e) => e.stopPropagation()}
           style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
         >
@@ -34400,12 +34406,12 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyGoalModal && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[84] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[84] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeJourneyGoalModal}
-        style={{ touchAction: 'none', overscrollBehavior: 'none' }}
+        style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
       >
         <div
-          className="w-full sm:w-[28rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          className="w-full sm:w-[28rem] max-h-[min(88dvh,52rem)] overflow-y-auto rounded-[28px] border border-white/40 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-950"
           onClick={(e) => e.stopPropagation()}
           style={{
             touchAction: 'pan-y',
@@ -34451,12 +34457,12 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyGoalCreatedPrompt && createdJourneyGoal && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[84] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[84] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeJourneyGoalCreatedPrompt}
-        style={{ touchAction: 'none', overscrollBehavior: 'none', backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+        style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
       >
         <div
-          className="w-full sm:w-[26rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          className="w-full sm:w-[26rem] max-h-[min(88dvh,52rem)] overflow-y-auto rounded-[28px] border border-white/40 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-950"
           onClick={(e) => e.stopPropagation()}
           style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
         >
@@ -34505,12 +34511,12 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[84] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[84] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeJourneyDeleteGoalPrompt}
-        style={{ touchAction: 'none', overscrollBehavior: 'none', backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+        style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
       >
         <div
-          className="w-full sm:w-[26rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          className="w-full sm:w-[26rem] max-h-[min(88dvh,52rem)] overflow-y-auto rounded-[28px] border border-white/40 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-950"
           onClick={(e) => e.stopPropagation()}
           style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
         >
@@ -34545,12 +34551,12 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyLogModal && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[84] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[84] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeJourneyLogModal}
-        style={{ touchAction: 'none', overscrollBehavior: 'none', backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+        style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
       >
         <div
-          className="w-full sm:w-[28rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          className="w-full sm:w-[28rem] max-h-[min(88dvh,52rem)] overflow-y-auto rounded-[28px] border border-white/40 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-950"
           onClick={(e) => e.stopPropagation()}
           style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
         >
@@ -34727,12 +34733,12 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyNoteModal && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[84] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[84] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={() => setShowJourneyNoteModal(false)}
-        style={{ touchAction: 'none', overscrollBehavior: 'none', backgroundColor: darkMode ? 'rgba(2, 6, 23, 0.68)' : undefined }}
+        style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
       >
         <div
-          className="w-full sm:w-[28rem] rounded-t-[28px] rounded-b-none sm:rounded-[28px] bg-white dark:bg-slate-950 shadow-2xl p-5 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] overflow-y-auto border-t border-transparent dark:border-white/10"
+          className="w-full sm:w-[28rem] max-h-[min(88dvh,52rem)] overflow-y-auto rounded-[28px] border border-white/40 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-950"
           onClick={(e) => e.stopPropagation()}
           style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
         >

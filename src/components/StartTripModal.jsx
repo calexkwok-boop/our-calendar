@@ -174,11 +174,11 @@ const StartTripModal = ({
   const activePickerLabel = activePicker === 'start' ? 'Choose start date' : 'Choose end date';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(env(safe-area-inset-top),0.75rem)] sm:pt-4 pb-0 sm:pb-4">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${darkMode ? 'dark' : ''}`}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       <div
-        className="relative w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100vh-2rem)] rounded-t-3xl rounded-b-none sm:rounded-3xl shadow-2xl overflow-hidden border border-white/40 dark:border-white/10 flex flex-col"
+        className="relative w-full max-w-md max-h-[min(88dvh,44rem)] rounded-[28px] shadow-2xl overflow-hidden border border-white/40 dark:border-white/10 flex flex-col"
         style={{
           borderColor: themeAccentBorder,
           background: darkMode ? 'rgba(15, 23, 42, 0.98)' : '#ffffff',
