@@ -412,7 +412,7 @@ const MemoryThumbnail = ({ memory, onClick, darkMode }) => {
 // MEMORY CREATOR
 // ============================================================================
 
-const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, darkMode, initialData }) => {
+export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, darkMode, initialData }) => {
   const [step, setStep] = useState(1); // 1: photos, 2: details, 3: people, 4: preview
   const [memoryData, setMemoryData] = useState(() => createEmptyMemoryDraft(initialData || {}));
 
