@@ -24747,11 +24747,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {homeAddEventModal}
     {!activeSubCalendar && showMemorySystem && renderJourneyPortal((
       <div
-        className="fixed inset-0 z-[88] bg-black/60 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[88] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeMemorySystem}
       >
         <div
-          className="relative flex w-full h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:h-auto sm:max-h-[90vh] sm:max-w-5xl flex-col overflow-hidden bg-white dark:bg-slate-950 rounded-t-[28px] rounded-b-none sm:rounded-[28px] shadow-2xl border-t border-transparent dark:border-white/10"
+          className="relative flex w-full max-w-5xl max-h-[min(88dvh,52rem)] flex-col overflow-hidden bg-white dark:bg-slate-950 rounded-[28px] shadow-2xl border border-white/40 dark:border-white/10"
           onClick={(e) => e.stopPropagation()}
         >
           {memorySystemView !== 'viewer' && (

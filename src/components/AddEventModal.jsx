@@ -149,9 +149,6 @@ const AddEventModal = ({
               <h2 className="text-3xl font-bold tracking-tight" style={themeAccentHeadingStyle}>
                 + Add Event
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                When, where, and what you're doing
-              </p>
             </div>
             <button
               onClick={onClose}
