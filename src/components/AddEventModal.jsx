@@ -122,11 +122,11 @@ const AddEventModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(2rem,calc(env(safe-area-inset-top)+1.5rem))] sm:pt-4 pb-0 sm:pb-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
         <div
-          className="relative w-full max-w-lg max-h-[calc(100dvh-env(safe-area-inset-top))] sm:max-h-[calc(100vh-2rem)] rounded-t-3xl rounded-b-none sm:rounded-3xl shadow-2xl overflow-hidden border-t border-transparent dark:border-white/10 flex flex-col bg-white dark:bg-slate-950"
+          className="relative w-full max-w-lg max-h-[calc(100dvh-env(safe-area-inset-top)-2rem)] sm:max-h-[calc(100vh-2rem)] rounded-t-3xl rounded-b-none sm:rounded-3xl shadow-2xl overflow-hidden border-t border-transparent dark:border-white/10 flex flex-col bg-white dark:bg-slate-950"
           style={{
             borderColor: themeAccentBorder,
             backgroundColor: darkMode ? 'rgb(15 23 42)' : '#ffffff',
