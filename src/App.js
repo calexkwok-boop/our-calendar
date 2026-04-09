@@ -24842,7 +24842,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {controlWidgetAddPanelPortal}
     {homeAddEventModal}
     {!activeSubCalendar && showMemorySystem && renderJourneyPortal((
-      <div className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[88] flex flex-col overflow-hidden bg-white dark:bg-slate-950`}>
+      <div className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[88] relative flex flex-col overflow-hidden ${
+        memorySystemView === 'viewer' ? 'bg-black' : 'bg-white dark:bg-slate-950'
+      }`}>
         {memorySystemView !== 'viewer' && (
           <div className="flex items-start justify-between gap-3 border-b border-gray-200 bg-white px-5 pb-4 pt-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] dark:border-white/10 dark:bg-slate-950 sm:px-6">
             <div>
@@ -24900,6 +24902,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             />
           </div>
         )}
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-x-0 bottom-0 h-[max(1rem,env(safe-area-inset-bottom))] ${
+            memorySystemView === 'viewer' ? 'bg-black' : 'bg-white dark:bg-slate-950'
+          }`}
+        />
       </div>
     ))}
     {false && !activeSubCalendar && showMemorySystem && renderJourneyPortal((
