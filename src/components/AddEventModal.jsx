@@ -162,7 +162,7 @@ const AddEventModal = ({
         </div>
 
         <div
-          className="flex-1 min-h-0 p-6 space-y-5 overflow-y-auto"
+          className="flex-1 min-h-0 px-6 pt-6 space-y-5 overflow-y-auto"
           style={{
             WebkitOverflowScrolling: 'touch',
             overscrollBehaviorY: 'contain',
@@ -394,7 +394,7 @@ const AddEventModal = ({
           </div>
         </div>
 
-        <div className="p-6 pt-4 flex gap-3 bg-transparent">
+        <div className="px-6 pt-4 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex gap-3 bg-transparent">
           <button
             onClick={validateAndSubmit}
             className="flex-1 px-5 py-3.5 rounded-xl text-white font-semibold transition-all duration-200 hover:shadow-lg active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
