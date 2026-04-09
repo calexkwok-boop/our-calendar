@@ -15,9 +15,24 @@ import {
 
 const formatDisplayDate = (value) => {
   if (!value) return '';
-  const date = new Date(value);
+  const stringValue = String(value).trim();
+  const dateMatch = stringValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = dateMatch
+    ? new Date(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3]))
+    : new Date(stringValue);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const formatDisplayWeekday = (value) => {
+  if (!value) return '';
+  const stringValue = String(value).trim();
+  const dateMatch = stringValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = dateMatch
+    ? new Date(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3]))
+    : new Date(stringValue);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { weekday: 'long' });
 };
 
 const formatDisplayTime = (value) => {
@@ -337,7 +352,7 @@ const ScrapbookHomePage = ({
                     className="rounded-[16px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.05] px-3 py-2.5"
                   >
                     <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                      {`• ${event?.date ? new Date(event.date).toLocaleDateString('en-US', { weekday: 'long' }) : ''}`}
+                      {`• ${formatDisplayWeekday(event?.date)}`}
                     </div>
                     <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">
                       {event?.title || 'Untitled event'}
