@@ -124,6 +124,7 @@ const ScrapbookHomePage = ({
   onCaptureQuickMoment,
   onAddMomentForDate,
   onDeleteMoment,
+  onConfirmAction,
   themeAccentHeadingStyle,
   themeAccentEllieChipButtonStyle,
   themeAccentTextStyle,
@@ -219,11 +220,27 @@ const ScrapbookHomePage = ({
                             <button
                               type="button"
                               aria-label="Delete photo"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 if (e?.stopPropagation) e.stopPropagation();
-                                const ok = window.confirm('Remove this moment from your week? This will delete the saved memory.');
+                                let ok = true;
+                                if (typeof onConfirmAction === 'function') {
+                                  const title = 'Remove this moment from your week?';
+                                  const lines = [
+                                    String(momentForDay?.title || '').trim() || undefined,
+                                    formatDisplayDate(momentForDay?.date),
+                                  ].filter(Boolean);
+                                  ok = await onConfirmAction(title, {
+                                    heading: 'Delete moment',
+                                    lines,
+                                    confirmLabel: 'Delete',
+                                    cancelLabel: 'Cancel',
+                                    tone: 'warning',
+                                  });
+                                } else if (typeof window !== 'undefined' && window.confirm) {
+                                  ok = window.confirm('Remove this moment from your week? This will delete the saved memory.');
+                                }
                                 if (!ok) return;
-                                onDeleteMoment(momentForDay);
+                                onDeleteMoment?.(momentForDay);
                               }}
                               className="absolute top-1.5 right-1.5 z-10 rounded-full bg-white/90 hover:bg-red-50 border border-black/10 shadow-sm p-1.5 transition-colors"
                             >

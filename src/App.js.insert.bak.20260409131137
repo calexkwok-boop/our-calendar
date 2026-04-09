@@ -27935,7 +27935,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onDeleteMoment={(moment) => {
               try { deleteMemoryRecord(moment?.id); } catch {}
             }}
-            onConfirmAction={showAppConfirm}
             themeAccentButtonStyle={themeAccentButtonStyle}
             themeAccentHeadingStyle={themeAccentHeadingStyle}
             themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
