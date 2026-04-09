@@ -124,7 +124,7 @@ const AddEventModal = ({
 
   const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4 bg-black/60 backdrop-blur-sm"
+      className={`${darkMode ? 'dark' : ''} fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4 bg-black/60 backdrop-blur-sm`}
     >
       <div className="absolute inset-0" onClick={onClose} />
 
