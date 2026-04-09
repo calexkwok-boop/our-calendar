@@ -22398,26 +22398,24 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     );
   }
 
-  if (showHomeAddEventModal) {
-    return (
-      <AddEventModal
-        isOpen={showHomeAddEventModal}
-        onClose={() => {
-          setShowHomeAddEventModal(false);
-          resetHomeAddEventForm();
-        }}
-        formData={homeAddEventForm}
-        setFormData={setHomeAddEventForm}
-        onSubmit={handleSubmitHomeAddEvent}
-        PlacesAutocomplete={PlacesAutocomplete}
-        darkMode={darkMode}
-        themeAccentButtonStyle={themeAccentButtonStyle}
-        themeAccentHeadingStyle={themeAccentHeadingStyle}
-        themeAccentBorder={themeAccentBorder}
-        themeAccentSoftButtonStyle={themeAccentSoftButtonStyle}
-      />
-    );
-  }
+  const homeAddEventModal = showHomeAddEventModal ? (
+    <AddEventModal
+      isOpen={showHomeAddEventModal}
+      onClose={() => {
+        setShowHomeAddEventModal(false);
+        resetHomeAddEventForm();
+      }}
+      formData={homeAddEventForm}
+      setFormData={setHomeAddEventForm}
+      onSubmit={handleSubmitHomeAddEvent}
+      PlacesAutocomplete={PlacesAutocomplete}
+      darkMode={darkMode}
+      themeAccentButtonStyle={themeAccentButtonStyle}
+      themeAccentHeadingStyle={themeAccentHeadingStyle}
+      themeAccentBorder={themeAccentBorder}
+      themeAccentSoftButtonStyle={themeAccentSoftButtonStyle}
+    />
+  ) : null;
 
   if (showUserSetup) {
     return (
@@ -24746,6 +24744,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     <>
     <style>{shakeStyle}</style>
     {controlWidgetAddPanelPortal}
+    {homeAddEventModal}
     {!activeSubCalendar && showMemorySystem && renderJourneyPortal((
       <div
         className="fixed inset-0 z-[88] bg-black/60 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
