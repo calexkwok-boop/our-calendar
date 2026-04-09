@@ -24714,7 +24714,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         onClick={closeMemorySystem}
       >
         <div
-          className="relative w-full h-[calc(100dvh-2.75rem-env(safe-area-inset-top))] sm:h-auto sm:max-h-[88vh] sm:max-w-5xl overflow-hidden bg-stone-50 dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10"
+          className="relative flex w-full flex-col h-[calc(100dvh-2.75rem-env(safe-area-inset-top))] sm:h-auto sm:max-h-[88vh] sm:max-w-5xl overflow-hidden bg-stone-50 dark:bg-slate-950 rounded-t-[32px] rounded-b-none sm:rounded-[32px] shadow-2xl border-t border-transparent dark:border-white/10"
           onClick={(e) => e.stopPropagation()}
         >
           {memorySystemView !== 'viewer' && (
@@ -24736,7 +24736,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </button>
             </div>
           )}
-          <div className={`${memorySystemView === 'viewer' ? 'h-full overflow-y-auto bg-black' : 'h-[calc(100%-4.5rem)] sm:h-auto sm:max-h-[calc(88vh-4.5rem)] overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 bg-stone-50 dark:bg-slate-950'}`}>
+          <div className={`${memorySystemView === 'viewer' ? 'flex-1 min-h-0 overflow-y-auto bg-black' : 'flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 bg-stone-50 dark:bg-slate-950'}`}>
             <MemorySystem
               view={memorySystemView}
               memories={memorySystemMemories}
