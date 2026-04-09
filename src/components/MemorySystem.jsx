@@ -214,8 +214,8 @@ const MemorySystem = ({
   
   return (
     <div
-      className={`memory-system relative h-full ${
-        activeView === 'viewer' ? 'overflow-hidden bg-black' : ''
+      className={`memory-system relative ${
+        activeView === 'viewer' ? 'h-full overflow-hidden bg-black' : 'w-full'
       }`}
     >
       {activeView === 'gallery' && (
@@ -1449,7 +1449,6 @@ const CreateMemoryPrompt = ({ event, onCreateMemory, onDismiss }) => (
 export default MemorySystem;
 export {
   MemoriesGallery,
-  MemoryCreator,
   MemoryViewer,
   CreateMemoryPrompt,
   MemoryThumbnail,
