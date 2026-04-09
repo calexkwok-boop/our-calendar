@@ -122,14 +122,13 @@ const AddEventModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(env(safe-area-inset-top),0.75rem)] sm:pt-4 pb-0 sm:pb-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       <div
-        className="relative w-full max-w-lg max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[calc(100vh-2rem)] rounded-t-3xl rounded-b-none sm:rounded-3xl shadow-2xl overflow-hidden border-t border-transparent dark:border-white/10 flex flex-col"
+        className="relative w-full min-h-[72dvh] sm:min-h-0 max-w-lg max-h-[calc(100dvh-env(safe-area-inset-top))] sm:max-h-[calc(100vh-2rem)] rounded-t-3xl rounded-b-none sm:rounded-3xl shadow-2xl overflow-hidden border-t border-transparent dark:border-white/10 flex flex-col bg-white dark:bg-slate-950"
         style={{
           borderColor: themeAccentBorder,
-          background: darkMode ? 'rgba(15, 23, 42, 0.98)' : '#ffffff',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -162,7 +161,7 @@ const AddEventModal = ({
         </div>
 
         <div
-          className="flex-1 min-h-0 px-6 pt-6 space-y-5 overflow-y-auto"
+          className="flex-1 min-h-0 px-6 pt-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] space-y-5 overflow-y-auto"
           style={{
             WebkitOverflowScrolling: 'touch',
             overscrollBehaviorY: 'contain',
@@ -394,7 +393,7 @@ const AddEventModal = ({
           </div>
         </div>
 
-        <div className="px-6 pt-4 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex gap-3 bg-transparent">
+        <div className="px-6 pt-4 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex gap-3 bg-white dark:bg-slate-950">
           <button
             onClick={validateAndSubmit}
             className="flex-1 px-5 py-3.5 rounded-xl text-white font-semibold transition-all duration-200 hover:shadow-lg active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
