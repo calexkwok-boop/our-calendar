@@ -20151,6 +20151,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       .sort((a, b) => Number(new Date(a?.date || a?.createdAt || 0)) - Number(new Date(b?.date || b?.createdAt || 0)))
       .slice(0, 7)
       .map((memory) => ({
+        ...memory,
         id: String(memory?.id || ''),
         title: String(memory?.title || 'Untitled memory').trim(),
         date: String(memory?.date || memory?.createdAt || '').trim(),

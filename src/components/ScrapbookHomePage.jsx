@@ -190,11 +190,7 @@ const ScrapbookHomePage = ({
                         <button
                           type="button"
                           onClick={handleMomentSlotPress}
-                          onMouseUp={handleMomentSlotPress}
-                          onTouchEnd={handleMomentSlotPress}
-                          onPointerUp={handleMomentSlotPress}
                           className="block w-full h-full cursor-pointer"
-                          style={{ touchAction: 'manipulation' }}
                         >
                           <div
                             className="w-full h-full bg-cover bg-center"
@@ -205,11 +201,7 @@ const ScrapbookHomePage = ({
                         <button
                           type="button"
                           onClick={handleMomentSlotPress}
-                          onMouseUp={handleMomentSlotPress}
-                          onTouchEnd={handleMomentSlotPress}
-                          onPointerUp={handleMomentSlotPress}
                           className="flex w-full h-full items-center justify-center text-gray-500 transition-colors hover:bg-[#f6efe4] cursor-pointer"
-                          style={{ touchAction: 'manipulation' }}
                         >
                           <Plus className="w-6 h-6" />
                         </button>
