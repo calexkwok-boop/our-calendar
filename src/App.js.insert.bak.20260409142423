@@ -24779,21 +24779,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 createMemoryRecord(memoryData);
                 closeMemorySystem();
               }}
-              onAddPhoto={(photos, draft) => {
-                if (Array.isArray(photos) && photos.length > 0) {
-                  const titleBuilder = () => {
-                    const d = new Date(String(draft?.date || ''));
-                    return Number.isNaN(d.getTime()) ? 'Moment' : ('Moment · ' + d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
-                  };
-                  const next = {
-                    ...draft,
-                    title: String(draft?.title || '').trim() || titleBuilder(),
-                    coverPhoto: String(draft?.coverPhoto || '').trim() || (photos[0]?.url || ''),
-                  };
-                  createMemoryRecord(next);
-                  closeMemorySystem();
-                }
-              }}
               onTagPerson={() => {}}
               user={user}
               initialData={memorySystemCreateDraftResolved}

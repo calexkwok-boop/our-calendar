@@ -446,6 +446,7 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
   // Auto-create when launched from Polaroids and photos are added (one-tap save)
   useEffect(() => {
     if (!autoCreateOnPhotoAdd) return;
+    if (typeof onAddPhoto === 'function') return; // parent handles quick save
     if (autoCreatedRef.current) return;
     if (step !== 1) return;
     if (!Array.isArray(memoryData.photos) || memoryData.photos.length === 0) return;
@@ -506,6 +507,7 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
           onChange={setMemoryData}
           onAddPhoto={onAddPhoto}
           darkMode={darkMode}
+          quickSaveOnPhotoAdd={autoCreateOnPhotoAdd}
         />
       )}
       
@@ -712,7 +714,7 @@ const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
 };
 
 // Step 1: Photos
-const MemoryPhotosStep = ({ data, onChange, onAddPhoto, darkMode }) => {
+const MemoryPhotosStep = ({ data, onChange, onAddPhoto, darkMode, quickSaveOnPhotoAdd = false }) => {
   const fileInputRef = useRef(null);
   
   const handleAddPhotos = async (e) => {
@@ -730,8 +732,11 @@ const MemoryPhotosStep = ({ data, onChange, onAddPhoto, darkMode }) => {
         };
       })
     );
-    
-    onChange({ ...data, photos: [...data.photos, ...newPhotos] });
+    const updated = { ...data, photos: [...data.photos, ...newPhotos] };
+    onChange(updated);
+    if (quickSaveOnPhotoAdd && typeof onAddPhoto === 'function') {
+      try { onAddPhoto(newPhotos, updated); } catch {}
+    }
   };
   
   const removePhoto = (photoId) => {

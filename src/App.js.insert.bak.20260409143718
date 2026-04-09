@@ -24787,13 +24787,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   };
                   const next = {
                     ...draft,
-                    title: String(draft?.title || '').trim() || titleBuilder(),
-                    coverPhoto: String(draft?.coverPhoto || '').trim() || (photos[0]?.url || ''),
-                  };
-                  createMemoryRecord(next);
-                  closeMemorySystem();
-                }
-              }}
               onTagPerson={() => {}}
               user={user}
               initialData={memorySystemCreateDraftResolved}

@@ -24793,7 +24793,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                   createMemoryRecord(next);
                   closeMemorySystem();
                 }
-              }}
               onTagPerson={() => {}}
               user={user}
               initialData={memorySystemCreateDraftResolved}
