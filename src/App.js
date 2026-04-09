@@ -24843,11 +24843,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {homeAddEventModal}
     {!activeSubCalendar && showMemorySystem && memorySystemView === 'create' && renderJourneyPortal((
       <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[88] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm`}
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[88] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm`}
       >
         <div className="absolute inset-0" onClick={closeMemorySystem} />
         <div
-          className="relative w-full max-w-lg max-h-[min(88dvh,44rem)] overflow-y-auto overscroll-contain rounded-[28px] shadow-2xl border border-white/40 dark:border-white/10 bg-white dark:bg-slate-950"
+          className="relative w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[28px] shadow-2xl border border-white/40 dark:border-white/10 bg-white dark:bg-slate-950"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-start justify-between gap-3 border-b border-gray-200 dark:border-white/10 px-6 py-5">
