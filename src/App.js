@@ -21,6 +21,7 @@ import TrophyCase, { deriveJourneyTrophyCase } from "./components/TrophyCase";
 import WelcomeCover from "./components/WelcomeCover";
 import ExploreTab from "./components/ExploreTab";
 import MemorySystem from "./components/MemorySystem";
+import ScrapbookHomePage from "./components/ScrapbookHomePage";
 import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
 import TripHighlightReel from "./components/TripHighlightReel";
@@ -2841,6 +2842,7 @@ function App() {
   const [showHomeCalendarOverview, setShowHomeCalendarOverview] = useState(false);
   const [agendaRangeDays, setAgendaRangeDays] = useState(30);
   const [agendaSearchQuery, setAgendaSearchQuery] = useState('');
+  const [eventsTabView, setEventsTabView] = useState('upcoming');
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [showDateDetailModal, setShowDateDetailModal] = useState(false);
   const [bottomNavTab, setBottomNavTab] = useState('home');
@@ -5257,7 +5259,7 @@ function App() {
         setActiveLayerId(tripRow.layer_id);
       }
       await openSubCalendar(tripRow);
-      setBottomNavTab('home');
+      setBottomNavTab('calendar');
       setPreferCalendarHome(true);
       setShowHomeCalendarOverview(true);
       clearTripQueryParam();
@@ -5922,7 +5924,7 @@ function App() {
         localStorage.setItem(`active-layer-${user.id}`, targetLayerId);
       }
       await openSubCalendar(tripRow);
-      setBottomNavTab('home');
+      setBottomNavTab('calendar');
       setPreferCalendarHome(true);
       setShowHomeCalendarOverview(true);
       setLayerRefreshToken((prev) => prev + 1);
@@ -7843,7 +7845,7 @@ function App() {
     showSportsImportModal,
     showCategoryEditor,
   ]);
-  const showHomeCalendarWidgets = bottomNavTab === 'home' && preferCalendarHome;
+  const showHomeCalendarWidgets = bottomNavTab === 'calendar';
   const hasOpenWidgetWindow = showControlWidgetAddPanel || Object.values(widgetCardOpenById).some(Boolean);
   useEffect(() => {
     if (!coverHeaderControlsVisible) return;
@@ -20086,6 +20088,18 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const homeTripsPreview = [...activeTrips, ...upcomingTrips]
     .filter((trip, index, arr) => arr.findIndex((row) => String(row?.id || '') === String(trip?.id || '')) === index)
     .slice(0, 3);
+  const homeTripsPreviewCards = homeTripsPreview.map((trip) => ({
+    ...trip,
+    startDate: String(getSubCalStartRaw(trip) || '').trim(),
+    endDate: String(getSubCalEndRaw(trip) || '').trim(),
+  }));
+  const homeTodayPlanCount = overviewTodayEvents.length;
+  const homeUpcomingEventCount = filteredUpcomingUserTabEvents.length;
+  const homeRecentMemory = [...(Array.isArray(memories) ? memories : [])]
+    .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)))[0] || null;
+  const homeMemoryPhotoCount = (Array.isArray(memories) ? memories : []).reduce((total, memory) => total + (memory?.photos?.length || 0), 0);
+  const homeMemoryReadyCount = eligibleMemoryEvents.length;
+  const homeMemoryOpportunities = eligibleMemoryEvents.slice(0, 2);
   const sortedJourneyGoals = [...(journeyState?.goals || [])].sort((a, b) => {
     const aPinned = a?.pinned ? 0 : 1;
     const bPinned = b?.pinned ? 0 : 1;
@@ -20101,7 +20115,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     && String(entry?.createdAt || '').slice(0, 10) === todayKey
   ));
   const primaryJourneyLoggedToday = primaryJourneyTodayEntries.length > 0;
-  const showCalendarViewToggle = bottomNavTab === 'home' && preferCalendarHome;
+  const showCalendarViewToggle = bottomNavTab === 'calendar';
   const journeyLatestEntry = [...(journeyState?.entries || [])]
     .sort((a, b) => Number(new Date(b?.createdAt || 0)) - Number(new Date(a?.createdAt || 0)))[0] || null;
   const journeyUpdatedToday = Boolean(
@@ -24087,6 +24101,37 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setShowMemorySystem(true);
   };
 
+  const openCalendarTab = () => {
+    setShowJourneyScreen(false);
+    setBottomNavTab('calendar');
+    setPreferCalendarHome(true);
+    setShowHomeCalendarOverview(true);
+    setShowDateDetailModal(false);
+  };
+
+  const openJourneyTab = () => {
+    setBottomNavTab('journey');
+    setShowDateDetailModal(false);
+    openJourneyScreen();
+  };
+
+  const closeJourneyTab = () => {
+    setShowJourneyScreen(false);
+    if (bottomNavTab === 'journey') setBottomNavTab('home');
+  };
+
+  const openMemoryViewer = (memory) => {
+    if (!memory) {
+      openMemoriesGallery();
+      return;
+    }
+    setMemoryCreateDraft(null);
+    setMemoryDraftSourceLabel('');
+    setMemorySystemCurrentMemory(memory);
+    setMemorySystemView('viewer');
+    setShowMemorySystem(true);
+  };
+
   const createMemoryFromEvent = async (event) => {
     const eventId = String(event?.id || '').trim();
     if (!eventId) return;
@@ -24947,7 +24992,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               />
             </div>
           ) : null}
-          {['home', 'events', 'trips', 'explore'].includes(String(bottomNavTab || '')) && (
+          {['home', 'calendar', 'events', 'explore'].includes(String(bottomNavTab || '')) && (
             <div className="absolute inset-0 z-[25] pointer-events-none">
 
               {/* Icon — top left, opens account */}
@@ -27610,299 +27655,67 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {bottomNavTab === 'home' && !preferCalendarHome && (
-          <div className="space-y-4 mb-4">
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex min-w-0 flex-1 justify-end gap-1.5">
-                {todayOverviewLeftWidgetIds.map((widgetId) => {
-                  const meta = getControlWidgetMeta(widgetId);
-                  return (
-                    <button
-                      key={`today-overview-left-${widgetId}`}
-                      onClick={() => handleControlWidgetClick(widgetId)}
-                      disabled={meta.disabled}
-                      title={meta.label}
-                      className={`relative shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border transition-all overflow-visible ${
-                        meta.active
-                          ? 'border-transparent text-white shadow-sm'
-                          : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 backdrop-blur-sm'
-                      } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      style={meta.active ? themeAccentButtonStyle : undefined}
-                    >
-                      <span className="flex items-center justify-center">{meta.icon}</span>
-                      {meta.badge ? (
-                        <span className="absolute -top-1 -right-1 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
-                          {meta.badge}
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-              <button
-                onClick={() => {
-                  setPreferCalendarHome(true);
-                  setShowHomeCalendarOverview(true);
-                }}
-                className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-                style={themeAccentEllieChipButtonStyle}
-              >
-                Show calendar view
-              </button>
-              <div className="flex min-w-0 flex-1 justify-start gap-1.5">
-                {todayOverviewRightWidgetIds.map((widgetId) => {
-                  const meta = getControlWidgetMeta(widgetId);
-                  return (
-                    <button
-                      key={`today-overview-right-${widgetId}`}
-                      onClick={() => handleControlWidgetClick(widgetId)}
-                      disabled={meta.disabled}
-                      title={meta.label}
-                      className={`relative shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border transition-all overflow-visible ${
-                        meta.active
-                          ? 'border-transparent text-white shadow-sm'
-                          : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 backdrop-blur-sm'
-                      } ${meta.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      style={meta.active ? themeAccentButtonStyle : undefined}
-                    >
-                      <span className="flex items-center justify-center">{meta.icon}</span>
-                      {meta.badge ? (
-                        <span className="absolute -top-1 -right-1 min-w-[1.2rem] h-[1.2rem] px-1.5 rounded-full bg-red-500 text-white text-[10px] leading-tight font-bold inline-flex items-center justify-center">
-                          {meta.badge}
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {overviewTodayEvents.length === 0 && homeTripsPreview.length === 0 && (
-              <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-5">
-                <div className="text-base font-semibold text-gray-900 dark:text-gray-100">A clean slate today</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Start with one plan, one event, or your next trip and the day will fill in naturally.</div>
-              </div>
-            )}
-
-            <div
-              className="relative overflow-hidden rounded-[28px] border p-4 sm:p-5 shadow-xl transition-all duration-300"
-              style={{
-                borderColor: themeAccentBorder,
-                background: darkMode
-                  ? `linear-gradient(135deg, ${hexToRgba(mixHexColors(activeLayerPageTheme.backgroundFrom, '#111827', 0.76), 0.94)} 0%, ${hexToRgba(mixHexColors(activeLayerPageTheme.backgroundVia, '#111827', 0.82), 0.96)} 52%, ${hexToRgba(mixHexColors(activeLayerPageTheme.backgroundTo, '#111827', 0.72), 0.9)} 100%)`
-                  : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.backgroundFrom, 0.96)} 0%, ${hexToRgba(activeLayerPageTheme.backgroundVia, 0.94)} 52%, ${hexToRgba(activeLayerPageTheme.backgroundTo, 0.96)} 100%)`,
-                boxShadow: darkMode
-                  ? `0 20px 44px ${hexToRgba(mixHexColors(activeLayerPageTheme.accent, '#000000', 0.72), 0.26)}`
-                  : `0 20px 44px ${hexToRgba(activeLayerPageTheme.accent, 0.14)}`,
-              }}
-            >
-              <div
-                className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full blur-3xl"
-                style={{
-                  background: darkMode
-                    ? hexToRgba(activeLayerPageTheme.accent, 0.16)
-                    : hexToRgba(activeLayerPageTheme.accent, 0.18),
-                }}
-              />
-              <div
-                className="pointer-events-none absolute bottom-0 left-0 h-24 w-24 rounded-full blur-2xl"
-                style={{
-                  background: darkMode
-                    ? hexToRgba(activeLayerPageTheme.backgroundTo, 0.14)
-                    : hexToRgba(activeLayerPageTheme.backgroundTo, 0.2),
-                }}
-              />
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400 mb-2">Today</div>
-                  <h2 className="text-2xl sm:text-3xl font-semibold leading-tight" style={themeAccentHeadingStyle}>
-                    {homeGreeting}, {homeGreetingName} {homeGreetingEmoji}
-                  </h2>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-3">Your morning, afternoon, and evening at a glance.</div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => openHomeAddEventModal()}
-                    className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-                    style={themeAccentEllieChipButtonStyle}
-                  >
-                    + Add event
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {homeDaySections.map((section, index) => (
-                  <div
-                    key={section.key}
-                    className="rounded-[24px] border border-white/40 dark:border-white/10 p-4"
-                    style={{
-                      background: darkMode
-                        ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.07)} 0%, ${hexToRgba('#0f172a', 0.72)} 100%)`
-                        : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.92) 100%)`,
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                      <div>
-                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{section.label}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">{section.events.length > 0 ? `${section.events.length} item${section.events.length === 1 ? '' : 's'}` : section.emptyTitle}</div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const next = new Date();
-                          next.setHours(index === 0 ? 9 : index === 1 ? 14 : 19, 0, 0, 0);
-                          setSelectedDate(next);
-                          setSelectedDates([]);
-                          setShowDateDetailModal(true);
-                        }}
-                        className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-                        style={themeAccentEllieChipButtonStyle}
-                      >
-                        + Add plan
-                      </button>
-                    </div>
-                    {section.events.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-white/20 dark:border-white/10 px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {section.emptyCopy}
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {section.events.slice(0, 3).map((event) => {
-                          const popupMeta = popupEventsByEventId[String(event.id || '')] || null;
-                          const popupCard = (userTabPopupEvents || []).find((row) => String(row?.id || '') === String(event?.id || '')) || null;
-                          const isPopupEvent = Boolean(popupMeta || popupCard);
-                          const effectiveCategoryKey = isPopupEvent ? 'popup_event' : (event.category || 'other');
-                          const category = categories[effectiveCategoryKey] || categories.other;
-                          const eventLayer = (layers || []).find((layer) => String(layer?.id || '') === String(popupMeta?.layerId || popupCard?.layerId || event?.layerId || event?.layer_id || '')) || null;
-                          const eventLayerTheme = normalizeLayerPageTheme(eventLayer?.page_theme, eventLayer?.title_style);
-                          const chipBg = darkMode
-                            ? mixHexColors(eventLayerTheme.accent, '#111827', 0.8)
-                            : mixHexColors(eventLayerTheme.accent, '#ffffff', 0.88);
-                          const chipBorder = darkMode
-                            ? 'transparent'
-                            : mixHexColors(eventLayerTheme.accent, '#ffffff', 0.72);
-                          const chipText = darkMode
-                            ? mixHexColors(eventLayerTheme.accent, '#ffffff', 0.34)
-                            : (isLightHexColor(eventLayerTheme.accent) ? '#111111' : eventLayerTheme.accent);
-                          return (
-                            <button
-                              key={`${section.key}-${event.id}-${event.date}`}
-                              onClick={() => { openUserTabEvent(event, popupMeta || popupCard); }}
-                              className="w-full rounded-2xl border px-3 py-3 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
-                              style={{
-                                background: isPopupEvent
-                                  ? (darkMode ? 'rgba(244,63,94,0.12)' : 'rgba(255,241,242,0.96)')
-                                  : (darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)'),
-                                borderColor: isPopupEvent
-                                  ? (darkMode ? 'rgba(244,114,182,0.28)' : 'rgba(251,113,133,0.28)')
-                                  : (darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)'),
-                              }}
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <span className={`w-2 h-2 rounded-full shrink-0 ${category.color}`} />
-                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{event.title}</span>
-                                  </div>
-                                  <div className="mt-1 flex flex-wrap items-center gap-1">
-                                    {isPopupEvent ? (
-                                      <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
-                                        Pop-up
-                                      </span>
-                                    ) : null}
-                                    {eventLayer ? (
-                                      <span
-                                        className={`rounded-full border px-1.5 py-0.5 text-[10px] ${darkMode ? 'font-bold' : 'font-medium'}`}
-                                        style={{ backgroundColor: chipBg, borderColor: chipBorder, color: chipText }}
-                                      >
-                                        {eventLayer.name || 'Calendar'}
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                  {event.location && (
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{event.location}</div>
-                                  )}
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
-                                  {event.time ? formatTime(event.time) : 'Anytime'}
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                        {section.events.length > 3 && (
-                          <button
-                            onClick={() => {
-                              setSelectedDate(new Date());
-                              setSelectedDates([]);
-                              setShowDateDetailModal(true);
-                            }}
-                            className="text-xs text-gray-500 dark:text-gray-400 px-1"
-                          >
-                            +{section.events.length - 3} more
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="glass-panel rounded-[24px] border border-white/50 dark:border-white/10 p-4" style={{
-              background: darkMode
-                ? 'linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(45,212,191,0.06) 100%)'
-                : 'linear-gradient(135deg, #f0f9ff 0%, #ecfeff 45%, #ecfdf5 100%)',
-            }}>
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Trips</h3>
-                  <div className="text-xs text-gray-500 dark:text-gray-400"></div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                          onClick={() => setShowSubCalendarModal(true)}
-      className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:shadow-lg hover:shadow-blue-500/25"
-    >
-      + Start Trip
-    </button>
-                </div>
-              </div>
-              {homeTripsPreview.length === 0 ? (
-                <div className="text-sm text-gray-500 dark:text-gray-400">No trips on deck yet.</div>
-              ) : (
-                <div className="space-y-2">
-                  {homeTripsPreview.map((trip) => (
-                    <button
-                      key={trip.id}
-                      onClick={() => openSubCalendar(trip)}
-                      className="w-full rounded-2xl border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/[0.04] px-3 py-3 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{trip.name}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {formatTripDate(getSubCalStartRaw(trip), true)} - {formatTripDate(getSubCalEndRaw(trip), true)}
-                          </div>
-                        </div>
-                        <span className="text-xs font-medium shrink-0" style={themeAccentTextStyle}>
-                          {activeTrips.some((row) => String(row?.id || '') === String(trip?.id || '')) ? 'Now' : 'Soon'}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-          </div>
+        {bottomNavTab === 'home' && (
+          <ScrapbookHomePage
+            darkMode={darkMode}
+            greeting={homeGreeting}
+            greetingName={homeGreetingName}
+            greetingEmoji={homeGreetingEmoji}
+            todayLabel={new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            todaySections={homeDaySections}
+            tripsPreview={homeTripsPreviewCards}
+            activeTripIds={activeTrips.map((trip) => String(trip?.id || ''))}
+            recentMemory={homeRecentMemory}
+            memoryCount={memories.length}
+            memoryPhotoCount={homeMemoryPhotoCount}
+            memoryReadyCount={homeMemoryReadyCount}
+            memoryOpportunities={homeMemoryOpportunities}
+            primaryJourneyGoal={primaryJourneyGoal}
+            primaryJourneyProgressText={primaryJourneyProgressText}
+            primaryJourneyStreak={primaryJourneyStreak}
+            primaryJourneyLoggedToday={primaryJourneyLoggedToday}
+            todayPlanCount={homeTodayPlanCount}
+            upcomingEventCount={homeUpcomingEventCount}
+            onShowCalendarView={openCalendarTab}
+            onAddEvent={openHomeAddEventModal}
+            onAddPlan={(index) => {
+              const next = new Date();
+              next.setHours(index === 0 ? 9 : index === 1 ? 14 : 19, 0, 0, 0);
+              setSelectedDate(next);
+              setSelectedDates([]);
+              setShowDateDetailModal(true);
+            }}
+            onOpenEvent={(event) => {
+              const popupMeta = popupEventsByEventId[String(event?.id || '')] || null;
+              const popupCard = (userTabPopupEvents || []).find((row) => String(row?.id || '') === String(event?.id || '')) || null;
+              openUserTabEvent(event, popupMeta || popupCard);
+            }}
+            onOpenUpcoming={() => {
+              setEventsTabView('upcoming');
+              setBottomNavTab('events');
+            }}
+            onOpenTrip={openSubCalendar}
+            onOpenTripsTab={() => {
+              setEventsTabView('trips');
+              setBottomNavTab('events');
+            }}
+            onStartTrip={() => setShowSubCalendarModal(true)}
+            onOpenMemories={openMemoriesGallery}
+            onOpenMemory={openMemoryViewer}
+            onCreateMemoryFromEvent={createMemoryFromEvent}
+            onOpenJourney={openJourneyTab}
+            onOpenExplore={() => setBottomNavTab('explore')}
+            themeAccentButtonStyle={themeAccentButtonStyle}
+            themeAccentHeadingStyle={themeAccentHeadingStyle}
+            themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
+            themeAccentTextStyle={themeAccentTextStyle}
+            themeAccentBorder={themeAccentBorder}
+          />
         )}
 
         <div className="grid grid-cols-1 gap-4">
-        {false && (showHomeCalendarOverview || preferCalendarHome) && (
-                    <div className={`${bottomNavTab !== 'home' ? 'hidden' : ''} relative overflow-hidden rounded-3xl shadow-2xl p-4 sm:p-6 ${calendarView === 'agenda' ? 'bg-gray-50 dark:bg-gray-900' : 'bg-gradient-to-br from-white via-purple-50/20 to-pink-50/20 dark:from-gray-900 dark:via-purple-900/5 dark:to-pink-900/5'}`} >
+        {false && bottomNavTab === 'calendar' && (
+                    <div className="relative overflow-hidden rounded-3xl shadow-2xl p-4 sm:p-6 bg-gradient-to-br from-white via-purple-50/20 to-pink-50/20 dark:from-gray-900 dark:via-purple-900/5 dark:to-pink-900/5">
             <div className="relative z-10">
 
 {false && (
@@ -28452,7 +28265,7 @@ transform: translateY(0);
           </div>
           )}
 
-          {bottomNavTab === 'home' && (
+          {bottomNavTab === 'calendar' && (
   React.createElement(
     require('./components/UnifiedCalendarView').default,
     {
@@ -28460,21 +28273,22 @@ transform: translateY(0);
       setCurrentDate: setCurrentDate,
       selectedDate: selectedDate,
       setSelectedDate: setSelectedDate,
-      events: { [getDateKey(new Date())]: getEventsForDate(new Date()) },
+      events: events,
       getEventsForDate: getEventsForDate,
       popupEventsByEventId: popupEventsByEventId,
-      subCalendars: (typeof activeTrips !== 'undefined' ? activeTrips : []),
+      subCalendars: (typeof subCalendars !== 'undefined' ? subCalendars : []),
       openSubCalendar: openSubCalendar,
             weather: weather,
       showWeather: showWeather,
       categories: categories,
-            calendarView: 'month',
-      setCalendarView: () => {},
+            calendarView: calendarView,
+      setCalendarView: setCalendarView,
       onAddEvent: (date) => {
         const targetDate = date ? new Date(date) : (selectedDate ? new Date(selectedDate) : new Date());
         setSelectedDate(targetDate);
         setShowDateDetailModal(true);
       },
+      onStartTrip: () => setShowSubCalendarModal(true),
 
       onEventClick: (event) => {
         const eventId = String(event?.id || '');
@@ -28513,7 +28327,7 @@ transform: translateY(0);
       journeyQuote: journeyQuote,
       journeyHomeCtaLabel: journeyHomeCtaLabel,
       primaryJourneyLoggedToday: primaryJourneyLoggedToday,
-      onOpenJourney: openJourneyScreen,
+      onOpenJourney: openJourneyTab,
       onJourneyCtaClick: handleHomeJourneyCardCta,
     }
   )
@@ -29182,24 +28996,46 @@ transform: translateY(0);
 
           )}
 
-          {bottomNavTab !== 'home' && (
+          {(bottomNavTab === 'events' || bottomNavTab === 'explore') && (
           <div className="glass-panel rounded-2xl border border-white/50 dark:border-gray-700/70 p-4 sm:p-6">
 
             {bottomNavTab === 'events' && (
               <>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Upcoming Events</h3>
-                  <button
-                    onClick={() => { 
-                      setIsPopupEventDraft(true); 
-                      setBottomNavTab('home');
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
-                    style={themeAccentButtonStyle}
-                  >
-                    <Plus className="w-3.5 h-3.5" /> New Event
-                  </button>
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Events</h3>
+                    <div className="mt-2 inline-flex rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 p-1">
+                      <button
+                        onClick={() => setEventsTabView('upcoming')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${eventsTabView === 'upcoming' ? '' : 'text-gray-600 dark:text-gray-300'}`}
+                        style={eventsTabView === 'upcoming' ? bottomNavActiveTabStyle : undefined}
+                      >
+                        Upcoming
+                      </button>
+                      <button
+                        onClick={() => setEventsTabView('trips')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${eventsTabView === 'trips' ? '' : 'text-gray-600 dark:text-gray-300'}`}
+                        style={eventsTabView === 'trips' ? bottomNavActiveTabStyle : undefined}
+                      >
+                        Trips
+                      </button>
+                    </div>
+                  </div>
+                  {eventsTabView === 'upcoming' && (
+                    <button
+                      onClick={() => { 
+                        setIsPopupEventDraft(true); 
+                        setBottomNavTab('home');
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                      style={themeAccentButtonStyle}
+                    >
+                      <Plus className="w-3.5 h-3.5" /> New Event
+                    </button>
+                  )}
                 </div>
+                {eventsTabView === 'upcoming' && (
+                <>
                 <div className="flex flex-wrap items-center gap-2 mb-4 relative">
                   <button
                     onClick={() => setEventsTabHideRecurring((prev) => !prev)}
@@ -29389,6 +29225,33 @@ transform: translateY(0);
                 <div className="mt-6">
                   {renderEventsMemoriesPanel()}
                 </div>
+                </>
+                )}
+                {eventsTabView === 'trips' && (
+                  <TripsTab
+                    activeTrips={activeTrips}
+                    upcomingTrips={orderedUpcomingTrips}
+                    archivedTrips={archivedTrips}
+                    user={user}
+                    openSubCalendar={openSubCalendar}
+                    deleteSubCalendar={deleteSubCalendar}
+                    setBottomNavTab={setBottomNavTab}
+                    setShowSubCalendarModal={setShowSubCalendarModal}
+                    getSubCalStartRaw={getSubCalStartRaw}
+                    getSubCalEndRaw={getSubCalEndRaw}
+                    getTripCoverPhoto={(subCalId) => {
+                      const cover = (tripPhotos || []).find((p) => String(p?.sub_calendar_id || '') === String(subCalId) && p?.is_cover);
+                      return cover?.url || null;
+                    }}
+                    getTripMemberCount={(subCalId) => {
+                      const members = (subCalMembers || []).filter((m) => String(m?.sub_calendar_id || '') === String(subCalId));
+                      return Math.max(1, members.length);
+                    }}
+                    darkMode={darkMode}
+                    themeAccentButtonStyle={themeAccentButtonStyle}
+                    themeAccentHeadingStyle={themeAccentHeadingStyle}
+                  />
+                )}
               </>
             )}
 
@@ -29898,30 +29761,37 @@ transform: translateY(0);
             </div>
           )}
 
-          <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
+          <div className="grid grid-cols-5 gap-1.5 p-1.5 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
             <button
-              onClick={() => { setBottomNavTab('home'); setShowDateDetailModal(false); }}
+              onClick={() => { setBottomNavTab('home'); setShowDateDetailModal(false); setShowJourneyScreen(false); }}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'home' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
               style={bottomNavTab === 'home' ? bottomNavActiveTabStyle : undefined}
             >
               Home
             </button>
             <button
-              onClick={() => { setBottomNavTab('events'); setShowDateDetailModal(false); }}
+              onClick={openCalendarTab}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'calendar' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              style={bottomNavTab === 'calendar' ? bottomNavActiveTabStyle : undefined}
+            >
+              Calendar
+            </button>
+            <button
+              onClick={() => { setBottomNavTab('events'); setShowDateDetailModal(false); setShowJourneyScreen(false); }}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'events' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
               style={bottomNavTab === 'events' ? bottomNavActiveTabStyle : undefined}
             >
               Events
             </button>
             <button
-              onClick={() => { setBottomNavTab('trips'); setShowDateDetailModal(false); }}
-              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'trips' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-              style={bottomNavTab === 'trips' ? bottomNavActiveTabStyle : undefined}
+              onClick={openJourneyTab}
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'journey' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              style={bottomNavTab === 'journey' ? bottomNavActiveTabStyle : undefined}
             >
-              Trips
-                        </button>
+              Journey
+            </button>
             <button
-              onClick={() => { setBottomNavTab('explore'); setShowDateDetailModal(false); }}
+              onClick={() => { setBottomNavTab('explore'); setShowDateDetailModal(false); setShowJourneyScreen(false); }}
               className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${bottomNavTab === 'explore' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
               style={bottomNavTab === 'explore' ? bottomNavActiveTabStyle : undefined}
             >
@@ -30937,7 +30807,7 @@ transform: translateY(0);
         >
           <div className="flex items-start justify-between gap-3">
             <button
-              onClick={() => { setActiveSubCalendar(null); setPreferCalendarHome(true); setShowHomeCalendarOverview(true); clearTripQueryParam(); }}
+              onClick={() => { setActiveSubCalendar(null); openCalendarTab(); clearTripQueryParam(); }}
               className={`shrink-0 flex items-center gap-1.5 rounded-full px-3 py-2 font-medium text-sm ${tripHeaderPillClassName} ${darkMode ? 'text-purple-200' : 'text-purple-600'}`}
             >
               <ChevronLeft className="w-4 h-4" /> Back
@@ -31189,7 +31059,7 @@ transform: translateY(0);
 
         {/* Header */}
         <div className="hidden" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
-          <button onClick={() => { setActiveSubCalendar(null); setPreferCalendarHome(true); setShowHomeCalendarOverview(true); clearTripQueryParam(); }} className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium text-sm">
+          <button onClick={() => { setActiveSubCalendar(null); openCalendarTab(); clearTripQueryParam(); }} className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium text-sm">
             <ChevronLeft className="w-4 h-4" /> Back
           </button>
           <div className="text-center">
@@ -33916,7 +33786,7 @@ transform: translateY(0);
     {!activeSubCalendar && showJourneyScreen && renderJourneyPortal((
       <div
         className="fixed inset-0 z-[82] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
-        onClick={() => setShowJourneyScreen(false)}
+        onClick={closeJourneyTab}
         style={{
           touchAction: 'none',
           overscrollBehavior: 'none',
@@ -33967,7 +33837,7 @@ transform: translateY(0);
               </div>
               <button
                 type="button"
-                onClick={() => setShowJourneyScreen(false)}
+                onClick={closeJourneyTab}
                 className="rounded-xl p-2 text-gray-500 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10"
               >
                 <X className="w-5 h-5" />
