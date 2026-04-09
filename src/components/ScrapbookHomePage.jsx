@@ -11,6 +11,7 @@ import {
   Plus,
   Sparkles,
   Trophy,
+  Trash2,
 } from 'lucide-react';
 
 const formatDisplayDate = (value) => {
@@ -122,6 +123,7 @@ const ScrapbookHomePage = ({
   onOpenExplore,
   onCaptureQuickMoment,
   onAddMomentForDate,
+  onDeleteMoment,
   themeAccentHeadingStyle,
   themeAccentEllieChipButtonStyle,
   themeAccentTextStyle,
@@ -202,16 +204,33 @@ const ScrapbookHomePage = ({
                   >
                     <div className="mx-3 mt-3 aspect-square relative overflow-hidden border border-black/5 bg-[#f1ece2]">
                       {momentForDay ? (
-                        <button
-                          type="button"
-                          onClick={handleMomentSlotPress}
-                          className="block w-full h-full cursor-pointer"
-                        >
-                          <div
-                            className="w-full h-full bg-cover bg-center"
-                            style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
-                          />
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleMomentSlotPress}
+                            className="block w-full h-full cursor-pointer"
+                          >
+                            <div
+                              className="w-full h-full bg-cover bg-center"
+                              style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
+                            />
+                          </button>
+                          {typeof onDeleteMoment === 'function' && (
+                            <button
+                              type="button"
+                              aria-label="Delete photo"
+                              onClick={(e) => {
+                                if (e?.stopPropagation) e.stopPropagation();
+                                const ok = window.confirm('Remove this moment from your week? This will delete the saved memory.');
+                                if (!ok) return;
+                                onDeleteMoment(momentForDay);
+                              }}
+                              className="absolute top-1.5 right-1.5 z-10 rounded-full bg-white/90 hover:bg-red-50 border border-black/10 shadow-sm p-1.5 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </button>
+                          )}
+                        </>
                       ) : (
                         <button
                           type="button"

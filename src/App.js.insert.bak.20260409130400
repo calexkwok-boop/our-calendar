@@ -27933,8 +27933,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               openQuickMemoryCapture(dateKey);
             }}
             onDeleteMoment={(moment) => {
-              try { deleteMemoryRecord(moment?.id); } catch {}
-            }}
             themeAccentButtonStyle={themeAccentButtonStyle}
             themeAccentHeadingStyle={themeAccentHeadingStyle}
             themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
