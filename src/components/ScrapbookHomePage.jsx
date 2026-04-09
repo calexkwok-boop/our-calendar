@@ -2,7 +2,6 @@ import React from 'react';
 import {
   ArrowRight,
   BookOpen,
-  Calendar,
   Camera,
   Clock,
   Compass,
@@ -594,31 +593,6 @@ const ScrapbookHomePage = ({
             )}
           </div>
 
-          <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-slate-900/65 p-4 sm:p-5 shadow-lg">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Next chapter</div>
-                <h3 className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">Keep the story moving</h3>
-              </div>
-              <Calendar className="w-5 h-5 text-gray-400" />
-            </div>
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                onClick={onShowCalendarView}
-                className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] px-4 py-4 text-left transition-all hover:bg-white/95 dark:hover:bg-white/[0.08]"
-              >
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">Open calendar view</div>
-                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Zoom back out to see the whole timeline.</div>
-              </button>
-              <button
-                onClick={onOpenExplore}
-                className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] px-4 py-4 text-left transition-all hover:bg-white/95 dark:hover:bg-white/[0.08]"
-              >
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">Find something new</div>
-                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Pull in the next idea, event, or outing.</div>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </>
