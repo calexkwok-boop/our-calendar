@@ -1348,6 +1348,28 @@ const writeMemoriesState = (userId, memories) => {
     localStorage.setItem(getMemoriesStorageKey(userId), JSON.stringify(Array.isArray(memories) ? memories : []));
   } catch {}
 };
+
+const mergePersistedMemories = (...memoryLists) => {
+  const byKey = new Map();
+  memoryLists.forEach((list) => {
+    (Array.isArray(list) ? list : []).forEach((memory, index) => {
+      if (!memory || typeof memory !== 'object') return;
+      const idKey = String(memory?.id || '').trim();
+      const fallbackKey = [
+        String(memory?.date || '').trim(),
+        String(memory?.title || '').trim().toLowerCase(),
+        String(memory?.coverPhoto || memory?.photos?.[0]?.url || '').trim(),
+        index,
+      ].join('|');
+      const key = idKey || fallbackKey;
+      if (!key) return;
+      byKey.set(key, memory);
+    });
+  });
+  return Array.from(byKey.values()).sort(
+    (a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0))
+  );
+};
 const readStoredProfilePhotoOverrideUrl = () => {
   if (typeof window === 'undefined') return '';
   try {
@@ -20397,8 +20419,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, journeyState]);
 
   useEffect(() => {
-    setMemories(readMemoriesState(user?.id));
-    setMemoriesHydratedUserId(String(user?.id || 'guest').trim() || 'guest');
+    const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
+    const savedForCurrentUser = readMemoriesState(user?.id);
+    if (currentMemoriesUserId !== 'guest') {
+      const guestMemories = readMemoriesState('guest');
+      const merged = mergePersistedMemories(savedForCurrentUser, guestMemories);
+      setMemories(merged);
+      writeMemoriesState(user?.id, merged);
+    } else {
+      setMemories(savedForCurrentUser);
+    }
+    setMemoriesHydratedUserId(currentMemoriesUserId);
   }, [user?.id]);
 
   useEffect(() => {
@@ -24759,6 +24790,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               onReact={reactToMemory}
               onComment={commentOnMemory}
               onShare={shareMemoryRecord}
+              onCloseSystem={closeMemorySystem}
               user={user}
               darkMode={darkMode}
             />

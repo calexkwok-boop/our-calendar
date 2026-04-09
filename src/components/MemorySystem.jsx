@@ -187,6 +187,7 @@ const MemorySystem = ({
   onReact,
   onComment,
   onShare,
+  onCloseSystem,
   
   // User
   user,
@@ -225,6 +226,7 @@ const MemorySystem = ({
             setActiveView('viewer');
           }}
           onCreateNew={() => setActiveView('create')}
+          onClose={onCloseSystem}
           darkMode={darkMode}
         />
       )}
@@ -271,7 +273,7 @@ const MemorySystem = ({
 // MEMORIES GALLERY VIEW
 // ============================================================================
 
-const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, darkMode }) => {
+const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, darkMode }) => {
   // Group memories by year
   const memoriesByYear = memories.reduce((acc, memory) => {
     const year = new Date(memory.date).getFullYear();
@@ -296,14 +298,25 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, darkMode }) =>
       </div>
       
       {/* Create new button */}
-      <button
-        onClick={onCreateNew}
-        className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 
-                   text-white font-bold text-base hover:shadow-xl transition-all
-                   flex items-center justify-center gap-2">
-        <Sparkles className="w-6 h-6" />
-        Create a Memory
-      </button>
+      <div className="flex gap-3">
+        <button
+          onClick={onCreateNew}
+          className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 
+                     text-white font-bold text-base hover:shadow-xl transition-all
+                     flex items-center justify-center gap-2">
+          <Sparkles className="w-6 h-6" />
+          Create a Memory
+        </button>
+        {typeof onClose === 'function' && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-2xl px-5 py-3.5 bg-white text-gray-700 font-semibold border border-gray-200 shadow-sm transition-all hover:bg-gray-50 dark:bg-slate-900 dark:text-slate-100 dark:border-white/10 dark:hover:bg-slate-800"
+          >
+            Close
+          </button>
+        )}
+      </div>
       
       {/* Empty state */}
       {memories.length === 0 && (
