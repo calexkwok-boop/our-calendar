@@ -24714,7 +24714,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         onClick={closeMemorySystem}
       >
         <div
-          className="relative flex w-full max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] sm:max-w-5xl flex-col overflow-hidden bg-white dark:bg-slate-950 rounded-t-[28px] rounded-b-none sm:rounded-[28px] shadow-2xl border-t border-transparent dark:border-white/10"
+          className="relative flex w-full min-h-[72dvh] sm:min-h-0 max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] sm:max-h-[90vh] sm:max-w-5xl flex-col overflow-hidden bg-white dark:bg-slate-950 rounded-t-[28px] rounded-b-none sm:rounded-[28px] shadow-2xl border-t border-transparent dark:border-white/10"
           onClick={(e) => e.stopPropagation()}
         >
           {memorySystemView !== 'viewer' && (
