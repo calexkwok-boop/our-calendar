@@ -25,7 +25,7 @@ const shell = {
   borderRadius: 24,
   overflow: 'hidden',
   color: T.text,
-  boxShadow: `0 0 60px rgba(0,255,136,0.15), 0 20px 40px rgba(0,0,0,0.5)`,
+  boxShadow: `inset 0 -2px 0 rgba(0,217,255,0.55), 0 0 60px rgba(0,255,136,0.15), 0 20px 40px rgba(0,0,0,0.5)`,
   fontFamily: '"Inter", sans-serif',
 };
 

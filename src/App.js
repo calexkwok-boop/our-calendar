@@ -24751,10 +24751,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         onClick={closeMemorySystem}
       >
         <div
-          className={`relative flex w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-white/40 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950 ${
+          className={`relative flex w-full flex-col overflow-hidden rounded-[28px] border border-white/40 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-950 ${
             memorySystemView === 'viewer'
-              ? 'h-[min(88dvh,52rem)]'
-              : 'max-h-[min(88dvh,52rem)]'
+              ? 'max-w-lg h-[min(88dvh,44rem)]'
+              : memorySystemView === 'create'
+                ? 'max-w-lg max-h-[min(88dvh,44rem)]'
+                : 'max-w-lg max-h-[min(88dvh,44rem)]'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
@@ -24777,7 +24779,11 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </button>
             </div>
           )}
-          <div className={`${memorySystemView === 'viewer' ? 'relative flex-1 min-h-0 overflow-hidden bg-black' : 'flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 bg-stone-50 dark:bg-slate-950'}`}>
+          <div className={`${memorySystemView === 'viewer'
+            ? 'relative flex-1 min-h-0 overflow-hidden bg-black'
+            : memorySystemView === 'create'
+              ? 'flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 bg-white dark:bg-slate-950'
+              : 'flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 bg-stone-50 dark:bg-slate-950'}`}>
             <MemorySystem
               view={memorySystemView}
               memories={memorySystemMemories}
