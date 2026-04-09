@@ -212,7 +212,7 @@ const MemorySystem = ({
   }, [memories, selectedMemory]);
   
   return (
-    <div className="memory-system h-full">
+    <div className="memory-system relative h-full overflow-hidden bg-black">
       {activeView === 'gallery' && (
         <MemoriesGallery
           memories={memories}
@@ -1091,7 +1091,7 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
   };
   
   return (
-    <div className="memory-viewer fixed inset-0 z-50 overflow-hidden bg-black" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div className="memory-viewer absolute inset-0 z-50 overflow-hidden bg-black">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10 px-4 pt-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] pb-4 bg-gradient-to-b from-black/85 to-transparent">
         <div className="flex items-center justify-between">

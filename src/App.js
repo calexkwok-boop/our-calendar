@@ -24736,7 +24736,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </button>
             </div>
           )}
-          <div className={`${memorySystemView === 'viewer' ? 'flex-1 min-h-0 overflow-y-auto bg-black' : 'flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 bg-stone-50 dark:bg-slate-950'}`}>
+          <div className={`${memorySystemView === 'viewer' ? 'relative flex-1 min-h-0 overflow-hidden bg-black' : 'flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 bg-stone-50 dark:bg-slate-950'}`}>
             <MemorySystem
               view={memorySystemView}
               memories={memorySystemMemories}
