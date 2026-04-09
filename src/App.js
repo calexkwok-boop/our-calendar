@@ -24223,7 +24223,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     const selectedDate = String(dateOverride || '').trim();
     const todayIso = new Date().toISOString().slice(0, 10);
     const targetDate = selectedDate || todayIso;
-    const targetDayEvents = (events || []).filter((event) => String(event?.date || event?.dateKey || '').trim() === targetDate);
+    const allCalendarEvents = Array.isArray(events)
+      ? events
+      : Object.values(events || {}).flatMap((rows) => (Array.isArray(rows) ? rows : []));
+    const targetDayEvents = allCalendarEvents.filter((event) => String(event?.date || event?.dateKey || '').trim() === targetDate);
     const selectedMemoryLocation = (
       targetDayEvents
         .map((event) => String(event?.location || '').trim())
@@ -27826,6 +27829,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onOpenJourney={openJourneyTab}
             onOpenExplore={() => setBottomNavTab('explore')}
             onCaptureQuickMoment={openQuickMemoryCapture}
+            onAddMomentForDate={(dateKey) => {
+              openQuickMemoryCapture(dateKey);
+            }}
             themeAccentButtonStyle={themeAccentButtonStyle}
             themeAccentHeadingStyle={themeAccentHeadingStyle}
             themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}

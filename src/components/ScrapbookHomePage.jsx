@@ -106,6 +106,7 @@ const ScrapbookHomePage = ({
   onOpenJourney,
   onOpenExplore,
   onCaptureQuickMoment,
+  onAddMomentForDate,
   themeAccentHeadingStyle,
   themeAccentEllieChipButtonStyle,
   themeAccentTextStyle,
@@ -143,9 +144,6 @@ const ScrapbookHomePage = ({
             {greeting}, {greetingName} {greetingEmoji}
           </h2>
           <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">{todayLabel}</div>
-          <p className="mt-3 max-w-xl text-sm sm:text-[15px] text-gray-600 dark:text-gray-300">
-            Your plans, trips, milestones, and memories all live here like chapters in the same story.
-          </p>
         </div>
 
         {/* Moments This Week - Polaroid film strip */}
@@ -172,22 +170,22 @@ const ScrapbookHomePage = ({
                   onOpenMemory?.(momentForDay);
                   return;
                 }
-                onCaptureQuickMoment?.(day.dateKey);
+                (onAddMomentForDate || onCaptureQuickMoment)?.(day.dateKey);
               };
 
               return (
                 <div
                   key={day.label}
-                  className="flex-shrink-0 w-28 group"
+                  className={`flex-shrink-0 w-32 group ${day.isToday ? 'rotate-[-1.5deg]' : day.dayIndex % 3 === 0 ? 'rotate-[2deg]' : day.dayIndex % 2 === 0 ? 'rotate-[-2deg]' : 'rotate-[1.25deg]'}`}
                 >
                   <div
                     className={`relative block w-full rounded-lg overflow-hidden transition-all ${
                       momentForDay
-                        ? 'bg-white dark:bg-white/10 shadow-md hover:shadow-xl hover:-translate-y-1'
-                        : 'bg-white/60 dark:bg-white/5 border-2 border-dashed border-gray-300/50 dark:border-gray-600/30'
+                        ? 'bg-[#fffdf8] shadow-[0_10px_24px_rgba(15,23,42,0.18)] hover:shadow-[0_18px_34px_rgba(15,23,42,0.22)] hover:-translate-y-1'
+                        : 'bg-[#fffdf8] border-[3px] border-dashed border-[#d7d0c3] shadow-[0_8px_18px_rgba(15,23,42,0.10)]'
                     }`}
                   >
-                    <div className="aspect-square relative">
+                    <div className="mx-3 mt-3 aspect-square relative overflow-hidden border border-black/5 bg-[#f1ece2]">
                       {momentForDay ? (
                         <button
                           type="button"
@@ -210,7 +208,7 @@ const ScrapbookHomePage = ({
                           onMouseUp={handleMomentSlotPress}
                           onTouchEnd={handleMomentSlotPress}
                           onPointerUp={handleMomentSlotPress}
-                          className="flex w-full h-full items-center justify-center text-gray-400 transition-colors hover:bg-white/50 dark:text-gray-600 dark:hover:bg-white/5 cursor-pointer"
+                          className="flex w-full h-full items-center justify-center text-gray-500 transition-colors hover:bg-[#f6efe4] cursor-pointer"
                           style={{ touchAction: 'manipulation' }}
                         >
                           <Plus className="w-6 h-6" />
@@ -218,17 +216,17 @@ const ScrapbookHomePage = ({
                       )}
                     </div>
 
-                    <div className={`px-2 py-1.5 text-center ${
-                      momentForDay ? 'bg-white dark:bg-white/10' : 'bg-white/40 dark:bg-white/5'
-                    }`}>
+                    <div className="px-3 pt-2 pb-4 text-center bg-[#fffdf8]">
                       <div className={`text-[11px] font-semibold ${
                         day.isToday 
-                          ? 'text-amber-600 dark:text-amber-400' 
+                          ? 'text-amber-700' 
                           : momentForDay
-                            ? 'text-gray-700 dark:text-gray-300'
-                            : 'text-gray-400 dark:text-gray-600'
+                            ? 'text-gray-700'
+                            : 'text-gray-400'
                       }`}>
-                        {day.isToday ? 'Today' : day.label}
+                        <span style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive' }}>
+                          {day.isToday ? 'Today' : day.label}
+                        </span>
                       </div>
                     </div>
                   </div>
