@@ -64,7 +64,6 @@ const getDaysOfWeek = () => {
     return {
       label: days[date.getDay()],
       isToday: dateKey === todayKey,
-      isPastOrToday: dateKey <= todayKey,
       dayIndex: date.getDay(),
       dateKey,
     };
@@ -208,15 +207,12 @@ const ScrapbookHomePage = ({
                         onOpenMemory?.(momentForDay);
                         return;
                       }
-                      if (day.isPastOrToday) onCaptureQuickMoment?.(day.dateKey);
+                      onCaptureQuickMoment?.(day.dateKey);
                     }}
-                    disabled={!momentForDay && !day.isPastOrToday}
                     className={`relative block w-full rounded-lg overflow-hidden transition-all ${
                       momentForDay
                         ? 'bg-white dark:bg-white/10 shadow-md hover:shadow-xl hover:-translate-y-1 cursor-pointer'
-                        : day.isPastOrToday
-                          ? 'bg-white/60 dark:bg-white/5 border-2 border-dashed border-gray-300/50 dark:border-gray-600/30 hover:bg-white/80 dark:hover:bg-white/[0.08] cursor-pointer'
-                          : 'bg-white/60 dark:bg-white/5 border-2 border-dashed border-gray-300/50 dark:border-gray-600/30 cursor-default'
+                        : 'bg-white/60 dark:bg-white/5 border-2 border-dashed border-gray-300/50 dark:border-gray-600/30 hover:bg-white/80 dark:hover:bg-white/[0.08] cursor-pointer'
                     }`}
                   >
                     <div className="aspect-square relative">
@@ -227,14 +223,10 @@ const ScrapbookHomePage = ({
                         />
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-600">
-                          {day.isPastOrToday ? (
-                            <>
-                              <Plus className="w-6 h-6 mb-1" />
-                              <span className="text-[10px] font-medium">+ Add</span>
-                            </>
-                          ) : (
-                            <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300/60 dark:border-gray-600/40" />
-                          )}
+                          <>
+                            <Plus className="w-6 h-6 mb-1" />
+                            <span className="text-[10px] font-medium">+</span>
+                          </>
                         </div>
                       )}
                     </div>
