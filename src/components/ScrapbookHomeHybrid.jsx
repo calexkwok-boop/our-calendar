@@ -2,13 +2,11 @@ import React from 'react';
 import {
   Camera,
   Clock,
-  Heart,
   Plus,
   Sparkles,
-  StickyNote,
   Trash2,
-  BookOpen,
 } from 'lucide-react';
+import QuickThoughtsSection from './QuickThoughtsSection';
 
 /**
  * HYBRID SCRAPBOOK HOME PAGE
@@ -128,7 +126,6 @@ const ScrapbookHomeHybrid = ({
   themeAccentEllieChipButtonStyle,
   themeAccentTextStyle,
 }) => {
-  const momentTapRef = React.useRef(null);
   const todaySpotlightPhoto = getVisualPreviewUrl(todaySpotlightEvent);
 
   return (
@@ -374,64 +371,12 @@ const ScrapbookHomeHybrid = ({
           )}
         </div>
 
-        {/* QUICK THOUGHTS - NEW scrapbook enhanced with sticky notes */}
-        <div className="rounded-[28px] border-2 border-yellow-900/20 bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 dark:from-yellow-950/30 dark:via-slate-900 dark:to-orange-950/20 p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <StickyNote className="w-5 h-5 text-yellow-700 dark:text-yellow-400" />
-              <h3 className="font-handwritten text-3xl text-gray-900 dark:text-white">
-                Quick Thoughts
-              </h3>
-            </div>
-            <button
-              onClick={onAddThought}
-              className="rounded-full p-2 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-          </div>
-
-          {quickThoughts.length > 0 ? (
-            <div className="space-y-3">
-              {quickThoughts.map((thought, idx) => (
-                <div
-                  key={thought.id || idx}
-                  className={`sticky-note relative p-4 rounded-lg ${
-                    thought.color === 'yellow' ? 'bg-yellow-200 dark:bg-yellow-900/50' :
-                    thought.color === 'pink' ? 'bg-pink-200 dark:bg-pink-900/50' :
-                    thought.color === 'blue' ? 'bg-blue-200 dark:bg-blue-900/50' :
-                    'bg-green-200 dark:bg-green-900/50'
-                  }`}
-                >
-                  <p className="font-handwritten text-lg text-gray-900 dark:text-white pr-8">
-                    {thought.text}
-                  </p>
-                  {onDeleteThought && (
-                    <button
-                      onClick={() => onDeleteThought(thought)}
-                      className="absolute top-2 right-2 rounded-full bg-white/60 dark:bg-black/20 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/50 transition-all"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-8 text-center">
-              <p className="font-handwritten text-2xl text-gray-600 dark:text-gray-400 italic mb-4">
-                Jot down ideas, reminders, random thoughts...
-              </p>
-              <button
-                onClick={onAddThought}
-                className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold bg-yellow-200 dark:bg-yellow-900/50 text-gray-900 dark:text-white hover:bg-yellow-300 dark:hover:bg-yellow-900/70 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add your first thought
-              </button>
-            </div>
-          )}
-        </div>
+        <QuickThoughtsSection
+          quickThoughts={quickThoughts}
+          onAddThought={onAddThought}
+          onDeleteThought={onDeleteThought}
+          darkMode={darkMode}
+        />
 
         {/* LATEST MEMORIES - compact collage */}
         <button

@@ -1331,6 +1331,22 @@ const writeStoredTripSelectedDateKey = (userId, subCalId, dateKey) => {
 };
 
 const getMemoriesStorageKey = (userId) => `saved-memories-${String(userId || 'guest').trim() || 'guest'}`;
+const getQuickThoughtsStorageKey = (userId) => `quick-thoughts-${String(userId || 'guest').trim() || 'guest'}`;
+const readQuickThoughtsState = (userId) => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(getQuickThoughtsStorageKey(userId)) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+const writeQuickThoughtsState = (userId, thoughts) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(getQuickThoughtsStorageKey(userId), JSON.stringify(Array.isArray(thoughts) ? thoughts : []));
+  } catch {}
+};
 const MEMORIES_DB_NAME = 'our-calendar-memories-db';
 const MEMORIES_STORE_NAME = 'memories';
 const PROFILE_PHOTO_OVERRIDE_STORAGE_KEY = 'our-calendar-uploaded-profile-photo';
@@ -2936,6 +2952,7 @@ function App() {
     normalizeProfilePhotoUrl(readStoredProfilePhotoOverrideUrl() || readCachedProfilePhotoUrl('last'))
   ));
   const [journeyState, setJourneyState] = useState(createEmptyJourneyState);
+  const [quickThoughts, setQuickThoughts] = useState(() => readQuickThoughtsState('guest'));
   const [memories, setMemories] = useState([]);
   const [memoriesHydratedUserId, setMemoriesHydratedUserId] = useState(null);
   const [memoryTripRosterById, setMemoryTripRosterById] = useState({});
@@ -20488,6 +20505,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, journeyState]);
 
   useEffect(() => {
+    setQuickThoughts(readQuickThoughtsState(user?.id));
+  }, [user?.id]);
+
+  useEffect(() => {
+    writeQuickThoughtsState(user?.id, quickThoughts);
+  }, [user?.id, quickThoughts]);
+
+  useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     let cancelled = false;
     (async () => {
@@ -24375,6 +24400,28 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     openJourneyScreen();
   };
 
+  const addQuickThought = (thought) => {
+    const text = String(thought?.text || '').trim();
+    if (!text) return;
+    const colors = ['yellow', 'pink', 'blue', 'green'];
+    const color = colors.includes(String(thought?.color || '')) ? thought.color : colors[Math.floor(Math.random() * colors.length)];
+    setQuickThoughts((prev) => [
+      {
+        id: uuidv4(),
+        text,
+        color,
+        createdAt: new Date().toISOString(),
+      },
+      ...(Array.isArray(prev) ? prev : []),
+    ]);
+  };
+
+  const deleteQuickThought = (thought) => {
+    const thoughtId = String(thought?.id || '').trim();
+    if (!thoughtId) return;
+    setQuickThoughts((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== thoughtId));
+  };
+
   const closeJourneyTab = () => {
     setShowJourneyScreen(false);
     if (bottomNavTab === 'journey') setBottomNavTab('home');
@@ -28186,6 +28233,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             primaryJourneyStreak={primaryJourneyStreak}
             primaryJourneyLoggedToday={primaryJourneyLoggedToday}
             upcomingEventCount={homeUpcomingEventCount}
+            quickThoughts={quickThoughts}
+            onAddThought={addQuickThought}
+            onDeleteThought={deleteQuickThought}
             momentsThisWeek={homeMomentsThisWeek}
             onThisDayMemory={homeOnThisDayMemory}
             todaySpotlightEvent={homeTodaySpotlightEvent}
