@@ -221,14 +221,16 @@ const ScrapbookHomeHybrid = ({
                   }`}>
                     <div className="aspect-square relative">
                       {momentForDay ? (
-                        <button
-                          onClick={() => onOpenMemory?.(momentForDay)}
-                          className="w-full h-full"
-                        >
-                          <div
-                            className="w-full h-full bg-cover bg-center"
-                            style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
-                          />
+                        <>
+                          <button
+                            onClick={() => onOpenMemory?.(momentForDay)}
+                            className="w-full h-full"
+                          >
+                            <div
+                              className="w-full h-full bg-cover bg-center"
+                              style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
+                            />
+                          </button>
                           {onDeleteMoment && (
                             <button
                               onClick={(e) => {
@@ -240,7 +242,7 @@ const ScrapbookHomeHybrid = ({
                               <Trash2 className="w-4 h-4 text-red-600" />
                             </button>
                           )}
-                        </button>
+                        </>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           {day.isToday ? (

@@ -21,7 +21,7 @@ import TrophyCase, { deriveJourneyTrophyCase } from "./components/TrophyCase";
 import WelcomeCover from "./components/WelcomeCover";
 import ExploreTab from "./components/ExploreTab";
 import MemorySystem, { MemoryCreator as ImportedMemoryCreator } from "./components/MemorySystem";
-import ScrapbookHomePage from "./components/ScrapbookHomePage";
+import ScrapbookHomePage from "./components/ScrapbookHomeHybrid";
 import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
 import TripHighlightReel from "./components/TripHighlightReel";
