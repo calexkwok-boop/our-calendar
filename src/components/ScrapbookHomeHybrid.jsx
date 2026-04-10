@@ -110,6 +110,7 @@ const ScrapbookHomeHybrid = ({
   memoryReadyCount = 0,
   memoryPhotoCount = 0,
   memoryOpportunities = [],
+  memoryCollagePhotos = [],
   onOpenMemories,
   onCreateMemoryFromEvent,
   
@@ -126,7 +127,6 @@ const ScrapbookHomeHybrid = ({
 }) => {
   const momentTapRef = React.useRef(null);
   const todaySpotlightPhoto = getVisualPreviewUrl(todaySpotlightEvent);
-  const memoryCover = getMemoryCover(recentMemory);
 
   return (
     <div className="min-h-screen bg-[#faf8f3] dark:bg-slate-950 p-4 sm:p-6">
@@ -427,96 +427,28 @@ const ScrapbookHomeHybrid = ({
           )}
         </div>
 
-        {/* LATEST MEMORIES - Current style */}
-        <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-purple-50/60 via-white/90 to-pink-50/60 dark:from-purple-950/30 dark:via-slate-900/80 dark:to-pink-950/20 p-5 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
-                Worth keeping
-              </div>
-              <h3 className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
-                Memories make the calendar feel lived in
-              </h3>
-            </div>
-            <button
-              onClick={onOpenMemories}
-              className="rounded-xl border border-white/50 dark:border-white/10 bg-white/70 dark:bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-100"
-            >
-              Open gallery
-            </button>
+        {/* LATEST MEMORIES - compact collage */}
+        <button
+          type="button"
+          onClick={onOpenMemories}
+          className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3 text-left shadow-lg transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+        >
+          <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
+            💭 LATEST MEMORIES
           </div>
-
-          {recentMemory ? (
-            <button
-              onClick={() => onOpenMemory?.(recentMemory)}
-              className="w-full overflow-hidden rounded-[20px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.04] text-left transition-all hover:bg-white/95 dark:hover:bg-white/[0.08]"
-            >
-              {memoryCover ? (
-                <div className="h-36 w-full bg-cover bg-center" style={{ backgroundImage: `url(${memoryCover})` }} />
-              ) : (
-                <div className="h-36 w-full flex items-center justify-center bg-white/80 dark:bg-white/[0.05] text-gray-400">
-                  <Camera className="w-8 h-8" />
-                </div>
-              )}
-              <div className="p-4">
-                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-                  <Heart className="w-3.5 h-3.5" />
-                  Latest memory
-                </div>
-                <div className="mt-2 text-base font-semibold text-gray-900 dark:text-white">
-                  {recentMemory.title || 'Untitled memory'}
-                </div>
-                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {formatDisplayDate(recentMemory.date)}
-                </div>
-              </div>
-            </button>
-          ) : (
-            <div className="rounded-[20px] border border-dashed border-white/30 dark:border-white/10 px-4 py-5 text-sm text-gray-600 dark:text-gray-300 text-center">
-              No saved memories yet. The best moments from events and trips can start filling this in.
-            </div>
-          )}
-
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3">
-              <div className="text-lg font-semibold text-gray-900 dark:text-white">{memoryReadyCount}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">moments ready to save</div>
-            </div>
-            <div className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3">
-              <div className="text-lg font-semibold text-gray-900 dark:text-white">{memoryPhotoCount}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">photos living in memories</div>
-            </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {(memoryCollagePhotos.length > 0 ? memoryCollagePhotos : ['', '', '', '']).slice(0, 4).map((url, index) => (
+              <div
+                key={`memory-collage-${index}`}
+                className="h-14 rounded-[14px] border border-white/40 bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 bg-cover bg-center dark:border-white/10 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20"
+                style={url ? { backgroundImage: `url(${url})` } : undefined}
+              />
+            ))}
           </div>
-
-          {memoryOpportunities.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {memoryOpportunities.slice(0, 2).map((event) => (
-                <div
-                  key={event.id}
-                  className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] px-3 py-3"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                        {event.title}
-                      </div>
-                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        {formatDisplayDate(event.date)}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => onCreateMemoryFromEvent?.(event)}
-                      className="shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold"
-                      style={themeAccentEllieChipButtonStyle}
-                    >
-                      Save
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            {memoryCollagePhotos.length > 0 ? 'A little collage from your gallery' : 'Your saved moments will gather here'}
+          </div>
+        </button>
 
         {/* SOMEDAY LIST - NEW scrapbook enhanced */}
         <div className="rounded-[28px] border-2 border-emerald-900/20 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-slate-900 dark:to-cyan-950/20 p-6 shadow-xl">

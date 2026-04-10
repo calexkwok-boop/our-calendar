@@ -23894,7 +23894,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     typeof document !== 'undefined'
       ? createPortal(
       <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[85] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10010] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={() => {
           if (journeyRunSession?.status !== 'active') closeJourneyRunTrackerModal();
         }}
@@ -24054,7 +24054,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     typeof document !== 'undefined'
       ? createPortal(
         <div
-          className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[85] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+          className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10010] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
           onClick={() => {
             if (journeyWorkoutSession?.status !== 'active') closeJourneyWorkoutTrackerModal();
           }}
@@ -24221,7 +24221,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       typeof document !== 'undefined'
         ? createPortal(
         <div
-          className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[85] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+          className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10010] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
           onClick={closeJourneyWeightTrackerModal}
           style={{ minHeight: '100dvh' }}
         >
@@ -34652,7 +34652,7 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyEntryModal && renderJourneyPortal((
       <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[84] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10010] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeJourneyEntryModal}
         style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
       >
@@ -34697,7 +34697,7 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyGoalModal && renderJourneyPortal((
       <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[84] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10010] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeJourneyGoalModal}
         style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
       >
@@ -34748,7 +34748,7 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyGoalCreatedPrompt && createdJourneyGoal && renderJourneyPortal((
       <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[84] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10010] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeJourneyGoalCreatedPrompt}
         style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
       >
@@ -34802,7 +34802,7 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyDeleteGoalPrompt && pendingDeleteJourneyGoal && renderJourneyPortal((
       <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[84] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10010] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeJourneyDeleteGoalPrompt}
         style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
       >
@@ -34842,7 +34842,7 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyLogModal && renderJourneyPortal((
       <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[84] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10010] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={closeJourneyLogModal}
         style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
       >
@@ -35024,7 +35024,7 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyNoteModal && renderJourneyPortal((
       <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[84] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10010] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
         onClick={() => setShowJourneyNoteModal(false)}
         style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
       >
