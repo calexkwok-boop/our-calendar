@@ -23795,7 +23795,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       </div>
     );
   };
-  const controlWidgetAddPanelPortal = showControlWidgetAddPanel && typeof document !== 'undefined'
+  const controlWidgetAddPanelPortal = bottomNavTab === 'calendar' && showControlWidgetAddPanel && typeof document !== 'undefined'
     ? createPortal(
       <div
         className="fixed inset-0 z-[999] bg-black/45 flex items-end sm:items-center justify-center p-4"
@@ -25493,7 +25493,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               />
             </div>
           ) : null}
-          {['calendar', 'events', 'explore'].includes(String(bottomNavTab || '')) && (
+          {bottomNavTab === 'calendar' && (
             <div className="absolute inset-0 z-[25] pointer-events-none">
 
               {/* Icon — top left, opens account */}
@@ -25725,6 +25725,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             </div>
           </div>
           </div>
+          {bottomNavTab === 'calendar' && (
           <div className="absolute inset-x-4 sm:inset-x-5 bottom-1 sm:bottom-2 z-20 pointer-events-none">
             <div className="flex items-center justify-center gap-1.5 pointer-events-auto">
               {activeControlWidgets.map((widgetId) => {
@@ -25756,6 +25757,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               </button>
             </div>
           </div>
+          )}
           {isCoverTapToRevealMode ? (
             <>
               <button
@@ -34764,6 +34766,7 @@ transform: translateY(0);
               <X className="w-5 h-5" />
             </button>
           </div>
+          )}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-stone-50 px-5 py-5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] [webkit-overflow-scrolling:touch] dark:bg-slate-950 sm:px-6">
           <div className="mx-auto w-full max-w-lg">
