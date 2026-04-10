@@ -227,6 +227,8 @@ const MemorySystem = ({
   onComment,
   onShare,
   onCloseSystem,
+  onViewChange,
+  onSetCurrentMemory,
   
   // User
   user,
@@ -262,9 +264,16 @@ const MemorySystem = ({
           memories={memories}
           onSelectMemory={(memory) => {
             setSelectedMemory(memory);
+            onSetCurrentMemory?.(memory);
             setActiveView('viewer');
+            onViewChange?.('viewer');
           }}
-          onCreateNew={() => setActiveView('create')}
+          onCreateNew={() => {
+            setSelectedMemory(null);
+            onSetCurrentMemory?.(null);
+            setActiveView('create');
+            onViewChange?.('create');
+          }}
           onClose={onCloseSystem}
           darkMode={darkMode}
         />
@@ -272,10 +281,14 @@ const MemorySystem = ({
       
       {activeView === 'create' && (
         <MemoryCreator
-          onCancel={() => setActiveView('gallery')}
+          onCancel={() => {
+            setActiveView('gallery');
+            onViewChange?.('gallery');
+          }}
           onCreate={(memoryData) => {
             onCreateMemory(memoryData);
             setActiveView('gallery');
+            onViewChange?.('gallery');
           }}
           onAddPhoto={onAddPhoto}
           onTagPerson={onTagPerson}
@@ -290,12 +303,16 @@ const MemorySystem = ({
           memory={selectedMemory}
           onClose={() => {
             setSelectedMemory(null);
+            onSetCurrentMemory?.(null);
             setActiveView('gallery');
+            onViewChange?.('gallery');
           }}
           onEdit={() => setActiveView('edit')}
           onDelete={() => {
             onDeleteMemory(selectedMemory.id);
+            onSetCurrentMemory?.(null);
             setActiveView('gallery');
+            onViewChange?.('gallery');
           }}
           onReact={onReact}
           onComment={onComment}

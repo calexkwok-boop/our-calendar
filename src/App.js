@@ -24906,6 +24906,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               onComment={commentOnMemory}
               onShare={shareMemoryRecord}
               onCloseSystem={closeMemorySystem}
+              onViewChange={setMemorySystemView}
+              onSetCurrentMemory={setMemorySystemCurrentMemory}
               user={user}
               darkMode={darkMode}
             />
@@ -34211,40 +34213,17 @@ transform: translateY(0);
     )}
     {!activeSubCalendar && showJourneyScreen && renderJourneyPortal((
       <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[82] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
-        onClick={closeJourneyTab}
-        style={{
-          touchAction: 'none',
-          overscrollBehavior: 'none',
-          minHeight: '100dvh',
-        }}
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10000] flex flex-col overflow-hidden bg-white dark:bg-slate-950`}
       >
+        <div className="h-1 shrink-0 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
         <div
-          className="relative w-full max-w-2xl max-h-[min(88dvh,52rem)] overflow-y-auto overflow-hidden rounded-[28px] border border-white/40 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-950"
-          onClick={(e) => e.stopPropagation()}
+          className="shrink-0 border-b border-gray-200 bg-white px-5 pb-4 pt-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] dark:border-white/10 dark:bg-slate-950 sm:px-6"
           style={{
-            touchAction: 'pan-y',
-            overscrollBehaviorY: 'contain',
-            WebkitOverflowScrolling: 'touch',
-            backgroundClip: 'padding-box',
-            boxShadow: darkMode
-              ? '0 24px 60px rgba(2, 6, 23, 0.62)'
-              : undefined,
+            background: darkMode
+              ? `linear-gradient(180deg, ${hexToRgba('#0f172a', 0.98)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.16)} 100%)`
+              : `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
           }}
         >
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
-          <div
-            className="mb-4"
-            style={{
-              background: darkMode
-                ? `linear-gradient(180deg, ${hexToRgba('#0f172a', 0.98)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.16)} 100%)`
-                : `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
-              marginLeft: '-1.5rem',
-              marginRight: '-1.5rem',
-              marginTop: '-1.5rem',
-              padding: '1.5rem',
-            }}
-          >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
@@ -34267,7 +34246,8 @@ transform: translateY(0);
             </div>
           </div>
 
-          <div className="space-y-4 pb-6">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-stone-50 px-5 py-5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] [webkit-overflow-scrolling:touch] dark:bg-slate-950 sm:px-6">
+          <div className="mx-auto w-full max-w-2xl space-y-4 pb-6">
             <div className="flex items-center justify-between gap-3 rounded-[24px] border border-gray-200/80 dark:border-white/10 bg-white/75 dark:bg-slate-900/65 px-4 py-3">
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Trophy Case</div>
