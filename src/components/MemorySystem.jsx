@@ -307,7 +307,10 @@ const MemorySystem = ({
             setActiveView('gallery');
             onViewChange?.('gallery');
           }}
-          onEdit={() => setActiveView('edit')}
+          onEdit={() => {
+            setActiveView('edit');
+            onViewChange?.('edit');
+          }}
           onDelete={() => {
             onDeleteMemory(selectedMemory.id);
             onSetCurrentMemory?.(null);
@@ -319,6 +322,46 @@ const MemorySystem = ({
           onShare={onShare}
           user={user}
           darkMode={darkMode}
+        />
+      )}
+
+      {activeView === 'edit' && selectedMemory && (
+        <MemoryCreator
+          onCancel={() => {
+            setActiveView('viewer');
+            onViewChange?.('viewer');
+          }}
+          onCreate={(memoryData) => {
+            const photos = Array.isArray(memoryData?.photos) ? memoryData.photos : [];
+            onUpdateMemory(selectedMemory.id, (memory) => ({
+              ...memory,
+              ...memoryData,
+              title: String(memoryData?.title || memory?.title || 'Untitled memory').trim(),
+              description: String(memoryData?.description || '').trim(),
+              highlights: Array.isArray(memoryData?.highlights)
+                ? memoryData.highlights.filter((highlight) => String(highlight || '').trim())
+                : [],
+              photos,
+              coverPhoto: String(memoryData?.coverPhoto || photos?.[0]?.url || '').trim(),
+              taggedPeople: Array.isArray(memoryData?.taggedPeople) ? memoryData.taggedPeople : [],
+              date: String(memoryData?.date || memory?.date || new Date().toISOString().split('T')[0]).trim(),
+              location: String(memoryData?.location || '').trim(),
+            }));
+            setSelectedMemory((prev) => ({
+              ...(prev || selectedMemory),
+              ...memoryData,
+              coverPhoto: String(memoryData?.coverPhoto || photos?.[0]?.url || '').trim(),
+              photos,
+            }));
+            setActiveView('viewer');
+            onViewChange?.('viewer');
+          }}
+          onAddPhoto={onAddPhoto}
+          onTagPerson={onTagPerson}
+          user={user}
+          initialData={selectedMemory}
+          darkMode={darkMode}
+          submitLabel="Save Memory"
         />
       )}
     </div>
@@ -470,7 +513,7 @@ const MemoryThumbnail = ({ memory, onClick, darkMode }) => {
 // MEMORY CREATOR
 // ============================================================================
 
-export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, darkMode, initialData, autoCreateOnPhotoAdd = false }) => {
+export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, user, darkMode, initialData, autoCreateOnPhotoAdd = false, submitLabel = 'Create a Memory' }) => {
   const [step, setStep] = useState(1); // 1: photos, 2: details, 3: people, 4: preview
   const [memoryData, setMemoryData] = useState(() => createEmptyMemoryDraft(initialData || {}));
   const autoCreatedRef = useRef(false);
@@ -638,7 +681,7 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
             className="flex-1 min-w-0 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 
                      text-white font-bold hover:shadow-xl transition-all flex items-center justify-center gap-2">
             <Sparkles className="w-5 h-5" />
-            Create a Memory
+            {submitLabel}
           </button>
         )}
         </div>

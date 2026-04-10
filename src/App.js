@@ -24910,7 +24910,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             <div>
               <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Memories</div>
               <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {memorySystemView === 'create' ? 'Create a memory' : 'Your memory gallery'}
+                {memorySystemView === 'create' ? 'Create a memory' : memorySystemView === 'edit' ? 'Edit memory' : 'Your memory gallery'}
               </div>
             </div>
             <button
