@@ -325,7 +325,21 @@ const ScrapbookHomePage = ({
         </div>
 
         {/* Mini Journey Card */}
-        <div className="mt-3 rounded-[20px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.05] p-3 shadow-sm">
+        <div
+          id="home-mini-journey"
+          className="mt-3 rounded-[20px] border border-white/50 dark:border-white/10 bg-white/90 dark:bg-white/[0.05] p-3 shadow-sm"
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Journey</div>
+            <button
+              onClick={onOpenJourney}
+              className="shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-semibold"
+              style={themeAccentEllieChipButtonStyle}
+            >
+              Open
+            </button>
+          </div>
+
           {primaryJourneyGoal ? (
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -345,32 +359,16 @@ const ScrapbookHomePage = ({
                   </span>
                 </div>
               </div>
-              <button
-                onClick={onOpenJourney}
-                className="shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold"
-                style={themeAccentEllieChipButtonStyle}
-              >
-                Open
-              </button>
             </div>
           ) : (
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                  <Sparkles className="w-4 h-4 shrink-0" />
-                  <span>Start a goal</span>
-                </div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">Start a goal</div>
                 <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
                   Track one simple habit or outcome and build momentum.
                 </div>
               </div>
-              <button
-                onClick={onOpenJourney}
-                className="shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold"
-                style={themeAccentEllieChipButtonStyle}
-              >
-                Open
-              </button>
             </div>
           )}
         </div>
