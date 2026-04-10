@@ -80,6 +80,7 @@ const ScrapbookHomeHybrid = ({
   greetingName = 'there',
   greetingEmoji = '',
   todayLabel = '',
+  showHeader = true,
   
   // Year stats for header
   yearStats = { events: 52, trips: 8, photos: 247, places: 12 },
@@ -87,6 +88,7 @@ const ScrapbookHomeHybrid = ({
   // Moments This Week (current)
   momentsThisWeek = [],
   onCaptureQuickMoment,
+  onAddMomentForDate,
   onOpenMemory,
   onDeleteMoment,
   onConfirmAction,
@@ -95,6 +97,7 @@ const ScrapbookHomeHybrid = ({
   
   // What's Next Today (current)
   todaySpotlightEvent = null,
+  onAddEvent,
   
   // Coming Up This Week (current)
   upcomingPreviewEvents = [],
@@ -168,6 +171,8 @@ const ScrapbookHomeHybrid = ({
 
       <div className="mx-auto max-w-5xl space-y-6">
         
+        {showHeader && (
+          <>
         {/* SCRAPBOOK HEADER with Year Stats */}
         <div className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-8 shadow-2xl paper-texture">
           {/* Decorative corner doodles */}
@@ -189,6 +194,8 @@ const ScrapbookHomeHybrid = ({
             </div>
           </div>
         </div>
+          </>
+        )}
 
         {/* MOMENTS THIS WEEK - Current clean style with polaroids */}
         <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-white/95 via-amber-50/40 to-white/90 dark:from-slate-900/80 dark:via-amber-900/10 dark:to-slate-900/75 p-5 shadow-lg">
@@ -211,6 +218,9 @@ const ScrapbookHomeHybrid = ({
               const momentForDay = momentsThisWeek.find(m => 
                 String(m?.date || '').trim().slice(0, 10) === day.dateKey
               );
+              const handleAddMoment = () => {
+                (onAddMomentForDate || onCaptureQuickMoment)?.(day.dateKey);
+              };
 
               return (
                 <div key={day.dateKey} className="flex-shrink-0 w-32">
@@ -245,17 +255,14 @@ const ScrapbookHomeHybrid = ({
                         </>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          {day.isToday ? (
-                            <button
-                              onClick={onCaptureQuickMoment}
-                              className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                            >
-                              <Plus className="w-6 h-6" />
-                              <span className="text-[10px] font-medium">Add</span>
-                            </button>
-                          ) : (
-                            <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600" />
-                          )}
+                          <button
+                            type="button"
+                            onClick={handleAddMoment}
+                            className="flex h-full w-full flex-col items-center justify-center gap-1 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+                            aria-label={`Add moment for ${day.label}`}
+                          >
+                            <Plus className="w-6 h-6" />
+                          </button>
                         </div>
                       )}
                     </div>
@@ -286,7 +293,7 @@ const ScrapbookHomeHybrid = ({
         {/* WHAT'S NEXT TODAY - Current style */}
         <button
           type="button"
-          onClick={() => todaySpotlightEvent && onOpenMemory?.(todaySpotlightEvent)}
+          onClick={onAddEvent}
           className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
         >
           <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400 mb-3">
@@ -315,14 +322,13 @@ const ScrapbookHomeHybrid = ({
               <p className="text-sm text-gray-600 dark:text-gray-400 italic">
                 Your day is wide open ✨
               </p>
-              <button
-                onClick={onCaptureQuickMoment}
+              <span
                 className="mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold"
                 style={themeAccentEllieChipButtonStyle}
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add something
-              </button>
+              </span>
             </div>
           )}
         </button>

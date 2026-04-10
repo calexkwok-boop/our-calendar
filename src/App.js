@@ -25434,16 +25434,57 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             if (!coverHeaderControlsVisible) return;
             bumpCoverControlsInteraction();
           }}
-          style={hasActiveLayerHeaderCover && effectiveCoverOpacity > 0.01
+          style={bottomNavTab !== 'home' && hasActiveLayerHeaderCover && effectiveCoverOpacity > 0.01
             ? {
               backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
               backgroundSize: 'cover',
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'center',
             }
-            : undefined}
+            : bottomNavTab === 'home'
+              ? {
+                background: darkMode
+                  ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.18)} 0%, rgba(15,23,42,0.94) 52%, rgba(2,6,23,0.98) 100%)`
+                  : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 0%, rgba(255,251,235,0.96) 52%, rgba(255,255,255,0.98) 100%)`,
+              }
+              : undefined}
         >
-          {!hasActiveLayerHeaderCover ? (
+          {bottomNavTab === 'home' ? (
+            <div className="relative z-20 flex min-h-[132px] flex-col justify-end overflow-hidden rounded-2xl px-2 pb-3 pt-14 sm:min-h-[172px] sm:px-4 sm:pb-5 lg:min-h-[252px]">
+              <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full blur-3xl" style={{ background: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.35 : 0.22) }} />
+              <div className="pointer-events-none absolute -bottom-10 -left-8 h-28 w-28 rounded-full blur-2xl" style={{ background: hexToRgba(activeLayerPageTheme.backgroundTo, darkMode ? 0.28 : 0.18) }} />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCalendarSwitcher((prev) => !prev);
+                }}
+                className="absolute left-2 top-2 sm:left-4 sm:top-4"
+                title="Calendars & account"
+              >
+                <UserProfileAvatar
+                  photoUrl={currentUserProfilePhotoUrl}
+                  userId={user?.id}
+                  label={currentUserProfileLabel}
+                  sizeClass="w-9 h-9 sm:w-10 sm:h-10"
+                  roundedClass="rounded-xl"
+                  textClass="text-base sm:text-lg"
+                />
+              </button>
+              <div className="relative">
+                <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">
+                  Home
+                </div>
+                <h1 className="mt-2 font-handwritten text-5xl leading-none text-gray-900 dark:text-white sm:text-6xl">
+                  {homeGreeting}, {homeGreetingName} {homeGreetingEmoji}
+                </h1>
+                <p className="mt-3 text-sm font-medium text-gray-600 dark:text-gray-300">
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
+            </div>
+          ) : null}
+          {bottomNavTab !== 'home' && !hasActiveLayerHeaderCover ? (
             <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
               <WelcomeCover
                 userName={homeGreetingName || currentUserProfileLabel || null}
@@ -25455,7 +25496,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               />
             </div>
           ) : null}
-          {['home', 'calendar', 'events', 'explore'].includes(String(bottomNavTab || '')) && (
+          {['calendar', 'events', 'explore'].includes(String(bottomNavTab || '')) && (
             <div className="absolute inset-0 z-[25] pointer-events-none">
 
               {/* Icon — top left, opens account */}
@@ -28133,6 +28174,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             greetingName={homeGreetingName}
             greetingEmoji={homeGreetingEmoji}
             todayLabel={new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            showHeader={false}
             tripsPreview={homeTripsPreviewCards}
             activeTripIds={activeTrips.map((trip) => String(trip?.id || ''))}
             recentMemory={homeRecentMemory}
