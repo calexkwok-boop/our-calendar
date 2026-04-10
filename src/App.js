@@ -7973,6 +7973,14 @@ function App() {
     };
   }, [showTitleStyleModal]);
   const activeLayer = layers.find(layer => layer.id === activeLayerId) || null;
+  useEffect(() => {
+    if (!activeLayerId) {
+      setCalendarTitle('Our Calendar');
+      return;
+    }
+    const nextTitle = activeLayer?.name || 'Our Calendar';
+    setCalendarTitle((prevTitle) => (prevTitle === nextTitle ? prevTitle : nextTitle));
+  }, [activeLayerId, activeLayer?.name]);
   const accountPaymentIdentity = String(user?.email || currentUser || '').trim();
   const hasSavedAccountPaymentHandle = Boolean(
     (accountPaymentIdentity && getVenmoHandleForIdentity(accountPaymentIdentity))
@@ -10410,12 +10418,26 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         await supabase.from('trip_photos').delete().in('sub_calendar_id', subCalIds);
       }
 
-      await supabase.from('sub_calendars').delete().eq('layer_id', normalizedLayerId);
-      await supabase.from('events').delete().eq('layer_id', normalizedLayerId);
-      await supabase.from('shared_lists').delete().eq('layer_id', normalizedLayerId);
-      await supabase.from('shared_list_groups').delete().eq('layer_id', normalizedLayerId);
-      await supabase.from('shared_access').delete().eq('layer_id', normalizedLayerId);
-      await supabase.from('calendar_layers').delete().eq('id', normalizedLayerId).eq('owner_id', user.id);
+      const relatedDeletes = [
+        await supabase.from('sub_calendars').delete().eq('layer_id', normalizedLayerId),
+        await supabase.from('events').delete().eq('layer_id', normalizedLayerId),
+        await supabase.from('shared_lists').delete().eq('layer_id', normalizedLayerId),
+        await supabase.from('shared_list_groups').delete().eq('layer_id', normalizedLayerId),
+        await supabase.from('shared_access').delete().eq('layer_id', normalizedLayerId),
+      ];
+      const relatedDeleteError = relatedDeletes.find((result) => result?.error)?.error;
+      if (relatedDeleteError) throw relatedDeleteError;
+
+      const { data: deletedLayerRows, error: deleteLayerError } = await supabase
+        .from('calendar_layers')
+        .delete()
+        .eq('id', normalizedLayerId)
+        .eq('owner_id', user.id)
+        .select('id');
+      if (deleteLayerError) throw deleteLayerError;
+      if (!Array.isArray(deletedLayerRows) || deletedLayerRows.length === 0) {
+        throw new Error('Calendar row was not deleted. You may not have permission to delete this calendar.');
+      }
 
       const remainingLayers = layers.filter(item => String(item.id) !== normalizedLayerId);
       setLayers(remainingLayers);
@@ -28165,28 +28187,35 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             {uniqueVisibleLayers.map(layer => {
               const isActive = String(layer.id) === String(activeLayerId);
               const rowTheme = normalizeLayerPageTheme(layer?.page_theme, layer?.title_style);
-              const canDeleteLayer = String(layer?.owner_id || '') === String(user?.id || '') && (layers || []).length > 1;
-              const rowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
-              const isDeleteRevealed = rowOffset < 0;
-              return (
-                <div key={layer.id} className="relative rounded-xl overflow-hidden">
-                  {canDeleteLayer && (
+                      const isLayerOwner = String(layer?.owner_id || '') === String(user?.id || '');
+                      const canSwipeLayerAction = (layers || []).length > 1;
+                      const rowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
+                      const isDeleteRevealed = rowOffset < 0;
+                      return (
+                        <div key={layer.id} className="relative rounded-xl overflow-hidden">
+                  {canSwipeLayerAction && (
                     <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
                       <button
-                        onClick={() => deleteLayerCalendar(layer.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isLayerOwner) deleteLayerCalendar(layer.id);
+                          else leaveSharedLayerCalendar(layer.id);
+                        }}
                         className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
                       >
-                        Delete
+                        {isLayerOwner ? 'Delete' : 'Leave'}
                       </button>
                     </div>
                   )}
                   <button
-                    onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canDeleteLayer)}
+                    onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canSwipeLayerAction)}
                     onTouchMove={handleLayerSwipeMove}
                     onTouchEnd={handleLayerSwipeEnd}
                     onTouchCancel={handleLayerSwipeEnd}
                     onClick={() => {
                       setActiveLayerId(layer.id);
+                      setCalendarTitle(layer.name || 'Our Calendar');
+                      if (user?.id) localStorage.setItem(`active-layer-${user.id}`, String(layer.id || ''));
                       setShowCalendarSwitcher(false);
                       openCalendarTab();
                     }}
