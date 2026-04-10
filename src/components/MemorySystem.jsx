@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Sparkles, Camera, Heart, MessageCircle, Share2, X,
-  ChevronLeft, ChevronRight, Plus, Check, Eye, Calendar, MapPin, Edit2, Trash2
+  ChevronLeft, ChevronRight, Plus, Check, Eye, Calendar, MapPin, Edit2, Trash2, Star
 } from 'lucide-react';
 
 const createEmptyMemoryDraft = (overrides = {}) => ({
@@ -275,6 +275,17 @@ const MemorySystem = ({
             onViewChange?.('create');
           }}
           onClose={onCloseSystem}
+          onToggleFavorite={(memory) => {
+            if (!memory?.id) return;
+            onUpdateMemory?.(memory.id, (current) => ({
+              ...current,
+              isFavorite: !Boolean(current?.isFavorite),
+            }));
+          }}
+          onDeleteMemory={(memory) => {
+            if (!memory?.id) return;
+            onDeleteMemory?.(memory.id);
+          }}
           darkMode={darkMode}
         />
       )}
@@ -372,8 +383,9 @@ const MemorySystem = ({
 // MEMORIES GALLERY VIEW
 // ============================================================================
 
-const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, darkMode }) => {
+const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onToggleFavorite, onDeleteMemory, darkMode }) => {
   const safeMemories = Array.isArray(memories) ? memories : [];
+  const [deleteReadyMemoryId, setDeleteReadyMemoryId] = useState('');
   // Group memories by year
   const memoriesByYear = safeMemories.reduce((acc, memory) => {
     const year = new Date(memory.date).getFullYear();
@@ -444,6 +456,13 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, darkM
                 key={memory.id}
                 memory={memory}
                 onClick={() => onSelectMemory(memory)}
+                onToggleFavorite={() => onToggleFavorite?.(memory)}
+                onDelete={() => {
+                  onDeleteMemory?.(memory);
+                  setDeleteReadyMemoryId('');
+                }}
+                deleteReady={String(deleteReadyMemoryId || '') === String(memory?.id || '')}
+                onLongPress={() => setDeleteReadyMemoryId(String(memory?.id || ''))}
                 darkMode={darkMode}
               />
             ))}
@@ -454,15 +473,56 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, darkM
   );
 };
 
-const MemoryThumbnail = ({ memory, onClick, darkMode }) => {
+const MemoryThumbnail = ({ memory, onClick, onToggleFavorite, onDelete, deleteReady = false, onLongPress, darkMode }) => {
   const photoCount = memory.photos?.length || 0;
   const peopleCount = memory.taggedPeople?.length || 0;
   const reactionCount = memory.reactionCount || 0;
   const coverPhoto = String(memory?.coverPhoto || memory?.photos?.[0]?.url || '').trim();
+  const isFavorite = Boolean(memory?.isFavorite);
+  const longPressTimerRef = useRef(null);
+  const longPressFiredRef = useRef(false);
+
+  const clearLongPressTimer = () => {
+    if (!longPressTimerRef.current) return;
+    window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
+  };
+
+  const startLongPressTimer = () => {
+    clearLongPressTimer();
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTimerRef.current = null;
+      longPressFiredRef.current = true;
+      onLongPress?.();
+    }, 550);
+  };
+
+  const handleCardClick = (event) => {
+    if (longPressFiredRef.current) {
+      event.preventDefault();
+      longPressFiredRef.current = false;
+      return;
+    }
+    onClick?.();
+  };
+
+  useEffect(() => clearLongPressTimer, []);
   
   return (
-    <button
-      onClick={onClick}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleCardClick}
+      onPointerDown={startLongPressTimer}
+      onPointerUp={clearLongPressTimer}
+      onPointerLeave={clearLongPressTimer}
+      onPointerCancel={clearLongPressTimer}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick?.();
+        }
+      }}
       className="relative rounded-2xl overflow-hidden aspect-square group cursor-pointer">
       {/* Cover photo */}
       {coverPhoto ? (
@@ -477,7 +537,24 @@ const MemoryThumbnail = ({ memory, onClick, darkMode }) => {
       
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-      
+
+      {deleteReady && (
+        <div className="absolute inset-x-3 top-3 z-30 flex items-center gap-2 rounded-2xl border border-red-200/60 bg-red-500/95 p-2 text-white shadow-xl backdrop-blur">
+          <Trash2 className="h-4 w-4 shrink-0" />
+          <button
+            type="button"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete?.();
+            }}
+            className="flex-1 rounded-xl bg-white/95 px-3 py-2 text-xs font-bold text-red-600 shadow-sm"
+          >
+            Delete
+          </button>
+        </div>
+      )}
+       
       {/* Content */}
       <div className="absolute inset-0 p-4 flex flex-col justify-end">
         <h4 className="text-white font-bold text-base mb-1 line-clamp-2">
@@ -499,13 +576,31 @@ const MemoryThumbnail = ({ memory, onClick, darkMode }) => {
         </div>
       </div>
       
+      <button
+        type="button"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggleFavorite?.();
+        }}
+        className={`absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full border shadow-lg backdrop-blur transition-all ${
+          isFavorite
+            ? 'border-amber-200 bg-amber-400 text-white'
+            : 'border-white/40 bg-black/35 text-white hover:bg-black/55'
+        }`}
+        aria-label={isFavorite ? 'Remove from favorite memories' : 'Favorite this memory'}
+        title={isFavorite ? 'Favorited' : 'Favorite'}
+      >
+        <Star className="h-4 w-4" fill={isFavorite ? 'currentColor' : 'none'} />
+      </button>
+
       {/* Badge if shared */}
       {memory.isShared && (
-        <div className="absolute top-3 right-3 bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+        <div className="absolute top-14 right-3 bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-bold">
           Shared
         </div>
       )}
-    </button>
+    </div>
   );
 };
 

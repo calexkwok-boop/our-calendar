@@ -1858,7 +1858,6 @@ const CONTROL_WIDGET_IDS = Object.freeze([
   'chat',
   'weather',
   'categories',
-  'theme',
   'ai',
   'scan',
   'import',
@@ -1878,16 +1877,13 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'import',
   'weather',
   'categories',
-  'theme',
 ]);
 const DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
   'notifications',
-  'theme',
   'weather',
   'categories',
 ]);
 const PICKLEBALL_559_DEFAULT_CONTROL_WIDGET_ORDER = Object.freeze([
-  'theme',
   'weather',
   'gauntlet',
   'roundrobin',
@@ -2278,8 +2274,8 @@ const urlBase64ToUint8Array = (base64String) => {
   return outputArray;
 };
 
-const getLayerDarkModeStorageKey = (userId, layerId) => `darkMode:${String(userId || '').trim()}:${String(layerId || '').trim()}`;
-const getLayerThemeModeStorageKey = (userId, layerId) => `themeMode:${String(userId || '').trim()}:${String(layerId || '').trim()}`;
+const getAccountDarkModeStorageKey = (userId) => `darkMode:${String(userId || 'guest').trim() || 'guest'}`;
+const getAccountThemeModeStorageKey = (userId) => `themeMode:${String(userId || 'guest').trim() || 'guest'}`;
 const THEME_MODE_OPTIONS = Object.freeze(['auto', 'dark', 'light']);
 const GAUNTLET_PAIRING_PATTERNS = Object.freeze([
   Object.freeze([[0, 3], [1, 2]]),
@@ -10925,33 +10921,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     const userId = String(user?.id || '').trim();
-    const layerId = String(activeLayerId || '').trim();
     const normalizeStoredThemeMode = (value) => (
       THEME_MODE_OPTIONS.includes(value) ? value : null
     );
     const legacyToThemeMode = (value) => (
       value === 'true' ? 'dark' : value === 'false' ? 'light' : null
     );
-    if (!userId || !layerId) {
-      const storedThemeMode = typeof window !== 'undefined' ? normalizeStoredThemeMode(localStorage.getItem('themeMode')) : null;
-      if (storedThemeMode) {
-        setThemeMode(storedThemeMode);
-        return;
-      }
-      const legacy = typeof window !== 'undefined' ? localStorage.getItem('darkMode') : null;
-      setThemeMode(legacyToThemeMode(legacy) || 'auto');
-      return;
-    }
-    const scopedThemeMode = normalizeStoredThemeMode(localStorage.getItem(getLayerThemeModeStorageKey(userId, layerId)));
-    if (scopedThemeMode) {
-      setThemeMode(scopedThemeMode);
-      return;
-    }
-    const scopedKey = getLayerDarkModeStorageKey(userId, layerId);
-    const scopedValue = localStorage.getItem(scopedKey);
-    const scopedLegacyThemeMode = legacyToThemeMode(scopedValue);
-    if (scopedLegacyThemeMode) {
-      setThemeMode(scopedLegacyThemeMode);
+    const accountThemeMode = normalizeStoredThemeMode(localStorage.getItem(getAccountThemeModeStorageKey(userId)));
+    if (accountThemeMode) {
+      setThemeMode(accountThemeMode);
       return;
     }
     const storedThemeMode = normalizeStoredThemeMode(localStorage.getItem('themeMode'));
@@ -10961,17 +10939,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     const legacy = localStorage.getItem('darkMode');
     setThemeMode(legacyToThemeMode(legacy) || 'auto');
-  }, [user?.id, activeLayerId]);
+  }, [user?.id]);
 
   useEffect(() => {
     const userId = String(user?.id || '').trim();
-    const layerId = String(activeLayerId || '').trim();
     localStorage.setItem('themeMode', themeMode);
     localStorage.setItem('darkMode', String(darkMode));
-    if (!userId || !layerId) return;
-    localStorage.setItem(getLayerThemeModeStorageKey(userId, layerId), themeMode);
-    localStorage.setItem(getLayerDarkModeStorageKey(userId, layerId), String(darkMode));
-  }, [themeMode, darkMode, user?.id, activeLayerId]);
+    localStorage.setItem(getAccountThemeModeStorageKey(userId), themeMode);
+    localStorage.setItem(getAccountDarkModeStorageKey(userId), String(darkMode));
+  }, [themeMode, darkMode, user?.id]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -22744,7 +22720,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const readInAppCount = inAppNotifications.reduce((sum, n) => sum + (n.read ? 1 : 0), 0);
   const activeChatUnreadCount = Number(chatUnreadCounts[String(activeLayerId || '')] || 0);
   const activeControlWidgets = [...new Set(controlWidgetOrder.filter((id) => CONTROL_WIDGET_IDS.includes(id)))];
-  const todayOverviewWidgetIds = ['notifications', 'theme', 'categories', 'notes'];
+  const todayOverviewWidgetIds = ['notifications', 'categories', 'notes'];
   const todayOverviewLeftWidgetIds = todayOverviewWidgetIds.slice(0, Math.ceil(todayOverviewWidgetIds.length / 2));
   const todayOverviewRightWidgetIds = todayOverviewWidgetIds.slice(Math.ceil(todayOverviewWidgetIds.length / 2));
   const popupEventDetailsById = (() => {
@@ -23765,10 +23741,6 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
       setShowCategoryEditor((prev) => !prev);
       return;
     }
-    if (id === 'theme') {
-      cycleThemeMode();
-      return;
-    }
     if (id === 'ai') {
       setShowAiAssistant((prev) => !prev);
       return;
@@ -23806,7 +23778,6 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     };
     if (id === 'weather') return { label: 'Weather', icon: <span className="text-sm leading-none">🌤️</span>, active: showWeather, disabled: false };
     if (id === 'categories') return { label: 'Categories', icon: <Settings className="w-4 h-4" />, active: Boolean(widgetCardOpenById.categories), disabled: false };
-    if (id === 'theme') return { label: themeModeLabel, icon: themeModeIcon, active: false, disabled: false };
     if (id === 'ai') return { label: 'AI', icon: <MessageSquare className="w-4 h-4" />, active: Boolean(widgetCardOpenById.ai), disabled: false };
     if (id === 'scan') return { label: isScanningReminder ? 'Scanning' : 'Scan', icon: <Camera className="w-4 h-4" />, active: Boolean(widgetCardOpenById.scan), disabled: isScanningReminder };
     if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: Boolean(widgetCardOpenById.import), disabled: Boolean(activeSubCalendar) };
@@ -28180,15 +28151,42 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         >
           ⚙️ Account settings & sharing
         </button>
-        <button
-          onClick={() => {
-            setShowCalendarSwitcher(false);
-            setShowCategoryEditor(true);
-          }}
-          className="w-full mt-2 text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
-        >
-          Label Categories
-        </button>
+        <div className="mt-3 rounded-2xl border border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/50 p-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">Theme</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{themeModeLabel} mode</div>
+            </div>
+            <div className="text-gray-500 dark:text-gray-300">
+              {themeModeIcon}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-1 rounded-2xl bg-white dark:bg-gray-800 p-1">
+            {[
+              { id: 'light', label: 'Light', icon: <Sun className="w-3.5 h-3.5" /> },
+              { id: 'dark', label: 'Dark', icon: <Moon className="w-3.5 h-3.5" /> },
+              { id: 'auto', label: 'Timer', icon: <Clock className="w-3.5 h-3.5" /> },
+            ].map((option) => {
+              const isActive = themeMode === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setThemeMode(option.id)}
+                  className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'text-white shadow-sm'
+                      : 'text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                  style={isActive ? themeSelectedSurfaceStyle : undefined}
+                >
+                  {option.icon}
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
       )}
     </div>
