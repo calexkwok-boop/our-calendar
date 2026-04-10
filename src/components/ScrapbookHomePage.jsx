@@ -139,6 +139,7 @@ const ScrapbookHomePage = ({
   themeAccentTextStyle,
   themeAccentBorder,
 }) => {
+  const momentTapRef = React.useRef(null);
   const hasAnythingToShow = tripsPreview.length > 0 || memoryCount > 0;
   const memoryCover = getMemoryCover(recentMemory);
   const todaySpotlightPhoto = getVisualPreviewUrl(todaySpotlightEvent);
@@ -200,14 +201,40 @@ const ScrapbookHomePage = ({
                 }
                 (onAddMomentForDate || onCaptureQuickMoment)?.(day.dateKey);
               };
+              const handleAddMomentPress = (event) => {
+                if (event?.stopPropagation) event.stopPropagation();
+                (onAddMomentForDate || onCaptureQuickMoment)?.(day.dateKey);
+              };
+              const handleMomentPointerDown = (event) => {
+                momentTapRef.current = {
+                  key: day.dateKey,
+                  x: event.clientX || 0,
+                  y: event.clientY || 0,
+                };
+              };
+              const handleMomentPointerUp = (event) => {
+                const start = momentTapRef.current;
+                momentTapRef.current = null;
+                if (!start || start.key !== day.dateKey) return;
+                const movedX = Math.abs((event.clientX || 0) - start.x);
+                const movedY = Math.abs((event.clientY || 0) - start.y);
+                if (movedX > 10 || movedY > 10) return;
+                if (event.pointerType === 'touch' || event.pointerType === 'pen') {
+                  handleMomentSlotPress(event);
+                }
+              };
 
               return (
                 <div
                   key={day.label}
                   className={`flex-shrink-0 w-32 group ${day.isToday ? 'rotate-[-1.5deg]' : day.dayIndex % 3 === 0 ? 'rotate-[2deg]' : day.dayIndex % 2 === 0 ? 'rotate-[-2deg]' : 'rotate-[1.25deg]'}`}
                 >
-                  <div
-                    className={`relative block w-full rounded-lg overflow-hidden transition-all ${
+                  <button
+                    type="button"
+                    onPointerDown={handleMomentPointerDown}
+                    onPointerUp={handleMomentPointerUp}
+                    onClick={handleMomentSlotPress}
+                    className={`relative block w-full rounded-lg overflow-hidden text-left transition-all ${
                       momentForDay
                         ? 'bg-[#fffdf8] shadow-[0_10px_24px_rgba(15,23,42,0.18)] hover:shadow-[0_18px_34px_rgba(15,23,42,0.22)] hover:-translate-y-1'
                         : 'bg-[#fffdf8] border-[3px] border-dashed border-[#d7d0c3] shadow-[0_8px_18px_rgba(15,23,42,0.10)]'
@@ -216,16 +243,10 @@ const ScrapbookHomePage = ({
                     <div className="mx-3 mt-3 aspect-square relative overflow-hidden border border-black/5 bg-[#f1ece2]">
                       {momentForDay ? (
                         <>
-                          <button
-                            type="button"
-                            onClick={handleMomentSlotPress}
-                            className="block w-full h-full cursor-pointer"
-                          >
-                            <div
-                              className="w-full h-full bg-cover bg-center"
-                              style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
-                            />
-                          </button>
+                          <div
+                            className="w-full h-full bg-cover bg-center"
+                            style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
+                          />
                           {typeof onDeleteMoment === 'function' && (
                             <button
                               type="button"
@@ -259,13 +280,9 @@ const ScrapbookHomePage = ({
                           )}
                         </>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={handleMomentSlotPress}
-                          className="flex w-full h-full items-center justify-center text-gray-500 transition-colors hover:bg-[#f6efe4] cursor-pointer"
-                        >
+                        <div className="flex w-full h-full items-center justify-center text-gray-500 transition-colors group-hover:bg-[#f6efe4] cursor-pointer">
                           <Plus className="w-6 h-6" />
-                        </button>
+                        </div>
                       )}
                     </div>
 
@@ -282,7 +299,7 @@ const ScrapbookHomePage = ({
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 </div>
               );
             })}

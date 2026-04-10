@@ -313,8 +313,9 @@ const MemorySystem = ({
 // ============================================================================
 
 const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, darkMode }) => {
+  const safeMemories = Array.isArray(memories) ? memories : [];
   // Group memories by year
-  const memoriesByYear = memories.reduce((acc, memory) => {
+  const memoriesByYear = safeMemories.reduce((acc, memory) => {
     const year = new Date(memory.date).getFullYear();
     if (!acc[year]) acc[year] = [];
     acc[year].push(memory);
@@ -324,7 +325,7 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, darkM
   const years = Object.keys(memoriesByYear).sort((a, b) => b - a);
   
   return (
-    <div className="memories-gallery min-h-full space-y-6 pb-6">
+    <div className="memories-gallery w-full space-y-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))]">
       {/* Header */}
       <div className="text-center">
         <div className="text-4xl mb-2">💫</div>
@@ -332,7 +333,7 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, darkM
           Your Memories
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          {memories.length} special moment{memories.length !== 1 ? 's' : ''} preserved
+          {safeMemories.length} special moment{safeMemories.length !== 1 ? 's' : ''} preserved
         </p>
       </div>
       
@@ -358,7 +359,7 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, darkM
       </div>
       
       {/* Empty state */}
-      {memories.length === 0 && (
+      {safeMemories.length === 0 && (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🎉</div>
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
@@ -397,15 +398,16 @@ const MemoryThumbnail = ({ memory, onClick, darkMode }) => {
   const photoCount = memory.photos?.length || 0;
   const peopleCount = memory.taggedPeople?.length || 0;
   const reactionCount = memory.reactionCount || 0;
+  const coverPhoto = String(memory?.coverPhoto || memory?.photos?.[0]?.url || '').trim();
   
   return (
     <button
       onClick={onClick}
       className="relative rounded-2xl overflow-hidden aspect-square group cursor-pointer">
       {/* Cover photo */}
-      {memory.coverPhoto ? (
+      {coverPhoto ? (
         <img 
-          src={memory.coverPhoto} 
+          src={coverPhoto} 
           alt={memory.title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />

@@ -20,12 +20,14 @@ import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
 import TrophyCase, { deriveJourneyTrophyCase } from "./components/TrophyCase";
 import WelcomeCover from "./components/WelcomeCover";
 import ExploreTab from "./components/ExploreTab";
-import MemorySystem, { MemoryCreator } from "./components/MemorySystem";
+import MemorySystem, { MemoryCreator as ImportedMemoryCreator } from "./components/MemorySystem";
 import ScrapbookHomePage from "./components/ScrapbookHomePage";
 import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
 import TripHighlightReel from "./components/TripHighlightReel";
 import JOURNEY_QUOTES from "./data/journeyQuotes";
+
+const MemoryCreator = ImportedMemoryCreator || (() => null);
 
 
 
@@ -2942,6 +2944,7 @@ function App() {
   const [memorySystemCurrentMemory, setMemorySystemCurrentMemory] = useState(null);
   const [memoryCreateDraft, setMemoryCreateDraft] = useState(null);
   const [memoryDraftSourceLabel, setMemoryDraftSourceLabel] = useState('');
+  const [memorySystemSessionKey, setMemorySystemSessionKey] = useState(0);
   const [showJourneyScreen, setShowJourneyScreen] = useState(false);
   const [showJourneyEntryModal, setShowJourneyEntryModal] = useState(false);
   const [showJourneyGoalModal, setShowJourneyGoalModal] = useState(false);
@@ -20660,7 +20663,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   ]);
 
   useEffect(() => {
-    const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyTrophyCase || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal || showJourneyWeightTrackerModal || showMemorySystem;
+    const shouldLockJourneyScroll = showJourneyScreen || showJourneyEntryModal || showJourneyGoalModal || showJourneyGoalCreatedPrompt || showJourneyDeleteGoalPrompt || showJourneyLogModal || showJourneyNoteModal || showJourneyTrophyCase || showJourneyRunTrackerModal || showJourneyWorkoutTrackerModal || showJourneyWeightTrackerModal;
     if (!shouldLockJourneyScroll || typeof document === 'undefined') return undefined;
     const scrollY = window.scrollY || window.pageYOffset || 0;
     const previousBodyOverflow = document.body.style.overflow;
@@ -24301,6 +24304,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setMemoryCreateDraft(null);
     setMemoryDraftSourceLabel('');
     setMemorySystemView('gallery');
+    setMemorySystemSessionKey((key) => key + 1);
     setShowMemorySystem(true);
   };
 
@@ -24332,6 +24336,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setMemoryDraftSourceLabel('');
     setMemorySystemCurrentMemory(memory);
     setMemorySystemView('viewer');
+    setMemorySystemSessionKey((key) => key + 1);
     setShowMemorySystem(true);
   };
 
@@ -24357,9 +24362,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     const sourceLabel = targetDate === todayIso
       ? 'today'
       : new Date(`${targetDate}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
-    setMemorySystemCurrentMemory(null);
-    setMemoryDraftSourceLabel(sourceLabel);
-    setMemoryCreateDraft({
+    const nextDraft = {
       title: '',
       description: '',
       date: targetDate,
@@ -24374,8 +24377,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       }],
       category: 'memory',
       isShared: false,
-    });
+    };
+    setMemorySystemCurrentMemory(null);
+    setMemoryDraftSourceLabel(sourceLabel);
+    setMemoryCreateDraft(nextDraft);
     setMemorySystemView('create');
+    setMemorySystemSessionKey((key) => key + 1);
     setShowMemorySystem(true);
   };
 
@@ -24842,9 +24849,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {controlWidgetAddPanelPortal}
     {homeAddEventModal}
     {!activeSubCalendar && showMemorySystem && renderJourneyPortal((
-      <div className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[88] relative flex flex-col overflow-hidden ${
+      <div className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10000] flex flex-col overflow-hidden ${
         memorySystemView === 'viewer' ? 'bg-black' : 'bg-white dark:bg-slate-950'
-      }`}>
+      }`} key={`memory-shell-${memorySystemSessionKey}-${memorySystemView}-${String(memorySystemCurrentMemoryResolved?.id || 'none')}`}>
         {memorySystemView !== 'viewer' && (
           <div className="flex items-start justify-between gap-3 border-b border-gray-200 bg-white px-5 pb-4 pt-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] dark:border-white/10 dark:bg-slate-950 sm:px-6">
             <div>
@@ -24863,8 +24870,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
         {memorySystemView === 'create' ? (
-          <div className="flex-1 overflow-y-auto bg-white px-5 py-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] dark:bg-slate-950 sm:px-6">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-white px-5 py-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] [webkit-overflow-scrolling:touch] dark:bg-slate-950 sm:px-6">
             <MemoryCreator
+              key={`memory-create-${memorySystemSessionKey}`}
               onCancel={closeMemorySystem}
               onCreate={(memoryData) => {
                 createMemoryRecord(memoryData);
@@ -24880,8 +24888,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         ) : (
           <div className={`${memorySystemView === 'viewer'
             ? 'relative flex-1 min-h-0 overflow-hidden bg-black'
-            : 'flex-1 min-h-0 overflow-y-auto bg-stone-50 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:bg-slate-950 sm:px-6 sm:py-5'}`}>
+            : 'flex-1 min-h-0 overflow-y-auto overscroll-contain bg-stone-50 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] [webkit-overflow-scrolling:touch] dark:bg-slate-950 sm:px-6 sm:py-5'}`}>
             <MemorySystem
+              key={`memory-system-${memorySystemSessionKey}-${memorySystemView}-${String(memorySystemCurrentMemoryResolved?.id || 'none')}`}
               view={memorySystemView}
               memories={memorySystemMemories}
               currentMemory={memorySystemCurrentMemoryResolved}
