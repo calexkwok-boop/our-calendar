@@ -25745,7 +25745,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </p>
               </div>
             </div>
-          )}
           {bottomNavTab !== 'home' && !hasActiveLayerHeaderCover ? (
             <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
               <WelcomeCover

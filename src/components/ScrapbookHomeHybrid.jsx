@@ -131,6 +131,10 @@ const ScrapbookHomeHybrid = ({
   themeAccentHeadingStyle,
   themeAccentEllieChipButtonStyle,
   themeAccentTextStyle,
+  
+  // Account / avatar
+  profilePhotoUrl = '',
+  onOpenAccountMenu,
 }) => {
   const momentTapRef = React.useRef(null);
   const todaySpotlightPhoto = getVisualPreviewUrl(todaySpotlightEvent);
@@ -181,6 +185,26 @@ const ScrapbookHomeHybrid = ({
           {/* Decorative corner doodles */}
           <div className="pointer-events-none absolute left-6 top-6 text-4xl opacity-15 select-none">✦</div>
           <div className="pointer-events-none absolute right-6 top-6 text-4xl opacity-15 select-none">❋</div>
+
+          {/* Profile avatar button */}
+          {typeof onOpenAccountMenu === 'function' && (
+            <button
+              type="button"
+              onClick={onOpenAccountMenu}
+              className="absolute left-3 top-3 sm:left-4 sm:top-4 z-10"
+              title="Account"
+            >
+              {profilePhotoUrl ? (
+                <img
+                  src={profilePhotoUrl}
+                  alt="Profile"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-white/40 dark:border-white/10"
+                />
+              ) : (
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/10" />
+              )}
+            </button>
+          )}
           
           <div className="relative">
             <h1 className="font-handwritten text-5xl sm:text-6xl text-gray-900 dark:text-white mb-3 leading-tight">
