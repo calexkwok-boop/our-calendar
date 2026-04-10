@@ -25171,9 +25171,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     {controlWidgetAddPanelPortal}
     {homeAddEventModal}
     {!activeSubCalendar && showMemorySystem && renderJourneyPortal((
-      <div className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10000] flex flex-col overflow-hidden ${
+      <div
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10000] relative flex flex-col overflow-hidden ${
         memorySystemView === 'viewer' ? 'bg-black' : 'bg-white dark:bg-slate-950'
-      }`} key={`memory-shell-${memorySystemSessionKey}-${memorySystemView}-${String(memorySystemCurrentMemoryResolved?.id || 'none')}`}>
+      }`}
+        key={`memory-shell-${memorySystemSessionKey}-${memorySystemView}-${String(memorySystemCurrentMemoryResolved?.id || 'none')}`}
+        style={{ minHeight: '100dvh', height: '100dvh', maxHeight: '100dvh' }}
+      >
         {memorySystemView !== 'viewer' && (
           <div className="flex items-start justify-between gap-3 border-b border-gray-200 bg-white px-5 pb-4 pt-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] dark:border-white/10 dark:bg-slate-950 sm:px-6">
             <div>
@@ -34641,7 +34645,8 @@ transform: translateY(0);
     )}
     {!activeSubCalendar && showJourneyScreen && renderJourneyPortal((
       <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10000] flex flex-col overflow-hidden bg-white dark:bg-slate-950`}
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10000] relative flex flex-col overflow-hidden bg-white dark:bg-slate-950`}
+        style={{ minHeight: '100dvh', height: '100dvh', maxHeight: '100dvh' }}
       >
         <div className="h-1 shrink-0 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
         <div
@@ -34683,8 +34688,12 @@ transform: translateY(0);
                   {journeyTrophyCase.stats.newTrophies > 0
                     ? `${journeyTrophyCase.stats.newTrophies} new ${journeyTrophyCase.stats.newTrophies === 1 ? 'trophy' : 'trophies'} earned`
                     : `${journeyTrophyCase.earnedTrophies.length} earned so far`}
-                </div>
-              </div>
+          </div>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[max(1rem,env(safe-area-inset-bottom))] bg-stone-50 dark:bg-slate-950"
+          />
+      </div>
               <button
                 type="button"
                 onClick={() => setShowJourneyTrophyCase(true)}
