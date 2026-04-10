@@ -1349,6 +1349,7 @@ const writeQuickThoughtsState = (userId, thoughts) => {
 };
 const MEMORIES_DB_NAME = 'our-calendar-memories-db';
 const MEMORIES_STORE_NAME = 'memories';
+const USER_MEMORIES_TABLE = 'user_memories';
 const PROFILE_PHOTO_OVERRIDE_STORAGE_KEY = 'our-calendar-uploaded-profile-photo';
 
 const openMemoriesDb = () => new Promise((resolve, reject) => {
@@ -1463,6 +1464,101 @@ const stampMemoryOwner = (memory, userId) => {
     ownerUserId,
     createdByUserId: String(memory?.createdByUserId || ownerUserId).trim() || ownerUserId,
   };
+};
+
+const toRemoteMemoryRow = (memory, userId) => {
+  if (!memory || typeof memory !== 'object') return null;
+  const ownerUserId = getPersonalMemoryOwnerId(userId);
+  if (!ownerUserId || ownerUserId === 'guest') return null;
+  const stampedMemory = stampMemoryOwner(memory, ownerUserId);
+  const id = String(stampedMemory?.id || '').trim();
+  if (!id) return null;
+  const rawMemoryDate = String(stampedMemory?.date || '').trim().slice(0, 10);
+  const memoryDate = /^\d{4}-\d{2}-\d{2}$/.test(rawMemoryDate) ? rawMemoryDate : null;
+  return {
+    owner_user_id: ownerUserId,
+    id,
+    memory: stampedMemory,
+    memory_date: memoryDate,
+    created_at: String(stampedMemory?.createdAt || '').trim() || new Date().toISOString(),
+    updated_at: String(stampedMemory?.updatedAt || '').trim() || new Date().toISOString(),
+  };
+};
+
+const fromRemoteMemoryRow = (row, userId) => {
+  if (!row || typeof row !== 'object') return null;
+  const rowMemory = row?.memory && typeof row.memory === 'object' ? row.memory : {};
+  return stampMemoryOwner({
+    ...rowMemory,
+    id: String(rowMemory?.id || row?.id || '').trim(),
+    date: String(rowMemory?.date || row?.memory_date || '').trim(),
+    createdAt: String(rowMemory?.createdAt || row?.created_at || '').trim(),
+    updatedAt: String(rowMemory?.updatedAt || row?.updated_at || '').trim(),
+  }, row?.owner_user_id || userId);
+};
+
+const readRemoteMemoriesState = async (userId) => {
+  const ownerUserId = getPersonalMemoryOwnerId(userId);
+  if (!ownerUserId || ownerUserId === 'guest') return [];
+  try {
+    const { data, error } = await supabase
+      .from(USER_MEMORIES_TABLE)
+      .select('id, owner_user_id, memory, memory_date, created_at, updated_at')
+      .eq('owner_user_id', ownerUserId)
+      .order('memory_date', { ascending: false, nullsFirst: false })
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+    return (Array.isArray(data) ? data : [])
+      .map((row) => fromRemoteMemoryRow(row, ownerUserId))
+      .filter(Boolean);
+  } catch (error) {
+    console.warn('Could not load remote memories; using local memories only.', error?.message || error);
+    return [];
+  }
+};
+
+const persistRemoteMemoriesState = async (userId, memories) => {
+  const rows = (Array.isArray(memories) ? memories : [])
+    .map((memory) => toRemoteMemoryRow(memory, userId))
+    .filter(Boolean);
+  if (rows.length === 0) return;
+  try {
+    const { error } = await supabase
+      .from(USER_MEMORIES_TABLE)
+      .upsert(rows, { onConflict: 'owner_user_id,id' });
+    if (error) throw error;
+  } catch (error) {
+    console.warn('Could not sync memories remotely.', error?.message || error);
+  }
+};
+
+const persistRemoteMemory = async (userId, memory) => {
+  const row = toRemoteMemoryRow(memory, userId);
+  if (!row) return;
+  try {
+    const { error } = await supabase
+      .from(USER_MEMORIES_TABLE)
+      .upsert(row, { onConflict: 'owner_user_id,id' });
+    if (error) throw error;
+  } catch (error) {
+    console.warn('Could not sync memory remotely.', error?.message || error);
+  }
+};
+
+const deleteRemoteMemory = async (userId, memoryId) => {
+  const ownerUserId = getPersonalMemoryOwnerId(userId);
+  const id = String(memoryId || '').trim();
+  if (!ownerUserId || ownerUserId === 'guest' || !id) return;
+  try {
+    const { error } = await supabase
+      .from(USER_MEMORIES_TABLE)
+      .delete()
+      .eq('owner_user_id', ownerUserId)
+      .eq('id', id);
+    if (error) throw error;
+  } catch (error) {
+    console.warn('Could not delete remote memory.', error?.message || error);
+  }
 };
 
 const readStoredProfilePhotoOverrideUrl = () => {
@@ -20539,6 +20635,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     let cancelled = false;
     (async () => {
       const savedForCurrentUser = mergePersistedMemories(
+        await readRemoteMemoriesState(user?.id),
         await readMemoriesIndexedDb(user?.id),
         readMemoriesState(user?.id)
       ).map((memory) => stampMemoryOwner(memory, currentMemoriesUserId));
@@ -20551,6 +20648,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (cancelled) return;
         setMemories(merged);
         persistMemoriesState(user?.id, merged);
+        void persistRemoteMemoriesState(user?.id, merged);
       } else {
         if (cancelled) return;
         setMemories(savedForCurrentUser);
@@ -20566,6 +20664,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     if (memoriesHydratedUserId !== currentMemoriesUserId) return;
     persistMemoriesState(user?.id, memories);
+    void persistRemoteMemoriesState(user?.id, memories);
   }, [user?.id, memories, memoriesHydratedUserId]);
 
   useEffect(() => {
@@ -24759,6 +24858,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       const nextMemories = [nextMemory, ...prev.filter((memory) => String(memory?.id || '') !== nextMemory.id)]
         .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)));
       persistMemoriesState(user?.id, nextMemories);
+      void persistRemoteMemory(user?.id, nextMemory);
       return nextMemories;
     });
     setMemoryCreateDraft(null);
@@ -24772,8 +24872,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       const nextMemories = prev.map((memory) => {
         if (String(memory?.id || '') !== String(memoryId || '')) return memory;
         const updated = typeof updater === 'function' ? updater(memory) : { ...memory, ...updater };
-        nextSelected = updated;
-        return { ...updated, updatedAt: new Date().toISOString() };
+        const stampedUpdated = stampMemoryOwner({ ...updated, updatedAt: new Date().toISOString() }, user?.id);
+        nextSelected = stampedUpdated;
+        void persistRemoteMemory(user?.id, stampedUpdated);
+        return stampedUpdated;
       });
       persistMemoriesState(user?.id, nextMemories);
       return nextMemories;
@@ -24785,6 +24887,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setMemories((prev) => {
       const nextMemories = prev.filter((memory) => String(memory?.id || '') !== String(memoryId || ''));
       persistMemoriesState(user?.id, nextMemories);
+      void deleteRemoteMemory(user?.id, memoryId);
       return nextMemories;
     });
     setMemorySystemCurrentMemory(null);

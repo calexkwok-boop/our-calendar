@@ -655,10 +655,7 @@ const WeekGrid = ({
         const isSelected = isSameDay(date, selectedDate);
         const isTodayDate = isToday(date);
         const eventCount = dateEvents.length;
-        const dateKey = getDateKey(date);
-        const todayMid = new Date(); todayMid.setHours(0,0,0,0);
-        const dateMid = new Date(date); dateMid.setHours(0,0,0,0);
-        const showBadge = eventCount > 0 && !isSelected && dateMid.getTime() >= todayMid.getTime();
+        const showBadge = eventCount > 0 && !isSelected;
 
         return (
           <button
@@ -790,8 +787,6 @@ const CalendarGrid = ({
     const d = typeof date === 'string' ? new Date(date + 'T00:00:00') : new Date(date);
     return d.getTime();
   };
-  const todayTs = toDateOnlyTs(new Date());
-  
   return (
     <div className="grid grid-cols-7 gap-2 sm:gap-3 mb-6">
       {getDaysInMonth(currentDate).map((date, index) => {
@@ -806,7 +801,7 @@ const CalendarGrid = ({
         const eventCount = dateEvents.length;
         const weatherData = showWeather && weather[dateKey];
         const dateTs = toDateOnlyTs(date);
-        const showBadge = eventCount > 0 && !isSelected && dateTs >= todayTs;
+        const showBadge = eventCount > 0 && !isSelected;
         
         // Check if date is in any trip
         const tripsOnDate = subCalendars.filter(sc => {
