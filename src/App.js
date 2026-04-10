@@ -9316,6 +9316,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const mapSupabaseEventRow = (event, currentUserId) => ({
     id: event.id,
     layerId: event.layer_id || null,
+    layer_id: event.layer_id || null,
+    calendar_id: event.calendar_id || event.layer_id || null,
     subCalendarId: event.sub_calendar_id || null,
     title: event.title,
     time: event.time,
@@ -11607,10 +11609,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     try {
       if (!assertCanEditActiveLayer('edit events in this calendar')) return;
       if (!activeLayerId || !user?.id) return;
-      setEvents(newEvents);
       const requestId = ++saveRequestIdRef.current;
       const saveLayerId = activeLayerId;
       const saveUserId = user.id;
+      const eventsForSave = Object.entries(newEvents || {}).reduce((acc, [dateKey, dateEvents]) => {
+        acc[dateKey] = (Array.isArray(dateEvents) ? dateEvents : []).map((event) => {
+          const eventLayerId = String(event?.layerId || event?.layer_id || event?.calendar_id || saveLayerId || '').trim();
+          if (!eventLayerId) return event;
+          return {
+            ...event,
+            layerId: eventLayerId,
+            layer_id: eventLayerId,
+            calendar_id: eventLayerId,
+          };
+        });
+        return acc;
+      }, {});
+      setEvents(eventsForSave);
 
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       const persist = async () => {
@@ -11619,10 +11634,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           const myEvents = [];
           const sharedUpdates = []; // events owned by others that we've edited
 
-          Object.entries(newEvents).forEach(([date, dateEvents]) => {
+          Object.entries(eventsForSave).forEach(([date, dateEvents]) => {
             dateEvents.forEach(event => {
               // Virtual recurrence rows are derived UI projections and should never be persisted as standalone DB rows.
               if (event?.isVirtualAnnual || event?.isVirtualRecurrence) return;
+              const eventLayerId = String(event?.layerId || event?.layer_id || event?.calendar_id || saveLayerId || '').trim();
               if (event.userId && event.userId !== saveUserId) {
                 // Shared event — do a targeted update on just the fields we allow editing
                 sharedUpdates.push(event);
@@ -11654,8 +11670,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 moderated_at: event.moderatedAt || null,
                 moderation_reason: event.moderationReason || null,
                 user_id: saveUserId,
-                layer_id: saveLayerId,
-                calendar_id: saveLayerId
+                layer_id: eventLayerId || saveLayerId,
+                calendar_id: eventLayerId || saveLayerId
               });
             });
           });
@@ -11735,7 +11751,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
               exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
               reactions: event.reactions ? JSON.stringify(event.reactions) : null,
               location: event.location || null,
-            }).eq('id', event.id).eq('layer_id', saveLayerId);
+            }).eq('id', event.id).eq('layer_id', String(event?.layerId || event?.layer_id || event?.calendar_id || saveLayerId || '').trim() || saveLayerId);
             if (updateResult.error && /column .*description|schema cache/i.test(String(updateResult.error.message || ''))) {
               updateResult = await supabase.from('events').update({
                 title: event.title,
@@ -11750,7 +11766,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
                 exceptions: event.exceptions ? JSON.stringify(event.exceptions) : null,
                 reactions: event.reactions ? JSON.stringify(event.reactions) : null,
                 location: event.location || null,
-              }).eq('id', event.id).eq('layer_id', saveLayerId);
+              }).eq('id', event.id).eq('layer_id', String(event?.layerId || event?.layer_id || event?.calendar_id || saveLayerId || '').trim() || saveLayerId);
             }
           }
         } catch (err) {
@@ -11834,6 +11850,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       isMultiDay: false,
       multiDayId: null,
       userId: user?.id || null,
+      layerId: activeLayerId,
+      layer_id: activeLayerId,
+      calendar_id: activeLayerId,
       moderationStatus: defaultModerationStatusForNewEvent,
       location,
     };
@@ -17877,6 +17896,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         isMultiDay: pendingEventDraft.isMultiDay,
         multiDayId,
         userId: user?.id || null,
+        layerId: activeLayerId,
+        layer_id: activeLayerId,
+        calendar_id: activeLayerId,
         moderationStatus: defaultModerationStatusForNewEvent,
       };
       createdEventIds.push(eventId);
@@ -29964,16 +29986,15 @@ transform: translateY(0);
                                 <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{event.title}</div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                   {eventDateLabel}{eventDateLabel ? ' · ' : ''}{eventTimeLabel}
-                                  {event.time ? ` · ${formatTime ? formatTime(event.time) : event.time}` : ''}
                                 </div>
-                                <div className="flex flex-wrap items-center gap-1 mt-1">
+                                <div className="flex flex-wrap items-center gap-1 mt-2">
                                   {weEventBadge ? (
-                                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${weEventBadge.className}`}>
+                                    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${weEventBadge.className}`}>
                                       <span aria-hidden="true">{weEventBadge.icon}</span>
                                       <span>{weEventBadge.label}</span>
                                     </span>
                                   ) : null}
-                                  {(event.isAnnual || (event.recurrence && event.recurrence !== 'once')) && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">Recurring</span>}
+                                  {(event.isAnnual || (event.recurrence && event.recurrence !== 'once')) && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">Recurring</span>}
                                   {(() => {
                                     const eventLayer = visibleLayerCalendars.find((layer) => String(layer?.id || '') === String(event?.layerId || event?.layer_id || '')) || null;
                                     const eventLayerTheme = normalizeLayerPageTheme(eventLayer?.page_theme, eventLayer?.title_style);
@@ -30000,7 +30021,7 @@ transform: translateY(0);
                               <div className="flex flex-col items-end gap-1 shrink-0">
                                 {popupMeta ? (
                                   <>
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${joined ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : isFull ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}`}>
+                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${joined ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : isFull ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}`}>
                                       {joined ? '✓ Joined' : isFull ? 'Full' : 'Open'}
                                     </span>
                                     {maxPeople > 0 && (
@@ -35050,7 +35071,6 @@ transform: translateY(0);
               <X className="w-5 h-5" />
             </button>
           </div>
-          )}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-stone-50 px-5 py-5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] [webkit-overflow-scrolling:touch] dark:bg-slate-950 sm:px-6">
           <div className="mx-auto w-full max-w-lg">

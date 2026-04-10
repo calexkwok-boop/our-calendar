@@ -518,7 +518,7 @@ export default function TrophyCase({
 
   return (
     <div
-      className="fixed inset-0 z-[86] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
+      className="fixed inset-0 z-[10020] bg-black/50 flex items-end sm:items-center justify-center px-0 sm:px-4 pt-[max(0.75rem,calc(env(safe-area-inset-top)+0.5rem))] sm:pt-4 pb-0 sm:pb-4"
       onClick={onClose}
       style={{
         touchAction: 'none',
