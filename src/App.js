@@ -1450,6 +1450,21 @@ const mergePersistedMemories = (...memoryLists) => {
     (a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0))
   );
 };
+
+const getPersonalMemoryOwnerId = (userId) => String(userId || 'guest').trim() || 'guest';
+
+const stampMemoryOwner = (memory, userId) => {
+  if (!memory || typeof memory !== 'object') return memory;
+  const fallbackOwnerId = getPersonalMemoryOwnerId(userId);
+  const existingOwnerId = String(memory?.ownerUserId || memory?.createdByUserId || '').trim();
+  const ownerUserId = existingOwnerId || fallbackOwnerId;
+  return {
+    ...memory,
+    ownerUserId,
+    createdByUserId: String(memory?.createdByUserId || ownerUserId).trim() || ownerUserId,
+  };
+};
+
 const readStoredProfilePhotoOverrideUrl = () => {
   if (typeof window === 'undefined') return '';
   try {
@@ -7372,6 +7387,7 @@ function App() {
   const [scrambleError, setScrambleError] = useState('');
   const [selectedPopupEventPanelId, setSelectedPopupEventPanelId] = useState(null);
   const [showCalendarSwitcher, setShowCalendarSwitcher] = useState(false);
+  const [calendarSwitcherMode, setCalendarSwitcherMode] = useState('calendars');
   const [manualRoundRobinRosterInput, setManualRoundRobinRosterInput] = useState(
     'Alex\nPearl\nJustin\nNgan\nMatt\nHelen\nGilbert\nElizabeth'
     );
@@ -20200,7 +20216,13 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }));
   const homeTodayPlanCount = overviewTodayEvents.length;
   const homeUpcomingEventCount = filteredUpcomingUserTabEvents.length;
-  const homeResolvedMemories = Array.isArray(memories) ? memories : [];
+  const currentHomeMemoryOwnerId = getPersonalMemoryOwnerId(user?.id);
+  const isMemoryOwnedByCurrentUser = (memory) => {
+    const ownerId = String(memory?.ownerUserId || memory?.createdByUserId || '').trim();
+    return !ownerId || ownerId === currentHomeMemoryOwnerId;
+  };
+  const personalMemories = (Array.isArray(memories) ? memories : []).filter(isMemoryOwnedByCurrentUser);
+  const homeResolvedMemories = personalMemories;
   const homeTodaySpotlightEvent = [...overviewTodayEvents]
     .sort((a, b) => {
       const aTime = String(a?.time || '').trim();
@@ -20519,12 +20541,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const savedForCurrentUser = mergePersistedMemories(
         await readMemoriesIndexedDb(user?.id),
         readMemoriesState(user?.id)
-      );
+      ).map((memory) => stampMemoryOwner(memory, currentMemoriesUserId));
       if (currentMemoriesUserId !== 'guest') {
         const guestMemories = mergePersistedMemories(
           await readMemoriesIndexedDb('guest'),
           readMemoriesState('guest')
-        );
+        ).map((memory) => stampMemoryOwner(memory, currentMemoriesUserId));
         const merged = mergePersistedMemories(savedForCurrentUser, guestMemories);
         if (cancelled) return;
         setMemories(merged);
@@ -20565,7 +20587,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         drafts.filter(Boolean).forEach(({ tripId, draft }) => {
           const nextShape = createMemoryRecordShape(draft);
           if (!nextShape) return;
-          const existingIndex = next.findIndex((memory) => String(memory?.sourceTripId || '').trim() === tripId);
+          const existingIndex = next.findIndex((memory) => {
+            const memoryOwnerId = String(memory?.ownerUserId || memory?.createdByUserId || '').trim();
+            return String(memory?.sourceTripId || '').trim() === tripId
+              && (!memoryOwnerId || memoryOwnerId === currentMemoriesUserId);
+          });
           if (existingIndex === -1) {
             next.push(nextShape);
             changed = true;
@@ -24394,6 +24420,18 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setShowDateDetailModal(false);
   };
 
+  const openCalendarSwitcher = () => {
+    setCalendarSwitcherMode('calendars');
+    setShowCalendarSwitcher(true);
+    setShowDateDetailModal(false);
+    setShowJourneyScreen(false);
+  };
+
+  const toggleAccountMenu = () => {
+    setCalendarSwitcherMode('account');
+    setShowCalendarSwitcher((prev) => (calendarSwitcherMode === 'account' ? !prev : true));
+  };
+
   const openJourneyTab = () => {
     setBottomNavTab('journey');
     setShowDateDetailModal(false);
@@ -24659,6 +24697,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   function createMemoryRecordShape(memoryData) {
     if (!memoryData) return null;
     const nowIso = new Date().toISOString();
+    const currentMemoryOwnerId = getPersonalMemoryOwnerId(user?.id);
+    const ownerUserId = String(memoryData?.ownerUserId || memoryData?.createdByUserId || currentMemoryOwnerId).trim()
+      || currentMemoryOwnerId;
     const normalizedPhotos = Array.isArray(memoryData?.photos)
       ? memoryData.photos.map((photo, index) => ({
         id: String(photo?.id || `photo-${index}`),
@@ -24696,6 +24737,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       sourceTripTitle: String(memoryData?.sourceTripTitle || '').trim() || null,
       sourceSubCalendarId: String(memoryData?.sourceSubCalendarId || '').trim() || null,
       category: String(memoryData?.category || '').trim() || null,
+      ownerUserId,
+      createdByUserId: String(memoryData?.createdByUserId || ownerUserId).trim() || ownerUserId,
       autoGeneratedFromTrip: Boolean(memoryData?.autoGeneratedFromTrip),
       isShared: Boolean(memoryData?.isShared || (memoryData?.taggedPeople || []).length > 1),
       reactionCount: Number(memoryData?.reactionCount || 0),
@@ -24937,7 +24980,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     };
   };
 
-  const memorySystemMemories = Array.isArray(memories) ? memories.map((memory) => applyTripRosterToMemory(memory)) : [];
+  const memorySystemMemories = personalMemories.map((memory) => applyTripRosterToMemory(memory));
   const memorySystemCurrentMemoryResolved = memorySystemCurrentMemory ? applyTripRosterToMemory(memorySystemCurrentMemory) : null;
   const memorySystemCreateDraftResolved = memoryCreateDraft ? applyTripRosterToMemory(memoryCreateDraft) : null;
 
@@ -25504,10 +25547,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowCalendarSwitcher((prev) => !prev);
+                  toggleAccountMenu();
                 }}
                 className="absolute left-2 top-2 sm:left-4 sm:top-4"
-                title="Calendars & account"
+                title="Account"
               >
                 <UserProfileAvatar
                   photoUrl={currentUserProfilePhotoUrl}
@@ -25550,9 +25593,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowCalendarSwitcher((prev) => !prev);
+                      toggleAccountMenu();
                     }}
-                    title="Calendars & account"
+                    title="Account"
                   >
                     <UserProfileAvatar
                       photoUrl={currentUserProfilePhotoUrl}
@@ -27937,71 +27980,82 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 )}
 {showCalendarSwitcher && (
   <div
-    className="fixed inset-0 z-50 bg-black/50 flex items-start justify-start p-4 pt-16 sm:pt-20"
+    className={calendarSwitcherMode === 'calendars'
+      ? 'fixed inset-0 z-50 bg-black/30 flex items-end justify-center px-4 pb-24 sm:pb-28'
+      : 'fixed inset-0 z-50 bg-black/50 flex items-start justify-start p-4 pt-16 sm:pt-20'}
     onClick={() => setShowCalendarSwitcher(false)}
   >
     <div
-      className="w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden"
+      className={calendarSwitcherMode === 'calendars'
+        ? 'w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden origin-bottom'
+        : 'w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden'}
       style={{ background: darkMode ? '#1f2937' : '#fff' }}
           onClick={(e) => e.stopPropagation()}
   >
-  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 opacity-90" />
       {/* Calendar switcher section */}
-      <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Your Calendars</h3>
-          <button
-            onClick={() => { setShowCalendarSwitcher(false); setShowLayerModal(true); }}
-            className="text-xs font-semibold px-2.5 py-1 rounded-lg"
-            style={themeAccentButtonStyle}
-          >+ New</button>
+      {calendarSwitcherMode === 'calendars' && (
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Your Calendars</h3>
+            <button
+              onClick={() => { setShowCalendarSwitcher(false); setShowLayerModal(true); }}
+              className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+              style={themeAccentButtonStyle}
+            >+ New</button>
+          </div>
+          <div className="space-y-1 max-h-48 overflow-y-auto">
+            {uniqueVisibleLayers.map(layer => {
+              const isActive = String(layer.id) === String(activeLayerId);
+              const rowTheme = normalizeLayerPageTheme(layer?.page_theme, layer?.title_style);
+              const canDeleteLayer = String(layer?.owner_id || '') === String(user?.id || '') && (layers || []).length > 1;
+              const rowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
+              const isDeleteRevealed = rowOffset < 0;
+              return (
+                <div key={layer.id} className="relative rounded-xl overflow-hidden">
+                  {canDeleteLayer && (
+                    <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
+                      <button
+                        onClick={() => deleteLayerCalendar(layer.id)}
+                        className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canDeleteLayer)}
+                    onTouchMove={handleLayerSwipeMove}
+                    onTouchEnd={handleLayerSwipeEnd}
+                    onTouchCancel={handleLayerSwipeEnd}
+                    onClick={() => {
+                      setActiveLayerId(layer.id);
+                      setShowCalendarSwitcher(false);
+                      openCalendarTab();
+                    }}
+                    className="relative z-10 w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
+                    style={{
+                      ...(isActive ? { background: `${rowTheme.accent}18`, border: `1.5px solid ${rowTheme.accent}40` } : { border: '1.5px solid transparent' }),
+                      transform: `translateX(${rowOffset}px)`,
+                      transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease',
+                    }}
+                  >
+                    <div className="w-3 h-3 rounded-full shrink-0" style={{ background: rowTheme.accent }} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">{layer.name || 'Untitled'}</div>
+                      {layer.is_public && <div className="text-[10px] text-gray-400">Public</div>}
+                    </div>
+                    {isActive && <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: rowTheme.accent }} />}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="space-y-1 max-h-48 overflow-y-auto">
-          {uniqueVisibleLayers.map(layer => {
-            const isActive = String(layer.id) === String(activeLayerId);
-            const rowTheme = normalizeLayerPageTheme(layer?.page_theme, layer?.title_style);
-            const canDeleteLayer = String(layer?.owner_id || '') === String(user?.id || '') && (layers || []).length > 1;
-            const rowOffset = layerSwipeDrag.id === layer.id ? layerSwipeDrag.offset : (swipedLayerId === layer.id ? -88 : 0);
-            const isDeleteRevealed = rowOffset < 0;
-            return (
-              <div key={layer.id} className="relative rounded-xl overflow-hidden">
-                {canDeleteLayer && (
-                  <div className={`absolute inset-y-0 right-0 w-[88px] flex items-center justify-center transition-colors ${isDeleteRevealed ? 'bg-red-500' : 'bg-transparent'}`}>
-                    <button
-                      onClick={() => deleteLayerCalendar(layer.id)}
-                      className={`w-full h-full text-sm font-semibold transition-opacity ${isDeleteRevealed ? 'text-white opacity-100' : 'text-transparent opacity-0 pointer-events-none'}`}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-                <button
-                  onTouchStart={(e) => handleLayerSwipeStart(e, layer.id, canDeleteLayer)}
-                  onTouchMove={handleLayerSwipeMove}
-                  onTouchEnd={handleLayerSwipeEnd}
-                  onTouchCancel={handleLayerSwipeEnd}
-                  onClick={() => { setActiveLayerId(layer.id); setShowCalendarSwitcher(false); }}
-                  className="relative z-10 w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
-                  style={{
-                    ...(isActive ? { background: `${rowTheme.accent}18`, border: `1.5px solid ${rowTheme.accent}40` } : { border: '1.5px solid transparent' }),
-                    transform: `translateX(${rowOffset}px)`,
-                    transition: layerSwipeDrag.id === layer.id ? 'none' : 'transform 180ms ease',
-                  }}
-                >
-                  <div className="w-3 h-3 rounded-full shrink-0" style={{ background: rowTheme.accent }} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">{layer.name || 'Untitled'}</div>
-                    {layer.is_public && <div className="text-[10px] text-gray-400">Public</div>}
-                  </div>
-                  {isActive && <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: rowTheme.accent }} />}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      )}
 
       {/* Account section */}
+      {calendarSwitcherMode === 'account' && (
       <div className="p-4">
         <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Account</h3>
         <div className="flex items-center gap-3 mb-3">
@@ -28033,6 +28087,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           Label Categories
         </button>
       </div>
+      )}
     </div>
   </div>
 )}
@@ -30334,7 +30389,7 @@ transform: translateY(0);
               <Home className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
             <button
-              onClick={openCalendarTab}
+              onClick={openCalendarSwitcher}
               title="Calendar"
               aria-label="Calendar"
               className={`min-w-0 px-1 py-2 rounded-xl flex items-center justify-center transition-all ${bottomNavTab === 'calendar' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
