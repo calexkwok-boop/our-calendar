@@ -1371,7 +1371,7 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
       
       {/* Bottom actions */}
       <div className="absolute bottom-0 left-0 right-0 px-4 pt-6 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)+0.35rem))] bg-gradient-to-t from-black via-black/90 to-transparent">
-        <div className="flex items-center justify-around">
+        <div className="mx-auto flex w-full max-w-[14rem] items-center justify-between">
           <ReactionButton
             icon={<Heart className="w-6 h-6" />}
             count={memory.reactionCount || 0}
@@ -1383,12 +1383,6 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
             icon={<MessageCircle className="w-6 h-6" />}
             count={memory.commentCount || 0}
             onClick={() => setShowComments(true)}
-          />
-          
-          <ReactionButton
-            icon={<Eye className="w-6 h-6" />}
-            count={memory.viewCount || 0}
-            disabled
           />
         </div>
       </div>
