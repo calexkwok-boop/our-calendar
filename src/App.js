@@ -25472,10 +25472,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 />
               </button>
               <div className="relative">
-                <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">
-                  Home
-                </div>
-                <h1 className="mt-2 font-handwritten text-5xl leading-none text-gray-900 dark:text-white sm:text-6xl">
+                <h1 className="font-handwritten text-4xl leading-none text-gray-900 dark:text-white sm:text-5xl">
                   {homeGreeting}, {homeGreetingName} {homeGreetingEmoji}
                 </h1>
                 <p className="mt-3 text-sm font-medium text-gray-600 dark:text-gray-300">
@@ -34739,23 +34736,37 @@ transform: translateY(0);
 
     {!activeSubCalendar && showJourneyGoalModal && renderJourneyPortal((
       <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10010] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
-        onClick={closeJourneyGoalModal}
-        style={{ touchAction: 'none', overscrollBehavior: 'none', minHeight: '100dvh' }}
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[10010] flex flex-col overflow-hidden bg-white dark:bg-slate-950`}
       >
         <div
-          className="w-full sm:w-[28rem] max-h-[min(88dvh,52rem)] overflow-y-auto rounded-[28px] border border-white/40 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-950"
-          onClick={(e) => e.stopPropagation()}
+          className="shrink-0 border-b border-gray-200 bg-white px-5 pb-4 pt-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] dark:border-white/10 dark:bg-slate-950 sm:px-6"
           style={{
-            touchAction: 'pan-y',
-            overscrollBehaviorY: 'contain',
-            WebkitOverflowScrolling: 'touch',
+            background: darkMode
+              ? `linear-gradient(180deg, ${hexToRgba('#0f172a', 0.98)} 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.16)} 100%)`
+              : `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 100%)`,
           }}
         >
-          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}</div>
-          <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {selectedJourneyGoalTemplate?.hint || 'Keep it measurable, simple, and easy to log.'}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">Journey</div>
+              <div className="mt-1 text-xl font-semibold text-gray-900 dark:text-gray-100">
+                {selectedJourneyGoalTemplate?.id === 'custom' ? 'Create your goal' : sortedJourneyGoals.length === 0 ? 'Start with one goal' : 'New goal'}
+              </div>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {selectedJourneyGoalTemplate?.hint || 'Keep it measurable, simple, and easy to log.'}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={closeJourneyGoalModal}
+              className="rounded-xl p-2 text-gray-500 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-stone-50 px-5 py-5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] [webkit-overflow-scrolling:touch] dark:bg-slate-950 sm:px-6">
+          <div className="mx-auto w-full max-w-lg">
           {selectedJourneyGoalTemplate ? (
             <div className="mt-4 rounded-2xl border px-4 py-3" style={{ borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16), backgroundColor: darkMode ? 'rgba(15,23,42,0.88)' : hexToRgba(activeLayerPageTheme.accent, 0.06) }}>
               <div className="text-xs uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Starting point</div>
@@ -34783,6 +34794,7 @@ transform: translateY(0);
               <button type="button" onClick={closeJourneyGoalModal} className="flex-1 rounded-2xl px-6 py-3.5 text-base font-semibold text-gray-700 dark:text-slate-100 bg-gray-100 dark:bg-white/[0.08]">Cancel</button>
               <button type="button" onClick={addJourneyGoal} disabled={!canSaveJourneyGoal} className={`flex-[2] rounded-2xl px-6 py-3.5 text-base font-semibold text-white ${canSaveJourneyGoal ? '' : 'cursor-not-allowed opacity-60'}`} style={themeAccentButtonStyle}>Start</button>
             </div>
+          </div>
           </div>
         </div>
       </div>
