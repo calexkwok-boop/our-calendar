@@ -14934,18 +14934,49 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     try {
       const raw = localStorage.getItem(storageKey);
       const parsed = raw ? JSON.parse(raw) : [];
-      const normalized = Array.isArray(parsed) ? parsed.slice(0, 75).map(item => ({
-        id: item.id || `ian_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        key: String(item.key || ''),
-        type: item.type || 'update',
-        message: item.message || '',
-        createdAt: item.createdAt || new Date().toISOString(),
-        read: Boolean(item.read),
-        target: (item?.target && typeof item.target === 'object') ? item.target : null,
-      })).filter(item => item.key && item.message) : [];
-      seenInAppNotificationKeysRef.current = new Set(normalized.map(item => item.key));
+      const normalized = Array.isArray(parsed) ? parsed.slice(0, 75).map(item => {
+        const key = String(item.key || '');
+        const stableKey = String(item.stableKey || '').trim() || (() => {
+          if (key.startsWith('calendar_invite:')) {
+            const parts = key.split(':');
+            return `calendar_invite:${parts[1] || ''}:${parts[2] || ''}`;
+          }
+          if (key.startsWith('trip_invite:')) {
+            const parts = key.split(':');
+            return `trip_invite:${parts[1] || ''}:${parts[2] || ''}`;
+          }
+          return key;
+        })();
+        const target = (item?.target && typeof item.target === 'object') ? item.target : null;
+        const stableSignature = String(item.stableSignature || '').trim() || [
+          String(item.type || 'update').trim().toLowerCase(),
+          stableKey,
+          String(target?.layerId || '').trim(),
+          String(target?.eventId || '').trim(),
+          String(target?.listId || '').trim(),
+          String(target?.listItemId || '').trim(),
+          String(target?.subCalendarId || '').trim(),
+          String(target?.dateKey || '').trim(),
+          String(target?.panel || '').trim(),
+        ].join('|');
+        return {
+          id: item.id || `ian_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          key,
+          stableKey,
+          stableSignature,
+          type: item.type || 'update',
+          message: item.message || '',
+          createdAt: item.createdAt || new Date().toISOString(),
+          read: Boolean(item.read),
+          target,
+        };
+      }).filter(item => item.key && item.message) : [];
+      const dedupedNormalized = normalized.filter((item, index, arr) => (
+        arr.findIndex((candidate) => String(candidate?.stableKey || candidate?.key || '') === String(item?.stableKey || item?.key || '')) === index
+      ));
+      seenInAppNotificationKeysRef.current = new Set(dedupedNormalized.flatMap(item => [item.key, item.stableKey].filter(Boolean)));
       seenInAppNotificationSignaturesRef.current = new Set(
-        normalized.map((item) => [
+        dedupedNormalized.flatMap((item) => [[
           String(item.type || 'update').trim().toLowerCase(),
           String(item.message || '').trim(),
           String(item?.target?.layerId || '').trim(),
@@ -14955,9 +14986,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           String(item?.target?.subCalendarId || '').trim(),
           String(item?.target?.dateKey || '').trim(),
           String(item?.target?.panel || '').trim(),
-        ].join('|'))
+        ].join('|'), item.stableSignature].filter(Boolean))
       );
-      setInAppNotifications(normalized);
+      setInAppNotifications(dedupedNormalized);
       const cursorRaw = localStorage.getItem(cursorKey);
       const parsedCursor = cursorRaw ? JSON.parse(cursorRaw) : null;
       const seenExpensesRaw = localStorage.getItem(expenseSeenKey);
@@ -16480,8 +16511,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const addInAppNotification = ({ key, type, message, createdAt, target = null }) => {
     if (!key || !message) return;
     const normalizedKey = String(key);
+    const normalizedType = String(type || 'update').trim().toLowerCase();
+    const stableKey = (() => {
+      if (normalizedKey.startsWith('calendar_invite:')) {
+        const parts = normalizedKey.split(':');
+        return `calendar_invite:${parts[1] || ''}:${parts[2] || ''}`;
+      }
+      if (normalizedKey.startsWith('trip_invite:')) {
+        const parts = normalizedKey.split(':');
+        return `trip_invite:${parts[1] || ''}:${parts[2] || ''}`;
+      }
+      return normalizedKey;
+    })();
     const normalizedSignature = [
-      String(type || 'update').trim().toLowerCase(),
+      normalizedType,
       String(message || '').trim(),
       String(target?.layerId || '').trim(),
       String(target?.eventId || '').trim(),
@@ -16491,13 +16534,28 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       String(target?.dateKey || '').trim(),
       String(target?.panel || '').trim(),
     ].join('|');
+    const normalizedStableSignature = [
+      normalizedType,
+      stableKey,
+      String(target?.layerId || '').trim(),
+      String(target?.eventId || '').trim(),
+      String(target?.listId || '').trim(),
+      String(target?.listItemId || '').trim(),
+      String(target?.subCalendarId || '').trim(),
+      String(target?.dateKey || '').trim(),
+      String(target?.panel || '').trim(),
+    ].join('|');
     if (seenInAppNotificationKeysRef.current.has(normalizedKey)) return;
+    if (stableKey !== normalizedKey && seenInAppNotificationKeysRef.current.has(stableKey)) return;
     if (seenInAppNotificationSignaturesRef.current.has(normalizedSignature)) return;
+    if (seenInAppNotificationSignaturesRef.current.has(normalizedStableSignature)) return;
     seenInAppNotificationKeysRef.current.add(normalizedKey);
+    seenInAppNotificationKeysRef.current.add(stableKey);
     seenInAppNotificationSignaturesRef.current.add(normalizedSignature);
+    seenInAppNotificationSignaturesRef.current.add(normalizedStableSignature);
     maybeSendInAppSystemNotification(type, normalizedKey, message);
     setInAppNotifications(prev => {
-      if (prev.some(n => n.key === normalizedKey)) return prev;
+      if (prev.some(n => n.key === normalizedKey || n.stableKey === stableKey)) return prev;
       if (prev.some((n) => [
         String(n.type || 'update').trim().toLowerCase(),
         String(n.message || '').trim(),
@@ -16509,9 +16567,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         String(n?.target?.dateKey || '').trim(),
         String(n?.target?.panel || '').trim(),
       ].join('|') === normalizedSignature)) return prev;
+      if (prev.some((n) => n.stableSignature === normalizedStableSignature)) return prev;
       const next = [{
         id: `ian_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         key: normalizedKey,
+        stableKey,
+        stableSignature: normalizedStableSignature,
         type: type || 'update',
         message,
         createdAt: createdAt || new Date().toISOString(),
@@ -29849,6 +29910,13 @@ transform: translateY(0);
                       const eventSwipeKey = `popup-tab:${String(event.date || event.dateKey || '')}:${String(event.id || '')}`;
                       const rowOffset = eventSwipeDrag.id === eventSwipeKey ? eventSwipeDrag.offset : (swipedEventKey === eventSwipeKey ? -88 : 0);
                       const isDeleteRevealed = rowOffset < 0;
+                      const eventDateValue = event.date || event.dateKey;
+                      const eventDateObj = eventDateValue ? new Date(`${eventDateValue}T00:00:00`) : null;
+                      const eventDayLabel = eventDateObj && !Number.isNaN(eventDateObj.getTime())
+                        ? eventDateObj.toLocaleDateString('en-US', { weekday: 'short' })
+                        : 'Event';
+                      const eventDateLabel = formatDateKeyMMDDYYYY ? formatDateKeyMMDDYYYY(eventDateValue) : eventDateValue;
+                      const eventTimeLabel = event.time ? (formatTime ? formatTime(event.time) : event.time) : 'Anytime';
                       return (
                         <div key={upcomingEventRowKey} className="relative rounded-2xl overflow-hidden">
                           {canDeleteThisEvent && (
@@ -29878,14 +29946,24 @@ transform: translateY(0);
                             onPointerUp={endEventSwipeDrag}
                             onPointerCancel={endEventSwipeDrag}
                             onClick={() => { openUserTabEvent(event, popupMeta); }}
-                            className="relative z-10 w-full text-left rounded-2xl p-3 sm:p-4 border transition-all hover:-translate-y-0.5 hover:shadow-md"
-                            style={{ background: darkMode ? 'rgba(255,255,255,0.04)' : '#fff', borderColor: `${activeLayerPageTheme.accent}30`, transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease', touchAction: 'pan-y' }}
+                            className="relative z-10 w-full text-left rounded-xl border border-white/40 dark:border-white/10 bg-white/60 dark:bg-white/[0.04] p-3 transition-all hover:bg-white/80 dark:hover:bg-white/[0.07]"
+                            style={{ transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease', touchAction: 'pan-y' }}
                           >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="flex h-10 w-12 shrink-0 items-center justify-center rounded-xl border text-[11px] font-bold uppercase tracking-[0.12em]"
+                                style={{
+                                  borderColor: darkMode ? 'rgba(255,255,255,0.10)' : `${activeLayerPageTheme.accent}24`,
+                                  background: darkMode ? 'rgba(255,255,255,0.04)' : `${activeLayerPageTheme.accent}10`,
+                                  color: darkMode ? 'rgba(255,255,255,0.78)' : activeLayerPageTheme.accent,
+                                }}
+                              >
+                                {eventDayLabel}
+                              </div>
+                              <div className="min-w-0 flex-1">
                                 <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{event.title}</div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                  {formatDateKeyMMDDYYYY ? formatDateKeyMMDDYYYY(event.date || event.dateKey) : (event.date || event.dateKey)}
+                                  {eventDateLabel}{eventDateLabel ? ' · ' : ''}{eventTimeLabel}
                                   {event.time ? ` · ${formatTime ? formatTime(event.time) : event.time}` : ''}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-1 mt-1">
