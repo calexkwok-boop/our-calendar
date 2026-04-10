@@ -1498,7 +1498,7 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
 };
 
 const CoverSlide = ({ memory }) => (
-  <div className="w-full h-full relative pt-[max(5rem,calc(env(safe-area-inset-top)+4rem))] pb-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))] px-2">
+  <div className="w-full h-full relative pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] px-2">
     {memory.coverPhoto ? (
       <img src={memory.coverPhoto} alt={memory.title} className="w-full h-full object-cover rounded-[28px]" />
     ) : (
@@ -1549,7 +1549,7 @@ const CoverSlide = ({ memory }) => (
 );
 
 const PhotoSlide = ({ photo }) => (
-  <div className="w-full h-full relative flex items-center justify-center bg-black px-2 pt-[max(5rem,calc(env(safe-area-inset-top)+4rem))] pb-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))]">
+  <div className="w-full h-full relative flex items-center justify-center bg-black px-2 pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))]">
     <img src={photo.url} alt={photo.caption} className="max-w-full max-h-full rounded-[28px] object-contain" />
     {photo.caption && (
       <div className="absolute left-2 right-2 bottom-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))] rounded-b-[28px] p-6 bg-gradient-to-t from-black/90 to-transparent">

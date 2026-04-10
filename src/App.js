@@ -24640,11 +24640,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     if (bottomNavTab === 'journey') setBottomNavTab('home');
   };
 
-  const openMemoryViewer = (memory) => {
+    const openMemoryViewer = (memory) => {
     if (!memory) {
       openMemoriesGallery();
       return;
     }
+    try { if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); } catch {}
     setMemoryCreateDraft(null);
     setMemoryDraftSourceLabel('');
     setMemorySystemCurrentMemory(memory);
@@ -25300,8 +25301,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         </div>
     ))}
     {false && !activeSubCalendar && showMemorySystem && memorySystemView !== 'create' && renderJourneyPortal((
-      <div
-        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[88] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4`}
+            <div
+        className={`${darkMode ? 'dark' : ''} fixed inset-0 z-[88] bg-black/60 backdrop-blur-sm flex ${memorySystemView === 'viewer' ? 'items-start' : 'items-center'} justify-center p-4 pt-[max(0.5rem,calc(env(safe-area-inset-top)+0.5rem))]`}
         onClick={closeMemorySystem}
       >
         <div
