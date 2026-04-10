@@ -17,6 +17,15 @@ const createEmptyMemoryDraft = (overrides = {}) => ({
   ...overrides,
 });
 
+const getMemoryCoverUrl = (memory) => String(
+  memory?.coverPhoto
+  || memory?.photos?.[0]?.url
+  || memory?.photos?.[0]?.photoUrl
+  || memory?.photoUrl
+  || memory?.photo_url
+  || ''
+).trim();
+
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => {
@@ -353,7 +362,7 @@ const MemorySystem = ({
                 ? memoryData.highlights.filter((highlight) => String(highlight || '').trim())
                 : [],
               photos,
-              coverPhoto: String(memoryData?.coverPhoto || photos?.[0]?.url || '').trim(),
+              coverPhoto: getMemoryCoverUrl({ ...memoryData, photos }),
               taggedPeople: Array.isArray(memoryData?.taggedPeople) ? memoryData.taggedPeople : [],
               date: String(memoryData?.date || memory?.date || new Date().toISOString().split('T')[0]).trim(),
               location: String(memoryData?.location || '').trim(),
@@ -361,7 +370,7 @@ const MemorySystem = ({
             setSelectedMemory((prev) => ({
               ...(prev || selectedMemory),
               ...memoryData,
-              coverPhoto: String(memoryData?.coverPhoto || photos?.[0]?.url || '').trim(),
+              coverPhoto: getMemoryCoverUrl({ ...memoryData, photos }),
               photos,
             }));
             setActiveView('viewer');
@@ -477,7 +486,7 @@ const MemoryThumbnail = ({ memory, onClick, onToggleFavorite, onDelete, deleteRe
   const photoCount = memory.photos?.length || 0;
   const peopleCount = memory.taggedPeople?.length || 0;
   const reactionCount = memory.reactionCount || 0;
-  const coverPhoto = String(memory?.coverPhoto || memory?.photos?.[0]?.url || '').trim();
+  const coverPhoto = getMemoryCoverUrl(memory);
   const isFavorite = Boolean(memory?.isFavorite);
   const longPressTimerRef = useRef(null);
   const longPressFiredRef = useRef(false);
@@ -632,7 +641,7 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
       onCreate({
         ...memoryData,
         title: draftTitle,
-        coverPhoto: memoryData.coverPhoto || memoryData.photos?.[0]?.url || '',
+        coverPhoto: getMemoryCoverUrl(memoryData),
         highlights: (memoryData.highlights || []).filter((h) => String(h || '').trim()),
       });
       return;
@@ -651,7 +660,7 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
     }
     onCreate({
       ...memoryData,
-      coverPhoto: memoryData.coverPhoto || memoryData.photos?.[0]?.url || '',
+      coverPhoto: getMemoryCoverUrl(memoryData),
       highlights: (memoryData.highlights || []).filter((highlight) => String(highlight || '').trim()),
     });
   };
@@ -674,7 +683,7 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
     const quick = {
       ...memoryData,
       title: draftTitle,
-      coverPhoto: memoryData.coverPhoto || memoryData.photos?.[0]?.url || '',
+      coverPhoto: getMemoryCoverUrl(memoryData),
       highlights: (memoryData.highlights || []).filter((h) => String(h || '').trim()),
     };
     autoCreatedRef.current = true;
@@ -1019,7 +1028,7 @@ const MemoryPhotosStep = ({
         >
           <div
             className="h-56 w-full bg-cover bg-center"
-            style={{ backgroundImage: `url(${data.coverPhoto || data.photos?.[0]?.url || ''})` }}
+            style={{ backgroundImage: `url(${getMemoryCoverUrl(data)})` }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
@@ -1233,8 +1242,8 @@ const MemoryPreviewStep = ({ data, darkMode }) => {
       <div className="rounded-2xl overflow-hidden border-2 border-purple-200 dark:border-purple-800">
         {/* Cover */}
         <div className="relative h-48">
-          {data.coverPhoto ? (
-            <img src={data.coverPhoto} alt={data.title} className="w-full h-full object-cover" />
+          {getMemoryCoverUrl(data) ? (
+            <img src={getMemoryCoverUrl(data)} alt={data.title} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500" />
           )}
@@ -1499,8 +1508,8 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
 
 const CoverSlide = ({ memory }) => (
   <div className="w-full h-full relative pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] px-2">
-    {memory.coverPhoto ? (
-      <img src={memory.coverPhoto} alt={memory.title} className="w-full h-full object-cover rounded-[28px]" />
+    {getMemoryCoverUrl(memory) ? (
+      <img src={getMemoryCoverUrl(memory)} alt={memory.title} className="w-full h-full object-cover rounded-[28px]" />
     ) : (
       <div className="w-full h-full rounded-[28px] bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500" />
     )}

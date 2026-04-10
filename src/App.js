@@ -32,10 +32,30 @@ const MemoryCreator = ImportedMemoryCreator || (() => null);
 
 
 
+const runWithoutNavigatorAuthLock = async (_name, _acquireTimeout, fn) => fn();
+const withTimeout = async (promise, timeoutMs, fallbackValue = null) => {
+  let timeoutId = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((resolve) => {
+        timeoutId = window.setTimeout(() => resolve(fallbackValue), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId !== null) window.clearTimeout(timeoutId);
+  }
+};
+
 // Initialize Supabase
 const supabase = createClient(
 process.env.REACT_APP_SUPABASE_URL,
-process.env.REACT_APP_SUPABASE_ANON_KEY
+process.env.REACT_APP_SUPABASE_ANON_KEY,
+{
+  auth: {
+    lock: runWithoutNavigatorAuthLock,
+  },
+}
 );
 
 const SUPABASE_URL = String(process.env.REACT_APP_SUPABASE_URL || '').trim().replace(/\/+$/, '');
@@ -1439,7 +1459,14 @@ const mergePersistedMemories = (...memoryLists) => {
       const fallbackKey = [
         String(memory?.date || '').trim(),
         String(memory?.title || '').trim().toLowerCase(),
-        String(memory?.coverPhoto || memory?.photos?.[0]?.url || '').trim(),
+        String(
+          memory?.coverPhoto
+          || memory?.photos?.[0]?.url
+          || memory?.photos?.[0]?.photoUrl
+          || memory?.photoUrl
+          || memory?.photo_url
+          || ''
+        ).trim(),
         index,
       ].join('|');
       const key = idKey || fallbackKey;
@@ -1453,6 +1480,15 @@ const mergePersistedMemories = (...memoryLists) => {
 };
 
 const getPersonalMemoryOwnerId = (userId) => String(userId || 'guest').trim() || 'guest';
+
+const getMemoryPrimaryPhotoUrl = (memory) => String(
+  memory?.coverPhoto
+  || memory?.photos?.[0]?.url
+  || memory?.photos?.[0]?.photoUrl
+  || memory?.photoUrl
+  || memory?.photo_url
+  || ''
+).trim();
 
 const stampMemoryOwner = (memory, userId) => {
   if (!memory || typeof memory !== 'object') return memory;
@@ -1855,11 +1891,8 @@ const CONTROL_WIDGET_IDS = Object.freeze([
   'gauntlet',
   'roundrobin',
   'scramble',
-  'chat',
   'weather',
   'categories',
-  'ai',
-  'scan',
   'import',
 ]);
 
@@ -1871,9 +1904,6 @@ const ALL_CONTROL_WIDGET_ORDER = Object.freeze([
   'gauntlet',
   'roundrobin',
   'scramble',
-  'chat',
-  'ai',
-  'scan',
   'import',
   'weather',
   'categories',
@@ -3176,7 +3206,6 @@ function App() {
   const [subCalMembers, setSubCalMembers] = useState([]);
   const [subCalMembersCollapsed, setSubCalMembersCollapsed] = useState(true);
   const [canEditActiveSubCalendar, setCanEditActiveSubCalendar] = useState(false);
-  const [showSubCalLocationSheet, setShowSubCalLocationSheet] = useState(false);
   const [subCalEditingEvent, setSubCalEditingEvent] = useState(null);
   const [subCalSelectedDate, setSubCalSelectedDate] = useState(null);
   const [subCalShowReactionPicker, setSubCalShowReactionPicker] = useState(null);
@@ -3236,21 +3265,12 @@ function App() {
     return () => { canceled = true; };
   }, [activeSubCalendar?.id, subCalTab]);
 
+  const [tripPhotos, setTripPhotos] = useState([]);
+  const [showSubCalLocationSheet, setShowSubCalLocationSheet] = useState(false);
   const [shareMyLocation, setShareMyLocation] = useState(false);
   const [memberLocations, setMemberLocations] = useState({});
-  const subCalLocationChannelRef = useRef(null);
-  const subCalGeoWatchRef = useRef(null);
   const [shareLayerLocation, setShareLayerLocation] = useState(false);
   const [layerMemberLocations, setLayerMemberLocations] = useState({});
-  const layerLocationChannelRef = useRef(null);
-  const layerGeoWatchRef = useRef(null);
-  useEffect(() => {
-    try {
-      localStorage.removeItem('subcal-share-location');
-      localStorage.removeItem('layer-share-location');
-    } catch {}
-  }, []);
-  const [tripPhotos, setTripPhotos] = useState([]);
   const [tripCoverPhoto, setTripCoverPhoto] = useState(null);
   const [tripCoverPhotoNoteId, setTripCoverPhotoNoteId] = useState(null);
   const [tripHighlightsSlides, setTripHighlightsSlides] = useState([]);
@@ -3998,18 +4018,19 @@ function App() {
 
   // -- Sub-calendar functions ----------------------------------------------
 
-  const loadSubCalendars = async () => {
-    const requestedLayerId = String(activeLayerId || '');
+  const loadSubCalendars = async (options = {}) => {
+    const requestedLayerId = String(options?.layerId || activeLayerId || '');
     if (!requestedLayerId) {
       setSubCalendars([]);
       setActiveSubCalendar(null);
       return [];
     }
     try {
-      const myUserId = String(user?.id || '');
-      const myEmail = String(user?.email || '').trim().toLowerCase();
-      const ownerIdForLayer = String(activeLayerOwnerId || myUserId || '');
-      const shareRecipientFilter = buildShareRecipientFilter(myUserId, myEmail, user?.phone);
+      const sessionUserId = String(options?.userId || user?.id || '');
+      const sessionUserEmail = String(options?.userEmail || user?.email || '').trim().toLowerCase();
+      const sessionUserPhone = options?.userPhone || user?.phone || '';
+      const ownerIdForLayer = String(options?.ownerId || activeLayerOwnerId || sessionUserId || '');
+      const shareRecipientFilter = buildShareRecipientFilter(sessionUserId, sessionUserEmail, sessionUserPhone);
 
       const { data: directRows, error } = await supabase
         .from('sub_calendars')
@@ -4043,8 +4064,8 @@ function App() {
 
       let memberRows = [];
       const memberTripIdSet = new Set();
-      const myPhone = normalizePhoneNumber(user?.phone);
-      const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
+      const myPhone = normalizePhoneNumber(sessionUserPhone);
+      const memberRecipientFilter = buildMemberRecipientFilter(sessionUserEmail, myPhone);
       if (memberRecipientFilter) {
         const { data: memberLinks } = await supabase
           .from('sub_calendar_members')
@@ -4136,10 +4157,16 @@ function App() {
     try {
       let directRows = [];
       if (visibleLayerIds.length > 0) {
-        const { data, error } = await supabase
-          .from('sub_calendars')
-          .select('*')
-          .in('layer_id', visibleLayerIds);
+        const result = await withTimeout(
+          supabase
+            .from('sub_calendars')
+            .select('*')
+            .in('layer_id', visibleLayerIds),
+          4000,
+          { data: [], error: { message: 'user tab trips timed out' } }
+        );
+        const data = result?.data || [];
+        const error = result?.error || null;
         if (error) {
           console.error('Error loading user tab trips:', error);
           setUserTabTrips([]);
@@ -4166,10 +4193,16 @@ function App() {
           .map((row) => String(row?.sub_calendar_id || '').trim())
           .filter(Boolean)));
         if (memberTripIds.length > 0) {
-          const { data: trips, error: tripsErr } = await supabase
-            .from('sub_calendars')
-            .select('*')
-            .in('id', memberTripIds);
+          const tripResult = await withTimeout(
+            supabase
+              .from('sub_calendars')
+              .select('*')
+              .in('id', memberTripIds),
+            4000,
+            { data: [], error: { message: 'member trips timed out' } }
+          );
+          const trips = tripResult?.data || [];
+          const tripsErr = tripResult?.error || null;
           if (tripsErr) {
             console.error('Error loading accepted trip invite rows for user tab:', tripsErr);
             setUserTabTrips([]);
@@ -4195,10 +4228,16 @@ function App() {
       return [];
     }
     try {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .in('layer_id', visibleLayerIds);
+      const result = await withTimeout(
+        supabase
+          .from('events')
+          .select('*')
+          .in('layer_id', visibleLayerIds),
+        4000,
+        { data: [], error: { message: 'user tab events timed out' } }
+      );
+      const data = result?.data || [];
+      const error = result?.error || null;
       if (error) {
         console.error('Error loading user tab events:', error);
         setUserTabEvents([]);
@@ -8755,6 +8794,16 @@ useEffect(() => {
       .order('created_at', { ascending: true });
     if (ownedErr) throw ownedErr;
 
+    if (!ownedLayers || ownedLayers.length === 0) {
+      const recheck = await supabase
+        .from('calendar_layers')
+        .select('*')
+        .eq('owner_id', userId)
+        .order('created_at', { ascending: true });
+      if (recheck.error) throw recheck.error;
+      ownedLayers = recheck.data || [];
+    }
+
     // Bootstrap a brand-new account with a default calendar.
     if (!ownedLayers || ownedLayers.length === 0) {
       const defaultPayload = {
@@ -13203,10 +13252,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return;
     }
 
-    const { data: popupEventsRows, error: popupEventsErr } = await supabase
-      .from('popup_events')
-      .select('layer_id,event_id,max_people,created_by_user_id,created_by_name,created_at')
-      .in('layer_id', visibleLayerIds);
+    const popupEventsResult = await withTimeout(
+      supabase
+        .from('popup_events')
+        .select('layer_id,event_id,max_people,created_by_user_id,created_by_name,created_at')
+        .in('layer_id', visibleLayerIds),
+      4000,
+      { data: [], error: { message: 'popup events timed out' } }
+    );
+    const popupEventsRows = popupEventsResult?.data || [];
+    const popupEventsErr = popupEventsResult?.error || null;
 
           if (popupEventsErr) {
         // Fallback: if popup_events is missing or errored, try deriving from popup_event_details
@@ -13363,10 +13418,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     let popupEventCards = [];
     if (eventIds.length > 0) {
-      const { data: eventRows, error: eventRowsErr } = await supabase
-        .from('events')
-        .select('id,title,date,time,location,description,category,layer_id,sub_calendar_id')
-        .in('id', eventIds);
+      const eventRowsResult = await withTimeout(
+        supabase
+          .from('events')
+          .select('id,title,date,time,location,description,category,layer_id,sub_calendar_id')
+          .in('id', eventIds),
+        4000,
+        { data: [], error: { message: 'popup event rows timed out' } }
+      );
+      const eventRows = eventRowsResult?.data || [];
+      const eventRowsErr = eventRowsResult?.error || null;
       if (!eventRowsErr) {
         (eventRows || []).forEach((row) => {
           const eventId = String(row?.id || '').trim();
@@ -14346,10 +14407,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   useEffect(() => {
     const loadData = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const userId = session?.user?.id;
-        const userEmail = session?.user?.email;
-        const userPhone = session?.user?.phone;
+        const sessionResult = await withTimeout(supabase.auth.getSession(), 4000, { data: { session: null } });
+        const session = sessionResult?.data?.session || null;
+        let authUser = session?.user || null;
+        try {
+          const userResult = await withTimeout(supabase.auth.getUser(), 4000, { data: { user: null } });
+          const userData = userResult?.data || null;
+          if (userData?.user?.id) authUser = userData.user;
+        } catch (authLookupError) {
+          console.warn('Could not verify auth user before loading calendars:', authLookupError);
+        }
+        const userId = authUser?.id;
+        const userEmail = authUser?.email;
+        const userPhone = authUser?.phone;
         if (!userId) return;
         const shareRecipientFilter = buildShareRecipientFilter(userId, userEmail, userPhone);
         let loadedLayers = await loadLayersForUser(userId, userEmail, userPhone);
@@ -14379,11 +14449,17 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (selectedLayerId !== activeLayerId) setActiveLayerId(selectedLayerId);
         localStorage.setItem(`active-layer-${userId}`, selectedLayerId);
 
-        // Load all events visible in this layer (owner + collaborators).
-        const { data: layerEventsData, error: layerEventsError } = await supabase
-          .from('events')
-          .select('*')
-          .eq('layer_id', selectedLayerId);
+        // Load all events visible in this layer, but don't let a stressed backend stall startup forever.
+        const layerEventsResult = await withTimeout(
+          supabase
+            .from('events')
+            .select('*')
+            .eq('layer_id', selectedLayerId),
+          4000,
+          { data: [], error: { message: 'events load timed out' } }
+        );
+        const layerEventsData = layerEventsResult?.data || [];
+        const layerEventsError = layerEventsResult?.error || null;
 
         // Load calendars shared WITH me (by email/id)
         let sharedWithMeQuery = supabase
@@ -14391,23 +14467,15 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           .select('*')
           .eq('layer_id', selectedLayerId);
         if (shareRecipientFilter) sharedWithMeQuery = sharedWithMeQuery.or(shareRecipientFilter);
-        const { data: sharedWithMeRaw } = await sharedWithMeQuery;
+        const sharedWithMeResult = await withTimeout(sharedWithMeQuery, 4000, { data: [] });
+        const sharedWithMeRaw = sharedWithMeResult?.data || [];
         const sharedWithMe = (sharedWithMeRaw || [])
           .filter((s) => String(s?.owner_id || '') !== String(userId))
           .filter((s) => !s?.is_banned);
 
-        // Update shared_with_id if not yet set (first time they log in)
         if (sharedWithMe && sharedWithMe.length > 0) {
-          for (const share of sharedWithMe) {
-            if (!share.shared_with_id) {
-              await supabase
-                .from('shared_access')
-                .update({ shared_with_id: userId })
-                .eq('id', share.id);
-            }
-          }
           setSharedCalendars(sharedWithMe);
-          await resolveSharedOwnerLabels(sharedWithMe, selectedLayerId);
+          void resolveSharedOwnerLabels(sharedWithMe, selectedLayerId);
         } else {
           setSharedCalendars([]);
           setSharedOwnerLabels({});
@@ -14426,28 +14494,44 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         }
 
         // Load people I've shared with
-        let { data: mySharesData, error: mySharesError } = await supabase
-          .from('shared_access')
-          .select('*')
-          .eq('layer_id', selectedLayerId);
-        if (mySharesError) {
-          const fallback = await supabase
+        let mySharesResult = await withTimeout(
+          supabase
             .from('shared_access')
             .select('*')
-            .eq('owner_id', userId)
-            .eq('layer_id', selectedLayerId);
-          mySharesData = fallback.data || [];
+            .eq('layer_id', selectedLayerId),
+          4000,
+          { data: [], error: null }
+        );
+        let mySharesData = mySharesResult?.data || [];
+        let mySharesError = mySharesResult?.error || null;
+        if (mySharesError) {
+          const fallback = await withTimeout(
+            supabase
+              .from('shared_access')
+              .select('*')
+              .eq('owner_id', userId)
+              .eq('layer_id', selectedLayerId),
+            4000,
+            { data: [] }
+          );
+          mySharesData = fallback?.data || [];
         }
         setMyShares(mySharesData || []);
 
         const activeLayerRow = loadedLayers.find(layer => String(layer.id) === String(selectedLayerId));
-        await loadCategoriesForLayer(selectedLayerId, userId, activeLayerRow?.owner_id || userId);
+        void loadCategoriesForLayer(selectedLayerId, userId, activeLayerRow?.owner_id || userId);
         setCalendarTitle(activeLayerRow?.name || 'Our Calendar');
 
-        await loadAccountHandleForUser(session?.user || { id: userId, email: userEmail, phone: userPhone });
+        void loadAccountHandleForUser(authUser || { id: userId, email: userEmail, phone: userPhone });
 
-        // Load sub-calendars now that we know user is authenticated
-        await loadSubCalendars();
+        // Load sub-calendars for the resolved active layer immediately, without waiting for state to settle.
+        void loadSubCalendars({
+          layerId: selectedLayerId,
+          userId,
+          userEmail,
+          userPhone,
+          ownerId: activeLayerRow?.owner_id || userId,
+        });
       } catch (error) {
         console.log('Error loading data:', error);
       } finally {
@@ -14457,44 +14541,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     loadData();
 
-    // Listen for changes to OTHER users' events (shared calendars)
-    // We use a separate loadSharedEvents function that only fetches shared data
-    // and merges it with local state — never triggers a save
-    const loadSharedEvents = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const userId = session?.user?.id;
-        if (!userId || !activeLayerId) return;
-
-        const { data: layerEventsData, error: layerEventsError } = await supabase
-          .from('events')
-          .select('*')
-          .eq('layer_id', activeLayerId);
-        if (layerEventsError) {
-          console.error('Error refreshing layer events:', layerEventsError);
-          return;
-        }
-
-        const eventsObj = {};
-        (layerEventsData || []).forEach(event => {
-          if (!eventsObj[event.date]) eventsObj[event.date] = [];
-          eventsObj[event.date].push(mapSupabaseEventRow(event, userId));
-        });
-        setEvents(eventsObj);
-        if (typeof window !== 'undefined') window.events = eventsObj;
-      } catch (err) {
-        console.error('Error refreshing shared events:', err);
-      }
-    };
-
-    const sharedSubscription = supabase
-      .channel('shared-events')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
-        loadSharedEvents();
-      })
-      .subscribe();
-
-    return () => sharedSubscription.unsubscribe();
+    return undefined;
   }, [activeLayerId, layerRefreshToken]);
 
   // Check auth session
@@ -14532,9 +14579,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return resolvedAuthUser;
     };
 
-    supabase.auth.getSession()
-      .then(async ({ data: { session } }) => {
-        await hydrateAuthUser(session?.user ?? null);
+    withTimeout(supabase.auth.getSession(), 4000, { data: { session: null } })
+      .then(async (sessionResult) => {
+        await hydrateAuthUser(sessionResult?.data?.session?.user ?? null);
         setIsLoading(false);
       })
       .catch(() => {
@@ -14547,6 +14594,14 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!isLoading) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setIsLoading(false);
+    }, 6000);
+    return () => window.clearTimeout(timeoutId);
+  }, [isLoading]);
 
   useEffect(() => {
     if (!primaryListOwnerId) return;
@@ -14611,57 +14666,40 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [primaryListOwnerId, selectedSharedListId, activeLayerId]);
 
   useEffect(() => {
-    if (!showChatPanel || !activeLayerId) {
-      if (!showChatPanel) setChatInput('');
-      return;
+    setChatInput('');
+    setCalendarChatMessages([]);
+    if (!showChatPanel) {
+      setChatMembers([]);
+      setShowChatMembersPanel(false);
     }
-    loadCalendarChatMessages();
   }, [showChatPanel, activeLayerId]);
 
   useEffect(() => {
     const subCalId = String(activeSubCalendar?.id || '').trim();
+    if (subCalTab === 'chat') {
+      setSubCalTab('itinerary');
+    }
     if (!subCalId) {
       setTripChatMessages([]);
       setTripChatDraft('');
+      setTripChatUnreadCounts({});
       return;
     }
-    if (subCalTab === 'chat') {
-      setTripChatUnreadCounts((prev) => ({ ...prev, [subCalId]: 0 }));
-    }
-    const channel = supabase
-      .channel(`trip-chat-${subCalId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sub_calendar_notes', filter: `sub_calendar_id=eq.${subCalId}` }, (payload) => {
-        const eventType = String(payload?.eventType || '').toUpperCase();
-        const row = payload?.new;
-        if (
-          eventType === 'INSERT'
-          && String(row?.text || '') === TRIP_CHAT_MESSAGE_NOTE_TEXT
-          && String(row?.user_id || '') !== String(user?.id || '')
-          && subCalTab !== 'chat'
-        ) {
-          setTripChatUnreadCounts((prev) => ({
-            ...prev,
-            [subCalId]: Number(prev?.[subCalId] || 0) + 1,
-          }));
-        }
-        loadSubCalNotes(subCalId);
-      })
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
+    setTripChatUnreadCounts((prev) => ({ ...prev, [subCalId]: 0 }));
+    return undefined;
   }, [activeSubCalendar?.id, subCalTab, user?.id]);
 
   useEffect(() => {
+    const shouldLoadPopupCollections = bottomNavTab === 'events' || Boolean(selectedPopupEventPanelId);
     if (!activeLayerId) {
       setPopupEventsByEventId({});
       setPopupSignupsByEventId({});
       setUserTabPopupEvents([]);
       return;
     }
+    if (!shouldLoadPopupCollections) return;
     loadPopupEventData();
-  }, [activeLayerId, layers, layerRefreshToken]);
+  }, [activeLayerId, layers, layerRefreshToken, bottomNavTab, selectedPopupEventPanelId]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -14721,9 +14759,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [activeSubCalendar?.id, tripPhotos, subCalendarEvents]);
 
   useEffect(() => {
+    const shouldLoadUserCollections = bottomNavTab === 'home' || bottomNavTab === 'events';
+    if (!shouldLoadUserCollections) return;
     loadUserTabTrips();
     loadUserTabEvents();
-  }, [layers, layerRefreshToken, user?.id]);
+  }, [bottomNavTab, layers, layerRefreshToken, user?.id]);
 
   useEffect(() => {
     if (!activeLayerId || !user?.id) return;
@@ -14744,12 +14784,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [activeLayerId, user?.id, layers]);
 
   useEffect(() => {
-    if (!activeLayerId) {
-      setChatMembers([]);
-      setShowChatMembersPanel(false);
-      return;
-    }
-    loadChatMembers();
+    setChatMembers([]);
+    setShowChatMembersPanel(false);
   }, [activeLayerId, activeLayerOwnerId, user?.id, user?.email, user?.phone, currentUser, myShares, sharedOwnerLabels, layerRefreshToken]);
 
   useEffect(() => {
@@ -14758,102 +14794,20 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [activeLayerId, user?.id, user?.email, activeLayerOwnerId, myShares, sharedCalendars, chatMembers, calendarChatMessages, layerRefreshToken]);
 
   useEffect(() => {
-    if (!activeLayerId || !user?.id) {
-      setChatPresenceByUserId({});
-      return;
-    }
-    const presenceChannel = supabase.channel(`calendar-chat-presence-${activeLayerId}`, {
-      config: { presence: { key: String(user.id) } },
-    });
-    const syncPresence = () => {
-      const state = presenceChannel.presenceState();
-      const next = {};
-      Object.values(state || {}).forEach((metas) => {
-        (metas || []).forEach((meta) => {
-          const uid = String(meta?.userId || '').trim();
-          if (!uid) return;
-          next[uid] = {
-            userId: uid,
-            label: String(meta?.label || ''),
-            at: String(meta?.at || ''),
-          };
-        });
-      });
-      setChatPresenceByUserId(next);
-    };
-
-    presenceChannel
-      .on('presence', { event: 'sync' }, syncPresence)
-      .on('presence', { event: 'join' }, syncPresence)
-      .on('presence', { event: 'leave' }, syncPresence)
-      .subscribe(async (status) => {
-        if (status !== 'SUBSCRIBED') return;
-        if (showChatPanel) {
-          await presenceChannel.track({
-            userId: String(user.id),
-            label: String(currentUser || user?.email || user?.phone || 'Member'),
-            at: new Date().toISOString(),
-          });
-        }
-      });
-
-    return () => {
-      presenceChannel.unsubscribe();
-      setChatPresenceByUserId({});
-    };
+    setChatPresenceByUserId({});
+    return undefined;
   }, [activeLayerId, user?.id, showChatPanel, currentUser, user?.email, user?.phone]);
 
   useEffect(() => {
-    if (!activeLayerId) return;
-    const channel = supabase
-      .channel(`calendar-chat-${activeLayerId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_messages', filter: `layer_id=eq.${activeLayerId}` }, (payload) => {
-        const eventType = String(payload?.eventType || '').toUpperCase();
-        if (eventType === 'DELETE') {
-          const deletedId = String(payload?.old?.id || '');
-          if (!deletedId) return;
-          setDeletingChatMessageId((prev) => (String(prev || '') === deletedId ? null : prev));
-          setCalendarChatMessages(prev => prev.filter((m) => String(m?.id || '') !== deletedId));
-          return;
-        }
-        const row = payload?.new;
-        if (!row) return;
-        if (isDeletedChatMessage(row?.message)) {
-          setCalendarChatMessages(prev => prev.filter((m) => String(m?.id || '') !== String(row?.id || '')));
-          return;
-        }
-        if (
-          eventType === 'INSERT'
-          && !showChatPanel
-          && String(row?.user_id || '') !== String(user?.id || '')
-        ) {
-          const layerKey = String(activeLayerId || '');
-          if (layerKey) {
-            setChatUnreadCounts(prev => ({
-              ...prev,
-              [layerKey]: (Number(prev[layerKey] || 0) + 1),
-            }));
-          }
-        }
-        setCalendarChatMessages((prev) => {
-          const idx = prev.findIndex((m) => String(m?.id || '') === String(row?.id || ''));
-          if (idx >= 0) {
-            const copy = [...prev];
-            copy[idx] = row;
-            return copy;
-          }
-          return [...prev, row];
-        });
-      })
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
+    setDeletingChatMessageId(null);
+    setCalendarChatMessages([]);
+    setChatUnreadCounts({});
+    return undefined;
   }, [showChatPanel, activeLayerId, user?.id]);
 
   useEffect(() => {
-    if (!activeLayerId) return;
+    const shouldLoadPopupCollections = bottomNavTab === 'events' || Boolean(selectedPopupEventPanelId);
+    if (!activeLayerId || !shouldLoadPopupCollections) return;
     const channel = supabase
       .channel(`popup-events-${activeLayerId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'popup_events', filter: `layer_id=eq.${activeLayerId}` }, () => {
@@ -14869,74 +14823,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return () => {
       channel.unsubscribe();
     };
-  }, [activeLayerId, user?.id]);
+  }, [activeLayerId, user?.id, bottomNavTab, selectedPopupEventPanelId]);
 
   useEffect(() => {
     if (!showChatPanel || !activeLayerId) return;
-    markChatSeenForLayer(activeLayerId);
   }, [showChatPanel, activeLayerId]);
 
   useEffect(() => {
-    if (!user?.id) {
-      setChatLastSeenByLayer({});
-      setChatUnreadCounts({});
-      return;
-    }
-    const storageKey = `chat-last-seen-${user.id}`;
-    try {
-      const raw = localStorage.getItem(storageKey);
-      const parsed = raw ? JSON.parse(raw) : {};
-      const normalized = (parsed && typeof parsed === 'object') ? parsed : {};
-      setChatLastSeenByLayer(normalized);
-    } catch {
-      setChatLastSeenByLayer({});
-    }
+    setChatLastSeenByLayer({});
+    setChatUnreadCounts({});
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user?.id) return;
-    const storageKey = `chat-last-seen-${user.id}`;
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(chatLastSeenByLayer));
-    } catch {}
+    return undefined;
   }, [user?.id, chatLastSeenByLayer]);
 
   useEffect(() => {
-    const syncUnreadForActiveLayer = async () => {
-      if (!activeLayerId || !user?.id || showChatPanel) return;
-      const layerKey = String(activeLayerId);
-      const lastSeen = chatLastSeenByLayer[layerKey];
-      let query = supabase
-        .from('calendar_messages')
-        .select('id,user_id,created_at,message')
-        .eq('layer_id', activeLayerId)
-        .order('created_at', { ascending: false })
-        .limit(250);
-      if (lastSeen) query = query.gt('created_at', lastSeen);
-      const { data, error } = await query;
-      if (error) return;
-      const unread = (data || []).filter(row => (
-        String(row?.user_id || '') !== String(user.id)
-        && !isDeletedChatMessage(row?.message)
-      )).length;
-      setChatUnreadCounts(prev => ({ ...prev, [layerKey]: unread }));
-    };
-
-    syncUnreadForActiveLayer();
-    if (showChatPanel || !activeLayerId || !user?.id) return;
-
-    const intervalId = window.setInterval(syncUnreadForActiveLayer, 15000);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') syncUnreadForActiveLayer();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', syncUnreadForActiveLayer);
-
-    return () => {
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', syncUnreadForActiveLayer);
-    };
+    return undefined;
   }, [activeLayerId, user?.id, showChatPanel, chatLastSeenByLayer, layerRefreshToken]);
 
   useEffect(() => {
@@ -15484,415 +15387,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, user?.email, user?.phone]);
 
   useEffect(() => {
-    if (!user?.id) return;
-    const me = String(user.id);
-    const myEmail = normalizeEmail(user?.email);
-    const myPhone = normalizePhoneNumber(user?.phone);
-    const myName = String(currentUser || '').trim().toLowerCase();
-    const memberRecipientFilter = buildMemberRecipientFilter(myEmail, myPhone);
-    if (!memberRecipientFilter) return;
-    const subCalIdSet = new Set((subCalendars || []).map(sc => String(sc.id)));
-    const subCalNameMap = {};
-    (subCalendars || []).forEach(sc => { subCalNameMap[String(sc.id)] = sc.name || 'Trip'; });
-
-    const isOwnRow = (row) => {
-      const rowUserId = row?.user_id ? String(row.user_id) : '';
-      const rowCreatedBy = String(row?.created_by || '').trim().toLowerCase();
-      return (rowUserId && rowUserId === me) || (rowCreatedBy && (rowCreatedBy === myEmail || rowCreatedBy === myName));
-    };
-
-    const updateCursor = (key, rows) => {
-      if (!Array.isArray(rows) || rows.length === 0) return;
-      const maxCreatedAt = rows.reduce((max, row) => {
-        const ts = String(row?.created_at || '');
-        if (!ts) return max;
-        return !max || ts > max ? ts : max;
-      }, inAppSyncCursorRef.current[key] || null);
-      if (maxCreatedAt) inAppSyncCursorRef.current[key] = maxCreatedAt;
-    };
-
-    const getCursor = (key) => inAppSyncCursorRef.current[key] || new Date(Date.now() - (5 * 60 * 1000)).toISOString();
-
-    const notifySharedEvents = (rows) => {
-      (rows || []).forEach(row => {
-        if (isOwnRow(row)) return;
-        const who = String(row.created_by || 'Someone');
-        addInAppNotification({
-          key: `events:${row.id}:${String(row.layer_id || '')}`,
-          type: 'event',
-          message: `${who} added "${row.title || 'an event'}" to the calendar.`,
-          createdAt: row.created_at,
-          target: {
-            layerId: String(row.layer_id || '').trim() || null,
-            eventId: String(row.id || '').trim() || null,
-            dateKey: String(row.date || '').trim() || null,
-          },
-        });
-      });
-    };
-
-    const notifySharedListItems = (rows) => {
-      (rows || []).forEach(row => {
-        if (isOwnRow(row)) return;
-        const who = String(row.created_by || 'Someone');
-        const itemText = String(row.text || '').trim();
-        const preview = itemText.length > 42 ? `${itemText.slice(0, 42)}...` : itemText;
-        addInAppNotification({
-          key: `shared_lists:${row.id}:${String(row.layer_id || '')}`,
-          type: 'list',
-          message: `${who} added "${preview || 'a list item'}" to the list.`,
-          createdAt: row.created_at,
-          target: {
-            layerId: String(row.layer_id || '').trim() || null,
-            listItemId: String(row.id || '').trim() || null,
-            listId: String(row.list_id || '').trim() || null,
-          },
-        });
-      });
-    };
-
-    const notifySubCalEvents = (rows) => {
-      (rows || []).forEach(row => {
-        if (isOwnRow(row)) return;
-        const subCalId = String(row.sub_calendar_id || '');
-        const who = String(row.created_by || 'Someone');
-        addInAppNotification({
-          key: `sub_calendar_events:${row.id}`,
-          type: 'event',
-          message: `${who} added "${row.title || 'an event'}" in ${subCalNameMap[subCalId] || 'trip'}.`,
-          createdAt: row.created_at,
-        });
-      });
-    };
-
-    const notifyExpenseNotes = (notes) => {
-      (notes || []).forEach(note => {
-        let parsed = [];
-        try {
-          parsed = note?.checklist ? JSON.parse(note.checklist) : [];
-        } catch {
-          parsed = [];
-        }
-        if (!Array.isArray(parsed)) return;
-        parsed.forEach(item => {
-          const expenseId = String(item?.id || '');
-          if (!expenseId) return;
-          const expenseKey = `${note.sub_calendar_id}:${expenseId}`;
-          if (seenExpenseIdsRef.current.has(expenseKey)) return;
-          seenExpenseIdsRef.current.add(expenseKey);
-          const payerKey = normalizeIdentityKey(item?.payer);
-          const mineEmailKey = normalizeIdentityKey(user?.email);
-          const mineNameKey = normalizeIdentityKey(currentUser);
-          if (payerKey && (payerKey === mineEmailKey || payerKey === mineNameKey)) return;
-          const amount = Number(item?.amount);
-          const amountLabel = Number.isFinite(amount) ? `$${amount.toFixed(2)}` : 'an amount';
-          const desc = String(item?.description || 'an expense');
-          const preview = desc.length > 38 ? `${desc.slice(0, 38)}...` : desc;
-          const tripName = subCalNameMap[String(note.sub_calendar_id)] || 'trip';
-          addInAppNotification({
-            key: `expense:${expenseKey}`,
-            type: 'expense',
-            message: `${getExpenseDisplayName(item?.payer)} added ${amountLabel} for "${preview}" in ${tripName}.`,
-            createdAt: item?.createdAt || note?.created_at,
-          });
-        });
-      });
-    };
-
-    const notifyTripPhotos = (rows) => {
-      const uniqueRows = Array.from(new Map((rows || []).map(row => [String(row.id), row])).values());
-      uniqueRows.forEach(row => {
-        if (isOwnRow(row)) return;
-        const subCalId = String(row.sub_calendar_id || '');
-        const who = String(row.uploaded_by || 'Someone');
-        addInAppNotification({
-          key: `trip_photos:${row.id}`,
-          type: 'photo',
-          message: `${who} added a photo in ${subCalNameMap[subCalId] || 'trip'}.`,
-          createdAt: row.created_at,
-        });
-      });
-    };
-
-    const notifyTripInvites = (rows) => {
-      (rows || []).forEach(row => {
-        const inviteIdentity = getInviteIdentityFromRow(row);
-        if (!inviteIdentity || (inviteIdentity !== myEmail && inviteIdentity !== myPhone)) return;
-        if (String(row?.added_by || '') === me) return;
-        const status = String(row?.status || '').trim().toLowerCase();
-        if (status && status !== 'pending') return;
-        if (row?.accepted_at) return;
-        const subCalId = String(row?.sub_calendar_id || '');
-        if (!subCalId) return;
-        const tripName = String(row?.sub_calendar_name || subCalNameMap[subCalId] || 'a trip');
-        const stamp = String(row?.invited_at || row?.created_at || '');
-        addInAppNotification({
-          key: `trip_invite:${subCalId}:${inviteIdentity}:${stamp}`,
-          type: 'invite',
-          message: `You were invited to ${tripName}.`,
-          createdAt: row?.created_at || new Date().toISOString(),
-        });
-      });
-    };
-
-    const notifyCalendarShares = async (rows) => {
-      const acceptedLayerIds = new Set(
-        (rows || [])
-          .filter((row) => String(row?.shared_with_id || '') === me)
-          .map((row) => String(row?.layer_id || '').trim())
-          .filter(Boolean)
-      );
-
-      if (acceptedLayerIds.size > 0) {
-        const removedKeys = [];
-        setInAppNotifications(prev => prev.filter((item) => {
-          const key = String(item?.key || '');
-          if (!key.startsWith('calendar_invite:')) return true;
-          const parts = key.split(':');
-          const layerId = String(parts?.[2] || '').trim();
-          const shouldRemove = Boolean(layerId) && acceptedLayerIds.has(layerId);
-          if (shouldRemove) removedKeys.push(key);
-          return !shouldRemove;
-        }));
-        removedKeys.forEach((key) => seenInAppNotificationKeysRef.current.delete(key));
-      }
-
-      const inviteRows = (rows || []).filter((row) => {
-        const rowId = String(row?.id || '').trim();
-        if (rowId && dismissedCalendarInviteIdsRef.current.has(rowId)) return false;
-        const ownerId = String(row?.owner_id || '');
-        if (!ownerId || ownerId === me) return false;
-        const sharedWithId = String(row?.shared_with_id || '');
-        const sharedRecipient = getShareRecipientFromRow(row);
-        const layerId = String(row?.layer_id || '').trim();
-        // Only surface pending calendar invites.
-        if (sharedWithId) return false;
-        if (layerId && acceptedLayerIds.has(layerId)) return false;
-        return sharedRecipient === myEmail || sharedRecipient === myPhone;
-      });
-      if (inviteRows.length === 0) return;
-
-      const layerIds = Array.from(new Set(inviteRows.map(row => String(row?.layer_id || '')).filter(Boolean)));
-      const layerNameMap = {};
-      if (layerIds.length > 0) {
-        const { data: layerRows, error: layerErr } = await supabase
-          .from('calendar_layers')
-          .select('id,name')
-          .in('id', layerIds);
-        if (layerErr) {
-          console.error('calendar_layers invite name fetch failed:', layerErr);
-        } else {
-          (layerRows || []).forEach(layer => {
-            layerNameMap[String(layer.id)] = layer.name || 'a calendar';
-          });
-        }
-      }
-
-      inviteRows.forEach((row) => {
-        const layerId = String(row?.layer_id || '');
-        const calendarName = layerNameMap[layerId] || 'a calendar';
-        const rowId = String(row?.id || '');
-        if (!rowId || !layerId) return;
-        addInAppNotification({
-          key: `calendar_invite:${rowId}:${layerId}`,
-          type: 'invite',
-          message: `You were invited to "${calendarName}".`,
-          createdAt: row?.created_at || new Date().toISOString(),
-        });
-      });
-    };
-
-    const getAccessibleSubCalIds = async () => {
-      const ids = new Set(Array.from(subCalIdSet));
-
-      const { data: ownedRows, error: ownedErr } = await supabase
-        .from('sub_calendars')
-        .select('id')
-        .eq('owner_id', me);
-      if (!ownedErr) (ownedRows || []).forEach(r => { if (r?.id) ids.add(String(r.id)); });
-
-      let memberRows = [];
-      let memberErr = null;
-      if (memberRecipientFilter) {
-        const memberResult = await supabase
-          .from('sub_calendar_members')
-          .select('sub_calendar_id')
-          .or(memberRecipientFilter);
-        memberRows = memberResult.data || [];
-        memberErr = memberResult.error;
-      }
-      if (!memberErr) (memberRows || []).forEach(r => { if (r?.sub_calendar_id) ids.add(String(r.sub_calendar_id)); });
-
-      const { data: sharesById, error: sharesByIdErr } = await supabase
-        .from('shared_access')
-        .select('owner_id')
-        .eq('shared_with_id', me);
-      const { data: sharesByRecipientRows, error: sharesByRecipientErr } = await supabase
-        .from('shared_access')
-        .select('owner_id,shared_with_email,shared_with_phone');
-      const sharesByRecipient = (sharesByRecipientRows || []).filter((row) => {
-        const recipient = getShareRecipientFromRow(row);
-        return recipient && (recipient === myEmail || recipient === myPhone);
-      });
-
-      const ownerIds = new Set();
-      if (!sharesByIdErr) (sharesById || []).forEach(s => { if (s?.owner_id) ownerIds.add(String(s.owner_id)); });
-      if (!sharesByRecipientErr) sharesByRecipient.forEach(s => { if (s?.owner_id) ownerIds.add(String(s.owner_id)); });
-
-      if (ownerIds.size > 0) {
-        const { data: sharedOwnerSubCals, error: sharedOwnerErr } = await supabase
-          .from('sub_calendars')
-          .select('id')
-          .in('owner_id', Array.from(ownerIds));
-        if (!sharedOwnerErr) (sharedOwnerSubCals || []).forEach(r => { if (r?.id) ids.add(String(r.id)); });
-      }
-
-      return Array.from(ids);
-    };
-
-    const pollInAppUpdates = async () => {
-      try {
-        const shareRecipientFilter = buildShareRecipientFilter(user?.id, user?.email, user?.phone);
-        let sharedDataQuery = supabase
-          .from('shared_access')
-          .select('id,owner_id,layer_id,shared_with_id,shared_with_email,shared_with_phone,created_at');
-        if (shareRecipientFilter) sharedDataQuery = sharedDataQuery.or(shareRecipientFilter);
-        const { data: sharedData } = await sharedDataQuery;
-        const accessibleShares = (sharedData || []).filter((row) => {
-          const sharedWithId = String(row?.shared_with_id || '');
-          const sharedRecipient = getShareRecipientFromRow(row);
-          return sharedWithId === me || sharedRecipient === myEmail || sharedRecipient === myPhone;
-        });
-        const sharedLayerIds = Array.from(new Set(accessibleShares.map(s => String(s.layer_id || '')).filter(Boolean)));
-        await notifyCalendarShares(sharedData || []);
-
-        if (sharedLayerIds.length > 0) {
-          const { data: sharedEvents } = await supabase
-            .from('events')
-            .select('id,title,date,created_by,user_id,created_at,layer_id')
-            .in('layer_id', sharedLayerIds)
-            .gt('created_at', getCursor('events'))
-            .order('created_at', { ascending: true })
-            .limit(200);
-          notifySharedEvents(sharedEvents);
-          updateCursor('events', sharedEvents);
-
-          const { data: sharedListItems } = await supabase
-            .from('shared_lists')
-            .select('id,list_id,text,created_by,user_id,created_at,layer_id')
-            .in('layer_id', sharedLayerIds)
-            .gt('created_at', getCursor('sharedListItems'))
-            .order('created_at', { ascending: true })
-            .limit(200);
-          notifySharedListItems(sharedListItems);
-          updateCursor('sharedListItems', sharedListItems);
-        }
-
-        const subCalIds = await getAccessibleSubCalIds();
-        if (subCalIds.length > 0) {
-          const { data: subCalEvents } = await supabase
-            .from('sub_calendar_events')
-            .select('id,title,created_by,user_id,sub_calendar_id,created_at')
-            .in('sub_calendar_id', subCalIds)
-            .gt('created_at', getCursor('subCalEvents'))
-            .order('created_at', { ascending: true })
-            .limit(200);
-          notifySubCalEvents(subCalEvents);
-          updateCursor('subCalEvents', subCalEvents);
-
-          const { data: expenseLedgerNotes } = await supabase
-            .from('sub_calendar_notes')
-            .select('id,sub_calendar_id,checklist,created_at')
-            .eq('text', EXPENSE_LEDGER_NOTE_TEXT)
-            .in('sub_calendar_id', subCalIds)
-            .limit(200);
-          notifyExpenseNotes(expenseLedgerNotes);
-        }
-
-        const buildTripPhotoQuery = () => {
-          const base = supabase
-            .from('trip_photos')
-            .select('id,uploaded_by,user_id,sub_calendar_id,created_at');
-          return subCalIds.length > 0 ? base.in('sub_calendar_id', subCalIds) : base;
-        };
-        const { data: datedTripPhotoRows, error: datedTripPhotoError } = await buildTripPhotoQuery()
-          .gt('created_at', getCursor('tripPhotos'))
-          .order('created_at', { ascending: true })
-          .limit(200);
-        if (datedTripPhotoError) {
-          console.error('trip_photos dated poll failed:', datedTripPhotoError);
-        }
-        const { data: nullTripPhotoRows, error: nullTripPhotoError } = await buildTripPhotoQuery()
-          .is('created_at', null)
-          .limit(200);
-        if (nullTripPhotoError) {
-          console.error('trip_photos null-created_at poll failed:', nullTripPhotoError);
-        }
-        notifyTripPhotos([...(datedTripPhotoRows || []), ...(nullTripPhotoRows || [])]);
-        updateCursor('tripPhotos', datedTripPhotoRows);
-
-        const { data: datedInviteRows, error: inviteErr } = await supabase
-          .from('sub_calendar_members')
-          .select('sub_calendar_id,email,phone,added_by,status,invited_at,accepted_at')
-          .or(memberRecipientFilter)
-          .eq('status', 'pending')
-          .or(`invited_at.gt.${getCursor('tripInvites')},accepted_at.gt.${getCursor('tripInvites')}`)
-          .order('invited_at', { ascending: true, nullsFirst: false })
-          .limit(200);
-        if (inviteErr) {
-          console.error('sub_calendar_members invite poll failed:', inviteErr);
-        }
-        const { data: nullInviteRows, error: nullInviteErr } = await supabase
-          .from('sub_calendar_members')
-          .select('sub_calendar_id,email,phone,added_by,status,invited_at,accepted_at')
-          .or(memberRecipientFilter)
-          .eq('status', 'pending')
-          .is('invited_at', null)
-          .limit(200);
-        if (nullInviteErr) {
-          console.error('sub_calendar_members null-invited_at invite poll failed:', nullInviteErr);
-        }
-        const inviteRows = Array.from(new Map([...(datedInviteRows || []), ...(nullInviteRows || [])].map(row => [`${String(row?.sub_calendar_id || '')}|${getInviteIdentityFromRow(row)}`, row])).values());
-        if (inviteRows.length > 0) {
-          const inviteTripIds = Array.from(new Set(inviteRows.map(row => String(row?.sub_calendar_id || '')).filter(Boolean)));
-          const inviteNameMap = {};
-          if (inviteTripIds.length > 0) {
-            const { data: inviteTrips, error: inviteTripsErr } = await supabase
-              .from('sub_calendars')
-              .select('id,name')
-              .in('id', inviteTripIds);
-            if (inviteTripsErr) {
-              console.error('sub_calendars invite name fetch failed:', inviteTripsErr);
-            } else {
-              (inviteTrips || []).forEach(trip => {
-                inviteNameMap[String(trip.id)] = trip.name || 'trip';
-              });
-            }
-          }
-          const inviteRowsWithNames = inviteRows.map(row => ({
-            ...row,
-            sub_calendar_name: inviteNameMap[String(row?.sub_calendar_id || '')] || subCalNameMap[String(row?.sub_calendar_id || '')] || 'trip',
-          }));
-          notifyTripInvites(inviteRowsWithNames);
-          updateCursor('tripInvites', datedInviteRows);
-        }
-      } catch (err) {
-        console.error('In-app notification sync failed:', err);
-      }
-    };
-
-    pollInAppUpdates();
-    const interval = setInterval(pollInAppUpdates, 60 * 1000);
-    window.addEventListener('focus', pollInAppUpdates);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') pollInAppUpdates();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', pollInAppUpdates);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
+    return undefined;
   }, [user?.id, user?.email, user?.phone, currentUser, subCalendars, layers]);
 
   // Invite notifications must work even when no active layer is selected yet.
@@ -16840,7 +16335,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     };
     if (targetLayerId) switchToLayer(targetLayerId);
     if (String(target?.panel || '').trim().toLowerCase() === 'chat') {
-      setShowChatPanel(true);
+      setShowChatPanel(false);
       setShowListPanel(false);
       setShowNotificationSettings(false);
     }
@@ -17031,7 +16526,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (targetLayerId) switchToLayer(targetLayerId);
       const dateKey = String(target?.dateKey || '').trim();
       if (dateKey) focusDateFromKey(dateKey);
-      setShowChatPanel(true);
+      setShowChatPanel(false);
       setShowListPanel(false);
       setShowNotificationSettings(false);
       return;
@@ -17502,201 +16997,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       cancelled = true;
     };
   }, [user?.id, notificationsEnabled, notificationPermission]);
-
-  // Live location sharing within active sub-calendar (opt-in only)
-  useEffect(() => {
-    const clearGeoWatch = () => {
-      if (subCalGeoWatchRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
-        navigator.geolocation.clearWatch(subCalGeoWatchRef.current);
-        subCalGeoWatchRef.current = null;
-      }
-    };
-
-    if (!activeSubCalendar) {
-      clearGeoWatch();
-      setMemberLocations({});
-      return;
-    }
-
-    const todayKey = getDateKey(new Date());
-    const sharingWindowOpen = todayKey >= activeSubCalendar.start_date && todayKey <= activeSubCalendar.end_date;
-    const identity = String(user?.id || user?.email || currentUser || `guest-${Date.now()}`);
-    const displayName = currentUser || user?.email || 'Member';
-
-    let cancelled = false;
-    const channel = supabase.channel(`subcal-live-location-${activeSubCalendar.id}`, {
-      config: { presence: { key: identity } },
-    });
-    subCalLocationChannelRef.current = channel;
-
-    const publishPassivePresence = async () => {
-      try {
-        await channel.track({
-          userId: identity,
-          name: displayName,
-          email: user?.email || null,
-          sharing: false,
-          updatedAt: new Date().toISOString(),
-        });
-      } catch {}
-    };
-
-    const startOrUpdateSharing = async () => {
-      clearGeoWatch();
-      if (!shareMyLocation || !sharingWindowOpen || !navigator?.geolocation) {
-        await publishPassivePresence();
-        return;
-      }
-      subCalGeoWatchRef.current = navigator.geolocation.watchPosition(
-        async (pos) => {
-          if (cancelled) return;
-          try {
-            await channel.track({
-              userId: identity,
-              name: displayName,
-              email: user?.email || null,
-              sharing: true,
-              lat: pos.coords.latitude,
-              lon: pos.coords.longitude,
-              accuracy: Math.round(pos.coords.accuracy || 0),
-              updatedAt: new Date().toISOString(),
-            });
-          } catch (err) {
-            console.error('Location presence update failed:', err);
-          }
-        },
-        async (err) => {
-          console.error('Geolocation watch failed:', err);
-          await publishPassivePresence();
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
-      );
-    };
-
-    channel.on('presence', { event: 'sync' }, () => {
-      if (cancelled) return;
-      const state = channel.presenceState();
-      const flattened = {};
-      Object.values(state || {}).forEach((entries) => {
-        (entries || []).forEach((entry) => {
-          if (!entry?.userId) return;
-          flattened[entry.userId] = entry;
-        });
-      });
-      setMemberLocations(flattened);
-    });
-
-    channel.subscribe(async (status) => {
-      if (status !== 'SUBSCRIBED' || cancelled) return;
-      await startOrUpdateSharing();
-    });
-
-    return () => {
-      cancelled = true;
-      clearGeoWatch();
-      setMemberLocations({});
-      channel.untrack().catch(() => {});
-      channel.unsubscribe();
-      if (subCalLocationChannelRef.current === channel) subCalLocationChannelRef.current = null;
-    };
-  }, [activeSubCalendar?.id, shareMyLocation, currentUser, user?.id, user?.email]);
-
-  // Live location sharing within active calendar layer (opt-in only).
-  useEffect(() => {
-    const clearGeoWatch = () => {
-      if (layerGeoWatchRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
-        navigator.geolocation.clearWatch(layerGeoWatchRef.current);
-        layerGeoWatchRef.current = null;
-      }
-    };
-
-    if (!activeLayerId || !user?.id) {
-      clearGeoWatch();
-      setLayerMemberLocations({});
-      return;
-    }
-
-    const identity = String(user?.id || user?.email || user?.phone || currentUser || `guest-${Date.now()}`);
-    const displayName = currentUser || user?.email || user?.phone || 'Member';
-    let cancelled = false;
-    const channel = supabase.channel(`layer-live-location-${activeLayerId}`, {
-      config: { presence: { key: identity } },
-    });
-    layerLocationChannelRef.current = channel;
-
-    const publishPassivePresence = async () => {
-      try {
-        await channel.track({
-          userId: identity,
-          layerId: String(activeLayerId),
-          name: displayName,
-          email: user?.email || null,
-          sharing: false,
-          updatedAt: new Date().toISOString(),
-        });
-      } catch {}
-    };
-
-    const startOrUpdateSharing = async () => {
-      clearGeoWatch();
-      if (!shareLayerLocation || !navigator?.geolocation) {
-        await publishPassivePresence();
-        return;
-      }
-      layerGeoWatchRef.current = navigator.geolocation.watchPosition(
-        async (pos) => {
-          if (cancelled) return;
-          try {
-            await channel.track({
-              userId: identity,
-              layerId: String(activeLayerId),
-              name: displayName,
-              email: user?.email || null,
-              sharing: true,
-              lat: pos.coords.latitude,
-              lon: pos.coords.longitude,
-              accuracy: Math.round(pos.coords.accuracy || 0),
-              updatedAt: new Date().toISOString(),
-            });
-          } catch (err) {
-            console.error('Layer location presence update failed:', err);
-          }
-        },
-        async (err) => {
-          console.error('Layer geolocation watch failed:', err);
-          await publishPassivePresence();
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
-      );
-    };
-
-    channel.on('presence', { event: 'sync' }, () => {
-      if (cancelled) return;
-      const state = channel.presenceState();
-      const flattened = {};
-      Object.values(state || {}).forEach((entries) => {
-        (entries || []).forEach((entry) => {
-          if (!entry?.userId) return;
-          flattened[entry.userId] = entry;
-        });
-      });
-      setLayerMemberLocations(flattened);
-    });
-
-    channel.subscribe(async (status) => {
-      if (status !== 'SUBSCRIBED' || cancelled) return;
-      await startOrUpdateSharing();
-    });
-
-    return () => {
-      cancelled = true;
-      clearGeoWatch();
-      setLayerMemberLocations({});
-      channel.untrack().catch(() => {});
-      channel.unsubscribe();
-      if (layerLocationChannelRef.current === channel) layerLocationChannelRef.current = null;
-    };
-  }, [activeLayerId, shareLayerLocation, currentUser, user?.id, user?.email, user?.phone]);
 
   // Global mouse up handler for selections
   useEffect(() => {
@@ -19474,7 +18774,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     subCalNotes.length,
     canEditCurrentTrip,
     canGenerateTripHighlights,
-    Object.keys(memberLocations || {}).length,
   ]);
   useEffect(() => {
     const node = subCalTabStripRef.current;
@@ -20426,7 +19725,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)))
     .flatMap((memory) => {
       const urls = [];
-      const cover = String(memory?.coverPhoto || '').trim();
+      const cover = getMemoryPrimaryPhotoUrl(memory);
       if (cover) urls.push(cover);
       (memory?.photos || []).forEach((photo) => {
         const url = String(photo?.url || photo?.photoUrl || '').trim();
@@ -20469,7 +19768,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         id: String(memory?.id || ''),
         title: String(memory?.title || 'Untitled memory').trim(),
         date: String(memory?.date || memory?.createdAt || '').trim().slice(0, 10),
-        photoUrl: String(memory?.coverPhoto || memory?.photos?.[0]?.url || '').trim(),
+        photoUrl: getMemoryPrimaryPhotoUrl(memory),
       }))
       .filter((memory) => memory.id && memory.photoUrl);
   })();
@@ -20487,7 +19786,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           && date.getMonth() === month
           && date.getDate() === day
           && date.getFullYear() < currentYear
-          && String(memory?.coverPhoto || memory?.photos?.[0]?.url || '').trim();
+          && getMemoryPrimaryPhotoUrl(memory);
       })
       .sort((a, b) => Number(new Date(b?.date || 0)) - Number(new Date(a?.date || 0)))[0];
     if (!match) return null;
@@ -20497,7 +19796,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       id: String(match?.id || ''),
       title: String(match?.title || 'Untitled memory').trim(),
       date: String(match?.date || '').trim(),
-      photoUrl: String(match?.coverPhoto || match?.photos?.[0]?.url || '').trim(),
+      photoUrl: getMemoryPrimaryPhotoUrl(match),
       yearsAgo,
       label: 'On This Day',
     };
@@ -22573,12 +21872,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const handleGoogleSignIn = async () => {
     setAuthError('');
     setAuthBusy(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin }
-    });
-    setAuthBusy(false);
-    if (error) setAuthError(error.message);
+    try {
+      const result = await withTimeout(
+        supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: window.location.origin }
+        }),
+        6000,
+        { error: { message: 'Google sign-in took too long to start. Please try again.' } }
+      );
+      if (result?.error) {
+        setAuthError(String(result.error.message || 'Could not start Google sign-in.'));
+      }
+    } catch (error) {
+      setAuthError(String(error?.message || 'Could not start Google sign-in.'));
+    } finally {
+      setAuthBusy(false);
+    }
   };
 
   if (showAuth) {
@@ -23831,11 +23141,6 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
       return;
     }
     if (id === 'chat') {
-      const layerKey = String(activeLayerId || '');
-      const next = !showChatPanel;
-      setShowChatPanel(next);
-      if (!next) setShowChatMembersPanel(false);
-      if (next && layerKey) markChatSeenForLayer(layerKey);
       return;
     }
     if (id === 'weather') {
@@ -23847,12 +23152,9 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
       return;
     }
     if (id === 'ai') {
-      setShowAiAssistant((prev) => !prev);
       return;
     }
     if (id === 'scan') {
-      if (isScanningReminder) return;
-      setShowScanHelpModal(true);
       return;
     }
     if (id === 'import') {
@@ -23877,14 +23179,14 @@ const finalizeRoundRobinMatch = (eventId, roundIndex, matchId) => {
     if (id === 'chat') return {
       label: 'Chat',
       icon: <MessageSquare className="w-4 h-4" />,
-      active: Boolean(widgetCardOpenById.chat),
-      disabled: false,
-      badge: activeChatUnreadCount > 0 ? (activeChatUnreadCount > 99 ? '99+' : String(activeChatUnreadCount)) : '',
+      active: false,
+      disabled: true,
+      badge: '',
     };
     if (id === 'weather') return { label: 'Weather', icon: <span className="text-sm leading-none">🌤️</span>, active: showWeather, disabled: false };
     if (id === 'categories') return { label: 'Categories', icon: <Settings className="w-4 h-4" />, active: Boolean(widgetCardOpenById.categories), disabled: false };
-    if (id === 'ai') return { label: 'AI', icon: <MessageSquare className="w-4 h-4" />, active: Boolean(widgetCardOpenById.ai), disabled: false };
-    if (id === 'scan') return { label: isScanningReminder ? 'Scanning' : 'Scan', icon: <Camera className="w-4 h-4" />, active: Boolean(widgetCardOpenById.scan), disabled: isScanningReminder };
+    if (id === 'ai') return { label: 'AI', icon: <MessageSquare className="w-4 h-4" />, active: false, disabled: true };
+    if (id === 'scan') return { label: 'Scan', icon: <Camera className="w-4 h-4" />, active: false, disabled: true };
     if (id === 'import') return { label: 'Import', icon: <Plus className="w-4 h-4" />, active: Boolean(widgetCardOpenById.import), disabled: Boolean(activeSubCalendar) };
     if (id === 'roundrobin') return {
   label: 'Round Robin',
@@ -24878,10 +24180,20 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     const normalizedPhotos = Array.isArray(memoryData?.photos)
       ? memoryData.photos.map((photo, index) => ({
         id: String(photo?.id || `photo-${index}`),
-        url: String(photo?.url || '').trim(),
+        url: String(photo?.url || photo?.photoUrl || '').trim(),
         caption: String(photo?.caption || '').trim(),
       })).filter((photo) => photo.url)
       : [];
+    if (!normalizedPhotos.length) {
+      const legacyPhotoUrl = String(memoryData?.photoUrl || memoryData?.photo_url || '').trim();
+      if (legacyPhotoUrl) {
+        normalizedPhotos.push({
+          id: 'photo-0',
+          url: legacyPhotoUrl,
+          caption: '',
+        });
+      }
+    }
     const requestedCoverPhoto = String(memoryData?.coverPhoto || normalizedPhotos?.[0]?.url || '').trim();
     const coverPhoto = requestedCoverPhoto && requestedCoverPhoto !== String(normalizedPhotos?.[0]?.url || '').trim()
       ? requestedCoverPhoto
@@ -25703,18 +25015,22 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             if (!coverHeaderControlsVisible) return;
             bumpCoverControlsInteraction();
           }}
-          style={bottomNavTab === 'home'
-            ? { display: 'none' }
-            : (hasActiveLayerHeaderCover && effectiveCoverOpacity > 0.01
+          style={bottomNavTab !== 'home' && hasActiveLayerHeaderCover && effectiveCoverOpacity > 0.01
+            ? {
+              backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
+              backgroundSize: 'cover',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center',
+            }
+            : bottomNavTab === 'home'
               ? {
-                backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
-                backgroundSize: 'cover',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
+                background: darkMode
+                  ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.18)} 0%, rgba(15,23,42,0.94) 52%, rgba(2,6,23,0.98) 100%)`
+                  : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 0%, rgba(255,251,235,0.96) 52%, rgba(255,255,255,0.98) 100%)`,
               }
-              : undefined)}
+              : undefined}
         >
-          {bottomNavTab === 'home' ? null : (
+          {bottomNavTab === 'home' ? (
             <div className="relative z-20 flex min-h-[132px] flex-col justify-end overflow-hidden rounded-2xl px-2 pb-3 pt-14 sm:min-h-[172px] sm:px-4 sm:pb-5 lg:min-h-[252px]">
               <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full blur-3xl" style={{ background: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.35 : 0.22) }} />
               <div className="pointer-events-none absolute -bottom-10 -left-8 h-28 w-28 rounded-full blur-2xl" style={{ background: hexToRgba(activeLayerPageTheme.backgroundTo, darkMode ? 0.28 : 0.18) }} />
@@ -25745,7 +25061,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 </p>
               </div>
             </div>
-          )}
+          ) : null}
           {bottomNavTab !== 'home' && !hasActiveLayerHeaderCover ? (
             <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
               <WelcomeCover
@@ -26336,7 +25652,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {showAiAssistant && (
+        {false && showAiAssistant && (
           <div className="glass-panel rounded-2xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -26817,6 +26133,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 )}
               </div>
             )}
+            {false && (
             <div className="mb-1 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700">
               {(() => {
                 const activeLayer = (layers || []).find(layer => String(layer?.id || '') === String(activeLayerId || ''));
@@ -26872,6 +26189,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 );
               })()}
             </div>
+            )}
             {!activeLayer?.is_public && myShares.length === 0 && (
               <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">No shares yet. Add an email or phone above to get started.</p>
             )}
@@ -31255,7 +30573,7 @@ transform: translateY(0);
       </div>
     )}
 
-    {showScanHelpModal && (
+    {false && showScanHelpModal && (
       <div
         className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center"
         onClick={() => setShowScanHelpModal(false)}
@@ -31755,18 +31073,6 @@ transform: translateY(0);
                   <Camera className="w-3.5 h-3.5" />
                 </button>
               )}
-              <button
-                onClick={() => setShowSubCalLocationSheet(true)}
-                className="relative flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/10"
-                title="Trip live location"
-              >
-                <MapPin className="w-4 h-4" />
-                {Object.values(memberLocations).filter(loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number').length > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[1rem] h-[1rem] px-1 rounded-full bg-emerald-500 text-white text-[9px] leading-none font-bold flex items-center justify-center">
-                    {Object.values(memberLocations).filter(loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number').length}
-                  </span>
-                )}
-              </button>
               {canGenerateTripHighlights && (
                 <button
                   onClick={openTripHighlights}
@@ -31944,18 +31250,6 @@ transform: translateY(0);
                 <Camera className="w-3.5 h-3.5" />
               </button>
             )}
-            <button
-              onClick={() => setShowSubCalLocationSheet(true)}
-              className="relative p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
-              title="Trip live location"
-            >
-              <MapPin className="w-4 h-4" />
-              {Object.values(memberLocations).filter(loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number').length > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[1rem] h-[1rem] px-1 rounded-full bg-emerald-500 text-white text-[9px] leading-none font-bold flex items-center justify-center">
-                  {Object.values(memberLocations).filter(loc => loc?.sharing && typeof loc?.lat === 'number' && typeof loc?.lon === 'number').length}
-                </span>
-              )}
-            </button>
             {/* Dark mode toggle */}
             <button
               onClick={cycleThemeMode}
@@ -32273,18 +31567,6 @@ transform: translateY(0);
       } catch { return null; }
     })()}
   </button>
-  <button
-    onClick={() => setSubCalTab('chat')}
-
-            className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all relative ${subCalTab === 'chat' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-          >
-            Chat
-            {Number(tripChatUnreadCounts?.[String(activeSubCalendar?.id || '')] || 0) > 0 && (
-              <span className="ml-1.5 px-1.5 py-0.5 bg-red-500 text-white text-xs rounded-full">
-                {Number(tripChatUnreadCounts?.[String(activeSubCalendar?.id || '')] || 0) > 99 ? '99+' : Number(tripChatUnreadCounts?.[String(activeSubCalendar?.id || '')] || 0)}
-              </span>
-            )}
-          </button>
           <button
             onClick={() => setSubCalTab('expenses')}
             className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${subCalTab === 'expenses' ? 'bg-white text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
@@ -34044,7 +33326,7 @@ transform: translateY(0);
           </div>
         )}
 
-        {showSubCalLocationSheet && (() => {
+        {false && showSubCalLocationSheet && (() => {
           const todayKey = getDateKey(new Date());
           const sharingWindowOpen = todayKey >= activeSubCalendar.start_date && todayKey <= activeSubCalendar.end_date;
           const liveLocations = Object.values(memberLocations).filter(

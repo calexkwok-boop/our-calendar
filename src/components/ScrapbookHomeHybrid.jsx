@@ -181,7 +181,7 @@ const ScrapbookHomeHybrid = ({
       <div className="mx-auto max-w-5xl space-y-6">
         
         {/* SCRAPBOOK HEADER with Year Stats */}
-        <div className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-8 shadow-2xl paper-texture">
+        <div className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-8 pb-8 pt-12 sm:p-10 shadow-2xl paper-texture">
           {/* Decorative corner doodles */}
           <div className="pointer-events-none absolute left-6 top-6 text-4xl opacity-15 select-none">✦</div>
           <div className="pointer-events-none absolute right-6 top-6 text-4xl opacity-15 select-none">❋</div>
@@ -207,9 +207,14 @@ const ScrapbookHomeHybrid = ({
           )}
           
           <div className="relative">
-            <h1 className="font-handwritten text-5xl sm:text-6xl text-gray-900 dark:text-white mb-3 leading-tight">
+            <h1 className="font-handwritten text-5xl sm:text-6xl text-gray-900 dark:text-white mb-3 leading-tight pl-8 sm:pl-0">
               {greeting}, {greetingName} {greetingEmoji}
             </h1>
+            {todayLabel ? (
+              <div className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-amber-900/55 dark:text-amber-100/55">
+                {todayLabel}
+              </div>
+            ) : null}
             {/* Year in Numbers in main header */}
             <div className="inline-flex flex-wrap items-center gap-3 rounded-2xl border border-amber-900/10 bg-white/60 dark:bg-black/20 px-6 py-3 backdrop-blur-sm">
               <span className="text-sm font-semibold text-gray-900 dark:text-white">
