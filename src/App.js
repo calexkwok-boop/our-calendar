@@ -2958,6 +2958,7 @@ function App() {
   const [journeyGoalError, setJourneyGoalError] = useState('');
   const [selectedJourneyGoalTemplateId, setSelectedJourneyGoalTemplateId] = useState('');
   const [journeyLogDraft, setJourneyLogDraft] = useState(buildJourneyLogDraft());
+  const [journeyEditingEntryId, setJourneyEditingEntryId] = useState('');
   const [journeyRunSession, setJourneyRunSession] = useState(() => buildJourneyRunSession());
   const [journeyRunNowMs, setJourneyRunNowMs] = useState(() => Date.now());
   const [journeyWorkoutSession, setJourneyWorkoutSession] = useState(() => buildJourneyWorkoutSession());
@@ -20865,6 +20866,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const closeJourneyLogModal = () => {
     setShowJourneyLogModal(false);
     setJourneyLogDraft(buildJourneyLogDraft());
+    setJourneyEditingEntryId('');
     setJourneyLogSavingPhoto(false);
     setJourneyLogError('');
   };
@@ -20963,6 +20965,29 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const openJourneyLogFlow = (goal = primaryJourneyGoal) => {
     setShowJourneyEntryModal(false);
     setJourneyLogDraft(buildJourneyLogDraft(goal?.id));
+    setJourneyEditingEntryId('');
+    setJourneyLogSavingPhoto(false);
+    setJourneyLogError('');
+    deferJourneyOverlayOpen(() => setShowJourneyLogModal(true));
+  };
+
+  const openJourneyJournalEntryEditor = (entry) => {
+    const normalizedEntryId = String(entry?.id || '').trim();
+    const entryGoal = journeyGoalById[String(entry?.goalId || '')] || primaryJourneyGoal || null;
+    if (!normalizedEntryId || getJourneyGoalType(entryGoal) !== 'journal') return;
+    setShowJourneyEntryModal(false);
+    setJourneyLogDraft({
+      goalId: String(entryGoal?.id || entry?.goalId || ''),
+      amount: String(entry?.amount || ''),
+      note: String(entry?.note || ''),
+      photoUrl: String(entry?.photoUrl || ''),
+      photoName: String(entry?.photoName || ''),
+      entryDate: String(entry?.entryDate || String(entry?.createdAt || '').slice(0, 10) || new Date().toISOString().slice(0, 10)),
+      mood: String(entry?.mood || ''),
+      tagsText: Array.isArray(entry?.tags) ? entry.tags.join(', ') : '',
+      prompt: String(entry?.prompt || ''),
+    });
+    setJourneyEditingEntryId(normalizedEntryId);
     setJourneyLogSavingPhoto(false);
     setJourneyLogError('');
     deferJourneyOverlayOpen(() => setShowJourneyLogModal(true));
@@ -21036,6 +21061,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const addJourneyLog = () => {
     const goalToLog = journeyGoalById[String(journeyLogDraft?.goalId || '')] || primaryJourneyGoal || null;
     const isJournalGoal = getJourneyGoalType(goalToLog) === 'journal';
+    const editingEntryId = String(journeyEditingEntryId || '').trim();
     const amount = isJournalGoal ? 1 : Math.max(0, normalizeJourneyNumber(journeyLogDraft?.amount));
     const note = String(journeyLogDraft?.note || '').trim();
     const photoUrl = String(journeyLogDraft?.photoUrl || '');
@@ -21050,7 +21076,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     const now = new Date().toISOString();
     const entry = {
-      id: `journey_entry_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      id: editingEntryId || `journey_entry_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       goalId: goalToLog?.id || null,
       type: 'log',
       amount,
@@ -21062,22 +21088,49 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       tags,
       prompt,
       createdAt: now,
+      updatedAt: now,
     };
-    setJourneyState((prev) => ({
-      ...prev,
-      goals: (prev?.goals || []).map((goal) => (
-        goalToLog && String(goal?.id || '') === String(goalToLog.id)
-          ? {
-              ...goal,
-              current: getJourneyGoalType(goal) === 'journal'
-                ? countJourneyJournalDays([entry, ...(prev?.entries || [])], goal.id)
-                : normalizeJourneyNumber(goal?.current) + amount,
-              updatedAt: now,
-            }
-          : goal
-      )),
-      entries: [entry, ...(prev?.entries || [])].slice(0, 50),
-    }));
+    setJourneyState((prev) => {
+      const previousEntries = prev?.entries || [];
+      const existingEntry = editingEntryId
+        ? previousEntries.find((item) => String(item?.id || '') === editingEntryId)
+        : null;
+      const nextEntry = {
+        ...existingEntry,
+        ...entry,
+        createdAt: existingEntry?.createdAt || now,
+      };
+      const nextEntries = editingEntryId
+        ? previousEntries.map((item) => (String(item?.id || '') === editingEntryId ? nextEntry : item))
+        : [nextEntry, ...previousEntries].slice(0, 50);
+      const previousProgress = Math.max(0, normalizeJourneyNumber(existingEntry?.amount));
+      const previousGoalId = String(existingEntry?.goalId || '');
+      const nextGoalId = String(goalToLog?.id || '');
+
+      return {
+        ...prev,
+        goals: (prev?.goals || []).map((goal) => {
+          const goalId = String(goal?.id || '');
+          if (!nextGoalId && !previousGoalId) return goal;
+          const isAffectedGoal = goalId === nextGoalId || goalId === previousGoalId;
+          if (!isAffectedGoal) return goal;
+
+          const goalType = getJourneyGoalType(goal);
+          const nextCurrent = goalType === 'journal'
+            ? countJourneyJournalDays(nextEntries, goal.id)
+            : editingEntryId
+              ? Math.max(0, normalizeJourneyNumber(goal?.current) - (goalId === previousGoalId ? previousProgress : 0) + (goalId === nextGoalId ? amount : 0))
+              : normalizeJourneyNumber(goal?.current) + amount;
+
+          return {
+            ...goal,
+            current: nextCurrent,
+            updatedAt: now,
+          };
+        }),
+        entries: nextEntries,
+      };
+    });
     closeJourneyLogModal();
   };
 
@@ -34541,6 +34594,24 @@ transform: translateY(0);
                             {entry.note ? (
                               <div className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">{entry.note}</div>
                             ) : null}
+                            {entry.type === 'log' && getJourneyGoalType(entryGoal) === 'journal' ? (
+                              <div className="mt-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openJourneyJournalEntryEditor(entry);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold"
+                                  style={{
+                                    backgroundColor: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.18 : 0.1),
+                                    color: activeLayerPageTheme.accent,
+                                  }}
+                                >
+                                  Open / edit entry
+                                </button>
+                              </div>
+                            ) : null}
                             {Array.isArray(entry?.tags) && entry.tags.length > 0 ? (
                               <div className="mt-2 flex flex-wrap gap-1.5">
                                 {entry.tags.slice(0, 4).map((tag) => (
@@ -34783,7 +34854,7 @@ transform: translateY(0);
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {primaryJourneyLoggedToday ? 'Add a quick update' : 'Log today'}
+                {journeyEditingEntryId ? 'Edit journal entry' : primaryJourneyLoggedToday ? 'Add a quick update' : 'Log today'}
               </div>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {selectedJourneyLogGoal ? selectedJourneyLogGoal.title : 'No active goal yet.'}
@@ -34945,7 +35016,7 @@ transform: translateY(0);
           </div>
           <div className="mt-5 flex gap-2">
             <button type="button" onClick={closeJourneyLogModal} className="flex-1 rounded-2xl bg-gray-100 dark:bg-white/[0.08] px-4 py-3 text-sm font-medium text-gray-700 dark:text-slate-100">Cancel</button>
-            <button type="button" onClick={addJourneyLog} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>Save update</button>
+            <button type="button" onClick={addJourneyLog} className="flex-1 rounded-2xl px-4 py-3 text-sm font-semibold text-white" style={themeAccentButtonStyle}>{journeyEditingEntryId ? 'Save entry' : 'Save update'}</button>
           </div>
         </div>
       </div>

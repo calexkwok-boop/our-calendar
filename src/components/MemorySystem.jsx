@@ -1366,15 +1366,15 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
 };
 
 const CoverSlide = ({ memory }) => (
-  <div className="w-full h-full relative pt-[max(3rem,calc(env(safe-area-inset-top)+2rem))] pb-[max(4.15rem,calc(env(safe-area-inset-bottom)+3.2rem))] px-2">
+  <div className="w-full h-full relative pt-[max(5rem,calc(env(safe-area-inset-top)+4rem))] pb-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))] px-2">
     {memory.coverPhoto ? (
       <img src={memory.coverPhoto} alt={memory.title} className="w-full h-full object-cover rounded-[28px]" />
     ) : (
       <div className="w-full h-full rounded-[28px] bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500" />
     )}
-    <div className="absolute inset-x-2 top-[max(3rem,calc(env(safe-area-inset-top)+2rem))] bottom-[max(4.15rem,calc(env(safe-area-inset-bottom)+3.2rem))] rounded-[28px] bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+    <div className="absolute inset-x-2 top-[max(5rem,calc(env(safe-area-inset-top)+4rem))] bottom-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))] rounded-[28px] bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
     
-    <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-6 py-20 sm:px-8">
+    <div className="absolute inset-x-2 top-[max(5rem,calc(env(safe-area-inset-top)+4rem))] bottom-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))] flex flex-col items-center justify-center text-center text-white px-6 py-10 sm:px-8">
       <div className="max-w-2xl">
       <h1 className="text-2xl sm:text-3xl font-bold mb-3 leading-tight">{memory.title}</h1>
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm sm:text-base mb-2">
@@ -1417,10 +1417,10 @@ const CoverSlide = ({ memory }) => (
 );
 
 const PhotoSlide = ({ photo }) => (
-  <div className="w-full h-full relative flex items-center justify-center bg-black px-2 pt-[max(3rem,calc(env(safe-area-inset-top)+2rem))] pb-[max(4.15rem,calc(env(safe-area-inset-bottom)+3.2rem))]">
+  <div className="w-full h-full relative flex items-center justify-center bg-black px-2 pt-[max(5rem,calc(env(safe-area-inset-top)+4rem))] pb-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))]">
     <img src={photo.url} alt={photo.caption} className="max-w-full max-h-full rounded-[28px] object-contain" />
     {photo.caption && (
-      <div className="absolute left-2 right-2 bottom-[max(4.15rem,calc(env(safe-area-inset-bottom)+3.2rem))] rounded-b-[28px] p-6 bg-gradient-to-t from-black/90 to-transparent">
+      <div className="absolute left-2 right-2 bottom-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))] rounded-b-[28px] p-6 bg-gradient-to-t from-black/90 to-transparent">
         <p className="text-white text-center">{photo.caption}</p>
       </div>
     )}
