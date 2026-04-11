@@ -541,6 +541,7 @@ export default function useHomeScreenData({
     upcomingTrips,
     upcomingUserTabEvents,
     filteredUpcomingUserTabEvents,
+    getWeEventDisplayBadge,
     eligibleMemoryEvents,
     activeTrips,
     archivedTrips,

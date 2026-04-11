@@ -10,6 +10,49 @@ import {
 } from 'lucide-react';
 import QuickThoughtsSection from './QuickThoughtsSection';
 
+const areShallowArraysEqual = (a, b) => {
+  if (a === b) return true;
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  return a.every((value, index) => value === b[index]);
+};
+
+const areShallowObjectsEqual = (a, b) => {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((key) => a[key] === b[key]);
+};
+
+const areHomePropsEqual = (prevProps, nextProps) => {
+  const prevKeys = Object.keys(prevProps);
+  const nextKeys = Object.keys(nextProps);
+  if (prevKeys.length !== nextKeys.length) return false;
+
+  for (const key of nextKeys) {
+    const prevValue = prevProps[key];
+    const nextValue = nextProps[key];
+
+    if (typeof prevValue === 'function' && typeof nextValue === 'function') continue;
+    if (Array.isArray(prevValue) || Array.isArray(nextValue)) {
+      if (!areShallowArraysEqual(prevValue, nextValue)) return false;
+      continue;
+    }
+    if (
+      prevValue && nextValue
+      && typeof prevValue === 'object'
+      && typeof nextValue === 'object'
+    ) {
+      if (!areShallowObjectsEqual(prevValue, nextValue)) return false;
+      continue;
+    }
+    if (prevValue !== nextValue) return false;
+  }
+
+  return true;
+};
+
 /**
  * HYBRID SCRAPBOOK HOME PAGE
  * 
@@ -663,4 +706,4 @@ const ScrapbookHomeHybrid = ({
   );
 };
 
-export default ScrapbookHomeHybrid;
+export default React.memo(ScrapbookHomeHybrid, areHomePropsEqual);
