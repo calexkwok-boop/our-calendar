@@ -279,14 +279,14 @@ const ScrapbookHomeHybrid = ({
             )}
           </div>
 
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+          <div className="flex gap-3 overflow-x-auto overflow-y-hidden pb-2 scrollbar-hide snap-x snap-mandatory [touch-action:pan-x]">
             {getDaysOfWeek().map((day) => {
               const momentForDay = momentsThisWeek.find(m => 
                 String(m?.date || '').trim().slice(0, 10) === day.dateKey
               );
 
               return (
-                <div key={day.dateKey} className="flex-shrink-0 w-32">
+                <div key={day.dateKey} className="w-32 flex-shrink-0 snap-start">
                   <div className={`rounded-lg overflow-hidden ${
                     momentForDay 
                       ? 'bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl hover:-translate-y-1 cursor-pointer transition-all' 

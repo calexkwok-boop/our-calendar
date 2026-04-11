@@ -236,6 +236,7 @@ const MemorySystem = ({
   onComment,
   onShare,
   onCloseSystem,
+  closeViewerToSystem = false,
   onViewChange,
   onSetCurrentMemory,
   
@@ -322,6 +323,10 @@ const MemorySystem = ({
         <MemoryViewer
           memory={selectedMemory}
           onClose={() => {
+            if (closeViewerToSystem) {
+              onCloseSystem?.();
+              return;
+            }
             setSelectedMemory(null);
             onSetCurrentMemory?.(null);
             setActiveView('gallery');
@@ -1376,14 +1381,29 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
     ...(memory.highlights?.filter(h => h.trim()).length > 0 ? [{ type: 'highlights', data: memory.highlights }] : []),
     ...(memory.taggedPeople?.length > 0 ? [{ type: 'people', data: memory.taggedPeople }] : []),
   ];
+  const slideCount = slides.length;
+  const currentSlideData = slides[currentSlide] || slides[0] || null;
   
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
+    if (slideCount <= 1) return;
+    setCurrentSlide((prev) => (prev + 1 >= slideCount ? 0 : prev + 1));
   };
   
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    if (slideCount <= 1) return;
+    setCurrentSlide((prev) => (prev - 1 < 0 ? slideCount - 1 : prev - 1));
   };
+
+  useEffect(() => {
+    setCurrentSlide((prev) => {
+      if (!slideCount) return 0;
+      return Math.min(prev, slideCount - 1);
+    });
+  }, [slideCount]);
+
+  useEffect(() => {
+    setCurrentSlide(0);
+  }, [memory?.id]);
   
   const handleReact = async (reactionType) => {
     setUserReaction(reactionType);
@@ -1427,41 +1447,46 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
       
       {/* Slideshow */}
       <div className="relative w-full h-full flex items-center justify-center">
-        {slides.map((slide, idx) => (
-          <div
-            key={idx}
-            className={`absolute inset-0 transition-opacity duration-500 ${
-              idx === currentSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}>
-            {slide.type === 'cover' && <CoverSlide memory={slide.data} />}
-            {slide.type === 'photo' && <PhotoSlide photo={slide.data} />}
-            {slide.type === 'highlights' && <HighlightsSlide highlights={slide.data} memory={memory} />}
-            {slide.type === 'people' && <PeopleSlide people={slide.data} memory={memory} />}
+        {currentSlideData && (
+          <div className="absolute inset-0 z-0 transition-opacity duration-200 opacity-100">
+            {currentSlideData.type === 'cover' && <CoverSlide memory={currentSlideData.data} />}
+            {currentSlideData.type === 'photo' && <PhotoSlide photo={currentSlideData.data} />}
+            {currentSlideData.type === 'highlights' && <HighlightsSlide highlights={currentSlideData.data} memory={memory} />}
+            {currentSlideData.type === 'people' && <PeopleSlide people={currentSlideData.data} memory={memory} />}
           </div>
-        ))}
+        )}
         
         {/* Navigation */}
-        {slides.length > 1 && (
+        {slideCount > 1 && (
           <>
             <button
+              type="button"
+              aria-label="Previous slide"
               onClick={prevSlide}
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full 
-                       bg-white/20 hover:bg-white/30 transition-all z-10">
-              <ChevronLeft className="w-6 h-6 text-white" />
+              className="absolute inset-y-0 left-0 z-40 flex w-24 items-center justify-start pl-4 sm:w-28 sm:pl-6"
+            >
+              <span className="rounded-full bg-white/20 p-4 transition-all hover:bg-white/30 active:scale-95">
+                <ChevronLeft className="h-6 w-6 text-white" />
+              </span>
             </button>
             
             <button
+              type="button"
+              aria-label="Next slide"
               onClick={nextSlide}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full 
-                       bg-white/20 hover:bg-white/30 transition-all z-10">
-              <ChevronRight className="w-6 h-6 text-white" />
+              className="absolute inset-y-0 right-0 z-40 flex w-24 items-center justify-end pr-4 sm:w-28 sm:pr-6"
+            >
+              <span className="rounded-full bg-white/20 p-4 transition-all hover:bg-white/30 active:scale-95">
+                <ChevronRight className="h-6 w-6 text-white" />
+              </span>
             </button>
             
             {/* Dots */}
-            <div className="absolute bottom-[max(4.2rem,calc(env(safe-area-inset-bottom)+3.1rem))] left-1/2 -translate-x-1/2 flex gap-2 z-10">
+            <div className="absolute bottom-[max(4.2rem,calc(env(safe-area-inset-bottom)+3.1rem))] left-1/2 z-40 flex -translate-x-1/2 gap-2">
               {slides.map((_, idx) => (
                 <button
                   key={idx}
+                  type="button"
                   onClick={() => setCurrentSlide(idx)}
                   className={`w-2 h-2 rounded-full transition-all ${
                     idx === currentSlide ? 'bg-white w-8' : 'bg-white/50'
@@ -1508,15 +1533,9 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
 
 const CoverSlide = ({ memory }) => (
   <div className="w-full h-full relative pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] px-2">
-    {getMemoryCoverUrl(memory) ? (
-      <img src={getMemoryCoverUrl(memory)} alt={memory.title} className="w-full h-full object-cover rounded-[28px]" />
-    ) : (
-      <div className="w-full h-full rounded-[28px] bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500" />
-    )}
-    <div className="pointer-events-none absolute inset-x-2 top-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] h-24 rounded-t-[28px] bg-gradient-to-b from-black/55 via-black/22 to-transparent" />
-    <div className="pointer-events-none absolute inset-x-2 bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] h-28 rounded-b-[28px] bg-gradient-to-t from-black/70 via-black/28 to-transparent" />
-    <div className="absolute inset-x-2 top-[max(5rem,calc(env(safe-area-inset-top)+4rem))] bottom-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))] rounded-[28px] bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
-    
+    <div className="absolute inset-x-2 top-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))] bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] rounded-[28px] bg-gradient-to-b from-purple-500 via-fuchsia-700 to-amber-950" />
+    <div className="absolute inset-x-2 top-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))] bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] rounded-[28px] bg-gradient-to-t from-black/28 via-transparent to-white/5" />
+
     <div className="absolute inset-x-2 top-[max(5rem,calc(env(safe-area-inset-top)+4rem))] bottom-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))] flex flex-col items-center justify-center text-center text-white px-6 py-10 sm:px-8">
       <div className="max-w-2xl">
       <h1 className="text-2xl sm:text-3xl font-bold mb-3 leading-tight">{memory.title}</h1>

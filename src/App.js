@@ -3099,6 +3099,7 @@ function App() {
   const [memoryCreateDraft, setMemoryCreateDraft] = useState(null);
   const [memoryDraftSourceLabel, setMemoryDraftSourceLabel] = useState('');
   const [memorySystemSessionKey, setMemorySystemSessionKey] = useState(0);
+  const [memorySystemOpenedDirectly, setMemorySystemOpenedDirectly] = useState(false);
   const [showJourneyScreen, setShowJourneyScreen] = useState(false);
   const [showJourneyEntryModal, setShowJourneyEntryModal] = useState(false);
   const [showJourneyGoalModal, setShowJourneyGoalModal] = useState(false);
@@ -23942,6 +23943,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setMemorySystemCurrentMemory(null);
     setMemoryCreateDraft(null);
     setMemoryDraftSourceLabel('');
+    setMemorySystemOpenedDirectly(false);
   };
 
   const openMemoriesGallery = () => {
@@ -23949,6 +23951,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setMemoryCreateDraft(null);
     setMemoryDraftSourceLabel('');
     setMemorySystemView('gallery');
+    setMemorySystemOpenedDirectly(false);
     setMemorySystemSessionKey((key) => key + 1);
     setShowMemorySystem(true);
   };
@@ -24015,6 +24018,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setMemoryDraftSourceLabel('');
     setMemorySystemCurrentMemory(memory);
     setMemorySystemView('viewer');
+    setMemorySystemOpenedDirectly(true);
     setMemorySystemSessionKey((key) => key + 1);
     setShowMemorySystem(true);
   };
@@ -24604,6 +24608,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               onComment={commentOnMemory}
               onShare={shareMemoryRecord}
               onCloseSystem={closeMemorySystem}
+              closeViewerToSystem={memorySystemOpenedDirectly}
               onViewChange={setMemorySystemView}
               onSetCurrentMemory={setMemorySystemCurrentMemory}
               user={user}
