@@ -523,7 +523,20 @@ export default function useHomeScreenData({
     let streak = 0;
     const cursor = new Date();
     cursor.setHours(0, 0, 0, 0);
-    while (reflectedDateKeys.has(getDateKey(cursor))) {
+    while (true) {
+      const key = getDateKey(cursor);
+      if (!reflectedDateKeys.has(key)) {
+        if (streak === 0) {
+          cursor.setDate(cursor.getDate() - 1);
+          const yesterdayKey = getDateKey(cursor);
+          if (reflectedDateKeys.has(yesterdayKey)) {
+            streak += 1;
+            cursor.setDate(cursor.getDate() - 1);
+            continue;
+          }
+        }
+        break;
+      }
       streak += 1;
       cursor.setDate(cursor.getDate() - 1);
     }
