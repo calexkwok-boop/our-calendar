@@ -19735,6 +19735,41 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     })
     .filter((url, index, arr) => url && arr.indexOf(url) === index)
     .slice(0, 4);
+  const homeYearStats = (() => {
+    const currentYear = new Date().getFullYear();
+    const startOfYearTs = toDateOnlyTs(`${currentYear}-01-01`);
+    const endOfYearTs = toDateOnlyTs(`${currentYear}-12-31`);
+    const inCurrentYearRange = (value) => {
+      const ts = toDateOnlyTs(value);
+      return ts !== null && startOfYearTs !== null && endOfYearTs !== null && ts >= startOfYearTs && ts <= endOfYearTs;
+    };
+    const tripsTakenThisYear = tabTrips.filter((trip) => {
+      const startRaw = getSubCalStartRaw(trip);
+      const startTs = toDateOnlyTs(startRaw);
+      return startTs !== null && startOfYearTs !== null && startTs >= startOfYearTs && startTs <= todayTs;
+    });
+    const yearEventCount = Object.values(events || {})
+      .flat()
+      .filter((event, index, arr) => {
+        const eventId = String(event?.id || '').trim();
+        if (!eventId) return false;
+        return arr.findIndex((candidate) => String(candidate?.id || '').trim() === eventId) === index;
+      })
+      .filter((event) => inCurrentYearRange(event?.date || event?.dateKey || ''))
+      .length;
+    const yearMemories = homeResolvedMemories.filter((memory) => inCurrentYearRange(memory?.date || memory?.createdAt || ''));
+    const yearPhotoCount = yearMemories.reduce((total, memory) => {
+      const coverBonus = getMemoryPrimaryPhotoUrl(memory) ? 1 : 0;
+      const galleryCount = Array.isArray(memory?.photos) ? memory.photos.filter((photo) => String(photo?.url || photo?.photoUrl || '').trim()).length : 0;
+      return total + Math.max(coverBonus, galleryCount);
+    }, 0);
+    return {
+      year: currentYear,
+      events: yearEventCount,
+      trips: tripsTakenThisYear.length,
+      photos: yearPhotoCount,
+    };
+  })();
   const homeMemoryReadyCount = eligibleMemoryEvents.length;
   const homeMemoryOpportunities = eligibleMemoryEvents.slice(0, 2);
   const HOME_MOMENTS_PAST_DAYS = 6;
@@ -27817,9 +27852,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             weekPastDaysCount={HOME_MOMENTS_PAST_DAYS}
             weekFutureDaysCount={HOME_MOMENTS_FUTURE_DAYS}
              themeAccentHeadingStyle={themeAccentHeadingStyle}
-             themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
-             themeAccentTextStyle={themeAccentTextStyle}
-             themeAccentBorder={themeAccentBorder}
+            themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
+            themeAccentTextStyle={themeAccentTextStyle}
+            themeAccentBorder={themeAccentBorder}
+            yearStats={homeYearStats}
              profilePhotoUrl={currentUserProfilePhotoUrl}
              onOpenAccountMenu={toggleAccountMenu}
            />

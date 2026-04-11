@@ -82,7 +82,7 @@ const ScrapbookHomeHybrid = ({
   todayLabel = '',
   
   // Year stats for header
-  yearStats = { year: new Date().getFullYear(), events: 52, trips: 8, photos: 247, places: 12 },
+  yearStats = { year: new Date().getFullYear(), events: 0, trips: 0, photos: 0 },
   
   // Moments This Week (current)
   momentsThisWeek = [],
@@ -228,7 +228,7 @@ const ScrapbookHomeHybrid = ({
                 {(yearStats.year || new Date().getFullYear())} SO FAR:
               </span>
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos · {yearStats.places} new places
+                {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos
               </span>
             </div>
           </div>
