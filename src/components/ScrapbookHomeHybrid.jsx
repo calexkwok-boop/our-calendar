@@ -53,6 +53,14 @@ const getVisualPreviewUrl = (item) => String(
   item?.coverPhoto || item?.photoUrl || item?.photos?.[0]?.url || ''
 ).trim();
 
+const toLocalDateKey = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const getDaysOfWeek = (pastDaysCount = 6, futureDaysCount = 0) => {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const today = new Date();
@@ -63,8 +71,8 @@ const getDaysOfWeek = (pastDaysCount = 6, futureDaysCount = 0) => {
   return Array.from({ length: total }, (_, index) => {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + index);
-    const dateKey = date.toISOString().slice(0, 10);
-    const todayKey = today.toISOString().slice(0, 10);
+    const dateKey = toLocalDateKey(date);
+    const todayKey = toLocalDateKey(today);
     return {
       label: days[date.getDay()],
       isToday: dateKey === todayKey,
@@ -98,6 +106,7 @@ const ScrapbookHomeHybrid = ({
   
   // Coming Up This Week (current)
   upcomingPreviewEvents = [],
+  onAddEvent = () => {},
   onOpenUpcoming,
   
   // Quick Thoughts (NEW - scrapbook enhanced)
@@ -187,8 +196,8 @@ const ScrapbookHomeHybrid = ({
 
       <div className="mx-auto max-w-5xl space-y-6 rounded-[36px] border border-black/5 dark:border-white/8 bg-white/35 dark:bg-white/[0.03] p-3 sm:p-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
         
-        {/* SCRAPBOOK HEADER with Year Stats */}
-        <div className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-8 pb-8 pt-12 sm:p-10 shadow-2xl paper-texture">
+        {/* SCRAPBOOK HEADER */}
+        <div className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-5 pb-6 pt-10 sm:p-10 shadow-2xl paper-texture">
           {/* Decorative corner doodles */}
           <div className="pointer-events-none absolute left-6 top-6 select-none text-4xl text-amber-950/15 dark:text-amber-100/20 dark:[text-shadow:0_0_18px_rgba(255,255,255,0.1)]">✦</div>
           <div className="pointer-events-none absolute right-6 top-6 select-none text-4xl text-amber-950/15 dark:text-sky-100/30 dark:[text-shadow:0_0_22px_rgba(186,230,253,0.22)]">❋</div>
@@ -214,23 +223,23 @@ const ScrapbookHomeHybrid = ({
           )}
           
           <div className="relative">
-            <h1 className="font-handwritten text-5xl sm:text-6xl text-gray-900 dark:text-white mb-3 leading-tight pl-8 sm:pl-0">
+            <h1 className="font-handwritten text-4xl sm:text-6xl text-gray-900 dark:text-white mb-3 leading-tight pl-8 sm:pl-0">
               {greeting}, {greetingName} {greetingEmoji}
             </h1>
             {todayLabel ? (
-              <div className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-amber-900/55 dark:text-amber-100/55">
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-900/55 dark:text-amber-100/55">
                 {todayLabel}
               </div>
             ) : null}
-            {/* Year in Numbers in main header */}
-            <div className="inline-flex flex-wrap items-center gap-3 rounded-2xl border border-amber-900/10 bg-white/60 dark:bg-black/20 px-6 py-3 backdrop-blur-sm">
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                {(yearStats.year || new Date().getFullYear())} SO FAR:
-              </span>
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos
-              </span>
-            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-amber-900/10 bg-white/70 px-4 py-3 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-black/20 sm:px-6 sm:py-4">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-900/55 dark:text-amber-100/55">
+            {(yearStats.year || new Date().getFullYear())} so far
+          </div>
+          <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 sm:text-base">
+            {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos
           </div>
         </div>
 
@@ -373,7 +382,7 @@ const ScrapbookHomeHybrid = ({
         {/* WHAT'S NEXT TODAY - Current style */}
         <button
           type="button"
-          onClick={() => todaySpotlightEvent && onOpenMemory?.(todaySpotlightEvent)}
+          onClick={onAddEvent}
           className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
         >
           <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400 mb-3">

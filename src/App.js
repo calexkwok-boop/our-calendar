@@ -23992,7 +23992,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
   const openQuickMemoryCapture = (dateOverride = '') => {
     const selectedDate = String(dateOverride || '').trim();
-    const todayIso = new Date().toISOString().slice(0, 10);
+    const todayIso = getDateKey(new Date());
     const targetDate = selectedDate || todayIso;
     const allCalendarEvents = Array.isArray(events)
       ? events
