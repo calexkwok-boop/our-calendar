@@ -1513,6 +1513,8 @@ const CoverSlide = ({ memory }) => (
     ) : (
       <div className="w-full h-full rounded-[28px] bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500" />
     )}
+    <div className="pointer-events-none absolute inset-x-2 top-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] h-24 rounded-t-[28px] bg-gradient-to-b from-black/55 via-black/22 to-transparent" />
+    <div className="pointer-events-none absolute inset-x-2 bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] h-28 rounded-b-[28px] bg-gradient-to-t from-black/70 via-black/28 to-transparent" />
     <div className="absolute inset-x-2 top-[max(5rem,calc(env(safe-area-inset-top)+4rem))] bottom-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))] rounded-[28px] bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
     
     <div className="absolute inset-x-2 top-[max(5rem,calc(env(safe-area-inset-top)+4rem))] bottom-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))] flex flex-col items-center justify-center text-center text-white px-6 py-10 sm:px-8">
@@ -1560,6 +1562,8 @@ const CoverSlide = ({ memory }) => (
 const PhotoSlide = ({ photo }) => (
   <div className="w-full h-full relative flex items-center justify-center bg-black px-2 pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))]">
     <img src={photo.url} alt={photo.caption} className="max-w-full max-h-full rounded-[28px] object-contain" />
+    <div className="pointer-events-none absolute inset-x-2 top-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] h-20 rounded-t-[28px] bg-gradient-to-b from-black/50 via-black/18 to-transparent" />
+    <div className="pointer-events-none absolute inset-x-2 bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] h-24 rounded-b-[28px] bg-gradient-to-t from-black/70 via-black/24 to-transparent" />
     {photo.caption && (
       <div className="absolute left-2 right-2 bottom-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))] rounded-b-[28px] p-6 bg-gradient-to-t from-black/90 to-transparent">
         <p className="text-white text-center">{photo.caption}</p>
