@@ -19772,17 +19772,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   })();
   const homeMemoryReadyCount = eligibleMemoryEvents.length;
   const homeMemoryOpportunities = eligibleMemoryEvents.slice(0, 2);
-  const HOME_MOMENTS_PAST_DAYS = 6;
-  const HOME_MOMENTS_FUTURE_DAYS = 0;
   const homeMomentsThisWeek = (() => {
     const today = new Date();
-    const start = new Date(today);
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - HOME_MOMENTS_PAST_DAYS);
-    const total = HOME_MOMENTS_PAST_DAYS + HOME_MOMENTS_FUTURE_DAYS + 1;
-    const visibleDateKeys = Array.from({ length: total }, (_, index) => {
-      const slotDate = new Date(start);
-      slotDate.setDate(start.getDate() + index);
+    const monday = new Date(today);
+    monday.setHours(0, 0, 0, 0);
+    const dayOfWeek = monday.getDay();
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    monday.setDate(monday.getDate() - daysFromMonday);
+    const visibleDateKeys = Array.from({ length: 7 }, (_, index) => {
+      const slotDate = new Date(monday);
+      slotDate.setDate(monday.getDate() + index);
       return getDateKey(slotDate);
     });
     const visibleDateKeySet = new Set(visibleDateKeys);
@@ -27879,9 +27878,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             }}
             onConfirmAction={showAppConfirm}
             themeAccentButtonStyle={themeAccentButtonStyle}
-            weekPastDaysCount={HOME_MOMENTS_PAST_DAYS}
-            weekFutureDaysCount={HOME_MOMENTS_FUTURE_DAYS}
-             themeAccentHeadingStyle={themeAccentHeadingStyle}
+            themeAccentHeadingStyle={themeAccentHeadingStyle}
             themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
             themeAccentTextStyle={themeAccentTextStyle}
             themeAccentBorder={themeAccentBorder}

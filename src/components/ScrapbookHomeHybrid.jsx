@@ -61,16 +61,17 @@ const toLocalDateKey = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getDaysOfWeek = (pastDaysCount = 6, futureDaysCount = 0) => {
+const getDaysOfWeek = () => {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const today = new Date();
-  const startDate = new Date(today);
-  startDate.setHours(0, 0, 0, 0);
-  startDate.setDate(today.getDate() - Math.max(0, Number(pastDaysCount || 0)));
-  const total = Math.max(1, Number(pastDaysCount || 0) + Number(futureDaysCount || 0) + 1);
-  return Array.from({ length: total }, (_, index) => {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + index);
+  const monday = new Date(today);
+  monday.setHours(0, 0, 0, 0);
+  const dayOfWeek = monday.getDay();
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  monday.setDate(monday.getDate() - daysFromMonday);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
     const dateKey = toLocalDateKey(date);
     const todayKey = toLocalDateKey(today);
     return {
@@ -98,8 +99,6 @@ const ScrapbookHomeHybrid = ({
   onOpenMemory,
   onDeleteMoment,
   onConfirmAction,
-  weekPastDaysCount = 6,
-  weekFutureDaysCount = 0,
   
   // What's Next Today (current)
   todaySpotlightEvent = null,
@@ -201,7 +200,7 @@ const ScrapbookHomeHybrid = ({
       <div className="mx-auto max-w-5xl space-y-6 rounded-[36px] border border-black/5 dark:border-white/8 bg-white/35 dark:bg-white/[0.03] p-3 sm:p-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
         
         {/* SCRAPBOOK HEADER */}
-        <div className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-4 pb-4 pt-8 sm:px-10 sm:pb-8 sm:pt-10 shadow-2xl paper-texture">
+        <div className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-5 pb-5 pt-9 sm:px-10 sm:pb-8 sm:pt-10 shadow-2xl paper-texture">
           {/* Profile avatar button */}
           {typeof onOpenAccountMenu === 'function' && (
             <div className="absolute left-3 top-3 sm:left-4 sm:top-4 z-10">
@@ -215,10 +214,10 @@ const ScrapbookHomeHybrid = ({
                     <img
                       src={profilePhotoUrl}
                       alt="Profile"
-                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-cover border border-white/40 dark:border-white/10"
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-white/40 dark:border-white/10"
                     />
                   ) : (
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/10" />
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/10" />
                   )}
                 </button>
                 {typeof onEditProfilePhoto === 'function' && (
@@ -239,7 +238,7 @@ const ScrapbookHomeHybrid = ({
           )}
           
           <div className="relative">
-            <h1 className="font-handwritten text-3xl sm:text-6xl text-gray-900 dark:text-white mb-2 leading-tight pl-7 sm:pl-0">
+            <h1 className="font-handwritten text-4xl sm:text-6xl text-gray-900 dark:text-white mb-2 leading-tight pl-8 sm:pl-0">
               {greeting}, {greetingName} {greetingEmoji}
             </h1>
             {todayLabel ? (
@@ -281,7 +280,7 @@ const ScrapbookHomeHybrid = ({
           </div>
 
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {getDaysOfWeek(weekPastDaysCount, weekFutureDaysCount).map((day) => {
+            {getDaysOfWeek().map((day) => {
               const momentForDay = momentsThisWeek.find(m => 
                 String(m?.date || '').trim().slice(0, 10) === day.dateKey
               );
@@ -303,6 +302,8 @@ const ScrapbookHomeHybrid = ({
                             className="w-full h-full bg-cover bg-center"
                             style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
                           />
+                          <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/40 via-black/12 to-transparent" />
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/45 via-black/15 to-transparent" />
                           {onDeleteMoment && (
                             <button
                               onClick={(e) => {
