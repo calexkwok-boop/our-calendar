@@ -62,6 +62,7 @@ process.env.REACT_APP_SUPABASE_ANON_KEY,
 
 const SUPABASE_URL = String(process.env.REACT_APP_SUPABASE_URL || '').trim().replace(/\/+$/, '');
 const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
+const PROFILE_PHOTO_STORAGE_PREFIX = 'profile-photos';
 const PROFILE_PHOTO_BUCKETS = ['layer-media', 'layer_media', 'trip-photos', 'trip_photos'];
 const TRIP_PHOTO_STORAGE_PROVIDER = String(process.env.REACT_APP_TRIP_PHOTO_STORAGE_PROVIDER || 'supabase').trim().toLowerCase();
 const USE_FIREBASE_TRIP_PHOTO_STORAGE = TRIP_PHOTO_STORAGE_PROVIDER === 'firebase';
@@ -9446,12 +9447,17 @@ useEffect(() => {
     attemptedStoredAvatarRecoveryRef.current.add(recoveryKey);
     let cancelled = false;
 
-    const recoverStoredAvatar = async () => {
-      const candidatePrefixes = [
-        `layer-media/${layerId}`,
-        `${layerId}`,
-      ];
-      for (const bucket of PROFILE_PHOTO_BUCKETS) {
+      const recoverStoredAvatar = async () => {
+        const candidatePrefixes = [
+          `${PROFILE_PHOTO_STORAGE_PREFIX}/${userId}`,
+          `layer-media/${layerId}`,
+          `${layerId}`,
+        ];
+        const candidateBuckets = [
+          ...TRIP_PHOTO_BUCKETS,
+          ...PROFILE_PHOTO_BUCKETS,
+        ].filter((bucket, index, array) => array.indexOf(bucket) === index);
+        for (const bucket of candidateBuckets) {
         for (const prefix of candidatePrefixes) {
           try {
             const { data, error } = await supabase.storage.from(bucket).list(prefix, {
@@ -10007,8 +10013,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     try {
       const processedFile = file;
       const ext = String((processedFile?.type || '').split('/')[1] || (String(file.name || '').split('.').pop() || 'jpg')).toLowerCase();
-      const filename = `layer-media/${activeLayerId}/${mediaKind}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
-      const buckets = ['layer-media', 'layer_media', 'trip-photos', 'trip_photos'];
+      const filename = mediaKind === 'icon'
+        ? `${PROFILE_PHOTO_STORAGE_PREFIX}/${String(user.id || '').trim()}/icon_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`
+        : `layer-media/${activeLayerId}/${mediaKind}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+      const buckets = mediaKind === 'icon' ? TRIP_PHOTO_BUCKETS : PROFILE_PHOTO_BUCKETS;
       let selectedBucket = null;
       let lastError = null;
 
