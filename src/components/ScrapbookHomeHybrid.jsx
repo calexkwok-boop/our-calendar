@@ -90,7 +90,7 @@ const ScrapbookHomeHybrid = ({
   todayLabel = '',
   
   // Year stats for header
-  yearStats = { year: new Date().getFullYear(), events: 0, trips: 0, photos: 0 },
+  yearStats = { year: new Date().getFullYear(), events: 0, trips: 0, photos: 0, streak: 0, streakHelpText: '' },
   
   // Moments This Week (current)
   momentsThisWeek = [],
@@ -108,6 +108,9 @@ const ScrapbookHomeHybrid = ({
   upcomingPreviewEvents = [],
   onAddEvent = () => {},
   onOpenUpcoming,
+  tripSpotlight = null,
+  onOpenTripsTab,
+  onStartTrip,
   
   // Quick Thoughts (NEW - scrapbook enhanced)
   quickThoughts = [],
@@ -144,6 +147,7 @@ const ScrapbookHomeHybrid = ({
   // Account / avatar
   profilePhotoUrl = '',
   onOpenAccountMenu,
+  onEditProfilePhoto,
 }) => {
   const momentTapRef = React.useRef(null);
   const todaySpotlightPhoto = getVisualPreviewUrl(todaySpotlightEvent);
@@ -197,33 +201,45 @@ const ScrapbookHomeHybrid = ({
       <div className="mx-auto max-w-5xl space-y-6 rounded-[36px] border border-black/5 dark:border-white/8 bg-white/35 dark:bg-white/[0.03] p-3 sm:p-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
         
         {/* SCRAPBOOK HEADER */}
-        <div className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-5 pb-6 pt-10 sm:p-10 shadow-2xl paper-texture">
-          {/* Decorative corner doodles */}
-          <div className="pointer-events-none absolute left-6 top-6 select-none text-4xl text-amber-950/15 dark:text-amber-100/20 dark:[text-shadow:0_0_18px_rgba(255,255,255,0.1)]">✦</div>
-          <div className="pointer-events-none absolute right-6 top-6 select-none text-4xl text-amber-950/15 dark:text-sky-100/30 dark:[text-shadow:0_0_22px_rgba(186,230,253,0.22)]">❋</div>
-
+        <div className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-4 pb-4 pt-8 sm:px-10 sm:pb-8 sm:pt-10 shadow-2xl paper-texture">
           {/* Profile avatar button */}
           {typeof onOpenAccountMenu === 'function' && (
-            <button
-              type="button"
-              onClick={onOpenAccountMenu}
-              className="absolute left-3 top-3 sm:left-4 sm:top-4 z-10"
-              title="Account"
-            >
-              {profilePhotoUrl ? (
-                <img
-                  src={profilePhotoUrl}
-                  alt="Profile"
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-white/40 dark:border-white/10"
-                />
-              ) : (
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/10" />
-              )}
-            </button>
+            <div className="absolute left-3 top-3 sm:left-4 sm:top-4 z-10">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={onOpenAccountMenu}
+                  title="Account"
+                >
+                  {profilePhotoUrl ? (
+                    <img
+                      src={profilePhotoUrl}
+                      alt="Profile"
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-cover border border-white/40 dark:border-white/10"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl border border-white/40 dark:border-white/10 bg-white/70 dark:bg-white/10" />
+                  )}
+                </button>
+                {typeof onEditProfilePhoto === 'function' && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onEditProfilePhoto();
+                    }}
+                    className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 bg-white shadow dark:border-gray-600 dark:bg-gray-800"
+                    title="Change profile photo"
+                  >
+                    <Camera className="h-3 w-3 text-gray-600 dark:text-gray-300" />
+                  </button>
+                )}
+              </div>
+            </div>
           )}
           
           <div className="relative">
-            <h1 className="font-handwritten text-4xl sm:text-6xl text-gray-900 dark:text-white mb-3 leading-tight pl-8 sm:pl-0">
+            <h1 className="font-handwritten text-3xl sm:text-6xl text-gray-900 dark:text-white mb-2 leading-tight pl-7 sm:pl-0">
               {greeting}, {greetingName} {greetingEmoji}
             </h1>
             {todayLabel ? (
@@ -239,8 +255,13 @@ const ScrapbookHomeHybrid = ({
             {(yearStats.year || new Date().getFullYear())} so far
           </div>
           <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 sm:text-base">
-            {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos
+            {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos · 🔥 {yearStats.streak || 0} day streak
           </div>
+          {yearStats.streakHelpText ? (
+            <div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              {yearStats.streakHelpText}
+            </div>
+          ) : null}
         </div>
 
         {/* MOMENTS THIS WEEK - Current clean style with polaroids */}
@@ -464,6 +485,47 @@ const ScrapbookHomeHybrid = ({
           )}
         </div>
 
+        <button
+          type="button"
+          onClick={tripSpotlight ? onOpenTripsTab : onStartTrip}
+          className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+        >
+          <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
+            Your Next Adventure
+          </div>
+          {tripSpotlight ? (
+            <div className="overflow-hidden rounded-[18px] border border-white/50 dark:border-white/10 bg-white/80 dark:bg-white/[0.05]">
+              <div className="relative h-[152px] w-full bg-gradient-to-br from-sky-200 via-cyan-100 to-emerald-100 dark:from-sky-900/40 dark:via-slate-900 dark:to-emerald-900/30">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.45),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.22),transparent_32%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_38%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_32%)]" />
+                <div className="absolute inset-x-0 bottom-0 px-4 py-4">
+                  <div className="truncate text-lg text-gray-900 dark:text-white" style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive' }}>
+                    {tripSpotlight?.weather_location || tripSpotlight?.name || 'Your next destination'}
+                  </div>
+                  <div className="mt-1 truncate text-xs text-gray-700/80 dark:text-gray-300">
+                    {formatDisplayDate(tripSpotlight.startDateLabel || tripSpotlight.startDate || tripSpotlight.start)} - {formatDisplayDate(tripSpotlight.endDateLabel || tripSpotlight.endDate || tripSpotlight.end)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-[152px] flex-col items-start justify-between rounded-[18px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-sky-100 via-cyan-50 to-emerald-100 p-4 dark:from-sky-900/30 dark:via-slate-900 dark:to-emerald-900/20">
+              <div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">Where do you want to go?</div>
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Plan a trip and it will show up here as your next adventure.
+                </div>
+              </div>
+              <div
+                className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold"
+                style={themeAccentEllieChipButtonStyle}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Plan trip
+              </div>
+            </div>
+          )}
+        </button>
+
         <QuickThoughtsSection
           quickThoughts={quickThoughts}
           onAddThought={onAddThought}
@@ -498,7 +560,7 @@ const ScrapbookHomeHybrid = ({
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3">
               <div className="text-lg font-semibold text-gray-900 dark:text-white">{memoryReadyCount}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">moments ready to save</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">moments</div>
             </div>
             <div className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3">
               <div className="text-lg font-semibold text-gray-900 dark:text-white">{memoryPhotoCount}</div>

@@ -21,7 +21,7 @@ import TrophyCase, { deriveJourneyTrophyCase } from "./components/TrophyCase";
 import WelcomeCover from "./components/WelcomeCover";
 import ExploreTab from "./components/ExploreTab";
 import MemorySystem, { MemoryCreator as ImportedMemoryCreator } from "./components/MemorySystem";
-import ScrapbookHomePage from "./components/ScrapbookHomeHybrid";
+import ScrapbookHomeHybrid from "./components/ScrapbookHomeHybrid";
 import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
 import TripHighlightReel from "./components/TripHighlightReel";
@@ -19843,6 +19843,36 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return Number(new Date(b?.updatedAt || b?.createdAt || 0)) - Number(new Date(a?.updatedAt || a?.createdAt || 0));
   });
   const journeyGoalById = Object.fromEntries(sortedJourneyGoals.map((goal) => [String(goal?.id || ''), goal]));
+  const homeReflectionStats = (() => {
+    const reflectedDateKeys = new Set([
+      ...(journeyState?.entries || [])
+        .filter((entry) => {
+          const goal = journeyGoalById[String(entry?.goalId || '')] || null;
+          return getJourneyGoalType(goal) === 'journal';
+        })
+        .map((entry) => String(entry?.entryDate || String(entry?.createdAt || '').slice(0, 10)).trim())
+        .filter(Boolean),
+      ...homeResolvedMemories
+        .map((memory) => String(memory?.date || memory?.createdAt || '').trim().slice(0, 10))
+        .filter(Boolean),
+    ]);
+    let streak = 0;
+    const cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
+    while (reflectedDateKeys.has(getDateKey(cursor))) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    const completedToday = reflectedDateKeys.has(getDateKey(new Date()));
+    return {
+      streak,
+      completedToday,
+      helpText: completedToday
+        ? 'Streak counted today. Come back tomorrow to keep it going.'
+        : 'Keep it going today: journal in Journey or add a moment.',
+    };
+  })();
+  const homeReflectionStreak = homeReflectionStats.streak;
   const primaryJourneyGoal = sortedJourneyGoals.find((goal) => goal?.active !== false) || null;
   const primaryJourneyGoalProgress = getJourneyGoalProgress(primaryJourneyGoal);
   const primaryJourneyProgressText = formatJourneyProgressText(primaryJourneyGoal);
@@ -27795,7 +27825,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         )}
 
         {bottomNavTab === 'home' && (
-          <ScrapbookHomePage
+          <ScrapbookHomeHybrid
             darkMode={darkMode}
             greeting={homeGreeting}
             greetingName={homeGreetingName}
@@ -27855,10 +27885,15 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
             themeAccentTextStyle={themeAccentTextStyle}
             themeAccentBorder={themeAccentBorder}
-            yearStats={homeYearStats}
+            yearStats={{
+              ...homeYearStats,
+              streak: homeReflectionStats.streak,
+              streakHelpText: homeReflectionStats.helpText,
+            }}
              profilePhotoUrl={currentUserProfilePhotoUrl}
              onOpenAccountMenu={toggleAccountMenu}
-           />
+             onEditProfilePhoto={openLayerMediaMenu}
+            />
         )}
 
         <div className="grid grid-cols-1 gap-4">
