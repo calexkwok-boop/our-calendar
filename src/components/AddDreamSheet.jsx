@@ -217,8 +217,9 @@ export default function AddDreamSheet({ onAdd, onDismiss }) {
 
 const styles = {
   overlay: {
-    position: "absolute",
+    position: "fixed",
     inset: 0,
+    zIndex: 10030,
     background: "rgba(0,0,0,0.4)",
     display: "flex",
     alignItems: "flex-end",
