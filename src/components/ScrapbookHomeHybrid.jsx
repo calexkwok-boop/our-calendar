@@ -5,10 +5,10 @@ import {
   Heart,
   Plus,
   Sparkles,
-  StickyNote,
   Trash2,
   BookOpen,
 } from 'lucide-react';
+import QuickThoughtsSection from './QuickThoughtsSection';
 
 /**
  * HYBRID SCRAPBOOK HOME PAGE
@@ -160,6 +160,13 @@ const ScrapbookHomeHybrid = ({
             repeating-linear-gradient(0deg, rgba(0,0,0,.02) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.02) 3px),
             repeating-linear-gradient(90deg, rgba(0,0,0,.02) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.02) 3px);
         }
+        .dark .paper-texture {
+          background-image:
+            linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0)),
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.035) 3px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.03) 3px);
+          background-blend-mode: screen, normal, normal;
+        }
         
         .sticky-note {
           box-shadow: 
@@ -178,13 +185,13 @@ const ScrapbookHomeHybrid = ({
         }
       `}</style>
 
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6 rounded-[36px] border border-black/5 dark:border-white/8 bg-white/35 dark:bg-white/[0.03] p-3 sm:p-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
         
         {/* SCRAPBOOK HEADER with Year Stats */}
         <div className="relative overflow-hidden rounded-[32px] border-2 border-amber-900/20 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-8 pb-8 pt-12 sm:p-10 shadow-2xl paper-texture">
           {/* Decorative corner doodles */}
-          <div className="pointer-events-none absolute left-6 top-6 text-4xl opacity-15 select-none">✦</div>
-          <div className="pointer-events-none absolute right-6 top-6 text-4xl opacity-15 select-none">❋</div>
+          <div className="pointer-events-none absolute left-6 top-6 select-none text-4xl text-amber-950/15 dark:text-amber-100/20 dark:[text-shadow:0_0_18px_rgba(255,255,255,0.1)]">✦</div>
+          <div className="pointer-events-none absolute right-6 top-6 select-none text-4xl text-amber-950/15 dark:text-sky-100/30 dark:[text-shadow:0_0_22px_rgba(186,230,253,0.22)]">❋</div>
 
           {/* Profile avatar button */}
           {typeof onOpenAccountMenu === 'function' && (
@@ -448,64 +455,12 @@ const ScrapbookHomeHybrid = ({
           )}
         </div>
 
-        {/* QUICK THOUGHTS - NEW scrapbook enhanced with sticky notes */}
-        <div className="rounded-[28px] border-2 border-yellow-900/20 bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 dark:from-yellow-950/30 dark:via-slate-900 dark:to-orange-950/20 p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <StickyNote className="w-5 h-5 text-yellow-700 dark:text-yellow-400" />
-              <h3 className="font-handwritten text-3xl text-gray-900 dark:text-white">
-                Quick Thoughts
-              </h3>
-            </div>
-            <button
-              onClick={onAddThought}
-              className="rounded-full p-2 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-          </div>
-
-          {quickThoughts.length > 0 ? (
-            <div className="space-y-3">
-              {quickThoughts.map((thought, idx) => (
-                <div
-                  key={thought.id || idx}
-                  className={`sticky-note relative p-4 rounded-lg ${
-                    thought.color === 'yellow' ? 'bg-yellow-200 dark:bg-yellow-900/50' :
-                    thought.color === 'pink' ? 'bg-pink-200 dark:bg-pink-900/50' :
-                    thought.color === 'blue' ? 'bg-blue-200 dark:bg-blue-900/50' :
-                    'bg-green-200 dark:bg-green-900/50'
-                  }`}
-                >
-                  <p className="font-handwritten text-lg text-gray-900 dark:text-white pr-8">
-                    {thought.text}
-                  </p>
-                  {onDeleteThought && (
-                    <button
-                      onClick={() => onDeleteThought(thought)}
-                      className="absolute top-2 right-2 rounded-full bg-white/60 dark:bg-black/20 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/50 transition-all"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-8 text-center">
-              <p className="font-handwritten text-2xl text-gray-600 dark:text-gray-400 italic mb-4">
-                Jot down ideas, reminders, random thoughts...
-              </p>
-              <button
-                onClick={onAddThought}
-                className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold bg-yellow-200 dark:bg-yellow-900/50 text-gray-900 dark:text-white hover:bg-yellow-300 dark:hover:bg-yellow-900/70 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add your first thought
-              </button>
-            </div>
-          )}
-        </div>
+        <QuickThoughtsSection
+          quickThoughts={quickThoughts}
+          onAddThought={onAddThought}
+          onDeleteThought={onDeleteThought}
+          darkMode={darkMode}
+        />
 
         {/* LATEST MEMORIES - Collage 2x2 */}
         <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-purple-50/60 via-white/90 to-pink-50/60 dark:from-purple-950/30 dark:via-slate-900/80 dark:to-pink-950/20 p-5 shadow-lg">

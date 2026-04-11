@@ -122,7 +122,7 @@ const QuickThoughtsSection = ({
                   key={color}
                   type="button"
                   onClick={() => setDraftColor(color)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-all ${colorClasses[color]} ${
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize text-gray-900 transition-all dark:text-white ${colorClasses[color]} ${
                     draftColor === color ? 'ring-2 ring-gray-900 dark:ring-white' : ''
                   }`}
                 >

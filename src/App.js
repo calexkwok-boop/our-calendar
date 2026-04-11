@@ -25010,7 +25010,9 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         />
         <div
           ref={layerHeaderCardRef}
-          className="glass-panel rounded-2xl mb-4 px-4 py-4 sm:px-5 sm:py-5 min-h-[165px] sm:min-h-[205px] lg:min-h-[285px] relative"
+          className={bottomNavTab === 'home'
+            ? 'relative mb-0'
+            : 'glass-panel relative mb-4 min-h-[165px] rounded-2xl px-4 py-4 sm:min-h-[205px] sm:px-5 sm:py-5 lg:min-h-[285px]'}
           onPointerDownCapture={() => {
             if (!coverHeaderControlsVisible) return;
             bumpCoverControlsInteraction();
@@ -25022,46 +25024,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'center',
             }
-            : bottomNavTab === 'home'
-              ? {
-                background: darkMode
-                  ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.18)} 0%, rgba(15,23,42,0.94) 52%, rgba(2,6,23,0.98) 100%)`
-                  : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 0%, rgba(255,251,235,0.96) 52%, rgba(255,255,255,0.98) 100%)`,
-              }
               : undefined}
         >
-          {bottomNavTab === 'home' ? (
-            <div className="relative z-20 flex min-h-[132px] flex-col justify-end overflow-hidden rounded-2xl px-2 pb-3 pt-14 sm:min-h-[172px] sm:px-4 sm:pb-5 lg:min-h-[252px]">
-              <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full blur-3xl" style={{ background: hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.35 : 0.22) }} />
-              <div className="pointer-events-none absolute -bottom-10 -left-8 h-28 w-28 rounded-full blur-2xl" style={{ background: hexToRgba(activeLayerPageTheme.backgroundTo, darkMode ? 0.28 : 0.18) }} />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleAccountMenu();
-                }}
-                className="absolute left-2 top-2 sm:left-4 sm:top-4"
-                title="Account"
-              >
-                <UserProfileAvatar
-                  photoUrl={currentUserProfilePhotoUrl}
-                  userId={user?.id}
-                  label={currentUserProfileLabel}
-                  sizeClass="w-9 h-9 sm:w-10 sm:h-10"
-                  roundedClass="rounded-xl"
-                  textClass="text-base sm:text-lg"
-                />
-              </button>
-              <div className="relative">
-                <h1 className="font-handwritten text-4xl leading-none text-gray-900 dark:text-white sm:text-5xl">
-                  {homeGreeting}, {homeGreetingName} {homeGreetingEmoji}
-                </h1>
-                <p className="mt-3 text-sm font-medium text-gray-600 dark:text-gray-300">
-                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </p>
-              </div>
-            </div>
-          ) : null}
           {bottomNavTab !== 'home' && !hasActiveLayerHeaderCover ? (
             <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
               <WelcomeCover
@@ -27852,11 +27816,13 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             themeAccentButtonStyle={themeAccentButtonStyle}
             weekPastDaysCount={HOME_MOMENTS_PAST_DAYS}
             weekFutureDaysCount={HOME_MOMENTS_FUTURE_DAYS}
-            themeAccentHeadingStyle={themeAccentHeadingStyle}
-            themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
-            themeAccentTextStyle={themeAccentTextStyle}
-            themeAccentBorder={themeAccentBorder}
-          />
+             themeAccentHeadingStyle={themeAccentHeadingStyle}
+             themeAccentEllieChipButtonStyle={themeAccentEllieChipButtonStyle}
+             themeAccentTextStyle={themeAccentTextStyle}
+             themeAccentBorder={themeAccentBorder}
+             profilePhotoUrl={currentUserProfilePhotoUrl}
+             onOpenAccountMenu={toggleAccountMenu}
+           />
         )}
 
         <div className="grid grid-cols-1 gap-4">
