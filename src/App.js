@@ -22,6 +22,7 @@ import WelcomeCover from "./components/WelcomeCover";
 import ExploreTab from "./components/ExploreTab";
 import MemorySystem, { MemoryCreator as ImportedMemoryCreator } from "./components/MemorySystem";
 import ScrapbookHomeHybrid from "./components/ScrapbookHomeHybrid";
+import useHomeScreenData from "./hooks/useHomeScreenData";
 import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
 import TripHighlightReel from "./components/TripHighlightReel";
@@ -19453,14 +19454,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   };
   const tabTrips = Array.isArray(userTabTrips) ? userTabTrips : [];
-  const upcomingTrips = [...tabTrips]
-    .filter(sc => {
-      const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
-      return startTs !== null && startTs > todayTs;
-    })
-    .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
+  const upcomingTrips = useMemo(() => (
+    [...tabTrips]
+      .filter(sc => {
+        const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
+        return startTs !== null && startTs > todayTs;
+      })
+      .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)))
+  ), [tabTrips, todayTs]);
   const upcomingPopupEvents = [...(userTabPopupEvents || [])];
-  const upcomingUserTabEvents = (() => {
+  const upcomingUserTabEvents = useMemo(() => {
     const horizonDays = 365;
     const isAllDayLike = (event) => {
       const time = String(event?.time || '').trim();
@@ -19545,17 +19548,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         if (!b?.time) return -1;
         return String(a.time).localeCompare(String(b.time));
       });
-  })();
-  const filteredUpcomingUserTabEvents = upcomingUserTabEvents.filter((event) => {
-    const layerId = String(event?.layerId || event?.layer_id || '').trim();
-    const eventTs = toDateOnlyTs(event?.date || event?.dateKey || '');
-    const upcomingWindowEndTs = todayTs + (13 * 24 * 60 * 60 * 1000);
-    if ((eventsTabVisibleLayerIds || []).length > 0 && !eventsTabVisibleLayerIds.includes(layerId)) return false;
-    if (eventTs === null || eventTs > upcomingWindowEndTs) return false;
-    if (eventsTabHideRecurring && (event?.isAnnual || (event?.recurrence && event.recurrence !== 'once'))) return false;
-    return true;
-  });
-  const getWeEventDisplayBadge = (event, popupMeta) => {
+  }, [popupEventsByEventId, popupSignupsByEventId, todayTs, user?.id, userTabEvents]);
+  const filteredUpcomingUserTabEvents = useMemo(() => (
+    upcomingUserTabEvents.filter((event) => {
+      const layerId = String(event?.layerId || event?.layer_id || '').trim();
+      const eventTs = toDateOnlyTs(event?.date || event?.dateKey || '');
+      const upcomingWindowEndTs = todayTs + (13 * 24 * 60 * 60 * 1000);
+      if ((eventsTabVisibleLayerIds || []).length > 0 && !eventsTabVisibleLayerIds.includes(layerId)) return false;
+      if (eventTs === null || eventTs > upcomingWindowEndTs) return false;
+      if (eventsTabHideRecurring && (event?.isAnnual || (event?.recurrence && event.recurrence !== 'once'))) return false;
+      return true;
+    })
+  ), [eventsTabHideRecurring, eventsTabVisibleLayerIds, todayTs, upcomingUserTabEvents]);
+  const getWeEventDisplayBadge = useCallback((event, popupMeta) => {
     const normalizedCategory = String(event?.category || '').trim().toLowerCase();
     const normalizedSubtype = String(
       event?.popupSubtype
@@ -19596,67 +19601,73 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       return { icon: '🎉', label: 'We Event', className: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-200' };
     }
     return { icon: '🎉', label: 'We Event', className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200' };
-  };
-  const eligibleMemoryEvents = Object.values(events || {})
-    .flat()
-    .filter((event, index, arr) => {
-      const eventId = String(event?.id || '').trim();
-      if (!eventId) return false;
-      return arr.findIndex((candidate) => String(candidate?.id || '').trim() === eventId) === index;
-    })
-    .filter((event) => {
-      const dateKey = String(event?.date || event?.dateKey || '').trim();
-      const eventTs = toDateOnlyTs(dateKey);
-      if (eventTs === null || eventTs >= todayTs) return false;
-      const eventId = String(event?.id || '').trim();
-      const popupMeta = popupEventsByEventId[eventId] || null;
-      const isWeEvent = Boolean(getWeEventDisplayBadge(event, popupMeta));
-      const isMeEvent = !popupMeta && !event?.sub_calendar_id && !event?.subCalendarId;
-      if (!isWeEvent && !isMeEvent) return false;
-      if (popupMeta) {
-        const joined = (popupSignupsByEventId[eventId] || []).some((row) => (
-          String(row?.userId || '').trim() === String(user?.id || '').trim()
-        ));
-        const createdByMe = String(popupMeta?.createdByUserId || '').trim() === String(user?.id || '').trim();
-        if (!joined && !createdByMe) return false;
-      }
-      return true;
-    })
-    .filter((event, index, arr) => {
-      const dateKey = String(event?.date || event?.dateKey || '').trim();
-      const normalizedTitle = normalizeHolidayLikeTitle(event?.title);
-      const holiday = getHolidayForDate(dateKey);
-      const holidayNames = getHolidayNameSet(holiday);
-      const isHolidayLike = normalizedTitle && (
-        holidayNames.has(normalizedTitle)
-        || isLikelyHolidayTitle(normalizedTitle)
-      );
-      if (!isHolidayLike) return true;
-      return arr.findIndex((candidate) => {
-        const candidateDateKey = String(candidate?.date || candidate?.dateKey || '').trim();
-        const candidateTitle = normalizeHolidayLikeTitle(candidate?.title);
-        return candidateDateKey === dateKey && candidateTitle === normalizedTitle;
-      }) === index;
-    })
-    .sort((a, b) => {
-      const aTs = toDateOnlyTs(a?.date || a?.dateKey || '') || 0;
-      const bTs = toDateOnlyTs(b?.date || b?.dateKey || '') || 0;
-      if (aTs !== bTs) return bTs - aTs;
-      return String(a?.title || '').localeCompare(String(b?.title || ''));
-    });
-  const activeTrips = [...tabTrips]
-    .filter(sc => {
-      const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
-      const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
-      return startTs !== null && endTs !== null && todayTs >= startTs && todayTs <= endTs;
-    })
-    .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)));
-  const archivedTrips = [...tabTrips]
-    .filter(sc => {
-      const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
-      return endTs !== null && endTs < todayTs;
-    })
-    .sort((a, b) => toDateOnlyTs(getSubCalEndRaw(b)) - toDateOnlyTs(getSubCalEndRaw(a)));
+  }, []);
+  const eligibleMemoryEvents = useMemo(() => (
+    Object.values(events || {})
+      .flat()
+      .filter((event, index, arr) => {
+        const eventId = String(event?.id || '').trim();
+        if (!eventId) return false;
+        return arr.findIndex((candidate) => String(candidate?.id || '').trim() === eventId) === index;
+      })
+      .filter((event) => {
+        const dateKey = String(event?.date || event?.dateKey || '').trim();
+        const eventTs = toDateOnlyTs(dateKey);
+        if (eventTs === null || eventTs >= todayTs) return false;
+        const eventId = String(event?.id || '').trim();
+        const popupMeta = popupEventsByEventId[eventId] || null;
+        const isWeEvent = Boolean(getWeEventDisplayBadge(event, popupMeta));
+        const isMeEvent = !popupMeta && !event?.sub_calendar_id && !event?.subCalendarId;
+        if (!isWeEvent && !isMeEvent) return false;
+        if (popupMeta) {
+          const joined = (popupSignupsByEventId[eventId] || []).some((row) => (
+            String(row?.userId || '').trim() === String(user?.id || '').trim()
+          ));
+          const createdByMe = String(popupMeta?.createdByUserId || '').trim() === String(user?.id || '').trim();
+          if (!joined && !createdByMe) return false;
+        }
+        return true;
+      })
+      .filter((event, index, arr) => {
+        const dateKey = String(event?.date || event?.dateKey || '').trim();
+        const normalizedTitle = normalizeHolidayLikeTitle(event?.title);
+        const holiday = getHolidayForDate(dateKey);
+        const holidayNames = getHolidayNameSet(holiday);
+        const isHolidayLike = normalizedTitle && (
+          holidayNames.has(normalizedTitle)
+          || isLikelyHolidayTitle(normalizedTitle)
+        );
+        if (!isHolidayLike) return true;
+        return arr.findIndex((candidate) => {
+          const candidateDateKey = String(candidate?.date || candidate?.dateKey || '').trim();
+          const candidateTitle = normalizeHolidayLikeTitle(candidate?.title);
+          return candidateDateKey === dateKey && candidateTitle === normalizedTitle;
+        }) === index;
+      })
+      .sort((a, b) => {
+        const aTs = toDateOnlyTs(a?.date || a?.dateKey || '') || 0;
+        const bTs = toDateOnlyTs(b?.date || b?.dateKey || '') || 0;
+        if (aTs !== bTs) return bTs - aTs;
+        return String(a?.title || '').localeCompare(String(b?.title || ''));
+      })
+  ), [events, getWeEventDisplayBadge, popupEventsByEventId, popupSignupsByEventId, todayTs, user?.id]);
+  const activeTrips = useMemo(() => (
+    [...tabTrips]
+      .filter(sc => {
+        const startTs = toDateOnlyTs(getSubCalStartRaw(sc));
+        const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
+        return startTs !== null && endTs !== null && todayTs >= startTs && todayTs <= endTs;
+      })
+      .sort((a, b) => toDateOnlyTs(getSubCalStartRaw(a)) - toDateOnlyTs(getSubCalStartRaw(b)))
+  ), [tabTrips, todayTs]);
+  const archivedTrips = useMemo(() => (
+    [...tabTrips]
+      .filter(sc => {
+        const endTs = toDateOnlyTs(getSubCalEndRaw(sc));
+        return endTs !== null && endTs < todayTs;
+      })
+      .sort((a, b) => toDateOnlyTs(getSubCalEndRaw(b)) - toDateOnlyTs(getSubCalEndRaw(a)))
+  ), [tabTrips, todayTs]);
   const eligibleMemoryTrips = archivedTrips;
   const greetingHour = new Date().getHours();
   const homeGreeting = greetingHour < 12 ? 'Good morning' : greetingHour < 18 ? 'Good afternoon' : 'Good evening';
@@ -19664,79 +19675,99 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const homeGreetingName = String(currentUser || user?.user_metadata?.handle || user?.user_metadata?.username || user?.email || 'there')
     .trim()
     .split('@')[0];
-  const getHomeSectionKeyForEvent = (event) => {
+  const getHomeSectionKeyForEvent = useCallback((event) => {
     const hour = Number(String(event?.time || '').split(':')[0]);
     if (!Number.isFinite(hour)) return 'morning';
     if (hour < 12) return 'morning';
     if (hour < 18) return 'afternoon';
     return 'evening';
-  };
-  const overviewTodayEvents = upcomingUserTabEvents.filter((event) => {
-    const dateKey = String(event?.date || event?.dateKey || '').trim();
-    return dateKey === todayKey && !event?.isHoliday && shouldIncludeEventInPersonalOverview(event);
-  });
-  const homeDaySections = [
-    { key: 'morning', label: 'Morning', emptyTitle: 'Ease into the day', emptyCopy: 'Add breakfast, a workout, or one clear priority.' },
-    { key: 'afternoon', label: 'Afternoon', emptyTitle: 'Keep the middle light', emptyCopy: 'Drop in a lunch, meeting, or errand when plans take shape.' },
-    { key: 'evening', label: 'Evening', emptyTitle: 'Save space for later', emptyCopy: 'Dinner, downtime, or a night plan can live here.' },
-  ].map((section) => ({
-    ...section,
-    events: overviewTodayEvents.filter((event) => getHomeSectionKeyForEvent(event) === section.key),
-  }));
-  const homeTripsPreview = [...activeTrips, ...upcomingTrips]
-    .filter((trip, index, arr) => arr.findIndex((row) => String(row?.id || '') === String(trip?.id || '')) === index)
-    .slice(0, 3);
-  const homeTripsPreviewCards = homeTripsPreview.map((trip) => ({
-    ...trip,
-    startDate: String(getSubCalStartRaw(trip) || '').trim(),
-    endDate: String(getSubCalEndRaw(trip) || '').trim(),
-  }));
+  }, []);
+  const overviewTodayEvents = useMemo(() => (
+    upcomingUserTabEvents.filter((event) => {
+      const dateKey = String(event?.date || event?.dateKey || '').trim();
+      return dateKey === todayKey && !event?.isHoliday && shouldIncludeEventInPersonalOverview(event);
+    })
+  ), [todayKey, upcomingUserTabEvents]);
+  const homeDaySections = useMemo(() => (
+    [
+      { key: 'morning', label: 'Morning', emptyTitle: 'Ease into the day', emptyCopy: 'Add breakfast, a workout, or one clear priority.' },
+      { key: 'afternoon', label: 'Afternoon', emptyTitle: 'Keep the middle light', emptyCopy: 'Drop in a lunch, meeting, or errand when plans take shape.' },
+      { key: 'evening', label: 'Evening', emptyTitle: 'Save space for later', emptyCopy: 'Dinner, downtime, or a night plan can live here.' },
+    ].map((section) => ({
+      ...section,
+      events: overviewTodayEvents.filter((event) => getHomeSectionKeyForEvent(event) === section.key),
+    }))
+  ), [getHomeSectionKeyForEvent, overviewTodayEvents]);
+  const homeTripsPreview = useMemo(() => (
+    [...activeTrips, ...upcomingTrips]
+      .filter((trip, index, arr) => arr.findIndex((row) => String(row?.id || '') === String(trip?.id || '')) === index)
+      .slice(0, 3)
+  ), [activeTrips, upcomingTrips]);
+  const homeTripsPreviewCards = useMemo(() => (
+    homeTripsPreview.map((trip) => ({
+      ...trip,
+      startDate: String(getSubCalStartRaw(trip) || '').trim(),
+      endDate: String(getSubCalEndRaw(trip) || '').trim(),
+    }))
+  ), [homeTripsPreview]);
   const homeTodayPlanCount = overviewTodayEvents.length;
   const homeUpcomingEventCount = filteredUpcomingUserTabEvents.length;
   const currentHomeMemoryOwnerId = getPersonalMemoryOwnerId(user?.id);
-  const isMemoryOwnedByCurrentUser = (memory) => {
+  const isMemoryOwnedByCurrentUser = useCallback((memory) => {
     const ownerId = String(memory?.ownerUserId || memory?.createdByUserId || '').trim();
     return !ownerId || ownerId === currentHomeMemoryOwnerId;
-  };
-  const personalMemories = (Array.isArray(memories) ? memories : []).filter(isMemoryOwnedByCurrentUser);
+  }, [currentHomeMemoryOwnerId]);
+  const personalMemories = useMemo(() => (
+    (Array.isArray(memories) ? memories : []).filter(isMemoryOwnedByCurrentUser)
+  ), [isMemoryOwnedByCurrentUser, memories]);
   const homeResolvedMemories = personalMemories;
-  const homeTodaySpotlightEvent = [...overviewTodayEvents]
-    .sort((a, b) => {
-      const aTime = String(a?.time || '').trim();
-      const bTime = String(b?.time || '').trim();
-      if (!aTime && !bTime) return 0;
-      if (!aTime) return 1;
-      if (!bTime) return -1;
-      return aTime.localeCompare(bTime);
-    })[0] || null;
+  const homeTodaySpotlightEvent = useMemo(() => (
+    [...overviewTodayEvents]
+      .sort((a, b) => {
+        const aTime = String(a?.time || '').trim();
+        const bTime = String(b?.time || '').trim();
+        if (!aTime && !bTime) return 0;
+        if (!aTime) return 1;
+        if (!bTime) return -1;
+        return aTime.localeCompare(bTime);
+      })[0] || null
+  ), [overviewTodayEvents]);
   const homeUpcomingPreviewEvents = filteredUpcomingUserTabEvents.slice(0, 3);
-  const homeTripSpotlight = [...homeTripsPreviewCards]
-    .sort((a, b) => {
-      const aStart = String(a?.startDate || '').trim();
-      const bStart = String(b?.startDate || '').trim();
-      if (!aStart && !bStart) return 0;
-      if (!aStart) return 1;
-      if (!bStart) return -1;
-      return aStart.localeCompare(bStart);
-    })[0] || null;
-  const homeRecentMemory = [...homeResolvedMemories]
-    .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)))[0] || null;
-  const homeMemoryPhotoCount = homeResolvedMemories.reduce((total, memory) => total + (memory?.photos?.length || 0), 0);
-  const homeMemoryCollagePhotos = [...homeResolvedMemories]
-    .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)))
-    .flatMap((memory) => {
-      const urls = [];
-      const cover = getMemoryPrimaryPhotoUrl(memory);
-      if (cover) urls.push(cover);
-      (memory?.photos || []).forEach((photo) => {
-        const url = String(photo?.url || photo?.photoUrl || '').trim();
-        if (url) urls.push(url);
-      });
-      return urls;
-    })
-    .filter((url, index, arr) => url && arr.indexOf(url) === index)
-    .slice(0, 4);
-  const homeYearStats = (() => {
+  const homeTripSpotlight = useMemo(() => (
+    [...homeTripsPreviewCards]
+      .sort((a, b) => {
+        const aStart = String(a?.startDate || '').trim();
+        const bStart = String(b?.startDate || '').trim();
+        if (!aStart && !bStart) return 0;
+        if (!aStart) return 1;
+        if (!bStart) return -1;
+        return aStart.localeCompare(bStart);
+      })[0] || null
+  ), [homeTripsPreviewCards]);
+  const homeRecentMemory = useMemo(() => (
+    [...homeResolvedMemories]
+      .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)))[0] || null
+  ), [homeResolvedMemories]);
+  const homeMemoryPhotoCount = useMemo(() => (
+    homeResolvedMemories.reduce((total, memory) => total + (memory?.photos?.length || 0), 0)
+  ), [homeResolvedMemories]);
+  const homeMemoryCollagePhotos = useMemo(() => (
+    [...homeResolvedMemories]
+      .sort((a, b) => Number(new Date(b?.date || b?.createdAt || 0)) - Number(new Date(a?.date || a?.createdAt || 0)))
+      .flatMap((memory) => {
+        const urls = [];
+        const cover = getMemoryPrimaryPhotoUrl(memory);
+        if (cover) urls.push(cover);
+        (memory?.photos || []).forEach((photo) => {
+          const url = String(photo?.url || photo?.photoUrl || '').trim();
+          if (url) urls.push(url);
+        });
+        return urls;
+      })
+      .filter((url, index, arr) => url && arr.indexOf(url) === index)
+      .slice(0, 4)
+  ), [homeResolvedMemories]);
+  const homeYearStats = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const startOfYearTs = toDateOnlyTs(`${currentYear}-01-01`);
     const endOfYearTs = toDateOnlyTs(`${currentYear}-12-31`);
@@ -19770,10 +19801,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       trips: tripsTakenThisYear.length,
       photos: yearPhotoCount,
     };
-  })();
+  }, [events, homeResolvedMemories, tabTrips, todayTs]);
   const homeMemoryReadyCount = eligibleMemoryEvents.length;
   const homeMemoryOpportunities = eligibleMemoryEvents.slice(0, 2);
-  const homeMomentsThisWeek = (() => {
+  const homeMomentsThisWeek = useMemo(() => {
     const today = new Date();
     const monday = new Date(today);
     monday.setHours(0, 0, 0, 0);
@@ -19806,8 +19837,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         photoUrl: getMemoryPrimaryPhotoUrl(memory),
       }))
       .filter((memory) => memory.id && memory.photoUrl);
-  })();
-  const homeOnThisDayMemory = (() => {
+  }, [homeResolvedMemories]);
+  const homeOnThisDayMemory = useMemo(() => {
     const today = new Date();
     const month = today.getMonth();
     const day = today.getDate();
@@ -19835,15 +19866,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       yearsAgo,
       label: 'On This Day',
     };
-  })();
-  const sortedJourneyGoals = [...(journeyState?.goals || [])].sort((a, b) => {
-    const aPinned = a?.pinned ? 0 : 1;
-    const bPinned = b?.pinned ? 0 : 1;
-    if (aPinned !== bPinned) return aPinned - bPinned;
-    return Number(new Date(b?.updatedAt || b?.createdAt || 0)) - Number(new Date(a?.updatedAt || a?.createdAt || 0));
-  });
-  const journeyGoalById = Object.fromEntries(sortedJourneyGoals.map((goal) => [String(goal?.id || ''), goal]));
-  const homeReflectionStats = (() => {
+  }, [homeResolvedMemories]);
+  const sortedJourneyGoals = useMemo(() => (
+    [...(journeyState?.goals || [])].sort((a, b) => {
+      const aPinned = a?.pinned ? 0 : 1;
+      const bPinned = b?.pinned ? 0 : 1;
+      if (aPinned !== bPinned) return aPinned - bPinned;
+      return Number(new Date(b?.updatedAt || b?.createdAt || 0)) - Number(new Date(a?.updatedAt || a?.createdAt || 0));
+    })
+  ), [journeyState?.goals]);
+  const journeyGoalById = useMemo(() => (
+    Object.fromEntries(sortedJourneyGoals.map((goal) => [String(goal?.id || ''), goal]))
+  ), [sortedJourneyGoals]);
+  const homeReflectionStats = useMemo(() => {
     const reflectedDateKeys = new Set([
       ...(journeyState?.entries || [])
         .filter((entry) => {
@@ -19871,7 +19906,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         ? 'Streak counted today. Come back tomorrow to keep it going.'
         : 'Keep it going today: journal in Journey or add a moment.',
     };
-  })();
+  }, [homeResolvedMemories, journeyGoalById, journeyState?.entries]);
   const homeReflectionStreak = homeReflectionStats.streak;
   const primaryJourneyGoal = sortedJourneyGoals.find((goal) => goal?.active !== false) || null;
   const primaryJourneyGoalProgress = getJourneyGoalProgress(primaryJourneyGoal);

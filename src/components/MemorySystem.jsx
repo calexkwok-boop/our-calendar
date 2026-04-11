@@ -1419,25 +1419,25 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
   return (
     <div className="memory-viewer absolute inset-0 z-50 overflow-hidden bg-black">
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 px-4 pt-[max(0.5rem,calc(env(safe-area-inset-top)+0.1rem))] pb-3 bg-gradient-to-b from-black/85 to-transparent">
+      <div className="pointer-events-none absolute top-0 left-0 right-0 z-50 px-4 pt-[max(0.5rem,calc(env(safe-area-inset-top)+0.1rem))] pb-3 bg-gradient-to-b from-black/85 to-transparent">
         <div className="flex items-center justify-between">
           <button
             onClick={onClose}
-            className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all">
+            className="pointer-events-auto p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all">
             <X className="w-6 h-6 text-white" />
           </button>
           
           <div className="flex items-center gap-2">
             <button
               onClick={() => onShare(memory)}
-              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all">
+              className="pointer-events-auto p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all">
               <Share2 className="w-5 h-5 text-white" />
             </button>
             
             {memory.canEdit && (
               <button
                 onClick={onEdit}
-                className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all">
+                className="pointer-events-auto p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all">
                 <Edit2 className="w-5 h-5 text-white" />
               </button>
             )}
@@ -1446,9 +1446,9 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
       </div>
       
       {/* Slideshow */}
-      <div className="relative w-full h-full flex items-center justify-center">
+      <div className="pointer-events-none relative w-full h-full flex items-center justify-center">
         {currentSlideData && (
-          <div className="absolute inset-0 z-0 transition-opacity duration-200 opacity-100">
+          <div className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-200 opacity-100">
             {currentSlideData.type === 'cover' && <CoverSlide memory={currentSlideData.data} />}
             {currentSlideData.type === 'photo' && <PhotoSlide photo={currentSlideData.data} />}
             {currentSlideData.type === 'highlights' && <HighlightsSlide highlights={currentSlideData.data} memory={memory} />}
@@ -1463,26 +1463,22 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
               type="button"
               aria-label="Previous slide"
               onClick={prevSlide}
-              className="absolute inset-y-0 left-0 z-40 flex w-24 items-center justify-start pl-4 sm:w-28 sm:pl-6"
+              className="absolute left-4 top-1/2 z-40 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 transition-all hover:bg-white/30 active:scale-95 sm:left-6"
             >
-              <span className="rounded-full bg-white/20 p-4 transition-all hover:bg-white/30 active:scale-95">
-                <ChevronLeft className="h-6 w-6 text-white" />
-              </span>
+              <ChevronLeft className="h-6 w-6 text-white" />
             </button>
             
             <button
               type="button"
               aria-label="Next slide"
               onClick={nextSlide}
-              className="absolute inset-y-0 right-0 z-40 flex w-24 items-center justify-end pr-4 sm:w-28 sm:pr-6"
+              className="absolute right-4 top-1/2 z-40 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 transition-all hover:bg-white/30 active:scale-95 sm:right-6"
             >
-              <span className="rounded-full bg-white/20 p-4 transition-all hover:bg-white/30 active:scale-95">
-                <ChevronRight className="h-6 w-6 text-white" />
-              </span>
+              <ChevronRight className="h-6 w-6 text-white" />
             </button>
             
             {/* Dots */}
-            <div className="absolute bottom-[max(4.2rem,calc(env(safe-area-inset-bottom)+3.1rem))] left-1/2 z-40 flex -translate-x-1/2 gap-2">
+            <div className="pointer-events-auto absolute bottom-[max(4.2rem,calc(env(safe-area-inset-bottom)+3.1rem))] left-1/2 z-40 flex -translate-x-1/2 gap-2">
               {slides.map((_, idx) => (
                 <button
                   key={idx}
