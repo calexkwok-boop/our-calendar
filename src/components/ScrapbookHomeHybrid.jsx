@@ -139,6 +139,7 @@ const ScrapbookHomeHybrid = ({
   // Moments This Week (current)
   momentsThisWeek = [],
   onCaptureQuickMoment,
+  onAddMomentForDate,
   onOpenMemory,
   onDeleteMoment,
   onConfirmAction,
@@ -363,7 +364,13 @@ const ScrapbookHomeHybrid = ({
                         <div className="w-full h-full flex items-center justify-center">
                           {day.isToday ? (
                             <button
-                              onClick={onCaptureQuickMoment}
+                              onClick={() => {
+                                if (typeof onAddMomentForDate === 'function') {
+                                  onAddMomentForDate(day.dateKey);
+                                  return;
+                                }
+                                onCaptureQuickMoment?.();
+                              }}
                               className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                             >
                               <Plus className="w-6 h-6" />

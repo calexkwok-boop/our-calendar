@@ -881,6 +881,18 @@ const getLocalTodayDateKey = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
 
+const normalizeMemoryDateKey = (value) => {
+  const raw = String(value || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  if (raw) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) {
+      return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+    }
+  }
+  return getLocalTodayDateKey();
+};
+
 const buildJourneyLogDraft = (goalId = '') => ({
   goalId: String(goalId || ''),
   amount: '',
@@ -1373,9 +1385,36 @@ const writeQuickThoughtsState = (userId, thoughts) => {
     window.localStorage.setItem(getQuickThoughtsStorageKey(userId), JSON.stringify(Array.isArray(thoughts) ? thoughts : []));
   } catch {}
 };
+const mergePersistedQuickThoughts = (...thoughtLists) => {
+  const byId = new Map();
+  thoughtLists.forEach((list) => {
+    (Array.isArray(list) ? list : []).forEach((thought, index) => {
+      if (!thought || typeof thought !== 'object') return;
+      const idKey = String(thought?.id || '').trim();
+      const fallbackKey = [
+        String(thought?.text || '').trim().toLowerCase(),
+        String(thought?.createdAt || '').trim(),
+        index,
+      ].join('|');
+      const key = idKey || fallbackKey;
+      if (!key) return;
+      byId.set(key, {
+        ...thought,
+        id: idKey || fallbackKey,
+        text: String(thought?.text || '').trim(),
+        color: String(thought?.color || '').trim(),
+        createdAt: String(thought?.createdAt || '').trim(),
+      });
+    });
+  });
+  return Array.from(byId.values()).sort(
+    (a, b) => Number(new Date(b?.createdAt || 0)) - Number(new Date(a?.createdAt || 0))
+  );
+};
 const MEMORIES_DB_NAME = 'our-calendar-memories-db';
 const MEMORIES_STORE_NAME = 'memories';
 const USER_MEMORIES_TABLE = 'user_memories';
+const USER_QUICK_THOUGHTS_TABLE = 'user_quick_thoughts';
 const PROFILE_PHOTO_OVERRIDE_STORAGE_KEY = 'our-calendar-uploaded-profile-photo';
 
 const openMemoriesDb = () => new Promise((resolve, reject) => {
@@ -1537,6 +1576,36 @@ const fromRemoteMemoryRow = (row, userId) => {
     createdAt: String(rowMemory?.createdAt || row?.created_at || '').trim(),
     updatedAt: String(rowMemory?.updatedAt || row?.updated_at || '').trim(),
   }, row?.owner_user_id || userId);
+};
+
+const readRemoteQuickThoughtsState = async (userId) => {
+  const ownerUserId = String(userId || '').trim();
+  if (!ownerUserId || ownerUserId === 'guest') return [];
+  try {
+    const { data, error } = await supabase
+      .from(USER_QUICK_THOUGHTS_TABLE)
+      .select('thoughts')
+      .eq('owner_user_id', ownerUserId)
+      .maybeSingle();
+    if (error) throw error;
+    return Array.isArray(data?.thoughts) ? data.thoughts : [];
+  } catch {
+    return [];
+  }
+};
+
+const persistRemoteQuickThoughtsState = async (userId, thoughts) => {
+  const ownerUserId = String(userId || '').trim();
+  if (!ownerUserId || ownerUserId === 'guest') return;
+  try {
+    await supabase
+      .from(USER_QUICK_THOUGHTS_TABLE)
+      .upsert({
+        owner_user_id: ownerUserId,
+        thoughts: Array.isArray(thoughts) ? thoughts : [],
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'owner_user_id' });
+  } catch {}
 };
 
 const readRemoteMemoriesState = async (userId) => {
@@ -3096,6 +3165,7 @@ function App() {
   ));
   const [journeyState, setJourneyState] = useState(createEmptyJourneyState);
   const [quickThoughts, setQuickThoughts] = useState(() => readQuickThoughtsState('guest'));
+  const [quickThoughtsHydratedUserId, setQuickThoughtsHydratedUserId] = useState(null);
   const [memories, setMemories] = useState([]);
   const [memoriesHydratedUserId, setMemoriesHydratedUserId] = useState(null);
   const [memoryTripRosterById, setMemoryTripRosterById] = useState({});
@@ -19716,12 +19786,35 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, journeyState]);
 
   useEffect(() => {
-    setQuickThoughts(readQuickThoughtsState(user?.id));
+    const currentQuickThoughtsUserId = String(user?.id || 'guest').trim() || 'guest';
+    let cancelled = false;
+    (async () => {
+      const localThoughts = readQuickThoughtsState(user?.id);
+      if (currentQuickThoughtsUserId === 'guest') {
+        if (cancelled) return;
+        setQuickThoughts(localThoughts);
+        setQuickThoughtsHydratedUserId(currentQuickThoughtsUserId);
+        return;
+      }
+      const remoteThoughts = await readRemoteQuickThoughtsState(user?.id);
+      if (cancelled) return;
+      const mergedThoughts = mergePersistedQuickThoughts(remoteThoughts, localThoughts);
+      setQuickThoughts(mergedThoughts);
+      writeQuickThoughtsState(user?.id, mergedThoughts);
+      void persistRemoteQuickThoughtsState(user?.id, mergedThoughts);
+      setQuickThoughtsHydratedUserId(currentQuickThoughtsUserId);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   useEffect(() => {
+    const currentQuickThoughtsUserId = String(user?.id || 'guest').trim() || 'guest';
+    if (quickThoughtsHydratedUserId !== currentQuickThoughtsUserId) return;
     writeQuickThoughtsState(user?.id, quickThoughts);
-  }, [user?.id, quickThoughts]);
+    void persistRemoteQuickThoughtsState(user?.id, quickThoughts);
+  }, [user?.id, quickThoughts, quickThoughtsHydratedUserId]);
 
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
@@ -23895,7 +23988,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           || ''
         ),
       })).filter((person) => person.name) : [],
-      date: String(memoryData?.date || '').trim() || getLocalTodayDateKey(),
+      date: normalizeMemoryDateKey(memoryData?.date),
       location: String(memoryData?.location || '').trim(),
       sourceEventId: String(memoryData?.sourceEventId || '').trim() || null,
       sourceEventTitle: String(memoryData?.sourceEventTitle || '').trim() || null,

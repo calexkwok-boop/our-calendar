@@ -43,7 +43,8 @@ export default function useHomeScreenData({
   ), [getSubCalStartRaw, tabTrips, toDateOnlyTs, todayTs]);
 
   const upcomingUserTabEvents = useMemo(() => {
-    const horizonDays = 365;
+    // Home only consumes today's events plus a short upcoming window.
+    const horizonDays = 14;
     const isAllDayLike = (event) => {
       const time = String(event?.time || '').trim();
       return !time || time === '00:00' || time === '00:00:00';

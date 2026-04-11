@@ -5,16 +5,34 @@ import {
   ChevronLeft, ChevronRight, Plus, Check, Eye, Calendar, MapPin, Edit2, Trash2, Star
 } from 'lucide-react';
 
+const getLocalDateInputValue = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
+const normalizeMemoryDateInput = (value) => {
+  const raw = String(value || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  if (raw) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) {
+      return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+    }
+  }
+  return getLocalDateInputValue();
+};
+
 const createEmptyMemoryDraft = (overrides = {}) => ({
   title: '',
   description: '',
   highlights: [''],
   photos: [],
   taggedPeople: [],
-  date: new Date().toISOString().split('T')[0],
+  date: getLocalDateInputValue(),
   location: '',
   coverPhoto: '',
   ...overrides,
+  date: normalizeMemoryDateInput(overrides?.date),
 });
 
 const getMemoryCoverUrl = (memory) => String(
@@ -369,7 +387,7 @@ const MemorySystem = ({
               photos,
               coverPhoto: getMemoryCoverUrl({ ...memoryData, photos }),
               taggedPeople: Array.isArray(memoryData?.taggedPeople) ? memoryData.taggedPeople : [],
-              date: String(memoryData?.date || memory?.date || new Date().toISOString().split('T')[0]).trim(),
+              date: normalizeMemoryDateInput(memoryData?.date || memory?.date),
               location: String(memoryData?.location || '').trim(),
             }));
             setSelectedMemory((prev) => ({
@@ -1463,7 +1481,7 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
               type="button"
               aria-label="Previous slide"
               onClick={prevSlide}
-              className="absolute left-4 top-1/2 z-40 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 transition-all hover:bg-white/30 active:scale-95 sm:left-6"
+              className="pointer-events-auto absolute left-4 top-1/2 z-40 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 transition-all hover:bg-white/30 active:scale-95 sm:left-6"
             >
               <ChevronLeft className="h-6 w-6 text-white" />
             </button>
@@ -1472,7 +1490,7 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
               type="button"
               aria-label="Next slide"
               onClick={nextSlide}
-              className="absolute right-4 top-1/2 z-40 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 transition-all hover:bg-white/30 active:scale-95 sm:right-6"
+              className="pointer-events-auto absolute right-4 top-1/2 z-40 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 transition-all hover:bg-white/30 active:scale-95 sm:right-6"
             >
               <ChevronRight className="h-6 w-6 text-white" />
             </button>
