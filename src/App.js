@@ -22,6 +22,7 @@ import WelcomeCover from "./components/WelcomeCover";
 import ExploreTab from "./components/ExploreTab";
 import MemorySystem, { MemoryCreator as ImportedMemoryCreator } from "./components/MemorySystem";
 import ScrapbookHomeHybrid from "./components/ScrapbookHomeHybrid";
+import AddDreamSheet from "./components/AddDreamSheet";
 import useHomeScreenData from "./hooks/useHomeScreenData";
 import TripsTab from "./components/TripsTab";
 import TripRatingSystem from "./components/TripRatingSystem";
@@ -1370,6 +1371,7 @@ const writeStoredTripSelectedDateKey = (userId, subCalId, dateKey) => {
 
 const getMemoriesStorageKey = (userId) => `saved-memories-${String(userId || 'guest').trim() || 'guest'}`;
 const getQuickThoughtsStorageKey = (userId) => `quick-thoughts-${String(userId || 'guest').trim() || 'guest'}`;
+const getBucketListStorageKey = (userId) => `bucket-list-${String(userId || 'guest').trim() || 'guest'}`;
 const readQuickThoughtsState = (userId) => {
   if (typeof window === 'undefined') return [];
   try {
@@ -1384,6 +1386,50 @@ const writeQuickThoughtsState = (userId, thoughts) => {
   try {
     window.localStorage.setItem(getQuickThoughtsStorageKey(userId), JSON.stringify(Array.isArray(thoughts) ? thoughts : []));
   } catch {}
+};
+const readBucketListState = (userId) => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(getBucketListStorageKey(userId)) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+const writeBucketListState = (userId, dreams) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(getBucketListStorageKey(userId), JSON.stringify(Array.isArray(dreams) ? dreams : []));
+  } catch {}
+};
+const mergePersistedBucketList = (...dreamLists) => {
+  const byId = new Map();
+  dreamLists.forEach((list) => {
+    (Array.isArray(list) ? list : []).forEach((dream, index) => {
+      if (!dream || typeof dream !== 'object') return;
+      const idKey = String(dream?.id || '').trim();
+      const fallbackKey = [
+        String(dream?.text || dream?.dream || '').trim().toLowerCase(),
+        String(dream?.category || '').trim().toLowerCase(),
+        String(dream?.createdAt || '').trim(),
+        index,
+      ].join('|');
+      const key = idKey || fallbackKey;
+      if (!key) return;
+      byId.set(key, {
+        ...dream,
+        id: idKey || fallbackKey,
+        text: String(dream?.text || dream?.dream || '').trim(),
+        category: String(dream?.category || '').trim(),
+        emoji: String(dream?.emoji || '').trim(),
+        sources: Array.isArray(dream?.sources) ? dream.sources : [],
+        createdAt: String(dream?.createdAt || '').trim(),
+      });
+    });
+  });
+  return Array.from(byId.values()).sort(
+    (a, b) => Number(new Date(b?.createdAt || 0)) - Number(new Date(a?.createdAt || 0))
+  );
 };
 const mergePersistedQuickThoughts = (...thoughtLists) => {
   const byId = new Map();
@@ -1415,6 +1461,7 @@ const MEMORIES_DB_NAME = 'our-calendar-memories-db';
 const MEMORIES_STORE_NAME = 'memories';
 const USER_MEMORIES_TABLE = 'user_memories';
 const USER_QUICK_THOUGHTS_TABLE = 'user_quick_thoughts';
+const USER_BUCKET_LIST_TABLE = 'user_bucket_list';
 const PROFILE_PHOTO_OVERRIDE_STORAGE_KEY = 'our-calendar-uploaded-profile-photo';
 
 const openMemoriesDb = () => new Promise((resolve, reject) => {
@@ -1603,6 +1650,36 @@ const persistRemoteQuickThoughtsState = async (userId, thoughts) => {
       .upsert({
         owner_user_id: ownerUserId,
         thoughts: Array.isArray(thoughts) ? thoughts : [],
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'owner_user_id' });
+  } catch {}
+};
+
+const readRemoteBucketListState = async (userId) => {
+  const ownerUserId = String(userId || '').trim();
+  if (!ownerUserId || ownerUserId === 'guest') return [];
+  try {
+    const { data, error } = await supabase
+      .from(USER_BUCKET_LIST_TABLE)
+      .select('dreams')
+      .eq('owner_user_id', ownerUserId)
+      .maybeSingle();
+    if (error) throw error;
+    return Array.isArray(data?.dreams) ? data.dreams : [];
+  } catch {
+    return [];
+  }
+};
+
+const persistRemoteBucketListState = async (userId, dreams) => {
+  const ownerUserId = String(userId || '').trim();
+  if (!ownerUserId || ownerUserId === 'guest') return;
+  try {
+    await supabase
+      .from(USER_BUCKET_LIST_TABLE)
+      .upsert({
+        owner_user_id: ownerUserId,
+        dreams: Array.isArray(dreams) ? dreams : [],
         updated_at: new Date().toISOString(),
       }, { onConflict: 'owner_user_id' });
   } catch {}
@@ -3165,7 +3242,10 @@ function App() {
   ));
   const [journeyState, setJourneyState] = useState(createEmptyJourneyState);
   const [quickThoughts, setQuickThoughts] = useState(() => readQuickThoughtsState('guest'));
+  const [bucketList, setBucketList] = useState(() => readBucketListState('guest'));
+  const [showAddDreamSheet, setShowAddDreamSheet] = useState(false);
   const [quickThoughtsHydratedUserId, setQuickThoughtsHydratedUserId] = useState(null);
+  const [bucketListHydratedUserId, setBucketListHydratedUserId] = useState(null);
   const [memories, setMemories] = useState([]);
   const [memoriesHydratedUserId, setMemoriesHydratedUserId] = useState(null);
   const [memoryTripRosterById, setMemoryTripRosterById] = useState({});
@@ -8503,12 +8583,12 @@ useEffect(() => {
       return next;
     });
   };
-  const shouldIncludeEventInPersonalOverview = (event) => {
+  const shouldIncludeEventInPersonalOverview = useCallback((event) => {
     const eventLayer = getLayerForEvent(event);
     if (!eventLayer?.is_public) return true;
     const relationship = getEventRelationshipStatus(event);
     return relationship === 'hosting' || relationship === 'going';
-  };
+  }, [getEventRelationshipStatus, getLayerForEvent]);
   const canDeleteEventInActiveLayer = (event) => {
     if (!event) return false;
     const eventLayerId = String(event?.layerId || event?.layer_id || activeLayerId || '').trim();
@@ -11125,9 +11205,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     importPromptDismissedThisSession,
   ]);
 
-  const getDateKey = (date) => {
+  const getDateKey = useCallback((date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  };
+  }, []);
 
   useEffect(() => {
     calendarDateStateRef.current = {
@@ -11460,22 +11540,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     }
     return null;
   };
-  const getHolidayNameSet = (holiday) => new Set(
-    [
-      holiday?.localName,
-      holiday?.name,
-      ...(Array.isArray(holiday?.aliases) ? holiday.aliases : []),
-    ]
-      .map(normalizeHolidayLikeTitle)
-      .filter(Boolean)
-  );
-
   // Helper: get holiday info for a specific date key
-  const getHolidayForDate = (dateKey) => {
+  const getHolidayForDate = useCallback((dateKey) => {
     const year = parseInt(dateKey.split('-')[0]);
     const yearHolidays = holidays[year] || [];
     return yearHolidays.find(h => h.date === dateKey) || getDerivedHolidayForDate(dateKey) || null;
-  };
+  }, [holidays]);
 
   // Weather code ? display object with emoji/label and a color
   const weatherDisplay = (code) => {
@@ -17530,7 +17600,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     return null;
   };
 
-  const normalizeHolidayLikeTitle = (value) => {
+  const normalizeHolidayLikeTitle = useCallback((value) => {
     const raw = String(value || '').trim();
     if (!raw) return '';
     let normalized = raw.toLowerCase();
@@ -17541,9 +17611,19 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       .replace(/^us\s*holiday[:\s-]*/i, '')
       .replace(/^public\s*holiday[:\s-]*/i, '')
       .replace(/[^a-z0-9]/g, '');
-  };
+  }, []);
 
-  const isLikelyHolidayTitle = (normalizedTitle) => {
+  const getHolidayNameSet = useCallback((holiday) => new Set(
+    [
+      holiday?.localName,
+      holiday?.name,
+      ...(Array.isArray(holiday?.aliases) ? holiday.aliases : []),
+    ]
+      .map(normalizeHolidayLikeTitle)
+      .filter(Boolean)
+  ), [normalizeHolidayLikeTitle]);
+
+  const isLikelyHolidayTitle = useCallback((normalizedTitle) => {
     const t = String(normalizedTitle || '');
     if (!t) return false;
     return [
@@ -17587,7 +17667,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       'springforward',
       'fallback',
     ].some((token) => t.includes(token));
-  };
+  }, []);
 
   const importEventKeyOf = (row) => {
     const dateKey = String(row?.date || '');
@@ -18723,9 +18803,9 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setSelectedDates([]);
     setShowDateDetailModal(true);
   };
-  const getSubCalStartRaw = (sc) => sc?.start_date ?? sc?.startDate ?? sc?.start ?? sc?.date ?? null;
-  const getSubCalEndRaw = (sc) => sc?.end_date ?? sc?.endDate ?? sc?.end ?? getSubCalStartRaw(sc);
-  const toDateOnlyTs = (value) => {
+  const getSubCalStartRaw = useCallback((sc) => sc?.start_date ?? sc?.startDate ?? sc?.start ?? sc?.date ?? null, []);
+  const getSubCalEndRaw = useCallback((sc) => sc?.end_date ?? sc?.endDate ?? sc?.end ?? getSubCalStartRaw(sc), [getSubCalStartRaw]);
+  const toDateOnlyTs = useCallback((value) => {
     if (!value) return null;
 
     let d = null;
@@ -18759,7 +18839,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!d || Number.isNaN(d.getTime())) return null;
     d.setHours(0, 0, 0, 0);
     return d.getTime();
-  };
+  }, []);
   const todayTs = toDateOnlyTs(todayKey);
   const formatTripDate = (value, withYear = false) => {
     const ts = toDateOnlyTs(value);
@@ -19817,6 +19897,37 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, quickThoughts, quickThoughtsHydratedUserId]);
 
   useEffect(() => {
+    const currentBucketListUserId = String(user?.id || 'guest').trim() || 'guest';
+    let cancelled = false;
+    (async () => {
+      const localDreams = readBucketListState(user?.id);
+      if (currentBucketListUserId === 'guest') {
+        if (cancelled) return;
+        setBucketList(localDreams);
+        setBucketListHydratedUserId(currentBucketListUserId);
+        return;
+      }
+      const remoteDreams = await readRemoteBucketListState(user?.id);
+      if (cancelled) return;
+      const mergedDreams = mergePersistedBucketList(remoteDreams, localDreams);
+      setBucketList(mergedDreams);
+      writeBucketListState(user?.id, mergedDreams);
+      void persistRemoteBucketListState(user?.id, mergedDreams);
+      setBucketListHydratedUserId(currentBucketListUserId);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    const currentBucketListUserId = String(user?.id || 'guest').trim() || 'guest';
+    if (bucketListHydratedUserId !== currentBucketListUserId) return;
+    writeBucketListState(user?.id, bucketList);
+    void persistRemoteBucketListState(user?.id, bucketList);
+  }, [user?.id, bucketList, bucketListHydratedUserId]);
+
+  useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     let cancelled = false;
     (async () => {
@@ -19853,16 +19964,37 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     void persistRemoteMemoriesState(user?.id, memories);
   }, [user?.id, memories, memoriesHydratedUserId]);
 
+  const eligibleMemoryTripSyncEntries = useMemo(() => (
+    (Array.isArray(eligibleMemoryTrips) ? eligibleMemoryTrips : [])
+      .map((trip) => ({
+        tripId: String(trip?.id || '').trim(),
+        name: String(trip?.name || '').trim(),
+        startDate: String(getSubCalStartRaw(trip) || '').trim(),
+        endDate: String(getSubCalEndRaw(trip) || '').trim(),
+      }))
+      .filter((trip) => trip.tripId)
+      .sort((a, b) => a.tripId.localeCompare(b.tripId))
+  ), [eligibleMemoryTrips, getSubCalEndRaw, getSubCalStartRaw]);
+
+  const eligibleMemoryTripSyncKey = useMemo(() => (
+    eligibleMemoryTripSyncEntries
+      .map((trip) => `${trip.tripId}|${trip.name}|${trip.startDate}|${trip.endDate}`)
+      .join('||')
+  ), [eligibleMemoryTripSyncEntries]);
+
   useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     if (memoriesHydratedUserId !== currentMemoriesUserId) return;
-    if (!Array.isArray(eligibleMemoryTrips) || eligibleMemoryTrips.length === 0) return;
+    if (!Array.isArray(eligibleMemoryTripSyncEntries) || eligibleMemoryTripSyncEntries.length === 0) return;
     let cancelled = false;
     (async () => {
       const drafts = await Promise.all(
-        eligibleMemoryTrips.map(async (trip) => {
+        eligibleMemoryTripSyncEntries.map(async ({ tripId }) => {
+          const trip = (Array.isArray(eligibleMemoryTrips) ? eligibleMemoryTrips : [])
+            .find((candidate) => String(candidate?.id || '').trim() === tripId);
+          if (!trip) return null;
           const draft = await buildMemoryDraftFromTrip(trip, { autoGeneratedFromTrip: true });
-          return draft ? { tripId: String(trip?.id || '').trim(), draft } : null;
+          return draft ? { tripId, draft } : null;
         })
       );
       if (cancelled) return;
@@ -19919,7 +20051,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       cancelled = true;
     };
   }, [
-    eligibleMemoryTrips,
+    eligibleMemoryTripSyncEntries,
+    eligibleMemoryTripSyncKey,
     memoriesHydratedUserId,
     user?.id,
   ]);
@@ -23706,6 +23839,62 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     const thoughtId = String(thought?.id || '').trim();
     if (!thoughtId) return;
     setQuickThoughts((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== thoughtId));
+  };
+
+  const openAddDreamSheet = () => {
+    setShowAddDreamSheet(true);
+  };
+
+  const closeAddDreamSheet = () => {
+    setShowAddDreamSheet(false);
+  };
+
+  const addBucketDream = (dream) => {
+    const text = String(dream?.dream || dream?.text || '').trim();
+    if (!text) return;
+    const category = String(dream?.category || 'travel').trim() || 'travel';
+    const categoryEmoji = {
+      travel: '✈️',
+      food: '🍽️',
+      adventure: '⛰️',
+      culture: '🎭',
+      home: '🏠',
+      wellness: '🧘',
+    };
+    setBucketList((prev) => [
+      {
+        id: uuidv4(),
+        text,
+        category,
+        sources: Array.isArray(dream?.sources) ? dream.sources : [],
+        emoji: categoryEmoji[category] || '✨',
+        createdAt: new Date().toISOString(),
+      },
+      ...(Array.isArray(prev) ? prev : []),
+    ]);
+    setShowAddDreamSheet(false);
+  };
+
+  const deleteBucketDream = (dream) => {
+    const dreamId = String(dream?.id || '').trim();
+    if (!dreamId) return;
+    setBucketList((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== dreamId));
+  };
+
+  const planFromDream = (dream) => {
+    const text = String(dream?.text || dream?.dream || '').trim();
+    const category = String(dream?.category || '').trim().toLowerCase();
+    if (category === 'travel' || category === 'adventure') {
+      setShowSubCalendarModal(true);
+      return;
+    }
+    setHomeAddEventForm({
+      title: text,
+      date: getLocalTodayDateKey(),
+      time: '',
+      location: '',
+    });
+    setShowHomeAddEventModal(true);
   };
 
   const closeJourneyTab = () => {
@@ -27568,6 +27757,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             quickThoughts={quickThoughts}
             onAddThought={addQuickThought}
             onDeleteThought={deleteQuickThought}
+            bucketList={bucketList}
+            onAddDream={openAddDreamSheet}
+            onPlanFromDream={planFromDream}
+            onDeleteDream={deleteBucketDream}
             momentsThisWeek={homeMomentsThisWeek}
             onThisDayMemory={homeOnThisDayMemory}
             todaySpotlightEvent={homeTodaySpotlightEvent}
@@ -27610,10 +27803,17 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
               streakHelpText: homeReflectionStats.helpText,
             }}
              profilePhotoUrl={currentUserProfilePhotoUrl}
-             onOpenAccountMenu={toggleAccountMenu}
-             onEditProfilePhoto={openLayerMediaMenu}
+              onOpenAccountMenu={toggleAccountMenu}
+              onEditProfilePhoto={openLayerMediaMenu}
             />
         )}
+
+        {showAddDreamSheet ? (
+          <AddDreamSheet
+            onAdd={addBucketDream}
+            onDismiss={closeAddDreamSheet}
+          />
+        ) : null}
 
         <div className="grid grid-cols-1 gap-4">
         {false && bottomNavTab === 'calendar' && (
