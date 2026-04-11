@@ -19831,40 +19831,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     user?.id,
   ]);
 
-  useEffect(() => {
-    const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
-    if (memoriesHydratedUserId !== currentMemoriesUserId) return;
-    if (!(Array.isArray(memories) ? memories : []).some((memory) => (
-      String(memory?.sourceTripId || '').trim()
-      && Array.isArray(memory?.taggedPeople)
-      && memory.taggedPeople.length > 0
-    ))) return;
-    setMemories((prev) => {
-      let changed = false;
-      const next = (Array.isArray(prev) ? prev : []).map((memory) => {
-        if (!String(memory?.sourceTripId || '').trim()) return memory;
-        const taggedPeople = Array.isArray(memory?.taggedPeople) ? memory.taggedPeople : [];
-        const nextPeople = taggedPeople.map((person, index) => {
-          const rawName = String(person?.name || '').trim();
-          const rawId = String(person?.id || '').trim();
-          const resolvedName = String(
-            resolveHandleLikeLabel(rawName || rawId || 'Member', rawId && !rawId.includes('@') ? rawId : '')
-          ).trim() || rawName || rawId || `Person ${index + 1}`;
-          if (resolvedName === rawName) return person;
-          changed = true;
-          return { ...person, name: resolvedName };
-        });
-        return nextPeople === taggedPeople ? memory : { ...memory, taggedPeople: nextPeople };
-      });
-      return changed ? next : prev;
-    });
-  }, [
-    memoriesHydratedUserId,
-    user?.id,
-    knownHandlesByEmail,
-    knownHandlesByUserId,
-  ]);
-
   const memoryTripRosterTripIds = useMemo(() => (
     Array.from(new Set(
       (Array.isArray(memories) ? memories : [])
@@ -24151,8 +24117,20 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const applyTripRosterToMemory = (memory) => {
     const tripId = String(memory?.sourceTripId || '').trim();
     if (!tripId) return memory;
+    const normalizedTaggedPeople = (Array.isArray(memory?.taggedPeople) ? memory.taggedPeople : []).map((person, index) => {
+      const rawName = String(person?.name || '').trim();
+      const rawId = String(person?.id || '').trim();
+      const resolvedName = String(
+        resolveHandleLikeLabel(rawName || rawId || 'Member', rawId && !rawId.includes('@') ? rawId : '')
+      ).trim() || rawName || rawId || `Person ${index + 1}`;
+      return resolvedName === rawName ? person : { ...person, name: resolvedName };
+    });
     const roster = Array.isArray(memoryTripRosterById?.[tripId]) ? memoryTripRosterById[tripId] : [];
-    if (roster.length === 0) return memory;
+    if (roster.length === 0) {
+      return normalizedTaggedPeople === memory?.taggedPeople
+        ? memory
+        : { ...memory, taggedPeople: normalizedTaggedPeople };
+    }
     const seenLabels = new Set();
     const nextPeople = [];
     const pushPerson = (person) => {
@@ -24162,6 +24140,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
       seenLabels.add(normalizedLabel);
       nextPeople.push(person);
     };
+    normalizedTaggedPeople.forEach(pushPerson);
     pushPerson(memoryTripSelfPerson);
     roster.forEach((member, index) => {
       const memberIdentity = member?.identity || member?.email || member?.phone || member?.shareUserId || member?.id || '';
