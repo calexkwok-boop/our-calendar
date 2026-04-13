@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 const CATEGORIES = [
   { id: "travel",    label: "Travel",    icon: "✈",  bg: "#E1F5EE", color: "#085041", border: "#1D9E75", glow: "rgba(29,158,117,.15)",  darkBg: "#0d2e22", darkColor: "#6ee7b7", darkBorder: "#1D9E75", darkGlow: "rgba(29,158,117,.25)" },
@@ -69,10 +69,41 @@ const SUGGESTIONS = [
   "See the Northern Lights",
 ];
 
+const compressImage = (file) =>
+  new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxSize = 600;
+        const scale = Math.min(1, maxSize / Math.max(img.width || 1, img.height || 1));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", 0.75));
+        } else {
+          resolve(typeof reader.result === "string" ? reader.result : "");
+        }
+      };
+      img.onerror = () => resolve(typeof reader.result === "string" ? reader.result : "");
+      img.src = typeof reader.result === "string" ? reader.result : "";
+    };
+    reader.readAsDataURL(file);
+  });
+
 export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
   const [dream, setDream] = useState("");
   const [selectedCat, setSelectedCat] = useState("travel");
   const [selectedSources, setSelectedSources] = useState(new Set());
+  const [photoUrl, setPhotoUrl] = useState("");
+
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
 
   const dm = (light, dark) => (darkMode ? dark : light);
 
@@ -84,12 +115,21 @@ export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
     });
   };
 
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = await compressImage(file);
+    setPhotoUrl(url);
+    e.target.value = "";
+  };
+
   const handleAdd = () => {
     if (!dream.trim()) return;
     onAdd?.({
       dream,
       category: selectedCat,
       sources: [...selectedSources],
+      photoUrl,
     });
   };
 
@@ -244,6 +284,65 @@ export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
           </div>
         </div>
 
+        {/* Photo */}
+        <div style={styles.section}>
+          <div style={{ ...styles.secLabel, color: dm("#999", "#666") }}>Add a photo (optional)</div>
+          {photoUrl ? (
+            <div style={{ position: "relative", display: "inline-block" }}>
+              <img
+                src={photoUrl}
+                alt="Dream preview"
+                style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 12, display: "block", border: `1.5px solid ${dm("rgba(15,23,42,0.12)", "rgba(255,255,255,0.12)")}` }}
+              />
+              <button
+                onClick={() => setPhotoUrl("")}
+                style={{
+                  position: "absolute", top: -6, right: -6, width: 20, height: 20,
+                  borderRadius: "50%", border: "none", cursor: "pointer", fontSize: 10,
+                  background: dm("#e8e5e0", "#2a2a32"), color: dm("#555", "#aaa"),
+                  display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700,
+                }}
+              >✕</button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => cameraInputRef.current?.click()}
+                style={{
+                  ...styles.photoBtn,
+                  border: `1.5px solid ${dm("rgba(15,23,42,0.15)", "rgba(255,255,255,0.12)")}`,
+                  background: dm("#f5f3ee", "#222228"),
+                  color: dm("#888", "#666"),
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                  <path d="M5.5 2L4.5 3.5H2a1 1 0 00-1 1v7a1 1 0 001 1h11a1 1 0 001-1v-7a1 1 0 00-1-1h-2.5L9.5 2h-4z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                  <circle cx="7.5" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.2"/>
+                </svg>
+                Take photo
+              </button>
+              <button
+                onClick={() => galleryInputRef.current?.click()}
+                style={{
+                  ...styles.photoBtn,
+                  border: `1.5px solid ${dm("rgba(15,23,42,0.15)", "rgba(255,255,255,0.12)")}`,
+                  background: dm("#f5f3ee", "#222228"),
+                  color: dm("#888", "#666"),
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                  <rect x="1" y="1" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.2"/>
+                  <circle cx="5" cy="5" r="1.3" fill="currentColor"/>
+                  <path d="M1.5 10.5l3.5-3.5 2.5 2.5 2-2 3.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                </svg>
+                Upload photo
+              </button>
+            </div>
+          )}
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleFileChange} />
+          <input ref={galleryInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
+        </div>
+
         {/* CTA */}
         <button
           onClick={handleAdd}
@@ -393,6 +492,18 @@ const styles = {
     fontWeight: 500,
     transition: "all .15s",
     fontFamily: "inherit",
+  },
+  photoBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 7,
+    padding: "9px 14px",
+    borderRadius: 20,
+    cursor: "pointer",
+    fontSize: 13,
+    fontWeight: 500,
+    fontFamily: "inherit",
+    transition: "all .15s",
   },
   addBtn: {
     display: "block",

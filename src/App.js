@@ -23977,6 +23977,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         category,
         sources: Array.isArray(dream?.sources) ? dream.sources : [],
         emoji: categoryEmoji[category] || '✨',
+        photoUrl: String(dream?.photoUrl || '').trim(),
         createdAt: new Date().toISOString(),
       },
       ...(Array.isArray(prev) ? prev : []),
