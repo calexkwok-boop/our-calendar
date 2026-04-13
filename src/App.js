@@ -1561,6 +1561,22 @@ const persistMemoriesState = (userId, memories) => {
   writeMemoriesState(userId, memories);
   void writeMemoriesIndexedDb(userId, memories);
 };
+const getMemoriesTombstonesKey = (userId) => `memories-deleted-${String(userId || 'guest').trim() || 'guest'}`;
+const readMemoriesTombstones = (userId) => {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(getMemoriesTombstonesKey(userId)) || '[]');
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch { return new Set(); }
+};
+const addMemoryTombstone = (userId, id) => {
+  if (typeof window === 'undefined' || !id) return;
+  try {
+    const existing = readMemoriesTombstones(userId);
+    existing.add(String(id));
+    window.localStorage.setItem(getMemoriesTombstonesKey(userId), JSON.stringify([...existing]));
+  } catch {}
+};
 
 const mergePersistedMemories = (...memoryLists) => {
   const byKey = new Map();
@@ -19962,17 +19978,23 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     let cancelled = false;
     (async () => {
-      const savedForCurrentUser = mergePersistedMemories(
-        await readRemoteMemoriesState(user?.id),
-        await readMemoriesIndexedDb(user?.id),
-        readMemoriesState(user?.id)
+      const tombstones = readMemoriesTombstones(user?.id);
+      const filterTombstones = (list) => list.filter((m) => !tombstones.has(String(m?.id || '')));
+      const savedForCurrentUser = filterTombstones(
+        mergePersistedMemories(
+          await readRemoteMemoriesState(user?.id),
+          await readMemoriesIndexedDb(user?.id),
+          readMemoriesState(user?.id)
+        )
       ).map((memory) => stampMemoryOwner(memory, currentMemoriesUserId));
       if (currentMemoriesUserId !== 'guest') {
-        const guestMemories = mergePersistedMemories(
-          await readMemoriesIndexedDb('guest'),
-          readMemoriesState('guest')
+        const guestMemories = filterTombstones(
+          mergePersistedMemories(
+            await readMemoriesIndexedDb('guest'),
+            readMemoriesState('guest')
+          )
         ).map((memory) => stampMemoryOwner(memory, currentMemoriesUserId));
-        const merged = mergePersistedMemories(savedForCurrentUser, guestMemories);
+        const merged = filterTombstones(mergePersistedMemories(savedForCurrentUser, guestMemories));
         if (cancelled) return;
         setMemories(merged);
         persistMemoriesState(user?.id, merged);
@@ -24265,6 +24287,8 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   };
 
   const deleteMemoryRecord = (memoryId) => {
+    const id = String(memoryId || '').trim();
+    if (id) addMemoryTombstone(user?.id, id);
     setMemories((prev) => {
       const nextMemories = prev.filter((memory) => String(memory?.id || '') !== String(memoryId || ''));
       persistMemoriesState(user?.id, nextMemories);
@@ -25017,14 +25041,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         />
         <div
           ref={layerHeaderCardRef}
-          className={bottomNavTab === 'home'
+          className={(bottomNavTab === 'home' || bottomNavTab === 'events' || bottomNavTab === 'explore')
             ? 'relative mb-0'
             : 'glass-panel relative mb-4 min-h-[165px] rounded-2xl px-4 py-4 sm:min-h-[205px] sm:px-5 sm:py-5 lg:min-h-[285px]'}
           onPointerDownCapture={() => {
             if (!coverHeaderControlsVisible) return;
             bumpCoverControlsInteraction();
           }}
-          style={bottomNavTab !== 'home' && hasActiveLayerHeaderCover && effectiveCoverOpacity > 0.01
+          style={bottomNavTab !== 'home' && bottomNavTab !== 'events' && bottomNavTab !== 'explore' && hasActiveLayerHeaderCover && effectiveCoverOpacity > 0.01
             ? {
               backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
               backgroundSize: 'cover',
@@ -25033,7 +25057,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             }
               : undefined}
         >
-          {bottomNavTab !== 'home' && !hasActiveLayerHeaderCover ? (
+          {bottomNavTab !== 'home' && bottomNavTab !== 'events' && bottomNavTab !== 'explore' && !hasActiveLayerHeaderCover ? (
             <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
               <WelcomeCover
                 userName={homeGreetingName || currentUserProfileLabel || null}
@@ -27566,6 +27590,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           <AddDreamSheet
             onAdd={addBucketDream}
             onDismiss={closeAddDreamSheet}
+            darkMode={darkMode}
           />
         ) : null}
 

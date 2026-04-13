@@ -669,10 +669,10 @@ const ScrapbookHomeHybrid = ({
           {bucketList.length > 0 ? (
             <div className="space-y-2">
               {bucketList.map((dream, idx) => (
-                <button
+                <div
                   key={dream.id || idx}
                   onClick={() => onPlanFromDream?.(dream)}
-                  className="group w-full flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white/60 dark:bg-black/20 p-3 text-left transition-all hover:bg-white/90 dark:hover:bg-black/40 hover:border-emerald-500/30"
+                  className="group w-full flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white/60 dark:bg-black/20 p-3 text-left transition-all hover:bg-white/90 dark:hover:bg-black/40 hover:border-emerald-500/30 cursor-pointer"
                 >
                   <span className="text-2xl flex-shrink-0">{dream.emoji}</span>
                   <span className="text-sm text-gray-900 dark:text-white flex-1">
@@ -689,7 +689,7 @@ const ScrapbookHomeHybrid = ({
                       <Trash2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
                     </button>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           ) : (

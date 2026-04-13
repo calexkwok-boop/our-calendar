@@ -1,55 +1,46 @@
 /**
  * ExplorePage.jsx
  *
- * Drop into your components folder and wire up in App.js / your router.
- *
  * Props:
  *   currentUser        – { id, name, avatarUrl? }
  *   feedItems          – array of feed item objects (see FEED ITEM SHAPE below)
- *   onAddEvent         – (item) => void   — adds a moment/event to the user's calendar
- *   onSaveToSomeday    – (item) => void   — saves anything to the Someday List
- *   onCopyTrip         – (item) => void   — copies a trip into the user's trips
- *   onJoinPublicEvent  – (item) => void   — joins a public event + adds to calendar
- *   onStartGoal        – (item) => void   — copies a Journey goal for the user
+ *   onAddEvent         – (item) => void
+ *   onSaveToSomeday    – (item) => void
+ *   onCopyTrip         – (item) => void
+ *   onJoinPublicEvent  – (item) => void
+ *   onStartGoal        – (item) => void
  *   onReact            – (itemId, reacted) => void
  *   darkMode           – boolean
- *
- * FEED ITEM SHAPE:
- * {
- *   id: string,
- *   type: 'moment' | 'trip' | 'public' | 'journey',
- *   author: { name: string, initials: string, avatarColor?: string, avatarTextColor?: string, isPublic?: bool },
- *   title: string,
- *   subtitle?: string,
- *   imageEmoji?: string,           // fallback when no imageUrl
- *   imageUrl?: string,
- *   imageBg?: string,              // CSS gradient string
- *   reactions: number,
- *   userReacted?: boolean,
- *
- *   // moment-specific
- *   location?: string,
- *   date?: string,
- *
- *   // trip-specific
- *   itinerary?: { day: string, stops: string[] }[],  // first day preview
- *   totalStops?: number,
- *
- *   // public-event-specific
- *   eventDate?: string,
- *   eventTime?: string,
- *   attendees?: { initials: string, color: string, textColor: string }[],
- *   attendeeCount?: number,
- *   friendsGoing?: string,         // e.g. "Sarah, James + 24 others"
- *
- *   // journey-specific
- *   streakCurrent?: number,
- *   streakTotal?: number,
- *   quote?: string,
- * }
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, createContext, useContext } from 'react';
+
+// ─── dark mode context ────────────────────────────────────────────────────────
+
+const DarkCtx = createContext(false);
+const useDark = () => useContext(DarkCtx);
+const dm = (dark, light, isDark) => (isDark ? dark : light);
+
+// ─── design tokens ────────────────────────────────────────────────────────────
+
+const T = {
+  pageBg:      (d) => dm('#0d0d11', '#f4f3f0', d),
+  cardBg:      (d) => dm('#1a1a1f', '#ffffff', d),
+  cardBorder:  (d) => dm('rgba(255,255,255,0.07)', 'rgba(15,23,42,0.08)', d),
+  surfaceBg:   (d) => dm('#242429', '#f5f3ee', d),
+  headerBg:    (d) => dm('#111115', '#ffffff', d),
+  divider:     (d) => dm('rgba(255,255,255,0.07)', 'rgba(15,23,42,0.07)', d),
+  textPrimary: (d) => dm('#f0f0f5', '#1a1a2e', d),
+  textSecond:  (d) => dm('#888896', '#666680', d),
+  textThird:   (d) => dm('#55555f', '#99999f', d),
+  btnPrimaryBg:(d) => dm('#2e2e38', '#1a1a2e', d),
+  btnPrimaryFg:(d) => dm('#f0f0f5', '#ffffff', d),
+  btnSecondBg: (d) => dm('#1e1e24', '#f5f3ee', d),
+  btnSecondFg: (d) => dm('#aaaabc', '#444455', d),
+  btnSecondBdr:(d) => dm('rgba(255,255,255,0.1)', 'rgba(15,23,42,0.12)', d),
+  btnGhostFg:  (d) => dm('#55555f', '#999999', d),
+  btnGhostBdr: (d) => dm('rgba(255,255,255,0.07)', 'rgba(15,23,42,0.1)', d),
+};
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -59,17 +50,16 @@ const FILTERS = [
   { id: 'trip',    label: 'Trips' },
   { id: 'event',   label: 'Events' },
   { id: 'public',  label: 'Public' },
-  { id: 'journey', label: 'Journey' },
 ];
 
 const TYPE_META = {
-  moment:  { label: 'Moment',  bg: '#EEEDFE', color: '#3C3489' },
-  trip:    { label: 'Trip',    bg: '#FAEEDA', color: '#633806' },
-  public:  { label: 'Public',  bg: '#EAF3DE', color: '#27500A' },
-  journey: { label: 'Journey', bg: '#FAECE7', color: '#712B13' },
+  moment:  { label: 'Moment',  light: { bg: '#EEEDFE', color: '#3C3489' }, dark: { bg: 'rgba(127,119,221,0.18)', color: '#a5b4fc' } },
+  trip:    { label: 'Trip',    light: { bg: '#FAEEDA', color: '#633806' }, dark: { bg: 'rgba(186,117,23,0.18)',  color: '#fbbf24' } },
+  public:  { label: 'Public',  light: { bg: '#EAF3DE', color: '#27500A' }, dark: { bg: 'rgba(99,153,34,0.18)',   color: '#86efac' } },
+  journey: { label: 'Journey', light: { bg: '#FAECE7', color: '#712B13' }, dark: { bg: 'rgba(216,90,48,0.18)',   color: '#fb923c' } },
 };
 
-// ─── sample data (remove / replace with real API data) ────────────────────────
+// ─── sample data ──────────────────────────────────────────────────────────────
 
 export const SAMPLE_FEED = [
   {
@@ -163,7 +153,7 @@ export const SAMPLE_FEED = [
   },
 ];
 
-// ─── small shared components ──────────────────────────────────────────────────
+// ─── shared small components ──────────────────────────────────────────────────
 
 const Avatar = ({ initials, color, textColor, size = 28 }) => (
   <div style={{
@@ -177,80 +167,49 @@ const Avatar = ({ initials, color, textColor, size = 28 }) => (
 );
 
 const TypeBadge = ({ type }) => {
+  const dark = useDark();
   const meta = TYPE_META[type] || TYPE_META.moment;
+  const palette = dark ? meta.dark : meta.light;
   return (
     <span style={{
       marginLeft: 'auto', padding: '3px 8px', borderRadius: 8,
       fontSize: 10, fontWeight: 700, letterSpacing: '.03em',
-      background: meta.bg, color: meta.color,
+      background: palette.bg, color: palette.color,
     }}>
       {meta.label}
     </span>
   );
 };
 
-const ActionBtn = ({ onClick, variant = 'primary', children, style }) => {
-  const base = {
-    display: 'flex', alignItems: 'center', gap: 5,
-    padding: '8px 13px', borderRadius: 12,
-    fontSize: 12, fontWeight: 500, cursor: 'pointer',
-    transition: 'all .15s', border: 'none',
-    fontFamily: 'inherit', whiteSpace: 'nowrap',
-    ...style,
-  };
+const ActionBtn = ({ onClick, variant = 'primary', children }) => {
+  const dark = useDark();
   const variants = {
-    primary:   { background: '#1a1a1a', color: '#fff' },
-    secondary: { background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', border: '0.5px solid var(--color-border-secondary)' },
-    ghost:     { background: 'transparent', color: 'var(--color-text-secondary)', border: '0.5px solid var(--color-border-tertiary)' },
+    primary:   { background: T.btnPrimaryBg(dark), color: T.btnPrimaryFg(dark), border: 'none' },
+    secondary: { background: T.btnSecondBg(dark),  color: T.btnSecondFg(dark),  border: `1px solid ${T.btnSecondBdr(dark)}` },
+    ghost:     { background: 'transparent',         color: T.btnGhostFg(dark),   border: `1px solid ${T.btnGhostBdr(dark)}` },
   };
   return (
-    <button style={{ ...base, ...variants[variant] }} onClick={onClick}>
+    <button style={{
+      display: 'flex', alignItems: 'center', gap: 5,
+      padding: '8px 13px', borderRadius: 12,
+      fontSize: 12, fontWeight: 500, cursor: 'pointer',
+      transition: 'all .15s', fontFamily: 'inherit', whiteSpace: 'nowrap',
+      ...variants[variant],
+    }} onClick={onClick}>
       {children}
     </button>
   );
 };
 
-// ─── icons (inline SVG to avoid icon library deps) ────────────────────────────
+// ─── icons ────────────────────────────────────────────────────────────────────
 
-const CalIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <rect x="1" y="2" width="11" height="10" rx="2" stroke="currentColor" strokeWidth="1.3"/>
-    <path d="M1 6h11M4 1v2M9 1v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-  </svg>
-);
-const PinIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <path d="M6.5 1.5C4.3 1.5 2.5 3.3 2.5 5.5c0 3.3 4 7 4 7s4-3.7 4-7c0-2.2-1.8-4-4-4z" stroke="currentColor" strokeWidth="1.3"/>
-  </svg>
-);
-const CopyIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
-    <path d="M2 8V2h6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-  </svg>
-);
-const SaveIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <path d="M2 2h9v9l-4.5-2L2 11V2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-  </svg>
-);
-const CheckIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <path d="M2 7l3 3 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-const GoalIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.3"/>
-    <path d="M4 6.5l2 2 3.5-3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-const ClockIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-    <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2"/>
-    <path d="M6 3.5v3l1.5 1" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-  </svg>
-);
+const CalIcon = () => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="2" width="11" height="10" rx="2" stroke="currentColor" strokeWidth="1.3"/><path d="M1 6h11M4 1v2M9 1v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>;
+const PinIcon = () => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5C4.3 1.5 2.5 3.3 2.5 5.5c0 3.3 4 7 4 7s4-3.7 4-7c0-2.2-1.8-4-4-4z" stroke="currentColor" strokeWidth="1.3"/></svg>;
+const CopyIcon = () => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M2 8V2h6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>;
+const SaveIcon = () => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 2h9v9l-4.5-2L2 11V2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>;
+const CheckIcon = () => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 7l3 3 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const GoalIcon = () => <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.3"/><path d="M4 6.5l2 2 3.5-3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const ClockIcon = () => <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2"/><path d="M6 3.5v3l1.5 1" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>;
 
 // ─── toast ────────────────────────────────────────────────────────────────────
 
@@ -270,67 +229,76 @@ const Toast = ({ message }) => {
   );
 };
 
-// ─── card variants ────────────────────────────────────────────────────────────
+// ─── card building blocks ─────────────────────────────────────────────────────
 
-const CardShell = ({ children, style }) => (
-  <div style={{
-    borderRadius: 20, overflow: 'hidden',
-    border: '0.5px solid var(--color-border-tertiary)',
-    background: 'var(--color-background-primary)',
-    ...style,
-  }}>
-    {children}
-  </div>
-);
+const CardShell = ({ children }) => {
+  const dark = useDark();
+  return (
+    <div style={{
+      borderRadius: 20, overflow: 'hidden',
+      border: `1px solid ${T.cardBorder(dark)}`,
+      background: T.cardBg(dark),
+    }}>
+      {children}
+    </div>
+  );
+};
 
 const CardImage = ({ emoji, url, bg }) => (
   <div style={{
     width: '100%', height: 160, display: 'flex',
     alignItems: 'center', justifyContent: 'center',
-    background: bg || 'var(--color-background-secondary)',
+    background: bg || '#e8e6e0',
     backgroundImage: url ? `url(${url})` : undefined,
     backgroundSize: 'cover', backgroundPosition: 'center',
-    fontSize: 52, userSelect: 'none',
+    fontSize: 56, userSelect: 'none',
   }}>
     {!url && emoji}
   </div>
 );
 
-const CardMeta = ({ author, type }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-    <Avatar initials={author.initials} color={author.avatarColor} textColor={author.avatarTextColor} />
-    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-      <strong style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>{author.name}</strong>
-      {' '}{type === 'moment' ? 'had a moment' : type === 'trip' ? 'shared a trip' : type === 'journey' ? 'shared a milestone' : '· Public event'}
-    </span>
-    <TypeBadge type={type} />
-  </div>
-);
+const CardMeta = ({ author, type }) => {
+  const dark = useDark();
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+      <Avatar initials={author.initials} color={author.avatarColor} textColor={author.avatarTextColor} />
+      <span style={{ fontSize: 12, color: T.textSecond(dark) }}>
+        <strong style={{ color: T.textPrimary(dark), fontWeight: 500 }}>{author.name}</strong>
+        {' '}{type === 'moment' ? 'had a moment' : type === 'trip' ? 'shared a trip' : type === 'journey' ? 'shared a milestone' : '· Public event'}
+      </span>
+      <TypeBadge type={type} />
+    </div>
+  );
+};
 
-const ReactRow = ({ reactions, reacted, onReact }) => (
-  <div style={{
-    display: 'flex', alignItems: 'center', gap: 12,
-    paddingTop: 10, marginTop: 10,
-    borderTop: '0.5px solid var(--color-border-tertiary)',
-  }}>
-    <button
-      onClick={onReact}
-      style={{
-        background: 'none', border: 'none', cursor: 'pointer',
-        fontSize: 13, color: reacted ? '#e24b4a' : 'var(--color-text-secondary)',
-        display: 'flex', alignItems: 'center', gap: 4,
-        padding: 0, fontFamily: 'inherit', transition: 'transform .1s',
-        fontWeight: reacted ? 600 : 400,
-      }}
-    >
-      ❤️ {reactions}
-    </button>
-  </div>
-);
+const ReactRow = ({ reactions, reacted, onReact }) => {
+  const dark = useDark();
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      paddingTop: 10, marginTop: 10,
+      borderTop: `1px solid ${T.divider(dark)}`,
+    }}>
+      <button
+        onClick={onReact}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: 13, color: reacted ? '#e24b4a' : T.textSecond(dark),
+          display: 'flex', alignItems: 'center', gap: 4,
+          padding: 0, fontFamily: 'inherit', transition: 'transform .1s',
+          fontWeight: reacted ? 600 : 400,
+        }}
+      >
+        ❤️ {reactions}
+      </button>
+    </div>
+  );
+};
 
 // ─── MOMENT CARD ──────────────────────────────────────────────────────────────
 
 const MomentCard = ({ item, onAddEvent, onSaveToSomeday, onReact, showToast }) => {
+  const dark = useDark();
   const [reacted, setReacted] = useState(item.userReacted || false);
   const [reactions, setReactions] = useState(item.reactions || 0);
 
@@ -347,13 +315,13 @@ const MomentCard = ({ item, onAddEvent, onSaveToSomeday, onReact, showToast }) =
       <div style={{ padding: 14 }}>
         <CardMeta author={item.author} type="moment" />
         {(item.date || item.location) && (
-          <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginBottom: 6, display: 'flex', gap: 8 }}>
+          <div style={{ fontSize: 11, color: T.textThird(dark), marginBottom: 6, display: 'flex', gap: 8 }}>
             {item.date && <span>{item.date}</span>}
             {item.location && <span>· {item.location}</span>}
           </div>
         )}
-        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 4, lineHeight: 1.35 }}>{item.title}</div>
-        {item.subtitle && <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 12, lineHeight: 1.4 }}>{item.subtitle}</div>}
+        <div style={{ fontSize: 15, fontWeight: 500, color: T.textPrimary(dark), marginBottom: 4, lineHeight: 1.35 }}>{item.title}</div>
+        {item.subtitle && <div style={{ fontSize: 13, color: T.textSecond(dark), marginBottom: 12, lineHeight: 1.4 }}>{item.subtitle}</div>}
         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
           <ActionBtn variant="primary" onClick={() => { onAddEvent?.(item); showToast('Added to your calendar! 📅'); }}>
             <CalIcon /> Add event
@@ -371,6 +339,7 @@ const MomentCard = ({ item, onAddEvent, onSaveToSomeday, onReact, showToast }) =
 // ─── TRIP CARD ────────────────────────────────────────────────────────────────
 
 const TripCard = ({ item, onSaveToSomeday, onCopyTrip, onReact, showToast }) => {
+  const dark = useDark();
   const [reacted, setReacted] = useState(item.userReacted || false);
   const [reactions, setReactions] = useState(item.reactions || 0);
   const [expanded, setExpanded] = useState(false);
@@ -389,20 +358,16 @@ const TripCard = ({ item, onSaveToSomeday, onCopyTrip, onReact, showToast }) => 
       <CardImage emoji={item.imageEmoji} url={item.imageUrl} bg={item.imageBg} />
       <div style={{ padding: 14 }}>
         <CardMeta author={item.author} type="trip" />
-        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 4, lineHeight: 1.35 }}>{item.title}</div>
-        {item.subtitle && <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 10, lineHeight: 1.4 }}>{item.subtitle}</div>}
+        <div style={{ fontSize: 15, fontWeight: 500, color: T.textPrimary(dark), marginBottom: 4, lineHeight: 1.35 }}>{item.title}</div>
+        {item.subtitle && <div style={{ fontSize: 13, color: T.textSecond(dark), marginBottom: 10, lineHeight: 1.4 }}>{item.subtitle}</div>}
 
-        {/* Itinerary preview */}
         {firstDay && (
-          <div style={{
-            background: 'var(--color-background-secondary)',
-            borderRadius: 12, padding: 10, marginBottom: 12,
-          }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-tertiary)', marginBottom: 6, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+          <div style={{ background: T.surfaceBg(dark), borderRadius: 12, padding: 10, marginBottom: 12 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: T.textThird(dark), marginBottom: 6, letterSpacing: '.04em', textTransform: 'uppercase' }}>
               {firstDay.day}
             </div>
             {(expanded ? firstDay.stops : firstDay.stops.slice(0, 3)).map((stop, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', fontSize: 12, color: 'var(--color-text-secondary)' }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', fontSize: 12, color: T.textSecond(dark) }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#7F77DD', flexShrink: 0 }} />
                 {stop}
               </div>
@@ -410,7 +375,7 @@ const TripCard = ({ item, onSaveToSomeday, onCopyTrip, onReact, showToast }) => 
             {item.totalStops > 3 && (
               <button
                 onClick={() => setExpanded(e => !e)}
-                style={{ fontSize: 11, color: 'var(--color-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0 0 14px', fontFamily: 'inherit' }}
+                style={{ fontSize: 11, color: T.textThird(dark), background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0 0 14px', fontFamily: 'inherit' }}
               >
                 {expanded ? '↑ Show less' : `+ ${item.totalStops - 3} more stops across the trip`}
               </button>
@@ -435,6 +400,7 @@ const TripCard = ({ item, onSaveToSomeday, onCopyTrip, onReact, showToast }) => 
 // ─── PUBLIC EVENT CARD ────────────────────────────────────────────────────────
 
 const PublicEventCard = ({ item, onJoinPublicEvent, onSaveToSomeday, onReact, showToast }) => {
+  const dark = useDark();
   const [reacted, setReacted] = useState(item.userReacted || false);
   const [reactions, setReactions] = useState(item.reactions || 0);
   const [joined, setJoined] = useState(false);
@@ -459,22 +425,21 @@ const PublicEventCard = ({ item, onJoinPublicEvent, onSaveToSomeday, onReact, sh
       <CardImage emoji={item.imageEmoji} url={item.imageUrl} bg={item.imageBg} />
       <div style={{ padding: 14 }}>
         <CardMeta author={item.author} type="public" />
-        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 8, lineHeight: 1.35 }}>{item.title}</div>
+        <div style={{ fontSize: 15, fontWeight: 500, color: T.textPrimary(dark), marginBottom: 8, lineHeight: 1.35 }}>{item.title}</div>
 
-        {/* Date/time badge */}
         {(item.eventDate || item.eventTime) && (
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '4px 10px', borderRadius: 8,
-            background: '#EAF3DE', color: '#27500A',
-            fontSize: 11, fontWeight: 600, marginBottom: 8,
+            padding: '4px 10px', borderRadius: 8, marginBottom: 8,
+            background: dark ? 'rgba(99,153,34,0.18)' : '#EAF3DE',
+            color: dark ? '#86efac' : '#27500A',
+            fontSize: 11, fontWeight: 600,
           }}>
             <ClockIcon />
             {[item.eventDate, item.eventTime, item.location].filter(Boolean).join(' · ')}
           </div>
         )}
 
-        {/* Friends going */}
         {item.friendsGoing && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
             <div style={{ display: 'flex' }}>
@@ -485,21 +450,18 @@ const PublicEventCard = ({ item, onJoinPublicEvent, onSaveToSomeday, onReact, sh
                   fontSize: 8, fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   marginLeft: i === 0 ? 0 : -6,
-                  border: '1.5px solid var(--color-background-primary)',
+                  border: `1.5px solid ${T.cardBg(dark)}`,
                 }}>
                   {a.initials}
                 </div>
               ))}
             </div>
-            <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{item.friendsGoing}</span>
+            <span style={{ fontSize: 12, color: T.textSecond(dark) }}>{item.friendsGoing}</span>
           </div>
         )}
 
         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-          <ActionBtn
-            variant={joined ? 'secondary' : 'primary'}
-            onClick={handleJoin}
-          >
+          <ActionBtn variant={joined ? 'secondary' : 'primary'} onClick={handleJoin}>
             <CheckIcon /> {joined ? 'Joined ✓' : 'Join event'}
           </ActionBtn>
           <ActionBtn variant="ghost" onClick={() => { onSaveToSomeday?.(item); showToast('Saved to someday list ✨'); }}>
@@ -515,6 +477,7 @@ const PublicEventCard = ({ item, onJoinPublicEvent, onSaveToSomeday, onReact, sh
 // ─── JOURNEY CARD ─────────────────────────────────────────────────────────────
 
 const JourneyCard = ({ item, onStartGoal, onReact, showToast }) => {
+  const dark = useDark();
   const [reacted, setReacted] = useState(item.userReacted || false);
   const [reactions, setReactions] = useState(item.reactions || 0);
   const [started, setStarted] = useState(false);
@@ -532,18 +495,21 @@ const JourneyCard = ({ item, onStartGoal, onReact, showToast }) => {
     <CardShell>
       <div style={{ padding: 16 }}>
         <CardMeta author={item.author} type="journey" />
-        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 4, lineHeight: 1.35 }}>{item.title}</div>
-        {item.subtitle && <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 10, lineHeight: 1.4, fontStyle: 'italic' }}>{item.subtitle}</div>}
+        <div style={{ fontSize: 15, fontWeight: 500, color: T.textPrimary(dark), marginBottom: 4, lineHeight: 1.35 }}>{item.title}</div>
+        {item.subtitle && (
+          <div style={{ fontSize: 13, color: T.textSecond(dark), marginBottom: 10, lineHeight: 1.4, fontStyle: 'italic' }}>
+            {item.subtitle}
+          </div>
+        )}
 
-        {/* Progress bar */}
         {item.streakTotal > 0 && (
-          <div style={{ background: 'var(--color-background-secondary)', borderRadius: 12, padding: 10, marginBottom: 12 }}>
+          <div style={{ background: T.surfaceBg(dark), borderRadius: 12, padding: 10, marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}>Progress</span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#639922' }}>{item.streakCurrent} / {item.streakTotal} days</span>
+              <span style={{ fontSize: 11, color: T.textThird(dark), fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' }}>Progress</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: dark ? '#86efac' : '#639922' }}>{item.streakCurrent} / {item.streakTotal} days</span>
             </div>
-            <div style={{ height: 6, background: 'var(--color-border-tertiary)', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${pct}%`, background: '#639922', borderRadius: 3, transition: 'width .6s ease' }} />
+            <div style={{ height: 6, background: T.divider(dark), borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${pct}%`, background: dark ? '#4ade80' : '#639922', borderRadius: 3, transition: 'width .6s ease' }} />
             </div>
           </div>
         )}
@@ -604,65 +570,71 @@ const ExplorePage = ({
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary)', fontFamily: 'var(--font-sans, system-ui, sans-serif)' }}>
+    <DarkCtx.Provider value={darkMode}>
+      <div style={{ minHeight: '100vh', background: T.pageBg(darkMode), fontFamily: 'var(--font-sans, system-ui, sans-serif)' }}>
 
-      {/* Header */}
-      <div style={{ padding: '16px 18px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--color-background-primary)', borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
-        <span style={{ fontSize: 24, fontWeight: 500, color: 'var(--color-text-primary)' }}>Explore ✦</span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            style={{ padding: '6px 12px', borderRadius: 10, fontSize: 12, fontWeight: 500, background: 'var(--color-background-secondary)', color: 'var(--color-text-secondary)', border: '0.5px solid var(--color-border-tertiary)', cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            Friends
-          </button>
-          <button
-            style={{ padding: '6px 12px', borderRadius: 10, fontSize: 12, fontWeight: 500, background: 'var(--color-background-secondary)', color: 'var(--color-text-secondary)', border: '0.5px solid var(--color-border-tertiary)', cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            Nearby
-          </button>
-        </div>
-      </div>
-
-      {/* Filter chips */}
-      <div style={{
-        display: 'flex', gap: 7, padding: '12px 16px',
-        overflowX: 'auto', background: 'var(--color-background-primary)',
-        borderBottom: '0.5px solid var(--color-border-tertiary)',
-        scrollbarWidth: 'none',
-      }}>
-        {FILTERS.map(f => (
-          <button
-            key={f.id}
-            onClick={() => setActiveFilter(f.id)}
-            style={{
-              padding: '7px 16px', borderRadius: 20,
-              fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
-              cursor: 'pointer', transition: 'all .15s',
-              fontFamily: 'inherit',
-              ...(activeFilter === f.id
-                ? { background: 'var(--color-text-primary)', color: 'var(--color-background-primary)', border: '1.5px solid transparent' }
-                : { background: 'var(--color-background-secondary)', color: 'var(--color-text-secondary)', border: '1.5px solid var(--color-border-tertiary)' }
-              ),
-            }}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Feed */}
-      <div style={{ padding: '14px 14px 100px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--color-text-tertiary)', fontSize: 14 }}>
-            Nothing here yet — invite friends to get the feed going.
+        {/* Header */}
+        <div style={{
+          padding: '16px 18px 0',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: T.headerBg(darkMode),
+          borderBottom: `1px solid ${T.divider(darkMode)}`,
+        }}>
+          <span style={{ fontSize: 24, fontWeight: 500, color: T.textPrimary(darkMode) }}>Explore ✦</span>
+          <div style={{ display: 'flex', gap: 8, paddingBottom: 16 }}>
+            {['Friends', 'Nearby'].map(label => (
+              <button key={label} style={{
+                padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: 500,
+                background: T.surfaceBg(darkMode), color: T.textSecond(darkMode),
+                border: `1px solid ${T.btnSecondBdr(darkMode)}`,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+                {label}
+              </button>
+            ))}
           </div>
-        ) : (
-          filtered.map(renderCard)
-        )}
-      </div>
+        </div>
 
-      <Toast message={toastMsg} />
-    </div>
+        {/* Filter chips */}
+        <div style={{
+          display: 'flex', gap: 7, padding: '12px 16px',
+          overflowX: 'auto', background: T.headerBg(darkMode),
+          borderBottom: `1px solid ${T.divider(darkMode)}`,
+          scrollbarWidth: 'none',
+        }}>
+          {FILTERS.map(f => (
+            <button
+              key={f.id}
+              onClick={() => setActiveFilter(f.id)}
+              style={{
+                padding: '7px 16px', borderRadius: 20,
+                fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
+                cursor: 'pointer', transition: 'all .15s', fontFamily: 'inherit',
+                ...(activeFilter === f.id
+                  ? { background: T.textPrimary(darkMode), color: T.pageBg(darkMode), border: '1px solid transparent' }
+                  : { background: T.surfaceBg(darkMode), color: T.textSecond(darkMode), border: `1px solid ${T.btnSecondBdr(darkMode)}` }
+                ),
+              }}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Feed */}
+        <div style={{ padding: '14px 14px 100px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '48px 24px', color: T.textThird(darkMode), fontSize: 14 }}>
+              Nothing here yet — invite friends to get the feed going.
+            </div>
+          ) : (
+            filtered.map(renderCard)
+          )}
+        </div>
+
+        <Toast message={toastMsg} />
+      </div>
+    </DarkCtx.Provider>
   );
 };
 

@@ -1,12 +1,12 @@
 import { useState } from "react";
 
 const CATEGORIES = [
-  { id: "travel",    label: "Travel",    icon: "✈",  bg: "#E1F5EE", color: "#085041", border: "#1D9E75", glow: "rgba(29,158,117,.15)" },
-  { id: "food",      label: "Food",      icon: "◎",  bg: "#FAEEDA", color: "#633806", border: "#BA7517", glow: "rgba(186,117,23,.15)" },
-  { id: "adventure", label: "Adventure", icon: "▲",  bg: "#FAECE7", color: "#712B13", border: "#D85A30", glow: "rgba(216,90,48,.15)" },
-  { id: "culture",   label: "Culture",   icon: "◈",  bg: "#EEEDFE", color: "#3C3489", border: "#7F77DD", glow: "rgba(127,119,221,.15)" },
-  { id: "home",      label: "Home",      icon: "⌂",  bg: "#EAF3DE", color: "#27500A", border: "#639922", glow: "rgba(99,153,34,.15)" },
-  { id: "wellness",  label: "Wellness",  icon: "◡",  bg: "#FBEAF0", color: "#72243E", border: "#D4537E", glow: "rgba(212,83,126,.15)" },
+  { id: "travel",    label: "Travel",    icon: "✈",  bg: "#E1F5EE", color: "#085041", border: "#1D9E75", glow: "rgba(29,158,117,.15)",  darkBg: "#0d2e22", darkColor: "#6ee7b7", darkBorder: "#1D9E75", darkGlow: "rgba(29,158,117,.25)" },
+  { id: "food",      label: "Food",      icon: "◎",  bg: "#FAEEDA", color: "#633806", border: "#BA7517", glow: "rgba(186,117,23,.15)",  darkBg: "#2e1e07", darkColor: "#fbbf24", darkBorder: "#BA7517", darkGlow: "rgba(186,117,23,.25)" },
+  { id: "adventure", label: "Adventure", icon: "▲",  bg: "#FAECE7", color: "#712B13", border: "#D85A30", glow: "rgba(216,90,48,.15)",   darkBg: "#2e1209", darkColor: "#fb923c", darkBorder: "#D85A30", darkGlow: "rgba(216,90,48,.25)" },
+  { id: "culture",   label: "Culture",   icon: "◈",  bg: "#EEEDFE", color: "#3C3489", border: "#7F77DD", glow: "rgba(127,119,221,.15)", darkBg: "#1e1b3a", darkColor: "#a5b4fc", darkBorder: "#7F77DD", darkGlow: "rgba(127,119,221,.25)" },
+  { id: "home",      label: "Home",      icon: "⌂",  bg: "#EAF3DE", color: "#27500A", border: "#639922", glow: "rgba(99,153,34,.15)",   darkBg: "#162608", darkColor: "#86efac", darkBorder: "#639922", darkGlow: "rgba(99,153,34,.25)" },
+  { id: "wellness",  label: "Wellness",  icon: "◡",  bg: "#FBEAF0", color: "#72243E", border: "#D4537E", glow: "rgba(212,83,126,.15)",  darkBg: "#2e0f1e", darkColor: "#f9a8d4", darkBorder: "#D4537E", darkGlow: "rgba(212,83,126,.25)" },
 ];
 
 const SOURCES = [
@@ -69,10 +69,12 @@ const SUGGESTIONS = [
   "See the Northern Lights",
 ];
 
-export default function AddDreamSheet({ onAdd, onDismiss }) {
+export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
   const [dream, setDream] = useState("");
   const [selectedCat, setSelectedCat] = useState("travel");
   const [selectedSources, setSelectedSources] = useState(new Set());
+
+  const dm = (light, dark) => (darkMode ? dark : light);
 
   const toggleSource = (id) => {
     setSelectedSources((prev) => {
@@ -93,26 +95,57 @@ export default function AddDreamSheet({ onAdd, onDismiss }) {
 
   return (
     <div style={styles.overlay} onClick={() => onDismiss?.()}>
-      <div style={styles.sheet} onClick={(event) => event.stopPropagation()}>
+      <div
+        style={{
+          ...styles.sheet,
+          background: dm("#fffdf8", "#18181c"),
+          border: `1px solid ${dm("rgba(15,23,42,0.08)", "rgba(255,255,255,0.08)")}`,
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
         {/* Close button */}
-        <button style={styles.closeBtn} onClick={() => onDismiss?.()}>✕</button>
+        <button
+          style={{
+            ...styles.closeBtn,
+            background: dm("#e8e5e0", "#2a2a32"),
+            color: dm("#555", "#aaa"),
+          }}
+          onClick={() => onDismiss?.()}
+        >
+          ✕
+        </button>
 
         {/* Drag handle */}
-        <div style={styles.dragHandle} />
+        <div
+          style={{
+            ...styles.dragHandle,
+            background: dm("rgba(15,23,42,0.15)", "rgba(255,255,255,0.15)"),
+          }}
+        />
 
         {/* Header */}
         <div style={styles.headerBand}>
-          <h2 style={styles.title}>Add a dream ✦</h2>
-          <p style={styles.subtitle}>What do you want to do someday?</p>
+          <h2 style={{ ...styles.title, color: dm("#1a1a2e", "#f0eefc") }}>Add a dream ✦</h2>
+          <p style={{ ...styles.subtitle, color: dm("#666", "#888") }}>What do you want to do someday?</p>
         </div>
 
-        <div style={styles.divider} />
+        <div
+          style={{
+            ...styles.divider,
+            background: dm("rgba(15,23,42,0.08)", "rgba(255,255,255,0.08)"),
+          }}
+        />
 
         {/* Dream input */}
         <div style={styles.section}>
-          <div style={styles.secLabel}>The dream</div>
+          <div style={{ ...styles.secLabel, color: dm("#999", "#666") }}>The dream</div>
           <input
-            style={styles.dreamField}
+            style={{
+              ...styles.dreamField,
+              border: `1.5px solid ${dm("rgba(15,23,42,0.15)", "rgba(255,255,255,0.12)")}`,
+              color: dm("#1a1a2e", "#f0eefc"),
+              background: dm("#f5f3ee", "#222228"),
+            }}
             value={dream}
             onChange={(e) => setDream(e.target.value)}
             placeholder="e.g. Trek in Patagonia…"
@@ -121,7 +154,7 @@ export default function AddDreamSheet({ onAdd, onDismiss }) {
               e.target.style.boxShadow = "0 0 0 4px rgba(127,119,221,0.12)";
             }}
             onBlur={(e) => {
-              e.target.style.borderColor = "var(--color-border-secondary)";
+              e.target.style.borderColor = darkMode ? "rgba(255,255,255,0.12)" : "rgba(15,23,42,0.15)";
               e.target.style.boxShadow = "none";
             }}
           />
@@ -129,19 +162,23 @@ export default function AddDreamSheet({ onAdd, onDismiss }) {
             {SUGGESTIONS.map((s) => (
               <button
                 key={s}
-                style={styles.sugChip}
+                style={{
+                  ...styles.sugChip,
+                  border: `1.5px dashed ${dm("rgba(15,23,42,0.2)", "rgba(255,255,255,0.15)")}`,
+                  color: dm("#888", "#666"),
+                }}
                 onClick={() => setDream(s)}
                 onMouseEnter={(e) => {
-                  e.target.style.borderColor = "#7F77DD";
-                  e.target.style.borderStyle = "solid";
-                  e.target.style.background = "#EEEDFE";
-                  e.target.style.color = "#534AB7";
+                  e.currentTarget.style.borderColor = "#7F77DD";
+                  e.currentTarget.style.borderStyle = "solid";
+                  e.currentTarget.style.background = dm("#EEEDFE", "rgba(127,119,221,0.18)");
+                  e.currentTarget.style.color = dm("#534AB7", "#a5b4fc");
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.borderColor = "var(--color-border-secondary)";
-                  e.target.style.borderStyle = "dashed";
-                  e.target.style.background = "transparent";
-                  e.target.style.color = "var(--color-text-secondary)";
+                  e.currentTarget.style.borderColor = darkMode ? "rgba(255,255,255,0.15)" : "rgba(15,23,42,0.2)";
+                  e.currentTarget.style.borderStyle = "dashed";
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = dm("#888", "#666");
                 }}
               >
                 {s}
@@ -152,7 +189,7 @@ export default function AddDreamSheet({ onAdd, onDismiss }) {
 
         {/* Category */}
         <div style={styles.section}>
-          <div style={styles.secLabel}>Category</div>
+          <div style={{ ...styles.secLabel, color: dm("#999", "#666") }}>Category</div>
           <div style={styles.catGrid}>
             {CATEGORIES.map((cat) => {
               const isActive = selectedCat === cat.id;
@@ -162,10 +199,12 @@ export default function AddDreamSheet({ onAdd, onDismiss }) {
                   onClick={() => setSelectedCat(cat.id)}
                   style={{
                     ...styles.catBtn,
-                    background: cat.bg,
-                    color: cat.color,
-                    border: isActive ? `2px solid ${cat.border}` : "2px solid transparent",
-                    boxShadow: isActive ? `0 0 0 3px ${cat.glow}` : "none",
+                    background: dm(cat.bg, cat.darkBg),
+                    color: dm(cat.color, cat.darkColor),
+                    border: isActive
+                      ? `2px solid ${dm(cat.border, cat.darkBorder)}`
+                      : `2px solid ${dm("transparent", "rgba(255,255,255,0.05)")}`,
+                    boxShadow: isActive ? `0 0 0 3px ${dm(cat.glow, cat.darkGlow)}` : "none",
                   }}
                 >
                   <span style={{ fontSize: 20, lineHeight: 1 }}>{cat.icon}</span>
@@ -178,7 +217,7 @@ export default function AddDreamSheet({ onAdd, onDismiss }) {
 
         {/* Source */}
         <div style={styles.section}>
-          <div style={styles.secLabel}>Where'd this come from?</div>
+          <div style={{ ...styles.secLabel, color: dm("#999", "#666") }}>Where'd this come from?</div>
           <div style={styles.sourceRow}>
             {SOURCES.map((src) => {
               const isActive = selectedSources.has(src.id);
@@ -188,9 +227,13 @@ export default function AddDreamSheet({ onAdd, onDismiss }) {
                   onClick={() => toggleSource(src.id)}
                   style={{
                     ...styles.srcPill,
-                    borderColor: isActive ? "#7F77DD" : "var(--color-border-secondary)",
-                    background: isActive ? "#EEEDFE" : "var(--color-background-secondary)",
-                    color: isActive ? "#3C3489" : "var(--color-text-secondary)",
+                    borderColor: isActive
+                      ? "#7F77DD"
+                      : dm("rgba(15,23,42,0.15)", "rgba(255,255,255,0.12)"),
+                    background: isActive
+                      ? dm("#EEEDFE", "rgba(127,119,221,0.18)")
+                      : dm("#f5f3ee", "#222228"),
+                    color: isActive ? dm("#3C3489", "#a5b4fc") : dm("#888", "#666"),
                   }}
                 >
                   {src.icon}
@@ -207,6 +250,8 @@ export default function AddDreamSheet({ onAdd, onDismiss }) {
           disabled={!dream.trim()}
           style={{
             ...styles.addBtn,
+            background: dm("#1a1a2e", "#f0eefc"),
+            color: dm("#fffdf8", "#18181c"),
             opacity: dream.trim() ? 1 : 0.4,
             cursor: dream.trim() ? "pointer" : "not-allowed",
           }}
@@ -223,7 +268,7 @@ const styles = {
     position: "fixed",
     inset: 0,
     zIndex: 10030,
-    background: "rgba(0,0,0,0.4)",
+    background: "rgba(0,0,0,0.55)",
     display: "flex",
     alignItems: "flex-end",
     justifyContent: "center",
@@ -233,31 +278,23 @@ const styles = {
     position: "relative",
     width: "100%",
     maxWidth: 480,
-    background: "#fffdf8",
     borderRadius: "20px 20px 0 0",
-    border: "1px solid rgba(15, 23, 42, 0.08)",
-    boxShadow: "0 24px 80px rgba(15, 23, 42, 0.22)",
+    boxShadow: "0 24px 80px rgba(0,0,0,0.35)",
     paddingBottom: 32,
   },
   dragHandle: {
     width: 40,
     height: 5,
-    background: "var(--color-border-secondary)",
     borderRadius: 3,
     margin: "14px auto 22px",
-  },
-  headerBand: {
-    padding: "0 22px 18px",
   },
   closeBtn: {
     position: "absolute",
     top: 12,
     right: 14,
-    background: "#e8e5e0",
     border: "none",
     fontSize: 13,
     fontWeight: 600,
-    color: "#555",
     cursor: "pointer",
     width: 30,
     height: 30,
@@ -269,20 +306,20 @@ const styles = {
     lineHeight: 1,
     zIndex: 1,
   },
+  headerBand: {
+    padding: "0 22px 18px",
+  },
   title: {
     fontSize: 22,
     fontWeight: 500,
-    color: "var(--color-text-primary)",
     margin: "0 0 3px",
   },
   subtitle: {
     fontSize: 14,
-    color: "var(--color-text-secondary)",
     margin: 0,
   },
   divider: {
     height: 0.5,
-    background: "var(--color-border-tertiary)",
     marginBottom: 20,
   },
   section: {
@@ -292,7 +329,6 @@ const styles = {
   secLabel: {
     fontSize: 11,
     fontWeight: 500,
-    color: "var(--color-text-tertiary)",
     letterSpacing: "0.06em",
     textTransform: "uppercase",
     marginBottom: 10,
@@ -300,13 +336,10 @@ const styles = {
   dreamField: {
     width: "100%",
     boxSizing: "border-box",
-    border: "1.5px solid var(--color-border-secondary)",
     borderRadius: 14,
     padding: "13px 16px",
     fontSize: 16,
     fontFamily: "inherit",
-    color: "var(--color-text-primary)",
-    background: "var(--color-background-secondary)",
     outline: "none",
     transition: "border-color .2s, box-shadow .2s",
   },
@@ -319,9 +352,7 @@ const styles = {
   sugChip: {
     padding: "7px 13px",
     borderRadius: 20,
-    border: "1.5px dashed var(--color-border-secondary)",
     fontSize: 13,
-    color: "var(--color-text-secondary)",
     background: "transparent",
     cursor: "pointer",
     fontFamily: "inherit",
@@ -368,8 +399,6 @@ const styles = {
     width: "calc(100% - 44px)",
     margin: "0 22px",
     padding: 15,
-    background: "var(--color-text-primary)",
-    color: "var(--color-background-primary)",
     border: "none",
     borderRadius: 16,
     fontSize: 15,
