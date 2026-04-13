@@ -320,7 +320,7 @@ const MomentCard = ({ item, onAddEvent, onSaveToSomeday, onReact, showToast }) =
             {item.location && <span>· {item.location}</span>}
           </div>
         )}
-        <div style={{ fontSize: 15, fontWeight: 500, color: T.textPrimary(dark), marginBottom: 4, lineHeight: 1.35 }}>{item.title}</div>
+        <div className="explore-heading" style={{ fontSize: 20, fontWeight: 700, color: T.textPrimary(dark), marginBottom: 4, lineHeight: 1.25 }}>{item.title}</div>
         {item.subtitle && <div style={{ fontSize: 13, color: T.textSecond(dark), marginBottom: 12, lineHeight: 1.4 }}>{item.subtitle}</div>}
         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
           <ActionBtn variant="primary" onClick={() => { onAddEvent?.(item); showToast('Added to your calendar! 📅'); }}>
@@ -358,7 +358,7 @@ const TripCard = ({ item, onSaveToSomeday, onCopyTrip, onReact, showToast }) => 
       <CardImage emoji={item.imageEmoji} url={item.imageUrl} bg={item.imageBg} />
       <div style={{ padding: 14 }}>
         <CardMeta author={item.author} type="trip" />
-        <div style={{ fontSize: 15, fontWeight: 500, color: T.textPrimary(dark), marginBottom: 4, lineHeight: 1.35 }}>{item.title}</div>
+        <div className="explore-heading" style={{ fontSize: 20, fontWeight: 700, color: T.textPrimary(dark), marginBottom: 4, lineHeight: 1.25 }}>{item.title}</div>
         {item.subtitle && <div style={{ fontSize: 13, color: T.textSecond(dark), marginBottom: 10, lineHeight: 1.4 }}>{item.subtitle}</div>}
 
         {firstDay && (
@@ -425,7 +425,7 @@ const PublicEventCard = ({ item, onJoinPublicEvent, onSaveToSomeday, onReact, sh
       <CardImage emoji={item.imageEmoji} url={item.imageUrl} bg={item.imageBg} />
       <div style={{ padding: 14 }}>
         <CardMeta author={item.author} type="public" />
-        <div style={{ fontSize: 15, fontWeight: 500, color: T.textPrimary(dark), marginBottom: 8, lineHeight: 1.35 }}>{item.title}</div>
+        <div className="explore-heading" style={{ fontSize: 20, fontWeight: 700, color: T.textPrimary(dark), marginBottom: 8, lineHeight: 1.25 }}>{item.title}</div>
 
         {(item.eventDate || item.eventTime) && (
           <div style={{
@@ -495,7 +495,7 @@ const JourneyCard = ({ item, onStartGoal, onReact, showToast }) => {
     <CardShell>
       <div style={{ padding: 16 }}>
         <CardMeta author={item.author} type="journey" />
-        <div style={{ fontSize: 15, fontWeight: 500, color: T.textPrimary(dark), marginBottom: 4, lineHeight: 1.35 }}>{item.title}</div>
+        <div className="explore-heading" style={{ fontSize: 20, fontWeight: 700, color: T.textPrimary(dark), marginBottom: 4, lineHeight: 1.25 }}>{item.title}</div>
         {item.subtitle && (
           <div style={{ fontSize: 13, color: T.textSecond(dark), marginBottom: 10, lineHeight: 1.4, fontStyle: 'italic' }}>
             {item.subtitle}
@@ -527,6 +527,15 @@ const JourneyCard = ({ item, onStartGoal, onReact, showToast }) => {
     </CardShell>
   );
 };
+
+// ─── font loader ─────────────────────────────────────────────────────────────
+
+const CaveatLoader = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
+    .explore-heading { font-family: 'Caveat', cursive; }
+  `}</style>
+);
 
 // ─── MAIN EXPLORE PAGE ────────────────────────────────────────────────────────
 
@@ -571,6 +580,7 @@ const ExplorePage = ({
 
   return (
     <DarkCtx.Provider value={darkMode}>
+      <CaveatLoader />
       <div style={{ minHeight: '100vh', background: T.pageBg(darkMode), fontFamily: 'var(--font-sans, system-ui, sans-serif)' }}>
 
         {/* Header */}
@@ -580,7 +590,7 @@ const ExplorePage = ({
           background: T.headerBg(darkMode),
           borderBottom: `1px solid ${T.divider(darkMode)}`,
         }}>
-          <span style={{ fontSize: 24, fontWeight: 500, color: T.textPrimary(darkMode) }}>Explore ✦</span>
+          <span className="explore-heading" style={{ fontSize: 32, fontWeight: 700, color: T.textPrimary(darkMode) }}>Explore ✦</span>
           <div style={{ display: 'flex', gap: 8, paddingBottom: 16 }}>
             {['Friends', 'Nearby'].map(label => (
               <button key={label} style={{

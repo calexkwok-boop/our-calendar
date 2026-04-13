@@ -9201,17 +9201,17 @@ useEffect(() => {
       return {
         matchTitle: true,
         accent: normalized.solidColor,
-        backgroundFrom: mixHexColors(normalized.solidColor, '#f9f8f7', 0.94),
-        backgroundVia: mixHexColors(normalized.solidColor, '#f9f8f7', 0.90),
-        backgroundTo: mixHexColors(normalized.solidColor, '#f4f3f0', 0.84),
+        backgroundFrom: '#f8f7f6',
+        backgroundVia: '#f4f3f1',
+        backgroundTo: '#efede9',
       };
     }
     return {
       matchTitle: true,
       accent: normalized.gradientVia,
-      backgroundFrom: mixHexColors(normalized.gradientFrom, '#f9f8f7', 0.93),
-      backgroundVia: mixHexColors(normalized.gradientVia, '#f9f8f7', 0.90),
-      backgroundTo: mixHexColors(normalized.gradientTo, '#f4f3f0', 0.86),
+      backgroundFrom: '#f8f7f6',
+      backgroundVia: '#f4f3f1',
+      backgroundTo: '#efede9',
     };
   };
 
