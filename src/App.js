@@ -11549,6 +11549,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       const date = 1 + offset + ((nth - 1) * 7);
       return getDateKey(new Date(year, targetMonth - 1, date));
     };
+    if (month === 4) {
+      const apr15 = new Date(year, 3, 15);
+      const dow15 = apr15.getDay();
+      let taxDay = 15;
+      if (dow15 === 6) taxDay = 17; // Saturday → Monday
+      if (dow15 === 0) taxDay = 16; // Sunday → Monday
+      if (day === taxDay) {
+        return { localName: 'Tax Day', name: 'Tax Day', aliases: ['taxday'] };
+      }
+    }
     if (month === 2 && day === 14) {
       return { localName: "Valentine's Day", name: "Valentine's Day", aliases: ['Valentines Day', 'Valentine Day'] };
     }
@@ -11588,7 +11598,16 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   const getHolidayForDate = useCallback((dateKey) => {
     const year = parseInt(dateKey.split('-')[0]);
     const yearHolidays = holidays[year] || [];
-    return yearHolidays.find(h => h.date === dateKey) || getDerivedHolidayForDate(dateKey) || null;
+    const derived = getDerivedHolidayForDate(dateKey);
+    if (derived) return derived;
+    const apiHoliday = yearHolidays.find((h) => {
+      if (h.date !== dateKey) return false;
+      // Skip Tax Day from the API — we compute it ourselves to ensure the correct date
+      const name = String(h.localName || h.name || '').replace(/[^a-z]/gi, '').toLowerCase();
+      if (name === 'taxday') return false;
+      return true;
+    });
+    return apiHoliday || null;
   }, [holidays]);
 
   // Weather code ? display object with emoji/label and a color
