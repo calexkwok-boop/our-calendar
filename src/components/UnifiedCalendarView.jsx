@@ -221,6 +221,20 @@ const UnifiedCalendarView = ({
 
   return (
     <div className="unified-calendar-view">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
+        .cal-heading { font-family: 'Caveat', cursive; }
+        .paper-texture {
+          background-image:
+            repeating-linear-gradient(0deg, rgba(0,0,0,.018) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.018) 3px),
+            repeating-linear-gradient(90deg, rgba(0,0,0,.018) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.018) 3px);
+        }
+        .dark .paper-texture {
+          background-image:
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.03) 3px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.025) 3px);
+        }
+      `}</style>
       {/* Persistent Header - Always visible */}
       <GreetingHeader
         todayEvents={todayEvents}
@@ -366,10 +380,8 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, onScrollToT
     <div
       className="mb-6 rounded-3xl p-5 shadow-lg border"
       style={{
-        background: darkMode
-          ? `linear-gradient(135deg, ${hexToRgba(accent, 0.18)} 0%, rgba(15,23,42,0.85) 100%)`
-          : `linear-gradient(135deg, ${hexToRgba(accent, 0.08)} 0%, rgba(255,255,255,0.96) 100%)`,
-        borderColor: darkMode ? 'rgba(255,255,255,0.10)' : hexToRgba(accent, 0.15),
+        background: darkMode ? 'rgba(31,41,55,0.9)' : '#fdf9f4',
+        borderColor: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)',
       }}
     >
       <div className="flex items-center justify-between">
@@ -382,7 +394,8 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, onScrollToT
             <button
               type="button"
               onClick={() => onScrollToTodaySchedule?.()}
-              className="text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors cal-heading"
+              style={{ fontSize: 20 }}
             >
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </button>
@@ -522,7 +535,8 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
           <button
             type="button"
             onClick={goToToday}
-            className="text-base font-bold text-gray-900 transition-colors hover:text-purple-600 dark:text-white dark:hover:text-purple-400 sm:text-lg"
+            className="font-bold text-gray-900 transition-colors hover:text-purple-600 dark:text-white dark:hover:text-purple-400 cal-heading"
+            style={{ fontSize: 28 }}
           >
             {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </button>
@@ -676,7 +690,7 @@ const WeekGrid = ({
               ? `linear-gradient(135deg, ${hexToRgba(accent, 0.95)} 0%, ${hexToRgba(accent, 0.75)} 100%)`
               : isTodayDate
                 ? (darkMode ? hexToRgba(accent, 0.18) : hexToRgba(accent, 0.12))
-                : (darkMode ? 'rgba(31,41,55,0.9)' : 'rgba(255,255,255,0.9)'),
+                : (darkMode ? 'rgba(31,41,55,0.9)' : '#fdf9f4'),
             boxShadow: isSelected
               ? `0 12px 28px rgba(0,0,0,0.25), 0 0 0 4px ${hexToRgba(accent, darkMode ? 0.4 : 0.3)}`
               : isTodayDate
@@ -788,7 +802,7 @@ const CalendarGrid = ({
     return d.getTime();
   };
   return (
-    <div className="grid grid-cols-7 gap-2 sm:gap-3 mb-6">
+    <div className="grid grid-cols-7 gap-2 sm:gap-3 mb-6 paper-texture">
       {getDaysInMonth(currentDate).map((date, index) => {
         if (!date) {
           return <div key={index} className="invisible" />;
@@ -834,7 +848,7 @@ const CalendarGrid = ({
                 ? (darkMode ? hexToRgba(accent, 0.18) : hexToRgba(accent, 0.12))
                 : isInTrip
                   ? (darkMode ? 'linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(29,78,216,0.12) 100%)' : 'linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%)')
-                  : (darkMode ? 'rgba(31,41,55,0.9)' : 'rgba(255,255,255,0.9)'),
+                  : (darkMode ? 'rgba(31,41,55,0.9)' : '#fdf9f4'),
             outline: !isSelected && isTodayDate ? `2px solid ${hexToRgba(accent, 0.5)}` : undefined,
             outlineOffset: 0,
           }}
@@ -920,18 +934,18 @@ const SelectedDateDetails = ({
   return (
     <div 
       id="todays-events"
-      className="mt-6 rounded-3xl backdrop-blur-sm p-5 shadow-xl border"
+      className="mt-6 rounded-3xl backdrop-blur-sm p-5 shadow-xl border paper-texture"
       style={{
         animation: 'fadeInUp 0.4s ease-out',
-        background: darkMode ? 'rgba(31,41,55,0.9)' : 'rgba(255,255,255,0.92)',
-        borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(accent, 0.2)
+        background: darkMode ? 'rgba(31,41,55,0.9)' : '#fdf9f4',
+        borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.07)'
       }}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-          {isSelectedToday 
-            ? "Today's Schedule" 
+        <h3 className="font-bold text-gray-900 dark:text-white cal-heading" style={{ fontSize: 26 }}>
+          {isSelectedToday
+            ? "Today's Schedule"
             : selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
           }
         </h3>

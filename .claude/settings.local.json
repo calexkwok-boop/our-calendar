@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(python3 -c ':*)",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "Bash(ls -lh /c/Users/a_kwo/Desktop/our-calendar/src/components/*Event*.jsx /c/Users/a_kwo/Desktop/our-calendar/src/components/*event*.jsx)"
     ]
   }
 }
