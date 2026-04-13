@@ -20,7 +20,9 @@ import StartTripModal from "./components/StartTripModal";
 import JourneyQuoteDisplay from "./components/JourneyQuoteDisplay";
 import TrophyCase, { deriveJourneyTrophyCase } from "./components/TrophyCase";
 import WelcomeCover from "./components/WelcomeCover";
-import ExploreTab from "./components/ExploreTab";
+import ExplorePage from "./components/ExplorePage";
+import NewCalendarLook from "./components/Newcalendarlook";
+import SharedListPanel from "./components/SharedListPanel";
 import MemorySystem, { MemoryCreator as ImportedMemoryCreator } from "./components/MemorySystem";
 import ScrapbookHomeHybrid from "./components/ScrapbookHomeHybrid";
 import AddDreamSheet from "./components/AddDreamSheet";
@@ -26764,308 +26766,30 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
 
-        {showListPanel && (
-          <div
-            ref={listPanelRef}
-            className={`glass-panel relative overflow-hidden rounded-[28px] p-4 sm:p-5 mb-6 border dark:border-gray-700 transition-all shadow-[0_24px_60px_rgba(15,23,42,0.14)] ${
-              listPanelAttention ? 'ring-2' : ''
-            }`}
-            style={listPanelAttention ? { borderColor: themeAccentBorder, boxShadow: `0 0 0 2px ${themeAccentBorder}, 0 24px 60px rgba(15,23,42,0.14)` } : { borderColor: themeAccentBorder }}
-          >
-            <div className="pointer-events-none absolute inset-0 overflow-hidden">
-              <div className="absolute -top-20 right-[-3.5rem] h-40 w-40 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${hexToRgba(activeLayerPageTheme.accent, darkMode ? 0.28 : 0.18)} 0%, transparent 70%)` }} />
-              <div className="absolute -bottom-16 left-[-2.5rem] h-32 w-32 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${hexToRgba(activeLayerPageTheme.backgroundTo, darkMode ? 0.24 : 0.12)} 0%, transparent 70%)` }} />
-            </div>
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ borderColor: themeAccentBorder, backgroundColor: darkMode ? hexToRgba(activeLayerPageTheme.accent, 0.12) : hexToRgba(activeLayerPageTheme.accent, 0.08), color: activeLayerPageTheme.accent }}>
-                  <span>Lists</span>
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: activeLayerPageTheme.accent }} />
-                  <span>{sharedListGroups.length}</span>
-                </div>
-                <h3 className="mt-3 text-lg sm:text-[1.35rem] font-semibold" style={themeAccentHeadingStyle}>Shared Lists</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Clean space for groceries, reminders, and quick to-dos.</p>
-              </div>
-              <button
-                onClick={() => setShowListPanel(false)}
-                className="rounded-full border p-2 transition-colors hover:bg-white/70 dark:hover:bg-white/10"
-                style={{ borderColor: darkMode ? 'rgba(255,255,255,0.1)' : hexToRgba(activeLayerPageTheme.accent, 0.16) }}
-              >
-                <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-              </button>
-            </div>
-
-            <div
-              className="mb-4 rounded-[24px] border p-3.5 backdrop-blur-sm"
-              style={{
-                borderColor: darkMode ? 'rgba(255,255,255,0.1)' : hexToRgba(activeLayerPageTheme.accent, 0.18),
-                background: darkMode
-                  ? `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.12)} 0%, rgba(15,23,42,0.82) 100%)`
-                  : `linear-gradient(135deg, ${hexToRgba(activeLayerPageTheme.accent, 0.08)} 0%, rgba(255,255,255,0.98) 100%)`,
-              }}
-            >
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  value={newSharedListTitle}
-                  onChange={(e) => setNewSharedListTitle(e.target.value)}
-                  placeholder="Create new list title"
-                  className="flex-1 rounded-2xl border px-3.5 py-2.5 text-base sm:text-sm dark:text-white focus:ring-1"
-                  style={{
-                    fontSize: '16px',
-                    borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16),
-                    backgroundColor: darkMode ? 'rgba(15,23,42,0.86)' : 'rgba(255,255,255,0.9)',
-                  }}
-                  onKeyPress={(e) => e.key === 'Enter' && createSharedList()}
-                />
-                <button
-                  onClick={createSharedList}
-                  className="px-4 py-2.5 text-sm text-white rounded-2xl hover:shadow-lg transition-all font-semibold"
-                  style={themeAccentButtonStyle}
-                  title="Create list"
-                >
-                  Create
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-2">
-              {sharedListGroups.map(group => (
-                editingListGroupId === group.id ? (
-                  <div key={group.id} className="shrink-0 flex items-center gap-1.5 px-2 py-1.5 rounded-full border bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm" style={{ borderColor: themeAccentBorder }}>
-                    <input
-                      autoFocus
-                      value={editingListGroupTitle}
-                      onChange={(e) => setEditingListGroupTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') submitEditingListGroup();
-                        if (e.key === 'Escape') cancelEditingListGroup();
-                      }}
-                      onBlur={submitEditingListGroup}
-                      className="w-36 px-2 py-1 text-base sm:text-xs border rounded-xl bg-white dark:bg-gray-800 dark:text-white"
-                      style={{ fontSize: '16px', borderColor: themeAccentBorder }}
-                    />
-                    <button
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={submitEditingListGroup}
-                      className="px-2 py-1 text-[11px] rounded-md"
-                      style={themeAccentButtonStyle}
-                    >
-                      Save
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    key={group.id}
-                    onClick={() => {
-                      setSwipedSharedListItemId(null);
-                      setSharedListItemSwipeDrag({ id: null, offset: 0 });
-                      swipingSharedListItemIdRef.current = null;
-                      setSelectedSharedListId(group.id);
-                      cancelEditingListGroup();
-                    }}
-                    className={`shrink-0 px-3.5 py-2 rounded-full text-xs font-medium border transition-all ${
-                      selectedSharedListId === group.id
-                        ? 'text-white border-transparent'
-                        : 'bg-white/75 dark:bg-slate-800/80 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 backdrop-blur-sm'
-                    }`}
-                    style={selectedSharedListId === group.id ? themeAccentButtonStyle : undefined}
-                  >
-                    {group.title}
-                  </button>
-                )
-              ))}
-              <button
-                onClick={() => {
-                  const selected = sharedListGroups.find(group => group.id === selectedSharedListId);
-                  if (selected) startEditingListGroup(selected);
-                }}
-                disabled={!selectedSharedListId}
-                className="shrink-0 px-3.5 py-2 rounded-full text-xs font-medium bg-blue-50/90 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800 disabled:opacity-50"
-                title="Rename selected list"
-              >
-                Rename
-              </button>
-              <button
-                onClick={() => deleteSharedList(selectedSharedListId)}
-                disabled={!selectedSharedListId}
-                className="shrink-0 px-3.5 py-2 rounded-full text-xs font-medium bg-red-50/90 dark:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 disabled:opacity-50"
-                title="Delete selected list"
-              >
-                Delete
-              </button>
-            </div>
-            {selectedSharedListGroup && (
-              <p className="mb-3 px-1 text-[11px] text-gray-500 dark:text-gray-400">
-                {selectedSharedListGroup.title}: {totalSharedListItems} item{totalSharedListItems === 1 ? '' : 's'} · {completedSharedListCount} done
-              </p>
-            )}
-
-            <div className="mb-4 flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={newListItemText}
-                onChange={(e) => setNewListItemText(e.target.value)}
-                placeholder="Add an item..."
-                className="flex-1 rounded-2xl border px-3.5 py-2.5 text-base sm:text-sm dark:text-white focus:ring-1"
-                style={{
-                  fontSize: '16px',
-                  borderColor: darkMode ? 'rgba(255,255,255,0.12)' : hexToRgba(activeLayerPageTheme.accent, 0.16),
-                  backgroundColor: darkMode ? 'rgba(15,23,42,0.7)' : 'rgba(255,255,255,0.85)',
-                }}
-                onKeyPress={(e) => e.key === 'Enter' && addSharedListItem()}
-                disabled={!selectedSharedListId}
-              />
-              <button
-                onClick={addSharedListItem}
-                className="px-4 py-2.5 text-sm rounded-2xl transition-colors disabled:opacity-50 font-semibold"
-                style={themeAccentButtonStyle}
-                title="Add item"
-                disabled={!selectedSharedListId || !newListItemText.trim()}
-              >
-                Add
-              </button>
-            </div>
-            {listError && (
-              <div className="mb-3 p-2.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-600 dark:text-red-300">
-                {listError}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              {sharedListGroups.length === 0 && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 italic">Create a list above, then add items below.</p>
-              )}
-              {sharedListGroups.length > 0 && !selectedSharedListId && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 italic">Pick a list to start adding items.</p>
-              )}
-              {selectedSharedListId && totalSharedListItems === 0 && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 italic">No items yet. Add your first one above.</p>
-              )}
-              {false && incompleteSharedListItems.map(item => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-2.5 rounded-[20px] border px-3 py-3 backdrop-blur-sm transition-all"
-                  style={{
-                    borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, 0.1),
-                    background: darkMode
-                      ? 'rgba(15,23,42,0.74)'
-                      : 'rgba(255,255,255,0.82)',
-                  }}
-                >
-                  <button
-                    onClick={() => toggleSharedListItem(item)}
-                    className={`h-5 w-5 rounded-full border flex items-center justify-center text-[11px] transition-all ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500 bg-white/70 dark:bg-slate-800/70'}`}
-                    title={item.done ? 'Mark incomplete' : 'Mark complete'}
-                  >
-                    {item.done ? '✓' : ''}
-                  </button>
-                  {editingListItemId === item.id ? (
-                    <input
-                      autoFocus
-                      value={editingListText}
-                      onChange={(e) => setEditingListText(e.target.value)}
-                      onBlur={() => saveSharedListItemText(item)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') saveSharedListItemText(item);
-                        if (e.key === 'Escape') { setEditingListItemId(null); setEditingListText(''); }
-                      }}
-                      className="flex-1 text-sm px-2 py-1.5 border dark:bg-gray-800 dark:text-white rounded-xl focus:ring-1"
-                      style={{ borderColor: themeAccentBorder }}
-                    />
-                  ) : (
-                    <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>
-                      {item.text}
-                    </span>
-                  )}
-                  {editingListItemId !== item.id && (
-                    <button
-                      onClick={() => startEditingListItem(item)}
-                      className={`rounded-xl p-1.5 ${darkMode ? 'border border-white/10 bg-white/10 hover:bg-white/15 text-gray-100' : ''}`}
-                      style={darkMode ? undefined : themeAccentSoftButtonStyle}
-                      title="Edit item"
-                    >
-                      <Edit2 className={`w-3.5 h-3.5 ${darkMode ? 'text-gray-100' : ''}`} style={darkMode ? undefined : themeAccentTextStyle} />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => removeSharedListItem(item.id)}
-                    className="rounded-xl p-1.5 hover:bg-red-100 dark:hover:bg-red-900"
-                    title="Delete item"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                  </button>
-                </div>
-              ))}
-              {incompleteSharedListItems.map(item => renderSharedListRow(item))}
-              {completedSharedListItems.length > 0 && (
-                  <div className="pt-2">
-                    <div className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      Completed ({completedSharedListItems.length})
-                    </div>
-                  <div className="space-y-2">
-                    {false && completedSharedListItems.map(item => (
-                      <div
-                        key={item.id}
-                        className="flex items-center gap-2.5 rounded-[20px] border px-3 py-3 opacity-85 backdrop-blur-sm"
-                        style={{
-                          borderColor: darkMode ? 'rgba(255,255,255,0.08)' : hexToRgba(activeLayerPageTheme.accent, 0.08),
-                          background: darkMode
-                            ? 'rgba(15,23,42,0.56)'
-                            : 'rgba(248,250,252,0.9)',
-                        }}
-                      >
-                        <button
-                          onClick={() => toggleSharedListItem(item)}
-                          className={`h-5 w-5 rounded-full border flex items-center justify-center text-[11px] ${item.done ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-500'}`}
-                          title={item.done ? 'Mark incomplete' : 'Mark complete'}
-                        >
-                          {item.done ? '✓' : ''}
-                        </button>
-                        {editingListItemId === item.id ? (
-                          <input
-                            autoFocus
-                            value={editingListText}
-                            onChange={(e) => setEditingListText(e.target.value)}
-                            onBlur={() => saveSharedListItemText(item)}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') saveSharedListItemText(item);
-                              if (e.key === 'Escape') { setEditingListItemId(null); setEditingListText(''); }
-                            }}
-                            className="flex-1 text-sm px-2 py-1.5 border dark:bg-gray-800 dark:text-white rounded-xl focus:ring-1"
-                            style={{ borderColor: themeAccentBorder }}
-                          />
-                        ) : (
-                          <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>
-                            {item.text}
-                          </span>
-                        )}
-                        {editingListItemId !== item.id && (
-                          <button
-                            onClick={() => startEditingListItem(item)}
-                            className={`rounded-xl p-1.5 ${darkMode ? 'border border-white/10 bg-white/10 hover:bg-white/15 text-gray-100' : ''}`}
-                            style={darkMode ? undefined : themeAccentSoftButtonStyle}
-                            title="Edit item"
-                          >
-                            <Edit2 className={`w-3.5 h-3.5 ${darkMode ? 'text-gray-100' : ''}`} style={darkMode ? undefined : themeAccentTextStyle} />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => removeSharedListItem(item.id)}
-                          className="rounded-xl p-1.5 hover:bg-red-100 dark:hover:bg-red-900"
-                          title="Delete item"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                        </button>
-                      </div>
-                    ))}
-                    {completedSharedListItems.map(item => renderSharedListRow(item, { completed: true }))}
-                  </div>
-                </div>
-              )}
-              </div>
-            </div>
-          )}
+        <SharedListPanel
+          showListPanel={showListPanel}
+          setShowListPanel={setShowListPanel}
+          newSharedListTitle={newSharedListTitle}
+          setNewSharedListTitle={setNewSharedListTitle}
+          createSharedList={createSharedList}
+          sharedListGroups={sharedListGroups}
+          selectedSharedListId={selectedSharedListId}
+          setSelectedSharedListId={setSelectedSharedListId}
+          deleteSharedList={deleteSharedList}
+          newListItemText={newListItemText}
+          setNewListItemText={setNewListItemText}
+          addSharedListItem={addSharedListItem}
+          listError={listError}
+          sharedListItems={sharedListItems}
+          toggleSharedListItem={toggleSharedListItem}
+          editingListItemId={editingListItemId}
+          editingListText={editingListText}
+          setEditingListText={setEditingListText}
+          saveSharedListItemText={saveSharedListItemText}
+          setEditingListItemId={setEditingListItemId}
+          startEditingListItem={startEditingListItem}
+          removeSharedListItem={removeSharedListItem}
+        />
 
         {showNotesPanel && (
           <div className="glass-panel rounded-2xl p-4 sm:p-5 mb-6 border" style={{ borderColor: themeAccentBorder }}>
@@ -28379,7 +28103,7 @@ transform: translateY(0);
 
           {bottomNavTab === 'calendar' && (
   React.createElement(
-    require('./components/UnifiedCalendarView').default,
+    NewCalendarLook,
     {
       currentDate: currentDate,
       setCurrentDate: setCurrentDate,
@@ -29549,46 +29273,31 @@ transform: translateY(0);
             })()}
 
             {bottomNavTab === 'explore' && (
-              <ExploreTab
-                publicCalendars={publicCalendars}
-                user={user}
-                layers={layers}
-                exploreSearch={exploreSearch}
-                setExploreSearch={setExploreSearch}
-                exploreSortBy={exploreSortBy}
-                setExploreSortBy={setExploreSortBy}
-                loadPublicCalendars={loadPublicCalendars}
-                joinPublicCalendar={(layerId) => {
-                  const lid = String(layerId || '').trim();
-                  const row = (publicCalendars || []).find((r) => String(r?.id || '') === lid)
-                    || (layers || []).find((r) => String(r?.id || '') === lid)
-                    || { id: lid };
-                  return joinPublicCalendar(row);
+              <ExplorePage
+                currentUser={{
+                  id: user?.id || 'guest',
+                  name: user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'You',
+                  avatarUrl: currentUserProfilePhotoUrl || undefined,
                 }}
-                leavePublicCalendar={leavePublicCalendarById}
-                handlePublicCalendarVote={handlePublicCalendarVote}
-                exploreLoading={exploreLoading}
-                exploreError={exploreError}
-                                exploreVoteBusyByLayer={exploreVoteBusyByLayer}
+                onAddEvent={() => openHomeAddEventModal()}
+                onSaveToSomeday={(item) => {
+                  setBucketList((prev) => [
+                    {
+                      id: uuidv4(),
+                      text: item.title,
+                      category: item.type === 'trip' ? 'travel' : 'fun',
+                      sources: [],
+                      emoji: item.imageEmoji || '✨',
+                      createdAt: new Date().toISOString(),
+                    },
+                    ...(Array.isArray(prev) ? prev : []),
+                  ]);
+                }}
+                onJoinPublicEvent={(item) => {
+                  if (item?.calendarId) joinPublicCalendar({ id: item.calendarId });
+                }}
+                onReact={() => {}}
                 darkMode={darkMode}
-                categories={categories}
-                activeLayerPageTheme={activeLayerPageTheme}
-                themeAccentButtonStyle={themeAccentButtonStyle}
-                onOpenCalendar={(layerId) => {
-                  const lid = String(layerId || '').trim();
-                  if (!lid) return;
-                  setActiveLayerId(lid);
-                  if (user?.id) localStorage.setItem(`active-layer-${user.id}`, lid);
-                  setBottomNavTab('home');
-                }}
-                onEditCalendar={(layerId) => {
-                  const lid = String(layerId || '').trim();
-                  if (!lid) return;
-                  const row = (publicCalendars || []).find((r) => String(r?.id || '') === lid)
-                    || (layers || []).find((r) => String(r?.id || '') === lid)
-                    || null;
-                  if (row) openPublishLayerModal(row);
-                }}
               />
 
 
