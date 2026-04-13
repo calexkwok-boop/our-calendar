@@ -28931,14 +28931,27 @@ transform: translateY(0);
           )}
 
           {(bottomNavTab === 'events' || bottomNavTab === 'explore') && (
-          <div className="glass-panel rounded-2xl border border-white/50 dark:border-gray-700/70 p-4 sm:p-6">
+          <div
+            className="rounded-2xl border p-4 sm:p-6"
+            style={{
+              backgroundColor: darkMode ? 'rgba(31,41,55,0.9)' : '#fdf9f4',
+              backgroundImage: darkMode
+                ? 'repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.03) 3px), repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.025) 3px)'
+                : 'repeating-linear-gradient(0deg, rgba(0,0,0,.018) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.018) 3px), repeating-linear-gradient(90deg, rgba(0,0,0,.018) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.018) 3px)',
+              borderColor: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)',
+            }}
+          >
 
             {bottomNavTab === 'events' && (
               <>
+                <style>{`
+                  @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
+                  .ev-heading { font-family: 'Caveat', cursive; }
+                `}</style>
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <div>
-                    <h3 className="text-lg sm:text-xl font-semibold" style={themeAccentHeadingStyle}>Events</h3>
-                    <div className="mt-2 inline-flex rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/80 p-1">
+                    <h3 className="ev-heading font-bold" style={{ ...themeAccentHeadingStyle, fontSize: 32 }}>Events</h3>
+                    <div className="mt-2 inline-flex rounded-2xl border p-1" style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : '#f0ede7', borderColor: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }}>
                       <button
                         onClick={() => setEventsTabView('upcoming')}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${eventsTabView === 'upcoming' ? '' : 'text-gray-600 dark:text-gray-300'}`}
@@ -29032,7 +29045,7 @@ transform: translateY(0);
                 {filteredUpcomingUserTabEvents.length === 0 ? (
                   <div className="text-center py-10">
                     <div className="text-4xl mb-3">🎾</div>
-                    <div className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">No upcoming events</div>
+                    <div className="ev-heading font-bold text-gray-500 dark:text-gray-400 mb-1" style={{ fontSize: 22 }}>No upcoming events</div>
                     <div className="text-xs text-gray-400 dark:text-gray-500">Adjust filters or tap "New Event" to create one</div>
                   </div>
                 ) : (
@@ -29099,13 +29112,14 @@ transform: translateY(0);
                             onPointerUp={endEventSwipeDrag}
                             onPointerCancel={endEventSwipeDrag}
                             onClick={() => { openUserTabEvent(event, popupMeta); }}
-                            className="relative z-10 w-full text-left rounded-xl border border-white/40 dark:border-white/10 bg-white/60 dark:bg-white/[0.04] p-3 transition-all hover:bg-white/80 dark:hover:bg-white/[0.07]"
-                            style={{ transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease', touchAction: 'pan-y' }}
+                            className="relative z-10 w-full text-left rounded-xl border p-3 transition-all"
+                            style={{ transform: `translateX(${rowOffset}px)`, transition: eventSwipeDrag.id === eventSwipeKey ? 'none' : 'transform 180ms ease', touchAction: 'pan-y', backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : '#fffcf7', borderColor: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)' }}
                           >
                             <div className="flex items-center gap-3">
                               <div
-                                className="flex h-10 w-12 shrink-0 items-center justify-center rounded-xl border text-[11px] font-bold uppercase tracking-[0.12em]"
+                                className="ev-heading flex h-10 w-12 shrink-0 items-center justify-center rounded-xl border font-bold"
                                 style={{
+                                  fontSize: 18,
                                   borderColor: darkMode ? 'rgba(255,255,255,0.10)' : `${activeLayerPageTheme.accent}24`,
                                   background: darkMode ? 'rgba(255,255,255,0.04)' : `${activeLayerPageTheme.accent}10`,
                                   color: darkMode ? 'rgba(255,255,255,0.78)' : activeLayerPageTheme.accent,
