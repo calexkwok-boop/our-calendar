@@ -94,6 +94,9 @@ export default function AddDreamSheet({ onAdd, onDismiss }) {
   return (
     <div style={styles.overlay} onClick={() => onDismiss?.()}>
       <div style={styles.sheet} onClick={(event) => event.stopPropagation()}>
+        {/* Close button */}
+        <button style={styles.closeBtn} onClick={() => onDismiss?.()}>✕</button>
+
         {/* Drag handle */}
         <div style={styles.dragHandle} />
 
@@ -227,6 +230,7 @@ const styles = {
     fontFamily: "var(--font-sans, system-ui, sans-serif)",
   },
   sheet: {
+    position: "relative",
     width: "100%",
     maxWidth: 480,
     background: "#fffdf8",
@@ -244,6 +248,24 @@ const styles = {
   },
   headerBand: {
     padding: "0 22px 18px",
+  },
+  closeBtn: {
+    position: "absolute",
+    top: 14,
+    right: 16,
+    background: "rgba(15,23,42,0.06)",
+    border: "none",
+    fontSize: 14,
+    color: "var(--color-text-secondary)",
+    cursor: "pointer",
+    width: 28,
+    height: 28,
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontFamily: "inherit",
+    lineHeight: 1,
   },
   title: {
     fontSize: 22,
