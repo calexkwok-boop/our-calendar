@@ -6,6 +6,7 @@ import { getToken, onMessage } from "firebase/messaging";
 import { deleteObject, getDownloadURL, ref as firebaseStorageRef, uploadBytes } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid';
 import { getFirebaseStorageIfConfigured, getMessagingIfSupported } from "./firebase";
+import imageCompression from 'browser-image-compression';
 import GauntletPanel from "./components/GauntletPanel";
 import ExpenseTrackerPanel from "./components/ExpenseTrackerPanel";
 import RoundRobinPanel from "./components/RoundRobinPanel";
@@ -6100,13 +6101,14 @@ function App() {
     setPhotoUploadError(false);
     setPhotoUploadMessage('');
     try {
-      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const compressedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 1200 });
+      const ext = (compressedFile.name.split('.').pop() || 'jpg').toLowerCase();
       const filename = `${activeSubCalendar.id}/background_${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
       let backgroundUrl = '';
 
       if (USE_R2_TRIP_PHOTO_STORAGE) {
         try {
-          const uploadResult = await uploadTripPhotoFileToR2(filename, file);
+          const uploadResult = await uploadTripPhotoFileToR2(filename, compressedFile);
           backgroundUrl = String(uploadResult?.url || '').trim();
         } catch (r2Error) {
           console.warn('R2 trip background upload failed; falling back to other storage.', r2Error);
@@ -6115,7 +6117,7 @@ function App() {
 
       if (!backgroundUrl && USE_FIREBASE_TRIP_PHOTO_STORAGE) {
         try {
-          const uploadResult = await uploadTripPhotoFileToFirebase(filename, file);
+          const uploadResult = await uploadTripPhotoFileToFirebase(filename, compressedFile);
           backgroundUrl = String(uploadResult?.url || '').trim();
         } catch (firebaseError) {
           console.warn('Firebase trip background upload failed; falling back to Supabase Storage.', firebaseError);
@@ -6126,8 +6128,8 @@ function App() {
         let selectedBucket = null;
         let uploadError = null;
         for (const bucket of TRIP_PHOTO_BUCKETS) {
-          const { error } = await supabase.storage.from(bucket).upload(filename, file, {
-            contentType: file.type,
+          const { error } = await supabase.storage.from(bucket).upload(filename, compressedFile, {
+            contentType: compressedFile.type,
             cacheControl: '31536000',
           });
           if (!error) {
@@ -10011,7 +10013,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
     setUploadingLayerMedia(true);
     try {
-      const processedFile = file;
+      const processedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 1200 });
       const ext = String((processedFile?.type || '').split('/')[1] || (String(file.name || '').split('.').pop() || 'jpg')).toLowerCase();
       const filename = mediaKind === 'icon'
         ? `${PROFILE_PHOTO_STORAGE_PREFIX}/${String(user.id || '').trim()}/icon_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`
