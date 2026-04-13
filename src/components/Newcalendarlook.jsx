@@ -385,9 +385,6 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, onScrollToT
             >
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </button>
-            <div className="text-xs mt-0.5" style={{ color: darkMode ? '#9ca3af' : '#a08060' }}>
-              your calendar
-            </div>
           </div>
         </div>
 

@@ -29645,7 +29645,7 @@ transform: translateY(0);
     {/* -- Create Sub-Calendar Modal -- */}
     {!activeSubCalendar && (
       <div
-        className="fixed inset-x-0 bottom-0 z-30 px-3"
+        className="fixed inset-x-0 bottom-0 z-[10001] px-3"
         style={{
           paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
           transform: 'translate3d(0, 0, 0)',
@@ -33725,7 +33725,7 @@ transform: translateY(0);
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-stone-50 px-5 py-5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] [webkit-overflow-scrolling:touch] dark:bg-slate-950 sm:px-6">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-stone-50 px-5 py-5 pb-[max(6rem,calc(env(safe-area-inset-bottom)+6rem))] [webkit-overflow-scrolling:touch] dark:bg-slate-950 sm:px-6">
           <div className="mx-auto w-full max-w-2xl space-y-4 pb-6">
             <div className="flex items-center justify-between gap-3 rounded-[24px] border border-gray-200/80 dark:border-white/10 bg-white/75 dark:bg-slate-900/65 px-4 py-3">
               <div className="min-w-0">
