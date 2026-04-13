@@ -19769,6 +19769,8 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   });
   const homeReflectionStreak = homeReflectionStats.streak;
   const primaryJourneyGoal = sortedJourneyGoals.find((goal) => goal?.active !== false) || null;
+  const todayWeatherIcon = weather[todayKey]?.icon;
+  const weatherGreetingEmoji = (todayWeatherIcon && todayWeatherIcon !== 'FOG') ? todayWeatherIcon : homeGreetingEmoji;
   const primaryJourneyGoalProgress = getJourneyGoalProgress(primaryJourneyGoal);
   const primaryJourneyProgressText = formatJourneyProgressText(primaryJourneyGoal);
   const primaryJourneyTodayEntries = (journeyState?.entries || []).filter((entry) => (
@@ -27570,7 +27572,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             darkMode={darkMode}
             greeting={homeGreeting}
             greetingName={homeGreetingName}
-            greetingEmoji={homeGreetingEmoji}
+            greetingEmoji={weatherGreetingEmoji}
             todayLabel={new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             showHeader={false}
             tripsPreview={homeTripsPreviewCards}
