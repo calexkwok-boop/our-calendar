@@ -1391,6 +1391,22 @@ const writeQuickThoughtsState = (userId, thoughts) => {
     window.localStorage.setItem(getQuickThoughtsStorageKey(userId), JSON.stringify(Array.isArray(thoughts) ? thoughts : []));
   } catch {}
 };
+const getQuickThoughtsTombstonesKey = (userId) => `quick-thoughts-deleted-${String(userId || 'guest').trim() || 'guest'}`;
+const readQuickThoughtTombstones = (userId) => {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(getQuickThoughtsTombstonesKey(userId)) || '[]');
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch { return new Set(); }
+};
+const addQuickThoughtTombstone = (userId, id) => {
+  if (typeof window === 'undefined' || !id) return;
+  try {
+    const existing = readQuickThoughtTombstones(userId);
+    existing.add(id);
+    window.localStorage.setItem(getQuickThoughtsTombstonesKey(userId), JSON.stringify([...existing]));
+  } catch {}
+};
 const readBucketListState = (userId) => {
   if (typeof window === 'undefined') return [];
   try {
@@ -19888,9 +19904,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         setQuickThoughtsHydratedUserId(currentQuickThoughtsUserId);
         return;
       }
-      const remoteThoughts = await readRemoteQuickThoughtsState(user?.id);
+      const tombstones = readQuickThoughtTombstones(user?.id);
+      const remoteThoughts = (await readRemoteQuickThoughtsState(user?.id))
+        .filter((t) => !tombstones.has(String(t?.id || '')));
       if (cancelled) return;
-      const mergedThoughts = mergePersistedQuickThoughts(remoteThoughts, localThoughts);
+      const mergedThoughts = mergePersistedQuickThoughts(remoteThoughts, localThoughts)
+        .filter((t) => !tombstones.has(String(t?.id || '')));
       setQuickThoughts(mergedThoughts);
       writeQuickThoughtsState(user?.id, mergedThoughts);
       void persistRemoteQuickThoughtsState(user?.id, mergedThoughts);
@@ -23850,6 +23869,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const deleteQuickThought = (thought) => {
     const thoughtId = String(thought?.id || '').trim();
     if (!thoughtId) return;
+    addQuickThoughtTombstone(user?.id, thoughtId);
     setQuickThoughts((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== thoughtId));
   };
 
