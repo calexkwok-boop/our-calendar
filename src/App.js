@@ -67,6 +67,7 @@ const SUPABASE_URL = String(process.env.REACT_APP_SUPABASE_URL || '').trim().rep
 const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
 const PROFILE_PHOTO_STORAGE_PREFIX = 'profile-photos';
 const PROFILE_PHOTO_BUCKETS = ['layer-media', 'layer_media', 'trip-photos', 'trip_photos'];
+const AVATAR_BUCKET = 'avatars';
 const TRIP_PHOTO_STORAGE_PROVIDER = String(process.env.REACT_APP_TRIP_PHOTO_STORAGE_PROVIDER || 'supabase').trim().toLowerCase();
 const USE_FIREBASE_TRIP_PHOTO_STORAGE = TRIP_PHOTO_STORAGE_PROVIDER === 'firebase';
 const USE_R2_TRIP_PHOTO_STORAGE = TRIP_PHOTO_STORAGE_PROVIDER === 'r2';
@@ -2031,9 +2032,9 @@ const LOCKED_DEFAULT_LAYER_TITLE_STYLE = Object.freeze({
 const LOCKED_DEFAULT_LAYER_PAGE_THEME = Object.freeze({
   matchTitle: true,
   accent: '#7c3aed',
-  backgroundFrom: '#fdf2f8',
-  backgroundVia: '#f5f3ff',
-  backgroundTo: '#eef2ff',
+  backgroundFrom: '#f8f7f6',
+  backgroundVia: '#f4f3f1',
+  backgroundTo: '#efede9',
   coverOpacity: 0.82,
   publicMemberPostsRequireApproval: true,
 });
@@ -9200,17 +9201,17 @@ useEffect(() => {
       return {
         matchTitle: true,
         accent: normalized.solidColor,
-        backgroundFrom: mixHexColors(normalized.solidColor, '#ffffff', 0.9),
-        backgroundVia: mixHexColors(normalized.solidColor, '#ffffff', 0.82),
-        backgroundTo: mixHexColors(normalized.solidColor, '#dbeafe', 0.72),
+        backgroundFrom: mixHexColors(normalized.solidColor, '#f9f8f7', 0.94),
+        backgroundVia: mixHexColors(normalized.solidColor, '#f9f8f7', 0.90),
+        backgroundTo: mixHexColors(normalized.solidColor, '#f4f3f0', 0.84),
       };
     }
     return {
       matchTitle: true,
       accent: normalized.gradientVia,
-      backgroundFrom: mixHexColors(normalized.gradientFrom, '#ffffff', 0.88),
-      backgroundVia: mixHexColors(normalized.gradientVia, '#ffffff', 0.84),
-      backgroundTo: mixHexColors(normalized.gradientTo, '#ffffff', 0.8),
+      backgroundFrom: mixHexColors(normalized.gradientFrom, '#f9f8f7', 0.93),
+      backgroundVia: mixHexColors(normalized.gradientVia, '#f9f8f7', 0.90),
+      backgroundTo: mixHexColors(normalized.gradientTo, '#f4f3f0', 0.86),
     };
   };
 
@@ -10049,10 +10050,67 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     try {
       const processedFile = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 1200 });
       const ext = String((processedFile?.type || '').split('/')[1] || (String(file.name || '').split('.').pop() || 'jpg')).toLowerCase();
-      const filename = mediaKind === 'icon'
-        ? `${PROFILE_PHOTO_STORAGE_PREFIX}/${String(user.id || '').trim()}/icon_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`
-        : `layer-media/${activeLayerId}/${mediaKind}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
-      const buckets = mediaKind === 'icon' ? TRIP_PHOTO_BUCKETS : PROFILE_PHOTO_BUCKETS;
+
+      // ── Avatar upload: dedicated public `avatars` bucket, user-scoped path ──
+      if (mediaKind === 'icon') {
+        const oldAvatarUrl = String(
+          profilePhotoOverrideUrl || user?.user_metadata?.avatar_url || ''
+        ).trim();
+        const avatarPath = `${String(user.id).trim()}/avatar_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+
+        const { error: uploadErr } = await supabase.storage
+          .from(AVATAR_BUCKET)
+          .upload(avatarPath, processedFile, { contentType: processedFile.type || file.type, upsert: false });
+        if (uploadErr) {
+          alert(`Could not upload image: ${uploadErr.message || 'Unknown upload error'}`);
+          return false;
+        }
+
+        const { data: urlData } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(avatarPath);
+        const publicUrl = String(urlData?.publicUrl || '').trim();
+        if (!publicUrl) {
+          alert('Upload succeeded but no public URL was returned.');
+          return false;
+        }
+
+        const nextMetadata = {
+          ...(user?.user_metadata || {}),
+          avatar_url: publicUrl,
+          avatarUrl: publicUrl,
+          picture: publicUrl,
+          photo_url: publicUrl,
+          photoURL: publicUrl,
+        };
+        const { data: authData, error: authError } = await supabase.auth.updateUser({ data: nextMetadata });
+        if (authError) {
+          // Profile save failed — roll back the orphaned upload
+          void supabase.storage.from(AVATAR_BUCKET).remove([avatarPath]);
+          alert(`Could not save profile photo: ${authError.message || 'Unknown error'}`);
+          return false;
+        }
+
+        // Profile saved — now safe to delete the previous avatar (only if it lived in avatars bucket)
+        if (oldAvatarUrl) {
+          const avatarPublicPrefix = `${SUPABASE_URL}/storage/v1/object/public/${AVATAR_BUCKET}/`;
+          if (oldAvatarUrl.startsWith(avatarPublicPrefix)) {
+            const oldPath = oldAvatarUrl.slice(avatarPublicPrefix.length);
+            void supabase.storage.from(AVATAR_BUCKET).remove([oldPath]);
+          }
+        }
+
+        const nextUser = authData?.user || { ...user, user_metadata: nextMetadata };
+        preservedProfilePhotoUrlRef.current = publicUrl;
+        setProfilePhotoOverrideUrl(publicUrl);
+        writeStoredProfilePhotoOverrideUrl(publicUrl);
+        writeCachedProfilePhotoUrl(nextUser?.id || user?.id, publicUrl);
+        setUser((prev) => mergeAuthUserPreservingProfilePhoto(nextUser, prev, publicUrl));
+        setShowLayerMediaMenu(false);
+        return true;
+      }
+
+      // ── Non-avatar (header/icon layer media): existing trip-photos/layer-media logic ──
+      const filename = `layer-media/${activeLayerId}/${mediaKind}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+      const buckets = PROFILE_PHOTO_BUCKETS;
       let selectedBucket = null;
       let lastError = null;
 
@@ -10079,31 +10137,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         return false;
       }
 
-      if (mediaKind === 'icon') {
-        const nextMetadata = {
-          ...(user?.user_metadata || {}),
-          avatar_url: publicUrl,
-          avatarUrl: publicUrl,
-          picture: publicUrl,
-          photo_url: publicUrl,
-          photoURL: publicUrl,
-        };
-        const { data: authData, error: authError } = await supabase.auth.updateUser({ data: nextMetadata });
-        if (authError) {
-          alert(`Could not save profile photo: ${authError.message || 'Unknown error'}`);
-          return false;
-        }
-        const nextUser = authData?.user || { ...user, user_metadata: nextMetadata };
-        preservedProfilePhotoUrlRef.current = publicUrl;
-        setProfilePhotoOverrideUrl(publicUrl);
-        writeStoredProfilePhotoOverrideUrl(publicUrl);
-        writeCachedProfilePhotoUrl(nextUser?.id || user?.id, publicUrl);
-        setUser((prev) => mergeAuthUserPreservingProfilePhoto(nextUser, prev, publicUrl));
-        setShowLayerMediaMenu(false);
-        return true;
-      }
-
-      const field = mediaKind === 'icon' ? 'icon_url' : 'header_bg_url';
+      const field = 'header_bg_url';
       const primaryUpdate = await supabase
         .from('calendar_layers')
         .update({ [field]: publicUrl })
