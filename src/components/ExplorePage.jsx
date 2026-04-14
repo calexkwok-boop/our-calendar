@@ -178,10 +178,10 @@ function MovieCard({ movie, onAddToSomeday, onPageTap }) {
   );
 }
 
-function CommunityCard({ post }) {
+function CommunityCard({ post, onPageTap, onPlanEvent }) {
   return (
     <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
-      <CardHeader post={post} />
+      <CardHeader post={post} onPageTap={onPageTap} />
       <Divider />
       <div className="px-4 py-2.5">
         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
@@ -190,7 +190,18 @@ function CommunityCard({ post }) {
       </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-1">
         {post.actions.map((a, i) => (
-          <button key={a} className={`text-xs font-medium px-3.5 py-1.5 rounded-xl active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"}`}>{a}</button>
+          <button
+            key={a}
+            onClick={() => {
+              if (post.type === "games") {
+                if (i === 0) onPageTap?.("games");
+                else onPlanEvent?.({ title: `Game night: ${post.cardTitle}` });
+              }
+            }}
+            className={`text-xs font-medium px-3.5 py-1.5 rounded-xl active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"}`}
+          >
+            {a}
+          </button>
         ))}
         <VoteButtons initialVotes={post.votes} />
       </div>
@@ -395,7 +406,7 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
           ) : post.type === "friends" ? (
             <FriendCard key={post.id} post={post} />
           ) : (
-            <CommunityCard key={post.id} post={post} />
+            <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} />
           )
         )}
       </div>
