@@ -23,13 +23,11 @@ function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, somedays }) {
 
   useEffect(() => {
     if (!open) return;
+    document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
     return () => {
+      document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
     };
   }, [open]);
 
@@ -55,7 +53,7 @@ function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, somedays }) {
       />
 
       {/* Sheet */}
-      <div className={`fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto bg-[#131c2e] rounded-t-3xl border-t border-white/[0.06] transition-transform duration-300 ease-out max-h-[88vh] overflow-y-auto ${open ? "translate-y-0" : "translate-y-full"}`}>
+      <div style={{ WebkitOverflowScrolling: 'touch' }} className={`fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto bg-[#131c2e] rounded-t-3xl border-t border-white/[0.06] transition-transform duration-300 ease-out max-h-[88vh] overflow-y-auto overscroll-contain ${open ? "translate-y-0" : "translate-y-full"}`}>
         {/* Handle */}
         <div className="w-9 h-1 bg-white/10 rounded-full mx-auto mt-3 mb-0 sticky top-3" />
 
@@ -67,7 +65,7 @@ function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, somedays }) {
         )}
 
         {/* Content */}
-        <div className="px-5 pb-10">
+        <div className="px-5 pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+1.5rem))]">
           {/* Poster + title row */}
           <div className="flex gap-3 -mt-10 mb-4">
             <div className="flex-shrink-0 w-20 h-[120px] rounded-xl overflow-hidden border-2 border-[#131c2e] shadow-xl">
