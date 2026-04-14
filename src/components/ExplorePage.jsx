@@ -34,11 +34,7 @@ const TAG_STYLES = {
   Restaurants: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
 };
 
-const MOVIE_TABS = [
-  { key: "popular",     label: "Popular" },
-  { key: "top_rated",   label: "Top rated" },
-  { key: "now_playing", label: "In theatres" },
-  { key: "upcoming",    label: "Upcoming" },
+
 ];
 
 function interleavePosts(friends, movies, community) {
@@ -209,15 +205,6 @@ function CommunityCard({ post, onPageTap, onPlanEvent }) {
   );
 }
 
-function MovieTabBar({ activeTab, onTab }) {
-  return (
-    <div className="flex gap-2 px-4 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
-      {MOVIE_TABS.map(t => (
-        <button key={t.key} onClick={() => onTab(t.key)} className={`text-xs font-medium px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${activeTab === t.key ? "bg-purple-500/20 text-purple-600 dark:text-purple-300" : "bg-stone-100 dark:bg-white/5 text-gray-500"}`}>{t.label}</button>
-      ))}
-    </div>
-  );
-}
 
 function ToggleRow({ sourceKey, config, enabled, onToggle }) {
   return (
@@ -306,7 +293,6 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
   const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true });
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [search, setSearch]               = useState("");
-  const [movieTab, setMovieTab]           = useState("popular");
   const [movies, setMovies]               = useState([]);
   const [moviesLoading, setMoviesLoading] = useState(true);
   const [moviesError, setMoviesError]     = useState(false);
@@ -317,12 +303,12 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
     let cancelled = false;
     setMoviesLoading(true);
     setMoviesError(false);
-    fetch(`https://api.themoviedb.org/3/movie/${movieTab}?api_key=${TMDB_KEY}&language=en-US&page=1`)
+    fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_KEY}&language=en-US&page=1`)
       .then(r => r.json())
       .then(data => { if (!cancelled) { setMovies(data.results || []); setMoviesLoading(false); } })
       .catch(() => { if (!cancelled) { setMoviesError(true); setMoviesLoading(false); } });
     return () => { cancelled = true; };
-  }, [movieTab, sources.movies]);
+  }, [sources.movies]);
 
   if (activePage === "movies") {
     return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onPlanEvent={onPlanEvent} />;
@@ -376,12 +362,6 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
           </button>
         </div>
       </div>
-
-      {sources.movies && !search && (
-        <div className="bg-white dark:bg-[#131c2e] pb-3 pt-2 border-b border-stone-200 dark:border-white/[0.05]">
-          <MovieTabBar activeTab={movieTab} onTab={setMovieTab} />
-        </div>
-      )}
 
       <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 px-4 pt-5 pb-3">
         {search ? `Results for "${search}"` : "Your feed"}
