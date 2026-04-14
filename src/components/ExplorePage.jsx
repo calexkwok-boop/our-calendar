@@ -1,114 +1,28 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import MoviesPage from "./MoviesPage";
 
-// ---------------------------------------------------------------------------
-// Mock data — replace with real Supabase queries + TMDB API calls
-// ---------------------------------------------------------------------------
-const MOCK_POSTS = [
-  {
-    id: 1,
-    type: "friends",
-    avatar: "MK",
-    name: "Maya K.",
-    action: "is going to",
-    time: "2h ago",
-    text: "Wine & Jazz Night at the SFJAZZ Center this Friday — anyone want to come?",
-    tag: "Friends",
-    actions: ["Save event", "Join them"],
-  },
-  {
-    id: 2,
-    type: "movies",
-    icon: "🎬",
-    page: "Movies",
-    time: "Top pick",
-    movieTitle: "Sinners",
-    year: "2025",
-    rating: "8.2",
-    overview: "Ryan Coogler's supernatural thriller set in the 1930s Mississippi Delta. Incredible performances.",
-    votes: 247,
-    tag: "Movies",
-    posterEmoji: "🎬",
-  },
-  {
-    id: 3,
-    type: "friends",
-    avatar: "JL",
-    name: "Jake L.",
-    action: "just got back from",
-    time: "5h ago",
-    text: "Big Sur camping trip — three nights, zero cell service, completely worth it",
-    tag: "Friends",
-    isTrip: true,
-    actions: ["Save to inspiration", "Plan similar"],
-  },
-  {
-    id: 4,
-    type: "hiking",
-    icon: "🥾",
-    page: "Hiking & Outdoors",
-    time: "Trending",
-    cardTitle: "Lands End Trail",
-    location: "San Francisco · 3.4 mi",
-    desc: "Stunning coastal views, moderate difficulty. Best visited at golden hour.",
-    votes: 183,
-    tag: "Hiking",
-    actions: ["Add to someday", "Plan it"],
-  },
-  {
-    id: 5,
-    type: "friends",
-    avatar: "SR",
-    name: "Sofia R.",
-    action: "added to her someday list",
-    time: "Yesterday",
-    text: '"Challengers" — said it\'s the perfect Friday night watch',
-    tag: "Friends",
-    actions: ["Add to my someday", "See more"],
-  },
-  {
-    id: 6,
-    type: "games",
-    icon: "🎲",
-    page: "Board Games",
-    time: "Community pick",
-    cardTitle: "Wingspan",
-    desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes. Great for a cozy weekend.",
-    votes: 312,
-    tag: "Games",
-    actions: ["Add to someday", "Plan game night"],
-  },
-  {
-    id: 7,
-    type: "restaurants",
-    icon: "🍜",
-    page: "Restaurants",
-    time: "New addition",
-    cardTitle: "Dumpling Time",
-    location: "SoMa, San Francisco",
-    desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable. Reservations recommended on weekends.",
-    votes: 198,
-    tag: "Restaurants",
-    actions: ["Add to someday", "Plan dinner"],
-  },
-  {
-    id: 8,
-    type: "friends",
-    avatar: "TN",
-    name: "Tom N.",
-    action: "is planning",
-    time: "2d ago",
-    text: "Pickleball at Mission Dolores Park — Saturday morning, all skill levels welcome",
-    tag: "Friends",
-    actions: ["Join event", "Save"],
-  },
+const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
+const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
+
+const FRIEND_POSTS = [
+  { id: "f1", type: "friends", avatar: "MK", name: "Maya K.", action: "is going to", time: "2h ago", text: "Wine & Jazz Night at the SFJAZZ Center this Friday — anyone want to come?", tag: "Friends", actions: ["Save event", "Join them"] },
+  { id: "f2", type: "friends", avatar: "JL", name: "Jake L.", action: "just got back from", time: "5h ago", text: "Big Sur camping trip — three nights, zero cell service, completely worth it", tag: "Friends", isTrip: true, actions: ["Save to inspiration", "Plan similar"] },
+  { id: "f3", type: "friends", avatar: "SR", name: "Sofia R.", action: "added to her someday list", time: "Yesterday", text: '"Challengers" — said it\'s the perfect Friday night watch', tag: "Friends", actions: ["Add to my someday", "See more"] },
+  { id: "f4", type: "friends", avatar: "TN", name: "Tom N.", action: "is planning", time: "2d ago", text: "Pickleball at Mission Dolores Park — Saturday morning, all skill levels welcome", tag: "Friends", actions: ["Join event", "Save"] },
+];
+
+const COMMUNITY_POSTS = [
+  { id: "c1", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Lands End Trail", location: "San Francisco · 3.4 mi", desc: "Stunning coastal views, moderate difficulty. Best visited at golden hour.", votes: 183, tag: "Hiking", actions: ["Add to someday", "Plan it"] },
+  { id: "c2", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan", desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.", votes: 312, tag: "Games", actions: ["Add to someday", "Plan game night"] },
+  { id: "c3", type: "restaurants", icon: "🍜", page: "Restaurants", time: "New addition", cardTitle: "Dumpling Time", location: "SoMa, San Francisco", desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable.", votes: 198, tag: "Restaurants", actions: ["Add to someday", "Plan dinner"] },
 ];
 
 const SOURCE_CONFIG = {
-  friends:     { label: "Friends",          sub: "Events, trips & moments", icon: "👥", bg: "bg-teal-500/10" },
-  movies:      { label: "Movies",           sub: "2.4k members",            icon: "🎬", bg: "bg-purple-500/10" },
-  hiking:      { label: "Hiking & Outdoors",sub: "1.8k members",            icon: "🥾", bg: "bg-green-500/10" },
-  games:       { label: "Board Games",      sub: "892 members",             icon: "🎲", bg: "bg-amber-500/10" },
-  restaurants: { label: "Restaurants",      sub: "3.1k members",            icon: "🍜", bg: "bg-pink-500/10" },
+  friends:     { label: "Friends",           sub: "Events, trips & moments", icon: "👥", bg: "bg-teal-500/10" },
+  movies:      { label: "Movies",            sub: "2.4k members",            icon: "🎬", bg: "bg-purple-500/10" },
+  hiking:      { label: "Hiking & Outdoors", sub: "1.8k members",            icon: "🥾", bg: "bg-green-500/10" },
+  games:       { label: "Board Games",       sub: "892 members",             icon: "🎲", bg: "bg-amber-500/10" },
+  restaurants: { label: "Restaurants",       sub: "3.1k members",            icon: "🍜", bg: "bg-pink-500/10" },
 };
 
 const TAG_STYLES = {
@@ -119,40 +33,62 @@ const TAG_STYLES = {
   Restaurants: "bg-pink-500/10 text-pink-400",
 };
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
+const MOVIE_TABS = [
+  { key: "popular",     label: "Popular" },
+  { key: "top_rated",   label: "Top rated" },
+  { key: "now_playing", label: "In theatres" },
+  { key: "upcoming",    label: "Upcoming" },
+];
 
-function SourceTag({ tag }) {
+function interleavePosts(friends, movies, community) {
+  const result = [];
+  let fi = 0, mi = 0, ci = 0;
+  while (fi < friends.length || mi < movies.length || ci < community.length) {
+    if (fi < friends.length)   result.push(friends[fi++]);
+    if (mi < movies.length)    result.push(movies[mi++]);
+    if (fi < friends.length)   result.push(friends[fi++]);
+    if (ci < community.length) result.push(community[ci++]);
+  }
+  return result;
+}
+
+function SourceTag({ tag, onClick }) {
   return (
-    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full tracking-wide ${TAG_STYLES[tag] || "bg-white/10 text-white/50"}`}>
+    <span
+      onClick={onClick}
+      className={`text-[10px] font-medium px-2 py-0.5 rounded-full tracking-wide flex-shrink-0 ${onClick ? "cursor-pointer active:opacity-70" : ""} ${TAG_STYLES[tag] || "bg-white/10 text-white/50"}`}
+    >
       {tag}
     </span>
   );
 }
 
-function CardHeader({ post }) {
+function CardHeader({ post, onPageTap }) {
   return (
     <div className="flex items-center gap-2.5 px-4 pt-4 pb-2.5">
       {post.avatar ? (
-        <div className="w-9 h-9 rounded-full bg-teal-500/15 text-teal-400 flex items-center justify-center text-sm font-medium flex-shrink-0">
-          {post.avatar}
-        </div>
+        <div className="w-9 h-9 rounded-full bg-teal-500/15 text-teal-400 flex items-center justify-center text-sm font-medium flex-shrink-0">{post.avatar}</div>
       ) : (
-        <div className="w-9 h-9 rounded-xl bg-white/5 dark:bg-white/5 flex items-center justify-center text-lg flex-shrink-0">
-          {post.icon}
-        </div>
+        <div
+          className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-lg flex-shrink-0 cursor-pointer active:opacity-70"
+          onClick={() => onPageTap?.(post.type)}
+        >{post.icon}</div>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-100 dark:text-gray-100 text-gray-800 leading-tight">
-          {post.name || post.page}
-          {post.action && (
-            <span className="font-normal text-gray-500 dark:text-gray-500"> {post.action}</span>
+        <p className="text-sm font-medium text-gray-100 leading-tight truncate">
+          {post.name || (
+            <span className="cursor-pointer hover:text-teal-400 transition-colors" onClick={() => onPageTap?.(post.type)}>
+              {post.page}
+            </span>
           )}
+          {post.action && <span className="font-normal text-gray-500"> {post.action}</span>}
         </p>
-        <p className="text-[11px] text-gray-600 dark:text-gray-600 mt-0.5">{post.time}</p>
+        <p className="text-[11px] text-gray-600 mt-0.5">{post.time}</p>
       </div>
-      <SourceTag tag={post.tag} />
+      <SourceTag
+        tag={post.tag}
+        onClick={post.type === "movies" ? () => onPageTap?.("movies") : undefined}
+      />
     </div>
   );
 }
@@ -161,339 +97,285 @@ function Divider() {
   return <div className="mx-4 h-px bg-white/[0.04]" />;
 }
 
-function ActionButtons({ actions }) {
+function VoteButtons({ initialVotes }) {
+  const [votes, setVotes] = useState(initialVotes);
   return (
-    <div className="flex items-center gap-2 px-4 pb-4 pt-2.5">
-      {actions.map((a, i) => (
-        <button
-          key={a}
-          className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-opacity active:opacity-70 ${
-            i === 0
-              ? "bg-teal-400 text-gray-900"
-              : "bg-white/5 dark:bg-white/5 text-gray-400"
-          }`}
-        >
-          {a}
-        </button>
-      ))}
+    <div className="ml-auto flex items-center gap-0.5">
+      <button onClick={() => setVotes(v => v + 1)} className="text-gray-600 text-sm px-2 py-1 rounded-lg hover:bg-white/5 hover:text-teal-400 transition-colors">▲</button>
+      <span className="text-[11px] text-gray-600 min-w-[28px] text-center">{votes}</span>
+      <button onClick={() => setVotes(v => Math.max(0, v - 1))} className="text-gray-600 text-sm px-2 py-1 rounded-lg hover:bg-white/5 transition-colors">▼</button>
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Card types
-// ---------------------------------------------------------------------------
 
 function FriendCard({ post }) {
   return (
-    <div className="rounded-2xl bg-[#161f30] dark:bg-[#161f30] bg-white overflow-hidden">
+    <div className="rounded-2xl bg-[#161f30] overflow-hidden">
       <CardHeader post={post} />
-      {post.isTrip && (
+      {post.isTrip ? (
         <div className="grid grid-cols-2 gap-0.5 border-y border-white/[0.04]">
           {["🏕️", "🌲"].map((e, i) => (
-            <div key={i} className="aspect-square flex items-center justify-center text-3xl bg-white/[0.03]">
-              {e}
-            </div>
+            <div key={i} className="aspect-square flex items-center justify-center text-3xl bg-white/[0.03]">{e}</div>
           ))}
         </div>
-      )}
-      {!post.isTrip && <Divider />}
+      ) : <Divider />}
       <div className="px-4 py-2.5">
         <p className="text-sm text-gray-500 leading-relaxed">{post.text}</p>
       </div>
-      <ActionButtons actions={post.actions} />
+      <div className="flex items-center gap-2 px-4 pb-4 pt-1">
+        {post.actions.map((a, i) => (
+          <button key={a} className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-opacity active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-white/5 text-gray-400"}`}>{a}</button>
+        ))}
+      </div>
     </div>
   );
 }
 
-function MovieCard({ post, onSomeday }) {
+function MovieCard({ movie, onAddToSomeday, onPageTap }) {
   const [inSomeday, setInSomeday] = useState(false);
-  const [votes, setVotes] = useState(post.votes);
+  const [expanded, setExpanded] = useState(false);
+  const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null;
+  const year   = movie.release_date ? movie.release_date.slice(0, 4) : "—";
+  const rating = movie.vote_average ? movie.vote_average.toFixed(1) : "—";
+  const votes  = Math.max(10, Math.floor((movie.vote_count || 100) / 10));
 
-  function handleSomeday() {
+  function handleSomeday(e) {
+    e.stopPropagation();
     setInSomeday(v => !v);
-    onSomeday?.(post);
+    if (!inSomeday) onAddToSomeday?.(movie);
   }
 
   return (
-    <div className="rounded-2xl bg-[#161f30] dark:bg-[#161f30] bg-white overflow-hidden">
-      <CardHeader post={post} />
-      <div className="flex border-t border-white/[0.04]">
-        <div className="w-[70px] h-[105px] bg-purple-500/10 flex items-center justify-center text-3xl flex-shrink-0">
-          {post.posterEmoji}
+    <div className="rounded-2xl bg-[#161f30] overflow-hidden">
+      <div className="flex items-center gap-2.5 px-4 pt-4 pb-2.5">
+        <div
+          className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center text-lg flex-shrink-0 cursor-pointer active:opacity-70"
+          onClick={() => onPageTap?.("movies")}
+        >🎬</div>
+        <div className="flex-1 min-w-0">
+          <p
+            className="text-sm font-medium text-gray-100 cursor-pointer hover:text-teal-400 transition-colors"
+            onClick={() => onPageTap?.("movies")}
+          >Movies</p>
+          <p className="text-[11px] text-gray-600 mt-0.5">Community pick</p>
         </div>
-        <div className="flex-1 px-3.5 py-3 flex flex-col justify-between">
+        <SourceTag tag="Movies" onClick={() => onPageTap?.("movies")} />
+      </div>
+      <div className="flex border-t border-white/[0.04] cursor-pointer" onClick={() => setExpanded(v => !v)}>
+        <div className="w-[72px] flex-shrink-0 bg-purple-500/10">
+          {posterUrl
+            ? <img src={posterUrl} alt={movie.title} className="w-full h-[108px] object-cover" loading="lazy" />
+            : <div className="w-full h-[108px] flex items-center justify-center text-2xl">🎬</div>
+          }
+        </div>
+        <div className="flex-1 px-3.5 py-3 flex flex-col justify-between min-w-0">
           <div>
-            <p className="text-sm font-medium text-gray-100 dark:text-gray-100 text-gray-800">
-              {post.movieTitle}
-            </p>
-            <p className="text-[11px] text-gray-600 mt-0.5">
-              {post.year} · ★ {post.rating}
-            </p>
-            <p className="text-[11px] text-gray-600 leading-snug mt-1.5 line-clamp-3">
-              {post.overview}
-            </p>
+            <p className="text-sm font-medium text-gray-100 leading-tight">{movie.title}</p>
+            <p className="text-[11px] text-gray-600 mt-1">{year} · ★ {rating}</p>
+            <p className={`text-[11px] text-gray-500 leading-snug mt-1.5 ${expanded ? "" : "line-clamp-3"}`}>{movie.overview}</p>
+            {(movie.overview?.length > 120) && (
+              <p className="text-[11px] text-teal-500 mt-1">{expanded ? "Show less" : "More"}</p>
+            )}
           </div>
           <p className="text-[10px] text-teal-500 mt-2">▲ {votes} votes</p>
         </div>
       </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-2.5">
-        <button
-          onClick={handleSomeday}
-          className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-all active:opacity-70 ${
-            inSomeday
-              ? "bg-teal-600 text-white"
-              : "bg-teal-400 text-gray-900"
-          }`}
-        >
+        <button onClick={handleSomeday} className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-all active:opacity-70 ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`}>
           {inSomeday ? "✓ In someday list" : "+ Someday list"}
         </button>
-        <button className="text-xs font-medium px-3.5 py-1.5 rounded-xl bg-white/5 text-gray-400">
-          Plan it
-        </button>
-        <div className="ml-auto flex gap-1">
-          <button
-            onClick={() => setVotes(v => v + 1)}
-            className="text-gray-600 text-sm px-2 py-1 rounded-lg hover:bg-white/5 hover:text-teal-400 transition-colors"
-          >▲</button>
-          <button
-            onClick={() => setVotes(v => Math.max(0, v - 1))}
-            className="text-gray-600 text-sm px-2 py-1 rounded-lg hover:bg-white/5 transition-colors"
-          >▼</button>
-        </div>
+        <button
+          onClick={() => onPageTap?.("movies")}
+          className="text-xs font-medium px-3.5 py-1.5 rounded-xl bg-white/5 text-gray-400 active:opacity-70"
+        >See all →</button>
+        <VoteButtons initialVotes={votes} />
       </div>
     </div>
   );
 }
 
 function CommunityCard({ post }) {
-  const [votes, setVotes] = useState(post.votes);
-
   return (
-    <div className="rounded-2xl bg-[#161f30] dark:bg-[#161f30] bg-white overflow-hidden">
+    <div className="rounded-2xl bg-[#161f30] overflow-hidden">
       <CardHeader post={post} />
       <Divider />
       <div className="px-4 py-2.5">
-        <p className="text-sm font-medium text-gray-100 dark:text-gray-100 text-gray-800 mb-0.5">
-          {post.cardTitle}
-        </p>
-        {post.location && (
-          <p className="text-[11px] text-gray-600 mb-1.5">{post.location}</p>
-        )}
+        <p className="text-sm font-medium text-gray-100 mb-0.5">{post.cardTitle}</p>
+        {post.location && <p className="text-[11px] text-gray-600 mb-1.5">{post.location}</p>}
         <p className="text-sm text-gray-500 leading-relaxed">{post.desc}</p>
-        <p className="text-[10px] text-teal-500 mt-2">▲ {votes} votes</p>
       </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-1">
         {post.actions.map((a, i) => (
-          <button
-            key={a}
-            className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-opacity active:opacity-70 ${
-              i === 0
-                ? "bg-teal-400 text-gray-900"
-                : "bg-white/5 text-gray-400"
-            }`}
-          >
-            {a}
-          </button>
+          <button key={a} className={`text-xs font-medium px-3.5 py-1.5 rounded-xl active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-white/5 text-gray-400"}`}>{a}</button>
         ))}
-        <div className="ml-auto flex gap-1">
-          <button
-            onClick={() => setVotes(v => v + 1)}
-            className="text-gray-600 text-sm px-2 py-1 rounded-lg hover:bg-white/5 hover:text-teal-400 transition-colors"
-          >▲</button>
-          <button
-            onClick={() => setVotes(v => Math.max(0, v - 1))}
-            className="text-gray-600 text-sm px-2 py-1 rounded-lg hover:bg-white/5 transition-colors"
-          >▼</button>
-        </div>
+        <VoteButtons initialVotes={post.votes} />
       </div>
     </div>
   );
 }
 
-function FeedCard({ post, onSomeday }) {
-  if (post.type === "movies") return <MovieCard post={post} onSomeday={onSomeday} />;
-  if (post.type === "friends") return <FriendCard post={post} />;
-  return <CommunityCard post={post} />;
-}
-
-// ---------------------------------------------------------------------------
-// Filter drawer
-// ---------------------------------------------------------------------------
-
-function FilterDrawer({ open, sources, onToggle, onClose }) {
-  const drawerRef = useRef(null);
-
-  // close on backdrop tap
-  useEffect(() => {
-    function handleKey(e) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
-
+function MovieTabBar({ activeTab, onTab }) {
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 ${
-          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-      />
-
-      {/* Drawer */}
-      <div
-        ref={drawerRef}
-        className={`fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto bg-[#131c2e] dark:bg-[#131c2e] rounded-t-3xl border-t border-white/[0.06] pb-8 transition-transform duration-300 ease-out ${
-          open ? "translate-y-0" : "translate-y-full"
-        }`}
-      >
-        {/* Handle */}
-        <div className="w-9 h-1 bg-white/10 rounded-full mx-auto mt-3 mb-4" />
-
-        <h2 className="font-['Caveat',cursive] text-2xl font-semibold text-gray-100 px-5 pb-4">
-          Feed settings
-        </h2>
-
-        {/* Social section */}
-        <div className="px-5 mb-5">
-          <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 mb-2.5">
-            Social
-          </p>
-          <ToggleRow
-            sourceKey="friends"
-            config={SOURCE_CONFIG.friends}
-            enabled={sources.friends}
-            onToggle={onToggle}
-          />
-        </div>
-
-        {/* Pages section */}
-        <div className="px-5 mb-5">
-          <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 mb-2.5">
-            Pages you've joined
-          </p>
-          {["movies", "hiking", "games", "restaurants"].map(key => (
-            <ToggleRow
-              key={key}
-              sourceKey={key}
-              config={SOURCE_CONFIG[key]}
-              enabled={sources[key]}
-              onToggle={onToggle}
-            />
-          ))}
-        </div>
-
-        <div className="px-5">
-          <button
-            onClick={onClose}
-            className="w-full py-3.5 bg-teal-400 text-gray-900 font-medium rounded-2xl text-sm active:opacity-80 transition-opacity"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    </>
+    <div className="flex gap-2 px-4 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+      {MOVIE_TABS.map(t => (
+        <button
+          key={t.key}
+          onClick={() => onTab(t.key)}
+          className={`text-xs font-medium px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${activeTab === t.key ? "bg-purple-500/20 text-purple-300" : "bg-white/5 text-gray-500"}`}
+        >{t.label}</button>
+      ))}
+    </div>
   );
 }
 
 function ToggleRow({ sourceKey, config, enabled, onToggle }) {
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-white/[0.04] last:border-0">
-      <div className={`w-9 h-9 rounded-xl ${config.bg} flex items-center justify-center text-lg flex-shrink-0`}>
-        {config.icon}
-      </div>
+      <div className={`w-9 h-9 rounded-xl ${config.bg} flex items-center justify-center text-lg flex-shrink-0`}>{config.icon}</div>
       <div className="flex-1">
         <p className="text-sm text-gray-200">{config.label}</p>
         <p className="text-[11px] text-gray-600">{config.sub}</p>
       </div>
       <button
         onClick={() => onToggle(sourceKey)}
-        className={`w-11 h-6 rounded-full relative transition-colors duration-200 flex-shrink-0 ${
-          enabled ? "bg-teal-400" : "bg-white/10"
-        }`}
+        className={`w-11 h-6 rounded-full relative transition-colors duration-200 flex-shrink-0 ${enabled ? "bg-teal-400" : "bg-white/10"}`}
       >
-        <span
-          className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
-            enabled ? "translate-x-5" : "translate-x-0.5"
-          }`}
-        />
+        <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${enabled ? "translate-x-5" : "translate-x-0.5"}`} />
       </button>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main ExplorePage component
-// ---------------------------------------------------------------------------
-
-export default function ExplorePage({ currentUser, onAddToSomeday, onPlanEvent }) {
-  const [sources, setSources] = useState({
-    friends: true,
-    movies: true,
-    hiking: true,
-    games: true,
-    restaurants: true,
-  });
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [search, setSearch] = useState("");
-
-  const anyOff = Object.values(sources).some(v => !v);
-
-  const visiblePosts = MOCK_POSTS.filter(p => {
-    if (!sources[p.type]) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      const haystack = [p.name, p.page, p.text, p.movieTitle, p.cardTitle, p.desc, p.location]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    }
-    return true;
-  });
-
-  function toggleSource(key) {
-    setSources(prev => ({ ...prev, [key]: !prev[key] }));
-  }
+function FilterDrawer({ open, sources, onToggle, onClose }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
 
   return (
-    <div className="min-h-screen bg-[#0e1520] dark:bg-[#0e1520] pb-24">
+    <>
+      <div onClick={onClose} className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} />
+      <div className={`fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto bg-[#131c2e] rounded-t-3xl border-t border-white/[0.06] pb-10 transition-transform duration-300 ease-out ${open ? "translate-y-0" : "translate-y-full"}`}>
+        <div className="w-9 h-1 bg-white/10 rounded-full mx-auto mt-3 mb-4" />
+        <h2 className="font-['Caveat',cursive] text-2xl font-semibold text-gray-100 px-5 pb-4">Feed settings</h2>
+        <div className="px-5 mb-5">
+          <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 mb-2.5">Social</p>
+          <ToggleRow sourceKey="friends" config={SOURCE_CONFIG.friends} enabled={sources.friends} onToggle={onToggle} />
+        </div>
+        <div className="px-5 mb-6">
+          <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 mb-2.5">Pages you've joined</p>
+          {["movies", "hiking", "games", "restaurants"].map(key => (
+            <ToggleRow key={key} sourceKey={key} config={SOURCE_CONFIG[key]} enabled={sources[key]} onToggle={onToggle} />
+          ))}
+        </div>
+        <div className="px-5">
+          <button onClick={onClose} className="w-full py-3.5 bg-teal-400 text-gray-900 font-medium rounded-2xl text-sm active:opacity-80">Done</button>
+        </div>
+      </div>
+    </>
+  );
+}
 
+function SkeletonCard() {
+  return (
+    <div className="rounded-2xl bg-[#161f30] overflow-hidden animate-pulse">
+      <div className="flex items-center gap-2.5 px-4 pt-4 pb-2.5">
+        <div className="w-9 h-9 rounded-xl bg-white/5 flex-shrink-0" />
+        <div className="flex-1 space-y-1.5">
+          <div className="h-3 bg-white/5 rounded w-2/3" />
+          <div className="h-2.5 bg-white/5 rounded w-1/3" />
+        </div>
+      </div>
+      <div className="flex border-t border-white/[0.04]">
+        <div className="w-[72px] h-[108px] bg-white/5 flex-shrink-0" />
+        <div className="flex-1 px-3.5 py-3 space-y-2">
+          <div className="h-3 bg-white/5 rounded w-3/4" />
+          <div className="h-2.5 bg-white/5 rounded w-1/4" />
+          <div className="h-2.5 bg-white/5 rounded w-full" />
+          <div className="h-2.5 bg-white/5 rounded w-2/3" />
+        </div>
+      </div>
+      <div className="flex gap-2 px-4 pb-4 pt-2.5">
+        <div className="h-7 bg-white/5 rounded-xl w-28" />
+        <div className="h-7 bg-white/5 rounded-xl w-16" />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main ExplorePage
+// ---------------------------------------------------------------------------
+export default function ExplorePage({ onAddToSomeday, onPlanEvent }) {
+  const [sources, setSources]       = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true });
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [search, setSearch]         = useState("");
+  const [movieTab, setMovieTab]     = useState("popular");
+  const [movies, setMovies]         = useState([]);
+  const [moviesLoading, setMoviesLoading] = useState(true);
+  const [moviesError, setMoviesError]     = useState(false);
+  const [activePage, setActivePage] = useState(null); // "movies" | null
+
+  // If a sub-page is active, render it instead
+  if (activePage === "movies") {
+    return (
+      <MoviesPage
+        onBack={() => setActivePage(null)}
+        onAddToSomeday={onAddToSomeday}
+      />
+    );
+  }
+
+  useEffect(() => {
+    if (!sources.movies) return;
+    let cancelled = false;
+    setMoviesLoading(true);
+    setMoviesError(false);
+    fetch(`https://api.themoviedb.org/3/movie/${movieTab}?api_key=${TMDB_KEY}&language=en-US&page=1`)
+      .then(r => r.json())
+      .then(data => { if (!cancelled) { setMovies(data.results || []); setMoviesLoading(false); } })
+      .catch(() => { if (!cancelled) { setMoviesError(true); setMoviesLoading(false); } });
+    return () => { cancelled = true; };
+  }, [movieTab, sources.movies]);
+
+  const anyOff = Object.values(sources).some(v => !v);
+  const moviePosts = movies.slice(0, 6).map(m => ({ ...m, type: "movies" }));
+  const activeFriends   = sources.friends ? FRIEND_POSTS : [];
+  const activeCommunity = COMMUNITY_POSTS.filter(p => sources[p.type]);
+  const activeMovies    = sources.movies && !moviesLoading ? moviePosts : [];
+  const allPosts = interleavePosts(activeFriends, activeMovies, activeCommunity);
+  const visiblePosts = search.trim()
+    ? allPosts.filter(p => {
+        const q   = search.toLowerCase();
+        const hay = [p.name, p.page, p.text, p.title, p.cardTitle, p.desc, p.location, p.overview].filter(Boolean).join(" ").toLowerCase();
+        return hay.includes(q);
+      })
+    : allPosts;
+
+  function toggleSource(key) { setSources(prev => ({ ...prev, [key]: !prev[key] })); }
+
+  return (
+    <div className="min-h-screen bg-[#0e1520] pb-28">
       {/* Top bar */}
-      <div className="bg-[#131c2e] dark:bg-[#131c2e] border-b border-white/[0.05] px-4 pt-4 pb-3 sticky top-0 z-30">
-        <h1 className="font-['Caveat',cursive] text-3xl font-semibold text-gray-100 mb-3">
-          Explore
-        </h1>
+      <div className="bg-[#131c2e] border-b border-white/[0.05] px-4 pt-5 pb-3 sticky top-0 z-30">
+        <h1 className="font-['Caveat',cursive] text-3xl font-semibold text-gray-100 mb-3">Explore</h1>
         <div className="flex gap-2">
-          {/* Search */}
           <div className="flex-1 flex items-center gap-2 bg-white/[0.06] rounded-2xl px-3.5 py-2.5">
             <svg className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" fill="none" viewBox="0 0 14 14">
               <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
               <path d="M10 10l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
             </svg>
             <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search people, places, movies..."
+              type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search movies, friends, places..."
               className="bg-transparent text-sm text-gray-200 placeholder-gray-600 outline-none flex-1 min-w-0"
             />
-            {search && (
-              <button onClick={() => setSearch("")} className="text-gray-600 text-xs">✕</button>
-            )}
+            {search && <button onClick={() => setSearch("")} className="text-gray-600 text-xs leading-none">✕</button>}
           </div>
-
-          {/* Filter button */}
           <button
             onClick={() => setDrawerOpen(true)}
-            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-colors ${
-              anyOff
-                ? "bg-teal-500/15 text-teal-400"
-                : "bg-white/[0.06] text-gray-400"
-            }`}
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-colors ${anyOff ? "bg-teal-500/15 text-teal-400" : "bg-white/[0.06] text-gray-300"}`}
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 13 13">
               <path d="M1 2.5h11M3 6.5h7M5 10.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -503,35 +385,41 @@ export default function ExplorePage({ currentUser, onAddToSomeday, onPlanEvent }
         </div>
       </div>
 
-      {/* Section label */}
-      <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 px-4 pt-5 pb-2">
+      {sources.movies && !search && (
+        <div className="bg-[#131c2e] pb-3 pt-2 border-b border-white/[0.05]">
+          <MovieTabBar activeTab={movieTab} onTab={setMovieTab} />
+        </div>
+      )}
+
+      <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 px-4 pt-5 pb-3">
         {search ? `Results for "${search}"` : "Your feed"}
       </p>
 
-      {/* Feed */}
       <div className="px-3.5 flex flex-col gap-3">
-        {visiblePosts.length === 0 ? (
+        {moviesLoading && sources.movies && !search && <><SkeletonCard /><SkeletonCard /></>}
+        {moviesError && sources.movies && (
+          <div className="rounded-2xl bg-[#161f30] px-4 py-5 text-center">
+            <p className="text-sm text-gray-500">Couldn't load movies</p>
+            <button onClick={() => setMovieTab(t => t)} className="text-xs text-teal-400 mt-1">Try again</button>
+          </div>
+        )}
+        {!moviesLoading && visiblePosts.length === 0 && (
           <div className="text-center py-16 text-gray-600 text-sm">
             {search ? "No results found" : "All sources hidden — open Filter to turn some back on"}
           </div>
-        ) : (
-          visiblePosts.map(post => (
-            <FeedCard
-              key={post.id}
-              post={post}
-              onSomeday={onAddToSomeday}
-            />
-          ))
+        )}
+        {!moviesLoading && visiblePosts.map(post =>
+          post.type === "movies" ? (
+            <MovieCard key={`movie-${post.id}`} movie={post} onAddToSomeday={onAddToSomeday} onPageTap={setActivePage} />
+          ) : post.type === "friends" ? (
+            <FriendCard key={post.id} post={post} />
+          ) : (
+            <CommunityCard key={post.id} post={post} />
+          )
         )}
       </div>
 
-      {/* Filter drawer */}
-      <FilterDrawer
-        open={drawerOpen}
-        sources={sources}
-        onToggle={toggleSource}
-        onClose={() => setDrawerOpen(false)}
-      />
+      <FilterDrawer open={drawerOpen} sources={sources} onToggle={toggleSource} onClose={() => setDrawerOpen(false)} />
     </div>
   );
 }
