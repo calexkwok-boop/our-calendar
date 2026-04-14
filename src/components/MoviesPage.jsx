@@ -21,6 +21,18 @@ function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, somedays }) {
     if (movie) setInSomeday(somedays.has(movie.id));
   }, [movie, somedays]);
 
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, [open]);
+
   if (!movie) return null;
 
   const posterUrl  = movie.poster_path   ? `${TMDB_IMG}${movie.poster_path}`       : null;
