@@ -229,6 +229,18 @@ function FilterDrawer({ open, sources, onToggle, onClose }) {
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, [open]);
+
   return (
     <>
       <div onClick={onClose} className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} />
