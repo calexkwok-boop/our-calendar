@@ -26,11 +26,11 @@ const SOURCE_CONFIG = {
 };
 
 const TAG_STYLES = {
-  Friends:     "bg-teal-500/10 text-teal-400",
-  Movies:      "bg-purple-500/10 text-purple-300",
-  Hiking:      "bg-green-500/10 text-green-400",
-  Games:       "bg-amber-500/10 text-amber-400",
-  Restaurants: "bg-pink-500/10 text-pink-400",
+  Friends:     "bg-teal-500/10 text-teal-600 dark:text-teal-400",
+  Movies:      "bg-purple-500/10 text-purple-600 dark:text-purple-300",
+  Hiking:      "bg-green-500/10 text-green-600 dark:text-green-400",
+  Games:       "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  Restaurants: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
 };
 
 const MOVIE_TABS = [
@@ -56,7 +56,7 @@ function SourceTag({ tag, onClick }) {
   return (
     <span
       onClick={onClick}
-      className={`text-[10px] font-medium px-2 py-0.5 rounded-full tracking-wide flex-shrink-0 ${onClick ? "cursor-pointer active:opacity-70" : ""} ${TAG_STYLES[tag] || "bg-white/10 text-white/50"}`}
+      className={`text-[10px] font-medium px-2 py-0.5 rounded-full tracking-wide flex-shrink-0 ${onClick ? "cursor-pointer active:opacity-70" : ""} ${TAG_STYLES[tag] || "bg-stone-100 dark:bg-white/10 text-stone-500 dark:text-white/50"}`}
     >
       {tag}
     </span>
@@ -67,18 +67,18 @@ function CardHeader({ post, onPageTap }) {
   return (
     <div className="flex items-center gap-2.5 px-4 pt-4 pb-2.5">
       {post.avatar ? (
-        <div className="w-9 h-9 rounded-full bg-teal-500/15 text-teal-400 flex items-center justify-center text-sm font-medium flex-shrink-0">{post.avatar}</div>
+        <div className="w-9 h-9 rounded-full bg-teal-500/15 text-teal-500 dark:text-teal-400 flex items-center justify-center text-sm font-medium flex-shrink-0">{post.avatar}</div>
       ) : (
-        <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-lg flex-shrink-0 cursor-pointer active:opacity-70" onClick={() => onPageTap?.(post.type)}>{post.icon}</div>
+        <div className="w-9 h-9 rounded-xl bg-stone-100 dark:bg-white/5 flex items-center justify-center text-lg flex-shrink-0 cursor-pointer active:opacity-70" onClick={() => onPageTap?.(post.type)}>{post.icon}</div>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-100 leading-tight truncate">
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight truncate">
           {post.name || (
-            <span className="cursor-pointer hover:text-teal-400 transition-colors" onClick={() => onPageTap?.(post.type)}>{post.page}</span>
+            <span className="cursor-pointer hover:text-teal-600 dark:hover:text-teal-400 transition-colors" onClick={() => onPageTap?.(post.type)}>{post.page}</span>
           )}
           {post.action && <span className="font-normal text-gray-500"> {post.action}</span>}
         </p>
-        <p className="text-[11px] text-gray-600 mt-0.5">{post.time}</p>
+        <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-0.5">{post.time}</p>
       </div>
       <SourceTag tag={post.tag} onClick={post.type === "movies" ? () => onPageTap?.("movies") : undefined} />
     </div>
@@ -86,28 +86,28 @@ function CardHeader({ post, onPageTap }) {
 }
 
 function Divider() {
-  return <div className="mx-4 h-px bg-white/[0.04]" />;
+  return <div className="mx-4 h-px bg-stone-100 dark:bg-white/[0.04]" />;
 }
 
 function VoteButtons({ initialVotes }) {
   const [votes, setVotes] = useState(initialVotes);
   return (
     <div className="ml-auto flex items-center gap-0.5">
-      <button onClick={() => setVotes(v => v + 1)} className="text-gray-600 text-sm px-2 py-1 rounded-lg hover:bg-white/5 hover:text-teal-400 transition-colors">▲</button>
-      <span className="text-[11px] text-gray-600 min-w-[28px] text-center">{votes}</span>
-      <button onClick={() => setVotes(v => Math.max(0, v - 1))} className="text-gray-600 text-sm px-2 py-1 rounded-lg hover:bg-white/5 transition-colors">▼</button>
+      <button onClick={() => setVotes(v => v + 1)} className="text-gray-400 dark:text-gray-600 text-sm px-2 py-1 rounded-lg hover:bg-stone-100 dark:hover:bg-white/5 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">▲</button>
+      <span className="text-[11px] text-gray-400 dark:text-gray-600 min-w-[28px] text-center">{votes}</span>
+      <button onClick={() => setVotes(v => Math.max(0, v - 1))} className="text-gray-400 dark:text-gray-600 text-sm px-2 py-1 rounded-lg hover:bg-stone-100 dark:hover:bg-white/5 transition-colors">▼</button>
     </div>
   );
 }
 
 function FriendCard({ post }) {
   return (
-    <div className="rounded-2xl bg-[#161f30] overflow-hidden">
+    <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
       <CardHeader post={post} />
       {post.isTrip ? (
-        <div className="grid grid-cols-2 gap-0.5 border-y border-white/[0.04]">
+        <div className="grid grid-cols-2 gap-0.5 border-y border-stone-100 dark:border-white/[0.04]">
           {["🏕️", "🌲"].map((e, i) => (
-            <div key={i} className="aspect-square flex items-center justify-center text-3xl bg-white/[0.03]">{e}</div>
+            <div key={i} className="aspect-square flex items-center justify-center text-3xl bg-stone-50 dark:bg-white/[0.03]">{e}</div>
           ))}
         </div>
       ) : <Divider />}
@@ -116,7 +116,7 @@ function FriendCard({ post }) {
       </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-1">
         {post.actions.map((a, i) => (
-          <button key={a} className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-opacity active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-white/5 text-gray-400"}`}>{a}</button>
+          <button key={a} className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-opacity active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"}`}>{a}</button>
         ))}
       </div>
     </div>
@@ -138,16 +138,16 @@ function MovieCard({ movie, onAddToSomeday, onPageTap }) {
   }
 
   return (
-    <div className="rounded-2xl bg-[#161f30] overflow-hidden">
+    <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
       <div className="flex items-center gap-2.5 px-4 pt-4 pb-2.5">
         <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center text-lg flex-shrink-0 cursor-pointer active:opacity-70" onClick={() => onPageTap?.("movies")}>🎬</div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-100 cursor-pointer hover:text-teal-400 transition-colors" onClick={() => onPageTap?.("movies")}>Movies</p>
-          <p className="text-[11px] text-gray-600 mt-0.5">Community pick</p>
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:text-teal-600 dark:hover:text-teal-400 transition-colors" onClick={() => onPageTap?.("movies")}>Movies</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-0.5">Community pick</p>
         </div>
         <SourceTag tag="Movies" onClick={() => onPageTap?.("movies")} />
       </div>
-      <div className="flex border-t border-white/[0.04] cursor-pointer" onClick={() => setExpanded(v => !v)}>
+      <div className="flex border-t border-stone-100 dark:border-white/[0.04] cursor-pointer" onClick={() => setExpanded(v => !v)}>
         <div className="w-[72px] flex-shrink-0 bg-purple-500/10">
           {posterUrl
             ? <img src={posterUrl} alt={movie.title} className="w-full h-[108px] object-cover" loading="lazy" />
@@ -156,8 +156,8 @@ function MovieCard({ movie, onAddToSomeday, onPageTap }) {
         </div>
         <div className="flex-1 px-3.5 py-3 flex flex-col justify-between min-w-0">
           <div>
-            <p className="text-sm font-medium text-gray-100 leading-tight">{movie.title}</p>
-            <p className="text-[11px] text-gray-600 mt-1">{year} · ★ {rating}</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight">{movie.title}</p>
+            <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-1">{year} · ★ {rating}</p>
             <p className={`text-[11px] text-gray-500 leading-snug mt-1.5 ${expanded ? "" : "line-clamp-3"}`}>{movie.overview}</p>
             {(movie.overview?.length > 120) && (
               <p className="text-[11px] text-teal-500 mt-1">{expanded ? "Show less" : "More"}</p>
@@ -170,7 +170,7 @@ function MovieCard({ movie, onAddToSomeday, onPageTap }) {
         <button onClick={handleSomeday} className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-all active:opacity-70 ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`}>
           {inSomeday ? "✓ In someday list" : "+ Someday list"}
         </button>
-        <button onClick={() => onPageTap?.("movies")} className="text-xs font-medium px-3.5 py-1.5 rounded-xl bg-white/5 text-gray-400 active:opacity-70">See all →</button>
+        <button onClick={() => onPageTap?.("movies")} className="text-xs font-medium px-3.5 py-1.5 rounded-xl bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 active:opacity-70">See all →</button>
         <VoteButtons initialVotes={votes} />
       </div>
     </div>
@@ -179,17 +179,17 @@ function MovieCard({ movie, onAddToSomeday, onPageTap }) {
 
 function CommunityCard({ post }) {
   return (
-    <div className="rounded-2xl bg-[#161f30] overflow-hidden">
+    <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
       <CardHeader post={post} />
       <Divider />
       <div className="px-4 py-2.5">
-        <p className="text-sm font-medium text-gray-100 mb-0.5">{post.cardTitle}</p>
-        {post.location && <p className="text-[11px] text-gray-600 mb-1.5">{post.location}</p>}
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">{post.cardTitle}</p>
+        {post.location && <p className="text-[11px] text-gray-400 dark:text-gray-600 mb-1.5">{post.location}</p>}
         <p className="text-sm text-gray-500 leading-relaxed">{post.desc}</p>
       </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-1">
         {post.actions.map((a, i) => (
-          <button key={a} className={`text-xs font-medium px-3.5 py-1.5 rounded-xl active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-white/5 text-gray-400"}`}>{a}</button>
+          <button key={a} className={`text-xs font-medium px-3.5 py-1.5 rounded-xl active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"}`}>{a}</button>
         ))}
         <VoteButtons initialVotes={post.votes} />
       </div>
@@ -201,7 +201,7 @@ function MovieTabBar({ activeTab, onTab }) {
   return (
     <div className="flex gap-2 px-4 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
       {MOVIE_TABS.map(t => (
-        <button key={t.key} onClick={() => onTab(t.key)} className={`text-xs font-medium px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${activeTab === t.key ? "bg-purple-500/20 text-purple-300" : "bg-white/5 text-gray-500"}`}>{t.label}</button>
+        <button key={t.key} onClick={() => onTab(t.key)} className={`text-xs font-medium px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${activeTab === t.key ? "bg-purple-500/20 text-purple-600 dark:text-purple-300" : "bg-stone-100 dark:bg-white/5 text-gray-500"}`}>{t.label}</button>
       ))}
     </div>
   );
@@ -209,13 +209,13 @@ function MovieTabBar({ activeTab, onTab }) {
 
 function ToggleRow({ sourceKey, config, enabled, onToggle }) {
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-white/[0.04] last:border-0">
+    <div className="flex items-center gap-3 py-2.5 border-b border-stone-100 dark:border-white/[0.04] last:border-0">
       <div className={`w-9 h-9 rounded-xl ${config.bg} flex items-center justify-center text-lg flex-shrink-0`}>{config.icon}</div>
       <div className="flex-1">
-        <p className="text-sm text-gray-200">{config.label}</p>
-        <p className="text-[11px] text-gray-600">{config.sub}</p>
+        <p className="text-sm text-gray-800 dark:text-gray-200">{config.label}</p>
+        <p className="text-[11px] text-gray-400 dark:text-gray-600">{config.sub}</p>
       </div>
-      <button onClick={() => onToggle(sourceKey)} className={`w-11 h-6 rounded-full relative transition-colors duration-200 flex-shrink-0 ${enabled ? "bg-teal-400" : "bg-white/10"}`}>
+      <button onClick={() => onToggle(sourceKey)} className={`w-11 h-6 rounded-full relative transition-colors duration-200 flex-shrink-0 ${enabled ? "bg-teal-400" : "bg-stone-200 dark:bg-white/10"}`}>
         <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${enabled ? "translate-x-5" : "translate-x-0.5"}`} />
       </button>
     </div>
@@ -242,15 +242,15 @@ function FilterDrawer({ open, sources, onToggle, onClose }) {
   return (
     <>
       <div onClick={onClose} className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} />
-      <div className={`fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto bg-[#131c2e] rounded-t-3xl border-t border-white/[0.06] pb-10 transition-transform duration-300 ease-out ${open ? "translate-y-0" : "translate-y-full"}`}>
-        <div className="w-9 h-1 bg-white/10 rounded-full mx-auto mt-3 mb-4" />
-        <h2 className="font-['Caveat',cursive] text-2xl font-semibold text-gray-100 px-5 pb-4">Feed settings</h2>
+      <div className={`fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto bg-white dark:bg-[#131c2e] rounded-t-3xl border-t border-stone-200 dark:border-white/[0.06] pb-10 transition-transform duration-300 ease-out ${open ? "translate-y-0" : "translate-y-full"}`}>
+        <div className="w-9 h-1 bg-stone-200 dark:bg-white/10 rounded-full mx-auto mt-3 mb-4" />
+        <h2 className="font-['Caveat',cursive] text-2xl font-semibold text-gray-900 dark:text-gray-100 px-5 pb-4">Feed settings</h2>
         <div className="px-5 mb-5">
-          <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 mb-2.5">Social</p>
+          <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 mb-2.5">Social</p>
           <ToggleRow sourceKey="friends" config={SOURCE_CONFIG.friends} enabled={sources.friends} onToggle={onToggle} />
         </div>
         <div className="px-5 mb-6">
-          <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 mb-2.5">Pages you've joined</p>
+          <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 mb-2.5">Pages you've joined</p>
           {["movies", "hiking", "games", "restaurants"].map(key => (
             <ToggleRow key={key} sourceKey={key} config={SOURCE_CONFIG[key]} enabled={sources[key]} onToggle={onToggle} />
           ))}
@@ -265,34 +265,31 @@ function FilterDrawer({ open, sources, onToggle, onClose }) {
 
 function SkeletonCard() {
   return (
-    <div className="rounded-2xl bg-[#161f30] overflow-hidden animate-pulse">
+    <div className="rounded-2xl bg-stone-50 dark:bg-[#161f30] border border-stone-100 dark:border-transparent overflow-hidden animate-pulse">
       <div className="flex items-center gap-2.5 px-4 pt-4 pb-2.5">
-        <div className="w-9 h-9 rounded-xl bg-white/5 flex-shrink-0" />
+        <div className="w-9 h-9 rounded-xl bg-stone-200 dark:bg-white/5 flex-shrink-0" />
         <div className="flex-1 space-y-1.5">
-          <div className="h-3 bg-white/5 rounded w-2/3" />
-          <div className="h-2.5 bg-white/5 rounded w-1/3" />
+          <div className="h-3 bg-stone-200 dark:bg-white/5 rounded w-2/3" />
+          <div className="h-2.5 bg-stone-200 dark:bg-white/5 rounded w-1/3" />
         </div>
       </div>
-      <div className="flex border-t border-white/[0.04]">
-        <div className="w-[72px] h-[108px] bg-white/5 flex-shrink-0" />
+      <div className="flex border-t border-stone-100 dark:border-white/[0.04]">
+        <div className="w-[72px] h-[108px] bg-stone-200 dark:bg-white/5 flex-shrink-0" />
         <div className="flex-1 px-3.5 py-3 space-y-2">
-          <div className="h-3 bg-white/5 rounded w-3/4" />
-          <div className="h-2.5 bg-white/5 rounded w-1/4" />
-          <div className="h-2.5 bg-white/5 rounded w-full" />
-          <div className="h-2.5 bg-white/5 rounded w-2/3" />
+          <div className="h-3 bg-stone-200 dark:bg-white/5 rounded w-3/4" />
+          <div className="h-2.5 bg-stone-200 dark:bg-white/5 rounded w-1/4" />
+          <div className="h-2.5 bg-stone-200 dark:bg-white/5 rounded w-full" />
+          <div className="h-2.5 bg-stone-200 dark:bg-white/5 rounded w-2/3" />
         </div>
       </div>
       <div className="flex gap-2 px-4 pb-4 pt-2.5">
-        <div className="h-7 bg-white/5 rounded-xl w-28" />
-        <div className="h-7 bg-white/5 rounded-xl w-16" />
+        <div className="h-7 bg-stone-200 dark:bg-white/5 rounded-xl w-28" />
+        <div className="h-7 bg-stone-200 dark:bg-white/5 rounded-xl w-16" />
       </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main ExplorePage — hooks are always called, activePage controls render
-// ---------------------------------------------------------------------------
 export default function ExplorePage({ onAddToSomeday, onPlanEvent }) {
   const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true });
   const [drawerOpen, setDrawerOpen]       = useState(false);
@@ -303,7 +300,6 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent }) {
   const [moviesError, setMoviesError]     = useState(false);
   const [activePage, setActivePage]       = useState(null);
 
-  // Always call hooks — no early returns before this
   useEffect(() => {
     if (!sources.movies) return;
     let cancelled = false;
@@ -316,7 +312,6 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent }) {
     return () => { cancelled = true; };
   }, [movieTab, sources.movies]);
 
-  // Now safe to conditionally render sub-pages
   if (activePage === "movies") {
     return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} />;
   }
@@ -338,25 +333,25 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent }) {
   function toggleSource(key) { setSources(prev => ({ ...prev, [key]: !prev[key] })); }
 
   return (
-    <div className="min-h-screen bg-[#0e1520] pb-28">
-      <div className="bg-[#131c2e] border-b border-white/[0.05] px-4 pt-5 pb-3 sticky top-0 z-30">
-        <h1 className="font-['Caveat',cursive] text-3xl font-semibold text-gray-100 mb-3">Explore</h1>
+    <div className="min-h-screen bg-[#faf8f3] dark:bg-[#0e1520] pb-28">
+      <div className="bg-white dark:bg-[#131c2e] border-b border-stone-200 dark:border-white/[0.05] px-4 pt-5 pb-3 sticky top-0 z-30">
+        <h1 className="font-['Caveat',cursive] text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Explore</h1>
         <div className="flex gap-2">
-          <div className="flex-1 flex items-center gap-2 bg-white/[0.06] rounded-2xl px-3.5 py-2.5">
-            <svg className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" fill="none" viewBox="0 0 14 14">
+          <div className="flex-1 flex items-center gap-2 bg-stone-100 dark:bg-white/[0.06] rounded-2xl px-3.5 py-2.5">
+            <svg className="w-3.5 h-3.5 text-gray-400 dark:text-gray-600 flex-shrink-0" fill="none" viewBox="0 0 14 14">
               <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
               <path d="M10 10l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
             </svg>
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search movies, friends, places..."
-              className="bg-transparent text-sm text-gray-200 placeholder-gray-600 outline-none flex-1 min-w-0"
+              className="bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-600 outline-none flex-1 min-w-0"
             />
-            {search && <button onClick={() => setSearch("")} className="text-gray-600 text-xs leading-none">✕</button>}
+            {search && <button onClick={() => setSearch("")} className="text-gray-400 dark:text-gray-600 text-xs leading-none">✕</button>}
           </div>
           <button
             onClick={() => setDrawerOpen(true)}
-            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-colors ${anyOff ? "bg-teal-500/15 text-teal-400" : "bg-white/[0.06] text-gray-300"}`}
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-colors ${anyOff ? "bg-teal-500/15 text-teal-600 dark:text-teal-400" : "bg-stone-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-300"}`}
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 13 13">
               <path d="M1 2.5h11M3 6.5h7M5 10.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -367,25 +362,25 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent }) {
       </div>
 
       {sources.movies && !search && (
-        <div className="bg-[#131c2e] pb-3 pt-2 border-b border-white/[0.05]">
+        <div className="bg-white dark:bg-[#131c2e] pb-3 pt-2 border-b border-stone-200 dark:border-white/[0.05]">
           <MovieTabBar activeTab={movieTab} onTab={setMovieTab} />
         </div>
       )}
 
-      <p className="text-[10px] font-medium tracking-widest uppercase text-gray-600 px-4 pt-5 pb-3">
+      <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 px-4 pt-5 pb-3">
         {search ? `Results for "${search}"` : "Your feed"}
       </p>
 
       <div className="px-3.5 flex flex-col gap-3">
         {moviesLoading && sources.movies && !search && <><SkeletonCard /><SkeletonCard /></>}
         {moviesError && sources.movies && (
-          <div className="rounded-2xl bg-[#161f30] px-4 py-5 text-center">
+          <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent px-4 py-5 text-center shadow-sm dark:shadow-none">
             <p className="text-sm text-gray-500">Couldn't load movies</p>
-            <button onClick={() => setMovieTab(t => t)} className="text-xs text-teal-400 mt-1">Try again</button>
+            <button onClick={() => setMovieTab(t => t)} className="text-xs text-teal-500 mt-1">Try again</button>
           </div>
         )}
         {!moviesLoading && visiblePosts.length === 0 && (
-          <div className="text-center py-16 text-gray-600 text-sm">
+          <div className="text-center py-16 text-gray-400 dark:text-gray-600 text-sm">
             {search ? "No results found" : "All sources hidden — open Filter to turn some back on"}
           </div>
         )}
