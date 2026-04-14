@@ -1408,6 +1408,22 @@ const addQuickThoughtTombstone = (userId, id) => {
     window.localStorage.setItem(getQuickThoughtsTombstonesKey(userId), JSON.stringify([...existing]));
   } catch {}
 };
+const getBucketListTombstonesKey = (userId) => `bucket-list-deleted-${String(userId || 'guest').trim() || 'guest'}`;
+const readBucketListTombstones = (userId) => {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(getBucketListTombstonesKey(userId)) || '[]');
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch { return new Set(); }
+};
+const addBucketListTombstone = (userId, id) => {
+  if (typeof window === 'undefined' || !id) return;
+  try {
+    const existing = readBucketListTombstones(userId);
+    existing.add(id);
+    window.localStorage.setItem(getBucketListTombstonesKey(userId), JSON.stringify([...existing]));
+  } catch {}
+};
 const readBucketListState = (userId) => {
   if (typeof window === 'undefined') return [];
   try {
@@ -20009,9 +20025,12 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
         setBucketListHydratedUserId(currentBucketListUserId);
         return;
       }
-      const remoteDreams = await readRemoteBucketListState(user?.id);
+      const bucketTombstones = readBucketListTombstones(user?.id);
+      const remoteDreams = (await readRemoteBucketListState(user?.id))
+        .filter((d) => !bucketTombstones.has(String(d?.id || '')));
       if (cancelled) return;
-      const mergedDreams = mergePersistedBucketList(remoteDreams, localDreams);
+      const mergedDreams = mergePersistedBucketList(remoteDreams, localDreams)
+        .filter((d) => !bucketTombstones.has(String(d?.id || '')));
       setBucketList(mergedDreams);
       writeBucketListState(user?.id, mergedDreams);
       void persistRemoteBucketListState(user?.id, mergedDreams);
@@ -23988,6 +24007,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const deleteBucketDream = (dream) => {
     const dreamId = String(dream?.id || '').trim();
     if (!dreamId) return;
+    addBucketListTombstone(user?.id, dreamId);
     setBucketList((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== dreamId));
   };
 
