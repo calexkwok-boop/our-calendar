@@ -241,8 +241,8 @@ function FilterDrawer({ open, sources, onToggle, onClose }) {
 
   return (
     <>
-      <div onClick={onClose} className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} />
-      <div className={`fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto bg-white dark:bg-[#131c2e] rounded-t-3xl border-t border-stone-200 dark:border-white/[0.06] pb-10 transition-transform duration-300 ease-out ${open ? "translate-y-0" : "translate-y-full"}`}>
+      <div onClick={onClose} className={`fixed inset-0 z-[10002] bg-black/50 transition-opacity duration-200 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} />
+      <div className={`fixed bottom-0 left-0 right-0 z-[10002] max-w-lg mx-auto bg-white dark:bg-[#131c2e] rounded-t-3xl border-t border-stone-200 dark:border-white/[0.06] pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+2.5rem))] transition-transform duration-300 ease-out ${open ? "translate-y-0" : "translate-y-full"}`}>
         <div className="w-9 h-1 bg-stone-200 dark:bg-white/10 rounded-full mx-auto mt-3 mb-4" />
         <h2 className="font-['Caveat',cursive] text-2xl font-semibold text-gray-900 dark:text-gray-100 px-5 pb-4">Feed settings</h2>
         <div className="px-5 mb-5">

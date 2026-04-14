@@ -49,11 +49,11 @@ function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, somedays }) {
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className={`fixed inset-0 z-50 bg-black/60 transition-opacity duration-250 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 z-[10002] bg-black/60 transition-opacity duration-250 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
       />
 
       {/* Sheet */}
-      <div style={{ WebkitOverflowScrolling: 'touch' }} className={`fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto bg-white dark:bg-[#131c2e] rounded-t-3xl border-t border-stone-200 dark:border-white/[0.06] transition-transform duration-300 ease-out max-h-[88vh] overflow-y-auto overscroll-contain ${open ? "translate-y-0" : "translate-y-full"}`}>
+      <div style={{ WebkitOverflowScrolling: 'touch' }} className={`fixed bottom-0 left-0 right-0 z-[10002] max-w-lg mx-auto bg-white dark:bg-[#131c2e] rounded-t-3xl border-t border-stone-200 dark:border-white/[0.06] transition-transform duration-300 ease-out max-h-[88vh] overflow-y-auto overscroll-contain ${open ? "translate-y-0" : "translate-y-full"}`}>
         {/* Handle */}
         <div className="w-9 h-1 bg-stone-200 dark:bg-white/10 rounded-full mx-auto mt-3 mb-0 sticky top-3" />
 
