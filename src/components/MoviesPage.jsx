@@ -271,6 +271,7 @@ export default function MoviesPage({ onBack, onAddToSomeday }) {
 
   return (
     <div className="min-h-screen bg-[#faf8f3] dark:bg-[#0e1520] pb-28">
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap'); .font-handwritten { font-family: 'Caveat', cursive; }`}</style>
 
       {/* Top bar */}
       <div className="bg-white dark:bg-[#131c2e] border-b border-stone-200 dark:border-white/[0.05] px-4 pt-5 pb-3 sticky top-0 z-30">
@@ -284,7 +285,7 @@ export default function MoviesPage({ onBack, onAddToSomeday }) {
             </svg>
           </button>
           <div>
-            <h1 className="font-['Caveat',cursive] text-2xl font-semibold text-gray-900 dark:text-gray-100 leading-tight">Movies</h1>
+            <h1 className="font-handwritten text-3xl font-bold text-gray-900 dark:text-gray-100 leading-tight">Movies</h1>
             <p className="text-[11px] text-gray-400 dark:text-gray-600">2.4k members</p>
           </div>
           <button className="ml-auto text-xs font-medium px-3.5 py-1.5 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 active:opacity-70">
