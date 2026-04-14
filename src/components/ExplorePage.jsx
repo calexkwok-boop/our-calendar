@@ -69,26 +69,18 @@ function CardHeader({ post, onPageTap }) {
       {post.avatar ? (
         <div className="w-9 h-9 rounded-full bg-teal-500/15 text-teal-400 flex items-center justify-center text-sm font-medium flex-shrink-0">{post.avatar}</div>
       ) : (
-        <div
-          className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-lg flex-shrink-0 cursor-pointer active:opacity-70"
-          onClick={() => onPageTap?.(post.type)}
-        >{post.icon}</div>
+        <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-lg flex-shrink-0 cursor-pointer active:opacity-70" onClick={() => onPageTap?.(post.type)}>{post.icon}</div>
       )}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-100 leading-tight truncate">
           {post.name || (
-            <span className="cursor-pointer hover:text-teal-400 transition-colors" onClick={() => onPageTap?.(post.type)}>
-              {post.page}
-            </span>
+            <span className="cursor-pointer hover:text-teal-400 transition-colors" onClick={() => onPageTap?.(post.type)}>{post.page}</span>
           )}
           {post.action && <span className="font-normal text-gray-500"> {post.action}</span>}
         </p>
         <p className="text-[11px] text-gray-600 mt-0.5">{post.time}</p>
       </div>
-      <SourceTag
-        tag={post.tag}
-        onClick={post.type === "movies" ? () => onPageTap?.("movies") : undefined}
-      />
+      <SourceTag tag={post.tag} onClick={post.type === "movies" ? () => onPageTap?.("movies") : undefined} />
     </div>
   );
 }
@@ -148,15 +140,9 @@ function MovieCard({ movie, onAddToSomeday, onPageTap }) {
   return (
     <div className="rounded-2xl bg-[#161f30] overflow-hidden">
       <div className="flex items-center gap-2.5 px-4 pt-4 pb-2.5">
-        <div
-          className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center text-lg flex-shrink-0 cursor-pointer active:opacity-70"
-          onClick={() => onPageTap?.("movies")}
-        >🎬</div>
+        <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center text-lg flex-shrink-0 cursor-pointer active:opacity-70" onClick={() => onPageTap?.("movies")}>🎬</div>
         <div className="flex-1 min-w-0">
-          <p
-            className="text-sm font-medium text-gray-100 cursor-pointer hover:text-teal-400 transition-colors"
-            onClick={() => onPageTap?.("movies")}
-          >Movies</p>
+          <p className="text-sm font-medium text-gray-100 cursor-pointer hover:text-teal-400 transition-colors" onClick={() => onPageTap?.("movies")}>Movies</p>
           <p className="text-[11px] text-gray-600 mt-0.5">Community pick</p>
         </div>
         <SourceTag tag="Movies" onClick={() => onPageTap?.("movies")} />
@@ -184,10 +170,7 @@ function MovieCard({ movie, onAddToSomeday, onPageTap }) {
         <button onClick={handleSomeday} className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-all active:opacity-70 ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`}>
           {inSomeday ? "✓ In someday list" : "+ Someday list"}
         </button>
-        <button
-          onClick={() => onPageTap?.("movies")}
-          className="text-xs font-medium px-3.5 py-1.5 rounded-xl bg-white/5 text-gray-400 active:opacity-70"
-        >See all →</button>
+        <button onClick={() => onPageTap?.("movies")} className="text-xs font-medium px-3.5 py-1.5 rounded-xl bg-white/5 text-gray-400 active:opacity-70">See all →</button>
         <VoteButtons initialVotes={votes} />
       </div>
     </div>
@@ -218,11 +201,7 @@ function MovieTabBar({ activeTab, onTab }) {
   return (
     <div className="flex gap-2 px-4 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
       {MOVIE_TABS.map(t => (
-        <button
-          key={t.key}
-          onClick={() => onTab(t.key)}
-          className={`text-xs font-medium px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${activeTab === t.key ? "bg-purple-500/20 text-purple-300" : "bg-white/5 text-gray-500"}`}
-        >{t.label}</button>
+        <button key={t.key} onClick={() => onTab(t.key)} className={`text-xs font-medium px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${activeTab === t.key ? "bg-purple-500/20 text-purple-300" : "bg-white/5 text-gray-500"}`}>{t.label}</button>
       ))}
     </div>
   );
@@ -236,10 +215,7 @@ function ToggleRow({ sourceKey, config, enabled, onToggle }) {
         <p className="text-sm text-gray-200">{config.label}</p>
         <p className="text-[11px] text-gray-600">{config.sub}</p>
       </div>
-      <button
-        onClick={() => onToggle(sourceKey)}
-        className={`w-11 h-6 rounded-full relative transition-colors duration-200 flex-shrink-0 ${enabled ? "bg-teal-400" : "bg-white/10"}`}
-      >
+      <button onClick={() => onToggle(sourceKey)} className={`w-11 h-6 rounded-full relative transition-colors duration-200 flex-shrink-0 ${enabled ? "bg-teal-400" : "bg-white/10"}`}>
         <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${enabled ? "translate-x-5" : "translate-x-0.5"}`} />
       </button>
     </div>
@@ -305,28 +281,19 @@ function SkeletonCard() {
 }
 
 // ---------------------------------------------------------------------------
-// Main ExplorePage
+// Main ExplorePage — hooks are always called, activePage controls render
 // ---------------------------------------------------------------------------
 export default function ExplorePage({ onAddToSomeday, onPlanEvent }) {
-  const [sources, setSources]       = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true });
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [search, setSearch]         = useState("");
-  const [movieTab, setMovieTab]     = useState("popular");
-  const [movies, setMovies]         = useState([]);
+  const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true });
+  const [drawerOpen, setDrawerOpen]       = useState(false);
+  const [search, setSearch]               = useState("");
+  const [movieTab, setMovieTab]           = useState("popular");
+  const [movies, setMovies]               = useState([]);
   const [moviesLoading, setMoviesLoading] = useState(true);
   const [moviesError, setMoviesError]     = useState(false);
-  const [activePage, setActivePage] = useState(null); // "movies" | null
+  const [activePage, setActivePage]       = useState(null);
 
-  // If a sub-page is active, render it instead
-  if (activePage === "movies") {
-    return (
-      <MoviesPage
-        onBack={() => setActivePage(null)}
-        onAddToSomeday={onAddToSomeday}
-      />
-    );
-  }
-
+  // Always call hooks — no early returns before this
   useEffect(() => {
     if (!sources.movies) return;
     let cancelled = false;
@@ -339,13 +306,18 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent }) {
     return () => { cancelled = true; };
   }, [movieTab, sources.movies]);
 
-  const anyOff = Object.values(sources).some(v => !v);
-  const moviePosts = movies.slice(0, 6).map(m => ({ ...m, type: "movies" }));
-  const activeFriends   = sources.friends ? FRIEND_POSTS : [];
-  const activeCommunity = COMMUNITY_POSTS.filter(p => sources[p.type]);
-  const activeMovies    = sources.movies && !moviesLoading ? moviePosts : [];
-  const allPosts = interleavePosts(activeFriends, activeMovies, activeCommunity);
-  const visiblePosts = search.trim()
+  // Now safe to conditionally render sub-pages
+  if (activePage === "movies") {
+    return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} />;
+  }
+
+  const anyOff        = Object.values(sources).some(v => !v);
+  const moviePosts    = movies.slice(0, 6).map(m => ({ ...m, type: "movies" }));
+  const activeFriends = sources.friends ? FRIEND_POSTS : [];
+  const activeCom     = COMMUNITY_POSTS.filter(p => sources[p.type]);
+  const activeMovies  = sources.movies && !moviesLoading ? moviePosts : [];
+  const allPosts      = interleavePosts(activeFriends, activeMovies, activeCom);
+  const visiblePosts  = search.trim()
     ? allPosts.filter(p => {
         const q   = search.toLowerCase();
         const hay = [p.name, p.page, p.text, p.title, p.cardTitle, p.desc, p.location, p.overview].filter(Boolean).join(" ").toLowerCase();
@@ -357,7 +329,6 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent }) {
 
   return (
     <div className="min-h-screen bg-[#0e1520] pb-28">
-      {/* Top bar */}
       <div className="bg-[#131c2e] border-b border-white/[0.05] px-4 pt-5 pb-3 sticky top-0 z-30">
         <h1 className="font-['Caveat',cursive] text-3xl font-semibold text-gray-100 mb-3">Explore</h1>
         <div className="flex gap-2">
