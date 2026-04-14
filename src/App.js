@@ -9348,16 +9348,16 @@ useEffect(() => {
     ? {
       backgroundImage: `linear-gradient(135deg, ${mixHexColors(activeLayerPageTheme.backgroundFrom, '#111827', 0.85)} 0%, ${mixHexColors(activeLayerPageTheme.backgroundVia, '#111827', 0.9)} 55%, ${mixHexColors(activeLayerPageTheme.backgroundTo, '#111827', 0.93)} 100%)`,
       paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
-      paddingLeft: 'max(0.5rem, env(safe-area-inset-left))',
-      paddingRight: 'max(0.5rem, env(safe-area-inset-right))',
-      paddingBottom: 'max(4.75rem, env(safe-area-inset-bottom))',
+      paddingLeft: 'env(safe-area-inset-left)',
+      paddingRight: 'env(safe-area-inset-right)',
+      paddingBottom: 'max(5rem, calc(4.75rem + env(safe-area-inset-bottom)))',
     }
     : {
       backgroundImage: `linear-gradient(135deg, ${activeLayerPageTheme.backgroundFrom} 0%, ${activeLayerPageTheme.backgroundVia} 50%, ${activeLayerPageTheme.backgroundTo} 100%)`,
       paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
-      paddingLeft: 'max(0.5rem, env(safe-area-inset-left))',
-      paddingRight: 'max(0.5rem, env(safe-area-inset-right))',
-      paddingBottom: 'max(4.75rem, env(safe-area-inset-bottom))',
+      paddingLeft: 'env(safe-area-inset-left)',
+      paddingRight: 'env(safe-area-inset-right)',
+      paddingBottom: 'max(5rem, calc(4.75rem + env(safe-area-inset-bottom)))',
     };
   const themeAccentButtonStyle = {
     backgroundColor: activeLayerPageTheme.accent,
@@ -25095,7 +25095,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     />
     <div
       ref={widgetSurfaceRef}
-      className="relative min-h-[100dvh] overflow-x-hidden overscroll-x-none p-2 sm:p-3 pt-7 sm:pt-10 pb-[calc(6rem+env(safe-area-inset-bottom))]"
+      className="relative min-h-[100dvh] overflow-x-hidden overscroll-x-none"
       style={themedPageBackgroundStyle}
       onPointerDownCapture={(event) => {
         if (bottomNavTab !== 'home') return;
@@ -29688,16 +29688,16 @@ transform: translateY(0);
     {/* -- Create Sub-Calendar Modal -- */}
     {!activeSubCalendar && (
       <div
-        className="fixed inset-x-0 bottom-0 z-[10001] px-3"
+        className="fixed inset-x-0 bottom-0 z-[10001]"
         style={{
-          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
+          paddingBottom: 'env(safe-area-inset-bottom)',
           transform: 'translate3d(0, 0, 0)',
           WebkitTransform: 'translate3d(0, 0, 0)',
           backfaceVisibility: 'hidden',
           WebkitBackfaceVisibility: 'hidden',
         }}
       >
-        <div className="max-w-6xl mx-auto pointer-events-auto">
+        <div className="w-full pointer-events-auto px-3 pb-2">
 
           {/* Widget toolbar — shown on home tab */}
           {false && showHomeCalendarWidgets && (
