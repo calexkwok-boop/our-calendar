@@ -29410,6 +29410,7 @@ transform: translateY(0);
 
             {bottomNavTab === 'explore' && (
               <ExplorePage
+                darkMode={darkMode}
                 currentUser={{
                   id: user?.id || 'guest',
                   name: user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'You',

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import MoviesPage from "./MoviesPage";
+import BoardGamePage from "./BoardGamePage";
 
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
@@ -290,7 +291,7 @@ function SkeletonCard() {
   );
 }
 
-export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {} }) {
+export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, darkMode = false }) {
   const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true });
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [search, setSearch]               = useState("");
@@ -314,6 +315,9 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {} }) 
 
   if (activePage === "movies") {
     return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onPlanEvent={onPlanEvent} />;
+  }
+  if (activePage === "games") {
+    return <BoardGamePage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} darkMode={darkMode} />;
   }
 
   const anyOff        = Object.values(sources).some(v => !v);
