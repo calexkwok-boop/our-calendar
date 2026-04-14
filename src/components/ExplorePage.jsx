@@ -58,23 +58,25 @@ function SourceTag({ tag, onClick }) {
 }
 
 function CardHeader({ post, onPageTap }) {
+  const tappable = !!onPageTap && !post.avatar;
   return (
-    <div className="flex items-center gap-2.5 px-4 pt-4 pb-2.5">
+    <div
+      className={`flex items-center gap-2.5 px-4 pt-4 pb-2.5${tappable ? ' cursor-pointer active:opacity-70' : ''}`}
+      onClick={tappable ? () => onPageTap(post.type) : undefined}
+    >
       {post.avatar ? (
         <div className="w-9 h-9 rounded-full bg-teal-500/15 text-teal-500 dark:text-teal-400 flex items-center justify-center text-sm font-medium flex-shrink-0">{post.avatar}</div>
       ) : (
-        <div className="w-9 h-9 rounded-xl bg-stone-100 dark:bg-white/5 flex items-center justify-center text-lg flex-shrink-0 cursor-pointer active:opacity-70" onClick={() => onPageTap?.(post.type)}>{post.icon}</div>
+        <div className="w-9 h-9 rounded-xl bg-stone-100 dark:bg-white/5 flex items-center justify-center text-lg flex-shrink-0">{post.icon}</div>
       )}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight truncate">
-          {post.name || (
-            <span className="cursor-pointer hover:text-teal-600 dark:hover:text-teal-400 transition-colors" onClick={() => onPageTap?.(post.type)}>{post.page}</span>
-          )}
+          {post.name || post.page}
           {post.action && <span className="font-normal text-gray-500"> {post.action}</span>}
         </p>
         <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-0.5">{post.time}</p>
       </div>
-      <SourceTag tag={post.tag} onClick={post.type === "movies" ? () => onPageTap?.("movies") : undefined} />
+      <SourceTag tag={post.tag} onClick={tappable ? () => onPageTap(post.type) : undefined} />
     </div>
   );
 }
@@ -293,6 +295,7 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
   const [movies, setMovies]               = useState([]);
   const [moviesLoading, setMoviesLoading] = useState(true);
   const [moviesError, setMoviesError]     = useState(false);
+  const [moviesRetry, setMoviesRetry]     = useState(0);
   const [activePage, setActivePage]       = useState(null);
 
   useEffect(() => {
@@ -305,7 +308,7 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
       .then(data => { if (!cancelled) { setMovies(data.results || []); setMoviesLoading(false); } })
       .catch(() => { if (!cancelled) { setMoviesError(true); setMoviesLoading(false); } });
     return () => { cancelled = true; };
-  }, [sources.movies]);
+  }, [sources.movies, moviesRetry]);
 
   if (activePage === "movies") {
     return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onPlanEvent={onPlanEvent} />;
@@ -369,7 +372,7 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
         {moviesError && sources.movies && (
           <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent px-4 py-5 text-center shadow-sm dark:shadow-none">
             <p className="text-sm text-gray-500">Couldn't load movies</p>
-            <button onClick={() => setMovieTab(t => t)} className="text-xs text-teal-500 mt-1">Try again</button>
+            <button onClick={() => setMoviesRetry(n => n + 1)} className="text-xs text-teal-500 mt-1">Try again</button>
           </div>
         )}
         {!moviesLoading && visiblePosts.length === 0 && (

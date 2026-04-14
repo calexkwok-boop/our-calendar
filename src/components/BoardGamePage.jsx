@@ -18,6 +18,40 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 
+// ─── static cover images ──────────────────────────────────────────────────────
+const GAME_COVERS = {
+  'Gloomhaven':            'https://upload.wikimedia.org/wikipedia/en/4/43/Gloomhaven_cover.jpg',
+  'Pandemic Legacy S1':    'https://upload.wikimedia.org/wikipedia/en/3/3e/Pandemic_Legacy_Season_1.jpg',
+  'Terraforming Mars':     'https://upload.wikimedia.org/wikipedia/en/f/fc/Terraforming_Mars_box_cover.jpg',
+  'Brass: Birmingham':     'https://upload.wikimedia.org/wikipedia/en/7/7f/Brass_Birmingham.jpg',
+  'Twilight Imperium 4':   'https://upload.wikimedia.org/wikipedia/en/a/a5/Twilight_Imperium_Fourth_Edition_box.jpg',
+  'Ark Nova':              'https://upload.wikimedia.org/wikipedia/en/b/b2/Ark_Nova_game.jpg',
+  'Dune: Imperium':        'https://upload.wikimedia.org/wikipedia/en/4/4e/Dune_Imperium_cover.jpg',
+  'Star Wars: Rebellion':  'https://upload.wikimedia.org/wikipedia/en/1/1e/Star_Wars_Rebellion_board_game.jpg',
+  'Twilight Struggle':     'https://upload.wikimedia.org/wikipedia/en/b/b7/Twilight_Struggle_cover.jpg',
+  'Ticket to Ride':        'https://upload.wikimedia.org/wikipedia/en/9/92/Ticket_to_Ride_board_game_box_EN.jpg',
+  'Catan':                 'https://upload.wikimedia.org/wikipedia/en/a/a3/Catan-2015box.jpg',
+  'Carcassonne':           'https://upload.wikimedia.org/wikipedia/en/4/4c/Carcassonne_Cover.jpg',
+  'Pandemic':              'https://upload.wikimedia.org/wikipedia/en/e/e5/Pandemic_board_game_box.jpg',
+  '7 Wonders':             'https://upload.wikimedia.org/wikipedia/en/7/7e/7_Wonders_board_game_cover.jpg',
+  'Codenames':             'https://upload.wikimedia.org/wikipedia/en/3/3d/Codenames_board_game_cover.jpg',
+  'Wingspan':              'https://upload.wikimedia.org/wikipedia/en/a/a1/Wingspan-board-game.jpg',
+  'Azul':                  'https://upload.wikimedia.org/wikipedia/en/3/32/Azul_board_game.jpg',
+  'Gaia Project':          'https://upload.wikimedia.org/wikipedia/en/5/5e/Gaia_Project_box.jpg',
+  'Vindication':           'https://upload.wikimedia.org/wikipedia/en/v/va/Vindication_board_game.jpg',
+  'Dominion':              'https://upload.wikimedia.org/wikipedia/en/7/7e/DominionGameBox.png',
+  'Viticulture EE':        'https://upload.wikimedia.org/wikipedia/en/4/44/Viticulture_board_game.jpg',
+  'Gloomhaven: Jaws':      'https://upload.wikimedia.org/wikipedia/en/c/c5/Gloomhaven_Jaws_of_the_Lion.jpg',
+  'War of the Ring 2e':    'https://upload.wikimedia.org/wikipedia/en/7/74/War_of_the_Ring_2nd_edition.jpg',
+  "Tzolk'in":              'https://upload.wikimedia.org/wikipedia/en/0/05/Tzolkin_The_Mayan_Calendar.jpg',
+  'The Crew':              'https://upload.wikimedia.org/wikipedia/en/0/0e/The_Crew_board_game.jpg',
+  'Lost Ruins of Arnak':   'https://upload.wikimedia.org/wikipedia/en/4/41/Lost_Ruins_of_Arnak.jpg',
+  'Dixit':                 'https://upload.wikimedia.org/wikipedia/en/1/1b/Dixit_board_game.jpg',
+  'Pandemic: Iberia':      'https://upload.wikimedia.org/wikipedia/en/2/28/Pandemic_Iberia.jpg',
+  'Heat: Pedal to Metal':  'https://upload.wikimedia.org/wikipedia/en/0/0e/Heat_Pedal_to_Metal.jpg',
+  'Cascadia':              'https://upload.wikimedia.org/wikipedia/en/a/a8/Cascadia_board_game.jpg',
+};
+
 // ─── fallback data (shown while API loads or on error) ────────────────────────
 const FALLBACK_GAMES = [
   { id: '174430', name: 'Gloomhaven',         year: 2017, rating: 8.6, minPlayers: 1, maxPlayers: 4, minTime: 60,  maxTime: 120, age: 14, category: 'strategy',     description: 'A game of tactical combat in an ever-changing dungeon. Players control mercenaries with unique abilities.',                          thumbnail: '' },
@@ -103,7 +137,6 @@ const parseBGGXML = (xmlText) => {
       const minTime = parseInt(item.querySelector('minplaytime')?.getAttribute('value') || '30');
       const maxTime = parseInt(item.querySelector('maxplaytime')?.getAttribute('value') || '60');
       const age = parseInt(item.querySelector('minage')?.getAttribute('value') || '8');
-      const thumbnail = item.querySelector('thumbnail')?.textContent?.trim() || '';
       const description = item.querySelector('description')?.textContent?.trim().slice(0, 200) + '...' || '';
       // infer category from BGG link tags
       const links = item.querySelectorAll('link[type="boardgamecategory"]');
@@ -112,7 +145,7 @@ const parseBGGXML = (xmlText) => {
       if (cats.some(c => c.includes('party') || c.includes('trivia'))) category = 'party';
       else if (cats.some(c => c.includes('children') || c.includes('family'))) category = 'family';
       else if (cats.some(c => c.includes('cooperative'))) category = 'cooperative';
-      if (name) games.push({ id, name, year, rating: Math.round(rating * 10) / 10, minPlayers, maxPlayers, minTime, maxTime, age, thumbnail, description, category });
+      if (name) games.push({ id, name, year, rating: Math.round(rating * 10) / 10, minPlayers, maxPlayers, minTime, maxTime, age, description, category });
     });
     return games;
   } catch {
@@ -213,9 +246,9 @@ const GameCard = ({ game, onAddEvent, darkMode, stagger }) => {
         }}
         onClick={() => setExpanded(e => !e)}
       >
-        {game.thumbnail && !imgError ? (
+        {GAME_COVERS[game.name] && !imgError ? (
           <img
-            src={game.thumbnail}
+            src={`https://images.weserv.nl/?url=${encodeURIComponent(GAME_COVERS[game.name])}&w=300`}
             alt={game.name}
             onError={() => setImgError(true)}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}

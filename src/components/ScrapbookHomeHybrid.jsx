@@ -346,9 +346,9 @@ const ScrapbookHomeHybrid = ({
                 Moments This Week
               </h3>
             </div>
-            {momentsThisWeek.length > 0 && (
+            {yearStats.streak > 0 && (
               <div className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                {momentsThisWeek.length} captured
+                🔥 {yearStats.streak} day streak
               </div>
             )}
           </div>
@@ -672,7 +672,7 @@ const ScrapbookHomeHybrid = ({
             {(yearStats.year || new Date().getFullYear())} so far
           </div>
           <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 sm:text-base">
-            {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos · 🔥 {yearStats.streak || 0} day streak
+            {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos
           </div>
           {yearStats.streakHelpText ? (
             <div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
