@@ -290,7 +290,7 @@ function SkeletonCard() {
   );
 }
 
-export default function ExplorePage({ onAddToSomeday, onPlanEvent }) {
+export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {} }) {
   const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true });
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [search, setSearch]               = useState("");
@@ -313,7 +313,7 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent }) {
   }, [movieTab, sources.movies]);
 
   if (activePage === "movies") {
-    return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} />;
+    return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onPlanEvent={onPlanEvent} />;
   }
 
   const anyOff        = Object.values(sources).some(v => !v);

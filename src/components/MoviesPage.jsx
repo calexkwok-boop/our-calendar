@@ -14,7 +14,7 @@ const MOVIE_TABS = [
 // ---------------------------------------------------------------------------
 // Detail sheet — slides up when a poster is tapped
 // ---------------------------------------------------------------------------
-function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, somedays }) {
+function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, onPlanEvent, somedays }) {
   const [inSomeday, setInSomeday] = useState(false);
 
   useEffect(() => {
@@ -97,7 +97,10 @@ function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, somedays }) {
             >
               {inSomeday ? "✓ In someday list" : "+ Someday list"}
             </button>
-            <button className="flex-1 py-3 rounded-2xl text-sm font-medium bg-stone-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 active:opacity-70">
+            <button
+              onClick={() => { onClose(); onPlanEvent?.({ title: movie.title }); }}
+              className="flex-1 py-3 rounded-2xl text-sm font-medium bg-stone-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 active:opacity-70"
+            >
               Plan it →
             </button>
           </div>
@@ -230,7 +233,7 @@ function PosterGrid({ movies, loading, somedays, onTap }) {
 // ---------------------------------------------------------------------------
 // Main MoviesPage
 // ---------------------------------------------------------------------------
-export default function MoviesPage({ onBack, onAddToSomeday }) {
+export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent }) {
   const [activeTab, setActiveTab] = useState("popular");
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -266,7 +269,9 @@ export default function MoviesPage({ onBack, onAddToSomeday }) {
       else next.add(movie.id);
       return next;
     });
-    onAddToSomeday?.(movie);
+    if (!somedays.has(movie.id)) {
+      onAddToSomeday?.({ ...movie, type: "movies" });
+    }
   }
 
   return (
@@ -343,6 +348,7 @@ export default function MoviesPage({ onBack, onAddToSomeday }) {
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
         onAddToSomeday={handleAddToSomeday}
+        onPlanEvent={onPlanEvent}
         somedays={somedays}
       />
     </div>

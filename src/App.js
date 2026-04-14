@@ -12121,9 +12121,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     });
   }, []);
 
-  const openHomeAddEventModal = React.useCallback(() => {
+  const openHomeAddEventModal = React.useCallback((hint) => {
     if (!assertCanEditActiveLayer('add events to this calendar')) return;
     resetHomeAddEventForm();
+    if (hint?.title) setHomeAddEventForm(prev => ({ ...prev, title: String(hint.title) }));
     setShowHomeAddEventModal(true);
   }, [resetHomeAddEventForm]);
 
@@ -29415,21 +29416,28 @@ transform: translateY(0);
                   avatarUrl: currentUserProfilePhotoUrl || undefined,
                 }}
                 onAddToSomeday={(post) => {
-                  const text = String(post?.movieTitle || post?.cardTitle || post?.text || '').trim();
+                  const text = String(post?.title || post?.movieTitle || post?.cardTitle || post?.text || '').trim();
                   if (!text) return;
-                  setBucketList((prev) => [
-                    {
-                      id: uuidv4(),
-                      text,
-                      category: post?.type === 'movies' ? 'fun' : post?.type === 'hiking' ? 'adventure' : post?.type === 'restaurants' ? 'food' : 'fun',
-                      sources: [],
-                      emoji: post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : '✨',
-                      createdAt: new Date().toISOString(),
-                    },
-                    ...(Array.isArray(prev) ? prev : []),
-                  ]);
+                  const posterPath = post?.poster_path || '';
+                  const photoUrl = posterPath ? `https://image.tmdb.org/t/p/w342${posterPath}` : '';
+                  setBucketList((prev) => {
+                    const alreadyExists = prev.some(d => d.text === text && d.emoji === (post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : '✨'));
+                    if (alreadyExists) return prev;
+                    return [
+                      {
+                        id: uuidv4(),
+                        text,
+                        category: post?.type === 'movies' ? 'fun' : post?.type === 'hiking' ? 'adventure' : post?.type === 'restaurants' ? 'food' : 'fun',
+                        sources: [],
+                        emoji: post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : '✨',
+                        photoUrl,
+                        createdAt: new Date().toISOString(),
+                      },
+                      ...(Array.isArray(prev) ? prev : []),
+                    ];
+                  });
                 }}
-                onPlanEvent={() => openHomeAddEventModal()}
+                onPlanEvent={(hint) => openHomeAddEventModal(hint)}
               />
 
 
