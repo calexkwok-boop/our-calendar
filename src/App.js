@@ -24427,12 +24427,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   const renderEventsMemoriesPanel = () => {
     const recentMemoryEvents = eligibleMemoryEvents.slice(0, 3);
     return (
-      <div className="mb-5 rounded-3xl border border-purple-200/70 dark:border-purple-800/60 bg-gradient-to-br from-white via-purple-50/70 to-pink-50/80 dark:from-slate-900 dark:via-purple-950/30 dark:to-slate-900 p-5">
+      <div className="mb-5 rounded-3xl border border-stone-200/80 dark:border-white/10 bg-gradient-to-br from-white/95 via-amber-50/40 to-white/90 dark:from-slate-900/80 dark:via-amber-900/10 dark:to-slate-900/75 p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-xl">
-            <div className="text-[11px] uppercase tracking-[0.24em] text-purple-500 dark:text-purple-300">Memories</div>
+            <div className="text-[11px] uppercase tracking-[0.24em] text-amber-900/55 dark:text-amber-100/55">Memories</div>
             <h3 className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
-              Save the moments that matter after the event ends
+              Save the moments that matter
             </h3>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               Turn your events into keepsakes with photos, tagged people, and a lasting gallery.
@@ -24441,14 +24441,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               onClick={openMemoriesGallery}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold hover:shadow-lg transition-all"
+              className="px-4 py-2.5 rounded-xl bg-stone-700 dark:bg-stone-600 text-amber-50 text-sm font-semibold hover:bg-stone-800 dark:hover:bg-stone-500 hover:shadow-lg transition-all"
             >
               {memories.length > 0 ? 'Open Memories' : 'Start Memory Gallery'}
             </button>
             {recentMemoryEvents.length > 0 && (
               <button
                 onClick={() => createMemoryFromEvent(recentMemoryEvents[0])}
-                className="px-4 py-2.5 rounded-xl border border-purple-200 dark:border-purple-700 text-sm font-semibold text-purple-700 dark:text-purple-200 hover:bg-purple-100/70 dark:hover:bg-purple-900/30 transition-all"
+                className="px-4 py-2.5 rounded-xl border border-stone-200 dark:border-white/10 text-sm font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-100/70 dark:hover:bg-white/[0.06] transition-all"
               >
                 Create From Event
               </button>
@@ -24457,24 +24457,24 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         </div>
 
         <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-purple-100 dark:border-white/10 p-4">
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
+          <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-stone-100 dark:border-white/10 p-4">
+            <div className="text-2xl font-bold text-amber-900 dark:text-amber-200">
               {memories.length}
             </div>
             <div className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">
               Saved memories
             </div>
           </div>
-          <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-purple-100 dark:border-white/10 p-4">
-            <div className="text-2xl font-bold text-pink-600 dark:text-pink-300">
+          <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-stone-100 dark:border-white/10 p-4">
+            <div className="text-2xl font-bold text-stone-600 dark:text-stone-300">
               {eligibleMemoryEvents.length + eligibleMemoryTrips.length}
             </div>
             <div className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">
               Past moments ready
             </div>
           </div>
-          <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-purple-100 dark:border-white/10 p-4">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">
+          <div className="rounded-2xl bg-white/80 dark:bg-white/[0.04] border border-stone-100 dark:border-white/10 p-4">
+            <div className="text-2xl font-bold text-stone-600 dark:text-stone-300">
               {memories.reduce((total, memory) => total + (memory.photos?.length || 0), 0)}
             </div>
             <div className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -24493,7 +24493,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                 {recentMemoryEvents.map((event) => (
                   <div
                     key={`event-${event.id}`}
-                    className="flex flex-col gap-3 rounded-2xl border border-purple-100 dark:border-white/10 bg-white/85 dark:bg-slate-900/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-3 rounded-2xl border border-stone-100 dark:border-white/10 bg-white/85 dark:bg-slate-900/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0">
                       <div className="font-semibold text-gray-900 dark:text-white truncate">{event.title}</div>
@@ -24504,7 +24504,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
                     </div>
                     <button
                       onClick={() => createMemoryFromEvent(event)}
-                      className="shrink-0 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-700 text-sm font-semibold text-purple-700 dark:text-purple-200 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all"
+                      className="shrink-0 px-4 py-2 rounded-xl bg-white/70 dark:bg-slate-800 border border-stone-200 dark:border-white/10 text-sm font-semibold text-stone-700 dark:text-stone-200 hover:bg-white dark:hover:bg-white/[0.08] transition-all"
                     >
                       Save as Memory
                     </button>
@@ -24514,7 +24514,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             )}
           </div>
         ) : (
-          <div className="mt-5 rounded-2xl border border-dashed border-purple-200 dark:border-purple-700/70 px-4 py-5 text-sm text-gray-600 dark:text-gray-400">
+          <div className="mt-5 rounded-2xl border border-dashed border-stone-200 dark:border-white/10 px-4 py-5 text-sm text-gray-600 dark:text-gray-400">
             Finished Me Events and We Events will show up here once they are ready to save.
           </div>
         )}
@@ -29009,20 +29009,20 @@ transform: translateY(0);
                 <div className="flex flex-wrap items-center gap-2 mb-4 relative">
                   <button
                     onClick={() => setEventsTabHideRecurring((prev) => !prev)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${eventsTabHideRecurring ? 'bg-gray-900 text-white border-gray-900 dark:bg-white/[0.08] dark:text-gray-100 dark:border-white/15' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${eventsTabHideRecurring ? 'bg-stone-700 text-amber-50 border-stone-700 dark:bg-white/[0.08] dark:text-gray-100 dark:border-white/15' : 'bg-white/70 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-stone-200 dark:border-gray-600'}`}
                   >
                     {eventsTabHideRecurring ? 'Show recurring' : 'Hide recurring'}
                   </button>
                   <div className="relative">
                     <button
                       onClick={() => setShowEventsTabCalendarFilter((prev) => !prev)}
-                      className="px-3 py-1.5 rounded-xl text-xs font-medium border transition-all bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600"
+                      className="px-3 py-1.5 rounded-xl text-xs font-medium border transition-all bg-white/70 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-stone-200 dark:border-gray-600"
                     >
                       Calendars
                     </button>
                     {showEventsTabCalendarFilter && (
-                      <div className="absolute left-0 top-full mt-2 z-20 min-w-[220px] max-w-[280px] rounded-2xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl p-2 space-y-1">
-                        <label className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <div className="absolute left-0 top-full mt-2 z-20 min-w-[220px] max-w-[280px] rounded-2xl border border-stone-200 dark:border-gray-600 bg-[#fdf9f4] dark:bg-gray-800 shadow-xl p-2 space-y-1">
+                        <label className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-stone-100 dark:hover:bg-gray-700">
                           <input
                             type="checkbox"
                             checked={visibleLayerCalendars.length > 0 && eventsTabVisibleLayerIds.length === visibleLayerCalendars.length}
@@ -29040,7 +29040,7 @@ transform: translateY(0);
                           const layerId = String(layer.id || '');
                           const enabled = eventsTabVisibleLayerIds.includes(layerId);
                           return (
-                            <label key={layerId} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <label key={layerId} className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-stone-100 dark:hover:bg-gray-700">
                               <input
                                 type="checkbox"
                                 checked={enabled}
@@ -29143,9 +29143,9 @@ transform: translateY(0);
                                 className="ev-heading flex h-10 w-12 shrink-0 items-center justify-center rounded-xl border font-bold"
                                 style={{
                                   fontSize: 18,
-                                  borderColor: darkMode ? 'rgba(255,255,255,0.10)' : `${activeLayerPageTheme.accent}24`,
-                                  background: darkMode ? 'rgba(255,255,255,0.04)' : `${activeLayerPageTheme.accent}10`,
-                                  color: darkMode ? 'rgba(255,255,255,0.78)' : activeLayerPageTheme.accent,
+                                  borderColor: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(120,90,60,0.15)',
+                                  background: darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(245,235,220,0.7)',
+                                  color: darkMode ? 'rgba(255,255,255,0.78)' : '#7c6040',
                                 }}
                               >
                                 {eventDayLabel}
@@ -29162,7 +29162,7 @@ transform: translateY(0);
                                       <span>{weEventBadge.label}</span>
                                     </span>
                                   ) : null}
-                                  {(event.isAnnual || (event.recurrence && event.recurrence !== 'once')) && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">Recurring</span>}
+                                  {(event.isAnnual || (event.recurrence && event.recurrence !== 'once')) && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 dark:bg-white/[0.07] dark:text-stone-300">Recurring</span>}
                                   {(() => {
                                     const eventLayer = visibleLayerCalendars.find((layer) => String(layer?.id || '') === String(event?.layerId || event?.layer_id || '')) || null;
                                     const eventLayerTheme = normalizeLayerPageTheme(eventLayer?.page_theme, eventLayer?.title_style);
@@ -29189,7 +29189,7 @@ transform: translateY(0);
                               <div className="flex flex-col items-end gap-1 shrink-0">
                                 {popupMeta ? (
                                   <>
-                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${joined ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : isFull ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}`}>
+                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${joined ? 'bg-stone-200 text-stone-700 dark:bg-white/[0.10] dark:text-stone-200' : isFull ? 'bg-stone-100 text-stone-500 dark:bg-white/[0.06] dark:text-stone-400' : 'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300'}`}>
                                       {joined ? '✓ Joined' : isFull ? 'Full' : 'Open'}
                                     </span>
                                     {maxPeople > 0 && (
