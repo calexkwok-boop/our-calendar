@@ -28975,21 +28975,43 @@ transform: translateY(0);
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <div>
                     <h3 className="ev-heading font-bold" style={{ fontSize: 32, color: darkMode ? 'rgba(255,255,255,0.88)' : '#44372a' }}>Events</h3>
-                    <div className="mt-2 inline-flex rounded-2xl border p-1" style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : '#f0ede7', borderColor: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }}>
-                      <button
-                        onClick={() => setEventsTabView('upcoming')}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${eventsTabView === 'upcoming' ? '' : 'text-gray-600 dark:text-gray-300'}`}
-                        style={eventsTabView === 'upcoming' ? bottomNavActiveTabStyle : undefined}
-                      >
-                        Upcoming
-                      </button>
-                      <button
-                        onClick={() => setEventsTabView('trips')}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${eventsTabView === 'trips' ? '' : 'text-gray-600 dark:text-gray-300'}`}
-                        style={eventsTabView === 'trips' ? bottomNavActiveTabStyle : undefined}
-                      >
-                        Trips
-                      </button>
+                    <div className="mt-2 inline-flex items-center gap-1 p-1" style={{
+                      backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : '#f5f0e4',
+                      borderRadius: 10,
+                      border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(139,110,70,0.18)',
+                      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)',
+                    }}>
+                      {[
+                        { key: 'upcoming', label: '📋 Upcoming' },
+                        { key: 'trips',    label: '✈️ Trips' },
+                      ].map(({ key, label }, i) => {
+                        const active = eventsTabView === key;
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => setEventsTabView(key)}
+                            className="ev-heading transition-all"
+                            style={{
+                              fontSize: 15,
+                              fontWeight: active ? 700 : 400,
+                              padding: '3px 11px',
+                              borderRadius: 7,
+                              color: active
+                                ? (darkMode ? '#fff' : '#3d2e1a')
+                                : (darkMode ? 'rgba(255,255,255,0.38)' : 'rgba(100,75,40,0.5)'),
+                              background: active
+                                ? (darkMode ? 'rgba(255,255,255,0.11)' : '#fffcf4')
+                                : 'transparent',
+                              boxShadow: active
+                                ? '0 1px 5px rgba(0,0,0,0.13), 0 0 0 1px rgba(139,110,70,0.18)'
+                                : 'none',
+                              transform: active ? (i === 0 ? 'rotate(-0.7deg)' : 'rotate(0.7deg)') : 'none',
+                            }}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                   {eventsTabView === 'upcoming' && (
