@@ -167,6 +167,7 @@ const RetailBtn = ({ href, label, color, textColor }) => (
 const GameCard = ({ game, onAddEvent, darkMode, stagger }) => {
   const [expanded, setExpanded] = useState(false);
   const [addedToNight, setAddedToNight] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const catStyle = CAT_STYLES[game.category] || CAT_STYLES.strategy;
   const links = retailLinks(game.name);
 
@@ -206,15 +207,20 @@ const GameCard = ({ game, onAddEvent, darkMode, stagger }) => {
       <div
         style={{
           width: '100%', height: 130,
-          background: game.thumbnail
-            ? `url(${game.thumbnail}) center/cover`
-            : `linear-gradient(135deg, ${catStyle.bg}, ${catStyle.border}30)`,
+          background: `linear-gradient(135deg, ${catStyle.bg}, ${catStyle.border}30)`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 48, cursor: 'pointer', position: 'relative',
         }}
         onClick={() => setExpanded(e => !e)}
       >
-        {!game.thumbnail && (
+        {game.thumbnail && !imgError ? (
+          <img
+            src={game.thumbnail}
+            alt={game.name}
+            onError={() => setImgError(true)}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
           <span style={{ opacity: .7 }}>
             {game.category === 'strategy' ? '♟️' : game.category === 'party' ? '🎉' : game.category === 'cooperative' ? '🤝' : '👨‍👩‍👧'}
           </span>
