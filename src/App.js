@@ -29414,25 +29414,22 @@ transform: translateY(0);
                   name: user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'You',
                   avatarUrl: currentUserProfilePhotoUrl || undefined,
                 }}
-                onAddEvent={() => openHomeAddEventModal()}
-                onSaveToSomeday={(item) => {
+                onAddToSomeday={(post) => {
+                  const text = String(post?.movieTitle || post?.cardTitle || post?.text || '').trim();
+                  if (!text) return;
                   setBucketList((prev) => [
                     {
                       id: uuidv4(),
-                      text: item.title,
-                      category: item.type === 'trip' ? 'travel' : 'fun',
+                      text,
+                      category: post?.type === 'movies' ? 'fun' : post?.type === 'hiking' ? 'adventure' : post?.type === 'restaurants' ? 'food' : 'fun',
                       sources: [],
-                      emoji: item.imageEmoji || '✨',
+                      emoji: post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : '✨',
                       createdAt: new Date().toISOString(),
                     },
                     ...(Array.isArray(prev) ? prev : []),
                   ]);
                 }}
-                onJoinPublicEvent={(item) => {
-                  if (item?.calendarId) joinPublicCalendar({ id: item.calendarId });
-                }}
-                onReact={() => {}}
-                darkMode={darkMode}
+                onPlanEvent={() => openHomeAddEventModal()}
               />
 
 
