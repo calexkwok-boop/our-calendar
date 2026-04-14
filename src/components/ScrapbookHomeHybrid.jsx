@@ -360,68 +360,73 @@ const ScrapbookHomeHybrid = ({
               );
 
               return (
-                <div key={day.dateKey} className="w-32 flex-shrink-0 snap-start">
-                  <div className={`rounded-lg overflow-hidden ${
-                    momentForDay
-                      ? 'bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl hover:-translate-y-1 cursor-pointer transition-all'
-                      : 'bg-white/60 dark:bg-slate-800/30 border-2 border-dashed border-gray-300 dark:border-gray-600'
-                  }`}>
-                    <div className="aspect-square relative">
-                      {momentForDay ? (
-                        <button
-                          onClick={() => onOpenMemory?.(momentForDay)}
-                          className="w-full h-full"
-                        >
+                <div
+                  key={day.dateKey}
+                  className="group flex-shrink-0 snap-start w-28"
+                  style={{ rotate: `${day.dateKey.charCodeAt(9) % 2 === 0 ? '-1.5deg' : '1.2deg'}` }}
+                >
+                  {momentForDay ? (
+                    <div className="bg-white dark:bg-slate-100 rounded-sm shadow-md p-1.5 pb-0 transition-all group-hover:shadow-lg group-hover:-translate-y-0.5 relative">
+                      <button
+                        onClick={() => onOpenMemory?.(momentForDay)}
+                        className="w-full"
+                      >
+                        <div className="aspect-square w-full overflow-hidden rounded-[2px]">
                           <div
                             className="w-full h-full bg-cover bg-center"
                             style={{ backgroundImage: `url(${momentForDay.photoUrl})` }}
                           />
-                          <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/40 via-black/12 to-transparent" />
-                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/45 via-black/15 to-transparent" />
-                          {onDeleteMoment && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteMoment?.(momentForDay);
-                              }}
-                              className="absolute top-2 right-2 rounded-full bg-white/90 p-1.5 shadow-sm hover:bg-red-50 transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </button>
-                          )}
-                        </button>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          {day.isToday ? (
-                            <button
-                              onClick={() => {
-                                if (typeof onAddMomentForDate === 'function') {
-                                  onAddMomentForDate(day.dateKey);
-                                  return;
-                                }
-                                onCaptureQuickMoment?.();
-                              }}
-                              className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                            >
-                              <Plus className="w-6 h-6" />
-                              <span className="text-[10px] font-medium">Add</span>
-                            </button>
-                          ) : (
-                            <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600" />
-                          )}
                         </div>
+                        <div className="py-2 px-0.5 text-center">
+                          <p className={`font-handwritten text-[13px] leading-tight ${
+                            day.isToday ? 'text-amber-700' : 'text-gray-600'
+                          }`}>
+                            {day.isToday ? 'Today' : day.label}
+                          </p>
+                        </div>
+                      </button>
+                      {onDeleteMoment && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteMoment?.(momentForDay);
+                          }}
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 rounded-full bg-white/90 p-1 shadow-sm hover:bg-red-50 transition-all"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-500" />
+                        </button>
                       )}
                     </div>
-                    <div className={`px-2 py-1.5 text-center ${
-                      momentForDay ? 'bg-white dark:bg-slate-800' : 'bg-white/40 dark:bg-slate-800/20'
-                    }`}>
-                      <p className={`text-[11px] font-semibold ${
-                        day.isToday ? 'text-amber-700 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'
-                      }`}>
-                        {day.isToday ? 'Today' : day.label}
-                      </p>
+                  ) : (
+                    <div className="bg-white/60 dark:bg-slate-800/30 rounded-sm shadow-sm p-1.5 pb-0 border border-dashed border-gray-300 dark:border-gray-600">
+                      <div className="aspect-square w-full overflow-hidden rounded-[2px] flex items-center justify-center bg-gray-50/60 dark:bg-slate-700/20">
+                        {day.isToday ? (
+                          <button
+                            onClick={() => {
+                              if (typeof onAddMomentForDate === 'function') {
+                                onAddMomentForDate(day.dateKey);
+                                return;
+                              }
+                              onCaptureQuickMoment?.();
+                            }}
+                            className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          >
+                            <Plus className="w-6 h-6" />
+                            <span className="text-[10px] font-medium">Add</span>
+                          </button>
+                        ) : (
+                          <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600" />
+                        )}
+                      </div>
+                      <div className="py-2 px-0.5 text-center">
+                        <p className={`font-handwritten text-[13px] leading-tight ${
+                          day.isToday ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'
+                        }`}>
+                          {day.isToday ? 'Today' : day.label}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
