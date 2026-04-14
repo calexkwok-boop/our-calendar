@@ -293,19 +293,49 @@ const ScrapbookHomeHybrid = ({
           </div>
         </div>
 
-        <div className="rounded-[24px] border border-amber-900/10 bg-white/70 px-4 py-3 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-black/20 sm:px-6 sm:py-4">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-900/55 dark:text-amber-100/55">
-            {(yearStats.year || new Date().getFullYear())} so far
+        {/* WHAT'S NEXT TODAY - Current style */}
+        <button
+          type="button"
+          onClick={onAddEvent}
+          className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
+        >
+          <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400 mb-3">
+            ☀️ WHAT'S NEXT TODAY
           </div>
-          <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 sm:text-base">
-            {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos · 🔥 {yearStats.streak || 0} day streak
-          </div>
-          {yearStats.streakHelpText ? (
-            <div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-              {yearStats.streakHelpText}
+          {todaySpotlightEvent ? (
+            <div className="flex gap-4">
+              {todaySpotlightPhoto && (
+                <div
+                  className="w-24 h-24 rounded-2xl bg-cover bg-center flex-shrink-0"
+                  style={{ backgroundImage: `url(${todaySpotlightPhoto})` }}
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-base font-semibold text-gray-900 dark:text-white">
+                  {todaySpotlightEvent.title}
+                </div>
+                <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  {formatDisplayTime(todaySpotlightEvent.time)}
+                  {todaySpotlightEvent.location && ` · ${todaySpotlightEvent.location}`}
+                </div>
+              </div>
             </div>
-          ) : null}
-        </div>
+          ) : (
+            <div className="py-4 text-center">
+              <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+                Your day is wide open ✨
+              </p>
+              <button
+                onClick={onCaptureQuickMoment}
+                className="mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold"
+                style={themeAccentEllieChipButtonStyle}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add something
+              </button>
+            </div>
+          )}
+        </button>
 
         {/* MOMENTS THIS WEEK - Current clean style with polaroids */}
         <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-white/95 via-amber-50/40 to-white/90 dark:from-slate-900/80 dark:via-amber-900/10 dark:to-slate-900/75 p-5 shadow-lg">
@@ -325,15 +355,15 @@ const ScrapbookHomeHybrid = ({
 
           <div className="flex gap-3 overflow-x-auto overflow-y-hidden pb-2 scrollbar-hide snap-x snap-mandatory [touch-action:pan-x]">
             {getDaysOfWeek().map((day) => {
-              const momentForDay = momentsThisWeek.find(m => 
+              const momentForDay = momentsThisWeek.find(m =>
                 String(m?.date || '').trim().slice(0, 10) === day.dateKey
               );
 
               return (
                 <div key={day.dateKey} className="w-32 flex-shrink-0 snap-start">
                   <div className={`rounded-lg overflow-hidden ${
-                    momentForDay 
-                      ? 'bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl hover:-translate-y-1 cursor-pointer transition-all' 
+                    momentForDay
+                      ? 'bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl hover:-translate-y-1 cursor-pointer transition-all'
                       : 'bg-white/60 dark:bg-slate-800/30 border-2 border-dashed border-gray-300 dark:border-gray-600'
                   }`}>
                     <div className="aspect-square relative">
@@ -405,95 +435,6 @@ const ScrapbookHomeHybrid = ({
             </div>
           )}
         </div>
-
-        {/* Mini Journey Card (under Moments) */}
-        <div id="home-mini-journey" className="rounded-[20px] border border-white/50 dark:border-white/10 bg-white/90 dark:bg-white/[0.05] p-3 shadow-sm">
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Journey</div>
-            {typeof onOpenJourney === 'function' && (
-              <button
-                onClick={onOpenJourney}
-                className="shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-semibold"
-                style={themeAccentEllieChipButtonStyle}
-              >
-                Open
-              </button>
-            )}
-          </div>
-          {primaryJourneyGoal ? (
-            <div className="flex items-start gap-3">
-              <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{primaryJourneyGoal.title}</div>
-                <div className="mt-1 text-xs text-gray-600 dark:text-gray-300 truncate">
-                  {primaryJourneyProgressText || 'Keep going. Progress adds up.'}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <span className="rounded-full bg-white/90 dark:bg-white/[0.08] px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:text-gray-200">
-                    {primaryJourneyStreak} day streak
-                  </span>
-                  <span className="rounded-full bg-white/90 dark:bg-white/[0.08] px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:text-gray-200">
-                    {primaryJourneyLoggedToday ? 'Logged today' : 'Not logged yet'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-start gap-3">
-              <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">Start a goal</div>
-                <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                  Track one simple habit or outcome and build momentum.
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* WHAT'S NEXT TODAY - Current style */}
-        <button
-          type="button"
-          onClick={onAddEvent}
-          className="w-full rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4 text-left transition-all hover:bg-white/90 dark:hover:bg-white/[0.08]"
-        >
-          <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400 mb-3">
-            ☀️ WHAT'S NEXT TODAY
-          </div>
-          {todaySpotlightEvent ? (
-            <div className="flex gap-4">
-              {todaySpotlightPhoto && (
-                <div
-                  className="w-24 h-24 rounded-2xl bg-cover bg-center flex-shrink-0"
-                  style={{ backgroundImage: `url(${todaySpotlightPhoto})` }}
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="text-base font-semibold text-gray-900 dark:text-white">
-                  {todaySpotlightEvent.title}
-                </div>
-                <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  {formatDisplayTime(todaySpotlightEvent.time)}
-                  {todaySpotlightEvent.location && ` · ${todaySpotlightEvent.location}`}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="py-4 text-center">
-              <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-                Your day is wide open ✨
-              </p>
-              <button
-                onClick={onCaptureQuickMoment}
-                className="mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold"
-                style={themeAccentEllieChipButtonStyle}
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add something
-              </button>
-            </div>
-          )}
-        </button>
 
         {/* COMING UP THIS WEEK - Current style */}
         <div className="rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4">
@@ -576,78 +517,6 @@ const ScrapbookHomeHybrid = ({
             </div>
           )}
         </button>
-
-        <QuickThoughtsSection
-          quickThoughts={quickThoughts}
-          onAddThought={onAddThought}
-          onDeleteThought={onDeleteThought}
-          darkMode={darkMode}
-        />
-
-        {/* LATEST MEMORIES - Collage 2x2 */}
-        <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-purple-50/60 via-white/90 to-pink-50/60 dark:from-purple-950/30 dark:via-slate-900/80 dark:to-pink-950/20 p-5 shadow-lg">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
-              💭 LATEST MEMORIES
-            </div>
-            <button
-              onClick={onOpenMemories}
-              className="rounded-xl border border-white/50 dark:border-white/10 bg-white/70 dark:bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-100"
-            >
-              Open gallery
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {(memoryCollagePhotos.length > 0 ? memoryCollagePhotos : ['', '', '', '']).slice(0, 4).map((url, index) => (
-              <div
-                key={`memory-collage-${index}`}
-                className="h-20 sm:h-24 rounded-[14px] border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20 bg-cover bg-center"
-                style={url ? { backgroundImage: `url(${url})` } : undefined}
-              />
-            ))}
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3">
-              <div className="text-lg font-semibold text-gray-900 dark:text-white">{memoryReadyCount}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">moments</div>
-            </div>
-            <div className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3">
-              <div className="text-lg font-semibold text-gray-900 dark:text-white">{memoryPhotoCount}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">photos living in memories</div>
-            </div>
-          </div>
-
-          {memoryOpportunities.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {memoryOpportunities.slice(0, 2).map((event) => (
-                <div
-                  key={event.id}
-                  className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] px-3 py-3"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                        {event.title}
-                      </div>
-                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        {formatDisplayDate(event.date)}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => onCreateMemoryFromEvent?.(event)}
-                      className="shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold"
-                      style={themeAccentEllieChipButtonStyle}
-                    >
-                      Save
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
         {/* SOMEDAY LIST - NEW scrapbook enhanced */}
         <div className="rounded-[28px] border-2 border-emerald-900/20 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-slate-900 dark:to-cyan-950/20 p-6 shadow-xl">
@@ -747,6 +616,137 @@ const ScrapbookHomeHybrid = ({
             </div>
           )}
         </div>
+
+        {/* Mini Journey Card (under Moments) */}
+        <div id="home-mini-journey" className="rounded-[20px] border border-white/50 dark:border-white/10 bg-white/90 dark:bg-white/[0.05] p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Journey</div>
+            {typeof onOpenJourney === 'function' && (
+              <button
+                onClick={onOpenJourney}
+                className="shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-semibold"
+                style={themeAccentEllieChipButtonStyle}
+              >
+                Open
+              </button>
+            )}
+          </div>
+          {primaryJourneyGoal ? (
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{primaryJourneyGoal.title}</div>
+                <div className="mt-1 text-xs text-gray-600 dark:text-gray-300 truncate">
+                  {primaryJourneyProgressText || 'Keep going. Progress adds up.'}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <span className="rounded-full bg-white/90 dark:bg-white/[0.08] px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:text-gray-200">
+                    {primaryJourneyStreak} day streak
+                  </span>
+                  <span className="rounded-full bg-white/90 dark:bg-white/[0.08] px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:text-gray-200">
+                    {primaryJourneyLoggedToday ? 'Logged today' : 'Not logged yet'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">Start a goal</div>
+                <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                  Track one simple habit or outcome and build momentum.
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-[24px] border border-amber-900/10 bg-white/70 px-4 py-3 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-black/20 sm:px-6 sm:py-4">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-900/55 dark:text-amber-100/55">
+            {(yearStats.year || new Date().getFullYear())} so far
+          </div>
+          <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 sm:text-base">
+            {yearStats.events} events · {yearStats.trips} trips · {yearStats.photos} photos · 🔥 {yearStats.streak || 0} day streak
+          </div>
+          {yearStats.streakHelpText ? (
+            <div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              {yearStats.streakHelpText}
+            </div>
+          ) : null}
+        </div>
+
+        {/* LATEST MEMORIES - Collage 2x2 */}
+        <div className="rounded-[28px] border border-white/50 dark:border-white/10 bg-gradient-to-br from-purple-50/60 via-white/90 to-pink-50/60 dark:from-purple-950/30 dark:via-slate-900/80 dark:to-pink-950/20 p-5 shadow-lg">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
+              💭 LATEST MEMORIES
+            </div>
+            <button
+              onClick={onOpenMemories}
+              className="rounded-xl border border-white/50 dark:border-white/10 bg-white/70 dark:bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-100"
+            >
+              Open gallery
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {(memoryCollagePhotos.length > 0 ? memoryCollagePhotos : ['', '', '', '']).slice(0, 4).map((url, index) => (
+              <div
+                key={`memory-collage-${index}`}
+                className="h-20 sm:h-24 rounded-[14px] border border-white/40 dark:border-white/10 bg-gradient-to-br from-violet-100 via-rose-50 to-amber-100 dark:from-violet-900/30 dark:via-slate-900 dark:to-amber-900/20 bg-cover bg-center"
+                style={url ? { backgroundImage: `url(${url})` } : undefined}
+              />
+            ))}
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3">
+              <div className="text-lg font-semibold text-gray-900 dark:text-white">{memoryReadyCount}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">moments</div>
+            </div>
+            <div className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-3">
+              <div className="text-lg font-semibold text-gray-900 dark:text-white">{memoryPhotoCount}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">photos living in memories</div>
+            </div>
+          </div>
+
+          {memoryOpportunities.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {memoryOpportunities.slice(0, 2).map((event) => (
+                <div
+                  key={event.id}
+                  className="rounded-2xl border border-white/40 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] px-3 py-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                        {event.title}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {formatDisplayDate(event.date)}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => onCreateMemoryFromEvent?.(event)}
+                      className="shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold"
+                      style={themeAccentEllieChipButtonStyle}
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <QuickThoughtsSection
+          quickThoughts={quickThoughts}
+          onAddThought={onAddThought}
+          onDeleteThought={onDeleteThought}
+          darkMode={darkMode}
+        />
 
       </div>
     </div>
