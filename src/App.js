@@ -28973,7 +28973,7 @@ transform: translateY(0);
                 `}</style>
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <div>
-                    <h3 className="ev-heading font-bold" style={{ ...themeAccentHeadingStyle, fontSize: 32 }}>Events</h3>
+                    <h3 className="ev-heading font-bold" style={{ fontSize: 32, color: darkMode ? 'rgba(255,255,255,0.88)' : '#44372a' }}>Events</h3>
                     <div className="mt-2 inline-flex rounded-2xl border p-1" style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : '#f0ede7', borderColor: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }}>
                       <button
                         onClick={() => setEventsTabView('upcoming')}
