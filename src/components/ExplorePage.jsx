@@ -34,9 +34,6 @@ const TAG_STYLES = {
   Restaurants: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
 };
 
-
-];
-
 function interleavePosts(friends, movies, community) {
   const result = [];
   let fi = 0, mi = 0, ci = 0;
