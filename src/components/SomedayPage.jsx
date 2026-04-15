@@ -26,7 +26,11 @@ const SAMPLE_PINS = [
   { id: '6', type: 'note',  x: 18,  y: 472, rot:  2.2, text: 'Learn to surf this summer — Santa Cruz?', noteColor: 'pink',   pinColor: 'pink',   categoryId: 'experiences', status: 'dreaming' },
   { id: '7', type: 'photo', x: 185, y: 462, rot: -2.0, label: 'Road trip down PCH',        emoji: '🚗', imageUrl: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&q=80', pinColor: 'teal',   categoryId: 'places',      status: 'planning' },
   { id: '8', type: 'note',  x: 328, y: 300, rot: -0.8, text: 'Get a Vitamix — wait for Black Friday sale', noteColor: 'blue',   pinColor: 'purple', categoryId: 'buy',         status: 'dreaming' },
-  { id: '9', type: 'photo', x: 325, y: 460, rot:  1.5, label: 'Redecorate living room',    emoji: '🛋️', imageUrl: '', pinColor: 'amber',  categoryId: 'home',        status: 'planning' },
+  { id: '9',  type: 'photo',   x: 325, y: 460, rot:  1.5, label: 'Redecorate living room', emoji: '🛋️', imageUrl: '', pinColor: 'amber', categoryId: 'home', status: 'planning' },
+  { id: '10', type: 'label',   x: 318, y: 62,  rot: -1.8, text: 'MOVIES',      fontStyle: 'bold',        fontSize: 'large',  textColor: '#7c3aed', styleVariant: 'highlight' },
+  { id: '11', type: 'label',   x: 18,  y: 390, rot:  1.4, text: 'My Wishlist', fontStyle: 'handwritten', fontSize: 'medium', textColor: '#0d9488', styleVariant: 'tape' },
+  { id: '12', type: 'sticker', x: 290, y: 192, rot:  11,  sticker: '⭐', size: 'medium' },
+  { id: '13', type: 'sticker', x: 150, y: 370, rot: -7,   sticker: '🌸', size: 'large' },
 ];
 
 const NOTE_COLORS = {
@@ -55,6 +59,9 @@ const CATEGORY_FILTERS = [
 
 const NOTE_COLOR_OPTIONS = ['yellow', 'pink', 'blue', 'green'];
 const PIN_COLOR_OPTIONS   = ['teal', 'purple', 'pink', 'amber', 'red'];
+
+const STICKERS = ['✈️','🍣','🎬','🎲','❤️','⭐','🌸','🏔️','🏡','🛍️','🍜','🚗','🍕','🎵','📚','🌊','🏄','🌮','☕','🍷','🎪','🌙','🌈','🎭'];
+const LABEL_COLORS = ['#1a1a2e','#ffffff','#0d9488','#7c3aed','#d97706','#db2777','#2563eb','#065f46'];
 
 // ─── Pushpin SVG ─────────────────────────────────────────────────────────────
 function Pushpin({ colorKey, darkMode }) {
@@ -139,16 +146,81 @@ function NotePin({ pin, isDragging, onDelete, onTap, darkMode }) {
   );
 }
 
+// ─── LabelPin ────────────────────────────────────────────────────────────────
+function LabelPin({ pin, isDragging, onDelete, darkMode }) {
+  const sizes  = { small: 17, medium: 24, large: 32 };
+  const fs     = sizes[pin.fontSize] || 24;
+  const ff     = pin.fontStyle === 'clean' ? 'system-ui, sans-serif' : CAVEAT;
+  const fw     = pin.fontStyle === 'bold' ? 700 : 400;
+  const color  = pin.textColor || (darkMode ? '#e8eaf0' : '#1a1a2e');
+
+  let wrapStyle = {
+    position: 'relative', display: 'inline-block',
+    cursor: isDragging ? 'grabbing' : 'grab',
+    userSelect: 'none', whiteSpace: 'nowrap',
+    padding: '4px 10px',
+    transition: isDragging ? 'none' : 'box-shadow 0.2s',
+  };
+
+  if (pin.styleVariant === 'highlight') {
+    wrapStyle = { ...wrapStyle, borderBottom: `3px solid ${color}`, background: `${color}22`, borderRadius: '4px 4px 0 0', padding: '5px 10px 3px' };
+  } else if (pin.styleVariant === 'tape') {
+    wrapStyle = { ...wrapStyle, background: darkMode ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.84)', boxShadow: isDragging ? '0 12px 32px rgba(0,0,0,0.4)' : '0 2px 8px rgba(0,0,0,0.14)', borderRadius: 3, padding: '6px 16px' };
+  }
+
+  return (
+    <div style={wrapStyle}>
+      <span style={{ fontFamily: ff, fontWeight: fw, fontSize: fs, color, lineHeight: 1.2, display: 'block' }}>
+        {pin.text}
+      </span>
+      <button
+        onClick={e => { e.stopPropagation(); onDelete(); }}
+        style={{ position: 'absolute', top: -8, right: -8, background: 'rgba(0,0,0,0.22)', border: 'none', borderRadius: '50%', width: 16, height: 16, color: '#fff', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+      >✕</button>
+    </div>
+  );
+}
+
+// ─── StickerPin ───────────────────────────────────────────────────────────────
+function StickerPin({ pin, isDragging, onDelete }) {
+  const sizes = { small: 32, medium: 46, large: 62 };
+  const fs    = sizes[pin.size] || 46;
+
+  return (
+    <div style={{ position: 'relative', display: 'inline-block', cursor: isDragging ? 'grabbing' : 'grab', userSelect: 'none' }}>
+      <span style={{ fontSize: fs, display: 'block', filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.22))' }}>
+        {pin.sticker}
+      </span>
+      <button
+        onClick={e => { e.stopPropagation(); onDelete(); }}
+        style={{ position: 'absolute', top: -8, right: -8, background: 'rgba(0,0,0,0.25)', border: 'none', borderRadius: '50%', width: 16, height: 16, color: '#fff', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+      >✕</button>
+    </div>
+  );
+}
+
 // ─── Add Sheet ────────────────────────────────────────────────────────────────
 function AddSheet({ onClose, onAdd, darkMode }) {
-  const [type, setType]           = useState('photo');
-  const [label, setLabel]         = useState('');
-  const [text, setText]           = useState('');
-  const [emoji, setEmoji]         = useState('✨');
-  const [noteColor, setNoteColor] = useState('yellow');
-  const [pinColor, setPinColor]   = useState('teal');
-  const [catId, setCatId]         = useState('experiences');
-  const [imageUrl, setUrl]        = useState('');
+  const [type, setType]               = useState('photo');
+  // photo fields
+  const [label, setLabel]             = useState('');
+  const [emoji, setEmoji]             = useState('✨');
+  const [imageUrl, setUrl]            = useState('');
+  // note fields
+  const [text, setText]               = useState('');
+  const [noteColor, setNoteColor]     = useState('yellow');
+  // shared photo/note fields
+  const [pinColor, setPinColor]       = useState('teal');
+  const [catId, setCatId]             = useState('experiences');
+  // label fields
+  const [labelText, setLabelText]     = useState('');
+  const [fontStyle, setFontStyle]     = useState('handwritten');
+  const [fontSize, setFontSize]       = useState('medium');
+  const [textColor, setTextColor]     = useState(darkMode ? '#e8eaf0' : '#1a1a2e');
+  const [styleVariant, setStyleVar]   = useState('plain');
+  // sticker fields
+  const [sticker, setSticker]         = useState('⭐');
+  const [stickerSize, setStickerSize] = useState('medium');
 
   const sheetBg  = darkMode ? '#131c2e' : '#ffffff';
   const inputBg  = darkMode ? 'rgba(255,255,255,0.06)' : '#f8f7f2';
@@ -156,13 +228,22 @@ function AddSheet({ onClose, onAdd, darkMode }) {
   const tp       = darkMode ? '#e8eaf0' : '#1a1a2e';
   const ts       = darkMode ? '#4a5568' : '#9ca3af';
   const divider  = darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece4';
-
   const inputStyle = { background: inputBg, border: `1px solid ${inputBdr}`, borderRadius: 12, padding: '10px 13px', fontFamily: CAVEAT, fontSize: 16, color: tp, outline: 'none', width: '100%' };
 
+  function pillStyle(active) {
+    return { flex: 1, padding: '7px 4px', borderRadius: 12, border: `1px solid ${active ? '#2dd4bf' : inputBdr}`, background: active ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: active ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' };
+  }
+
   function submit() {
-    if (type === 'photo' && !label.trim()) return;
-    if (type === 'note'  && !text.trim())  return;
-    onAdd({ type, label: label.trim(), text: text.trim(), emoji, noteColor, pinColor, categoryId: catId, imageUrl, status: 'dreaming' });
+    if (type === 'photo'   && !label.trim())     return;
+    if (type === 'note'    && !text.trim())       return;
+    if (type === 'label'   && !labelText.trim())  return;
+    let data = { type, status: 'dreaming' };
+    if (type === 'photo')   data = { ...data, label: label.trim(), emoji, pinColor, categoryId: catId, imageUrl };
+    if (type === 'note')    data = { ...data, text: text.trim(), noteColor, pinColor, categoryId: catId };
+    if (type === 'label')   data = { ...data, text: labelText.trim(), fontStyle, fontSize, textColor, styleVariant };
+    if (type === 'sticker') data = { ...data, sticker, size: stickerSize };
+    onAdd(data);
     onClose();
   }
 
@@ -172,27 +253,30 @@ function AddSheet({ onClose, onAdd, darkMode }) {
         <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 18px' }} />
         <p style={{ fontFamily: CAVEAT, fontSize: 24, fontWeight: 700, color: tp, marginBottom: 16 }}>Pin something new</p>
 
-        {/* Type */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          {[['photo', '📸 Photo / emoji'], ['note', '📝 Quick note']].map(([t, lbl]) => (
-            <button key={t} onClick={() => setType(t)} style={{ flex: 1, padding: '9px', borderRadius: 14, border: `1px solid ${type === t ? '#2dd4bf' : inputBdr}`, background: type === t ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: type === t ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: CAVEAT, fontSize: 15, cursor: 'pointer' }}>
-              {lbl}
+        {/* Type selector — 2×2 grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+          {[['photo','📸','Photo / emoji'],['note','📝','Quick note'],['label','🏷️','Label'],['sticker','✦','Sticker']].map(([t, ic, lbl]) => (
+            <button key={t} onClick={() => setType(t)} style={{ padding: '9px 6px', borderRadius: 14, border: `1px solid ${type === t ? '#2dd4bf' : inputBdr}`, background: type === t ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: type === t ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}>
+              {ic} {lbl}
             </button>
           ))}
         </div>
 
+        {/* ── Photo fields ── */}
         {type === 'photo' && (
           <>
             <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Label (e.g. Visit Boston)" style={{ ...inputStyle, marginBottom: 10 }} />
             <input value={imageUrl} onChange={e => setUrl(e.target.value)} placeholder="Image URL (optional)" style={{ ...inputStyle, marginBottom: 12 }} />
+            <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Emoji</p>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14 }}>
-              {['✨','🌍','🍜','🏔️','🚗','🏡','🎬','🎲','🛍️','🌊','🏄','🎵','📚','🍣','🌸'].map(e => (
+              {['✨','🌍','🍜','🏔️','🚗','🏡','🎬','🎲','🛍️','🌊','🏄','🎵','📚','🍣','🌸','✈️','🍕','🎪','🌮','☕','🍷','🌙','🌈','🎭'].map(e => (
                 <button key={e} onClick={() => setEmoji(e)} style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${emoji === e ? '#2dd4bf' : inputBdr}`, background: emoji === e ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', fontSize: 18, cursor: 'pointer' }}>{e}</button>
               ))}
             </div>
           </>
         )}
 
+        {/* ── Note fields ── */}
         {type === 'note' && (
           <>
             <textarea value={text} onChange={e => setText(e.target.value)} placeholder="What's on your mind?" rows={3} style={{ ...inputStyle, resize: 'none', marginBottom: 12 }} />
@@ -200,34 +284,86 @@ function AddSheet({ onClose, onAdd, darkMode }) {
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
               {NOTE_COLOR_OPTIONS.map(k => {
                 const c = NOTE_COLORS[k][darkMode ? 'dark' : 'light'];
-                return (
-                  <button key={k} onClick={() => setNoteColor(k)} style={{ width: 34, height: 34, borderRadius: 10, background: c.bg, border: noteColor === k ? `2px solid #2dd4bf` : `1px solid ${c.fold}33`, cursor: 'pointer' }} />
-                );
+                return <button key={k} onClick={() => setNoteColor(k)} style={{ width: 34, height: 34, borderRadius: 10, background: c.bg, border: noteColor === k ? `2px solid #2dd4bf` : `1px solid ${c.fold}33`, cursor: 'pointer' }} />;
               })}
             </div>
           </>
         )}
 
-        {/* Category */}
-        <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Category</p>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-          {CATEGORY_FILTERS.filter(c => c.id !== 'all').map(c => (
-            <button key={c.id} onClick={() => setCatId(c.id)} style={{ padding: '5px 11px', borderRadius: 20, border: `1px solid ${catId === c.id ? '#2dd4bf' : inputBdr}`, background: catId === c.id ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', fontFamily: CAVEAT, fontSize: 14, color: catId === c.id ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, cursor: 'pointer' }}>
-              {c.emoji} {c.label}
-            </button>
-          ))}
-        </div>
+        {/* ── Label fields ── */}
+        {type === 'label' && (
+          <>
+            <input value={labelText} onChange={e => setLabelText(e.target.value)} placeholder="MOVIES · My Wishlist · This Summer" style={{ ...inputStyle, marginBottom: 12 }} />
 
-        {/* Pin colour */}
-        <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pin colour</p>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
-          {PIN_COLOR_OPTIONS.map(k => {
-            const col = PIN_COLORS[k][darkMode ? 'dark' : 'light'];
-            return (
-              <button key={k} onClick={() => setPinColor(k)} style={{ width: 24, height: 24, borderRadius: '50%', background: col, border: pinColor === k ? '2px solid white' : '2px solid transparent', outline: pinColor === k ? `2px solid ${col}` : 'none', cursor: 'pointer' }} />
-            );
-          })}
-        </div>
+            <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Style</p>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {[['plain','Plain'],['highlight','Highlight'],['tape','Tape']].map(([v, lbl]) => (
+                <button key={v} onClick={() => setStyleVar(v)} style={pillStyle(styleVariant === v)}>{lbl}</button>
+              ))}
+            </div>
+
+            <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Font</p>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {[['handwritten','Caveat'],['clean','Clean'],['bold','Bold']].map(([v, lbl]) => (
+                <button key={v} onClick={() => setFontStyle(v)} style={{ ...pillStyle(fontStyle === v), fontFamily: v === 'handwritten' ? CAVEAT : 'system-ui', fontWeight: v === 'bold' ? 700 : 400 }}>{lbl}</button>
+              ))}
+            </div>
+
+            <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Size</p>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {[['small','Small'],['medium','Medium'],['large','Large']].map(([v, lbl]) => (
+                <button key={v} onClick={() => setFontSize(v)} style={pillStyle(fontSize === v)}>{lbl}</button>
+              ))}
+            </div>
+
+            <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Colour</p>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+              {LABEL_COLORS.map(c => (
+                <button key={c} onClick={() => setTextColor(c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: textColor === c ? '2px solid #2dd4bf' : c === '#ffffff' ? `1px solid ${inputBdr}` : '2px solid transparent', outline: textColor === c ? `2px solid ${c}55` : 'none', cursor: 'pointer' }} />
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ── Sticker fields ── */}
+        {type === 'sticker' && (
+          <>
+            <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pick a sticker</p>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14 }}>
+              {STICKERS.map(s => (
+                <button key={s} onClick={() => setSticker(s)} style={{ width: 44, height: 44, borderRadius: 12, border: `1px solid ${sticker === s ? '#2dd4bf' : inputBdr}`, background: sticker === s ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', fontSize: 22, cursor: 'pointer' }}>{s}</button>
+              ))}
+            </div>
+
+            <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Size</p>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {[['small','Small'],['medium','Medium'],['large','Large']].map(([v, lbl]) => (
+                <button key={v} onClick={() => setStickerSize(v)} style={pillStyle(stickerSize === v)}>{lbl}</button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Category + pin colour — only for photo/note */}
+        {(type === 'photo' || type === 'note') && (
+          <>
+            <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Category</p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+              {CATEGORY_FILTERS.filter(c => c.id !== 'all').map(c => (
+                <button key={c.id} onClick={() => setCatId(c.id)} style={{ padding: '5px 11px', borderRadius: 20, border: `1px solid ${catId === c.id ? '#2dd4bf' : inputBdr}`, background: catId === c.id ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', fontFamily: CAVEAT, fontSize: 14, color: catId === c.id ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, cursor: 'pointer' }}>
+                  {c.emoji} {c.label}
+                </button>
+              ))}
+            </div>
+            <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pin colour</p>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
+              {PIN_COLOR_OPTIONS.map(k => {
+                const col = PIN_COLORS[k][darkMode ? 'dark' : 'light'];
+                return <button key={k} onClick={() => setPinColor(k)} style={{ width: 24, height: 24, borderRadius: '50%', background: col, border: pinColor === k ? '2px solid white' : '2px solid transparent', outline: pinColor === k ? `2px solid ${col}` : 'none', cursor: 'pointer' }} />;
+              })}
+            </div>
+          </>
+        )}
 
         <button onClick={submit} style={{ width: '100%', padding: '13px', borderRadius: 16, background: '#2dd4bf', color: '#0a1020', border: 'none', fontFamily: CAVEAT, fontSize: 20, fontWeight: 700, cursor: 'pointer' }}>
           Pin it 📌
@@ -452,6 +588,8 @@ const SomedayPage = ({
 
   function handlePinClick(pin) {
     if (didDrag.current) return;
+    // Labels and stickers are decorative — no detail sheet, just drag/delete
+    if (pin.type === 'label' || pin.type === 'sticker') return;
     setDetailPin(pin);
   }
 
@@ -558,8 +696,12 @@ const SomedayPage = ({
             onTouchStart={e => startDrag(e, pin.id)}
           >
             {pin.type === 'note'
-              ? <NotePin  pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
-              : <PhotoPin pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              ? <NotePin    pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              : pin.type === 'label'
+              ? <LabelPin   pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} darkMode={darkMode} />
+              : pin.type === 'sticker'
+              ? <StickerPin pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} />
+              : <PhotoPin   pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
             }
           </div>
         ))}
