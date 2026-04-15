@@ -3301,6 +3301,11 @@ function App() {
   const [somedayPinPositions, setSomedayPinPositions] = useState(() => {
     try { return JSON.parse(localStorage.getItem('someday-pin-positions') || '{}'); } catch { return {}; }
   });
+  // Stores label + sticker pins with their full data (type, text, sticker, style fields, x/y/rot).
+  // Kept separate from bucketList/quickThoughts so type information is never lost on remount.
+  const [somedayDecorPins, setSomedayDecorPins] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('someday-decor-pins') || '[]'); } catch { return []; }
+  });
   const [quickThoughtsHydratedUserId, setQuickThoughtsHydratedUserId] = useState(null);
   const [bucketListHydratedUserId, setBucketListHydratedUserId] = useState(null);
   const [memories, setMemories] = useState([]);
@@ -20058,6 +20063,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [somedayPinPositions]);
 
   useEffect(() => {
+    try { localStorage.setItem('someday-decor-pins', JSON.stringify(somedayDecorPins)); } catch {}
+  }, [somedayDecorPins]);
+
+  useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     let cancelled = false;
     (async () => {
@@ -24022,7 +24031,10 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
 
   // Called when a pin is added from within SomedayPage's own AddSheet
   const handleSomedayAddDream = (pin) => {
-    if (pin.type === 'note') {
+    if (pin.type === 'label' || pin.type === 'sticker') {
+      // Store the full pin data so type + style fields survive page navigation
+      setSomedayDecorPins((prev) => [...(Array.isArray(prev) ? prev : []), pin]);
+    } else if (pin.type === 'note') {
       const colors = ['yellow', 'pink', 'blue', 'green'];
       const color = colors.includes(pin.noteColor) ? pin.noteColor : 'yellow';
       setQuickThoughts((prev) => [
@@ -24040,11 +24052,21 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
   // Called when a pin is dragged to a new position — save it
   const handleSomedayUpdateDream = (pin) => {
     if (pin.x == null) return;
-    setSomedayPinPositions(prev => ({ ...prev, [pin.id]: { x: pin.x, y: pin.y, rot: pin.rot } }));
+    if (pin.type === 'label' || pin.type === 'sticker') {
+      // Update x/y/rot in-place within the decor pin record (preserves all style fields)
+      setSomedayDecorPins(prev =>
+        (Array.isArray(prev) ? prev : []).map(p =>
+          p.id === pin.id ? { ...p, x: pin.x, y: pin.y, rot: pin.rot } : p
+        )
+      );
+    } else {
+      setSomedayPinPositions(prev => ({ ...prev, [pin.id]: { x: pin.x, y: pin.y, rot: pin.rot } }));
+    }
   };
 
   // Called when a pin is deleted from SomedayPage — remove from whichever list owns it
   const handleSomedayDeleteDream = (id) => {
+    setSomedayDecorPins((prev) => (Array.isArray(prev) ? prev : []).filter((p) => String(p?.id || '') !== id));
     addBucketListTombstone(user?.id, id);
     setBucketList((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== id));
     addQuickThoughtTombstone(user?.id, id);
@@ -29751,6 +29773,8 @@ transform: translateY(0);
                 status: 'dreaming',
                 ...(somedayPinPositions[t.id] || {}),
               })),
+              // Label and sticker pins stored with full data — passed through unchanged
+              ...(Array.isArray(somedayDecorPins) ? somedayDecorPins : []),
             ];
             return (
               <SomedayPage
