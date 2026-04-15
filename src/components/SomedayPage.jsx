@@ -88,7 +88,7 @@ function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode }) {
 
   return (
     <div
-      style={{ background: cardBg, padding: '6px 6px 0', boxShadow: shadow, width: 112, borderRadius: 2, cursor: isDragging ? 'grabbing' : 'grab', position: 'relative', transition: isDragging ? 'none' : 'box-shadow 0.2s' }}
+      style={{ background: cardBg, padding: '6px 6px 0', boxShadow: shadow, width: 150, borderRadius: 2, cursor: isDragging ? 'grabbing' : 'grab', position: 'relative', transition: isDragging ? 'none' : 'box-shadow 0.2s' }}
       onClick={onTap}
     >
       <Pushpin colorKey={pin.pinColor} darkMode={darkMode} />
@@ -295,8 +295,8 @@ function gridPosition(index) {
   const jx  = (Math.random() - 0.5) * 14;
   const jy  = (Math.random() - 0.5) * 14;
   return {
-    x:   (col === 0 ? 18 : 188) + jx,
-    y:   64 + row * 218 + jy,
+    x:   (col === 0 ? 16 : 208) + jx,
+    y:   64 + row * 240 + jy,
     rot: (col === 0 ? -1 : 1) * (0.4 + Math.random() * 2.2),
   };
 }
@@ -310,6 +310,8 @@ const SomedayPage = ({
   onConvertToEvent,
   onConvertToTrip,
   onBack,
+  currentUser,
+  ownerName,
   darkMode = false,
 }) => {
   const [pins, setPins]           = useState(() => dreams.map((d, idx) => {
@@ -374,7 +376,7 @@ const SomedayPage = ({
     : { backgroundColor: '#f5f2eb', backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' };
 
   const visiblePins = (filter === 'all' ? pins : pins.filter(p => p.categoryId === filter)).filter(p => p.id !== heroId);
-  const BOARD_HEIGHT = Math.max(600, Math.ceil(pins.length / 2) * 220 + 220);
+  const BOARD_HEIGHT = Math.max(600, Math.ceil(pins.length / 2) * 240 + 240);
 
   // ─── Drag ──────────────────────────────────────────────────────────────────
   function startDrag(e, id) {
@@ -404,8 +406,8 @@ const SomedayPage = ({
     const rect = canvas.getBoundingClientRect();
     let nx = touch.clientX - dragOffset.current.x;
     let ny = touch.clientY - dragOffset.current.y;
-    nx = Math.max(0, Math.min(rect.width - 160, nx));
-    ny = Math.max(0, Math.min(BOARD_HEIGHT - 220, ny));
+    nx = Math.max(0, Math.min(rect.width - 170, nx));
+    ny = Math.max(0, Math.min(BOARD_HEIGHT - 240, ny));
     setPins(ps => ps.map(p => p.id === dragging ? { ...p, x: nx, y: ny } : p));
   }, [dragging, BOARD_HEIGHT]);
 
@@ -467,7 +469,9 @@ const SomedayPage = ({
               <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ts, fontSize: 26, lineHeight: 1, padding: '0 4px', display: 'flex', alignItems: 'center' }}>‹</button>
             )}
             <div>
-              <h1 style={{ fontFamily: CAVEAT, fontSize: 34, fontWeight: 700, color: tp, margin: 0, lineHeight: 1 }}>✦ Someday</h1>
+              <h1 style={{ fontFamily: CAVEAT, fontSize: 34, fontWeight: 700, color: tp, margin: 0, lineHeight: 1 }}>
+              {(!ownerName || ownerName === currentUser) ? '✦ Your Someday' : `${ownerName}'s Someday`}
+            </h1>
               <p style={{ fontSize: 11, color: ts, margin: '3px 0 0', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 500 }}>
                 {pins.length} things pinned
               </p>

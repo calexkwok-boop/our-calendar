@@ -29761,6 +29761,7 @@ transform: translateY(0);
                 onDeleteDream={handleSomedayDeleteDream}
                 onConvertToEvent={planFromDream}
                 onConvertToTrip={planFromDream}
+                currentUser={currentUser}
               />
             );
           })()}
