@@ -373,7 +373,7 @@ const SomedayPage = ({
     ? { backgroundColor: '#0e1520', backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '28px 28px' }
     : { backgroundColor: '#f5f2eb', backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' };
 
-  const visiblePins = filter === 'all' ? pins : pins.filter(p => p.categoryId === filter);
+  const visiblePins = (filter === 'all' ? pins : pins.filter(p => p.categoryId === filter)).filter(p => p.id !== heroId);
   const BOARD_HEIGHT = Math.max(600, Math.ceil(pins.length / 2) * 220 + 220);
 
   // ─── Drag ──────────────────────────────────────────────────────────────────
