@@ -599,8 +599,6 @@ const SomedayPage = ({
     setDetailPin(pin);
   }
 
-  const PIN_COLOR_OPTIONS = ['teal','purple','pink','amber','red'];
-
   return (
     <div style={{ minHeight: '100vh', background: pageBg, paddingBottom: 'max(100px, calc(env(safe-area-inset-bottom) + 100px))' }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
