@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import MoviesPage from "./MoviesPage";
 import BoardGamePage from "./BoardGamePage";
+import RestaurantPage from "./RestaurantPage";
 
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
@@ -303,7 +304,7 @@ function CategoryGrid({ onPageTap }) {
     { key: 'movies',      icon: '🎬', label: 'Movies',            page: 'movies' },
     { key: 'games',       icon: '🎲', label: 'Board Games',       page: 'games' },
     { key: 'hiking',      icon: '🥾', label: 'Hiking & Outdoors', page: null },
-    { key: 'restaurants', icon: '🍜', label: 'Restaurants',       page: null },
+    { key: 'restaurants', icon: '🍜', label: 'Restaurants',       page: 'restaurants' },
   ];
   return (
     <div className="px-3.5 grid grid-cols-2 gap-2.5">
@@ -351,6 +352,9 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
   }
   if (activePage === "games") {
     return <BoardGamePage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} darkMode={darkMode} />;
+  }
+  if (activePage === "restaurants") {
+    return <RestaurantPage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onSaveToSomeday={onAddToSomeday} darkMode={darkMode} />;
   }
 
   const anyOff        = Object.values(sources).some(v => !v);

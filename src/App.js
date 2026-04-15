@@ -29482,17 +29482,19 @@ transform: translateY(0);
                   const text = String(post?.title || post?.movieTitle || post?.cardTitle || post?.text || '').trim();
                   if (!text) return;
                   const posterPath = post?.poster_path || '';
-                  const photoUrl = posterPath ? `https://image.tmdb.org/t/p/w342${posterPath}` : '';
+                  const photoUrl = posterPath ? `https://image.tmdb.org/t/p/w342${posterPath}` : (post?.imageUrl || '');
+                  const emoji = post?.emoji || (post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : '✨');
+                  const category = post?.categoryId === 'food' || post?.type === 'restaurants' ? 'food' : post?.type === 'movies' ? 'fun' : post?.type === 'hiking' ? 'adventure' : post?.type === 'games' ? 'fun' : 'fun';
                   setBucketList((prev) => {
-                    const alreadyExists = prev.some(d => d.text === text && d.emoji === (post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : '✨'));
+                    const alreadyExists = prev.some(d => d.text === text && d.emoji === emoji);
                     if (alreadyExists) return prev;
                     return [
                       {
                         id: uuidv4(),
                         text,
-                        category: post?.type === 'movies' ? 'fun' : post?.type === 'hiking' ? 'adventure' : post?.type === 'restaurants' ? 'food' : 'fun',
+                        category,
                         sources: [],
-                        emoji: post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : '✨',
+                        emoji,
                         photoUrl,
                         createdAt: new Date().toISOString(),
                       },
