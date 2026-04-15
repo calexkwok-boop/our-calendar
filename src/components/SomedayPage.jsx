@@ -275,10 +275,10 @@ function DetailSheet({ pin, onClose, onConvertToEvent, onConvertToTrip, onMarkDo
               </button>
             </>
           )}
-          <button onClick={() => { onMarkDone?.(pin); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: pin.status === 'done' ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : secBg, color: pin.status === 'done' ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : '#e5e0d5'}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
+          <button onClick={() => { onMarkDone?.(pin); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: pin.status === 'done' ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : secBg, color: pin.status === 'done' ? (darkMode ? '#2dd4bf' : '#0d9488') : (darkMode ? '#cbd5e1' : ts), border: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : '#e5e0d5'}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
             {pin.status === 'done' ? '✓ Done!' : 'Mark done'}
           </button>
-          <button onClick={() => { onSetHero?.(pin.id === heroId ? null : pin.id); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: pin.id === heroId ? (darkMode ? 'rgba(251,191,36,0.12)' : '#fffbeb') : secBg, color: pin.id === heroId ? (darkMode ? '#fbbf24' : '#92400e') : ts, border: `1px solid ${pin.id === heroId ? (darkMode ? 'rgba(251,191,36,0.3)' : '#fde68a') : (darkMode ? 'rgba(255,255,255,0.06)' : '#e5e0d5')}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
+          <button onClick={() => { onSetHero?.(pin.id === heroId ? null : pin.id); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: pin.id === heroId ? (darkMode ? 'rgba(251,191,36,0.12)' : '#fffbeb') : secBg, color: pin.id === heroId ? (darkMode ? '#fbbf24' : '#92400e') : (darkMode ? '#cbd5e1' : ts), border: `1px solid ${pin.id === heroId ? (darkMode ? 'rgba(251,191,36,0.3)' : '#fde68a') : (darkMode ? 'rgba(255,255,255,0.12)' : '#e5e0d5')}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
             {pin.id === heroId ? '★ Remove focus' : '☆ Set as focus'}
           </button>
         </div>

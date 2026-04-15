@@ -288,6 +288,42 @@ function SkeletonCard() {
   );
 }
 
+// ─── Section header ───────────────────────────────────────────────────────────
+function SectionHeader({ label }) {
+  return (
+    <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 px-4 pt-5 pb-2">
+      {label}
+    </p>
+  );
+}
+
+// ─── Browse by interest grid ──────────────────────────────────────────────────
+function CategoryGrid({ onPageTap }) {
+  const cats = [
+    { key: 'movies',      icon: '🎬', label: 'Movies',            page: 'movies' },
+    { key: 'games',       icon: '🎲', label: 'Board Games',       page: 'games' },
+    { key: 'hiking',      icon: '🥾', label: 'Hiking & Outdoors', page: null },
+    { key: 'restaurants', icon: '🍜', label: 'Restaurants',       page: null },
+  ];
+  return (
+    <div className="px-3.5 grid grid-cols-2 gap-2.5">
+      {cats.map(c => (
+        <button
+          key={c.key}
+          onClick={() => c.page && onPageTap(c.page)}
+          className={`flex items-center gap-3 p-3.5 rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm text-left active:opacity-70 transition-opacity ${c.page ? 'cursor-pointer' : 'cursor-default opacity-60'}`}
+        >
+          <span className="text-2xl">{c.icon}</span>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-tight">{c.label}</p>
+            <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-0.5">{SOURCE_CONFIG[c.key]?.sub || ''}</p>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, darkMode = false }) {
   const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true });
   const [drawerOpen, setDrawerOpen]       = useState(false);
@@ -331,6 +367,36 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
       })
     : allPosts;
 
+  // ─── Discovery sections (non-search, deduplication via Set) ───────────────
+  const sectionData = (() => {
+    const moviesByRating = [...activeMovies].sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+    const comByVotesDesc = [...activeCom].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+    const used = new Set();
+    function take(items, limit) {
+      const out = [];
+      for (const item of items) {
+        if (out.length >= limit) break;
+        if (!used.has(String(item.id))) { used.add(String(item.id)); out.push(item); }
+      }
+      return out;
+    }
+    // "Good for this weekend" — casual/quick community items + top-rated movies
+    const weekend  = take([...activeCom.filter(p => ['hiking', 'restaurants'].includes(p.type)), ...moviesByRating], 5);
+    // "From your friends" — friend activity posts (omit if empty)
+    const friends  = activeFriends.length > 0 ? take(activeFriends, 4) : [];
+    // "Hidden gems" — lower-voted community + lower-popularity movies
+    const gems     = take([...[...comByVotesDesc].reverse(), ...[...moviesByRating].reverse()], 4);
+    // "Trending" — highest-voted community + top movies by rating
+    const trending = take([...comByVotesDesc, ...moviesByRating], 6);
+    return { weekend, friends, gems, trending };
+  })();
+
+  function renderCard(post) {
+    if (post.type === 'movies') return <MovieCard key={`movie-${post.id}`} movie={post} onAddToSomeday={onAddToSomeday} onPageTap={setActivePage} />;
+    if (post.type === 'friends') return <FriendCard key={post.id} post={post} />;
+    return <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} />;
+  }
+
   function toggleSource(key) { setSources(prev => ({ ...prev, [key]: !prev[key] })); }
 
   return (
@@ -363,33 +429,82 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
         </div>
       </div>
 
-      <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 px-4 pt-5 pb-3">
-        {search ? `Results for "${search}"` : "Your feed"}
-      </p>
+      {/* ── Search results ─────────────────────────────────────────────────── */}
+      {search.trim() && (
+        <>
+          <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 px-4 pt-5 pb-3">
+            Results for "{search}"
+          </p>
+          <div className="px-3.5 flex flex-col gap-3">
+            {visiblePosts.length === 0
+              ? <div className="text-center py-16 text-gray-400 dark:text-gray-600 text-sm">No results found</div>
+              : visiblePosts.map(post => renderCard(post))
+            }
+          </div>
+        </>
+      )}
 
-      <div className="px-3.5 flex flex-col gap-3">
-        {moviesLoading && sources.movies && !search && <><SkeletonCard /><SkeletonCard /></>}
-        {moviesError && sources.movies && (
-          <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent px-4 py-5 text-center shadow-sm dark:shadow-none">
-            <p className="text-sm text-gray-500">Couldn't load movies</p>
-            <button onClick={() => setMoviesRetry(n => n + 1)} className="text-xs text-teal-500 mt-1">Try again</button>
-          </div>
-        )}
-        {!moviesLoading && visiblePosts.length === 0 && (
-          <div className="text-center py-16 text-gray-400 dark:text-gray-600 text-sm">
-            {search ? "No results found" : "All sources hidden — open Filter to turn some back on"}
-          </div>
-        )}
-        {!moviesLoading && visiblePosts.map(post =>
-          post.type === "movies" ? (
-            <MovieCard key={`movie-${post.id}`} movie={post} onAddToSomeday={onAddToSomeday} onPageTap={setActivePage} />
-          ) : post.type === "friends" ? (
-            <FriendCard key={post.id} post={post} />
-          ) : (
-            <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} />
-          )
-        )}
-      </div>
+      {/* ── Discovery feed ─────────────────────────────────────────────────── */}
+      {!search.trim() && (
+        <>
+          {moviesLoading && sources.movies && (
+            <div className="px-3.5 flex flex-col gap-3 pt-3"><SkeletonCard /><SkeletonCard /></div>
+          )}
+          {moviesError && sources.movies && (
+            <div className="px-3.5 pt-3">
+              <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent px-4 py-5 text-center shadow-sm dark:shadow-none">
+                <p className="text-sm text-gray-500">Couldn't load movies</p>
+                <button onClick={() => setMoviesRetry(n => n + 1)} className="text-xs text-teal-500 mt-1">Try again</button>
+              </div>
+            </div>
+          )}
+
+          {sectionData.weekend.length > 0 && (
+            <>
+              <SectionHeader label="Good for this weekend" />
+              <div className="px-3.5 flex flex-col gap-3">
+                {sectionData.weekend.map(post => renderCard(post))}
+              </div>
+            </>
+          )}
+
+          {sectionData.friends.length > 0 && (
+            <>
+              <SectionHeader label="From your friends" />
+              <div className="px-3.5 flex flex-col gap-3">
+                {sectionData.friends.map(post => renderCard(post))}
+              </div>
+            </>
+          )}
+
+          {sectionData.gems.length > 0 && (
+            <>
+              <SectionHeader label="Hidden gems" />
+              <div className="px-3.5 flex flex-col gap-3">
+                {sectionData.gems.map(post => renderCard(post))}
+              </div>
+            </>
+          )}
+
+          {sectionData.trending.length > 0 && (
+            <>
+              <SectionHeader label="Trending" />
+              <div className="px-3.5 flex flex-col gap-3">
+                {sectionData.trending.map(post => renderCard(post))}
+              </div>
+            </>
+          )}
+
+          {!moviesLoading && sectionData.weekend.length === 0 && sectionData.trending.length === 0 && (
+            <div className="text-center py-16 text-gray-400 dark:text-gray-600 text-sm">
+              All sources hidden — open Filter to turn some back on
+            </div>
+          )}
+
+          <SectionHeader label="Browse by interest" />
+          <CategoryGrid onPageTap={setActivePage} />
+        </>
+      )}
 
       <FilterDrawer open={drawerOpen} sources={sources} onToggle={toggleSource} onClose={() => setDrawerOpen(false)} />
     </div>
