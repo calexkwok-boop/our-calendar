@@ -688,7 +688,7 @@ const SomedayPage = ({
               position: 'absolute',
               left: pin.x, top: pin.y,
               transform: `rotate(${pin.rot}deg)${dragging === pin.id ? ' scale(1.06)' : ''}`,
-              zIndex: dragging === pin.id ? 50 : 2,
+              zIndex: dragging === pin.id ? 50 : (pin.type === 'label' || pin.type === 'sticker') ? 10 : 2,
               userSelect: 'none',
               transition: dragging === pin.id ? 'none' : 'transform 0.15s',
               touchAction: 'none',
