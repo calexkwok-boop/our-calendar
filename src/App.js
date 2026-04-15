@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown, Share2, Trophy, Home, Compass } from 'lucide-react';
+import { Calendar, Clock, Plus, X, ChevronLeft, ChevronRight, Edit2, Trash2, Tag, Settings, Lock, User, Bell, BellOff, AlertTriangle, Repeat, Moon, Sun, Camera, MessageSquare, MapPin, ThumbsUp, ThumbsDown, Share2, Trophy, Home, Compass, Sparkles } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
 import { getToken, onMessage } from "firebase/messaging";
@@ -29877,7 +29877,7 @@ transform: translateY(0);
               className={`min-w-0 px-1 py-2 rounded-xl flex items-center justify-center transition-all ${bottomNavTab === 'someday' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
               style={bottomNavTab === 'someday' ? bottomNavActiveTabStyle : undefined}
             >
-              <MapPin className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+              <Sparkles className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
           </div>
         </div>
