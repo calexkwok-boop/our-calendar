@@ -238,7 +238,7 @@ function AddSheet({ onClose, onAdd, darkMode }) {
 }
 
 // ─── Detail Sheet ─────────────────────────────────────────────────────────────
-function DetailSheet({ pin, onClose, onConvertToEvent, onConvertToTrip, onMarkDone, darkMode }) {
+function DetailSheet({ pin, onClose, onConvertToEvent, onConvertToTrip, onMarkDone, onSetHero, heroId, darkMode }) {
   const sheetBg = darkMode ? '#131c2e' : '#ffffff';
   const tp      = darkMode ? '#e8eaf0' : '#1a1a2e';
   const ts      = darkMode ? '#4a5568' : '#9ca3af';
@@ -277,6 +277,9 @@ function DetailSheet({ pin, onClose, onConvertToEvent, onConvertToTrip, onMarkDo
           )}
           <button onClick={() => { onMarkDone?.(pin); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: pin.status === 'done' ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : secBg, color: pin.status === 'done' ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : '#e5e0d5'}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
             {pin.status === 'done' ? '✓ Done!' : 'Mark done'}
+          </button>
+          <button onClick={() => { onSetHero?.(pin.id === heroId ? null : pin.id); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: pin.id === heroId ? (darkMode ? 'rgba(251,191,36,0.12)' : '#fffbeb') : secBg, color: pin.id === heroId ? (darkMode ? '#fbbf24' : '#92400e') : ts, border: `1px solid ${pin.id === heroId ? (darkMode ? 'rgba(251,191,36,0.3)' : '#fde68a') : (darkMode ? 'rgba(255,255,255,0.06)' : '#e5e0d5')}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
+            {pin.id === heroId ? '★ Remove focus' : '☆ Set as focus'}
           </button>
         </div>
       </div>
@@ -324,9 +327,14 @@ const SomedayPage = ({
   const [showAdd, setShowAdd]     = useState(false);
   const [detailPin, setDetailPin] = useState(null);
   const [dragging, setDragging]   = useState(null);
+  const [heroId, setHeroId]       = useState(() => { try { return localStorage.getItem('someday-hero-id') || null; } catch { return null; } });
   const dragOffset                = useRef({ x: 0, y: 0 });
   const canvasRef                 = useRef();
   const didDrag                   = useRef(false);
+
+  useEffect(() => {
+    try { if (heroId) localStorage.setItem('someday-hero-id', heroId); else localStorage.removeItem('someday-hero-id'); } catch {}
+  }, [heroId]);
 
   // Sync new items added externally (from home page bucket list / quick notes)
   useEffect(() => {
@@ -481,6 +489,49 @@ const SomedayPage = ({
         </div>
       </div>
 
+      {/* Hero pin */}
+      {(() => {
+        const heroPin = heroId ? pins.find(p => p.id === heroId) : null;
+        if (!heroPin) return null;
+        const isNote = heroPin.type === 'note';
+        const noteScheme = isNote ? (NOTE_COLORS[heroPin.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'] : null;
+        return (
+          <div style={{ padding: '20px 16px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <p style={{ fontSize: 10, color: darkMode ? '#fbbf24' : '#92400e', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 12, fontWeight: 700 }}>★ Focus</p>
+            <div
+              onClick={() => setDetailPin(heroPin)}
+              style={{ cursor: 'pointer', transform: `rotate(${(heroPin.rot ?? 0) * 0.3}deg)`, transition: 'transform 0.2s' }}
+            >
+              {isNote ? (
+                <div style={{ background: noteScheme.bg, padding: '18px 18px 20px', boxShadow: '0 10px 36px rgba(0,0,0,0.18)', width: 240, minHeight: 120, position: 'relative', borderRadius: 2 }}>
+                  <div style={{ position: 'absolute', top: 0, right: 0, borderWidth: '0 26px 26px 0', borderStyle: 'solid', borderColor: `transparent ${noteScheme.fold} transparent transparent` }} />
+                  <Pushpin colorKey={heroPin.pinColor} darkMode={darkMode} />
+                  <p style={{ fontFamily: CAVEAT, fontSize: 19, color: noteScheme.text, lineHeight: 1.45, margin: 0, wordBreak: 'break-word' }}>{heroPin.text}</p>
+                </div>
+              ) : (
+                <div style={{ background: darkMode ? '#e2e8f0' : '#ffffff', padding: '8px 8px 0', borderRadius: 3, boxShadow: '0 10px 36px rgba(0,0,0,0.18)', width: 220, position: 'relative' }}>
+                  <Pushpin colorKey={heroPin.pinColor} darkMode={darkMode} />
+                  <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 2 }}>
+                    {heroPin.imageUrl ? (
+                      <img src={heroPin.imageUrl} alt={heroPin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>
+                        {heroPin.emoji || '📌'}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ padding: '8px 4px 10px', textAlign: 'center' }}>
+                    <div style={{ fontFamily: CAVEAT, fontSize: 16, color: '#374151', lineHeight: 1.3 }}>
+                      {heroPin.emoji ? `${heroPin.emoji} ${heroPin.label || heroPin.text}` : (heroPin.label || heroPin.text)}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Pin board */}
       <div ref={canvasRef} style={{ ...boardBg, position: 'relative', width: '100%', height: BOARD_HEIGHT, overflowX: 'hidden', touchAction: dragging ? 'none' : 'pan-y' }}>
 
@@ -520,7 +571,7 @@ const SomedayPage = ({
       </div>
 
       {showAdd && <AddSheet onClose={() => setShowAdd(false)} onAdd={addPin} darkMode={darkMode} />}
-      {detailPin && <DetailSheet pin={detailPin} onClose={() => setDetailPin(null)} onConvertToEvent={onConvertToEvent} onConvertToTrip={onConvertToTrip} onMarkDone={markDone} darkMode={darkMode} />}
+      {detailPin && <DetailSheet pin={detailPin} onClose={() => setDetailPin(null)} onConvertToEvent={onConvertToEvent} onConvertToTrip={onConvertToTrip} onMarkDone={markDone} heroId={heroId} onSetHero={setHeroId} darkMode={darkMode} />}
     </div>
   );
 };
