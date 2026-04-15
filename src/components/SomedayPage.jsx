@@ -679,7 +679,7 @@ const SomedayPage = ({
       })()}
 
       {/* Pin board */}
-      <div ref={canvasRef} style={{ ...boardBg, position: 'relative', width: '100%', height: BOARD_HEIGHT, overflowX: 'hidden', touchAction: dragging ? 'none' : 'pan-y' }}>
+      <div ref={canvasRef} style={{ ...boardBg, position: 'relative', zIndex: 1, width: '100%', height: BOARD_HEIGHT, overflowX: 'hidden', touchAction: dragging ? 'none' : 'pan-y' }}>
 
         {visiblePins.map(pin => (
           <div
