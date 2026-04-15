@@ -241,6 +241,16 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent }) {
 
   // ── Debounce search; reset list state on change ──────────────────────────
   useEffect(() => {
+    if (!search) {
+      // Immediately reset to active tab — on mount this is a no-op (same values);
+      // when the user clears the search input it resets debouncedSearch so the
+      // fetch effect re-runs with the tab URL instead of the search URL.
+      setDebouncedSearch("");
+      setPage(1);
+      setMovies([]);
+      setError(false);
+      return; // no timer needed when search is empty
+    }
     const t = setTimeout(() => {
       setDebouncedSearch(search);
       setPage(1);
