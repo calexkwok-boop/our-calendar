@@ -180,7 +180,7 @@ function FeaturedBanner({ game, onTap, onAddToSomeday, somedays }) {
           </div>
           <button
             onClick={handleSomeday}
-            className={`flex-shrink-0 text-xs font-medium px-3.5 py-2 rounded-xl transition-all active:opacity-70 ${inSomeday ? 'bg-teal-600 text-white' : 'bg-teal-400 text-gray-900'}`}
+            className={`flex-shrink-0 text-xs font-medium px-3.5 py-2 rounded-xl transition-all active:opacity-70 ${inSomeday ? 'bg-teal-600/20 text-teal-400 border border-teal-500/40' : 'bg-teal-400 text-gray-900'}`}
           >
             {inSomeday ? '✓ Saved' : '+ Someday'}
           </button>
@@ -348,9 +348,9 @@ function GameDetailSheet({ game, open, onClose, onAddEvent, onAddToSomeday, some
           <div className="flex gap-2">
             <button
               onClick={handleSomeday}
-              className={`flex-1 py-3 rounded-2xl text-sm font-medium transition-all active:opacity-70 ${inSomeday ? 'bg-teal-600 text-white' : 'bg-teal-400 text-gray-900'}`}
+              className={`flex-1 py-3 rounded-2xl text-sm font-medium transition-all active:opacity-70 ${inSomeday ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400 border border-teal-500/30' : 'bg-teal-400 text-gray-900'}`}
             >
-              {inSomeday ? '✓ In someday list' : '+ Someday list'}
+              {inSomeday ? '✓ Saved · tap to remove' : '+ Someday list'}
             </button>
             <button
               onClick={() => {
