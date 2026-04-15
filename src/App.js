@@ -29842,7 +29842,7 @@ transform: translateY(0);
             </div>
           )}
 
-          <div className="grid grid-cols-5 gap-1 p-1 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
+          <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-white/60 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 shadow-2xl">
             <button
               onClick={() => { setBottomNavTab('home'); setShowDateDetailModal(false); setShowJourneyScreen(false); }}
               title="Home"
@@ -29862,24 +29862,6 @@ transform: translateY(0);
               <Calendar className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
             <button
-              onClick={() => { setBottomNavTab('events'); setShowDateDetailModal(false); setShowJourneyScreen(false); }}
-              title="Events"
-              aria-label="Events"
-              className={`min-w-0 px-1 py-2 rounded-xl flex items-center justify-center transition-all ${bottomNavTab === 'events' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-              style={bottomNavTab === 'events' ? bottomNavActiveTabStyle : undefined}
-            >
-              <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-            </button>
-            <button
-              onClick={openJourneyTab}
-              title="Journey"
-              aria-label="Journey"
-              className={`min-w-0 px-1 py-2 rounded-xl flex items-center justify-center transition-all ${bottomNavTab === 'journey' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-              style={bottomNavTab === 'journey' ? bottomNavActiveTabStyle : undefined}
-            >
-              <Trophy className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-            </button>
-            <button
               onClick={() => { setBottomNavTab('explore'); setShowDateDetailModal(false); setShowJourneyScreen(false); }}
               title="Explore"
               aria-label="Explore"
@@ -29887,6 +29869,15 @@ transform: translateY(0);
               style={bottomNavTab === 'explore' ? bottomNavActiveTabStyle : undefined}
             >
               <Compass className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+            </button>
+            <button
+              onClick={() => { setBottomNavTab('someday'); setShowDateDetailModal(false); setShowJourneyScreen(false); }}
+              title="Someday"
+              aria-label="Someday"
+              className={`min-w-0 px-1 py-2 rounded-xl flex items-center justify-center transition-all ${bottomNavTab === 'someday' ? '' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              style={bottomNavTab === 'someday' ? bottomNavActiveTabStyle : undefined}
+            >
+              <MapPin className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
           </div>
         </div>
