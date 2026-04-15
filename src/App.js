@@ -3298,6 +3298,9 @@ function App() {
   const [quickThoughts, setQuickThoughts] = useState(() => readQuickThoughtsState('guest'));
   const [bucketList, setBucketList] = useState(() => readBucketListState('guest'));
   const [showAddDreamSheet, setShowAddDreamSheet] = useState(false);
+  const [somedayPinPositions, setSomedayPinPositions] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('someday-pin-positions') || '{}'); } catch { return {}; }
+  });
   const [quickThoughtsHydratedUserId, setQuickThoughtsHydratedUserId] = useState(null);
   const [bucketListHydratedUserId, setBucketListHydratedUserId] = useState(null);
   const [memories, setMemories] = useState([]);
@@ -20051,6 +20054,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
   }, [user?.id, bucketList, bucketListHydratedUserId]);
 
   useEffect(() => {
+    try { localStorage.setItem('someday-pin-positions', JSON.stringify(somedayPinPositions)); } catch {}
+  }, [somedayPinPositions]);
+
+  useEffect(() => {
     const currentMemoriesUserId = String(user?.id || 'guest').trim() || 'guest';
     let cancelled = false;
     (async () => {
@@ -24030,6 +24037,12 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     }
   };
 
+  // Called when a pin is dragged to a new position — save it
+  const handleSomedayUpdateDream = (pin) => {
+    if (pin.x == null) return;
+    setSomedayPinPositions(prev => ({ ...prev, [pin.id]: { x: pin.x, y: pin.y, rot: pin.rot } }));
+  };
+
   // Called when a pin is deleted from SomedayPage — remove from whichever list owns it
   const handleSomedayDeleteDream = (id) => {
     addBucketListTombstone(user?.id, id);
@@ -25144,14 +25157,14 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         />
         <div
           ref={layerHeaderCardRef}
-          className={(bottomNavTab === 'home' || bottomNavTab === 'events' || bottomNavTab === 'explore')
+          className={(bottomNavTab === 'home' || bottomNavTab === 'events' || bottomNavTab === 'explore' || bottomNavTab === 'someday')
             ? 'relative mb-0'
             : 'glass-panel relative mb-4 min-h-[165px] rounded-2xl px-4 py-4 sm:min-h-[205px] sm:px-5 sm:py-5 lg:min-h-[285px]'}
           onPointerDownCapture={() => {
             if (!coverHeaderControlsVisible) return;
             bumpCoverControlsInteraction();
           }}
-          style={bottomNavTab !== 'home' && bottomNavTab !== 'events' && bottomNavTab !== 'explore' && hasActiveLayerHeaderCover && effectiveCoverOpacity > 0.01
+          style={bottomNavTab !== 'home' && bottomNavTab !== 'events' && bottomNavTab !== 'explore' && bottomNavTab !== 'someday' && hasActiveLayerHeaderCover && effectiveCoverOpacity > 0.01
             ? {
               backgroundImage: `linear-gradient(${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}, ${hexToRgba(coverFadeSurfaceColor, Number((1 - effectiveCoverOpacity).toFixed(3)))}), url(${activeLayer.header_bg_url})`,
               backgroundSize: 'cover',
@@ -25160,7 +25173,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             }
               : undefined}
         >
-          {bottomNavTab !== 'home' && bottomNavTab !== 'events' && bottomNavTab !== 'explore' && !hasActiveLayerHeaderCover ? (
+          {bottomNavTab !== 'home' && bottomNavTab !== 'events' && bottomNavTab !== 'explore' && bottomNavTab !== 'someday' && !hasActiveLayerHeaderCover ? (
             <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
               <WelcomeCover
                 userName={homeGreetingName || currentUserProfileLabel || null}
@@ -29492,46 +29505,6 @@ transform: translateY(0);
 
 
             )}
-            {bottomNavTab === 'someday' && (() => {
-              const catMap = { travel: 'places', food: 'food', adventure: 'experiences', culture: 'experiences', home: 'home', wellness: 'experiences', fun: 'experiences' };
-              const somedayDreams = [
-                ...(Array.isArray(bucketList) ? bucketList : []).map(d => ({
-                  id: d.id,
-                  type: d.photoUrl ? 'photo' : 'photo',
-                  label: d.text,
-                  text: d.text,
-                  emoji: d.emoji || '✨',
-                  imageUrl: d.photoUrl || '',
-                  noteColor: 'yellow',
-                  pinColor: 'teal',
-                  categoryId: catMap[d.category] || 'experiences',
-                  status: 'dreaming',
-                })),
-                ...(Array.isArray(quickThoughts) ? quickThoughts : []).map(t => ({
-                  id: t.id,
-                  type: 'note',
-                  text: t.text,
-                  label: t.text,
-                  noteColor: ['yellow', 'pink', 'blue', 'green'].includes(t.color) ? t.color : 'yellow',
-                  pinColor: 'purple',
-                  categoryId: 'experiences',
-                  status: 'dreaming',
-                })),
-              ];
-              return (
-                <SomedayPage
-                  key="someday-page"
-                  dreams={somedayDreams}
-                  darkMode={darkMode}
-                  onBack={() => setBottomNavTab('home')}
-                  onAddDream={handleSomedayAddDream}
-                  onDeleteDream={handleSomedayDeleteDream}
-                  onConvertToEvent={planFromDream}
-                  onConvertToTrip={planFromDream}
-                />
-              );
-            })()}
-
             {/* legacy explore UI disabled below */}
             {bottomNavTab === 'explore' && false && (
 
@@ -29748,6 +29721,49 @@ transform: translateY(0);
             )}
           </div>
           )}
+
+          {bottomNavTab === 'someday' && (() => {
+            const catMap = { travel: 'places', food: 'food', adventure: 'experiences', culture: 'experiences', home: 'home', wellness: 'experiences', fun: 'experiences' };
+            const somedayDreams = [
+              ...(Array.isArray(bucketList) ? bucketList : []).map(d => ({
+                id: d.id,
+                type: 'photo',
+                label: d.text,
+                text: d.text,
+                emoji: d.emoji || '✨',
+                imageUrl: d.photoUrl || '',
+                noteColor: 'yellow',
+                pinColor: 'teal',
+                categoryId: catMap[d.category] || 'experiences',
+                status: 'dreaming',
+                ...(somedayPinPositions[d.id] || {}),
+              })),
+              ...(Array.isArray(quickThoughts) ? quickThoughts : []).map(t => ({
+                id: t.id,
+                type: 'note',
+                text: t.text,
+                label: t.text,
+                noteColor: ['yellow', 'pink', 'blue', 'green'].includes(t.color) ? t.color : 'yellow',
+                pinColor: 'purple',
+                categoryId: 'experiences',
+                status: 'dreaming',
+                ...(somedayPinPositions[t.id] || {}),
+              })),
+            ];
+            return (
+              <SomedayPage
+                key="someday-page"
+                dreams={somedayDreams}
+                darkMode={darkMode}
+                onBack={() => setBottomNavTab('home')}
+                onAddDream={handleSomedayAddDream}
+                onUpdateDream={handleSomedayUpdateDream}
+                onDeleteDream={handleSomedayDeleteDream}
+                onConvertToEvent={planFromDream}
+                onConvertToTrip={planFromDream}
+              />
+            );
+          })()}
 
           <input
             ref={scanReminderInputRef}

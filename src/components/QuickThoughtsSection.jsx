@@ -14,6 +14,7 @@ const QuickThoughtsSection = ({
   quickThoughts = [],
   onAddThought,
   onDeleteThought,
+  onOpenSomeday,
   darkMode = false,
 }) => {
   const [isAdding, setIsAdding] = useState(false);
@@ -36,12 +37,15 @@ const QuickThoughtsSection = ({
   return (
     <div className="rounded-[28px] border-2 border-yellow-900/20 bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 p-6 shadow-xl dark:from-yellow-950/30 dark:via-slate-900 dark:to-orange-950/20">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+        <button
+          onClick={onOpenSomeday}
+          className="flex items-center gap-2 text-left active:opacity-70 transition-opacity"
+        >
           <StickyNote className="w-5 h-5 text-yellow-700 dark:text-yellow-400" />
           <h3 className="font-handwritten text-3xl text-gray-900 dark:text-white">
             Quick Thoughts
           </h3>
-        </div>
+        </button>
         <button
           type="button"
           onClick={() => setIsAdding(true)}
@@ -56,7 +60,8 @@ const QuickThoughtsSection = ({
           {quickThoughts.map((thought, idx) => (
             <div
               key={thought.id || idx}
-              className={`sticky-note group relative rounded-lg p-4 ${colorClasses[thought.color] || colorClasses.green}`}
+              onClick={onOpenSomeday}
+              className={`sticky-note group relative rounded-lg p-4 cursor-pointer active:opacity-70 transition-opacity ${colorClasses[thought.color] || colorClasses.green}`}
             >
               <p className="font-handwritten text-lg text-gray-900 pr-8 dark:text-white">
                 {thought.text}
@@ -64,7 +69,7 @@ const QuickThoughtsSection = ({
               {onDeleteThought && (
                 <button
                   type="button"
-                  onClick={() => onDeleteThought(thought)}
+                  onClick={(e) => { e.stopPropagation(); onDeleteThought(thought); }}
                   className="absolute top-2 right-2 rounded-full bg-white/60 p-1.5 opacity-0 transition-all hover:bg-red-50 group-hover:opacity-100 dark:bg-black/20 dark:hover:bg-red-900/50"
                 >
                   <Trash2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />

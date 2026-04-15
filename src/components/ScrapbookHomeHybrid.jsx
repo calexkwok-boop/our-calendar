@@ -445,9 +445,12 @@ const ScrapbookHomeHybrid = ({
         {/* COMING UP THIS WEEK - Current style */}
         <div className="rounded-[24px] border border-white/50 dark:border-white/10 bg-white/75 dark:bg-white/[0.04] p-4">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
+            <button
+              onClick={onOpenUpcoming}
+              className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400 active:opacity-70 transition-opacity text-left"
+            >
               📅 COMING UP THIS WEEK
-            </div>
+            </button>
             {upcomingPreviewEvents.length > 3 && (
               <button
                 onClick={onOpenUpcoming}
@@ -463,7 +466,8 @@ const ScrapbookHomeHybrid = ({
               {upcomingPreviewEvents.slice(0, 3).map((event, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-3 rounded-xl border border-white/40 dark:border-white/10 bg-white/60 dark:bg-white/[0.04] p-3"
+                  onClick={onOpenUpcoming}
+                  className="flex items-center gap-3 rounded-xl border border-white/40 dark:border-white/10 bg-white/60 dark:bg-white/[0.04] p-3 cursor-pointer active:opacity-70 transition-opacity"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
@@ -554,7 +558,7 @@ const ScrapbookHomeHybrid = ({
                       key={dream.id || idx}
                       className="group flex-shrink-0 snap-start w-28 cursor-pointer"
                       style={{ rotate: `${idx % 2 === 0 ? '-1.5deg' : '1.2deg'}` }}
-                      onClick={() => onPlanFromDream?.(dream)}
+                      onClick={onOpenSomeday}
                     >
                       {/* Polaroid frame */}
                       <div className="bg-white dark:bg-slate-100 rounded-sm shadow-md p-1.5 pb-0 transition-all group-hover:shadow-lg group-hover:-translate-y-0.5">
@@ -589,7 +593,7 @@ const ScrapbookHomeHybrid = ({
               {bucketList.filter((d) => !d.photoUrl).map((dream, idx) => (
                 <div
                   key={dream.id || idx}
-                  onClick={() => onPlanFromDream?.(dream)}
+                  onClick={onOpenSomeday}
                   className="group w-full flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white/60 dark:bg-black/20 p-3 text-left transition-all hover:bg-white/90 dark:hover:bg-black/40 hover:border-emerald-500/30 cursor-pointer"
                 >
                   <span className="text-2xl flex-shrink-0">{dream.emoji}</span>
@@ -754,6 +758,7 @@ const ScrapbookHomeHybrid = ({
           quickThoughts={quickThoughts}
           onAddThought={onAddThought}
           onDeleteThought={onDeleteThought}
+          onOpenSomeday={onOpenSomeday}
           darkMode={darkMode}
         />
 

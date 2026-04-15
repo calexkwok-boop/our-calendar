@@ -278,6 +278,20 @@ function DetailSheet({ pin, onClose, onConvertToEvent, onConvertToTrip, onMarkDo
   );
 }
 
+// ─── Grid layout helper ───────────────────────────────────────────────────────
+// Places pins in a staggered 2-column layout with small random jitter.
+function gridPosition(index) {
+  const col = index % 2;
+  const row = Math.floor(index / 2);
+  const jx  = (Math.random() - 0.5) * 14;
+  const jy  = (Math.random() - 0.5) * 14;
+  return {
+    x:   (col === 0 ? 18 : 188) + jx,
+    y:   64 + row * 218 + jy,
+    rot: (col === 0 ? -1 : 1) * (0.4 + Math.random() * 2.2),
+  };
+}
+
 // ─── Main SomedayPage ─────────────────────────────────────────────────────────
 const SomedayPage = ({
   dreams = SAMPLE_PINS,
@@ -289,15 +303,17 @@ const SomedayPage = ({
   onBack,
   darkMode = false,
 }) => {
-  const [pins, setPins]           = useState(() => dreams.map(d => ({
-    ...d,
-    x:         d.x         ?? Math.random() * 220,
-    y:         d.y         ?? 60 + Math.random() * 400,
-    rot:       d.rot       ?? (Math.random() * 6 - 3),
-    pinColor:  d.pinColor  ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)],
-    noteColor: d.noteColor ?? 'yellow',
-    type:      d.type      ?? (d.imageUrl || d.emoji ? 'photo' : 'note'),
-  })));
+  const [pins, setPins]           = useState(() => dreams.map((d, idx) => {
+    const pos = (d.x == null || d.y == null) ? gridPosition(idx) : { x: d.x, y: d.y, rot: d.rot };
+    return {
+      ...d,
+      ...pos,
+      rot:       pos.rot       ?? d.rot ?? (Math.random() * 6 - 3),
+      pinColor:  d.pinColor  ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)],
+      noteColor: d.noteColor ?? 'yellow',
+      type:      d.type      ?? (d.imageUrl || d.emoji ? 'photo' : 'note'),
+    };
+  }));
   const [filter, setFilter]       = useState('all');
   const [showAdd, setShowAdd]     = useState(false);
   const [detailPin, setDetailPin] = useState(null);
@@ -310,18 +326,20 @@ const SomedayPage = ({
   useEffect(() => {
     setPins(prev => {
       const existingIds = new Set(prev.map(p => p.id));
-      const newPins = (Array.isArray(dreams) ? dreams : [])
-        .filter(d => !existingIds.has(d.id))
-        .map(d => ({
+      const toAdd = (Array.isArray(dreams) ? dreams : []).filter(d => !existingIds.has(d.id));
+      if (!toAdd.length) return prev;
+      const newPins = toAdd.map((d, i) => {
+        const pos = (d.x == null || d.y == null) ? gridPosition(prev.length + i) : { x: d.x, y: d.y, rot: d.rot };
+        return {
           ...d,
-          x:         d.x         ?? 30 + Math.random() * 180,
-          y:         d.y         ?? 40 + Math.random() * 120,
-          rot:       d.rot       ?? (Math.random() * 6 - 3),
+          ...pos,
+          rot:       pos.rot       ?? d.rot ?? (Math.random() * 6 - 3),
           pinColor:  d.pinColor  ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)],
           noteColor: d.noteColor ?? 'yellow',
           type:      d.type      ?? (d.imageUrl || d.emoji ? 'photo' : 'note'),
-        }));
-      return newPins.length ? [...prev, ...newPins] : prev;
+        };
+      });
+      return [...prev, ...newPins];
     });
   }, [dreams]);
 
@@ -342,7 +360,7 @@ const SomedayPage = ({
     : { backgroundColor: '#f5f2eb', backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' };
 
   const visiblePins = filter === 'all' ? pins : pins.filter(p => p.categoryId === filter);
-  const BOARD_HEIGHT = Math.max(860, pins.length * 110);
+  const BOARD_HEIGHT = Math.max(600, Math.ceil(pins.length / 2) * 220 + 220);
 
   // ─── Drag ──────────────────────────────────────────────────────────────────
   function startDrag(e, id) {
@@ -399,13 +417,8 @@ const SomedayPage = ({
   }, [onMove, stopDrag]);
 
   function addPin(data) {
-    const newPin = {
-      id: Date.now().toString(),
-      x: 30 + Math.random() * 180,
-      y: 40 + Math.random() * 120,
-      rot: Math.random() * 6 - 3,
-      ...data,
-    };
+    const pos = gridPosition(pins.length);
+    const newPin = { id: Date.now().toString(), ...pos, ...data };
     setPins(ps => [...ps, newPin]);
     onAddDream?.(newPin);
   }
