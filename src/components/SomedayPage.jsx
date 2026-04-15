@@ -161,8 +161,8 @@ function AddSheet({ onClose, onAdd, darkMode }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '20px 18px 44px', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}`, maxHeight: '85vh', overflowY: 'auto' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10020, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '20px 18px max(44px, calc(env(safe-area-inset-bottom) + 44px))', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}`, maxHeight: '85vh', overflowY: 'auto' }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 18px' }} />
         <p style={{ fontFamily: CAVEAT, fontSize: 24, fontWeight: 700, color: tp, marginBottom: 16 }}>Pin something new</p>
 
@@ -240,8 +240,8 @@ function DetailSheet({ pin, onClose, onConvertToEvent, onConvertToTrip, onMarkDo
   const secBg   = darkMode ? 'rgba(255,255,255,0.04)' : '#f8f7f2';
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '20px 18px 48px', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}` }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10020, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '20px 18px max(48px, calc(env(safe-area-inset-bottom) + 48px))', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}` }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 16px' }} />
 
         {pin.type === 'photo' && pin.imageUrl && (
@@ -442,7 +442,7 @@ const SomedayPage = ({
   const PIN_COLOR_OPTIONS = ['teal','purple','pink','amber','red'];
 
   return (
-    <div style={{ minHeight: '100vh', background: pageBg, paddingBottom: 100 }}>
+    <div style={{ minHeight: '100vh', background: pageBg, paddingBottom: 'max(100px, calc(env(safe-area-inset-bottom) + 100px))' }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
 
       {/* Sticky top bar — matches ExplorePage */}
@@ -476,7 +476,7 @@ const SomedayPage = ({
       </div>
 
       {/* Pin board */}
-      <div ref={canvasRef} style={{ ...boardBg, position: 'relative', width: '100%', height: BOARD_HEIGHT, overflowX: 'hidden', touchAction: 'none' }}>
+      <div ref={canvasRef} style={{ ...boardBg, position: 'relative', width: '100%', height: BOARD_HEIGHT, overflowX: 'hidden', touchAction: dragging ? 'none' : 'pan-y' }}>
 
         {visiblePins.map(pin => (
           <div
