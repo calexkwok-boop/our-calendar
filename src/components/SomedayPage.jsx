@@ -1,0 +1,509 @@
+/**
+ * SomedayPage.jsx — Pinboard redesign matching Explore theme
+ *
+ * Props:
+ *   dreams            – Dream[]
+ *   onAddDream        – (dream) => void
+ *   onUpdateDream     – (dream) => void
+ *   onDeleteDream     – (id) => void
+ *   onConvertToEvent  – (dream) => void
+ *   onConvertToTrip   – (dream) => void
+ *   onUploadImage     – (dreamId, file) => Promise<string>
+ *   currentUser       – { id, name }
+ *   darkMode          – boolean
+ */
+
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+
+const CAVEAT = '"Caveat", cursive';
+
+const SAMPLE_PINS = [
+  { id: '1', type: 'photo', x: 18,  y: 70,  rot: -2.5, label: 'Trek in Patagonia',       emoji: '🏔️', imageUrl: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&q=80', pinColor: 'teal',   categoryId: 'places',      status: 'dreaming' },
+  { id: '2', type: 'photo', x: 175, y: 52,  rot:  2.1, label: 'A week in Japan',          emoji: '🗾', imageUrl: 'https://images.unsplash.com/photo-1480796927426-f609979314bd?w=400&q=80', pinColor: 'purple', categoryId: 'places',      status: 'planning' },
+  { id: '3', type: 'note',  x: 318, y: 64,  rot: -1.2, text: 'Cherry blossom April 2026 — book flights NOW!!', noteColor: 'yellow', pinColor: 'amber',  categoryId: 'places',      status: 'planning' },
+  { id: '4', type: 'photo', x: 18,  y: 272, rot:  1.8, label: 'See the Northern Lights',  emoji: '🌌', imageUrl: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=400&q=80', pinColor: 'purple', categoryId: 'places',      status: 'dreaming' },
+  { id: '5', type: 'photo', x: 188, y: 260, rot: -1.5, label: 'Try omakase in LA',         emoji: '🍣', imageUrl: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=400&q=80', pinColor: 'teal',   categoryId: 'food',        status: 'dreaming' },
+  { id: '6', type: 'note',  x: 18,  y: 472, rot:  2.2, text: 'Learn to surf this summer — Santa Cruz?', noteColor: 'pink',   pinColor: 'pink',   categoryId: 'experiences', status: 'dreaming' },
+  { id: '7', type: 'photo', x: 185, y: 462, rot: -2.0, label: 'Road trip down PCH',        emoji: '🚗', imageUrl: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&q=80', pinColor: 'teal',   categoryId: 'places',      status: 'planning' },
+  { id: '8', type: 'note',  x: 328, y: 300, rot: -0.8, text: 'Get a Vitamix — wait for Black Friday sale', noteColor: 'blue',   pinColor: 'purple', categoryId: 'buy',         status: 'dreaming' },
+  { id: '9', type: 'photo', x: 325, y: 460, rot:  1.5, label: 'Redecorate living room',    emoji: '🛋️', imageUrl: '', pinColor: 'amber',  categoryId: 'home',        status: 'planning' },
+];
+
+const NOTE_COLORS = {
+  yellow: { light: { bg: '#fef9c3', fold: '#fde047', text: '#713f12' }, dark: { bg: '#2d2a0a', fold: '#854d0e', text: '#fef08a' } },
+  pink:   { light: { bg: '#fce7f3', fold: '#f9a8d4', text: '#831843' }, dark: { bg: '#2d0a1e', fold: '#9d174d', text: '#fbcfe8' } },
+  blue:   { light: { bg: '#dbeafe', fold: '#93c5fd', text: '#1e3a8a' }, dark: { bg: '#0a1628', fold: '#1d4ed8', text: '#bfdbfe' } },
+  green:  { light: { bg: '#dcfce7', fold: '#86efac', text: '#14532d' }, dark: { bg: '#0a2010', fold: '#15803d', text: '#bbf7d0' } },
+};
+
+const PIN_COLORS = {
+  teal:   { light: '#0d9488', dark: '#2dd4bf' },
+  purple: { light: '#7c3aed', dark: '#c084fc' },
+  pink:   { light: '#db2777', dark: '#f472b6' },
+  amber:  { light: '#d97706', dark: '#fbbf24' },
+  red:    { light: '#dc2626', dark: '#f87171' },
+};
+
+const CATEGORY_FILTERS = [
+  { id: 'all',         label: 'All',          emoji: '✦' },
+  { id: 'places',      label: 'Places',       emoji: '🌍' },
+  { id: 'food',        label: 'Food',         emoji: '🍜' },
+  { id: 'experiences', label: 'Experiences',  emoji: '✨' },
+  { id: 'home',        label: 'Home',         emoji: '🏡' },
+  { id: 'buy',         label: 'Things to buy',emoji: '🛍️' },
+];
+
+const NOTE_COLOR_OPTIONS = ['yellow', 'pink', 'blue', 'green'];
+const PIN_COLOR_OPTIONS   = ['teal', 'purple', 'pink', 'amber', 'red'];
+
+// ─── Pushpin SVG ─────────────────────────────────────────────────────────────
+function Pushpin({ colorKey, darkMode }) {
+  const col = (PIN_COLORS[colorKey] || PIN_COLORS.teal)[darkMode ? 'dark' : 'light'];
+  return (
+    <div style={{
+      position: 'absolute', top: -11, left: '50%',
+      transform: 'translateX(-50%)', zIndex: 10,
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      pointerEvents: 'none',
+    }}>
+      <div style={{
+        width: 16, height: 16, borderRadius: '50%',
+        background: col,
+        boxShadow: `0 2px 6px ${col}55, inset 0 -1px 2px rgba(0,0,0,0.2)`,
+        border: darkMode ? '1.5px solid rgba(255,255,255,0.15)' : '1.5px solid rgba(255,255,255,0.6)',
+      }} />
+      <div style={{ width: 2.5, height: 9, background: darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)', borderRadius: '0 0 2px 2px', marginTop: -1 }} />
+    </div>
+  );
+}
+
+// ─── PhotoPin ────────────────────────────────────────────────────────────────
+function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode }) {
+  const cardBg   = darkMode ? '#161f30' : '#ffffff';
+  const labelCol = darkMode ? '#c8d0e0' : '#1a1a2e';
+  const metaCol  = darkMode ? '#4a5568' : '#9ca3af';
+  const shadow   = isDragging
+    ? '0 20px 50px rgba(0,0,0,0.5)'
+    : darkMode ? '3px 4px 16px rgba(0,0,0,0.5)' : '3px 4px 14px rgba(0,0,0,0.18)';
+
+  return (
+    <div
+      style={{ background: cardBg, padding: '7px 7px 26px', boxShadow: shadow, width: 128, cursor: isDragging ? 'grabbing' : 'grab', position: 'relative', transition: isDragging ? 'none' : 'box-shadow 0.2s' }}
+      onClick={onTap}
+    >
+      <Pushpin colorKey={pin.pinColor} darkMode={darkMode} />
+      {pin.imageUrl ? (
+        <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} draggable={false} />
+      ) : (
+        <div style={{ width: '100%', aspectRatio: '1', background: darkMode ? '#0e1520' : '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34 }}>
+          {pin.emoji || '📌'}
+        </div>
+      )}
+      <div style={{ fontFamily: CAVEAT, fontSize: 13, color: labelCol, textAlign: 'center', marginTop: 5, padding: '0 3px', lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+        {pin.label}
+      </div>
+      {pin.status === 'planning' && (
+        <div style={{ position: 'absolute', top: 6, right: 6, background: darkMode ? 'rgba(251,191,36,0.15)' : '#fef3c7', color: darkMode ? '#fbbf24' : '#92400e', fontSize: 9, fontWeight: 600, padding: '2px 5px', borderRadius: 6, letterSpacing: '0.05em' }}>PLANNING</div>
+      )}
+      {pin.status === 'done' && (
+        <div style={{ position: 'absolute', top: 6, right: 6, background: darkMode ? 'rgba(45,212,191,0.15)' : '#d1fae5', color: darkMode ? '#2dd4bf' : '#065f46', fontSize: 9, fontWeight: 600, padding: '2px 5px', borderRadius: 6 }}>DONE ✓</div>
+      )}
+      <button onClick={e => { e.stopPropagation(); onDelete(); }} style={{ position: 'absolute', top: 5, left: 5, background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', border: 'none', borderRadius: '50%', width: 17, height: 17, color: metaCol, fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
+    </div>
+  );
+}
+
+// ─── NotePin ─────────────────────────────────────────────────────────────────
+function NotePin({ pin, isDragging, onDelete, onTap, darkMode }) {
+  const scheme = (NOTE_COLORS[pin.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'];
+  const shadow = isDragging
+    ? '0 20px 50px rgba(0,0,0,0.5)'
+    : darkMode ? '3px 4px 16px rgba(0,0,0,0.5)' : '3px 4px 12px rgba(0,0,0,0.15)';
+
+  return (
+    <div
+      style={{ background: scheme.bg, padding: '13px 13px 14px', boxShadow: shadow, width: 148, minHeight: 108, position: 'relative', cursor: isDragging ? 'grabbing' : 'grab', transition: isDragging ? 'none' : 'box-shadow 0.2s' }}
+      onClick={onTap}
+    >
+      <div style={{ position: 'absolute', top: 0, right: 0, borderWidth: '0 20px 20px 0', borderStyle: 'solid', borderColor: `transparent ${scheme.fold} transparent transparent` }} />
+      <Pushpin colorKey={pin.pinColor} darkMode={darkMode} />
+      <p style={{ fontFamily: CAVEAT, fontSize: 15, color: scheme.text, lineHeight: 1.45, margin: 0, wordBreak: 'break-word' }}>{pin.text}</p>
+      <button onClick={e => { e.stopPropagation(); onDelete(); }} style={{ position: 'absolute', bottom: 5, right: 7, background: 'none', border: 'none', fontSize: 10, color: scheme.fold, cursor: 'pointer', padding: 0 }}>✕</button>
+    </div>
+  );
+}
+
+// ─── Add Sheet ────────────────────────────────────────────────────────────────
+function AddSheet({ onClose, onAdd, darkMode }) {
+  const [type, setType]           = useState('photo');
+  const [label, setLabel]         = useState('');
+  const [text, setText]           = useState('');
+  const [emoji, setEmoji]         = useState('✨');
+  const [noteColor, setNoteColor] = useState('yellow');
+  const [pinColor, setPinColor]   = useState('teal');
+  const [catId, setCatId]         = useState('experiences');
+  const [imageUrl, setUrl]        = useState('');
+
+  const sheetBg  = darkMode ? '#131c2e' : '#ffffff';
+  const inputBg  = darkMode ? 'rgba(255,255,255,0.06)' : '#f8f7f2';
+  const inputBdr = darkMode ? 'rgba(255,255,255,0.08)' : '#e5e0d5';
+  const tp       = darkMode ? '#e8eaf0' : '#1a1a2e';
+  const ts       = darkMode ? '#4a5568' : '#9ca3af';
+  const divider  = darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece4';
+
+  const inputStyle = { background: inputBg, border: `1px solid ${inputBdr}`, borderRadius: 12, padding: '10px 13px', fontFamily: CAVEAT, fontSize: 16, color: tp, outline: 'none', width: '100%' };
+
+  function submit() {
+    if (type === 'photo' && !label.trim()) return;
+    if (type === 'note'  && !text.trim())  return;
+    onAdd({ type, label: label.trim(), text: text.trim(), emoji, noteColor, pinColor, categoryId: catId, imageUrl, status: 'dreaming' });
+    onClose();
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '20px 18px 44px', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}`, maxHeight: '85vh', overflowY: 'auto' }}>
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 18px' }} />
+        <p style={{ fontFamily: CAVEAT, fontSize: 24, fontWeight: 700, color: tp, marginBottom: 16 }}>Pin something new</p>
+
+        {/* Type */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          {[['photo', '📸 Photo / emoji'], ['note', '📝 Quick note']].map(([t, lbl]) => (
+            <button key={t} onClick={() => setType(t)} style={{ flex: 1, padding: '9px', borderRadius: 14, border: `1px solid ${type === t ? '#2dd4bf' : inputBdr}`, background: type === t ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: type === t ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: CAVEAT, fontSize: 15, cursor: 'pointer' }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+
+        {type === 'photo' && (
+          <>
+            <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Label (e.g. Visit Boston)" style={{ ...inputStyle, marginBottom: 10 }} />
+            <input value={imageUrl} onChange={e => setUrl(e.target.value)} placeholder="Image URL (optional)" style={{ ...inputStyle, marginBottom: 12 }} />
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14 }}>
+              {['✨','🌍','🍜','🏔️','🚗','🏡','🎬','🎲','🛍️','🌊','🏄','🎵','📚','🍣','🌸'].map(e => (
+                <button key={e} onClick={() => setEmoji(e)} style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${emoji === e ? '#2dd4bf' : inputBdr}`, background: emoji === e ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', fontSize: 18, cursor: 'pointer' }}>{e}</button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {type === 'note' && (
+          <>
+            <textarea value={text} onChange={e => setText(e.target.value)} placeholder="What's on your mind?" rows={3} style={{ ...inputStyle, resize: 'none', marginBottom: 12 }} />
+            <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Note colour</p>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {NOTE_COLOR_OPTIONS.map(k => {
+                const c = NOTE_COLORS[k][darkMode ? 'dark' : 'light'];
+                return (
+                  <button key={k} onClick={() => setNoteColor(k)} style={{ width: 34, height: 34, borderRadius: 10, background: c.bg, border: noteColor === k ? `2px solid #2dd4bf` : `1px solid ${c.fold}33`, cursor: 'pointer' }} />
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Category */}
+        <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Category</p>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+          {CATEGORY_FILTERS.filter(c => c.id !== 'all').map(c => (
+            <button key={c.id} onClick={() => setCatId(c.id)} style={{ padding: '5px 11px', borderRadius: 20, border: `1px solid ${catId === c.id ? '#2dd4bf' : inputBdr}`, background: catId === c.id ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', fontFamily: CAVEAT, fontSize: 14, color: catId === c.id ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, cursor: 'pointer' }}>
+              {c.emoji} {c.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Pin colour */}
+        <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pin colour</p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
+          {PIN_COLOR_OPTIONS.map(k => {
+            const col = PIN_COLORS[k][darkMode ? 'dark' : 'light'];
+            return (
+              <button key={k} onClick={() => setPinColor(k)} style={{ width: 24, height: 24, borderRadius: '50%', background: col, border: pinColor === k ? '2px solid white' : '2px solid transparent', outline: pinColor === k ? `2px solid ${col}` : 'none', cursor: 'pointer' }} />
+            );
+          })}
+        </div>
+
+        <button onClick={submit} style={{ width: '100%', padding: '13px', borderRadius: 16, background: '#2dd4bf', color: '#0a1020', border: 'none', fontFamily: CAVEAT, fontSize: 20, fontWeight: 700, cursor: 'pointer' }}>
+          Pin it 📌
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Detail Sheet ─────────────────────────────────────────────────────────────
+function DetailSheet({ pin, onClose, onConvertToEvent, onConvertToTrip, onMarkDone, darkMode }) {
+  const sheetBg = darkMode ? '#131c2e' : '#ffffff';
+  const tp      = darkMode ? '#e8eaf0' : '#1a1a2e';
+  const ts      = darkMode ? '#4a5568' : '#9ca3af';
+  const divider = darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece4';
+  const secBg   = darkMode ? 'rgba(255,255,255,0.04)' : '#f8f7f2';
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '20px 18px 48px', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}` }}>
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 16px' }} />
+
+        {pin.type === 'photo' && pin.imageUrl && (
+          <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 16, marginBottom: 14 }} />
+        )}
+
+        <p style={{ fontFamily: CAVEAT, fontSize: 26, fontWeight: 700, color: tp, marginBottom: 4, lineHeight: 1.2 }}>
+          {!pin.imageUrl && pin.emoji ? `${pin.emoji} ` : ''}{pin.label || pin.text}
+        </p>
+
+        {pin.type === 'note' && (
+          <div style={{ background: (NOTE_COLORS[pin.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].bg, borderRadius: 14, padding: '12px 14px', marginBottom: 16 }}>
+            <p style={{ fontFamily: CAVEAT, fontSize: 16, color: (NOTE_COLORS[pin.noteColor] || NOTE_COLORS.yellow)[darkMode ? 'dark' : 'light'].text, margin: 0, lineHeight: 1.5 }}>{pin.text}</p>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
+          {pin.status !== 'done' && (
+            <>
+              <button onClick={() => { onConvertToEvent?.(pin); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb', color: darkMode ? '#2dd4bf' : '#0d9488', border: `1px solid ${darkMode ? 'rgba(45,212,191,0.2)' : '#99f6e4'}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
+                📅 Make it an event
+              </button>
+              <button onClick={() => { onConvertToTrip?.(pin); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: darkMode ? 'rgba(192,132,252,0.1)' : '#faf5ff', color: darkMode ? '#c084fc' : '#7c3aed', border: `1px solid ${darkMode ? 'rgba(192,132,252,0.2)' : '#e9d5ff'}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
+                ✈️ Plan a trip
+              </button>
+            </>
+          )}
+          <button onClick={() => { onMarkDone?.(pin); onClose(); }} style={{ flex: 1, minWidth: 120, padding: '11px', borderRadius: 14, background: pin.status === 'done' ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : secBg, color: pin.status === 'done' ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : '#e5e0d5'}`, fontFamily: CAVEAT, fontSize: 16, cursor: 'pointer' }}>
+            {pin.status === 'done' ? '✓ Done!' : 'Mark done'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main SomedayPage ─────────────────────────────────────────────────────────
+const SomedayPage = ({
+  dreams = SAMPLE_PINS,
+  onAddDream,
+  onUpdateDream,
+  onDeleteDream,
+  onConvertToEvent,
+  onConvertToTrip,
+  onBack,
+  darkMode = false,
+}) => {
+  const [pins, setPins]           = useState(() => dreams.map(d => ({
+    ...d,
+    x:         d.x         ?? Math.random() * 220,
+    y:         d.y         ?? 60 + Math.random() * 400,
+    rot:       d.rot       ?? (Math.random() * 6 - 3),
+    pinColor:  d.pinColor  ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)],
+    noteColor: d.noteColor ?? 'yellow',
+    type:      d.type      ?? (d.imageUrl || d.emoji ? 'photo' : 'note'),
+  })));
+  const [filter, setFilter]       = useState('all');
+  const [showAdd, setShowAdd]     = useState(false);
+  const [detailPin, setDetailPin] = useState(null);
+  const [dragging, setDragging]   = useState(null);
+  const dragOffset                = useRef({ x: 0, y: 0 });
+  const canvasRef                 = useRef();
+  const didDrag                   = useRef(false);
+
+  // Sync new items added externally (from home page bucket list / quick notes)
+  useEffect(() => {
+    setPins(prev => {
+      const existingIds = new Set(prev.map(p => p.id));
+      const newPins = (Array.isArray(dreams) ? dreams : [])
+        .filter(d => !existingIds.has(d.id))
+        .map(d => ({
+          ...d,
+          x:         d.x         ?? 30 + Math.random() * 180,
+          y:         d.y         ?? 40 + Math.random() * 120,
+          rot:       d.rot       ?? (Math.random() * 6 - 3),
+          pinColor:  d.pinColor  ?? PIN_COLOR_OPTIONS[Math.floor(Math.random() * PIN_COLOR_OPTIONS.length)],
+          noteColor: d.noteColor ?? 'yellow',
+          type:      d.type      ?? (d.imageUrl || d.emoji ? 'photo' : 'note'),
+        }));
+      return newPins.length ? [...prev, ...newPins] : prev;
+    });
+  }, [dreams]);
+
+  const pageBg   = darkMode ? '#0e1520' : '#faf8f3';
+  const topbarBg = darkMode ? '#131c2e' : '#ffffff';
+  const topBdr   = darkMode ? 'rgba(255,255,255,0.05)' : '#e5e0d5';
+  const tp       = darkMode ? '#e8eaf0' : '#1a1a2e';
+  const ts       = darkMode ? '#4a5568' : '#9ca3af';
+  const pillAct  = darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfb';
+  const pillActBdr = darkMode ? 'rgba(45,212,191,0.3)' : '#2dd4bf';
+  const pillActTxt = darkMode ? '#2dd4bf' : '#0d9488';
+  const pillIdle   = darkMode ? 'rgba(255,255,255,0.04)' : '#f5f3ee';
+  const pillIdleBdr = darkMode ? 'rgba(255,255,255,0.08)' : '#e5e0d5';
+
+  // Board background: subtle dot grid instead of cork
+  const boardBg = darkMode
+    ? { backgroundColor: '#0e1520', backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '28px 28px' }
+    : { backgroundColor: '#f5f2eb', backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' };
+
+  const visiblePins = filter === 'all' ? pins : pins.filter(p => p.categoryId === filter);
+  const BOARD_HEIGHT = Math.max(860, pins.length * 110);
+
+  // ─── Drag ──────────────────────────────────────────────────────────────────
+  function startDrag(e, id) {
+    e.preventDefault();
+    e.stopPropagation();
+    didDrag.current = false;
+    const touch = e.touches?.[0] ?? e;
+    const pin = pins.find(p => p.id === id);
+    if (!pin) return;
+    dragOffset.current = { x: touch.clientX - pin.x, y: touch.clientY - pin.y };
+    setDragging(id);
+    setPins(ps => {
+      const idx = ps.findIndex(p => p.id === id);
+      const arr = [...ps];
+      const [item] = arr.splice(idx, 1);
+      arr.push(item);
+      return arr;
+    });
+  }
+
+  const onMove = useCallback((e) => {
+    if (!dragging) return;
+    didDrag.current = true;
+    const touch = e.touches?.[0] ?? e;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    let nx = touch.clientX - dragOffset.current.x;
+    let ny = touch.clientY - dragOffset.current.y;
+    nx = Math.max(0, Math.min(rect.width - 160, nx));
+    ny = Math.max(0, Math.min(BOARD_HEIGHT - 220, ny));
+    setPins(ps => ps.map(p => p.id === dragging ? { ...p, x: nx, y: ny } : p));
+  }, [dragging, BOARD_HEIGHT]);
+
+  const stopDrag = useCallback(() => {
+    if (dragging) {
+      const pin = pins.find(p => p.id === dragging);
+      if (pin) onUpdateDream?.({ ...pin });
+    }
+    setDragging(null);
+  }, [dragging, pins, onUpdateDream]);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', stopDrag);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', stopDrag);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', stopDrag);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', stopDrag);
+    };
+  }, [onMove, stopDrag]);
+
+  function addPin(data) {
+    const newPin = {
+      id: Date.now().toString(),
+      x: 30 + Math.random() * 180,
+      y: 40 + Math.random() * 120,
+      rot: Math.random() * 6 - 3,
+      ...data,
+    };
+    setPins(ps => [...ps, newPin]);
+    onAddDream?.(newPin);
+  }
+
+  function deletePin(id) {
+    setPins(ps => ps.filter(p => p.id !== id));
+    onDeleteDream?.(id);
+  }
+
+  function markDone(pin) {
+    const updated = { ...pin, status: pin.status === 'done' ? 'dreaming' : 'done' };
+    setPins(ps => ps.map(p => p.id === pin.id ? updated : p));
+    onUpdateDream?.(updated);
+  }
+
+  function handlePinClick(pin) {
+    if (didDrag.current) return;
+    setDetailPin(pin);
+  }
+
+  const PIN_COLOR_OPTIONS = ['teal','purple','pink','amber','red'];
+
+  return (
+    <div style={{ minHeight: '100vh', background: pageBg, paddingBottom: 100 }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');`}</style>
+
+      {/* Sticky top bar — matches ExplorePage */}
+      <div style={{ background: topbarBg, borderBottom: `1px solid ${topBdr}`, padding: '18px 16px 12px', position: 'sticky', top: 0, zIndex: 30 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {onBack && (
+              <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: ts, fontSize: 26, lineHeight: 1, padding: '0 4px', display: 'flex', alignItems: 'center' }}>‹</button>
+            )}
+            <div>
+              <h1 style={{ fontFamily: CAVEAT, fontSize: 34, fontWeight: 700, color: tp, margin: 0, lineHeight: 1 }}>✦ Someday</h1>
+              <p style={{ fontSize: 11, color: ts, margin: '3px 0 0', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 500 }}>
+                {pins.length} things pinned
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowAdd(true)}
+            style={{ width: 42, height: 42, borderRadius: '50%', background: '#2dd4bf', border: 'none', color: '#0a1020', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(45,212,191,0.4)', fontWeight: 700 }}
+          >+</button>
+        </div>
+
+        {/* Category filter pills */}
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
+          {CATEGORY_FILTERS.map(c => (
+            <button key={c.id} onClick={() => setFilter(c.id)} style={{ flexShrink: 0, padding: '5px 13px', borderRadius: 20, background: filter === c.id ? pillAct : pillIdle, border: `1px solid ${filter === c.id ? pillActBdr : pillIdleBdr}`, color: filter === c.id ? pillActTxt : ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap' }}>
+              {c.emoji} {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Pin board */}
+      <div ref={canvasRef} style={{ ...boardBg, position: 'relative', width: '100%', height: BOARD_HEIGHT, overflowX: 'hidden', touchAction: 'none' }}>
+
+        {visiblePins.map(pin => (
+          <div
+            key={pin.id}
+            style={{
+              position: 'absolute',
+              left: pin.x, top: pin.y,
+              transform: `rotate(${pin.rot}deg)${dragging === pin.id ? ' scale(1.06)' : ''}`,
+              zIndex: dragging === pin.id ? 50 : 2,
+              userSelect: 'none',
+              transition: dragging === pin.id ? 'none' : 'transform 0.15s',
+              touchAction: 'none',
+              filter: dragging === pin.id
+                ? darkMode ? 'drop-shadow(0 16px 32px rgba(0,0,0,0.7))' : 'drop-shadow(0 16px 32px rgba(0,0,0,0.3))'
+                : 'none',
+            }}
+            onMouseDown={e => startDrag(e, pin.id)}
+            onTouchStart={e => startDrag(e, pin.id)}
+          >
+            {pin.type === 'note'
+              ? <NotePin  pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+              : <PhotoPin pin={pin} isDragging={dragging === pin.id} onDelete={() => deletePin(pin.id)} onTap={() => handlePinClick(pin)} darkMode={darkMode} />
+            }
+          </div>
+        ))}
+
+        {visiblePins.length === 0 && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+            <p style={{ fontFamily: CAVEAT, fontSize: 22, color: ts, fontStyle: 'italic' }}>Nothing pinned here yet</p>
+            <button onClick={() => setShowAdd(true)} style={{ padding: '10px 24px', borderRadius: 16, border: `2px dashed ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'}`, background: 'transparent', color: ts, fontFamily: CAVEAT, fontSize: 18, cursor: 'pointer' }}>
+              + Pin something
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showAdd && <AddSheet onClose={() => setShowAdd(false)} onAdd={addPin} darkMode={darkMode} />}
+      {detailPin && <DetailSheet pin={detailPin} onClose={() => setDetailPin(null)} onConvertToEvent={onConvertToEvent} onConvertToTrip={onConvertToTrip} onMarkDone={markDone} darkMode={darkMode} />}
+    </div>
+  );
+};
+
+export default SomedayPage;

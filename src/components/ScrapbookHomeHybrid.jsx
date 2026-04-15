@@ -181,6 +181,7 @@ const ScrapbookHomeHybrid = ({
   onAddDream,
   onPlanFromDream,
   onDeleteDream,
+  onOpenSomeday,
   
   // Theme
   themeAccentHeadingStyle,
@@ -526,12 +527,15 @@ const ScrapbookHomeHybrid = ({
         {/* SOMEDAY LIST - NEW scrapbook enhanced */}
         <div className="rounded-[28px] border-2 border-emerald-900/20 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-slate-900 dark:to-cyan-950/20 p-6 shadow-xl">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
+            <button
+              onClick={onOpenSomeday}
+              className="flex items-center gap-2 text-left active:opacity-70 transition-opacity"
+            >
               <Sparkles className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
               <h3 className="font-handwritten text-3xl text-gray-900 dark:text-white">
                 Someday List
               </h3>
-            </div>
+            </button>
             <button
               onClick={onAddDream}
               className="rounded-full p-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"

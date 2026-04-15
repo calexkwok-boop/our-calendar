@@ -25,6 +25,7 @@ import NewCalendarLook from "./components/Newcalendarlook";
 import SharedListPanel from "./components/SharedListPanel";
 import MemorySystem, { MemoryCreator as ImportedMemoryCreator } from "./components/MemorySystem";
 import ScrapbookHomeHybrid from "./components/ScrapbookHomeHybrid";
+import SomedayPage from "./components/SomedayPage";
 import AddDreamSheet from "./components/AddDreamSheet";
 import useHomeScreenData from "./hooks/useHomeScreenData";
 import TripsTab from "./components/TripsTab";
@@ -24012,6 +24013,31 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
     setBucketList((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== dreamId));
   };
 
+  // Called when a pin is added from within SomedayPage's own AddSheet
+  const handleSomedayAddDream = (pin) => {
+    if (pin.type === 'note') {
+      const colors = ['yellow', 'pink', 'blue', 'green'];
+      const color = colors.includes(pin.noteColor) ? pin.noteColor : 'yellow';
+      setQuickThoughts((prev) => [
+        { id: pin.id, text: pin.text || pin.label || '', color, createdAt: new Date().toISOString() },
+        ...(Array.isArray(prev) ? prev : []),
+      ]);
+    } else {
+      setBucketList((prev) => [
+        { id: pin.id, text: pin.label || pin.text || '', category: 'travel', emoji: pin.emoji || '✨', photoUrl: pin.imageUrl || '', createdAt: new Date().toISOString(), sources: [] },
+        ...(Array.isArray(prev) ? prev : []),
+      ]);
+    }
+  };
+
+  // Called when a pin is deleted from SomedayPage — remove from whichever list owns it
+  const handleSomedayDeleteDream = (id) => {
+    addBucketListTombstone(user?.id, id);
+    setBucketList((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== id));
+    addQuickThoughtTombstone(user?.id, id);
+    setQuickThoughts((prev) => (Array.isArray(prev) ? prev : []).filter((item) => String(item?.id || '') !== id));
+  };
+
   const planFromDream = (dream) => {
     const text = String(dream?.text || dream?.dream || '').trim();
     const category = String(dream?.category || '').trim().toLowerCase();
@@ -27639,6 +27665,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onCreateMemoryFromEvent={createMemoryFromEvent}
             onOpenJourney={openJourneyTab}
             onOpenExplore={() => setBottomNavTab('explore')}
+            onOpenSomeday={() => setBottomNavTab('someday')}
             onCaptureQuickMoment={openQuickMemoryCapture}
             onAddMomentForDate={(dateKey) => {
               openQuickMemoryCapture(dateKey);
@@ -29465,6 +29492,46 @@ transform: translateY(0);
 
 
             )}
+            {bottomNavTab === 'someday' && (() => {
+              const catMap = { travel: 'places', food: 'food', adventure: 'experiences', culture: 'experiences', home: 'home', wellness: 'experiences', fun: 'experiences' };
+              const somedayDreams = [
+                ...(Array.isArray(bucketList) ? bucketList : []).map(d => ({
+                  id: d.id,
+                  type: d.photoUrl ? 'photo' : 'photo',
+                  label: d.text,
+                  text: d.text,
+                  emoji: d.emoji || '✨',
+                  imageUrl: d.photoUrl || '',
+                  noteColor: 'yellow',
+                  pinColor: 'teal',
+                  categoryId: catMap[d.category] || 'experiences',
+                  status: 'dreaming',
+                })),
+                ...(Array.isArray(quickThoughts) ? quickThoughts : []).map(t => ({
+                  id: t.id,
+                  type: 'note',
+                  text: t.text,
+                  label: t.text,
+                  noteColor: ['yellow', 'pink', 'blue', 'green'].includes(t.color) ? t.color : 'yellow',
+                  pinColor: 'purple',
+                  categoryId: 'experiences',
+                  status: 'dreaming',
+                })),
+              ];
+              return (
+                <SomedayPage
+                  key="someday-page"
+                  dreams={somedayDreams}
+                  darkMode={darkMode}
+                  onBack={() => setBottomNavTab('home')}
+                  onAddDream={handleSomedayAddDream}
+                  onDeleteDream={handleSomedayDeleteDream}
+                  onConvertToEvent={planFromDream}
+                  onConvertToTrip={planFromDream}
+                />
+              );
+            })()}
+
             {/* legacy explore UI disabled below */}
             {bottomNavTab === 'explore' && false && (
 
