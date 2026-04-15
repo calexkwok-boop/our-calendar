@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
@@ -33,11 +33,11 @@ function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, onPlanEvent, s
 
   if (!movie) return null;
 
-  const posterUrl  = movie.poster_path   ? `${TMDB_IMG}${movie.poster_path}`       : null;
+  const posterUrl   = movie.poster_path   ? `${TMDB_IMG}${movie.poster_path}`       : null;
   const backdropUrl = movie.backdrop_path ? `${TMDB_BACKDROP}${movie.backdrop_path}` : null;
-  const year    = movie.release_date ? movie.release_date.slice(0, 4) : "—";
-  const rating  = movie.vote_average ? movie.vote_average.toFixed(1) : "—";
-  const votes   = Math.max(10, Math.floor((movie.vote_count || 100) / 10));
+  const year   = movie.release_date ? movie.release_date.slice(0, 4) : "—";
+  const rating = movie.vote_average ? movie.vote_average.toFixed(1) : "—";
+  const votes  = Math.max(10, Math.floor((movie.vote_count || 100) / 10));
 
   function handleSomeday() {
     setInSomeday(v => !v);
@@ -46,27 +46,18 @@ function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, onPlanEvent, s
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={onClose}
         className={`fixed inset-0 z-[10002] bg-black/60 transition-opacity duration-250 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
       />
-
-      {/* Sheet */}
       <div style={{ WebkitOverflowScrolling: 'touch' }} className={`fixed bottom-0 left-0 right-0 z-[10002] max-w-lg mx-auto bg-white dark:bg-[#131c2e] rounded-t-3xl border-t border-stone-200 dark:border-white/[0.06] transition-transform duration-300 ease-out max-h-[88vh] overflow-y-auto overscroll-contain ${open ? "translate-y-0" : "translate-y-full"}`}>
-        {/* Handle */}
         <div className="w-9 h-1 bg-stone-200 dark:bg-white/10 rounded-full mx-auto mt-3 mb-0 sticky top-3" />
-
-        {/* Backdrop image */}
         {backdropUrl ? (
           <img src={backdropUrl} alt={movie.title} className="w-full h-48 object-cover mt-4" />
         ) : (
           <div className="w-full h-48 mt-4 bg-purple-500/10 flex items-center justify-center text-5xl">🎬</div>
         )}
-
-        {/* Content */}
         <div className="px-5 pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+1.5rem))]">
-          {/* Poster + title row */}
           <div className="flex gap-3 -mt-10 mb-4">
             <div className="flex-shrink-0 w-20 h-[120px] rounded-xl overflow-hidden border-2 border-white dark:border-[#131c2e] shadow-xl">
               {posterUrl
@@ -79,17 +70,11 @@ function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, onPlanEvent, s
               <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-1">{year} · ★ {rating} · {votes} community votes</p>
             </div>
           </div>
-
-          {/* Overview */}
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-5">{movie.overview || "No description available."}</p>
-
-          {/* Vote row */}
           <div className="flex items-center gap-3 mb-5">
             <VoteChip initialVotes={votes} />
             <span className="text-[11px] text-gray-400 dark:text-gray-600">community votes</span>
           </div>
-
-          {/* Actions */}
           <div className="flex gap-2">
             <button
               onClick={handleSomeday}
@@ -151,15 +136,11 @@ function FeaturedBanner({ movie, onTap, onAddToSomeday, somedays }) {
       style={{ height: "210px" }}
       onClick={() => onTap(movie)}
     >
-      {/* Backdrop */}
       {backdropUrl
         ? <img src={backdropUrl} alt={movie.title} className="absolute inset-0 w-full h-full object-cover" />
         : <div className="absolute inset-0 bg-gradient-to-br from-purple-900/60 to-[#0e1520]" />
       }
-      {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-      {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 p-4">
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
@@ -180,24 +161,14 @@ function FeaturedBanner({ movie, onTap, onAddToSomeday, somedays }) {
 }
 
 // ---------------------------------------------------------------------------
-// Poster grid
+// Poster grid — renders the provided movies array (no internal slicing)
 // ---------------------------------------------------------------------------
-function PosterGrid({ movies, loading, somedays, onTap }) {
-  if (loading) {
-    return (
-      <div className="grid grid-cols-3 gap-0.5 px-3.5">
-        {Array(12).fill(0).map((_, i) => (
-          <div key={i} className="aspect-[2/3] rounded-xl bg-stone-100 dark:bg-[#161f30] animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
+function PosterGrid({ movies, somedays, onTap }) {
   return (
     <div className="grid grid-cols-3 gap-0.5 px-3.5">
-      {movies.slice(1).map(movie => {
+      {movies.map(movie => {
         const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null;
-        const votes = Math.max(10, Math.floor((movie.vote_count || 100) / 10));
+        const votes     = Math.max(10, Math.floor((movie.vote_count || 100) / 10));
         const inSomeday = somedays.has(movie.id);
 
         return (
@@ -210,12 +181,10 @@ function PosterGrid({ movies, loading, somedays, onTap }) {
               ? <img src={posterUrl} alt={movie.title} className="w-full h-full object-cover" loading="lazy" />
               : <div className="w-full h-full flex items-center justify-center text-2xl bg-purple-500/10">🎬</div>
             }
-            {/* Vote badge */}
             <div className="absolute bottom-1.5 left-1.5 bg-black/60 rounded-full px-2 py-0.5 flex items-center gap-1">
               <span className="text-[9px] text-teal-400">▲</span>
               <span className="text-[9px] text-white/70">{votes}</span>
             </div>
-            {/* Someday indicator */}
             {inSomeday && (
               <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center">
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -231,31 +200,123 @@ function PosterGrid({ movies, loading, somedays, onTap }) {
 }
 
 // ---------------------------------------------------------------------------
+// Skeleton grid — shown only on fresh tab switch or new search
+// ---------------------------------------------------------------------------
+function SkeletonGrid() {
+  return (
+    <div className="grid grid-cols-3 gap-0.5 px-3.5">
+      {Array(12).fill(0).map((_, i) => (
+        <div key={i} className="aspect-[2/3] rounded-xl bg-stone-100 dark:bg-[#161f30] animate-pulse" />
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main MoviesPage
 // ---------------------------------------------------------------------------
 export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent }) {
-  const [activeTab, setActiveTab] = useState("popular");
-  const [movies, setMovies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [selectedMovie, setSelectedMovie] = useState(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [somedays, setSomedays] = useState(new Set());
+  const [activeTab, setActiveTab]           = useState("popular");
+  const [search, setSearch]                 = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [movies, setMovies]                 = useState([]);
+  const [page, setPage]                     = useState(1);
+  const [totalPages, setTotalPages]         = useState(1);
+  const [loading, setLoading]               = useState(true);
+  const [isFetching, setIsFetching]         = useState(false);
+  const [error, setError]                   = useState(false);
+  const [selectedMovie, setSelectedMovie]   = useState(null);
+  const [sheetOpen, setSheetOpen]           = useState(false);
+  const [somedays, setSomedays]             = useState(new Set());
 
+  // Refs for IntersectionObserver (avoids stale closures)
+  const sentinelRef   = useRef(null);
+  const isFetchingRef = useRef(false);
+  const pageRef       = useRef(1);
+  const totalPagesRef = useRef(1);
+
+  useEffect(() => { isFetchingRef.current = loading || isFetching; }, [loading, isFetching]);
+  useEffect(() => { pageRef.current = page; },             [page]);
+  useEffect(() => { totalPagesRef.current = totalPages; }, [totalPages]);
+
+  // ── Debounce search; reset list state on change ──────────────────────────
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+      setMovies([]);
+      setError(false);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // ── Fetch ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(false);
-    fetch(`https://api.themoviedb.org/3/movie/${activeTab}?api_key=${TMDB_KEY}&language=en-US&page=1`)
+
+    if (page === 1) {
+      setLoading(true);
+      setIsFetching(false);
+    } else {
+      setIsFetching(true);
+    }
+
+    const url = debouncedSearch
+      ? `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&language=en-US&query=${encodeURIComponent(debouncedSearch)}&page=${page}`
+      : `https://api.themoviedb.org/3/movie/${activeTab}?api_key=${TMDB_KEY}&language=en-US&page=${page}`;
+
+    fetch(url)
       .then(r => r.json())
       .then(data => {
-        if (!cancelled) { setMovies(data.results || []); setLoading(false); }
+        if (cancelled) return;
+        const results = data.results || [];
+        setMovies(prev => page === 1 ? results : [...prev, ...results]);
+        setTotalPages(data.total_pages || 1);
+        setLoading(false);
+        setIsFetching(false);
       })
       .catch(() => {
-        if (!cancelled) { setError(true); setLoading(false); }
+        if (cancelled) return;
+        setError(true);
+        setLoading(false);
+        setIsFetching(false);
       });
+
     return () => { cancelled = true; };
-  }, [activeTab]);
+  }, [activeTab, debouncedSearch, page]);
+
+  // ── IntersectionObserver — increment page when sentinel enters viewport ──
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      entries => {
+        if (
+          entries[0].isIntersecting &&
+          !isFetchingRef.current &&
+          pageRef.current < totalPagesRef.current
+        ) {
+          setPage(p => p + 1);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  function handleTabChange(tab) {
+    // Also works as "clear search and return to tab"
+    if (tab === activeTab && !debouncedSearch) return;
+    setSearch("");
+    setDebouncedSearch("");
+    setActiveTab(tab);
+    setPage(1);
+    setMovies([]);
+    setLoading(true);
+    setError(false);
+  }
 
   function handleTap(movie) {
     setSelectedMovie(movie);
@@ -274,11 +335,16 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent }) {
     }
   }
 
+  const isSearching  = debouncedSearch.length > 0;
+  const sectionLabel = isSearching
+    ? `Results for "${debouncedSearch}"`
+    : MOVIE_TABS.find(t => t.key === activeTab)?.label;
+
   return (
     <div className="min-h-screen bg-[#faf8f3] dark:bg-[#0e1520] pb-28">
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap'); .font-handwritten { font-family: 'Caveat', cursive; }`}</style>
 
-      {/* Top bar */}
+      {/* ── Top bar ── */}
       <div className="bg-white dark:bg-[#131c2e] border-b border-stone-200 dark:border-white/[0.05] px-4 pt-5 pb-3 sticky top-0 z-30">
         <div className="flex items-center gap-3 mb-3">
           <button
@@ -291,7 +357,9 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent }) {
           </button>
           <div>
             <h1 className="font-handwritten text-3xl font-bold text-gray-900 dark:text-gray-100 leading-tight">Movies</h1>
-            <p className="text-[11px] text-gray-400 dark:text-gray-600">2.4k members</p>
+            <p className="text-[11px] text-gray-400 dark:text-gray-600">
+              {loading ? "Loading…" : `${movies.length} movie${movies.length !== 1 ? "s" : ""}${page < totalPages ? "+" : ""}`}
+            </p>
           </div>
           <button className="ml-auto text-xs font-medium px-3.5 py-1.5 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 active:opacity-70">
             Joined ✓
@@ -299,50 +367,96 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent }) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+        <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
           {MOVIE_TABS.map(t => (
             <button
               key={t.key}
-              onClick={() => setActiveTab(t.key)}
-              className={`text-xs font-medium px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${activeTab === t.key ? "bg-purple-500/20 text-purple-600 dark:text-purple-300" : "bg-stone-100 dark:bg-white/5 text-gray-500"}`}
+              onClick={() => handleTabChange(t.key)}
+              className={`text-xs font-medium px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${
+                activeTab === t.key && !isSearching
+                  ? "bg-purple-500/20 text-purple-600 dark:text-purple-300"
+                  : "bg-stone-100 dark:bg-white/5 text-gray-500"
+              }`}
             >
               {t.label}
             </button>
           ))}
         </div>
+
+        {/* Search */}
+        <div className="flex items-center gap-2 bg-stone-100 dark:bg-white/5 rounded-xl px-3 py-2 mt-2">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-gray-400 flex-shrink-0">
+            <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M9.5 9.5l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search movies…"
+            className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="text-gray-400 text-xs px-1">✕</button>
+          )}
+        </div>
       </div>
 
-      {/* Section label */}
-      <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 px-4 pt-5 pb-3">
-        {MOVIE_TABS.find(t => t.key === activeTab)?.label}
+      {/* ── Section label ── */}
+      <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 px-4 pt-5 pb-3 truncate">
+        {sectionLabel}
       </p>
 
+      {/* ── Content ── */}
       {error ? (
-        <div className="mx-3.5 rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none px-4 py-8 text-center">
+        <div className="mx-3.5 rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm px-4 py-8 text-center">
           <p className="text-sm text-gray-400 dark:text-gray-500 mb-2">Couldn't load movies</p>
-          <button onClick={() => setActiveTab(t => t)} className="text-xs text-teal-500 dark:text-teal-400">Try again</button>
+          <button
+            onClick={() => { setError(false); setPage(1); setMovies([]); setLoading(true); }}
+            className="text-xs text-teal-500 dark:text-teal-400"
+          >
+            Try again
+          </button>
         </div>
       ) : (
         <>
-          {/* Featured banner — first movie */}
-          <FeaturedBanner
-            movie={loading ? null : movies[0]}
-            onTap={handleTap}
-            onAddToSomeday={handleAddToSomeday}
-            somedays={somedays}
-          />
+          {/* Featured banner — only when not searching */}
+          {!isSearching && (
+            <FeaturedBanner
+              movie={loading ? null : movies[0]}
+              onTap={handleTap}
+              onAddToSomeday={handleAddToSomeday}
+              somedays={somedays}
+            />
+          )}
 
-          {/* Poster grid — rest of movies */}
-          <PosterGrid
-            movies={movies}
-            loading={loading}
-            somedays={somedays}
-            onTap={handleTap}
-          />
+          {/* Skeleton on fresh load */}
+          {loading ? (
+            <SkeletonGrid />
+          ) : (
+            <>
+              <PosterGrid
+                movies={isSearching ? movies : movies.slice(1)}
+                somedays={somedays}
+                onTap={handleTap}
+              />
+
+              {/* Spinner when appending pages */}
+              {isFetching && (
+                <div className="flex justify-center py-5">
+                  <div className="w-5 h-5 rounded-full border-2 border-stone-200 dark:border-white/10 border-t-teal-400 animate-spin" />
+                </div>
+              )}
+
+              {/* Sentinel — always rendered so the observer stays connected;
+                  the observer callback checks page < totalPages via ref */}
+              <div ref={sentinelRef} className="h-1" />
+            </>
+          )}
         </>
       )}
 
-      {/* Detail sheet */}
+      {/* ── Detail sheet ── */}
       <MovieDetailSheet
         movie={selectedMovie}
         open={sheetOpen}
