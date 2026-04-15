@@ -79,36 +79,42 @@ function Pushpin({ colorKey, darkMode }) {
 
 // ─── PhotoPin ────────────────────────────────────────────────────────────────
 function PhotoPin({ pin, isDragging, onDelete, onTap, darkMode }) {
-  const cardBg   = darkMode ? '#161f30' : '#ffffff';
-  const labelCol = darkMode ? '#c8d0e0' : '#1a1a2e';
-  const metaCol  = darkMode ? '#4a5568' : '#9ca3af';
-  const shadow   = isDragging
+  // Polaroids are always white/off-white regardless of dark mode — matches home page style
+  const cardBg  = darkMode ? '#e2e8f0' : '#ffffff';
+  const labelCol = '#374151';
+  const shadow  = isDragging
     ? '0 20px 50px rgba(0,0,0,0.5)'
-    : darkMode ? '3px 4px 16px rgba(0,0,0,0.5)' : '3px 4px 14px rgba(0,0,0,0.18)';
+    : '3px 5px 16px rgba(0,0,0,0.22)';
 
   return (
     <div
-      style={{ background: cardBg, padding: '7px 7px 26px', boxShadow: shadow, width: 128, cursor: isDragging ? 'grabbing' : 'grab', position: 'relative', transition: isDragging ? 'none' : 'box-shadow 0.2s' }}
+      style={{ background: cardBg, padding: '6px 6px 0', boxShadow: shadow, width: 112, borderRadius: 2, cursor: isDragging ? 'grabbing' : 'grab', position: 'relative', transition: isDragging ? 'none' : 'box-shadow 0.2s' }}
       onClick={onTap}
     >
       <Pushpin colorKey={pin.pinColor} darkMode={darkMode} />
-      {pin.imageUrl ? (
-        <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} draggable={false} />
-      ) : (
-        <div style={{ width: '100%', aspectRatio: '1', background: darkMode ? '#0e1520' : '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34 }}>
-          {pin.emoji || '📌'}
+      {/* Square image area */}
+      <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', borderRadius: 2 }}>
+        {pin.imageUrl ? (
+          <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} draggable={false} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>
+            {pin.emoji || '📌'}
+          </div>
+        )}
+      </div>
+      {/* Caption strip — emoji + label, handwritten font */}
+      <div style={{ padding: '6px 2px 7px', textAlign: 'center' }}>
+        <div style={{ fontFamily: CAVEAT, fontSize: 12, color: labelCol, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          {pin.emoji ? `${pin.emoji} ${pin.label}` : pin.label}
         </div>
-      )}
-      <div style={{ fontFamily: CAVEAT, fontSize: 13, color: labelCol, textAlign: 'center', marginTop: 5, padding: '0 3px', lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-        {pin.label}
       </div>
       {pin.status === 'planning' && (
-        <div style={{ position: 'absolute', top: 6, right: 6, background: darkMode ? 'rgba(251,191,36,0.15)' : '#fef3c7', color: darkMode ? '#fbbf24' : '#92400e', fontSize: 9, fontWeight: 600, padding: '2px 5px', borderRadius: 6, letterSpacing: '0.05em' }}>PLANNING</div>
+        <div style={{ position: 'absolute', top: 5, right: 5, background: '#fef3c7', color: '#92400e', fontSize: 8, fontWeight: 700, padding: '2px 4px', borderRadius: 4, letterSpacing: '0.05em' }}>PLANNING</div>
       )}
       {pin.status === 'done' && (
-        <div style={{ position: 'absolute', top: 6, right: 6, background: darkMode ? 'rgba(45,212,191,0.15)' : '#d1fae5', color: darkMode ? '#2dd4bf' : '#065f46', fontSize: 9, fontWeight: 600, padding: '2px 5px', borderRadius: 6 }}>DONE ✓</div>
+        <div style={{ position: 'absolute', top: 5, right: 5, background: '#d1fae5', color: '#065f46', fontSize: 8, fontWeight: 700, padding: '2px 4px', borderRadius: 4 }}>DONE ✓</div>
       )}
-      <button onClick={e => { e.stopPropagation(); onDelete(); }} style={{ position: 'absolute', top: 5, left: 5, background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', border: 'none', borderRadius: '50%', width: 17, height: 17, color: metaCol, fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
+      <button onClick={e => { e.stopPropagation(); onDelete(); }} style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,0.10)', border: 'none', borderRadius: '50%', width: 16, height: 16, color: '#6b7280', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
     </div>
   );
 }
