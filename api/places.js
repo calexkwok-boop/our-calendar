@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'GOOGLE_PLACES_KEY not configured' });
   }
 
-  const { lat, lng, query = '', type = 'restaurant', place_id, action, ref, maxwidth = '400' } = req.query;
+  const { lat, lng, query = '', type = 'restaurant', place_id, action, ref, maxwidth = '400', radius = '10000' } = req.query;
 
   // ── Photo proxy ───────────────────────────────────────────────────────────
   if (action === 'photo') {
@@ -67,7 +67,7 @@ export default async function handler(req, res) {
   const url = [
     'https://maps.googleapis.com/maps/api/place/nearbysearch/json',
     `?location=${lat},${lng}`,
-    `&radius=5000`,
+    `&radius=${radius}`,
     `&type=${encodeURIComponent(type)}`,
     query ? `&keyword=${encodeURIComponent(query)}` : '',
     `&key=${key}`,
@@ -76,8 +76,25 @@ export default async function handler(req, res) {
   try {
     const r = await fetch(url);
     const data = await r.json();
+
+    // Paginate up to 2 more pages (max 60 results total).
+    // Google requires a ~2 s delay before a next_page_token becomes valid.
+    let allResults = data.results || [];
+    let nextToken = data.next_page_token;
+    let pages = 0;
+
+    while (nextToken && pages < 2) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const pageUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?pagetoken=${encodeURIComponent(nextToken)}&key=${key}`;
+      const pr = await fetch(pageUrl);
+      const pageData = await pr.json();
+      if (pageData.results) allResults = [...allResults, ...pageData.results];
+      nextToken = pageData.next_page_token;
+      pages++;
+    }
+
     res.setHeader('Cache-Control', 's-maxage=300'); // cache 5 min
-    return res.json(data);
+    return res.json({ ...data, results: allResults });
   } catch (err) {
     return res.status(500).json({ error: 'Places fetch failed' });
   }
