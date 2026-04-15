@@ -469,6 +469,7 @@ const SomedayPage = ({
   const dragOffset                = useRef({ x: 0, y: 0 });
   const canvasRef                 = useRef();
   const didDrag                   = useRef(false);
+  const draggingTypeRef           = useRef(null); // tracks pin type during drag for bound adjustments
 
   useEffect(() => {
     try { if (heroId) localStorage.setItem('someday-hero-id', heroId); else localStorage.removeItem('someday-hero-id'); } catch {}
@@ -522,6 +523,7 @@ const SomedayPage = ({
     const touch = e.touches?.[0] ?? e;
     const pin = pins.find(p => p.id === id);
     if (!pin) return;
+    draggingTypeRef.current = pin.type;
     dragOffset.current = { x: touch.clientX - pin.x, y: touch.clientY - pin.y };
     setDragging(id);
     setPins(ps => {
@@ -542,8 +544,12 @@ const SomedayPage = ({
     const rect = canvas.getBoundingClientRect();
     let nx = touch.clientX - dragOffset.current.x;
     let ny = touch.clientY - dragOffset.current.y;
-    nx = Math.max(0, Math.min(rect.width - 170, nx));
-    ny = Math.max(0, Math.min(BOARD_HEIGHT - 240, ny));
+    const isDecor = draggingTypeRef.current === 'label' || draggingTypeRef.current === 'sticker';
+    const isSticker = draggingTypeRef.current === 'sticker';
+    // Labels/stickers: allow negative y so they can overlap the hero/focus section above the board.
+    // Stickers: allow further right since they're much smaller than photo/note cards.
+    nx = Math.max(0, Math.min(isSticker ? rect.width - 24 : rect.width - 170, nx));
+    ny = Math.max(isDecor ? -320 : 0, Math.min(BOARD_HEIGHT - 240, ny));
     setPins(ps => ps.map(p => p.id === dragging ? { ...p, x: nx, y: ny } : p));
   }, [dragging, BOARD_HEIGHT]);
 
