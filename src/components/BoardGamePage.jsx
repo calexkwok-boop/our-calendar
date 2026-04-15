@@ -197,9 +197,10 @@ const RetailBtn = ({ href, label, color, textColor }) => (
 );
 
 // ─── game card ────────────────────────────────────────────────────────────────
-const GameCard = ({ game, onAddEvent, darkMode, stagger }) => {
+const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger }) => {
   const [expanded, setExpanded] = useState(false);
   const [addedToNight, setAddedToNight] = useState(false);
+  const [inSomeday, setInSomeday] = useState(false);
   const [imgError, setImgError] = useState(false);
   const catStyle = CAT_STYLES[game.category] || CAT_STYLES.strategy;
   const links = retailLinks(game.name);
@@ -335,32 +336,55 @@ const GameCard = ({ game, onAddEvent, darkMode, stagger }) => {
             </div>
           </div>
 
-          {/* Plan game night */}
-          <button
-            onClick={() => {
-              setAddedToNight(true);
-              onAddEvent?.({
-                title: `🎲 Game Night — ${game.name}`,
-                notes: `Playing ${game.name} (${playerLabel}, ${timeLabel}). Category: ${game.category}.`,
-                category: 'hangout',
-              });
-            }}
-            style={{
-              width: '100%', padding: '10px 0',
-              borderRadius: 12, border: 'none', cursor: 'pointer',
-              fontFamily: '"Caveat", "Comic Sans MS", cursive',
-              fontSize: 16, fontWeight: 700, letterSpacing: '.01em',
-              background: addedToNight
-                ? (darkMode ? 'rgba(99,153,34,0.25)' : '#EAF3DE')
-                : 'linear-gradient(90deg, #c4a882 0%, #a08060 100%)',
-              color: addedToNight
-                ? (darkMode ? '#a3d96a' : '#27500A')
-                : '#fff',
-              transition: 'all .2s',
-            }}
-          >
-            {addedToNight ? '✓ Added to calendar!' : '📅 Plan a game night'}
-          </button>
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => {
+                setInSomeday(true);
+                onAddToSomeday?.({ ...game, type: 'games', cardTitle: game.name, poster_path: '' });
+              }}
+              style={{
+                flex: 1, padding: '10px 0',
+                borderRadius: 12, border: 'none', cursor: 'pointer',
+                fontFamily: '"Caveat", "Comic Sans MS", cursive',
+                fontSize: 16, fontWeight: 700,
+                background: inSomeday
+                  ? (darkMode ? 'rgba(45,212,191,0.2)' : '#ccfbf1')
+                  : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfb'),
+                color: inSomeday
+                  ? (darkMode ? '#2dd4bf' : '#0d9488')
+                  : (darkMode ? '#2dd4bf' : '#0d9488'),
+                transition: 'all .2s',
+              }}
+            >
+              {inSomeday ? '✓ In someday list' : '+ Someday list'}
+            </button>
+            <button
+              onClick={() => {
+                setAddedToNight(true);
+                onAddEvent?.({
+                  title: `🎲 Game Night — ${game.name}`,
+                  notes: `Playing ${game.name} (${playerLabel}, ${timeLabel}). Category: ${game.category}.`,
+                  category: 'hangout',
+                });
+              }}
+              style={{
+                flex: 1, padding: '10px 0',
+                borderRadius: 12, border: 'none', cursor: 'pointer',
+                fontFamily: '"Caveat", "Comic Sans MS", cursive',
+                fontSize: 16, fontWeight: 700, letterSpacing: '.01em',
+                background: addedToNight
+                  ? (darkMode ? 'rgba(99,153,34,0.25)' : '#EAF3DE')
+                  : 'linear-gradient(90deg, #c4a882 0%, #a08060 100%)',
+                color: addedToNight
+                  ? (darkMode ? '#a3d96a' : '#27500A')
+                  : '#fff',
+                transition: 'all .2s',
+              }}
+            >
+              {addedToNight ? '✓ Added!' : '📅 Game night'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -418,7 +442,7 @@ const SkeletonCard = ({ darkMode }) => (
 );
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
-const BoardGamePage = ({ onAddEvent, onBack, darkMode = false }) => {
+const BoardGamePage = ({ onAddEvent, onAddToSomeday, onBack, darkMode = false }) => {
   const [games, setGames]           = useState(FALLBACK_GAMES);
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
@@ -692,6 +716,7 @@ const BoardGamePage = ({ onAddEvent, onBack, darkMode = false }) => {
                 key={game.id}
                 game={game}
                 onAddEvent={onAddEvent}
+                onAddToSomeday={onAddToSomeday}
                 darkMode={darkMode}
                 stagger={i}
               />

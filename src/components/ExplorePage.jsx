@@ -314,7 +314,7 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
     return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onPlanEvent={onPlanEvent} />;
   }
   if (activePage === "games") {
-    return <BoardGamePage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} darkMode={darkMode} />;
+    return <BoardGamePage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} darkMode={darkMode} />;
   }
 
   const anyOff        = Object.values(sources).some(v => !v);
