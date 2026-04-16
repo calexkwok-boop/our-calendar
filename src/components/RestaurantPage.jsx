@@ -1247,8 +1247,17 @@ const RestaurantPage = ({
     setLocSearching(true);
     setError('');
     try {
-      const r = await fetch(`/api/geocode?address=${encodeURIComponent(query)}`);
-      const data = await r.json();
+      const KEY = apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || '';
+      let data;
+      try {
+        const r = await fetch(`/api/geocode?address=${encodeURIComponent(query)}`);
+        if (!r.ok) throw new Error('proxy_unavailable');
+        data = await r.json();
+      } catch {
+        if (!KEY) throw new Error('proxy_unavailable');
+        const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${KEY}`);
+        data = await r.json();
+      }
       if (data.status === 'OK' && data.results?.[0]) {
         const { lat, lng } = data.results[0].geometry.location;
         const loc = { lat, lng };
