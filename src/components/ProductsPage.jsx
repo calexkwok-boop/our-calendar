@@ -642,7 +642,7 @@ export default function ProductsPage({ onBack } = {}) {
         {/* ── Post CTA ── */}
         <div className="bg-gradient-to-r from-orange-500/8 to-pink-500/6 border border-orange-400/20 rounded-3xl p-5 mb-8 flex items-center gap-4">
           <span className="text-3xl flex-shrink-0">✨</span>
-          <div>
+          <div className="flex-1 min-w-0">
             <h3 className="font-['Caveat'] text-xl font-bold text-slate-100 leading-tight">
               Found something amazing?
             </h3>

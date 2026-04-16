@@ -19,7 +19,7 @@ const COMMUNITY_POSTS = [
   { id: "c1", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Lands End Trail", location: "San Francisco · 3.4 mi", desc: "Stunning coastal views, moderate difficulty. Best visited at golden hour.", votes: 183, tag: "Hiking", actions: ["Add to someday", "Plan it"] },
   { id: "c2", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan", desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.", votes: 312, tag: "Games", actions: ["Add to someday", "Plan game night"] },
   { id: "c3", type: "restaurants", icon: "🍜", page: "Restaurants", time: "New addition", cardTitle: "Dumpling Time", location: "SoMa, San Francisco", desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable.", votes: 198, tag: "Restaurants", actions: ["Add to someday", "Plan dinner"] },
-  { id: "c4", type: "products", icon: "🛍️", page: "Products", time: "Community pick", cardTitle: "Sony WH-1000XM5", desc: "Most recommended headphones this month — noise cancellation is unreal.", votes: 247, tag: "Products", actions: ["Browse products", "Add to wishlist"] },
+  { id: "c4", type: "products", icon: "🛍️", page: "Products", time: "Community pick", cardTitle: "Sony WH-1000XM5", desc: "Most recommended headphones this month — noise cancellation is unreal.", votes: 247, tag: "Products", actions: ["Add to someday", "Browse products"] },
 ];
 
 const SOURCE_CONFIG = {
@@ -200,7 +200,8 @@ function CommunityCard({ post, onPageTap, onPlanEvent }) {
               } else if (post.type === "hiking") {
                 if (i === 0) onPageTap?.("hiking");
               } else if (post.type === "products") {
-                if (i === 0) onPageTap?.("products");
+                if (i === 0) onAddToSomeday?.({ title: post.cardTitle, type: "product" });
+                else onPageTap?.("products");
               }
             }}
             className={`text-xs font-medium px-3.5 py-1.5 rounded-xl active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"}`}

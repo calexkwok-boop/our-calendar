@@ -495,7 +495,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Search trails, parks, or cities..."
-            className="flex-1 bg-[#161f30] border border-white/7 rounded-2xl px-4 py-3 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-teal-400/40 transition-colors"
+            className="flex-1 min-w-0 bg-[#161f30] border border-white/7 rounded-2xl px-4 py-3 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-teal-400/40 transition-colors"
           />
           <button
             onClick={handleSearch}
