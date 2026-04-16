@@ -266,7 +266,25 @@ function AddSheet({ onClose, onAdd, darkMode }) {
         {type === 'photo' && (
           <>
             <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Label (e.g. Visit Boston)" style={{ ...inputStyle, marginBottom: 10 }} />
-            <input value={imageUrl} onChange={e => setUrl(e.target.value)} placeholder="Image URL (optional)" style={{ ...inputStyle, marginBottom: 12 }} />
+            {/* Photo source */}
+            <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Photo</p>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <button
+                onClick={() => { const i = document.createElement('input'); i.type='file'; i.accept='image/*'; i.onchange=e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>setUrl(ev.target.result); r.readAsDataURL(f); }; i.click(); }}
+                style={{ flex: 1, padding: '9px 6px', borderRadius: 12, border: `1px solid ${inputBdr}`, background: 'transparent', color: ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}
+              >📁 Upload photo</button>
+              <button
+                onClick={() => { const i = document.createElement('input'); i.type='file'; i.accept='image/*'; i.capture='environment'; i.onchange=e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>setUrl(ev.target.result); r.readAsDataURL(f); }; i.click(); }}
+                style={{ flex: 1, padding: '9px 6px', borderRadius: 12, border: `1px solid ${inputBdr}`, background: 'transparent', color: ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' }}
+              >📷 Take photo</button>
+            </div>
+            {imageUrl && imageUrl.startsWith('data:') && (
+              <div style={{ position: 'relative', marginBottom: 10 }}>
+                <img src={imageUrl} alt="" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 12 }} />
+                <button onClick={() => setUrl('')} style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              </div>
+            )}
+            <input value={imageUrl.startsWith('data:') ? '' : imageUrl} onChange={e => setUrl(e.target.value)} placeholder="or paste image URL (optional)" style={{ ...inputStyle, marginBottom: 12 }} />
             <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Emoji</p>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14 }}>
               {['✨','🌍','🍜','🏔️','🚗','🏡','🎬','🎲','🛍️','🌊','🏄','🎵','📚','🍣','🌸','✈️','🍕','🎪','🌮','☕','🍷','🌙','🌈','🎭'].map(e => (
