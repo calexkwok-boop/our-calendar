@@ -1223,18 +1223,64 @@ const RestaurantPage = ({
 
                   {filtered.length > 0 && (
                     <div style={{ gridColumn: '1 / -1', margin: '2px 0 2px' }}>
-                      <div style={{ background: darkMode ? 'rgba(245,158,11,0.08)' : 'linear-gradient(135deg, rgba(255,247,237,0.96), rgba(255,237,213,0.88))', border: `1px solid ${darkMode ? 'rgba(245,158,11,0.18)' : '#fdba74'}`, borderRadius: 24, padding: '18px 18px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, textAlign: 'center' }}>
-                        <span style={{ fontSize: 32, flexShrink: 0 }}>✨</span>
-                        <div style={{ minWidth: 0 }}>
-                          <h3 style={{ fontFamily: handwritten, fontSize: 24, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp, textAlign: 'center' }}>
-                            Found a great spot?
-                          </h3>
-                        </div>
+                      <div style={{
+                        borderRadius: '20px',
+                        background: '#FFF3E8',
+                        border: '1.5px solid #F5C496',
+                        padding: '28px 24px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '6px',
+                        textAlign: 'center',
+                        position: 'relative',
+                        overflow: 'hidden',
+                      }}>
+                        <div style={{
+                          position: 'absolute', top: '-30px', right: '-30px',
+                          width: '100px', height: '100px', borderRadius: '50%',
+                          background: '#FBBF7C', opacity: 0.18, pointerEvents: 'none',
+                        }} />
+                        <div style={{
+                          position: 'absolute', bottom: '-20px', left: '-20px',
+                          width: '70px', height: '70px', borderRadius: '50%',
+                          background: '#F97316', opacity: 0.10, pointerEvents: 'none',
+                        }} />
+
+                        <div style={{ fontSize: '28px', marginBottom: '2px' }}>📍</div>
+
+                        <p style={{
+                          fontSize: '18px', fontWeight: 500, color: '#7C3313',
+                          fontFamily: 'Georgia, serif', margin: 0,
+                        }}>
+                          Found a great spot?
+                        </p>
+
+                        <p style={{ fontSize: '13px', color: '#A04B20', margin: '0 0 10px' }}>
+                          Share it with the community
+                        </p>
+
                         <button
                           onClick={() => setIsRecommendOpen(true)}
-                          style={{ background: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 16, padding: '11px 16px', fontSize: 14, color: '#fff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                          style={{
+                            background: '#EA6C25', color: 'white', border: 'none',
+                            borderRadius: '50px', padding: '11px 28px',
+                            fontSize: '14px', fontWeight: 500, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            letterSpacing: '0.01em',
+                          }}
                         >
-                          Recommend a place →
+                          <span style={{
+                            background: '#7C3313', borderRadius: '50%',
+                            width: '20px', height: '20px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0,
+                          }}>
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                              <path d="M2 5H8M8 5L5.5 2.5M8 5L5.5 7.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </span>
+                          Recommend a place
                         </button>
                       </div>
                     </div>

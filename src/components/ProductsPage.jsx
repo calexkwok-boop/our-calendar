@@ -845,6 +845,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className={`min-h-screen font-['DM_Sans'] ${dm ? 'bg-[#0e1520] text-slate-200' : 'bg-[#faf8f3] text-slate-800'}`}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap'); .font-handwritten { font-family: 'Caveat', cursive; }`}</style>
       <div className="max-w-3xl mx-auto px-4 py-6 pb-24">
 
         {/* ── Hero ── */}
