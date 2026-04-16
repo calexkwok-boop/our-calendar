@@ -138,7 +138,7 @@ function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose, dar
             <div className="flex gap-3">
               <button
                 onClick={() => onSave(trail)}
-                className={`flex-1 rounded-2xl py-3 text-sm font-medium transition-all duration-200 border ${
+                className={`flex-1 rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-all duration-200 border ${
                   isSaved
                     ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
                     : dm
@@ -146,7 +146,7 @@ function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose, dar
                       : "bg-teal-500 border-transparent text-white hover:bg-teal-600"
                 }`}
               >
-                {isSaved ? "✓ Saved to Someday" : "+ Save to Someday"}
+                {isSaved ? "✓ In someday list" : "+ Someday list"}
               </button>
               <button
                 onClick={onPlanTrip}
@@ -225,7 +225,7 @@ function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen, darkMode }) {
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onSave(trail)}
-            className={`flex-1 rounded-xl py-2 text-xs font-medium transition-all duration-200 border ${
+            className={`flex-1 rounded-xl py-2 text-xs font-['Caveat'] font-bold transition-all duration-200 border ${
               isSaved
                 ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
                 : dm
@@ -233,7 +233,7 @@ function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen, darkMode }) {
                   : "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100"
             }`}
           >
-            {isSaved ? "✓ Saved" : "+ Someday"}
+            {isSaved ? "✓ In someday list" : "+ Someday list"}
           </button>
           <button
             onClick={onOpen}

@@ -173,7 +173,7 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap }) {
         </div>
       </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-2.5">
-        <button onClick={handleSomeday} className={`text-xs font-medium px-3.5 py-1.5 rounded-xl transition-all active:opacity-70 ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`}>
+        <button onClick={handleSomeday} className={`text-xs font-handwritten font-bold px-3.5 py-1.5 rounded-xl transition-all active:opacity-70 ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`}>
           {inSomeday ? "✓ In someday list" : "+ Someday list"}
         </button>
         <button onClick={() => onPageTap?.("movies")} className="text-xs font-medium px-3.5 py-1.5 rounded-xl bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 active:opacity-70">See all →</button>
@@ -225,13 +225,13 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
                 else if (post.type === "products")    onPageTap?.("products");
               }
             }}
-            className={`text-xs font-medium px-3.5 py-1.5 rounded-xl active:opacity-70 ${
+            className={`text-xs font-handwritten font-bold px-3.5 py-1.5 rounded-xl active:opacity-70 ${
               i === 0
                 ? inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"
                 : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"
             }`}
           >
-            {i === 0 ? (inSomeday ? "✓ In someday list" : a) : a}
+            {i === 0 ? (inSomeday ? "✓ In someday list" : "+ Someday list") : a}
           </button>
         ))}
         <VoteButtons initialVotes={post.votes} />

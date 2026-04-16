@@ -355,7 +355,7 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
                 transition: 'all .2s',
               }}
             >
-              {inSomeday ? '✓ Saved · tap to remove' : '+ Someday list'}
+              {inSomeday ? '✓ In someday list' : '+ Someday list'}
             </button>
             <button
               onClick={() => {

@@ -265,7 +265,7 @@ const RestaurantDetailSheet = ({ restaurant, onAddEvent, onSaveToSomeday, onClos
               }}
               style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: 'none', background: saved ? '#0d9488' : '#2dd4bf', color: saved ? '#fff' : '#111827', fontFamily: handwritten, fontSize: 17, fontWeight: 700, cursor: saved ? 'default' : 'pointer', transition: 'all .2s' }}
             >
-              {saved ? '✓ Saved' : '✦ Someday list'}
+              {saved ? '✓ In someday list' : '+ Someday list'}
             </button>
           </div>
         </div>
@@ -411,7 +411,7 @@ const FeaturedRestaurantRecommendation = React.memo(({ post, onSomeday, onRemove
             }}
             style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 13, fontWeight: 700, fontFamily: handwritten, cursor: 'pointer' }}
           >
-            {saved ? '✓ Saved' : '+ Add to Someday'}
+            {saved ? '✓ In someday list' : '+ Someday list'}
           </button>
         </div>
       </div>
@@ -512,7 +512,7 @@ const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeda
             }}
             style={{ marginLeft: 'auto', padding: '8px 12px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(45,212,191,0.22)' : '#99f6e4'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 12, fontWeight: 700, fontFamily: handwritten, cursor: saved ? 'default' : 'pointer' }}
           >
-            {saved ? '✓ Someday' : '+ Someday'}
+            {saved ? '✓ In someday list' : '+ Someday list'}
           </button>
         </div>
       </div>

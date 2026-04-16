@@ -138,7 +138,7 @@ function ProductModal({ product, isSaved, onSomeday, onPost, onClose, darkMode }
                   : "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100"
             }`}
           >
-            {saved ? "✓ In Someday List" : "+ Add to Someday"}
+            {saved ? "✓ In someday list" : "+ Someday list"}
           </button>
           <div className="flex gap-2.5">
             {product.amazonUrl && product.amazonUrl !== "#" && (
@@ -230,7 +230,7 @@ const ProductCard = React.memo(function ProductCard({ product, onSomeday, savedI
                   : "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100"
             }`}
           >
-            {isWished ? "✓ Someday" : "+ Someday"}
+            {isWished ? "✓ In someday list" : "+ Someday list"}
           </button>
           <button
             onClick={() => onPost(product)}
@@ -340,7 +340,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
                 : "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100"
           }`}
         >
-          {wished ? "✓ Someday" : "+ Someday"}
+          {wished ? "✓ In someday list" : "+ Someday list"}
         </button>
       </div>
     </div>
@@ -452,7 +452,7 @@ function FeaturedSomedayButton({ featured, onAddToSomeday, darkMode }) {
             : "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100"
       }`}
     >
-      {saved ? "✓ Someday" : "+ Someday"}
+      {saved ? "✓ In someday list" : "+ Someday list"}
     </button>
   );
 }
