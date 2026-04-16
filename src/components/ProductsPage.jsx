@@ -1043,8 +1043,8 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
         {/* ── Post CTA ── */}
         <div style={{
           borderRadius: '20px',
-          background: '#FFF3E8',
-          border: '1.5px solid #F5C496',
+          background: '#FFF0F5',
+          border: '1.5px solid #F2BAC9',
           padding: '28px 24px',
           display: 'flex',
           flexDirection: 'column',
@@ -1057,12 +1057,12 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
           <div style={{
             position: 'absolute', top: '-30px', right: '-30px',
             width: '100px', height: '100px', borderRadius: '50%',
-            background: '#FBBF7C', opacity: 0.18, pointerEvents: 'none',
+            background: '#E89AB6', opacity: 0.18, pointerEvents: 'none',
           }} />
           <div style={{
             position: 'absolute', bottom: '-20px', left: '-20px',
             width: '70px', height: '70px', borderRadius: '50%',
-            background: '#F97316', opacity: 0.10, pointerEvents: 'none',
+            background: '#C65A85', opacity: 0.10, pointerEvents: 'none',
           }} />
 
           <div style={{ fontSize: '28px', marginBottom: '2px' }}>🛍️</div>
@@ -1081,7 +1081,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
           <button
             onClick={() => setPostingProduct({ name: "", image: null, price: null })}
             style={{
-              background: '#EA6C25', color: 'white', border: 'none',
+              background: '#D96B8C', color: 'white', border: 'none',
               borderRadius: '50px', padding: '11px 28px',
               fontSize: '18px', fontWeight: 600, cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: '8px',
@@ -1099,7 +1099,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
                 <path d="M2 5H8M8 5L5.5 2.5M8 5L5.5 7.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </span>
-            Post a product
+            Share something you love 🛍️
           </button>
         </div>
 
