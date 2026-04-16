@@ -360,54 +360,82 @@ const RestaurantPage = ({
   const [locSearching, setLocSearching]     = useState(false);
   const fetchedRef                    = useRef(false);
 
-  // ── fetch restaurants ───────────────────────────────────────────────────────
+  // ── fetch restaurants (paginated — up to 3 pages / 60 results) ──────────────
   const fetchRestaurants = useCallback(async (loc, query = '', rad = 10000) => {
     setLoading(true);
     setError('');
-    try {
-      // Try Vercel proxy first, fall back to direct API call
-      let data;
-      const proxyUrl = `/api/places?lat=${loc.lat}&lng=${loc.lng}&query=${encodeURIComponent(query)}&type=restaurant&radius=${rad}`;
-      const directUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${loc.lat},${loc.lng}&radius=${rad}&type=restaurant&keyword=${encodeURIComponent(query)}&key=${apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || ''}`;
+
+    const KEY = apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || '';
+    const useProxy = !KEY; // prefer proxy when no client-side key
+
+    // Fetch a single page; tries proxy first, falls back to direct call
+    const fetchPage = async (pagetoken = null) => {
+      // Proxy path
+      const proxyUrl = pagetoken
+        ? `/api/places?pagetoken=${encodeURIComponent(pagetoken)}`
+        : `/api/places?lat=${loc.lat}&lng=${loc.lng}&query=${encodeURIComponent(query)}&type=restaurant&radius=${rad}`;
+      // Direct path
+      const directUrl = pagetoken
+        ? `https://maps.googleapis.com/maps/api/place/nearbysearch/json?pagetoken=${encodeURIComponent(pagetoken)}&key=${KEY}`
+        : `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${loc.lat},${loc.lng}&radius=${rad}&type=restaurant&keyword=${encodeURIComponent(query)}&key=${KEY}`;
 
       let res;
       try {
         res = await fetch(proxyUrl);
         if (!res.ok) throw new Error('proxy unavailable');
-        data = await res.json();
+        const d = await res.json();
+        if (d.status === 'REQUEST_DENIED') throw new Error('proxy unavailable');
+        return d;
       } catch {
-        if (apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY) {
+        if (KEY) {
           res = await fetch(directUrl);
-          data = await res.json();
-        } else {
-          throw new Error('no_key');
+          return res.json();
+        }
+        throw new Error('no_key');
+      }
+    };
+
+    try {
+      const data1 = await fetchPage();
+      if (!data1?.results?.length) throw new Error('no_results');
+
+      let allResults = [...data1.results];
+
+      if (data1.next_page_token) {
+        await new Promise(r => setTimeout(r, 2000));
+        const data2 = await fetchPage(data1.next_page_token);
+        if (data2?.results?.length) {
+          allResults = [...allResults, ...data2.results];
+
+          if (data2.next_page_token) {
+            await new Promise(r => setTimeout(r, 2000));
+            const data3 = await fetchPage(data2.next_page_token);
+            if (data3?.results?.length) {
+              allResults = [...allResults, ...data3.results];
+            }
+          }
         }
       }
 
-      if (data?.status === 'OK' && data.results?.length > 0) {
-        const mapped = data.results.map(r => ({
-          id: r.place_id,
-          name: r.name,
-          cuisine: inferCuisine(r.types || [], r.name),
-          rating: r.rating || 0,
-          priceLevel: r.price_level || 0,
-          address: r.vicinity || '',
-          distance: '',
-          isOpen: r.opening_hours?.open_now ?? null,
-          photo: r.photos?.[0]?.photo_reference
-            ? `/api/places?action=photo&ref=${encodeURIComponent(r.photos[0].photo_reference)}&maxwidth=400`
-            : '',
-          phone: '',
-          website: '',
-          description: '',
-          googlePlaceId: r.place_id,
-        }));
-        setRestaurants(mapped);
-      } else {
-        throw new Error('no_results');
-      }
+      const mapped = allResults.map(r => ({
+        id: r.place_id,
+        name: r.name,
+        cuisine: inferCuisine(r.types || [], r.name),
+        rating: r.rating || 0,
+        priceLevel: r.price_level || 0,
+        address: r.vicinity || '',
+        distance: '',
+        isOpen: r.opening_hours?.open_now ?? null,
+        photo: r.photos?.[0]?.photo_reference
+          ? `/api/places?action=photo&ref=${encodeURIComponent(r.photos[0].photo_reference)}&maxwidth=400`
+          : '',
+        phone: '',
+        website: '',
+        description: '',
+        googlePlaceId: r.place_id,
+      }));
+      setRestaurants(mapped);
     } catch (err) {
-      // Fall back to curated data
       setRestaurants(FALLBACK_RESTAURANTS);
       if (err.message !== 'no_key' && err.message !== 'no_results') {
         setError('Showing curated picks — connect your Google Places API for live results near you.');
