@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient"; // adjust path as needed
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -61,12 +62,116 @@ function getCategoryForProduct(name = "") {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function ProductCard({ product, onSomeday, savedIds, onPost }) {
+// ─── Product Modal ────────────────────────────────────────────────────────────
+function ProductModal({ product, isSaved, onSomeday, onPost, onClose }) {
+  const category = getCategoryForProduct(product.name);
+  const [saved, setSaved] = useState(isSaved);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  const handleSomeday = () => {
+    if (!saved) onSomeday(product);
+    setSaved((s) => !s);
+  };
+
+  const ratingsLabel = product.ratingsTotal
+    ? product.ratingsTotal > 999
+      ? `${Math.round(product.ratingsTotal / 1000)}k`
+      : String(product.ratingsTotal)
+    : null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-lg bg-[#0e1520] rounded-t-3xl sm:rounded-3xl border border-white/10 shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+        {/* Image header */}
+        <div className="relative flex-shrink-0">
+          {product.image ? (
+            <img src={product.image} alt={product.name} className="w-full h-56 object-contain bg-[#1a2540] p-6" />
+          ) : (
+            <div className="w-full h-56 flex items-center justify-center text-8xl bg-gradient-to-br from-[#1a2540] to-[#1e2040]">🛍️</div>
+          )}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/50 text-slate-300 hover:text-white flex items-center justify-center text-sm transition-colors"
+          >✕</button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="overflow-y-auto flex-1 p-6 pb-2">
+          <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">{category}</p>
+          <h2 className="font-['Caveat'] text-3xl font-bold text-slate-100 leading-tight mb-1">{product.name}</h2>
+
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            {product.price && (
+              <span className="font-['Caveat'] text-2xl font-bold text-teal-400">{product.price}</span>
+            )}
+            {product.isPrime && (
+              <span className="text-[11px] text-blue-400 bg-blue-400/10 border border-blue-400/20 rounded-full px-2.5 py-0.5">✓ Prime</span>
+            )}
+            {product.rating && (
+              <span className="text-sm text-slate-400 flex items-center gap-1">
+                <span className="text-amber-400">★</span>
+                {Number(product.rating).toFixed(1)}
+                {ratingsLabel && <span className="text-slate-600">({ratingsLabel})</span>}
+              </span>
+            )}
+          </div>
+
+          <p className="text-sm text-slate-400 leading-relaxed mb-6">
+            {product.description || `Highly rated ${category.toLowerCase()} product loved by the community. Check Amazon for full specs and reviews.`}
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex-shrink-0 p-6 pt-3 border-t border-white/5 flex flex-col gap-2.5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))]">
+          <button
+            onClick={handleSomeday}
+            className={`w-full rounded-2xl py-3 text-sm font-medium border transition-all duration-200 ${
+              saved
+                ? "bg-teal-400/20 border-teal-400/35 text-teal-300"
+                : "bg-teal-400/10 border-teal-400/25 text-teal-400 hover:bg-teal-400/20"
+            }`}
+          >
+            {saved ? "✓ In Someday List" : "+ Add to Someday"}
+          </button>
+          <div className="flex gap-2.5">
+            {product.amazonUrl && product.amazonUrl !== "#" && (
+              <a
+                href={product.amazonUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 bg-amber-400/10 border border-amber-400/25 rounded-2xl py-3 text-sm font-medium text-amber-400 hover:bg-amber-400/20 transition-all text-center"
+              >
+                View on Amazon →
+              </a>
+            )}
+            <button
+              onClick={() => { onPost(product); onClose(); }}
+              className="flex-1 bg-violet-400/10 border border-violet-400/25 rounded-2xl py-3 text-sm font-medium text-violet-400 hover:bg-violet-400/20 transition-all"
+            >
+              Share with friends
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function ProductCard({ product, onSomeday, savedIds, onPost, onOpen }) {
   const isWished = savedIds.has(product.id);
   const category = getCategoryForProduct(product.name);
 
   return (
-    <div className="bg-[#161f30] border border-white/5 rounded-2xl overflow-hidden hover:border-violet-400/25 hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
+    <div onClick={onOpen} className="bg-[#161f30] border border-white/5 rounded-2xl overflow-hidden hover:border-violet-400/25 hover:-translate-y-0.5 transition-all duration-200 flex flex-col cursor-pointer">
       {/* Image */}
       {product.image ? (
         <img
@@ -111,7 +216,7 @@ function ProductCard({ product, onSomeday, savedIds, onPost }) {
           <p className="text-[10px] text-blue-400 mb-2">✓ Prime</p>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onSomeday(product)}
             className={`flex-1 rounded-xl py-2 text-xs font-medium transition-all duration-200 border ${
@@ -319,6 +424,31 @@ function PostProductModal({ product, onClose, onSubmit }) {
   );
 }
 
+function FeaturedSomedayButton({ featured, onAddToSomeday }) {
+  const [saved, setSaved] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        if (saved) return;
+        setSaved(true);
+        onAddToSomeday?.({
+          title:    featured.product_name,
+          imageUrl: featured.product_image || "",
+          emoji:    "🛍️",
+          type:     "products",
+        });
+      }}
+      className={`text-xs px-4 py-2 rounded-xl border transition-all duration-200 ${
+        saved
+          ? "bg-teal-400/20 border-teal-400/35 text-teal-300"
+          : "bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15"
+      }`}
+    >
+      {saved ? "✓ Someday" : "+ Someday"}
+    </button>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
@@ -330,7 +460,8 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
   const [wishlistedIds,  setWishlistedIds]  = useState(new Set());
   const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState(null);
-  const [postingProduct, setPostingProduct] = useState(null); // product to post modal
+  const [postingProduct, setPostingProduct] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [currentUserId,  setCurrentUserId]  = useState(null);
 
   // ── Auth ──
@@ -582,7 +713,7 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
                       "{featured.review}"
                     </p>
                   )}
-                  <div className="flex gap-3 flex-wrap">
+                  <div className="flex gap-3 flex-wrap mb-4">
                     {featured.product_price && (
                       <div className="flex flex-col">
                         <span className="font-['Caveat'] text-xl font-semibold text-teal-400">
@@ -598,6 +729,7 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
                       <span className="text-[10px] uppercase text-slate-500 tracking-wide">Likes</span>
                     </div>
                   </div>
+                  <FeaturedSomedayButton featured={featured} onAddToSomeday={onAddToSomeday} />
                 </div>
               </div>
             </div>
@@ -631,6 +763,7 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
                 onSomeday={handleSomeday}
                 savedIds={wishlistedIds}
                 onPost={setPostingProduct}
+                onOpen={() => setSelectedProduct(product)}
               />
             ))}
           </div>
@@ -679,6 +812,17 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
           product={postingProduct}
           onClose={() => setPostingProduct(null)}
           onSubmit={handlePostSubmit}
+        />
+      )}
+
+      {/* ── Product detail modal ── */}
+      {selectedProduct && (
+        <ProductModal
+          product={selectedProduct}
+          isSaved={wishlistedIds.has(selectedProduct.id)}
+          onSomeday={handleSomeday}
+          onPost={setPostingProduct}
+          onClose={() => setSelectedProduct(null)}
         />
       )}
     </div>
