@@ -369,7 +369,7 @@ const FeaturedRestaurantRecommendation = ({ post, onSomeday, darkMode }) => {
         </div>
         <div style={{ padding: 22, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 10 }}>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#8b5cf6' }}>
-            Community pick
+            From your community
           </p>
           <h2 style={{ fontFamily: handwritten, fontSize: 30, fontWeight: 700, lineHeight: 1.05, margin: 0, color: tp }}>
             {post.restaurant_name}
@@ -516,6 +516,8 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
   const tp = darkMode ? '#f1f5f9' : '#111827';
   const ts = darkMode ? '#6b7280' : '#9ca3af';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
+  const uploadRef = useRef(null);
+  const cameraRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [form, setForm] = useState({
@@ -531,6 +533,22 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
 
   const updateField = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const readImageFile = (file) => {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm(prev => ({ ...prev, restaurant_image: String(reader.result || '') }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImagePick = (event) => {
+    const file = event.target.files?.[0];
+    readImageFile(file);
+    event.target.value = '';
   };
 
   const handleSubmit = async () => {
@@ -568,8 +586,11 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
                 Share a favorite spot
               </h2>
             </div>
-            <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: tp, cursor: 'pointer' }}>
-              <X style={{ width: 16, height: 16 }} />
+            <button
+              onClick={onClose}
+              style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: tp, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, lineHeight: 0 }}
+            >
+              <X style={{ width: 16, height: 16, display: 'block' }} />
             </button>
           </div>
 
@@ -584,9 +605,8 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
           )}
 
           <div style={{ display: 'grid', gap: 12 }}>
-            {[
+            {[ 
               { key: 'restaurant_name', label: 'Restaurant name', required: true, placeholder: 'Bestia' },
-              { key: 'restaurant_image', label: 'Image URL', placeholder: 'https://...' },
               { key: 'address', label: 'Address', placeholder: '2121 E 7th Pl, Los Angeles' },
               { key: 'cuisine', label: 'Cuisine', placeholder: 'Italian' },
               { key: 'best_for', label: 'Best for', placeholder: 'Date night, brunch, family...' },
@@ -602,6 +622,52 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
                 />
               </label>
             ))}
+
+            <div style={{ display: 'grid', gap: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: tp }}>Photo</span>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => uploadRef.current?.click()}
+                  style={{ padding: '10px 12px', borderRadius: 12, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc', color: tp, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Upload image
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cameraRef.current?.click()}
+                  style={{ padding: '10px 12px', borderRadius: 12, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc', color: tp, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Take a picture
+                </button>
+                {form.restaurant_image && (
+                  <button
+                    type="button"
+                    onClick={() => updateField('restaurant_image', '')}
+                    style={{ padding: '10px 12px', borderRadius: 12, border: `1px solid ${bw}`, background: 'transparent', color: ts, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+
+              <input ref={uploadRef} type="file" accept="image/*" onChange={handleImagePick} style={{ display: 'none' }} />
+              <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleImagePick} style={{ display: 'none' }} />
+
+              {form.restaurant_image ? (
+                <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.03)' : '#f8fafc' }}>
+                  <img
+                    src={form.restaurant_image}
+                    alt="Selected restaurant"
+                    style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
+              ) : (
+                <div style={{ borderRadius: 14, border: `1px dashed ${bw}`, padding: '16px 14px', color: ts, fontSize: 12, lineHeight: 1.5 }}>
+                  Add a photo from your device or snap one with your camera. We’ll store it with the post.
+                </div>
+              )}
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="max-sm:grid-cols-1">
               <label style={{ display: 'grid', gap: 6 }}>
@@ -1084,6 +1150,29 @@ const RestaurantPage = ({
             />
           </div>
         )}
+
+        {/* ── Recommendation CTA ── */}
+        <div style={{ padding: '0 16px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, borderRadius: 22, padding: '16px 16px 16px 18px', background: darkMode ? 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(20,184,166,0.08))' : 'linear-gradient(135deg, rgba(250,245,255,0.95), rgba(240,253,250,0.9))', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e9d5ff'}` }}>
+            <div style={{ width: 42, height: 42, borderRadius: 14, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+              ✨
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3 style={{ fontFamily: handwritten, fontSize: 22, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp }}>
+                Found a great spot?
+              </h3>
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: ts, lineHeight: 1.5 }}>
+                Share it with your friends — tell them why it’s worth going.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsRecommendOpen(true)}
+              style={{ padding: '10px 14px', borderRadius: 14, border: 'none', background: '#14b8a6', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              Recommend a place ✨
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ── Grid ── */}
@@ -1114,29 +1203,6 @@ const RestaurantPage = ({
               />
             ))
         }
-      </div>
-
-      {/* ── Recommendation CTA ── */}
-      <div style={{ padding: '0 16px 14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, borderRadius: 22, padding: '16px 16px 16px 18px', background: darkMode ? 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(20,184,166,0.08))' : 'linear-gradient(135deg, rgba(250,245,255,0.95), rgba(240,253,250,0.9))', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e9d5ff'}` }}>
-          <div style={{ width: 42, height: 42, borderRadius: 14, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-            ✨
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h3 style={{ fontFamily: handwritten, fontSize: 22, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp }}>
-              Found a great spot?
-            </h3>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: ts, lineHeight: 1.5 }}>
-              Share it with your friends — tell them why it’s worth going.
-            </p>
-          </div>
-          <button
-            onClick={() => setIsRecommendOpen(true)}
-            style={{ padding: '10px 14px', borderRadius: 14, border: 'none', background: '#14b8a6', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-          >
-            Recommend a place ✨
-          </button>
-        </div>
       </div>
 
       {/* ── Community recommendations feed ── */}
