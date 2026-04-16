@@ -143,7 +143,7 @@ const RestaurantDetailSheet = ({ restaurant, onAddEvent, onSaveToSomeday, onClos
       onClick={onClose}
     >
       <div
-        style={{ width: '100%', maxWidth: 480, background: pbg, borderRadius: '24px 24px 0 0', maxHeight: '88vh', overflowY: 'auto', borderTop: `1px solid ${bw}` }}
+        style={{ width: '100%', maxWidth: 480, background: pbg, borderRadius: '24px 24px 0 0', maxHeight: '88vh', overflowY: 'auto', borderTop: `1px solid ${bw}`, paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Drag handle */}

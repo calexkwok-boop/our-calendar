@@ -429,7 +429,7 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
   const years = Object.keys(memoriesByYear).sort((a, b) => b - a);
   
   return (
-    <div className="memories-gallery w-full space-y-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))]">
+    <div className="memories-gallery w-full space-y-6 pb-[max(5rem,calc(env(safe-area-inset-bottom)+4.5rem))]">
       {/* Header */}
       <div className="text-center">
         <div className="text-4xl mb-2">💫</div>
