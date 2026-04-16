@@ -8,12 +8,7 @@ import ProductsPage from "./ProductsPage";
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
 
-const FRIEND_POSTS = [
-  { id: "f1", type: "friends", avatar: "MK", name: "Maya K.", action: "is going to", time: "2h ago", text: "Wine & Jazz Night at the SFJAZZ Center this Friday — anyone want to come?", tag: "Friends", actions: ["Save event", "Join them"] },
-  { id: "f2", type: "friends", avatar: "JL", name: "Jake L.", action: "just got back from", time: "5h ago", text: "Big Sur camping trip — three nights, zero cell service, completely worth it", tag: "Friends", isTrip: true, actions: ["Save to inspiration", "Plan similar"] },
-  { id: "f3", type: "friends", avatar: "SR", name: "Sofia R.", action: "added to her someday list", time: "Yesterday", text: '"Challengers" — said it\'s the perfect Friday night watch', tag: "Friends", actions: ["Add to my someday", "See more"] },
-  { id: "f4", type: "friends", avatar: "TN", name: "Tom N.", action: "is planning", time: "2d ago", text: "Pickleball at Mission Dolores Park — Saturday morning, all skill levels welcome", tag: "Friends", actions: ["Join event", "Save"] },
-];
+const FRIEND_POSTS = [];
 
 const COMMUNITY_POSTS = [
   { id: "c1", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Lands End Trail", location: "San Francisco · 3.4 mi", desc: "Stunning coastal views, moderate difficulty. Best visited at golden hour.", votes: 183, tag: "Hiking", actions: ["Add to someday", "Plan it"] },

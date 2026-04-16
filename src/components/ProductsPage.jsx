@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import { Camera } from "lucide-react";
 import { supabase } from "../supabaseClient"; // adjust path as needed
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -153,7 +154,7 @@ function ProductModal({ product, isSaved, onSomeday, onPost, onClose, darkMode }
             )}
             <button
               onClick={() => { onPost(product); onClose(); }}
-              className={`flex-1 rounded-2xl py-3 text-sm font-medium transition-all border ${dm ? 'bg-violet-400/10 border-violet-400/25 text-violet-400 hover:bg-violet-400/20' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
+              className={`flex-1 rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-all border ${dm ? 'bg-violet-400/10 border-violet-400/25 text-violet-400 hover:bg-violet-400/20' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
             >
               Share with friends
             </button>
@@ -234,7 +235,7 @@ const ProductCard = React.memo(function ProductCard({ product, onSomeday, savedI
           </button>
           <button
             onClick={() => onPost(product)}
-            className={`flex-1 rounded-xl py-2 text-xs font-medium transition-all duration-200 border ${dm ? 'bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15' : 'bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100'}`}
+            className={`flex-1 rounded-xl py-2 text-xs font-['Caveat'] font-bold transition-all duration-200 border ${dm ? 'bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15' : 'bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100'}`}
           >
             Share
           </button>
@@ -294,6 +295,11 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
           {post.product_brand && (
             <p className="text-xs text-slate-500 mb-1">{post.product_brand}</p>
           )}
+          {post.product_description && (
+            <p className="text-sm text-slate-500 leading-relaxed line-clamp-2 mb-1">
+              {post.product_description}
+            </p>
+          )}
           {post.review && (
             <p className="text-sm text-slate-500 italic leading-relaxed line-clamp-2">
               "{post.review}"
@@ -303,6 +309,34 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
             <p className="font-['Caveat'] text-lg font-bold text-teal-500 mt-1">
               {post.product_price}
             </p>
+          )}
+          {post.product_rating && (
+            <p className="text-xs text-slate-500 mt-1">
+              <span className="text-amber-500">★</span> {Number(post.product_rating).toFixed(1)}
+            </p>
+          )}
+          {(post.amazon_url || post.target_url || post.walmart_url) && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {[
+                { label: "Amazon", href: post.amazon_url },
+                { label: "Target", href: post.target_url },
+                { label: "Walmart", href: post.walmart_url },
+              ].map((store) => {
+                const href = String(store.href || "").trim();
+                if (!href) return null;
+                return (
+                  <a
+                    key={store.label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] px-2.5 py-1 rounded-full border border-violet-200 dark:border-violet-400/20 bg-violet-50 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-400/15 transition-colors"
+                  >
+                    {store.label}
+                  </a>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
@@ -350,80 +384,286 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
 // Post product modal
 function PostProductModal({ product, onClose, onSubmit, darkMode }) {
   const dm = darkMode;
-  const [review, setReview] = useState("");
-  const [category, setCategory] = useState(getCategoryForProduct(product?.name));
+  const photoInputRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const [draft, setDraft] = useState(() => ({
+    name: product?.name || "",
+    image: product?.image || "",
+    price: product?.price || "",
+    rating: product?.rating ?? "",
+    category: getCategoryForProduct(product?.name),
+    description: product?.description || "",
+    amazonUrl: product?.amazonUrl || "",
+    targetUrl: product?.targetUrl || "",
+    walmartUrl: product?.walmartUrl || "",
+    review: "",
+  }));
+
+  const updateField = (field, value) => {
+    setDraft((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const readImageFile = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setDraft((prev) => ({ ...prev, image: String(reader.result || "") }));
+      setPhotoError("");
+    };
+    reader.onerror = () => setPhotoError("Could not read that image.");
+    reader.readAsDataURL(file);
+  };
+
+  const handleImagePick = (event) => {
+    const file = event.target.files?.[0];
+    readImageFile(file);
+    event.target.value = "";
+  };
 
   const handleSubmit = async () => {
-    if (!review.trim()) return;
+    if (!draft.review.trim()) return;
     setSubmitting(true);
-    await onSubmit({ product, review, category });
+    await onSubmit({
+      product: {
+        ...product,
+        name: draft.name.trim() || product?.name || "",
+        image: draft.image.trim() || "",
+        price: draft.price || product?.price || "",
+        rating: draft.rating === "" ? (product?.rating ?? null) : Number(draft.rating),
+        category: draft.category,
+        description: draft.description.trim(),
+        amazonUrl: draft.amazonUrl.trim(),
+        targetUrl: draft.targetUrl.trim(),
+        walmartUrl: draft.walmartUrl.trim(),
+      },
+      review: draft.review,
+      category: draft.category,
+    });
     setSubmitting(false);
     onClose();
   };
 
+  const storeLinks = [
+    { label: "Amazon", url: draft.amazonUrl || product?.amazonUrl || "" },
+    { label: "Target", url: draft.targetUrl || "" },
+    { label: "Walmart", url: draft.walmartUrl || "" },
+  ];
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className={`border rounded-3xl w-full max-w-md p-6 ${dm ? 'bg-[#161f30] border-white/10' : 'bg-white border-slate-200'}`}>
-        <div className="flex items-center justify-between mb-5">
+      <div className={`border rounded-3xl w-full max-w-2xl overflow-hidden ${dm ? 'bg-[#161f30] border-white/10' : 'bg-white border-slate-200'}`}>
+        <div className="flex items-center justify-between px-6 pt-6">
           <h2 className={`font-['Caveat'] text-2xl font-bold ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Share this product</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
         </div>
 
-        {/* Product preview */}
-        {product && (
-          <div className={`flex gap-3 rounded-2xl p-3 mb-4 ${dm ? 'bg-[#0e1520]' : 'bg-slate-100'}`}>
-            {product.image && (
-              <img src={product.image} alt={product.name} className={`w-14 h-14 object-contain rounded-xl p-1 flex-shrink-0 ${dm ? 'bg-[#1a2540]' : 'bg-slate-200'}`} />
-            )}
-            <div className="min-w-0">
-              <p className={`font-['Caveat'] text-lg font-semibold leading-tight line-clamp-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>{product.name}</p>
-              {product.price && <p className="font-['Caveat'] text-base font-bold text-teal-500">{product.price}</p>}
+        <div className="px-6 pb-6 pt-4 grid gap-5">
+          <div className={`overflow-hidden rounded-3xl border ${dm ? 'border-white/10 bg-[#0e1520]' : 'border-slate-200 bg-slate-50'}`}>
+            <div className="grid md:grid-cols-[1.1fr_0.9fr]">
+              <div className={`min-h-[240px] ${dm ? 'bg-[#1a2540]' : 'bg-slate-100'} relative`}>
+                {draft.image ? (
+                  <img
+                    src={draft.image}
+                    alt={draft.name || "Selected product"}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-6xl">🛍️</div>
+                )}
+                <div className="absolute top-3 left-3 rounded-full bg-black/55 px-3 py-1 text-[11px] font-semibold text-white">
+                  Product preview
+                </div>
+              </div>
+
+              <div className="p-5 flex flex-col justify-center gap-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.15em] text-violet-500 mb-2">From your shelf</p>
+                  <h3 className={`font-['Caveat'] text-3xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
+                    {draft.name || product?.name}
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+                    {draft.description || product?.description || `Highly rated ${draft.category.toLowerCase()} product loved by the community.`}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {draft.price && (
+                    <span className="font-['Caveat'] text-xl font-bold text-teal-500">{draft.price}</span>
+                  )}
+                  {draft.rating !== "" && (
+                    <span className="font-['Caveat'] text-xl font-bold text-violet-500">
+                      {Number(draft.rating).toFixed(1)} ★
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORIES.filter((c) => c.label !== "All").map((c) => (
+                    <button
+                      key={c.label}
+                      onClick={() => updateField("category", c.label)}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                        draft.category === c.label
+                          ? "bg-violet-400/15 border-violet-400/40 text-violet-600"
+                          : dm
+                            ? "bg-white/5 border-white/8 text-slate-400 hover:border-violet-400/25"
+                            : "bg-slate-100 border-slate-200 text-slate-500 hover:border-violet-300"
+                      }`}
+                    >
+                      {c.emoji} {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Category */}
-        <div className="mb-3">
-          <label className="text-xs uppercase tracking-widest text-slate-500 block mb-2">Category</label>
-          <div className="flex gap-2 flex-wrap">
-            {CATEGORIES.filter((c) => c.label !== "All").map((c) => (
-              <button
-                key={c.label}
-                onClick={() => setCategory(c.label)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                  category === c.label
-                    ? "bg-violet-400/15 border-violet-400/40 text-violet-600"
-                    : dm
-                      ? "bg-white/5 border-white/8 text-slate-400 hover:border-violet-400/25"
-                      : "bg-slate-100 border-slate-200 text-slate-500 hover:border-violet-300"
-                }`}
-              >
-                {c.emoji} {c.label}
-              </button>
-            ))}
+          <div className="grid gap-3">
+            <span className="text-xs uppercase tracking-widest text-slate-500">Photo</span>
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30 transition-all flex flex-col items-center justify-center gap-2"
+            >
+              <Camera className="w-8 h-8 text-stone-500 dark:text-stone-400" />
+              <span className="font-semibold text-stone-700 dark:text-stone-300">
+                {draft.image ? "Change photo" : "Add Photos"}
+              </span>
+              <span className="text-sm text-stone-500 dark:text-stone-400">
+                Tap to select from your device
+              </span>
+            </button>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleImagePick}
+              className="hidden"
+            />
+            {photoError && (
+              <div className="text-xs text-red-500">{photoError}</div>
+            )}
           </div>
-        </div>
 
-        {/* Review */}
-        <div className="mb-5">
-          <label className="text-xs uppercase tracking-widest text-slate-500 block mb-2">Why do you love it?</label>
-          <textarea
-            value={review}
-            onChange={(e) => setReview(e.target.value)}
-            placeholder="Tell your friends what makes this worth it..."
-            rows={3}
-            className={`w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-colors resize-none font-['DM_Sans'] ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
-          />
-        </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="grid gap-2">
+              <span className="text-xs uppercase tracking-widest text-slate-500">Amazon link</span>
+              <input
+                type="url"
+                value={draft.amazonUrl}
+                onChange={(e) => updateField("amazonUrl", e.target.value)}
+                placeholder="https://amazon.com/..."
+                className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-xs uppercase tracking-widest text-slate-500">Target link</span>
+              <input
+                type="url"
+                value={draft.targetUrl}
+                onChange={(e) => updateField("targetUrl", e.target.value)}
+                placeholder="https://target.com/..."
+                className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-xs uppercase tracking-widest text-slate-500">Walmart link</span>
+              <input
+                type="url"
+                value={draft.walmartUrl}
+                onChange={(e) => updateField("walmartUrl", e.target.value)}
+                placeholder="https://walmart.com/..."
+                className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-xs uppercase tracking-widest text-slate-500">Product description</span>
+              <input
+                type="text"
+                value={draft.description}
+                onChange={(e) => updateField("description", e.target.value)}
+                placeholder="What makes it stand out?"
+                className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
+              />
+            </label>
+          </div>
 
-        <button
-          onClick={handleSubmit}
-          disabled={!review.trim() || submitting}
-          className="w-full bg-violet-500 hover:bg-violet-400 disabled:opacity-40 text-white rounded-2xl py-3 text-sm font-medium transition-colors"
-        >
-          {submitting ? "Posting…" : "Share with friends"}
-        </button>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="grid gap-2">
+              <span className="text-xs uppercase tracking-widest text-slate-500">Price</span>
+              <input
+                type="text"
+                value={draft.price}
+                onChange={(e) => updateField("price", e.target.value)}
+                placeholder="$349"
+                className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-xs uppercase tracking-widest text-slate-500">Rating</span>
+              <input
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                value={draft.rating}
+                onChange={(e) => updateField("rating", e.target.value)}
+                placeholder="4.8"
+                className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-3">
+            <label className="grid gap-2">
+              <span className="text-xs uppercase tracking-widest text-slate-500">Why do you love it?</span>
+              <textarea
+                value={draft.review}
+                onChange={(e) => updateField("review", e.target.value)}
+                placeholder="Tell your friends what makes this worth it..."
+                rows={4}
+                className={`w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-colors resize-none font-['DM_Sans'] ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-3">
+            <div className="text-xs uppercase tracking-widest text-slate-500">Store links</div>
+            <div className="flex flex-wrap gap-2">
+              {storeLinks.map((store) => {
+                const href = String(store.url || "").trim();
+                const disabled = !href;
+                return (
+                  <a
+                    key={store.label}
+                    href={disabled ? undefined : href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-disabled={disabled}
+                    onClick={(e) => { if (disabled) e.preventDefault(); }}
+                    className={`rounded-xl px-4 py-2.5 text-sm font-medium border transition-all ${
+                      disabled
+                        ? 'opacity-40 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-400'
+                        : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'
+                    }`}
+                  >
+                    {store.label}
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            disabled={!draft.review.trim() || submitting}
+            className="w-full bg-violet-500 hover:bg-violet-400 disabled:opacity-40 text-white rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-colors"
+          >
+            {submitting ? "Posting…" : "Share with friends"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -571,10 +811,14 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
     const { error } = await supabase.from("product_posts").insert({
       user_id:       currentUserId,
       product_name:  product.name,
+      product_description: product.description || null,
       product_image: product.image,
       product_price: product.price,
+      product_rating: product.rating ?? null,
       product_asin:  product.id,
       amazon_url:    product.amazonUrl,
+      target_url:    product.targetUrl || null,
+      walmart_url:   product.walmartUrl || null,
       review,
       category,
       likes_count:    0,
@@ -605,11 +849,12 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
 
         {/* ── Hero ── */}
         <div className={`relative bg-gradient-to-br rounded-3xl p-8 mb-6 overflow-hidden border ${dm ? 'from-[#0f1a2e] via-[#1a1535] to-[#0e1520] border-white/5' : 'from-slate-50 via-violet-50 to-slate-50 border-violet-100'}`}>
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_80%_20%,rgba(167,139,250,0.08),transparent)]" />
+          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_60%_80%_at_80%_20%,rgba(167,139,250,0.08),transparent)]" />
           <div className="absolute right-8 top-6 text-8xl opacity-10 -rotate-6 select-none">🛍️</div>
 
+          <div className="relative z-10">
           {onBack && (
-            <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors mb-4">
+            <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors mb-4 relative z-10">
               ← Back
             </button>
           )}
@@ -634,6 +879,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
                 <span className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">{lbl}</span>
               </div>
             ))}
+          </div>
           </div>
         </div>
 
