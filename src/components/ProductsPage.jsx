@@ -485,7 +485,7 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
         </div>
 
-        <div className="px-6 pb-6 pt-4 grid gap-5 overflow-y-auto flex-1">
+        <div className="px-6 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-4 grid gap-5 overflow-y-auto flex-1">
           <div className={`overflow-hidden rounded-3xl border ${dm ? 'border-white/10 bg-[#0e1520]' : 'border-slate-200 bg-slate-50'}`}>
             <div className="grid md:grid-cols-[1.1fr_0.9fr]">
               <div className={`min-h-[240px] ${dm ? 'bg-[#1a2540]' : 'bg-slate-100'} relative`}>
@@ -662,7 +662,7 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
           <button
             onClick={handleSubmit}
             disabled={!draft.review.trim() || submitting}
-            className="w-full bg-violet-500 hover:bg-violet-400 disabled:opacity-40 text-white rounded-2xl py-3 text-sm font-handwritten font-bold transition-colors"
+            className="w-full bg-violet-500 hover:bg-violet-400 disabled:opacity-40 text-white rounded-2xl py-3 text-sm font-handwritten font-bold transition-colors sticky bottom-0"
           >
             {submitting ? "Posting…" : "Share with friends"}
           </button>
@@ -1043,8 +1043,8 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
         {/* ── Post CTA ── */}
         <div style={{
           borderRadius: '20px',
-          background: '#FFF0F5',
-          border: '1.5px solid #F2BAC9',
+          background: '#FFF8EA',
+          border: '1.5px solid #D8B36A',
           padding: '28px 24px',
           display: 'flex',
           flexDirection: 'column',
@@ -1057,31 +1057,31 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
           <div style={{
             position: 'absolute', top: '-30px', right: '-30px',
             width: '100px', height: '100px', borderRadius: '50%',
-            background: '#E89AB6', opacity: 0.18, pointerEvents: 'none',
+            background: '#D8B36A', opacity: 0.18, pointerEvents: 'none',
           }} />
           <div style={{
             position: 'absolute', bottom: '-20px', left: '-20px',
             width: '70px', height: '70px', borderRadius: '50%',
-            background: '#C65A85', opacity: 0.10, pointerEvents: 'none',
+            background: '#B88A3A', opacity: 0.10, pointerEvents: 'none',
           }} />
 
           <div style={{ fontSize: '28px', marginBottom: '2px' }}>🛍️</div>
 
           <p style={{
             fontSize: '18px', fontWeight: 500, color: '#7C3313',
-            fontFamily: 'Georgia, serif', margin: 0,
+            fontFamily: "'Caveat', cursive", margin: 0,
           }}>
             Found something amazing?
           </p>
 
-          <p style={{ fontSize: '13px', color: '#A04B20', margin: '0 0 10px' }}>
+          <p style={{ fontSize: '13px', color: '#8A5A1F', margin: '0 0 10px', fontFamily: "'Caveat', cursive" }}>
             Share it with your friends — tell them why you love it.
           </p>
 
           <button
             onClick={() => setPostingProduct({ name: "", image: null, price: null })}
             style={{
-              background: '#D96B8C', color: 'white', border: 'none',
+              background: '#C9A15D', color: 'white', border: 'none',
               borderRadius: '50px', padding: '11px 28px',
               fontSize: '18px', fontWeight: 600, cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: '8px',

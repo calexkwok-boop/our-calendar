@@ -1406,8 +1406,8 @@ const RestaurantPage = ({
                     <div style={{ gridColumn: '1 / -1', margin: '2px 0 2px' }}>
                       <div style={{
                         borderRadius: '20px',
-                        background: '#FFF0F5',
-                        border: '1.5px solid #F2BAC9',
+                        background: '#FFF8EA',
+                        border: '1.5px solid #D8B36A',
                         padding: '28px 24px',
                         display: 'flex',
                         flexDirection: 'column',
@@ -1420,31 +1420,31 @@ const RestaurantPage = ({
                         <div style={{
                           position: 'absolute', top: '-30px', right: '-30px',
                           width: '100px', height: '100px', borderRadius: '50%',
-                          background: '#E89AB6', opacity: 0.18, pointerEvents: 'none',
+                          background: '#D8B36A', opacity: 0.18, pointerEvents: 'none',
                         }} />
                         <div style={{
                           position: 'absolute', bottom: '-20px', left: '-20px',
                           width: '70px', height: '70px', borderRadius: '50%',
-                          background: '#C65A85', opacity: 0.10, pointerEvents: 'none',
+                          background: '#B88A3A', opacity: 0.10, pointerEvents: 'none',
                         }} />
 
                         <div style={{ fontSize: '28px', marginBottom: '2px' }}>📍</div>
 
                         <p style={{
                           fontSize: '18px', fontWeight: 500, color: '#7C3313',
-                          fontFamily: 'Georgia, serif', margin: 0,
+                          fontFamily: handwritten, margin: 0,
                         }}>
                           Found a great spot?
                         </p>
 
-                        <p style={{ fontSize: '13px', color: '#A04B20', margin: '0 0 10px' }}>
+                        <p style={{ fontSize: '13px', color: '#8A5A1F', margin: '0 0 10px', fontFamily: handwritten }}>
                           Share it with your friends
                         </p>
 
                         <button
                           onClick={() => setIsRecommendOpen(true)}
                           style={{
-                            background: '#D96B8C', color: 'white', border: 'none',
+                            background: '#C9A15D', color: 'white', border: 'none',
                             borderRadius: '50px', padding: '11px 28px',
                             fontSize: '14px', fontWeight: 500, cursor: 'pointer',
                             display: 'flex', alignItems: 'center', gap: '8px',
