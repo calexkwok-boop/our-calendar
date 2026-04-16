@@ -536,10 +536,15 @@ const SomedayPage = ({
     : [...visiblePins].sort((a, b) => (a.y - b.y) || (a.x - b.x));
   const nudgedPins = filter === 'all'
     ? displayedPins
-    : displayedPins.map((pin, index) => ({
-        ...pin,
-        y: Math.max(0, pin.y - (index * 14)),
-      }));
+    : displayedPins.map((pin, index) => {
+        const row = Math.floor(index / 2);
+        const col = index % 2;
+        return {
+          ...pin,
+          x: Math.min(220 + (col * 170), pin.x),
+          y: 24 + (row * 210),
+        };
+      });
   const BOARD_HEIGHT = Math.max(600, Math.ceil(pins.length / 2) * 240 + 240);
 
   // ─── Drag ──────────────────────────────────────────────────────────────────

@@ -1628,8 +1628,8 @@ const RestaurantPage = ({
         </div>
 
         {/* Location search */}
-        <div style={{ margin: '0 16px 10px', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+        <div style={{ margin: '0 16px 10px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, position: 'relative' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', border: `1px solid ${bw}`, borderRadius: 14, padding: '8px 14px' }}>
             <MapPin style={{ width: 14, height: 14, color: ts, flexShrink: 0, opacity: .6 }} />
             <input
@@ -1645,7 +1645,7 @@ const RestaurantPage = ({
             )}
             </div>
             {(locationSuggesting || locationSuggestions.length > 0) && locationSearch.trim().length >= 2 && (
-              <div style={{ marginTop: 8, border: `1px solid ${bw}`, borderRadius: 14, overflow: 'hidden', background: darkMode ? '#111827' : '#ffffff', boxShadow: darkMode ? '0 12px 28px rgba(0,0,0,0.28)' : '0 12px 28px rgba(15,23,42,0.08)' }}>
+              <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, border: `1px solid ${bw}`, borderRadius: 14, overflow: 'hidden', background: darkMode ? '#111827' : '#ffffff', boxShadow: darkMode ? '0 12px 28px rgba(0,0,0,0.28)' : '0 12px 28px rgba(15,23,42,0.08)', zIndex: 20 }}>
                 {locationSuggesting && locationSuggestions.length === 0 ? (
                   <div style={{ padding: '10px 12px', fontSize: 13, color: ts }}>
                     Looking up places…
