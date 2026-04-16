@@ -384,7 +384,8 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
 // Post product modal
 function PostProductModal({ product, onClose, onSubmit, darkMode }) {
   const dm = darkMode;
-  const photoInputRef = useRef(null);
+  const photoUploadRef = useRef(null);
+  const photoCameraRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const [draft, setDraft] = useState(() => ({
@@ -478,10 +479,10 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[11010] flex items-end sm:items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[11010] flex items-end sm:items-center justify-center p-4 overflow-hidden overscroll-contain">
       <div className={`border rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col ${dm ? 'bg-[#161f30] border-white/10' : 'bg-white border-slate-200'}`}>
         <div className="flex items-center justify-between px-6 pt-6">
-          <h2 className={`font-handwritten text-2xl font-bold ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Share something you love</h2>
+          <h2 className={`font-handwritten text-2xl font-bold ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Share something you love ✨</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
         </div>
 
@@ -545,21 +546,40 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
 
           <div className="grid gap-3">
             <span className="text-xs uppercase tracking-widest text-slate-500">Photo</span>
-            <button
-              type="button"
-              onClick={() => photoInputRef.current?.click()}
-              className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30 transition-all flex flex-col items-center justify-center gap-2"
-            >
+            <div className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30 transition-all flex flex-col items-center justify-center gap-3">
               <Camera className="w-8 h-8 text-stone-500 dark:text-stone-400" />
               <span className="font-semibold text-stone-700 dark:text-stone-300">
                 {draft.image ? "Change photo" : "Add Photos"}
               </span>
-              <span className="text-sm text-stone-500 dark:text-stone-400">
-                Tap to select from your device
+              <span className="text-sm text-stone-500 dark:text-stone-400 text-center px-4">
+                Upload from your device or take a picture
               </span>
-            </button>
+              <div className="flex flex-wrap justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => photoUploadRef.current?.click()}
+                  className="px-4 py-2 rounded-full border border-stone-300 bg-white/80 text-stone-700 text-sm font-semibold hover:bg-white transition-colors"
+                >
+                  Upload photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => photoCameraRef.current?.click()}
+                  className="px-4 py-2 rounded-full border border-stone-300 bg-white/80 text-stone-700 text-sm font-semibold hover:bg-white transition-colors"
+                >
+                  Use camera
+                </button>
+              </div>
+            </div>
             <input
-              ref={photoInputRef}
+              ref={photoUploadRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImagePick}
+              className="hidden"
+            />
+            <input
+              ref={photoCameraRef}
               type="file"
               accept="image/*"
               capture="environment"

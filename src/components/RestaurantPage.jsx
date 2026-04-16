@@ -525,7 +525,8 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
   const tp = darkMode ? '#f1f5f9' : '#111827';
   const ts = darkMode ? '#6b7280' : '#9ca3af';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
-  const fileInputRef = useRef(null);
+  const photoUploadRef = useRef(null);
+  const photoCameraRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [addressSuggestions, setAddressSuggestions] = useState([]);
@@ -544,6 +545,14 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
   const updateField = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
 
   useEffect(() => {
     const query = form.address.trim();
@@ -601,8 +610,12 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
     event.target.value = '';
   };
 
-  const openPhotoPicker = () => {
-    fileInputRef.current?.click();
+  const openPhotoPicker = (mode = 'upload') => {
+    if (mode === 'camera') {
+      photoCameraRef.current?.click();
+      return;
+    }
+    photoUploadRef.current?.click();
   };
 
   const chooseAddressSuggestion = (suggestion) => {
@@ -629,9 +642,9 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden', overscrollBehavior: 'contain' }} onClick={onClose}>
       <div
-        style={{ width: '100%', maxWidth: 560, background: pbg, borderRadius: '24px 24px 0 0', maxHeight: '88vh', overflowY: 'auto', borderTop: `1px solid ${bw}`, paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}
+        style={{ width: '100%', maxWidth: 560, background: pbg, borderRadius: '24px 24px 0 0', maxHeight: '88vh', overflowY: 'auto', overscrollBehavior: 'contain', borderTop: `1px solid ${bw}`, paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ width: 36, height: 4, background: darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb', borderRadius: 3, margin: '12px auto 0' }} />
@@ -642,7 +655,7 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
                 Recommend a place ✨
               </p>
               <h2 style={{ fontFamily: handwritten, fontSize: 28, fontWeight: 700, color: tp, margin: '4px 0 0' }}>
-                Share a favorite spot
+                Share a favorite spot ✨
               </h2>
             </div>
             <button
@@ -728,7 +741,7 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
               <span style={{ fontSize: 12, fontWeight: 600, color: tp }}>Photo</span>
               {form.restaurant_image ? (
                 <button
-                  onClick={openPhotoPicker}
+                  onClick={() => openPhotoPicker('upload')}
                   type="button"
                   className="relative block w-full overflow-hidden rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-slate-900 text-left transition-all hover:shadow-lg"
                 >
@@ -752,23 +765,42 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
                   </div>
                 </button>
               ) : (
-                <button
-                  onClick={openPhotoPicker}
-                  type="button"
-                  className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30 transition-all flex flex-col items-center justify-center gap-2"
-                >
+                <div className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30 transition-all flex flex-col items-center justify-center gap-3">
                   <Camera className="w-8 h-8 text-stone-500 dark:text-stone-400" />
                   <span className="font-semibold text-stone-700 dark:text-stone-300">
                     Add Photos
                   </span>
-                  <span className="text-sm text-stone-500 dark:text-stone-400">
-                    Tap to select from your device
+                  <span className="text-sm text-stone-500 dark:text-stone-400 text-center px-4">
+                    Upload from your device or take a picture
                   </span>
-                </button>
+                  <div className="flex flex-wrap justify-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => openPhotoPicker('upload')}
+                      className="px-4 py-2 rounded-full border border-stone-300 bg-white/80 text-stone-700 text-sm font-semibold hover:bg-white transition-colors"
+                    >
+                      Upload photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openPhotoPicker('camera')}
+                      className="px-4 py-2 rounded-full border border-stone-300 bg-white/80 text-stone-700 text-sm font-semibold hover:bg-white transition-colors"
+                    >
+                      Use camera
+                    </button>
+                  </div>
+                </div>
               )}
 
               <input
-                ref={fileInputRef}
+                ref={photoUploadRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImagePick}
+                className="hidden"
+              />
+              <input
+                ref={photoCameraRef}
                 type="file"
                 accept="image/*"
                 capture="environment"
