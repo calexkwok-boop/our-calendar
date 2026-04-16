@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import MoviesPage from "./MoviesPage";
 import BoardGamePage from "./BoardGamePage";
 import RestaurantPage from "./RestaurantPage";
+import HikingPage from "./HikingPage";
 
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
@@ -192,6 +193,8 @@ function CommunityCard({ post, onPageTap, onPlanEvent }) {
               if (post.type === "games") {
                 if (i === 0) onPageTap?.("games");
                 else onPlanEvent?.({ title: `Game night: ${post.cardTitle}` });
+              } else if (post.type === "hiking") {
+                if (i === 0) onPageTap?.("hiking");
               }
             }}
             className={`text-xs font-medium px-3.5 py-1.5 rounded-xl active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"}`}
@@ -303,7 +306,7 @@ function CategoryGrid({ onPageTap }) {
   const cats = [
     { key: 'movies',      icon: '🎬', label: 'Movies',            page: 'movies' },
     { key: 'games',       icon: '🎲', label: 'Board Games',       page: 'games' },
-    { key: 'hiking',      icon: '🥾', label: 'Hiking & Outdoors', page: null },
+    { key: 'hiking',      icon: '🥾', label: 'Hiking & Outdoors', page: 'hiking' },
     { key: 'restaurants', icon: '🍜', label: 'Restaurants',       page: 'restaurants' },
   ];
   return (
@@ -349,6 +352,9 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
 
   if (activePage === "movies") {
     return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onPlanEvent={onPlanEvent} />;
+  }
+  if (activePage === "hiking") {
+    return <HikingPage onBack={() => setActivePage(null)} />;
   }
   if (activePage === "games") {
     return <BoardGamePage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} darkMode={darkMode} />;

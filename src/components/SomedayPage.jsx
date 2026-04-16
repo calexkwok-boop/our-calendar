@@ -615,7 +615,7 @@ const SomedayPage = ({
               {(!ownerName || ownerName === currentUser) ? '✦ Your Someday' : `${ownerName}'s Someday`}
             </h1>
               <p style={{ fontSize: 11, color: ts, margin: '3px 0 0', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 500 }}>
-                {pins.length} things pinned
+                {pins.filter(p => p.type !== 'label' && p.type !== 'sticker').length} things pinned
               </p>
             </div>
           </div>
