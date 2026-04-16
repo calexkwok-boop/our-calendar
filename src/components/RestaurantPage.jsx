@@ -1461,7 +1461,7 @@ const RestaurantPage = ({
                               <path d="M2 5H8M8 5L5.5 2.5M8 5L5.5 7.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
                           </span>
-                          <span style={{ fontFamily: handwritten }}>Share a spot 🍽️</span>
+                          <span style={{ fontFamily: handwritten }}>Share a spot ✨</span>
                         </button>
                       </div>
                     </div>

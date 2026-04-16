@@ -9511,6 +9511,7 @@ useEffect(() => {
 
       const recoverStoredAvatar = async () => {
         const candidatePrefixes = [
+          `${userId}`,
           `${PROFILE_PHOTO_STORAGE_PREFIX}/${userId}`,
           `layer-media/${layerId}`,
           `${layerId}`,
@@ -9527,11 +9528,11 @@ useEffect(() => {
               sortBy: { column: 'name', order: 'desc' },
             });
             if (error) continue;
-            const iconFile = (data || [])
-              .filter((entry) => /^icon_/i.test(String(entry?.name || '')))
+            const avatarFile = (data || [])
+              .filter((entry) => /^(avatar|profile|icon_)/i.test(String(entry?.name || '')) || String(entry?.name || '').toLowerCase() === 'avatar')
               .sort((a, b) => Number(new Date(b?.created_at || b?.updated_at || 0)) - Number(new Date(a?.created_at || a?.updated_at || 0)))[0];
-            if (!iconFile) continue;
-            const objectPath = `${prefix}/${String(iconFile.name || '').trim()}`;
+            if (!avatarFile) continue;
+            const objectPath = `${prefix}/${String(avatarFile.name || '').trim()}`;
             const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(objectPath);
             const recoveredUrl = normalizeProfilePhotoUrl(urlData?.publicUrl || '');
             if (!recoveredUrl || cancelled) return;
@@ -10078,14 +10079,11 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
       // ── Avatar upload: dedicated public `avatars` bucket, user-scoped path ──
       if (mediaKind === 'icon') {
-        const oldAvatarUrl = String(
-          profilePhotoOverrideUrl || user?.user_metadata?.avatar_url || ''
-        ).trim();
-        const avatarPath = `${String(user.id).trim()}/avatar_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+        const avatarPath = `${String(user.id).trim()}/avatar`;
 
         const { error: uploadErr } = await supabase.storage
           .from(AVATAR_BUCKET)
-          .upload(avatarPath, processedFile, { contentType: processedFile.type || file.type, upsert: false });
+          .upload(avatarPath, processedFile, { contentType: processedFile.type || file.type, upsert: true });
         if (uploadErr) {
           alert(`Could not upload image: ${uploadErr.message || 'Unknown upload error'}`);
           return false;
@@ -10112,15 +10110,6 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
           void supabase.storage.from(AVATAR_BUCKET).remove([avatarPath]);
           alert(`Could not save profile photo: ${authError.message || 'Unknown error'}`);
           return false;
-        }
-
-        // Profile saved — now safe to delete the previous avatar (only if it lived in avatars bucket)
-        if (oldAvatarUrl) {
-          const avatarPublicPrefix = `${SUPABASE_URL}/storage/v1/object/public/${AVATAR_BUCKET}/`;
-          if (oldAvatarUrl.startsWith(avatarPublicPrefix)) {
-            const oldPath = oldAvatarUrl.slice(avatarPublicPrefix.length);
-            void supabase.storage.from(AVATAR_BUCKET).remove([oldPath]);
-          }
         }
 
         const nextUser = authData?.user || { ...user, user_metadata: nextMetadata };

@@ -1099,7 +1099,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
                 <path d="M2 5H8M8 5L5.5 2.5M8 5L5.5 7.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </span>
-            Share something you love 🛍️
+            Share something you love ✨
           </button>
         </div>
 
