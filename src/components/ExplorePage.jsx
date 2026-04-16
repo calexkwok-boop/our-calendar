@@ -207,7 +207,7 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday }) {
                     imageUrl: "",
                   });
                 }
-                setInSomeday(true);
+                setInSomeday(v => !v);
               } else {
                 if (post.type === "games")            onPlanEvent?.({ title: `Game night: ${post.cardTitle}` });
                 else if (post.type === "hiking")      onPageTap?.("hiking");
