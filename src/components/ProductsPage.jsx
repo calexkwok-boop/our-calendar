@@ -61,8 +61,8 @@ function getCategoryForProduct(name = "") {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function ProductCard({ product, onWishlist, wishlisted, onPost }) {
-  const isWished = wishlisted.has(product.id);
+function ProductCard({ product, onSomeday, savedIds, onPost }) {
+  const isWished = savedIds.has(product.id);
   const category = getCategoryForProduct(product.name);
 
   return (
@@ -113,14 +113,14 @@ function ProductCard({ product, onWishlist, wishlisted, onPost }) {
 
         <div className="flex gap-2">
           <button
-            onClick={() => onWishlist(product)}
+            onClick={() => onSomeday(product)}
             className={`flex-1 rounded-xl py-2 text-xs font-medium transition-all duration-200 border ${
               isWished
-                ? "bg-violet-400/20 border-violet-400/35 text-violet-300"
-                : "bg-violet-400/8 border-violet-400/20 text-violet-400 hover:bg-violet-400/15"
+                ? "bg-teal-400/20 border-teal-400/35 text-teal-300"
+                : "bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15"
             }`}
           >
-            {isWished ? "✓ Saved" : "+ Wishlist"}
+            {isWished ? "✓ Someday" : "+ Someday"}
           </button>
           <button
             onClick={() => onPost(product)}
@@ -311,7 +311,7 @@ function PostProductModal({ product, onClose, onSubmit }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function ProductsPage({ onBack } = {}) {
+export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
   const [searchQuery,    setSearchQuery]    = useState("");
   const [products,       setProducts]       = useState([]);
@@ -407,29 +407,23 @@ export default function ProductsPage({ onBack } = {}) {
   };
 
   // ── Wishlist save ──
-  const handleWishlist = async (product) => {
+  const handleSomeday = (product) => {
     setWishlistedIds((prev) => {
       const next = new Set(prev);
-      next.has(product.id) ? next.delete(product.id) : next.add(product.id);
+      if (next.has(product.id)) { next.delete(product.id); return next; }
+      next.add(product.id);
       return next;
     });
-
-    // TODO: persist to Supabase
-    // const isWished = wishlistedIds.has(product.id);
-    // if (!isWished) {
-    //   await supabase.from('wishlist_items').insert({
-    //     user_id: currentUserId,
-    //     product_asin: product.id,
-    //     product_name: product.name,
-    //     product_image: product.image,
-    //     product_price: product.price,
-    //     amazon_url: product.amazonUrl,
-    //   });
-    // } else {
-    //   await supabase.from('wishlist_items').delete()
-    //     .match({ user_id: currentUserId, product_asin: product.id });
-    // }
+    if (!wishlistedIds.has(product.id)) {
+      onAddToSomeday?.({
+        title:    product.name,
+        imageUrl: product.image || "",
+        emoji:    "🛍️",
+        type:     "products",
+      });
+    }
   };
+
 
   // ── Post a product ──
   const handlePostSubmit = async ({ product, review, category }) => {
@@ -623,8 +617,8 @@ export default function ProductsPage({ onBack } = {}) {
               <ProductCard
                 key={product.id}
                 product={product}
-                onWishlist={handleWishlist}
-                wishlisted={wishlistedIds}
+                onSomeday={handleSomeday}
+                savedIds={wishlistedIds}
                 onPost={setPostingProduct}
               />
             ))}

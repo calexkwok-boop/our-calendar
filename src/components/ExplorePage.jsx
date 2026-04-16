@@ -365,7 +365,7 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
     return <HikingPage onBack={() => setActivePage(null)} />;
   }
   if (activePage === "products") {
-    return <ProductsPage onBack={() => setActivePage(null)} />;
+    return <ProductsPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} />;
   }
   if (activePage === "games") {
     return <BoardGamePage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} darkMode={darkMode} />;

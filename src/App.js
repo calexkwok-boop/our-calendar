@@ -29505,7 +29505,7 @@ transform: translateY(0);
                   if (!text) return;
                   const posterPath = post?.poster_path || '';
                   const photoUrl = posterPath ? `https://image.tmdb.org/t/p/w342${posterPath}` : (post?.imageUrl || '');
-                  const emoji = post?.emoji || (post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : '✨');
+                  const emoji = post?.emoji || (post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : post?.type === 'products' ? '🛍️' : '✨');
                   const category = post?.categoryId === 'food' || post?.type === 'restaurants' ? 'food' : post?.type === 'movies' ? 'fun' : post?.type === 'hiking' ? 'adventure' : post?.type === 'games' ? 'fun' : 'fun';
                   setBucketList((prev) => {
                     const alreadyExists = prev.some(d => d.text === text && d.emoji === emoji);
