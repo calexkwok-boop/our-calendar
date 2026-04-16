@@ -854,13 +854,16 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
 
           <div className="relative z-10">
           {onBack && (
-            <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors mb-4 relative z-10">
-              ← Back
+            <button
+              onClick={onBack}
+              className="w-9 h-9 rounded-xl bg-stone-100 dark:bg-white/5 flex items-center justify-center text-gray-600 dark:text-gray-300 active:opacity-70 flex-shrink-0 mb-4"
+              aria-label="Back"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
           )}
-          <p className="text-[10px] uppercase tracking-[0.15em] text-violet-500 mb-2 opacity-80">
-            Explore · Products
-          </p>
           <h1 className={`font-['Caveat'] text-5xl font-bold leading-tight mb-2 bg-gradient-to-r bg-clip-text text-transparent ${dm ? 'from-slate-100 to-violet-300' : 'from-slate-800 to-violet-600'}`}>
             Find your next favorite thing
           </h1>

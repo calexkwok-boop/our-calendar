@@ -438,7 +438,6 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
         <div className={`relative bg-gradient-to-br rounded-3xl p-8 mb-6 overflow-hidden border ${dm ? 'from-[#0f2027] via-[#162b3a] to-[#0e1520] border-white/5' : 'from-slate-50 via-teal-50 to-slate-50 border-teal-100'}`}>
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_80%_20%,rgba(45,212,191,0.08),transparent)]" />
           <div className="absolute right-8 top-6 text-8xl opacity-10 rotate-12 select-none">🏔️</div>
-          <p className="text-[10px] uppercase tracking-[0.15em] text-teal-500 mb-2 opacity-80">Explore · Hiking</p>
           <h1 className={`font-['Caveat'] text-5xl font-bold leading-tight mb-2 bg-gradient-to-r bg-clip-text text-transparent ${dm ? 'from-slate-100 to-teal-300' : 'from-slate-800 to-teal-600'}`}>
             Hit the trails
           </h1>
