@@ -181,7 +181,7 @@ function MovieCard({ movie, onAddToSomeday, onPageTap }) {
 
 const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", products: "🛍️" };
 
-function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday }) {
+function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveFromSomeday }) {
   const [inSomeday, setInSomeday] = useState(false);
 
   return (
@@ -205,6 +205,12 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday }) {
                     emoji:    TYPE_EMOJI[post.type] || "✨",
                     type:     post.type,
                     imageUrl: "",
+                  });
+                } else {
+                  onRemoveFromSomeday?.({
+                    title: post.cardTitle,
+                    emoji: TYPE_EMOJI[post.type] || "✨",
+                    type:  post.type,
                   });
                 }
                 setInSomeday(v => !v);
@@ -351,7 +357,7 @@ function CategoryGrid({ onPageTap }) {
   );
 }
 
-export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, darkMode = false }) {
+export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPlanEvent = () => {}, darkMode = false }) {
   const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true, products: true });
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [search, setSearch]               = useState("");
@@ -430,7 +436,7 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
   function renderCard(post) {
     if (post.type === 'movies') return <MovieCard key={`movie-${post.id}`} movie={post} onAddToSomeday={onAddToSomeday} onPageTap={setActivePage} />;
     if (post.type === 'friends') return <FriendCard key={post.id} post={post} />;
-    return <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} />;
+    return <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} />;
   }
 
   function toggleSource(key) { setSources(prev => ({ ...prev, [key]: !prev[key] })); }

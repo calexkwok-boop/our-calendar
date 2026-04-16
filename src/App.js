@@ -29524,6 +29524,11 @@ transform: translateY(0);
                     ];
                   });
                 }}
+                onRemoveFromSomeday={(post) => {
+                  const text = String(post?.title || '').trim();
+                  const emoji = post?.emoji || (post?.type === 'movies' ? '🎬' : post?.type === 'hiking' ? '⛰️' : post?.type === 'restaurants' ? '🍽️' : post?.type === 'games' ? '🎲' : post?.type === 'products' ? '🛍️' : '✨');
+                  setBucketList((prev) => (Array.isArray(prev) ? prev : []).filter(d => !(d.text === text && d.emoji === emoji)));
+                }}
                 onPlanEvent={(hint) => openHomeAddEventModal(hint)}
               />
 
