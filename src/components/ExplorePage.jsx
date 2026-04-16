@@ -125,7 +125,7 @@ function FriendCard({ post }) {
   );
 }
 
-function MovieCard({ movie, onAddToSomeday, onPageTap }) {
+function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap }) {
   const [inSomeday, setInSomeday] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null;
@@ -135,8 +135,12 @@ function MovieCard({ movie, onAddToSomeday, onPageTap }) {
 
   function handleSomeday(e) {
     e.stopPropagation();
+    if (!inSomeday) {
+      onAddToSomeday?.(movie);
+    } else {
+      onRemoveFromSomeday?.({ title: movie.title, emoji: '🎬', type: 'movies' });
+    }
     setInSomeday(v => !v);
-    if (!inSomeday) onAddToSomeday?.(movie);
   }
 
   return (
@@ -434,7 +438,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   })();
 
   function renderCard(post) {
-    if (post.type === 'movies') return <MovieCard key={`movie-${post.id}`} movie={post} onAddToSomeday={onAddToSomeday} onPageTap={setActivePage} />;
+    if (post.type === 'movies') return <MovieCard key={`movie-${post.id}`} movie={post} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} onPageTap={setActivePage} />;
     if (post.type === 'friends') return <FriendCard key={post.id} post={post} />;
     return <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} />;
   }
