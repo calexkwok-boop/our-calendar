@@ -396,7 +396,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
     return <BoardGamePage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} darkMode={darkMode} />;
   }
   if (activePage === "restaurants") {
-    return <RestaurantPage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onSaveToSomeday={onAddToSomeday} darkMode={darkMode} />;
+    return <RestaurantPage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onSaveToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} darkMode={darkMode} />;
   }
 
   const anyOff        = Object.values(sources).some(v => !v);

@@ -340,12 +340,16 @@ const RestaurantCard = ({ restaurant, onTap, savedIds, darkMode, stagger }) => {
 };
 
 // ─── skeleton card ────────────────────────────────────────────────────────────
-const FeaturedRestaurantRecommendation = React.memo(({ post, onSomeday, darkMode }) => {
+const FeaturedRestaurantRecommendation = React.memo(({ post, onSomeday, onRemoveFromSomeday, darkMode }) => {
   const bg = darkMode ? '#161f30' : '#ffffff';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
   const tp = darkMode ? '#f1f5f9' : '#111827';
   const ts = darkMode ? '#6b7280' : '#9ca3af';
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setSaved(false);
+  }, [post?.id]);
 
   return (
     <div style={{ background: bg, borderRadius: 24, border: `1px solid ${bw}`, overflow: 'hidden' }}>
@@ -396,11 +400,16 @@ const FeaturedRestaurantRecommendation = React.memo(({ post, onSomeday, darkMode
           )}
           <button
             onClick={() => {
-              if (saved) return;
+              const payload = restaurantSomedayPayload(post);
+              if (saved) {
+                onRemoveFromSomeday?.(payload);
+                setSaved(false);
+                return;
+              }
               setSaved(true);
               onSomeday?.(post);
             }}
-            style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 13, fontWeight: 700, cursor: saved ? 'default' : 'pointer' }}
+            style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
           >
             {saved ? '✓ Saved' : '+ Add to Someday'}
           </button>
@@ -749,6 +758,7 @@ const RestaurantPage = ({
   userLocation = null,
   onAddEvent,
   onSaveToSomeday,
+  onRemoveFromSomeday,
   onBack,
   darkMode = false,
 }) => {
@@ -1148,6 +1158,7 @@ const RestaurantPage = ({
             <FeaturedRestaurantRecommendation
               post={recommendedPosts[0]}
               onSomeday={handleSomedayFromRecommendation}
+              onRemoveFromSomeday={onRemoveFromSomeday}
               darkMode={darkMode}
             />
           </div>
