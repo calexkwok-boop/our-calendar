@@ -1319,7 +1319,7 @@ const RestaurantPage = ({
     }
   };
 
-  const resolveLocationSearch = useCallback(async (query) => {
+  const resolveLocationSearch = useCallback(async (query, restaurantQuery = search) => {
     const trimmed = query.trim();
     if (!trimmed) return;
 
@@ -1359,7 +1359,7 @@ const RestaurantPage = ({
           setLocationLabel(label);
           setLocationSearch(label);
           setLocationSuggestions([]);
-          fetchRestaurants(loc, search, radius);
+          fetchRestaurants(loc, restaurantQuery, radius);
           return;
         }
       }
@@ -1383,7 +1383,7 @@ const RestaurantPage = ({
         setLocationLabel(label);
         setLocationSearch(label);
         setLocationSuggestions([]);
-        fetchRestaurants(loc, search, radius);
+        fetchRestaurants(loc, restaurantQuery, radius);
         return;
       }
 
@@ -1394,6 +1394,29 @@ const RestaurantPage = ({
       setLocSearching(false);
     }
   }, [apiKey, fetchRestaurants, radius, search]);
+
+  const handleCuisineChipClick = async (nextCuisine) => {
+    const selectedCuisine = nextCuisine === cuisine ? 'all' : nextCuisine;
+    setCuisine(selectedCuisine);
+
+    const cuisineLabel = CUISINE_FILTERS.find(c => c.id === selectedCuisine)?.label || '';
+
+    if (selectedCuisine === 'all') {
+      if (locationSearch.trim()) {
+        await resolveLocationSearch(locationSearch);
+      } else {
+        fetchRestaurants(location, search, radius);
+      }
+      return;
+    }
+
+    if (locationSearch.trim()) {
+      await resolveLocationSearch(locationSearch, cuisineLabel);
+      return;
+    }
+
+    fetchRestaurants(location, cuisineLabel, radius);
+  };
 
   // Re-trigger device geolocation
   const useMyLocation = () => {
@@ -1687,7 +1710,7 @@ const RestaurantPage = ({
           {CUISINE_FILTERS.map(c => (
             <button
               key={c.id}
-              onClick={() => setCuisine(c.id === cuisine ? 'all' : c.id)}
+              onClick={() => handleCuisineChipClick(c.id)}
               style={{ flexShrink: 0, padding: '5px 13px', borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: 'pointer', transition: 'all .15s', background: cuisine === c.id ? (darkMode ? 'rgba(168,85,247,0.2)' : 'rgba(168,85,247,0.12)') : (darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6'), color: cuisine === c.id ? (darkMode ? '#c4b5fd' : '#7c3aed') : ts, border: cuisine === c.id ? `1px solid ${darkMode ? 'rgba(168,85,247,0.4)' : 'rgba(168,85,247,0.3)'}` : `1px solid ${bw}` }}
             >
               {c.emoji} {c.label}
