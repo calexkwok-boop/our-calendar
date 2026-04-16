@@ -478,14 +478,14 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[11010] flex items-end sm:items-center justify-center p-4 overflow-y-auto">
       <div className={`border rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col ${dm ? 'bg-[#161f30] border-white/10' : 'bg-white border-slate-200'}`}>
         <div className="flex items-center justify-between px-6 pt-6">
-          <h2 className={`font-['Caveat'] text-2xl font-bold ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Share this product</h2>
+          <h2 className={`font-['Caveat'] text-2xl font-bold ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Share something you love</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
         </div>
 
-        <div className="px-6 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-4 grid gap-5 overflow-y-auto flex-1">
+        <div className="px-6 pt-4 grid gap-5 overflow-y-auto flex-1">
           <div className={`overflow-hidden rounded-3xl border ${dm ? 'border-white/10 bg-[#0e1520]' : 'border-slate-200 bg-slate-50'}`}>
             <div className="grid md:grid-cols-[1.1fr_0.9fr]">
               <div className={`min-h-[240px] ${dm ? 'bg-[#1a2540]' : 'bg-slate-100'} relative`}>
@@ -659,10 +659,13 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
             </div>
           </div>
 
+        </div>
+
+        <div className={`px-6 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] border-t ${dm ? 'border-white/10 bg-[#161f30]' : 'border-slate-200 bg-white'}`}>
           <button
             onClick={handleSubmit}
             disabled={!draft.review.trim() || submitting}
-            className="w-full bg-violet-500 hover:bg-violet-400 disabled:opacity-40 text-white rounded-2xl py-3 text-sm font-handwritten font-bold transition-colors sticky bottom-0"
+            className="w-full bg-violet-500 hover:bg-violet-400 disabled:opacity-40 text-white rounded-2xl py-3 text-sm font-handwritten font-bold transition-colors"
           >
             {submitting ? "Posting…" : "Share with friends"}
           </button>

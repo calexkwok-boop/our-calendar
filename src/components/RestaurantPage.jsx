@@ -850,7 +850,7 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: 'none', background: submitting ? 'rgba(20,184,166,0.45)' : '#14b8a6', color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: handwritten, cursor: submitting ? 'default' : 'pointer' }}
+              style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: 'none', background: submitting ? 'rgba(201,161,93,0.45)' : '#C9A15D', color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: handwritten, cursor: submitting ? 'default' : 'pointer' }}
             >
               {submitting ? 'Posting…' : 'Recommend a place'}
             </button>
