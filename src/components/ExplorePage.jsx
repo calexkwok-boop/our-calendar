@@ -182,6 +182,8 @@ function MovieCard({ movie, onAddToSomeday, onPageTap }) {
 const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", products: "🛍️" };
 
 function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday }) {
+  const [inSomeday, setInSomeday] = useState(false);
+
   return (
     <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
       <CardHeader post={post} onPageTap={onPageTap} />
@@ -197,24 +199,29 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday }) {
             key={a}
             onClick={() => {
               if (i === 0) {
-                // "Add to someday" — first button on all community cards
-                onAddToSomeday?.({
-                  title:    post.cardTitle,
-                  emoji:    TYPE_EMOJI[post.type] || "✨",
-                  type:     post.type,
-                  imageUrl: "",
-                });
+                if (!inSomeday) {
+                  onAddToSomeday?.({
+                    title:    post.cardTitle,
+                    emoji:    TYPE_EMOJI[post.type] || "✨",
+                    type:     post.type,
+                    imageUrl: "",
+                  });
+                }
+                setInSomeday(true);
               } else {
-                // Second button — type-specific action
-                if (post.type === "games")       onPlanEvent?.({ title: `Game night: ${post.cardTitle}` });
+                if (post.type === "games")            onPlanEvent?.({ title: `Game night: ${post.cardTitle}` });
                 else if (post.type === "hiking")      onPageTap?.("hiking");
                 else if (post.type === "restaurants") onPageTap?.("restaurants");
                 else if (post.type === "products")    onPageTap?.("products");
               }
             }}
-            className={`text-xs font-medium px-3.5 py-1.5 rounded-xl active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"}`}
+            className={`text-xs font-medium px-3.5 py-1.5 rounded-xl active:opacity-70 ${
+              i === 0
+                ? inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"
+                : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"
+            }`}
           >
-            {a}
+            {i === 0 ? (inSomeday ? "✓ In someday list" : a) : a}
           </button>
         ))}
         <VoteButtons initialVotes={post.votes} />
