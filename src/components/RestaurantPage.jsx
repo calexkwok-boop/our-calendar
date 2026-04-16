@@ -1155,21 +1155,13 @@ const RestaurantPage = ({
 
         {/* ── Recommendation CTA ── */}
         <div style={{ padding: '0 16px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, borderRadius: 22, padding: '16px 16px 16px 18px', background: darkMode ? 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(20,184,166,0.08))' : 'linear-gradient(135deg, rgba(250,245,255,0.95), rgba(240,253,250,0.9))', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e9d5ff'}` }}>
-            <div style={{ width: 42, height: 42, borderRadius: 14, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-              ✨
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <h3 style={{ fontFamily: handwritten, fontSize: 22, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp }}>
-                Found a great spot?
-              </h3>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: ts, lineHeight: 1.5 }}>
-                Share it with your friends — tell them why it’s worth going.
-              </p>
-            </div>
+          <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10, borderRadius: 18, padding: '12px 14px', background: darkMode ? 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(20,184,166,0.08))' : 'linear-gradient(135deg, rgba(250,245,255,0.95), rgba(240,253,250,0.9))', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e9d5ff'}`, maxWidth: 260 }}>
+            <h3 style={{ fontFamily: handwritten, fontSize: 18, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp }}>
+              Found a great spot?
+            </h3>
             <button
               onClick={() => setIsRecommendOpen(true)}
-              style={{ padding: '10px 14px', borderRadius: 14, border: 'none', background: '#14b8a6', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '9px 12px', borderRadius: 12, border: 'none', background: '#14b8a6', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               Recommend a place ✨
             </button>
