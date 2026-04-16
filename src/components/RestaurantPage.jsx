@@ -528,7 +528,7 @@ const RestaurantPage = ({
   const ts     = darkMode ? '#6b7280' : '#9ca3af';
 
   return (
-    <div style={{ minHeight: '100vh', background: pageBg, fontFamily: 'var(--font-sans, system-ui, sans-serif)' }}>
+    <div style={{ minHeight: '100vh', background: pageBg, fontFamily: 'var(--font-sans, system-ui, sans-serif)', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap');
         @keyframes fadeUp { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:translateY(0) } }
