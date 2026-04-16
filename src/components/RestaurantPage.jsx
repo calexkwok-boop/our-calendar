@@ -957,6 +957,7 @@ const RestaurantPage = ({
   const [savedIds, setSavedIds]       = useState(new Set());
   const [currentUserId, setCurrentUserId] = useState(null);
   const [recommendedPosts, setRecommendedPosts] = useState([]);
+  const [highlightedRestaurantId, setHighlightedRestaurantId] = useState(null);
   const [isRecommendOpen, setIsRecommendOpen] = useState(false);
   const [location, setLocation]       = useState(userLocation || { lat: 34.0522, lng: -118.2437 }); // default LA
   const [locationSearch, setLocationSearch] = useState('');
@@ -1223,6 +1224,7 @@ const RestaurantPage = ({
 
     if (data) {
       setRecommendedPosts((prev) => [data, ...prev.filter((post) => String(post.id) !== String(data.id))]);
+      setHighlightedRestaurantId(String(data.id));
       window.setTimeout(() => {
         communityFeedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 120);
@@ -1554,13 +1556,27 @@ const RestaurantPage = ({
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {recommendedPosts.map((post) => (
-            <RestaurantRecommendationCard
+            <div
               key={post.id}
-              post={post}
-              currentUserId={currentUserId}
-              onSomeday={handleSomedayFromRecommendation}
-              darkMode={darkMode}
-            />
+              style={{
+                borderRadius: 20,
+                padding: post.id === highlightedRestaurantId ? 2 : 0,
+                background: post.id === highlightedRestaurantId
+                  ? 'linear-gradient(135deg, rgba(201,161,93,0.28), rgba(216,179,106,0.10))'
+                  : 'transparent',
+                boxShadow: post.id === highlightedRestaurantId
+                  ? '0 0 0 1px rgba(201,161,93,0.18), 0 10px 30px rgba(201,161,93,0.12)'
+                  : 'none',
+                transition: 'all .2s ease',
+              }}
+            >
+              <RestaurantRecommendationCard
+                post={post}
+                currentUserId={currentUserId}
+                onSomeday={handleSomedayFromRecommendation}
+                darkMode={darkMode}
+              />
+            </div>
           ))}
         </div>
       </div>
