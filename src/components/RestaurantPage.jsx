@@ -70,6 +70,13 @@ const PRICE_FILTERS = [
   { id: '4',   label: '$$$$' },
 ];
 
+const normalizeCuisineId = (value = '') => {
+  const v = value.trim().toLowerCase();
+  if (!v) return '';
+  const match = CUISINE_FILTERS.find(c => c.id === v || c.label.toLowerCase() === v);
+  return match?.id || '';
+};
+
 const SORT_OPTIONS = [
   { id: 'prominence', label: 'Best match' },
   { id: 'rating',     label: 'Top rated' },
@@ -275,12 +282,15 @@ const RestaurantDetailSheet = ({ restaurant, onAddEvent, onSaveToSomeday, onClos
 };
 
 // ─── Restaurant Card ──────────────────────────────────────────────────────────
-const RestaurantCard = ({ restaurant, onTap, savedIds, darkMode, stagger }) => {
+const RestaurantCard = ({ restaurant, onTap, savedIds, darkMode, stagger, onVote }) => {
   const bg  = darkMode ? '#161f30' : '#ffffff';
   const bdr = darkMode ? 'transparent' : '#e5e7eb';
   const tp  = darkMode ? '#f1f5f9' : '#111827';
   const ts  = darkMode ? '#6b7280' : '#9ca3af';
   const saved = savedIds.has(restaurant.id);
+  const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
+  const vote = restaurant.my_vote ?? 0;
+  const votes = restaurant.vote_count ?? 0;
 
   const photoBg = darkMode ? 'rgba(99,102,241,0.08)' : '#f5f3ff';
 
@@ -334,6 +344,52 @@ const RestaurantCard = ({ restaurant, onTap, savedIds, darkMode, stagger }) => {
             <span style={{ fontSize: 11, color: ts, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', marginTop: 1 }}>{restaurant.address}</span>
           </div>
         )}
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onVote?.(restaurant, vote === 1 ? 0 : 1);
+              }}
+              style={{
+                padding: '6px 8px',
+                borderRadius: 10,
+                border: `1px solid ${vote === 1 ? 'rgba(34,197,94,0.28)' : bw}`,
+                background: vote === 1 ? 'rgba(34,197,94,0.12)' : 'transparent',
+                color: vote === 1 ? '#16a34a' : ts,
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+              aria-label="Upvote restaurant result"
+            >
+              ▲
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onVote?.(restaurant, vote === -1 ? 0 : -1);
+              }}
+              style={{
+                padding: '6px 8px',
+                borderRadius: 10,
+                border: `1px solid ${vote === -1 ? 'rgba(239,68,68,0.28)' : bw}`,
+                background: vote === -1 ? 'rgba(239,68,68,0.12)' : 'transparent',
+                color: vote === -1 ? '#dc2626' : ts,
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+              aria-label="Downvote restaurant result"
+            >
+              ▼
+            </button>
+          </div>
+          <span style={{ fontSize: 11, color: ts, fontWeight: 600 }}>{votes} votes</span>
+        </div>
       </div>
     </div>
   );
@@ -1155,9 +1211,47 @@ const RestaurantPage = ({
     }
   }, []);
 
+  const hydrateRestaurantVotes = useCallback(async (items) => {
+    const placeIds = items.map(item => item.googlePlaceId || item.id).filter(Boolean);
+    if (placeIds.length === 0) return items;
+
+    const { data: voteRows, error } = await supabase
+      .from('google_restaurant_votes')
+      .select('google_place_id, user_id, vote')
+      .in('google_place_id', placeIds);
+
+    if (error || !Array.isArray(voteRows)) return items;
+
+    const byPlace = new Map();
+    for (const row of voteRows) {
+      const key = row.google_place_id;
+      const current = byPlace.get(key) || { vote_count: 0, my_vote: 0 };
+      current.vote_count += row.vote || 0;
+      if (currentUserId && row.user_id && String(row.user_id) === String(currentUserId)) {
+        current.my_vote = row.vote || 0;
+      }
+      byPlace.set(key, current);
+    }
+
+    return items.map(item => {
+      const stats = byPlace.get(item.googlePlaceId || item.id) || { vote_count: 0, my_vote: 0 };
+      return { ...item, vote_count: stats.vote_count, my_vote: stats.my_vote };
+    });
+  }, [currentUserId]);
+
   useEffect(() => {
     fetchRecommendedPosts();
   }, [fetchRecommendedPosts]);
+
+  useEffect(() => {
+    if (!restaurants.length) return;
+    let active = true;
+    (async () => {
+      const updated = await hydrateRestaurantVotes(restaurants);
+      if (active) setRestaurants(updated);
+    })();
+    return () => { active = false; };
+  }, [currentUserId, hydrateRestaurantVotes]);
 
   useEffect(() => {
     const query = locationSearch.trim();
@@ -1224,10 +1318,12 @@ const RestaurantPage = ({
       }
 
       if (data?.status === 'OK' && data.results?.length > 0) {
+        const queryCuisine = normalizeCuisineId(query);
         const mapped = data.results.map(r => ({
           id: r.place_id,
+          googlePlaceId: r.place_id,
           name: r.name,
-          cuisine: inferCuisine(r.types || [], r.name),
+          cuisine: queryCuisine || inferCuisine(r.types || [], r.name),
           rating: r.rating || 0,
           priceLevel: r.price_level || 0,
           address: r.vicinity || '',
@@ -1240,8 +1336,11 @@ const RestaurantPage = ({
           website: '',
           description: '',
           googlePlaceId: r.place_id,
+          vote_count: 0,
+          my_vote: 0,
         }));
-        setRestaurants(mapped);
+        const hydrated = await hydrateRestaurantVotes(mapped);
+        setRestaurants(hydrated);
       } else {
         throw new Error('no_results');
       }
@@ -1253,7 +1352,7 @@ const RestaurantPage = ({
     } finally {
       setLoading(false);
     }
-  }, [apiKey]);
+  }, [apiKey, hydrateRestaurantVotes]);
 
   // Initial load
   useEffect(() => {
@@ -1546,6 +1645,66 @@ const RestaurantPage = ({
     }
   }, []);
 
+  const handleVoteGoogleRestaurant = useCallback(async (restaurant, nextVote) => {
+    if (!restaurant) return;
+    const placeId = restaurant.googlePlaceId || restaurant.id;
+    if (!placeId) return;
+
+    const prevVote = restaurant.my_vote ?? 0;
+    const delta = nextVote - prevVote;
+    if (delta === 0) return;
+
+    const applyLocalVote = () => {
+      setRestaurants(prev => prev.map(item => (
+        (item.id === restaurant.id || item.googlePlaceId === placeId)
+          ? {
+              ...item,
+              vote_count: Math.max(0, (item.vote_count ?? 0) + delta),
+              my_vote: nextVote,
+            }
+          : item
+      )));
+      setSelected(prev => (
+        prev && (prev.id === restaurant.id || prev.googlePlaceId === placeId)
+          ? {
+              ...prev,
+              vote_count: Math.max(0, (prev.vote_count ?? 0) + delta),
+              my_vote: nextVote,
+            }
+          : prev
+      ));
+    };
+
+    if (!currentUserId) {
+      applyLocalVote();
+      return;
+    }
+
+    try {
+      if (nextVote === 0) {
+        const { error } = await supabase
+          .from('google_restaurant_votes')
+          .delete()
+          .eq('user_id', currentUserId)
+          .eq('google_place_id', placeId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('google_restaurant_votes')
+          .upsert({
+            user_id: currentUserId,
+            google_place_id: placeId,
+            restaurant_name: restaurant.name || '',
+            vote: nextVote,
+          }, { onConflict: 'user_id,google_place_id' });
+        if (error) throw error;
+      }
+      applyLocalVote();
+    } catch (error) {
+      console.error(error);
+    }
+  }, [currentUserId]);
+
   const handleDeleteRecommendation = useCallback(async (post) => {
     if (!post?.id) return;
     if (!window.confirm('Delete this recommendation?')) return;
@@ -1811,6 +1970,7 @@ const RestaurantPage = ({
                       savedIds={savedIds}
                       darkMode={darkMode}
                       stagger={i}
+                      onVote={handleVoteGoogleRestaurant}
                     />
                   ))}
 
@@ -1921,6 +2081,7 @@ const RestaurantPage = ({
                       savedIds={savedIds}
                       darkMode={darkMode}
                       stagger={i + topRestaurants.length}
+                      onVote={handleVoteGoogleRestaurant}
                     />
                   ))}
                 </>
