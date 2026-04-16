@@ -154,7 +154,7 @@ function ProductModal({ product, isSaved, onSomeday, onPost, onClose, darkMode }
             )}
             <button
               onClick={() => { onPost(product); onClose(); }}
-              className={`flex-1 rounded-2xl py-3 text-sm font-handwritten font-bold transition-all border ${dm ? 'bg-violet-400/10 border-violet-400/25 text-violet-400 hover:bg-violet-400/20' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
+              className={`flex-1 rounded-2xl py-3 text-sm font-handwritten font-bold transition-all border ${dm ? 'bg-[#C9A15D]/15 border-[#C9A15D]/35 text-[#C9A15D] hover:bg-[#C9A15D]/25' : 'bg-[#FFF8EA] border-[#D8B36A] text-[#8A5A1F] hover:bg-[#FFF3D4]'}`}
             >
               Share with friends
             </button>
