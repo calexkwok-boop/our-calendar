@@ -41,7 +41,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { MapPin, Clock, Phone, ExternalLink, Plus, Search, Star, X, ChevronRight, Navigation } from 'lucide-react';
+import { MapPin, Clock, Phone, ExternalLink, Plus, Search, Star, X, ChevronRight, Navigation, Camera } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -525,8 +525,7 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
   const tp = darkMode ? '#f1f5f9' : '#111827';
   const ts = darkMode ? '#6b7280' : '#9ca3af';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
-  const uploadRef = useRef(null);
-  const cameraRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [form, setForm] = useState({
@@ -558,6 +557,10 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
     const file = event.target.files?.[0];
     readImageFile(file);
     event.target.value = '';
+  };
+
+  const openPhotoPicker = () => {
+    fileInputRef.current?.click();
   };
 
   const handleSubmit = async () => {
@@ -634,46 +637,65 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
 
             <div style={{ display: 'grid', gap: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: tp }}>Photo</span>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {form.restaurant_image ? (
                 <button
+                  onClick={openPhotoPicker}
                   type="button"
-                  onClick={() => uploadRef.current?.click()}
-                  style={{ padding: '10px 12px', borderRadius: 12, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc', color: tp, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  className="relative block w-full overflow-hidden rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-slate-900 text-left transition-all hover:shadow-lg"
                 >
-                  Upload image
+                  <div
+                    className="h-56 w-full bg-cover bg-center"
+                    style={{ backgroundImage: `url(${form.restaurant_image})` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-white">
+                        Photo added
+                      </div>
+                      <div className="mt-1 text-xs text-white/80">
+                        Tap here to change the photo
+                      </div>
+                    </div>
+                    <div className="rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-stone-700 shadow-sm">
+                      Change
+                    </div>
+                  </div>
                 </button>
+              ) : (
                 <button
+                  onClick={openPhotoPicker}
                   type="button"
-                  onClick={() => cameraRef.current?.click()}
-                  style={{ padding: '10px 12px', borderRadius: 12, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc', color: tp, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30 transition-all flex flex-col items-center justify-center gap-2"
                 >
-                  Take a picture
+                  <Camera className="w-8 h-8 text-stone-500 dark:text-stone-400" />
+                  <span className="font-semibold text-stone-700 dark:text-stone-300">
+                    Add Photos
+                  </span>
+                  <span className="text-sm text-stone-500 dark:text-stone-400">
+                    Tap to select from your device
+                  </span>
                 </button>
-                {form.restaurant_image && (
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleImagePick}
+                className="hidden"
+              />
+
+              {form.restaurant_image && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button
                     type="button"
                     onClick={() => updateField('restaurant_image', '')}
-                    style={{ padding: '10px 12px', borderRadius: 12, border: `1px solid ${bw}`, background: 'transparent', color: ts, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                    style={{ padding: '8px 10px', borderRadius: 12, border: `1px solid ${bw}`, background: 'transparent', color: ts, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                   >
-                    Remove
+                    Remove photo
                   </button>
-                )}
-              </div>
-
-              <input ref={uploadRef} type="file" accept="image/*" onChange={handleImagePick} style={{ display: 'none' }} />
-              <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleImagePick} style={{ display: 'none' }} />
-
-              {form.restaurant_image ? (
-                <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.03)' : '#f8fafc' }}>
-                  <img
-                    src={form.restaurant_image}
-                    alt="Selected restaurant"
-                    style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }}
-                  />
-                </div>
-              ) : (
-                <div style={{ borderRadius: 14, border: `1px dashed ${bw}`, padding: '16px 14px', color: ts, fontSize: 12, lineHeight: 1.5 }}>
-                  Add a photo from your device or snap one with your camera. We’ll store it with the post.
                 </div>
               )}
             </div>
@@ -1164,20 +1186,6 @@ const RestaurantPage = ({
           </div>
         )}
 
-        {/* ── Recommendation CTA ── */}
-        <div style={{ padding: '0 16px 14px' }}>
-          <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10, borderRadius: 18, padding: '12px 14px', background: darkMode ? 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(20,184,166,0.08))' : 'linear-gradient(135deg, rgba(250,245,255,0.95), rgba(240,253,250,0.9))', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e9d5ff'}`, maxWidth: 260 }}>
-            <h3 style={{ fontFamily: handwritten, fontSize: 18, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp }}>
-              Found a great spot?
-            </h3>
-            <button
-              onClick={() => setIsRecommendOpen(true)}
-              style={{ padding: '9px 12px', borderRadius: 12, border: 'none', background: '#14b8a6', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-            >
-              Recommend a place ✨
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* ── Grid ── */}
@@ -1197,16 +1205,54 @@ const RestaurantPage = ({
                 </button>
               </div>
             )
-            : filtered.map((r, i) => (
-              <RestaurantCard
-                key={r.id}
-                restaurant={r}
-                onTap={setSelected}
-                savedIds={savedIds}
-                darkMode={darkMode}
-                stagger={i}
-              />
-            ))
+            : (() => {
+              const topRestaurants = filtered.slice(0, 4);
+              const remainingRestaurants = filtered.slice(4);
+              return (
+                <>
+                  {topRestaurants.map((r, i) => (
+                    <RestaurantCard
+                      key={r.id}
+                      restaurant={r}
+                      onTap={setSelected}
+                      savedIds={savedIds}
+                      darkMode={darkMode}
+                      stagger={i}
+                    />
+                  ))}
+
+                  {filtered.length > 0 && (
+                    <div style={{ gridColumn: '1 / -1', margin: '2px 0 2px' }}>
+                      <div style={{ background: darkMode ? 'rgba(245,158,11,0.08)' : 'linear-gradient(135deg, rgba(255,247,237,0.96), rgba(255,237,213,0.88))', border: `1px solid ${darkMode ? 'rgba(245,158,11,0.18)' : '#fdba74'}`, borderRadius: 24, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 32, flexShrink: 0 }}>✨</span>
+                        <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                          <h3 style={{ fontFamily: handwritten, fontSize: 24, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp }}>
+                            Found a great spot?
+                          </h3>
+                        </div>
+                        <button
+                          onClick={() => setIsRecommendOpen(true)}
+                          style={{ marginLeft: 'auto', background: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 16, padding: '11px 16px', fontSize: 14, color: '#fff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        >
+                          Recommend a place →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {remainingRestaurants.map((r, i) => (
+                    <RestaurantCard
+                      key={r.id}
+                      restaurant={r}
+                      onTap={setSelected}
+                      savedIds={savedIds}
+                      darkMode={darkMode}
+                      stagger={i + topRestaurants.length}
+                    />
+                  ))}
+                </>
+              );
+            })()
         }
       </div>
 

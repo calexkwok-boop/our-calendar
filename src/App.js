@@ -67,7 +67,7 @@ process.env.REACT_APP_SUPABASE_ANON_KEY,
 const SUPABASE_URL = String(process.env.REACT_APP_SUPABASE_URL || '').trim().replace(/\/+$/, '');
 const TRIP_PHOTO_BUCKETS = ['trip-photos', 'trip_photos'];
 const PROFILE_PHOTO_STORAGE_PREFIX = 'profile-photos';
-const PROFILE_PHOTO_BUCKETS = ['layer-media', 'layer_media', 'trip-photos', 'trip_photos'];
+const PROFILE_PHOTO_BUCKETS = ['avatars', 'layer-media', 'layer_media', 'trip-photos', 'trip_photos'];
 const AVATAR_BUCKET = 'avatars';
 const TRIP_PHOTO_STORAGE_PROVIDER = String(process.env.REACT_APP_TRIP_PHOTO_STORAGE_PROVIDER || 'supabase').trim().toLowerCase();
 const USE_FIREBASE_TRIP_PHOTO_STORAGE = TRIP_PHOTO_STORAGE_PROVIDER === 'firebase';
