@@ -134,7 +134,7 @@ function ProductCard({ product, onSomeday, savedIds, onPost }) {
   );
 }
 
-function CommunityPost({ post, currentUserId }) {
+function CommunityPost({ post, currentUserId, onAddToSomeday }) {
   const [liked, setLiked]   = useState(post.liked_by_me ?? false);
   const [likes, setLikes]   = useState(post.likes_count ?? 0);
   const [wished, setWished] = useState(false);
@@ -216,14 +216,24 @@ function CommunityPost({ post, currentUserId }) {
           💬 {post.comments_count ?? 0} comments
         </button>
         <button
-          onClick={() => setWished((w) => !w)}
+          onClick={() => {
+            if (!wished) {
+              onAddToSomeday?.({
+                title:    post.product_name,
+                imageUrl: post.product_image || "",
+                emoji:    "🛍️",
+                type:     "products",
+              });
+            }
+            setWished((w) => !w);
+          }}
           className={`ml-auto text-xs px-3 py-1.5 rounded-xl border transition-all duration-200 ${
             wished
-              ? "bg-violet-400/20 border-violet-400/35 text-violet-300"
-              : "bg-violet-400/8 border-violet-400/20 text-violet-400 hover:bg-violet-400/15"
+              ? "bg-teal-400/20 border-teal-400/35 text-teal-300"
+              : "bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15"
           }`}
         >
-          {wished ? "✓ Wishlisted" : "+ Wishlist"}
+          {wished ? "✓ Someday" : "+ Someday"}
         </button>
       </div>
     </div>
@@ -408,13 +418,14 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
 
   // ── Wishlist save ──
   const handleSomeday = (product) => {
+    const alreadySaved = wishlistedIds.has(product.id);
     setWishlistedIds((prev) => {
       const next = new Set(prev);
       if (next.has(product.id)) { next.delete(product.id); return next; }
       next.add(product.id);
       return next;
     });
-    if (!wishlistedIds.has(product.id)) {
+    if (!alreadySaved) {
       onAddToSomeday?.({
         title:    product.name,
         imageUrl: product.image || "",
@@ -656,7 +667,7 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
         </p>
         <div className="flex flex-col gap-2.5">
           {communityPosts.map((post) => (
-            <CommunityPost key={post.id} post={post} currentUserId={currentUserId} />
+            <CommunityPost key={post.id} post={post} currentUserId={currentUserId} onAddToSomeday={onAddToSomeday} />
           ))}
         </div>
 
