@@ -637,8 +637,17 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
     setAddressSuggesting(true);
     const timer = window.setTimeout(async () => {
       try {
-        const res = await fetch(`/api/places?action=autocomplete&input=${encodeURIComponent(query)}`);
-        const data = await res.json();
+        const key = apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || '';
+        let data;
+        try {
+          const res = await fetch(`/api/places?action=autocomplete&input=${encodeURIComponent(query)}`);
+          if (!res.ok) throw new Error('proxy_unavailable');
+          data = await res.json();
+        } catch {
+          if (!key) throw new Error('proxy_unavailable');
+          const direct = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${key}`);
+          data = await direct.json();
+        }
         if (!active) return;
         if (data.status === 'OK' && Array.isArray(data.predictions)) {
           setAddressSuggestions(
@@ -1276,6 +1285,85 @@ const RestaurantPage = ({
     }
   };
 
+  const resolveLocationSearch = useCallback(async (query) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    setLocSearching(true);
+    setError('');
+
+    try {
+      const KEY = apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || '';
+      let data;
+
+      try {
+        const r = await fetch(`/api/geocode?address=${encodeURIComponent(trimmed)}`);
+        if (!r.ok) throw new Error('proxy_unavailable');
+        data = await r.json();
+      } catch {
+        if (!KEY) throw new Error('proxy_unavailable');
+        const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(trimmed)}&key=${KEY}`);
+        data = await r.json();
+      }
+
+      if (data.status === 'OK' && data.results?.[0]) {
+        const { lat, lng } = data.results[0].geometry.location;
+        const loc = { lat, lng };
+        setLocation(loc);
+        setLocationLabel(data.results[0].formatted_address);
+        setLocationSearch('');
+        setLocationSuggestions([]);
+        fetchRestaurants(loc, search, radius);
+        return;
+      }
+
+      const fallbackRes = await fetch(`/api/places?action=autocomplete&input=${encodeURIComponent(trimmed)}`);
+      let fallbackData;
+      try {
+        if (!fallbackRes.ok) throw new Error('proxy_unavailable');
+        fallbackData = await fallbackRes.json();
+      } catch {
+        if (!KEY) throw new Error('proxy_unavailable');
+        const directFallback = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(trimmed)}&key=${KEY}`);
+        fallbackData = await directFallback.json();
+      }
+      const prediction = fallbackData.status === 'OK' && Array.isArray(fallbackData.predictions) ? fallbackData.predictions[0] : null;
+
+      if (!prediction?.place_id) {
+        setError('Location not found — try a different city or address.');
+        return;
+      }
+
+      let detailsData;
+      try {
+        const detailsRes = await fetch(`/api/places?action=details&place_id=${encodeURIComponent(prediction.place_id)}`);
+        if (!detailsRes.ok) throw new Error('proxy_unavailable');
+        detailsData = await detailsRes.json();
+      } catch {
+        if (!KEY) throw new Error('proxy_unavailable');
+        const directDetails = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(prediction.place_id)}&fields=geometry,formatted_address&key=${KEY}`);
+        detailsData = await directDetails.json();
+      }
+      const locDetails = detailsData?.result?.geometry?.location;
+      if (!locDetails?.lat || !locDetails?.lng) {
+        setError('Location not found — try a different city or address.');
+        return;
+      }
+
+      const loc = { lat: locDetails.lat, lng: locDetails.lng };
+      const label = detailsData?.result?.formatted_address || prediction.description || trimmed;
+      setLocation(loc);
+      setLocationLabel(label);
+      setLocationSearch('');
+      setLocationSuggestions([]);
+      fetchRestaurants(loc, search, radius);
+    } catch {
+      setError('Could not look up that location.');
+    } finally {
+      setLocSearching(false);
+    }
+  }, [apiKey, fetchRestaurants, radius, search]);
+
   // Re-trigger device geolocation
   const useMyLocation = () => {
     if (!navigator.geolocation) return;
@@ -1490,7 +1578,7 @@ const RestaurantPage = ({
               type="text"
               value={locationSearch}
               onChange={e => setLocationSearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && geocodeLocation(locationSearch)}
+              onKeyDown={e => e.key === 'Enter' && resolveLocationSearch(locationSearch)}
               placeholder={locationLabel || 'Search a city or address…'}
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: tp }}
             />
@@ -1513,7 +1601,7 @@ const RestaurantPage = ({
                         setLocationSearch(suggestion.description);
                         setLocationLabel(suggestion.description);
                         setLocationSuggestions([]);
-                        geocodeLocation(suggestion.description);
+                        resolveLocationSearch(suggestion.description);
                       }}
                       style={{ width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', borderBottom: `1px solid ${bw}`, background: 'transparent', cursor: 'pointer', color: tp }}
                     >

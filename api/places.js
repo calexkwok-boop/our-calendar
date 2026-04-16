@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     const term = (input || query || '').trim();
     if (!term) return res.status(400).json({ error: 'input required' });
 
-    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(term)}&types=geocode&components=country:us&key=${key}`;
+    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(term)}&key=${key}`;
 
     try {
       const r = await fetch(url);
@@ -64,7 +64,7 @@ export default async function handler(req, res) {
   if (action === 'details' || place_id) {
     if (!place_id) return res.status(400).json({ error: 'place_id required' });
 
-    const fields = 'name,rating,price_level,formatted_address,formatted_phone_number,website,opening_hours,photos,place_id,types,editorial_summary';
+    const fields = 'geometry,name,rating,price_level,formatted_address,formatted_phone_number,website,opening_hours,photos,place_id,types,editorial_summary';
     const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&fields=${fields}&key=${key}`;
 
     try {
