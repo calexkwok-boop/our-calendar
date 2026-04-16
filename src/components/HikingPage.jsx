@@ -7,14 +7,10 @@ const RAPIDAPI_KEY  = process.env.REACT_APP_TRAILAPI_KEY;
 const RAPIDAPI_HOST = "trailapi-trailapi.p.rapidapi.com";
 const GOOGLE_KEY    = process.env.REACT_APP_GOOGLE_MAPS_KEY;
 
-// NOTE: Places textsearch/json is not CORS-enabled for browser requests.
-// In production, proxy requests through your backend or a Cloud Function.
-// The photo URL used as <img src> works fine without CORS restrictions.
-
 const DIFFICULTY_MAP = {
-  1: { label: "Easy",     style: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" },
-  2: { label: "Moderate", style: "bg-amber-500/10   text-amber-400   border border-amber-500/20"   },
-  3: { label: "Hard",     style: "bg-red-500/10     text-red-400     border border-red-500/20"     },
+  1: { label: "Easy",     style: "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" },
+  2: { label: "Moderate", style: "bg-amber-500/10   text-amber-600   border border-amber-500/20"   },
+  3: { label: "Hard",     style: "bg-red-500/10     text-red-600     border border-red-500/20"     },
 };
 
 const FILTERS    = ["All", "Easy", "Moderate", "Hard", "Dog Friendly", "Kid Friendly", "Views"];
@@ -30,45 +26,34 @@ const MOCK_FEED = [
 
 // ─── TrailModal ──────────────────────────────────────────────────────────────
 
-function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose }) {
+function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose, darkMode }) {
+  const dm   = darkMode;
   const diff  = DIFFICULTY_MAP[trail.difficulty] ?? DIFFICULTY_MAP[2];
   const emoji = TRAIL_EMOJIS[trail.id % TRAIL_EMOJIS.length];
 
-  // Lock body scroll while open
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  const handleBackdrop = (e) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
   return createPortal(
     <div
       className="fixed inset-0 z-[10100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
-      onClick={handleBackdrop}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-lg bg-[#0e1520] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border border-white/8 max-h-[92vh] flex flex-col">
+      <div className={`w-full max-w-lg rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border max-h-[92vh] flex flex-col ${dm ? 'bg-[#0e1520] border-white/8' : 'bg-white border-slate-200'}`}>
 
         {/* ── Photo header ── */}
         <div className="relative flex-shrink-0">
           {photoUrl || trail.thumbnail ? (
-            <img
-              src={photoUrl || trail.thumbnail}
-              alt={trail.name}
-              className="w-full h-56 object-cover"
-            />
+            <img src={photoUrl || trail.thumbnail} alt={trail.name} className="w-full h-56 object-cover" />
           ) : (
-            <div className="w-full h-56 flex items-center justify-center text-8xl bg-gradient-to-br from-[#162b3a] to-[#1a3a4a]">
+            <div className={`w-full h-56 flex items-center justify-center text-8xl bg-gradient-to-br ${dm ? 'from-[#162b3a] to-[#1a3a4a]' : 'from-teal-50 to-teal-100'}`}>
               {emoji}
             </div>
           )}
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e1520] via-transparent to-black/20" />
-
-          {/* Close button */}
+          <div className={`absolute inset-0 bg-gradient-to-t ${dm ? 'from-[#0e1520]' : 'from-white/60'} via-transparent to-black/20`} />
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/70 transition-all"
@@ -77,8 +62,6 @@ function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose }) {
               <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
-
-          {/* Difficulty badge over image */}
           <div className="absolute bottom-4 left-4">
             <span className={`text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full font-medium ${diff.style}`}>
               {diff.label}
@@ -89,9 +72,7 @@ function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose }) {
         {/* ── Scrollable content ── */}
         <div className="flex-1 overflow-y-auto overscroll-contain">
           <div className="px-5 pt-4 pb-6">
-
-            {/* Name + location */}
-            <h2 className="font-['Caveat'] text-3xl font-bold text-slate-100 leading-tight mb-0.5">
+            <h2 className={`font-['Caveat'] text-3xl font-bold leading-tight mb-0.5 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
               {trail.name}
             </h2>
             <p className="text-sm text-slate-500 mb-4">
@@ -101,24 +82,24 @@ function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose }) {
             {/* Stats row */}
             <div className="grid grid-cols-3 gap-3 mb-5">
               {trail.length && (
-                <div className="bg-[#161f30] rounded-2xl p-3 text-center border border-white/5">
-                  <span className="font-['Caveat'] text-xl font-bold text-teal-400 block leading-none">
+                <div className={`border rounded-2xl p-3 text-center ${dm ? 'bg-[#161f30] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+                  <span className="font-['Caveat'] text-xl font-bold text-teal-500 block leading-none">
                     {Number(trail.length).toFixed(1)} mi
                   </span>
                   <span className="text-[10px] uppercase text-slate-500 tracking-wide mt-1 block">Distance</span>
                 </div>
               )}
               {trail.ascent && (
-                <div className="bg-[#161f30] rounded-2xl p-3 text-center border border-white/5">
-                  <span className="font-['Caveat'] text-xl font-bold text-teal-400 block leading-none">
+                <div className={`border rounded-2xl p-3 text-center ${dm ? 'bg-[#161f30] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+                  <span className="font-['Caveat'] text-xl font-bold text-teal-500 block leading-none">
                     {Math.round(trail.ascent).toLocaleString()} ft
                   </span>
                   <span className="text-[10px] uppercase text-slate-500 tracking-wide mt-1 block">Elevation</span>
                 </div>
               )}
               {trail.rating && (
-                <div className="bg-[#161f30] rounded-2xl p-3 text-center border border-white/5">
-                  <span className="font-['Caveat'] text-xl font-bold text-amber-400 block leading-none">
+                <div className={`border rounded-2xl p-3 text-center ${dm ? 'bg-[#161f30] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+                  <span className="font-['Caveat'] text-xl font-bold text-amber-500 block leading-none">
                     {Number(trail.rating).toFixed(1)} ★
                   </span>
                   <span className="text-[10px] uppercase text-slate-500 tracking-wide mt-1 block">
@@ -132,49 +113,48 @@ function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose }) {
             {trail.features?.length > 0 && (
               <div className="flex gap-1.5 flex-wrap mb-5">
                 {trail.features.map((f) => (
-                  <span key={f} className="text-[11px] text-teal-400 bg-teal-400/8 border border-teal-400/20 rounded-full px-3 py-1">
+                  <span key={f} className="text-[11px] text-teal-600 bg-teal-500/10 border border-teal-500/20 rounded-full px-3 py-1">
                     {f}
                   </span>
                 ))}
               </div>
             )}
 
-            {/* Description */}
             {trail.description && (
               <div className="mb-5">
-                <p className="text-[10px] uppercase tracking-widest text-slate-600 mb-2">About</p>
-                <p className="text-sm text-slate-400 leading-relaxed">{trail.description}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-400 mb-2">About</p>
+                <p className="text-sm text-slate-500 leading-relaxed">{trail.description}</p>
               </div>
             )}
 
-            {/* Directions */}
             {trail.directions && (
               <div className="mb-6">
-                <p className="text-[10px] uppercase tracking-widest text-slate-600 mb-2">Getting there</p>
-                <p className="text-sm text-slate-400 leading-relaxed">{trail.directions}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-400 mb-2">Getting there</p>
+                <p className="text-sm text-slate-500 leading-relaxed">{trail.directions}</p>
               </div>
             )}
 
             {/* Action buttons */}
             <div className="flex gap-3">
               <button
-                onClick={() => { onSave(trail); }}
+                onClick={() => onSave(trail)}
                 className={`flex-1 rounded-2xl py-3 text-sm font-medium transition-all duration-200 border ${
                   isSaved
-                    ? "bg-teal-400/20 border-teal-400/35 text-teal-300"
-                    : "bg-teal-400 border-transparent text-[#0e1520] hover:bg-teal-300"
+                    ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
+                    : dm
+                      ? "bg-teal-400 border-transparent text-[#0e1520] hover:bg-teal-300"
+                      : "bg-teal-500 border-transparent text-white hover:bg-teal-600"
                 }`}
               >
                 {isSaved ? "✓ Saved to Someday" : "+ Save to Someday"}
               </button>
               <button
                 onClick={onPlanTrip}
-                className="flex-1 bg-violet-400/10 border border-violet-400/25 rounded-2xl py-3 text-sm font-medium text-violet-400 hover:bg-violet-400/20 transition-all duration-200"
+                className={`flex-1 rounded-2xl py-3 text-sm font-medium transition-all duration-200 border ${dm ? 'bg-violet-400/10 border-violet-400/25 text-violet-400 hover:bg-violet-400/20' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
               >
                 Plan Trip
               </button>
             </div>
-
           </div>
         </div>
       </div>
@@ -185,7 +165,8 @@ function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose }) {
 
 // ─── TrailCard ───────────────────────────────────────────────────────────────
 
-function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen }) {
+function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen, darkMode }) {
+  const dm     = darkMode;
   const isSaved = savedIds.has(trail.id);
   const diff    = DIFFICULTY_MAP[trail.difficulty] ?? DIFFICULTY_MAP[2];
   const emoji   = TRAIL_EMOJIS[trail.id % TRAIL_EMOJIS.length];
@@ -194,72 +175,69 @@ function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen }) {
   return (
     <div
       onClick={onOpen}
-      className="bg-[#161f30] border border-white/5 rounded-2xl overflow-hidden hover:border-teal-400/25 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+      className={`border rounded-2xl overflow-hidden hover:border-teal-400/25 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer ${dm ? 'bg-[#161f30] border-white/5' : 'bg-white border-slate-200'}`}
     >
-      {/* Image / placeholder */}
       {imgSrc ? (
         <img src={imgSrc} alt={trail.name} className="w-full h-36 object-cover" />
       ) : (
-        <div className="w-full h-36 flex items-center justify-center text-5xl bg-gradient-to-br from-[#1a2540] to-[#1e3040]">
+        <div className={`w-full h-36 flex items-center justify-center text-5xl bg-gradient-to-br ${dm ? 'from-[#1a2540] to-[#1e3040]' : 'from-teal-50 to-teal-100'}`}>
           {emoji}
         </div>
       )}
 
       <div className="p-4">
-        {/* Difficulty + rating */}
         <div className="flex items-center justify-between mb-2">
           <span className={`text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full font-medium ${diff.style}`}>
             {diff.label}
           </span>
           {trail.rating && (
-            <span className="text-xs text-slate-400 flex items-center gap-1">
-              <span className="text-amber-400">★</span>
+            <span className="text-xs text-slate-500 flex items-center gap-1">
+              <span className="text-amber-500">★</span>
               {Number(trail.rating).toFixed(1)}
-              {trail.ratingCount && <span className="text-slate-500">({trail.ratingCount})</span>}
+              {trail.ratingCount && <span className="text-slate-400">({trail.ratingCount})</span>}
             </span>
           )}
         </div>
 
-        {/* Name + location */}
-        <h3 className="font-['Caveat'] text-xl font-semibold text-slate-100 leading-tight mb-0.5">
+        <h3 className={`font-['Caveat'] text-xl font-semibold leading-tight mb-0.5 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
           {trail.name}
         </h3>
         <p className="text-xs text-slate-500 mb-3">
           {trail.city}{trail.state ? `, ${trail.state}` : ""}
         </p>
 
-        {/* Stats chips */}
         <div className="flex gap-1.5 flex-wrap mb-3">
           {trail.length && (
-            <span className="text-[11px] text-slate-400 bg-white/5 rounded-md px-2 py-0.5">
+            <span className={`text-[11px] text-slate-500 rounded-md px-2 py-0.5 ${dm ? 'bg-white/5' : 'bg-slate-100'}`}>
               {Number(trail.length).toFixed(1)} mi
             </span>
           )}
           {trail.ascent && (
-            <span className="text-[11px] text-slate-400 bg-white/5 rounded-md px-2 py-0.5">
+            <span className={`text-[11px] text-slate-500 rounded-md px-2 py-0.5 ${dm ? 'bg-white/5' : 'bg-slate-100'}`}>
               {Math.round(trail.ascent).toLocaleString()} ft gain
             </span>
           )}
           {trail.features?.slice(0, 1).map((f) => (
-            <span key={f} className="text-[11px] text-slate-400 bg-white/5 rounded-md px-2 py-0.5">{f}</span>
+            <span key={f} className={`text-[11px] text-slate-500 rounded-md px-2 py-0.5 ${dm ? 'bg-white/5' : 'bg-slate-100'}`}>{f}</span>
           ))}
         </div>
 
-        {/* Actions */}
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onSave(trail)}
             className={`flex-1 rounded-xl py-2 text-xs font-medium transition-all duration-200 border ${
               isSaved
-                ? "bg-teal-400/20 border-teal-400/35 text-teal-300"
-                : "bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15"
+                ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
+                : dm
+                  ? "bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15"
+                  : "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100"
             }`}
           >
             {isSaved ? "✓ Saved" : "+ Someday"}
           </button>
           <button
             onClick={onOpen}
-            className="flex-1 bg-violet-400/8 border border-violet-400/20 rounded-xl py-2 text-xs font-medium text-violet-400 hover:bg-violet-400/15 transition-all duration-200"
+            className={`flex-1 rounded-xl py-2 text-xs font-medium transition-all duration-200 border ${dm ? 'bg-violet-400/8 border-violet-400/20 text-violet-400 hover:bg-violet-400/15' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
           >
             View trail
           </button>
@@ -271,39 +249,40 @@ function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen }) {
 
 // ─── FeedCard ─────────────────────────────────────────────────────────────────
 
-function FeedCard({ item }) {
+function FeedCard({ item, darkMode }) {
+  const dm = darkMode;
   const [liked, setLiked] = useState(false);
   const likeCount = liked ? item.likes + 1 : item.likes;
 
   return (
-    <div className="bg-[#161f30] border border-white/5 rounded-2xl p-4 flex gap-3">
+    <div className={`border rounded-2xl p-4 flex gap-3 ${dm ? 'bg-[#161f30] border-white/5' : 'bg-white border-slate-200'}`}>
       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-600 to-violet-500 flex items-center justify-center font-['Caveat'] text-base font-bold text-white flex-shrink-0">
         {item.initials}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start flex-wrap gap-x-1.5 gap-y-0.5 mb-1">
-          <span className="text-sm font-medium text-slate-200">{item.name}</span>
+          <span className={`text-sm font-medium ${dm ? 'text-slate-200' : 'text-slate-800'}`}>{item.name}</span>
           <span className="text-sm text-slate-500">{item.action}</span>
-          <span className="text-sm text-teal-400">{item.trail}</span>
+          <span className="text-sm text-teal-500">{item.trail}</span>
           {item.suffix && <span className="text-sm text-slate-500">{item.suffix}</span>}
-          <span className="text-xs text-slate-600 ml-auto">{item.time}</span>
+          <span className="text-xs text-slate-400 ml-auto">{item.time}</span>
         </div>
         {item.note && (
-          <p className="text-sm text-slate-400 italic leading-relaxed mb-2">"{item.note}"</p>
+          <p className="text-sm text-slate-500 italic leading-relaxed mb-2">"{item.note}"</p>
         )}
         {item.hasPhoto && (
-          <div className="w-full h-24 rounded-xl bg-gradient-to-br from-[#1a2540] to-[#1e3040] flex items-center justify-center text-3xl mb-2">
+          <div className={`w-full h-24 rounded-xl flex items-center justify-center text-3xl mb-2 bg-gradient-to-br ${dm ? 'from-[#1a2540] to-[#1e3040]' : 'from-teal-50 to-teal-100'}`}>
             📸
           </div>
         )}
         <div className="flex items-center gap-4">
           <button
             onClick={() => setLiked((l) => !l)}
-            className={`text-xs flex items-center gap-1 transition-colors duration-150 ${liked ? "text-pink-400" : "text-slate-500 hover:text-pink-400"}`}
+            className={`text-xs flex items-center gap-1 transition-colors duration-150 ${liked ? "text-pink-500" : "text-slate-400 hover:text-pink-500"}`}
           >
             {liked ? "♥" : "♡"} {likeCount} likes
           </button>
-          <button className="text-xs text-slate-500 hover:text-slate-300 transition-colors duration-150">
+          <button className="text-xs text-slate-400 hover:text-slate-600 transition-colors duration-150">
             💬 {item.comments} comments
           </button>
         </div>
@@ -314,19 +293,19 @@ function FeedCard({ item }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {}) {
-  const [query, setQuery]             = useState("");
+export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMode = false } = {}) {
+  const dm = darkMode;
+  const [query, setQuery]               = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
-  const [trails, setTrails]           = useState([]);
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState(null);
-  const [savedIds, setSavedIds]       = useState(new Set());
+  const [trails, setTrails]             = useState([]);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState(null);
+  const [savedIds, setSavedIds]         = useState(new Set());
   const [userLocation, setUserLocation] = useState(null);
-  const [placePhotos, setPlacePhotos] = useState({});   // trailId → photo URL
+  const [placePhotos, setPlacePhotos]   = useState({});
   const [selectedTrail, setSelectedTrail] = useState(null);
   const fetchedRef = useRef(new Set());
 
-  // ── Get user location on mount ──
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
       (pos) => setUserLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
@@ -334,12 +313,10 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
     );
   }, []);
 
-  // ── Fetch trails when location is ready ──
   useEffect(() => {
     if (userLocation) fetchTrails(userLocation.lat, userLocation.lon);
   }, [userLocation]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── TrailAPI fetch ──
   const fetchTrails = useCallback(async (lat, lon, searchQuery = "") => {
     setLoading(true);
     setError(null);
@@ -381,17 +358,12 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
     }
   }, []);
 
-  // ── Fetch Google Places photos for each trail ──
   const fetchTrailPhoto = useCallback(async (trail) => {
     if (!GOOGLE_KEY || fetchedRef.current.has(String(trail.id))) return;
     fetchedRef.current.add(String(trail.id));
     try {
-      const q = encodeURIComponent(
-        `${trail.name} trail ${trail.city || ""} ${trail.state || ""}`
-      );
-      const res  = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${GOOGLE_KEY}`
-      );
+      const q = encodeURIComponent(`${trail.name} trail ${trail.city || ""} ${trail.state || ""}`);
+      const res  = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${GOOGLE_KEY}`);
       const data = await res.json();
       const photoRef = data.results?.[0]?.photos?.[0]?.photo_reference;
       if (photoRef) {
@@ -399,7 +371,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
         setPlacePhotos((prev) => ({ ...prev, [trail.id]: url }));
       }
     } catch {
-      // silently fail — CORS or API error; trail thumbnail / emoji fallback used
+      // silently fail
     }
   }, []);
 
@@ -426,7 +398,6 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
     onPlanEvent?.({ title: `Hike: ${trail.name}` });
   };
 
-  // ── Filter trails client-side ──
   const filteredTrails = trails.filter((t) => {
     if (activeFilter === "All")      return true;
     if (activeFilter === "Easy")     return t.difficulty === 1;
@@ -440,7 +411,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0e1520] text-slate-200 font-sans">
+    <div className={`min-h-screen font-sans ${dm ? 'bg-[#0e1520] text-slate-200' : 'bg-[#faf8f3] text-slate-800'}`}>
       <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
 
         {/* ── Top bar ── */}
@@ -448,14 +419,14 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
           <div className="flex items-center gap-3 mb-5">
             <button
               onClick={onBack}
-              className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-slate-300 active:opacity-70 flex-shrink-0"
+              className={`w-9 h-9 rounded-xl flex items-center justify-center active:opacity-70 flex-shrink-0 ${dm ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-600'}`}
             >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                 <path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
             <div>
-              <h1 className="font-['Caveat'] text-3xl font-bold text-slate-100 leading-tight">Hiking & Outdoors</h1>
+              <h1 className={`font-['Caveat'] text-3xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Hiking & Outdoors</h1>
               <p className="text-[11px] text-slate-500">
                 {loading ? "Loading…" : `${trails.length} trail${trails.length !== 1 ? "s" : ""} nearby`}
               </p>
@@ -464,11 +435,11 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
         )}
 
         {/* ── Hero ── */}
-        <div className="relative bg-gradient-to-br from-[#0f2027] via-[#162b3a] to-[#0e1520] rounded-3xl p-8 mb-6 overflow-hidden border border-white/5">
+        <div className={`relative bg-gradient-to-br rounded-3xl p-8 mb-6 overflow-hidden border ${dm ? 'from-[#0f2027] via-[#162b3a] to-[#0e1520] border-white/5' : 'from-slate-50 via-teal-50 to-slate-50 border-teal-100'}`}>
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_80%_20%,rgba(45,212,191,0.08),transparent)]" />
           <div className="absolute right-8 top-6 text-8xl opacity-10 rotate-12 select-none">🏔️</div>
-          <p className="text-[10px] uppercase tracking-[0.15em] text-teal-400 mb-2 opacity-80">Explore · Hiking</p>
-          <h1 className="font-['Caveat'] text-5xl font-bold leading-tight mb-2 bg-gradient-to-r from-slate-100 to-teal-300 bg-clip-text text-transparent">
+          <p className="text-[10px] uppercase tracking-[0.15em] text-teal-500 mb-2 opacity-80">Explore · Hiking</p>
+          <h1 className={`font-['Caveat'] text-5xl font-bold leading-tight mb-2 bg-gradient-to-r bg-clip-text text-transparent ${dm ? 'from-slate-100 to-teal-300' : 'from-slate-800 to-teal-600'}`}>
             Hit the trails
           </h1>
           <p className="text-sm text-slate-500 leading-relaxed max-w-sm mb-6">
@@ -481,7 +452,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
               { num: savedIds.size,        lbl: "Someday saves" },
             ].map(({ num, lbl }) => (
               <div key={lbl} className="flex flex-col">
-                <span className="font-['Caveat'] text-3xl font-bold text-teal-400 leading-none">{num}</span>
+                <span className="font-['Caveat'] text-3xl font-bold text-teal-500 leading-none">{num}</span>
                 <span className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">{lbl}</span>
               </div>
             ))}
@@ -495,12 +466,12 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Search trails, parks, or cities..."
-            className="flex-1 min-w-0 bg-[#161f30] border border-white/7 rounded-2xl px-4 py-3 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-teal-400/40 transition-colors"
+            className={`flex-1 min-w-0 border rounded-2xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#161f30] border-white/7 text-slate-200 placeholder-slate-500 focus:border-teal-400/40' : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400 focus:border-teal-400'}`}
           />
           <button
             onClick={handleSearch}
             disabled={loading}
-            className="bg-teal-400 text-[#0e1520] rounded-2xl px-5 py-3 text-sm font-medium hover:bg-teal-300 transition-colors disabled:opacity-50 whitespace-nowrap"
+            className={`rounded-2xl px-5 py-3 text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap ${dm ? 'bg-teal-400 text-[#0e1520] hover:bg-teal-300' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
           >
             {loading ? "Searching…" : "Find Trails"}
           </button>
@@ -514,8 +485,10 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
               onClick={() => setActiveFilter(f)}
               className={`rounded-full px-4 py-1.5 text-xs transition-all duration-200 border ${
                 activeFilter === f
-                  ? "bg-teal-400/12 border-teal-400/40 text-teal-400"
-                  : "bg-[#161f30] border-white/7 text-slate-500 hover:text-teal-400 hover:border-teal-400/25"
+                  ? "bg-teal-400/12 border-teal-400/40 text-teal-600"
+                  : dm
+                    ? "bg-[#161f30] border-white/7 text-slate-500 hover:text-teal-400 hover:border-teal-400/25"
+                    : "bg-white border-slate-200 text-slate-500 hover:text-teal-600 hover:border-teal-300"
               }`}
             >
               {f}
@@ -525,7 +498,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
 
         {/* ── Error state ── */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-sm text-red-400 mb-6">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-sm text-red-500 mb-6">
             {error}
           </div>
         )}
@@ -534,7 +507,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
         {loading && (
           <div className="grid grid-cols-2 gap-3 mb-8">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-[#161f30] rounded-2xl h-64 animate-pulse border border-white/5" />
+              <div key={i} className={`rounded-2xl h-64 animate-pulse border ${dm ? 'bg-[#161f30] border-white/5' : 'bg-slate-200 border-slate-200'}`} />
             ))}
           </div>
         )}
@@ -545,7 +518,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
             <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Featured trail</p>
             <div
               onClick={() => setSelectedTrail(featuredTrail)}
-              className="bg-[#161f30] border border-teal-400/15 rounded-3xl overflow-hidden mb-8 hover:border-teal-400/30 transition-colors cursor-pointer"
+              className={`border border-teal-400/15 rounded-3xl overflow-hidden mb-8 hover:border-teal-400/30 transition-colors cursor-pointer ${dm ? 'bg-[#161f30]' : 'bg-white'}`}
             >
               <div className="grid grid-cols-2 max-sm:grid-cols-1">
                 {(placePhotos[featuredTrail.id] || featuredTrail.thumbnail) ? (
@@ -555,13 +528,13 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
                     className="w-full h-52 object-cover"
                   />
                 ) : (
-                  <div className="h-52 flex items-center justify-center text-7xl bg-gradient-to-br from-[#162b3a] to-[#1a3a4a]">
+                  <div className={`h-52 flex items-center justify-center text-7xl bg-gradient-to-br ${dm ? 'from-[#162b3a] to-[#1a3a4a]' : 'from-teal-50 to-teal-100'}`}>
                     🌲
                   </div>
                 )}
                 <div className="p-6 flex flex-col justify-center">
-                  <p className="text-[10px] uppercase tracking-widest text-teal-400 mb-2">⭐ Top rated this week</p>
-                  <h2 className="font-['Caveat'] text-2xl font-bold text-slate-100 leading-tight mb-2">
+                  <p className="text-[10px] uppercase tracking-widest text-teal-500 mb-2">⭐ Top rated this week</p>
+                  <h2 className={`font-['Caveat'] text-2xl font-bold leading-tight mb-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
                     {featuredTrail.name}
                   </h2>
                   {featuredTrail.description && (
@@ -572,7 +545,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
                   <div className="flex gap-4 flex-wrap">
                     {featuredTrail.length && (
                       <div className="flex flex-col">
-                        <span className="font-['Caveat'] text-xl font-semibold text-teal-400">
+                        <span className="font-['Caveat'] text-xl font-semibold text-teal-500">
                           {Number(featuredTrail.length).toFixed(1)} mi
                         </span>
                         <span className="text-[10px] uppercase text-slate-500 tracking-wide">Distance</span>
@@ -580,7 +553,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
                     )}
                     {featuredTrail.ascent && (
                       <div className="flex flex-col">
-                        <span className="font-['Caveat'] text-xl font-semibold text-teal-400">
+                        <span className="font-['Caveat'] text-xl font-semibold text-teal-500">
                           {Math.round(featuredTrail.ascent).toLocaleString()} ft
                         </span>
                         <span className="text-[10px] uppercase text-slate-500 tracking-wide">Elevation</span>
@@ -588,7 +561,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
                     )}
                     {featuredTrail.rating && (
                       <div className="flex flex-col">
-                        <span className="font-['Caveat'] text-xl font-semibold text-teal-400">
+                        <span className="font-['Caveat'] text-xl font-semibold text-teal-500">
                           {Number(featuredTrail.rating).toFixed(1)} ★
                         </span>
                         <span className="text-[10px] uppercase text-slate-500 tracking-wide">Rating</span>
@@ -614,6 +587,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
                   onSave={handleSave}
                   savedIds={savedIds}
                   onOpen={() => setSelectedTrail(trail)}
+                  darkMode={dm}
                 />
               ))}
             </div>
@@ -622,9 +596,9 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
 
         {/* ── Empty state ── */}
         {!loading && filteredTrails.length === 0 && !error && (
-          <div className="text-center py-16 text-slate-500">
+          <div className="text-center py-16 text-slate-400 mb-8">
             <div className="text-5xl mb-4">🗺️</div>
-            <p className="font-['Caveat'] text-2xl text-slate-400 mb-1">No trails found</p>
+            <p className={`font-['Caveat'] text-2xl mb-1 ${dm ? 'text-slate-400' : 'text-slate-600'}`}>No trails found</p>
             <p className="text-sm">Try a different location or filter</p>
           </div>
         )}
@@ -634,12 +608,12 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
           <div className="bg-gradient-to-r from-violet-500/10 to-pink-500/8 border border-violet-400/20 rounded-3xl p-5 mb-8 flex items-center gap-4">
             <span className="text-3xl flex-shrink-0">📌</span>
             <div>
-              <h3 className="font-['Caveat'] text-xl font-bold text-slate-100 leading-tight">Your Someday List</h3>
+              <h3 className={`font-['Caveat'] text-xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Your Someday List</h3>
               <p className="text-sm text-slate-500">
                 You've saved {savedIds.size} trail{savedIds.size !== 1 ? "s" : ""} — ready to pick a date?
               </p>
             </div>
-            <button className="ml-auto bg-violet-400/12 border border-violet-400/25 rounded-2xl px-4 py-2.5 text-sm text-violet-400 hover:bg-violet-400/20 transition-all whitespace-nowrap">
+            <button className="ml-auto bg-violet-400/12 border border-violet-400/25 rounded-2xl px-4 py-2.5 text-sm text-violet-600 hover:bg-violet-400/20 transition-all whitespace-nowrap">
               View list →
             </button>
           </div>
@@ -648,7 +622,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
         {/* ── Community feed ── */}
         <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Friends' recent hikes</p>
         <div className="flex flex-col gap-2.5">
-          {MOCK_FEED.map((item) => <FeedCard key={item.id} item={item} />)}
+          {MOCK_FEED.map((item) => <FeedCard key={item.id} item={item} darkMode={dm} />)}
         </div>
 
       </div>
@@ -662,6 +636,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {})
           onSave={handleSave}
           onPlanTrip={() => handlePlanTrip(selectedTrail)}
           onClose={() => setSelectedTrail(null)}
+          darkMode={dm}
         />
       )}
     </div>
