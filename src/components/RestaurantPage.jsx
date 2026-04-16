@@ -353,7 +353,34 @@ const FeaturedRestaurantRecommendation = React.memo(({ post, currentUserId, onSo
   }, [post?.id]);
 
   return (
-    <div style={{ background: bg, borderRadius: 24, border: `1px solid ${bw}`, overflow: 'hidden' }}>
+    <div style={{ background: bg, borderRadius: 24, border: `1px solid ${bw}`, overflow: 'hidden', position: 'relative' }}>
+      {isMine && onDelete && (
+        <button
+          type="button"
+          onClick={() => onDelete(post)}
+          aria-label="Delete recommendation"
+          title="Delete recommendation"
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            zIndex: 2,
+            width: 28,
+            height: 28,
+            borderRadius: 999,
+            border: `1px solid ${darkMode ? 'rgba(251,191,36,0.35)' : '#d8b36a'}`,
+            background: darkMode ? 'rgba(17,24,39,0.85)' : 'rgba(255,248,234,0.95)',
+            color: darkMode ? '#fbbf24' : '#8a5a1f',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: darkMode ? '0 6px 18px rgba(0,0,0,0.25)' : '0 6px 18px rgba(140,104,37,0.12)',
+          }}
+        >
+          <span style={{ fontSize: 16, lineHeight: 1, fontWeight: 700 }}>×</span>
+        </button>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1fr' }} className="max-sm:block">
         <div style={{ minHeight: 220, background: darkMode ? 'rgba(99,102,241,0.08)' : '#f5f3ff', position: 'relative' }}>
           {post.restaurant_image ? (
@@ -399,31 +426,21 @@ const FeaturedRestaurantRecommendation = React.memo(({ post, currentUserId, onSo
               "{truncateText(post.review, 160)}"
             </p>
           )}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-            <button
-              onClick={() => {
-                const payload = restaurantSomedayPayload(post);
-                if (saved) {
-                  onRemoveFromSomeday?.(payload);
-                  setSaved(false);
-                  return;
-                }
-                setSaved(true);
-                onSomeday?.(post);
-              }}
-              style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 13, fontWeight: 700, fontFamily: handwritten, cursor: 'pointer' }}
-            >
-              {saved ? '✓ In someday list' : '+ Someday list'}
-            </button>
-            {isMine && onDelete && (
-              <button
-                onClick={() => onDelete(post)}
-                style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(251,191,36,0.28)' : '#d8b36a'}`, background: darkMode ? 'rgba(251,191,36,0.08)' : '#fff8ea', color: darkMode ? '#fbbf24' : '#8a5a1f', fontSize: 13, fontWeight: 700, fontFamily: handwritten, cursor: 'pointer' }}
-              >
-                Delete
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => {
+              const payload = restaurantSomedayPayload(post);
+              if (saved) {
+                onRemoveFromSomeday?.(payload);
+                setSaved(false);
+                return;
+              }
+              setSaved(true);
+              onSomeday?.(post);
+            }}
+            style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 13, fontWeight: 700, fontFamily: handwritten, cursor: 'pointer' }}
+          >
+            {saved ? '✓ In someday list' : '+ Someday list'}
+          </button>
         </div>
       </div>
     </div>
@@ -440,7 +457,34 @@ const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeda
   const isMine = Boolean(currentUserId && post.user_id && currentUserId === post.user_id);
 
   return (
-    <div style={{ background: bg, borderRadius: 20, border: `1px solid ${bw}`, overflow: 'hidden' }}>
+    <div style={{ background: bg, borderRadius: 20, border: `1px solid ${bw}`, overflow: 'hidden', position: 'relative' }}>
+      {isMine && onDelete && (
+        <button
+          type="button"
+          onClick={() => onDelete(post)}
+          aria-label="Delete recommendation"
+          title="Delete recommendation"
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            zIndex: 2,
+            width: 26,
+            height: 26,
+            borderRadius: 999,
+            border: `1px solid ${darkMode ? 'rgba(251,191,36,0.35)' : '#d8b36a'}`,
+            background: darkMode ? 'rgba(17,24,39,0.85)' : 'rgba(255,248,234,0.95)',
+            color: darkMode ? '#fbbf24' : '#8a5a1f',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: darkMode ? '0 6px 18px rgba(0,0,0,0.25)' : '0 6px 18px rgba(140,104,37,0.12)',
+          }}
+        >
+          <span style={{ fontSize: 15, lineHeight: 1, fontWeight: 700 }}>×</span>
+        </button>
+      )}
       <div style={{ display: 'flex', gap: 12, padding: 14 }}>
         <div style={{ width: 54, height: 54, borderRadius: 18, background: 'linear-gradient(135deg, rgba(139,92,246,0.18), rgba(20,184,166,0.18))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: handwritten, fontSize: 18, fontWeight: 700, color: tp, flexShrink: 0 }}>
           {isMine ? 'You' : '★'}
@@ -491,14 +535,6 @@ const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeda
                 </span>
               )}
             </div>
-            {isMine && onDelete && (
-              <button
-                onClick={() => onDelete(post)}
-                style={{ flexShrink: 0, padding: '6px 10px', borderRadius: 10, border: `1px solid ${darkMode ? 'rgba(251,191,36,0.28)' : '#d8b36a'}`, background: darkMode ? 'rgba(251,191,36,0.08)' : '#fff8ea', color: darkMode ? '#fbbf24' : '#8a5a1f', fontSize: 12, fontWeight: 700, fontFamily: handwritten, cursor: 'pointer' }}
-              >
-                Delete
-              </button>
-            )}
           </div>
           {post.price_level && (
             <span style={{ fontFamily: handwritten, fontSize: 18, color: ts, flexShrink: 0 }}>
@@ -563,6 +599,23 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
   const updateField = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
+
+  const cuisineChips = [
+    { label: 'Italian', value: 'Italian' },
+    { label: 'Japanese', value: 'Japanese' },
+    { label: 'American', value: 'American' },
+    { label: 'Mexican', value: 'Mexican' },
+    { label: 'Thai', value: 'Thai' },
+  ];
+
+  const bestForChips = [
+    { label: 'Date night', value: 'Date night' },
+    { label: 'Family', value: 'Family' },
+    { label: 'Kids', value: 'Kids' },
+    { label: 'Brunch', value: 'Brunch' },
+    { label: 'Group dinner', value: 'Group dinner' },
+    { label: 'Takeout', value: 'Takeout' },
+  ];
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -768,6 +821,58 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
                   onChange={e => updateField(field.key, e.target.value)}
                   style={{ width: '100%', borderRadius: 12, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc', color: tp, padding: '11px 12px', fontSize: 14, outline: 'none' }}
                 />
+                {field.key === 'cuisine' && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 2 }}>
+                    {cuisineChips.map((chip) => {
+                      const active = form.cuisine.trim().toLowerCase() === chip.value.toLowerCase();
+                      return (
+                        <button
+                          key={chip.value}
+                          type="button"
+                          onClick={() => updateField('cuisine', chip.value)}
+                          style={{
+                            padding: '6px 10px',
+                            borderRadius: 999,
+                            border: `1px solid ${active ? '#c9a15d' : bw}`,
+                            background: active ? '#fff8ea' : (darkMode ? 'rgba(255,255,255,0.03)' : '#f8fafc'),
+                            color: active ? '#8a5a1f' : ts,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {chip.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {field.key === 'best_for' && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 2 }}>
+                    {bestForChips.map((chip) => {
+                      const active = form.best_for.trim().toLowerCase() === chip.value.toLowerCase();
+                      return (
+                        <button
+                          key={chip.value}
+                          type="button"
+                          onClick={() => updateField('best_for', chip.value)}
+                          style={{
+                            padding: '6px 10px',
+                            borderRadius: 999,
+                            border: `1px solid ${active ? '#c9a15d' : bw}`,
+                            background: active ? '#fff8ea' : (darkMode ? 'rgba(255,255,255,0.03)' : '#f8fafc'),
+                            color: active ? '#8a5a1f' : ts,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {chip.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </label>
             ))}
 

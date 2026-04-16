@@ -403,6 +403,15 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
     setDraft((prev) => ({ ...prev, [field]: value }));
   };
 
+  const quickCategoryChips = [
+    "Tech",
+    "Kitchen",
+    "Travel",
+    "Home",
+    "Fitness",
+    "Books",
+  ];
+
   const readFilesAsDataUrls = (files) => Promise.all(files.map((file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
@@ -596,9 +605,33 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  {quickCategoryChips.map((label) => {
+                    const active = draft.category === label;
+                    const chip = CATEGORIES.find((c) => c.label === label);
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => updateField("category", label)}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                          active
+                            ? "bg-violet-400/15 border-violet-400/40 text-violet-600"
+                            : dm
+                              ? "bg-white/5 border-white/8 text-slate-400 hover:border-violet-400/25"
+                              : "bg-slate-100 border-slate-200 text-slate-500 hover:border-violet-300"
+                        }`}
+                      >
+                        {chip?.emoji ? `${chip.emoji} ` : ""}{label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
                   {CATEGORIES.filter((c) => c.label !== "All").map((c) => (
                     <button
                       key={c.label}
+                      type="button"
                       onClick={() => updateField("category", c.label)}
                       className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
                         draft.category === c.label
