@@ -3,6 +3,7 @@ import MoviesPage from "./MoviesPage";
 import BoardGamePage from "./BoardGamePage";
 import RestaurantPage from "./RestaurantPage";
 import HikingPage from "./HikingPage";
+import ProductsPage from "./ProductsPage";
 
 const TMDB_KEY = "b66752afda91b8258d32f4388f049a22";
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342";
@@ -18,6 +19,7 @@ const COMMUNITY_POSTS = [
   { id: "c1", type: "hiking", icon: "🥾", page: "Hiking & Outdoors", time: "Trending", cardTitle: "Lands End Trail", location: "San Francisco · 3.4 mi", desc: "Stunning coastal views, moderate difficulty. Best visited at golden hour.", votes: 183, tag: "Hiking", actions: ["Add to someday", "Plan it"] },
   { id: "c2", type: "games", icon: "🎲", page: "Board Games", time: "Community pick", cardTitle: "Wingspan", desc: "Elegant engine-builder about birds. Perfect for 2–5 players, around 90 minutes.", votes: 312, tag: "Games", actions: ["Add to someday", "Plan game night"] },
   { id: "c3", type: "restaurants", icon: "🍜", page: "Restaurants", time: "New addition", cardTitle: "Dumpling Time", location: "SoMa, San Francisco", desc: "Handcrafted dumplings, beautiful space. The XLB are unmissable.", votes: 198, tag: "Restaurants", actions: ["Add to someday", "Plan dinner"] },
+  { id: "c4", type: "products", icon: "🛍️", page: "Products", time: "Community pick", cardTitle: "Sony WH-1000XM5", desc: "Most recommended headphones this month — noise cancellation is unreal.", votes: 247, tag: "Products", actions: ["Browse products", "Add to wishlist"] },
 ];
 
 const SOURCE_CONFIG = {
@@ -26,6 +28,7 @@ const SOURCE_CONFIG = {
   hiking:      { label: "Hiking & Outdoors", sub: "1.8k members",            icon: "🥾", bg: "bg-green-500/10" },
   games:       { label: "Board Games",       sub: "892 members",             icon: "🎲", bg: "bg-amber-500/10" },
   restaurants: { label: "Restaurants",       sub: "3.1k members",            icon: "🍜", bg: "bg-pink-500/10" },
+  products:    { label: "Products",          sub: "Wishlist & recommendations", icon: "🛍️", bg: "bg-violet-500/10" },
 };
 
 const TAG_STYLES = {
@@ -34,6 +37,7 @@ const TAG_STYLES = {
   Hiking:      "bg-green-500/10 text-green-600 dark:text-green-400",
   Games:       "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   Restaurants: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
+  Products:    "bg-violet-500/10 text-violet-600 dark:text-violet-400",
 };
 
 function interleavePosts(friends, movies, community) {
@@ -195,6 +199,8 @@ function CommunityCard({ post, onPageTap, onPlanEvent }) {
                 else onPlanEvent?.({ title: `Game night: ${post.cardTitle}` });
               } else if (post.type === "hiking") {
                 if (i === 0) onPageTap?.("hiking");
+              } else if (post.type === "products") {
+                if (i === 0) onPageTap?.("products");
               }
             }}
             className={`text-xs font-medium px-3.5 py-1.5 rounded-xl active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"}`}
@@ -253,7 +259,7 @@ function FilterDrawer({ open, sources, onToggle, onClose }) {
         </div>
         <div className="px-5 mb-6">
           <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 mb-2.5">Pages you've joined</p>
-          {["movies", "hiking", "games", "restaurants"].map(key => (
+          {["movies", "hiking", "games", "restaurants", "products"].map(key => (
             <ToggleRow key={key} sourceKey={key} config={SOURCE_CONFIG[key]} enabled={sources[key]} onToggle={onToggle} />
           ))}
         </div>
@@ -308,6 +314,7 @@ function CategoryGrid({ onPageTap }) {
     { key: 'games',       icon: '🎲', label: 'Board Games',       page: 'games' },
     { key: 'hiking',      icon: '🥾', label: 'Hiking & Outdoors', page: 'hiking' },
     { key: 'restaurants', icon: '🍜', label: 'Restaurants',       page: 'restaurants' },
+    { key: 'products',    icon: '🛍️', label: 'Products',          page: 'products' },
   ];
   return (
     <div className="px-3.5 grid grid-cols-2 gap-2.5">
@@ -329,7 +336,7 @@ function CategoryGrid({ onPageTap }) {
 }
 
 export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, darkMode = false }) {
-  const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true });
+  const [sources, setSources]             = useState({ friends: true, movies: true, hiking: true, games: true, restaurants: true, products: true });
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [search, setSearch]               = useState("");
   const [movies, setMovies]               = useState([]);
@@ -355,6 +362,9 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
   }
   if (activePage === "hiking") {
     return <HikingPage onBack={() => setActivePage(null)} />;
+  }
+  if (activePage === "products") {
+    return <ProductsPage onBack={() => setActivePage(null)} />;
   }
   if (activePage === "games") {
     return <BoardGamePage onBack={() => setActivePage(null)} onAddEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} darkMode={darkMode} />;
