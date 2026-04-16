@@ -591,7 +591,7 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
         <div style={{ padding: '18px 20px 22px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
             <div>
-              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#8b5cf6' }}>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#8b5cf6', fontFamily: handwritten }}>
                 Recommend a place ✨
               </p>
               <h2 style={{ fontFamily: handwritten, fontSize: 28, fontWeight: 700, color: tp, margin: '4px 0 0' }}>
@@ -752,7 +752,7 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: 'none', background: submitting ? 'rgba(20,184,166,0.45)' : '#14b8a6', color: '#fff', fontSize: 14, fontWeight: 700, cursor: submitting ? 'default' : 'pointer' }}
+              style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: 'none', background: submitting ? 'rgba(20,184,166,0.45)' : '#14b8a6', color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: handwritten, cursor: submitting ? 'default' : 'pointer' }}
             >
               {submitting ? 'Posting…' : 'Recommend a place'}
             </button>
@@ -1280,7 +1280,7 @@ const RestaurantPage = ({
                               <path d="M2 5H8M8 5L5.5 2.5M8 5L5.5 7.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
                           </span>
-                          Recommend a place
+                          <span style={{ fontFamily: handwritten }}>Recommend a place</span>
                         </button>
                       </div>
                     </div>

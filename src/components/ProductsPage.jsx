@@ -131,7 +131,7 @@ function ProductModal({ product, isSaved, onSomeday, onPost, onClose, darkMode }
         <div className={`flex-shrink-0 p-6 pt-3 border-t flex flex-col gap-2.5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] ${dm ? 'border-white/5' : 'border-slate-200'}`}>
           <button
             onClick={handleSomeday}
-            className={`w-full rounded-2xl py-3 text-sm font-['Caveat'] font-bold border transition-all duration-200 ${
+            className={`w-full rounded-2xl py-3 text-sm font-handwritten font-bold border transition-all duration-200 ${
               saved
                 ? "bg-teal-500/20 border-teal-500/35 text-teal-600"
                 : dm
@@ -154,7 +154,7 @@ function ProductModal({ product, isSaved, onSomeday, onPost, onClose, darkMode }
             )}
             <button
               onClick={() => { onPost(product); onClose(); }}
-              className={`flex-1 rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-all border ${dm ? 'bg-violet-400/10 border-violet-400/25 text-violet-400 hover:bg-violet-400/20' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
+              className={`flex-1 rounded-2xl py-3 text-sm font-handwritten font-bold transition-all border ${dm ? 'bg-violet-400/10 border-violet-400/25 text-violet-400 hover:bg-violet-400/20' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
             >
               Share with friends
             </button>
@@ -223,7 +223,7 @@ const ProductCard = React.memo(function ProductCard({ product, onSomeday, savedI
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onSomeday(product)}
-            className={`flex-1 rounded-xl py-2 text-xs font-['Caveat'] font-bold transition-all duration-200 border ${
+            className={`flex-1 rounded-xl py-2 text-xs font-handwritten font-bold transition-all duration-200 border ${
               isWished
                 ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
                 : dm
@@ -235,7 +235,7 @@ const ProductCard = React.memo(function ProductCard({ product, onSomeday, savedI
           </button>
           <button
             onClick={() => onPost(product)}
-            className={`flex-1 rounded-xl py-2 text-xs font-['Caveat'] font-bold transition-all duration-200 border ${dm ? 'bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15' : 'bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100'}`}
+            className={`flex-1 rounded-xl py-2 text-xs font-handwritten font-bold transition-all duration-200 border ${dm ? 'bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15' : 'bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100'}`}
           >
             Share
           </button>
@@ -659,7 +659,7 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
           <button
             onClick={handleSubmit}
             disabled={!draft.review.trim() || submitting}
-            className="w-full bg-violet-500 hover:bg-violet-400 disabled:opacity-40 text-white rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-colors"
+            className="w-full bg-violet-500 hover:bg-violet-400 disabled:opacity-40 text-white rounded-2xl py-3 text-sm font-handwritten font-bold transition-colors"
           >
             {submitting ? "Posting…" : "Share with friends"}
           </button>
@@ -684,7 +684,7 @@ function FeaturedSomedayButton({ featured, onAddToSomeday, darkMode }) {
           type:     "products",
         });
       }}
-      className={`text-xs px-4 py-2 rounded-xl border font-['Caveat'] font-bold transition-all duration-200 ${
+      className={`text-xs px-4 py-2 rounded-xl border font-handwritten font-bold transition-all duration-200 ${
         saved
           ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
           : dm
@@ -869,7 +869,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
             Find your next favorite thing
           </h1>
           <p className="text-sm text-slate-500 leading-relaxed max-w-sm mb-6">
-            Discover products you never knew you needed — recommended by real people, not algorithms.
+            Discover products you never knew you needed.
           </p>
 
           <div className="flex gap-6 flex-wrap">
@@ -1038,19 +1038,65 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
         )}
 
         {/* ── Post CTA ── */}
-        <div className={`bg-gradient-to-r from-orange-500/8 to-pink-500/6 border border-orange-400/20 rounded-3xl p-5 mb-8 flex items-center gap-4`}>
-          <span className="text-3xl flex-shrink-0">✨</span>
-          <div className="flex-1 min-w-0">
-            <h3 className={`font-['Caveat'] text-xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
-              Found something amazing?
-            </h3>
-            <p className="text-sm text-slate-500">Share it with your friends — tell them why you love it.</p>
-          </div>
+        <div style={{
+          borderRadius: '20px',
+          background: '#FFF3E8',
+          border: '1.5px solid #F5C496',
+          padding: '28px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '6px',
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            position: 'absolute', top: '-30px', right: '-30px',
+            width: '100px', height: '100px', borderRadius: '50%',
+            background: '#FBBF7C', opacity: 0.18, pointerEvents: 'none',
+          }} />
+          <div style={{
+            position: 'absolute', bottom: '-20px', left: '-20px',
+            width: '70px', height: '70px', borderRadius: '50%',
+            background: '#F97316', opacity: 0.10, pointerEvents: 'none',
+          }} />
+
+          <div style={{ fontSize: '28px', marginBottom: '2px' }}>🛍️</div>
+
+          <p style={{
+            fontSize: '18px', fontWeight: 500, color: '#7C3313',
+            fontFamily: 'Georgia, serif', margin: 0,
+          }}>
+            Found something amazing?
+          </p>
+
+          <p style={{ fontSize: '13px', color: '#A04B20', margin: '0 0 10px' }}>
+            Share it with your friends — tell them why you love it.
+          </p>
+
           <button
             onClick={() => setPostingProduct({ name: "", image: null, price: null })}
-            className="ml-auto bg-orange-400/12 border border-orange-400/25 rounded-2xl px-4 py-2.5 text-sm text-orange-600 hover:bg-orange-400/20 transition-all whitespace-nowrap"
+            style={{
+              background: '#EA6C25', color: 'white', border: 'none',
+              borderRadius: '50px', padding: '11px 28px',
+              fontSize: '18px', fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '8px',
+              fontFamily: "'Caveat', cursive",
+              letterSpacing: '0.01em',
+            }}
           >
-            Post a product →
+            <span style={{
+              background: '#7C3313', borderRadius: '50%',
+              width: '20px', height: '20px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M2 5H8M8 5L5.5 2.5M8 5L5.5 7.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
+            Post a product
           </button>
         </div>
 
