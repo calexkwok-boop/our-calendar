@@ -409,7 +409,7 @@ const FeaturedRestaurantRecommendation = React.memo(({ post, onSomeday, onRemove
               setSaved(true);
               onSomeday?.(post);
             }}
-            style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+            style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 13, fontWeight: 700, fontFamily: handwritten, cursor: 'pointer' }}
           >
             {saved ? '✓ Saved' : '+ Add to Someday'}
           </button>
@@ -510,7 +510,7 @@ const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeda
               setSaved(true);
               onSomeday?.(post);
             }}
-            style={{ marginLeft: 'auto', padding: '8px 12px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(45,212,191,0.22)' : '#99f6e4'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 12, fontWeight: 700, cursor: saved ? 'default' : 'pointer' }}
+            style={{ marginLeft: 'auto', padding: '8px 12px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(45,212,191,0.22)' : '#99f6e4'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 12, fontWeight: 700, fontFamily: handwritten, cursor: saved ? 'default' : 'pointer' }}
           >
             {saved ? '✓ Someday' : '+ Someday'}
           </button>
@@ -1223,16 +1223,16 @@ const RestaurantPage = ({
 
                   {filtered.length > 0 && (
                     <div style={{ gridColumn: '1 / -1', margin: '2px 0 2px' }}>
-                      <div style={{ background: darkMode ? 'rgba(245,158,11,0.08)' : 'linear-gradient(135deg, rgba(255,247,237,0.96), rgba(255,237,213,0.88))', border: `1px solid ${darkMode ? 'rgba(245,158,11,0.18)' : '#fdba74'}`, borderRadius: 24, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                      <div style={{ background: darkMode ? 'rgba(245,158,11,0.08)' : 'linear-gradient(135deg, rgba(255,247,237,0.96), rgba(255,237,213,0.88))', border: `1px solid ${darkMode ? 'rgba(245,158,11,0.18)' : '#fdba74'}`, borderRadius: 24, padding: '18px 18px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, textAlign: 'center' }}>
                         <span style={{ fontSize: 32, flexShrink: 0 }}>✨</span>
-                        <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-                          <h3 style={{ fontFamily: handwritten, fontSize: 24, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp }}>
+                        <div style={{ minWidth: 0 }}>
+                          <h3 style={{ fontFamily: handwritten, fontSize: 24, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp, textAlign: 'center' }}>
                             Found a great spot?
                           </h3>
                         </div>
                         <button
                           onClick={() => setIsRecommendOpen(true)}
-                          style={{ marginLeft: 'auto', background: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 16, padding: '11px 16px', fontSize: 14, color: '#fff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                          style={{ background: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 16, padding: '11px 16px', fontSize: 14, color: '#fff', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
                         >
                           Recommend a place →
                         </button>

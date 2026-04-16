@@ -130,7 +130,7 @@ function ProductModal({ product, isSaved, onSomeday, onPost, onClose, darkMode }
         <div className={`flex-shrink-0 p-6 pt-3 border-t flex flex-col gap-2.5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] ${dm ? 'border-white/5' : 'border-slate-200'}`}>
           <button
             onClick={handleSomeday}
-            className={`w-full rounded-2xl py-3 text-sm font-medium border transition-all duration-200 ${
+            className={`w-full rounded-2xl py-3 text-sm font-['Caveat'] font-bold border transition-all duration-200 ${
               saved
                 ? "bg-teal-500/20 border-teal-500/35 text-teal-600"
                 : dm
@@ -222,7 +222,7 @@ const ProductCard = React.memo(function ProductCard({ product, onSomeday, savedI
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onSomeday(product)}
-            className={`flex-1 rounded-xl py-2 text-xs font-medium transition-all duration-200 border ${
+            className={`flex-1 rounded-xl py-2 text-xs font-['Caveat'] font-bold transition-all duration-200 border ${
               isWished
                 ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
                 : dm
@@ -332,7 +332,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
             }
             setWished((w) => !w);
           }}
-          className={`ml-auto text-xs px-3 py-1.5 rounded-xl border transition-all duration-200 ${
+          className={`ml-auto text-xs px-3 py-1.5 rounded-xl border font-['Caveat'] font-bold transition-all duration-200 ${
             wished
               ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
               : dm
@@ -444,7 +444,7 @@ function FeaturedSomedayButton({ featured, onAddToSomeday, darkMode }) {
           type:     "products",
         });
       }}
-      className={`text-xs px-4 py-2 rounded-xl border transition-all duration-200 ${
+      className={`text-xs px-4 py-2 rounded-xl border font-['Caveat'] font-bold transition-all duration-200 ${
         saved
           ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
           : dm
