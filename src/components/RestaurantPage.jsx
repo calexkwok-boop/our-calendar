@@ -447,14 +447,19 @@ const FeaturedRestaurantRecommendation = React.memo(({ post, currentUserId, onSo
   );
 });
 
-const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeday, onDelete, darkMode }) => {
+const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeday, onVote, onDelete, darkMode }) => {
   const bg = darkMode ? '#161f30' : '#ffffff';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
   const tp = darkMode ? '#f1f5f9' : '#111827';
   const ts = darkMode ? '#6b7280' : '#9ca3af';
-  const [liked, setLiked] = useState(false);
+  const [vote, setVote] = useState(0);
+  const [likes, setLikes] = useState(post.likes_count ?? 0);
   const [saved, setSaved] = useState(false);
   const isMine = Boolean(currentUserId && post.user_id && currentUserId === post.user_id);
+
+  useEffect(() => {
+    setLikes(post.likes_count ?? 0);
+  }, [post.id, post.likes_count]);
 
   return (
     <div style={{ background: bg, borderRadius: 20, border: `1px solid ${bw}`, overflow: 'hidden', position: 'relative' }}>
@@ -495,7 +500,7 @@ const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeda
               {isMine ? 'You recommended a place' : 'Someone recommended a place'}
             </p>
             <span style={{ fontSize: 11, color: ts, flexShrink: 0 }}>
-              {post.likes_count ?? 0} likes
+              {likes} votes
             </span>
           </div>
           <p style={{ margin: 0, fontSize: 11, color: ts }}>
@@ -550,12 +555,37 @@ const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeda
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setLiked(v => !v)}
-            style={{ padding: '7px 10px', borderRadius: 10, border: `1px solid ${bw}`, background: liked ? 'rgba(244,114,182,0.12)' : 'transparent', color: liked ? '#ec4899' : ts, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-          >
-            {liked ? '♥' : '♡'} {post.likes_count ?? 0}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              onClick={() => {
+                const nextVote = vote === 1 ? 0 : 1;
+                const delta = nextVote - vote;
+                if (!delta) return;
+                setVote(nextVote);
+                setLikes((n) => Math.max(0, n + delta));
+                onVote?.(post, delta);
+              }}
+              style={{ padding: '7px 9px', borderRadius: 10, border: `1px solid ${vote === 1 ? 'rgba(34,197,94,0.28)' : bw}`, background: vote === 1 ? 'rgba(34,197,94,0.12)' : 'transparent', color: vote === 1 ? '#16a34a' : ts, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+              aria-label="Upvote recommendation"
+            >
+              ▲
+            </button>
+            <span style={{ fontSize: 12, color: ts, minWidth: 28, textAlign: 'center' }}>{likes}</span>
+            <button
+              onClick={() => {
+                const nextVote = vote === -1 ? 0 : -1;
+                const delta = nextVote - vote;
+                if (!delta) return;
+                setVote(nextVote);
+                setLikes((n) => Math.max(0, n + delta));
+                onVote?.(post, delta);
+              }}
+              style={{ padding: '7px 9px', borderRadius: 10, border: `1px solid ${vote === -1 ? 'rgba(239,68,68,0.28)' : bw}`, background: vote === -1 ? 'rgba(239,68,68,0.12)' : 'transparent', color: vote === -1 ? '#dc2626' : ts, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+              aria-label="Downvote recommendation"
+            >
+              ▼
+            </button>
+          </div>
           <span style={{ fontSize: 12, color: ts }}>
             💬 {post.comments_count ?? 0}
           </span>
@@ -1294,8 +1324,43 @@ const RestaurantPage = ({
 
     try {
       const KEY = apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || '';
-      let data;
+      const fallbackRes = await fetch(`/api/places?action=autocomplete&input=${encodeURIComponent(trimmed)}`);
+      let fallbackData;
+      try {
+        if (!fallbackRes.ok) throw new Error('proxy_unavailable');
+        fallbackData = await fallbackRes.json();
+      } catch {
+        if (!KEY) throw new Error('proxy_unavailable');
+        const directFallback = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(trimmed)}&key=${KEY}`);
+        fallbackData = await directFallback.json();
+      }
+      const prediction = fallbackData.status === 'OK' && Array.isArray(fallbackData.predictions) ? fallbackData.predictions[0] : null;
 
+      if (prediction?.place_id) {
+        let detailsData;
+        try {
+          const detailsRes = await fetch(`/api/places?action=details&place_id=${encodeURIComponent(prediction.place_id)}`);
+          if (!detailsRes.ok) throw new Error('proxy_unavailable');
+          detailsData = await detailsRes.json();
+        } catch {
+          if (!KEY) throw new Error('proxy_unavailable');
+          const directDetails = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(prediction.place_id)}&fields=geometry,formatted_address&key=${KEY}`);
+          detailsData = await directDetails.json();
+        }
+        const locDetails = detailsData?.result?.geometry?.location;
+        if (locDetails?.lat && locDetails?.lng) {
+          const loc = { lat: locDetails.lat, lng: locDetails.lng };
+          const label = detailsData?.result?.formatted_address || prediction.description || trimmed;
+          setLocation(loc);
+          setLocationLabel(label);
+          setLocationSearch('');
+          setLocationSuggestions([]);
+          fetchRestaurants(loc, search, radius);
+          return;
+        }
+      }
+
+      let data;
       try {
         const r = await fetch(`/api/geocode?address=${encodeURIComponent(trimmed)}`);
         if (!r.ok) throw new Error('proxy_unavailable');
@@ -1317,46 +1382,7 @@ const RestaurantPage = ({
         return;
       }
 
-      const fallbackRes = await fetch(`/api/places?action=autocomplete&input=${encodeURIComponent(trimmed)}`);
-      let fallbackData;
-      try {
-        if (!fallbackRes.ok) throw new Error('proxy_unavailable');
-        fallbackData = await fallbackRes.json();
-      } catch {
-        if (!KEY) throw new Error('proxy_unavailable');
-        const directFallback = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(trimmed)}&key=${KEY}`);
-        fallbackData = await directFallback.json();
-      }
-      const prediction = fallbackData.status === 'OK' && Array.isArray(fallbackData.predictions) ? fallbackData.predictions[0] : null;
-
-      if (!prediction?.place_id) {
-        setError('Location not found — try a different city or address.');
-        return;
-      }
-
-      let detailsData;
-      try {
-        const detailsRes = await fetch(`/api/places?action=details&place_id=${encodeURIComponent(prediction.place_id)}`);
-        if (!detailsRes.ok) throw new Error('proxy_unavailable');
-        detailsData = await detailsRes.json();
-      } catch {
-        if (!KEY) throw new Error('proxy_unavailable');
-        const directDetails = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(prediction.place_id)}&fields=geometry,formatted_address&key=${KEY}`);
-        detailsData = await directDetails.json();
-      }
-      const locDetails = detailsData?.result?.geometry?.location;
-      if (!locDetails?.lat || !locDetails?.lng) {
-        setError('Location not found — try a different city or address.');
-        return;
-      }
-
-      const loc = { lat: locDetails.lat, lng: locDetails.lng };
-      const label = detailsData?.result?.formatted_address || prediction.description || trimmed;
-      setLocation(loc);
-      setLocationLabel(label);
-      setLocationSearch('');
-      setLocationSuggestions([]);
-      fetchRestaurants(loc, search, radius);
+      setError('Location not found — try a different city or address.');
     } catch {
       setError('Could not look up that location.');
     } finally {
@@ -1466,6 +1492,31 @@ const RestaurantPage = ({
 
     return true;
   };
+
+  const handleVoteRecommendation = useCallback(async (post, delta) => {
+    if (!post?.id || !delta) return;
+
+    try {
+      const { error } = await supabase.rpc('vote_on_restaurant_post', {
+        post_id: post.id,
+        vote_delta: delta,
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setRecommendedPosts((prev) => prev.map((item) => (
+        item.id === post.id
+          ? { ...item, likes_count: Math.max(0, (item.likes_count ?? 0) + delta) }
+          : item
+      )));
+      setFeaturedRestaurantPost((prev) => (
+        prev && prev.id === post.id
+          ? { ...prev, likes_count: Math.max(0, (prev.likes_count ?? 0) + delta) }
+          : prev
+      ));
+    }
+  }, []);
 
   const handleDeleteRecommendation = useCallback(async (post) => {
     if (!post?.id) return;
@@ -1839,6 +1890,7 @@ const RestaurantPage = ({
                 post={post}
                 currentUserId={currentUserId}
                 onSomeday={handleSomedayFromRecommendation}
+                onVote={handleVoteRecommendation}
                 onDelete={handleDeleteRecommendation}
                 darkMode={darkMode}
               />

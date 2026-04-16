@@ -245,16 +245,22 @@ const ProductCard = React.memo(function ProductCard({ product, onSomeday, savedI
   );
 });
 
-const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, onAddToSomeday, darkMode }) {
+const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, onAddToSomeday, onVote, darkMode }) {
   const dm = darkMode;
-  const [liked, setLiked]   = useState(post.liked_by_me ?? false);
+  const [vote, setVote]     = useState(0);
   const [likes, setLikes]   = useState(post.likes_count ?? 0);
   const [wished, setWished] = useState(false);
 
-  const handleLike = async () => {
-    const newLiked = !liked;
-    setLiked(newLiked);
-    setLikes((n) => newLiked ? n + 1 : n - 1);
+  useEffect(() => {
+    setLikes(post.likes_count ?? 0);
+  }, [post.id, post.likes_count]);
+
+  const handleVote = async (nextVote) => {
+    const delta = nextVote - vote;
+    if (!delta) return;
+    setVote(nextVote);
+    setLikes((n) => Math.max(0, n + delta));
+    onVote?.(post, delta);
   };
 
   const displayName = post.profiles?.full_name ?? (post.user_id === currentUserId ? "You" : "Someone");
@@ -344,14 +350,31 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
 
       {/* Actions */}
       <div className={`flex items-center gap-4 pt-3 border-t ${dm ? 'border-white/5' : 'border-slate-200'}`}>
-        <button
-          onClick={handleLike}
-          className={`text-xs flex items-center gap-1 transition-colors duration-150 ${
-            liked ? "text-pink-500" : "text-slate-400 hover:text-pink-500"
-          }`}
-        >
-          {liked ? "♥" : "♡"} {likes} {likes === 1 ? "like" : "likes"}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => handleVote(vote === 1 ? 0 : 1)}
+            className={`text-xs flex items-center gap-1 px-2 py-1 rounded-full border transition-colors duration-150 ${
+              vote === 1
+                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600"
+                : "text-slate-400 hover:text-emerald-600 border-transparent hover:border-emerald-400/20"
+            }`}
+            aria-label="Upvote recommendation"
+          >
+            ▲
+          </button>
+          <span className="text-xs text-slate-500 tabular-nums">{likes}</span>
+          <button
+            onClick={() => handleVote(vote === -1 ? 0 : -1)}
+            className={`text-xs flex items-center gap-1 px-2 py-1 rounded-full border transition-colors duration-150 ${
+              vote === -1
+                ? "bg-rose-500/10 border-rose-500/20 text-rose-600"
+                : "text-slate-400 hover:text-rose-600 border-transparent hover:border-rose-400/20"
+            }`}
+            aria-label="Downvote recommendation"
+          >
+            ▼
+          </button>
+        </div>
         <button className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
           💬 {post.comments_count ?? 0} comments
         </button>
@@ -901,6 +924,31 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
     }
   };
 
+  const handleVoteCommunityPost = useCallback(async (post, delta) => {
+    if (!post?.id || !delta) return;
+
+    try {
+      const { error } = await supabase.rpc("vote_on_product_post", {
+        post_id: post.id,
+        vote_delta: delta,
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setCommunityPosts((prev) => prev.map((item) => (
+        item.id === post.id
+          ? { ...item, likes_count: Math.max(0, (item.likes_count ?? 0) + delta) }
+          : item
+      )));
+      setFeaturedPost((prev) => (
+        prev && prev.id === post.id
+          ? { ...prev, likes_count: Math.max(0, (prev.likes_count ?? 0) + delta) }
+          : prev
+      ));
+    }
+  }, []);
+
   // ── Wishlist save ──
   const handleSomeday = useCallback((product) => {
     const alreadySaved = wishlistedIds.has(product.id);
@@ -1236,7 +1284,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
         </p>
         <div className="flex flex-col gap-2.5">
           {communityPosts.map((post) => (
-            <CommunityPost key={post.id} post={post} currentUserId={currentUserId} onAddToSomeday={onAddToSomeday} darkMode={dm} />
+            <CommunityPost key={post.id} post={post} currentUserId={currentUserId} onAddToSomeday={onAddToSomeday} onVote={handleVoteCommunityPost} darkMode={dm} />
           ))}
         </div>
 
