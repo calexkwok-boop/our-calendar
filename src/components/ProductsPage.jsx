@@ -481,7 +481,7 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[11010] flex items-end sm:items-center justify-center p-4 overflow-y-auto">
       <div className={`border rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col ${dm ? 'bg-[#161f30] border-white/10' : 'bg-white border-slate-200'}`}>
         <div className="flex items-center justify-between px-6 pt-6">
-          <h2 className={`font-['Caveat'] text-2xl font-bold ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Share something you love</h2>
+          <h2 className={`font-handwritten text-2xl font-bold ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Share something you love</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
         </div>
 
@@ -665,7 +665,7 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
           <button
             onClick={handleSubmit}
             disabled={!draft.review.trim() || submitting}
-            className="w-full bg-violet-500 hover:bg-violet-400 disabled:opacity-40 text-white rounded-2xl py-3 text-sm font-handwritten font-bold transition-colors"
+            className="w-full bg-[#C9A15D] hover:bg-[#B88A3A] disabled:opacity-40 text-white rounded-2xl py-3 text-sm font-handwritten font-bold transition-colors"
           >
             {submitting ? "Posting…" : "Share with friends"}
           </button>

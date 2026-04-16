@@ -553,20 +553,11 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
       return;
     }
 
-    const KEY = apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || '';
-    if (!KEY) {
-      setAddressSuggestions([]);
-      setAddressSuggesting(false);
-      return;
-    }
-
     let active = true;
     setAddressSuggesting(true);
     const timer = window.setTimeout(async () => {
       try {
-        const res = await fetch(
-          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=geocode&components=country:us&key=${KEY}`
-        );
+        const res = await fetch(`/api/places?action=autocomplete&input=${encodeURIComponent(query)}`);
         const data = await res.json();
         if (!active) return;
         if (data.status === 'OK' && Array.isArray(data.predictions)) {
@@ -592,7 +583,7 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
       active = false;
       clearTimeout(timer);
     };
-  }, [apiKey, form.address]);
+  }, [form.address]);
 
   const readImageFile = (file) => {
     if (!file) return;
@@ -937,20 +928,11 @@ const RestaurantPage = ({
       return;
     }
 
-    const KEY = apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || '';
-    if (!KEY) {
-      setLocationSuggestions([]);
-      setLocationSuggesting(false);
-      return;
-    }
-
     let active = true;
     setLocationSuggesting(true);
     const timer = window.setTimeout(async () => {
       try {
-        const res = await fetch(
-          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=geocode&components=country:us&key=${KEY}`
-        );
+        const res = await fetch(`/api/places?action=autocomplete&input=${encodeURIComponent(query)}`);
         const data = await res.json();
         if (!active) return;
         if (data.status === 'OK' && Array.isArray(data.predictions)) {
@@ -976,7 +958,7 @@ const RestaurantPage = ({
       active = false;
       clearTimeout(timer);
     };
-  }, [apiKey, locationSearch]);
+  }, [locationSearch]);
 
   // ── fetch restaurants ───────────────────────────────────────────────────────
   // The /api/places proxy already paginates up to 60 results server-side.

@@ -13,6 +13,7 @@
  *
  * Endpoints used:
  *   GET /api/places?lat=34.05&lng=-118.24&query=sushi&type=restaurant
+ *   GET /api/places?action=autocomplete&input=los%20angeles
  *   GET /api/places/details?place_id=ChIJ...
  */
 
@@ -23,7 +24,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'GOOGLE_PLACES_KEY not configured' });
   }
 
-  const { lat, lng, query = '', type = 'restaurant', place_id, action, ref, maxwidth = '400', radius = '10000' } = req.query;
+  const { lat, lng, query = '', input = '', type = 'restaurant', place_id, action, ref, maxwidth = '400', radius = '10000' } = req.query;
 
   // ── Photo proxy ───────────────────────────────────────────────────────────
   if (action === 'photo') {
@@ -43,6 +44,23 @@ export default async function handler(req, res) {
   }
 
   // ── Place Details ─────────────────────────────────────────────────────────
+  // ── Autocomplete proxy ─────────────────────────────────────────────────────
+  if (action === 'autocomplete') {
+    const term = (input || query || '').trim();
+    if (!term) return res.status(400).json({ error: 'input required' });
+
+    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(term)}&types=geocode&components=country:us&key=${key}`;
+
+    try {
+      const r = await fetch(url);
+      const data = await r.json();
+      res.setHeader('Cache-Control', 's-maxage=300'); // cache 5 min
+      return res.json(data);
+    } catch (err) {
+      return res.status(500).json({ error: 'Places autocomplete fetch failed' });
+    }
+  }
+
   if (action === 'details' || place_id) {
     if (!place_id) return res.status(400).json({ error: 'place_id required' });
 
