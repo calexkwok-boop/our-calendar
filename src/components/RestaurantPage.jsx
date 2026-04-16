@@ -42,6 +42,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapPin, Clock, Phone, ExternalLink, Plus, Search, Star, X, ChevronRight, Navigation } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const handwritten = '"Caveat", "Comic Sans MS", "Bradley Hand", cursive';
@@ -108,6 +109,22 @@ const getCuisineEmoji = (cuisine) => CUISINE_EMOJI[cuisine?.toLowerCase()] || CU
 
 // ─── price display ────────────────────────────────────────────────────────────
 const priceStr = (level) => level ? '$'.repeat(level) : '–';
+
+const truncateText = (text, max = 120) => {
+  if (!text) return '';
+  const clean = String(text).trim();
+  return clean.length > max ? `${clean.slice(0, max).trimEnd()}…` : clean;
+};
+
+const restaurantSomedayPayload = (post) => ({
+  title: post.restaurant_name,
+  imageUrl: post.restaurant_image || '',
+  emoji: '🍽️',
+  type: 'restaurants',
+  notes: [post.review, post.address, post.best_for, post.cuisine, post.price_level ? priceStr(post.price_level) : '']
+    .filter(Boolean)
+    .join(' · '),
+});
 
 // ─── (paper texture removed — matches MoviesPage clean aesthetic) ─────────────
 
@@ -323,6 +340,332 @@ const RestaurantCard = ({ restaurant, onTap, savedIds, darkMode, stagger }) => {
 };
 
 // ─── skeleton card ────────────────────────────────────────────────────────────
+const FeaturedRestaurantRecommendation = ({ post, onSomeday, darkMode }) => {
+  const bg = darkMode ? '#161f30' : '#ffffff';
+  const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
+  const tp = darkMode ? '#f1f5f9' : '#111827';
+  const ts = darkMode ? '#6b7280' : '#9ca3af';
+  const [saved, setSaved] = useState(false);
+
+  return (
+    <div style={{ background: bg, borderRadius: 24, border: `1px solid ${bw}`, overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 1fr' }} className="max-sm:block">
+        <div style={{ minHeight: 220, background: darkMode ? 'rgba(99,102,241,0.08)' : '#f5f3ff', position: 'relative' }}>
+          {post.restaurant_image ? (
+            <img
+              src={post.restaurant_image}
+              alt={post.restaurant_name}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={e => { e.currentTarget.style.display = 'none'; }}
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>
+              🍽️
+            </div>
+          )}
+          <div style={{ position: 'absolute', top: 12, left: 12, padding: '5px 10px', borderRadius: 999, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: 11, fontWeight: 700 }}>
+            Most loved this week
+          </div>
+        </div>
+        <div style={{ padding: 22, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 10 }}>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#8b5cf6' }}>
+            Community pick
+          </p>
+          <h2 style={{ fontFamily: handwritten, fontSize: 30, fontWeight: 700, lineHeight: 1.05, margin: 0, color: tp }}>
+            {post.restaurant_name}
+          </h2>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {post.cuisine && (
+              <span style={{ padding: '4px 9px', borderRadius: 8, background: darkMode ? 'rgba(168,85,247,0.15)' : 'rgba(243,232,255,1)', color: darkMode ? '#c4b5fd' : '#6d28d9', fontSize: 11, fontWeight: 600 }}>
+                {post.cuisine}
+              </span>
+            )}
+            {post.best_for && (
+              <span style={{ padding: '4px 9px', borderRadius: 8, background: darkMode ? 'rgba(20,184,166,0.12)' : 'rgba(204,251,241,0.8)', color: darkMode ? '#5eead4' : '#0f766e', fontSize: 11, fontWeight: 600 }}>
+                {post.best_for}
+              </span>
+            )}
+            <span style={{ padding: '4px 9px', borderRadius: 8, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: ts, fontSize: 11, fontWeight: 600 }}>
+              {post.likes_count ?? 0} likes
+            </span>
+          </div>
+          {post.review && (
+            <p style={{ margin: 0, color: ts, fontSize: 13, lineHeight: 1.6, fontStyle: 'italic' }}>
+              "{truncateText(post.review, 160)}"
+            </p>
+          )}
+          <button
+            onClick={() => {
+              if (saved) return;
+              setSaved(true);
+              onSomeday?.(post);
+            }}
+            style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 13, fontWeight: 700, cursor: saved ? 'default' : 'pointer' }}
+          >
+            {saved ? '✓ Saved' : '+ Add to Someday'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RestaurantRecommendationCard = ({ post, currentUserId, onSomeday, darkMode }) => {
+  const bg = darkMode ? '#161f30' : '#ffffff';
+  const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
+  const tp = darkMode ? '#f1f5f9' : '#111827';
+  const ts = darkMode ? '#6b7280' : '#9ca3af';
+  const [liked, setLiked] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const isMine = Boolean(currentUserId && post.user_id && currentUserId === post.user_id);
+
+  return (
+    <div style={{ background: bg, borderRadius: 20, border: `1px solid ${bw}`, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: 12, padding: 14 }}>
+        <div style={{ width: 54, height: 54, borderRadius: 18, background: 'linear-gradient(135deg, rgba(139,92,246,0.18), rgba(20,184,166,0.18))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: handwritten, fontSize: 18, fontWeight: 700, color: tp, flexShrink: 0 }}>
+          {isMine ? 'You' : '★'}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+            <p style={{ margin: 0, color: tp, fontSize: 14, fontWeight: 600, lineHeight: 1.2 }}>
+              {isMine ? 'You recommended a place' : 'Someone recommended a place'}
+            </p>
+            <span style={{ fontSize: 11, color: ts, flexShrink: 0 }}>
+              {post.likes_count ?? 0} likes
+            </span>
+          </div>
+          <p style={{ margin: 0, fontSize: 11, color: ts }}>
+            {post.address || 'Community recommendation'}
+          </p>
+        </div>
+      </div>
+
+      {post.restaurant_image ? (
+        <img
+          src={post.restaurant_image}
+          alt={post.restaurant_name}
+          style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }}
+          onError={e => { e.currentTarget.style.display = 'none'; }}
+        />
+      ) : (
+        <div style={{ width: '100%', height: 180, background: darkMode ? 'rgba(255,255,255,0.04)' : '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>
+          🍽️
+        </div>
+      )}
+
+      <div style={{ padding: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <h3 style={{ fontFamily: handwritten, fontSize: 22, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp }}>
+              {post.restaurant_name}
+            </h3>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 7 }}>
+              {post.cuisine && (
+                <span style={{ padding: '3px 8px', borderRadius: 8, background: darkMode ? 'rgba(168,85,247,0.15)' : 'rgba(243,232,255,1)', color: darkMode ? '#c4b5fd' : '#6d28d9', fontSize: 11, fontWeight: 600 }}>
+                  {post.cuisine}
+                </span>
+              )}
+              {post.best_for && (
+                <span style={{ padding: '3px 8px', borderRadius: 8, background: darkMode ? 'rgba(20,184,166,0.12)' : 'rgba(204,251,241,0.8)', color: darkMode ? '#5eead4' : '#0f766e', fontSize: 11, fontWeight: 600 }}>
+                  {post.best_for}
+                </span>
+              )}
+            </div>
+          </div>
+          {post.price_level && (
+            <span style={{ fontFamily: handwritten, fontSize: 18, color: ts, flexShrink: 0 }}>
+              {priceStr(post.price_level)}
+            </span>
+          )}
+        </div>
+
+        {post.review && (
+          <p style={{ margin: '10px 0 0', fontSize: 13, color: ts, lineHeight: 1.6, fontStyle: 'italic' }}>
+            "{truncateText(post.review, 130)}"
+          </p>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setLiked(v => !v)}
+            style={{ padding: '7px 10px', borderRadius: 10, border: `1px solid ${bw}`, background: liked ? 'rgba(244,114,182,0.12)' : 'transparent', color: liked ? '#ec4899' : ts, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+          >
+            {liked ? '♥' : '♡'} {post.likes_count ?? 0}
+          </button>
+          <span style={{ fontSize: 12, color: ts }}>
+            💬 {post.comments_count ?? 0}
+          </span>
+          <button
+            onClick={() => {
+              if (saved) return;
+              setSaved(true);
+              onSomeday?.(post);
+            }}
+            style={{ marginLeft: 'auto', padding: '8px 12px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(45,212,191,0.22)' : '#99f6e4'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 12, fontWeight: 700, cursor: saved ? 'default' : 'pointer' }}
+          >
+            {saved ? '✓ Someday' : '+ Someday'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
+  const pbg = darkMode ? '#131c2e' : '#fff';
+  const tp = darkMode ? '#f1f5f9' : '#111827';
+  const ts = darkMode ? '#6b7280' : '#9ca3af';
+  const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [form, setForm] = useState({
+    restaurant_name: '',
+    restaurant_image: '',
+    address: '',
+    cuisine: '',
+    price_level: '',
+    rating: '',
+    review: '',
+    best_for: '',
+  });
+
+  const updateField = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async () => {
+    if (!form.restaurant_name.trim() || !form.review.trim()) {
+      setSubmitError('Please add a restaurant name and a short review.');
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError('');
+    const ok = await onSubmit?.(form);
+    setSubmitting(false);
+
+    if (ok) {
+      onClose();
+    } else {
+      setSubmitError('Could not save this recommendation right now.');
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div
+        style={{ width: '100%', maxWidth: 560, background: pbg, borderRadius: '24px 24px 0 0', maxHeight: '88vh', overflowY: 'auto', borderTop: `1px solid ${bw}`, paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ width: 36, height: 4, background: darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb', borderRadius: 3, margin: '12px auto 0' }} />
+        <div style={{ padding: '18px 20px 22px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#8b5cf6' }}>
+                Recommend a place ✨
+              </p>
+              <h2 style={{ fontFamily: handwritten, fontSize: 28, fontWeight: 700, color: tp, margin: '4px 0 0' }}>
+                Share a favorite spot
+              </h2>
+            </div>
+            <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: tp, cursor: 'pointer' }}>
+              <X style={{ width: 16, height: 16 }} />
+            </button>
+          </div>
+
+          <p style={{ fontSize: 13, color: ts, lineHeight: 1.6, margin: '0 0 18px' }}>
+            Add a place you love so it can show up alongside the Google results.
+          </p>
+
+          {submitError && (
+            <div style={{ marginBottom: 14, padding: '10px 12px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(251,191,36,0.2)' : '#fde68a'}`, background: darkMode ? 'rgba(251,191,36,0.08)' : '#fffbeb', color: darkMode ? '#fbbf24' : '#92400e', fontSize: 12 }}>
+              {submitError}
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gap: 12 }}>
+            {[
+              { key: 'restaurant_name', label: 'Restaurant name', required: true, placeholder: 'Bestia' },
+              { key: 'restaurant_image', label: 'Image URL', placeholder: 'https://...' },
+              { key: 'address', label: 'Address', placeholder: '2121 E 7th Pl, Los Angeles' },
+              { key: 'cuisine', label: 'Cuisine', placeholder: 'Italian' },
+              { key: 'best_for', label: 'Best for', placeholder: 'Date night, brunch, family...' },
+            ].map(field => (
+              <label key={field.key} style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: tp }}>{field.label}{field.required ? ' *' : ''}</span>
+                <input
+                  type="text"
+                  value={form[field.key]}
+                  placeholder={field.placeholder}
+                  onChange={e => updateField(field.key, e.target.value)}
+                  style={{ width: '100%', borderRadius: 12, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc', color: tp, padding: '11px 12px', fontSize: 14, outline: 'none' }}
+                />
+              </label>
+            ))}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }} className="max-sm:grid-cols-1">
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: tp }}>Price level</span>
+                <select
+                  value={form.price_level}
+                  onChange={e => updateField('price_level', e.target.value)}
+                  style={{ width: '100%', borderRadius: 12, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc', color: tp, padding: '11px 12px', fontSize: 14, outline: 'none' }}
+                >
+                  <option value="">Select</option>
+                  <option value="1">$</option>
+                  <option value="2">$$</option>
+                  <option value="3">$$$</option>
+                  <option value="4">$$$$</option>
+                </select>
+              </label>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: tp }}>Rating</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  value={form.rating}
+                  placeholder="4.8"
+                  onChange={e => updateField('rating', e.target.value)}
+                  style={{ width: '100%', borderRadius: 12, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc', color: tp, padding: '11px 12px', fontSize: 14, outline: 'none' }}
+                />
+              </label>
+            </div>
+
+            <label style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: tp }}>Why do you love it? *</span>
+              <textarea
+                value={form.review}
+                onChange={e => updateField('review', e.target.value)}
+                rows={4}
+                placeholder="Tell people what makes it worth going..."
+                style={{ width: '100%', borderRadius: 12, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc', color: tp, padding: '11px 12px', fontSize: 14, outline: 'none', resize: 'vertical' }}
+              />
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+            <button
+              onClick={onClose}
+              style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: `1px solid ${bw}`, background: 'transparent', color: ts, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              style={{ flex: 1, padding: '12px 14px', borderRadius: 14, border: 'none', background: submitting ? 'rgba(20,184,166,0.45)' : '#14b8a6', color: '#fff', fontSize: 14, fontWeight: 700, cursor: submitting ? 'default' : 'pointer' }}
+            >
+              {submitting ? 'Posting…' : 'Recommend a place'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SkeletonCard = ({ darkMode }) => (
   <div style={{ background: darkMode ? '#161f30' : '#ffffff', borderRadius: 20, border: `1px solid ${darkMode ? 'transparent' : '#e5e7eb'}`, overflow: 'hidden' }}>
     <div style={{ height: 130, background: darkMode ? 'rgba(255,255,255,0.06)' : '#f3f4f6', animation: 'pulse 1.5s ease infinite' }} />
@@ -354,11 +697,39 @@ const RestaurantPage = ({
   const [radius, setRadius]           = useState(10000);
   const [selected, setSelected]       = useState(null);
   const [savedIds, setSavedIds]       = useState(new Set());
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [recommendedPosts, setRecommendedPosts] = useState([]);
+  const [isRecommendOpen, setIsRecommendOpen] = useState(false);
   const [location, setLocation]       = useState(userLocation || { lat: 34.0522, lng: -118.2437 }); // default LA
   const [locationSearch, setLocationSearch] = useState('');
   const [locationLabel, setLocationLabel]   = useState('');
   const [locSearching, setLocSearching]     = useState(false);
   const fetchedRef                    = useRef(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUserId(data?.user?.id ?? null);
+    });
+  }, []);
+
+  const fetchRecommendedPosts = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('restaurant_posts')
+      .select('*')
+      .order('likes_count', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (!error && data && data.length > 0) {
+      setRecommendedPosts(data);
+    } else {
+      setRecommendedPosts(MOCK_RESTAURANT_POSTS);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRecommendedPosts();
+  }, [fetchRecommendedPosts]);
 
   // ── fetch restaurants ───────────────────────────────────────────────────────
   // The /api/places proxy already paginates up to 60 results server-side.
@@ -520,6 +891,42 @@ const RestaurantPage = ({
   };
 
   // ── style tokens ────────────────────────────────────────────────────────────
+  const handleRecommendSubmit = async (form) => {
+    const payload = {
+      user_id: currentUserId,
+      restaurant_name: form.restaurant_name.trim(),
+      restaurant_image: form.restaurant_image.trim() || null,
+      address: form.address.trim() || null,
+      cuisine: form.cuisine.trim() || null,
+      price_level: form.price_level || null,
+      rating: form.rating ? Number(form.rating) : null,
+      review: form.review.trim(),
+      best_for: form.best_for.trim() || null,
+      likes_count: 0,
+      comments_count: 0,
+    };
+
+    const { error } = await supabase.from('restaurant_posts').insert(payload);
+    if (error) {
+      console.error(error);
+      return false;
+    }
+
+    await fetchRecommendedPosts();
+    return true;
+  };
+
+  const handleSomedayFromRecommendation = (post) => {
+    onSaveToSomeday?.({
+      ...restaurantSomedayPayload(post),
+      cuisine: post.cuisine || '',
+      address: post.address || '',
+      review: post.review || '',
+      best_for: post.best_for || '',
+      price_level: post.price_level || null,
+    });
+  };
+
   const pageBg = darkMode ? '#0e1520' : '#faf8f3';
   const hBg    = darkMode ? 'rgba(19,28,46,0.98)' : 'rgba(255,255,255,0.98)';
   const bw     = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
@@ -666,10 +1073,21 @@ const RestaurantPage = ({
             <span style={{ flexShrink: 0 }}>ℹ️</span>{error}
           </div>
         )}
+
+        {/* ── Featured recommendation ── */}
+        {recommendedPosts.length > 0 && (
+          <div style={{ padding: '0 16px 14px' }}>
+            <FeaturedRestaurantRecommendation
+              post={recommendedPosts[0]}
+              onSomeday={handleSomedayFromRecommendation}
+              darkMode={darkMode}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Grid ── */}
-      <div style={{ padding: '14px 14px 100px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+      <div style={{ padding: '14px 14px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
         {loading
           ? Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} darkMode={darkMode} />)
           : filtered.length === 0
@@ -698,6 +1116,47 @@ const RestaurantPage = ({
         }
       </div>
 
+      {/* ── Recommendation CTA ── */}
+      <div style={{ padding: '0 16px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, borderRadius: 22, padding: '16px 16px 16px 18px', background: darkMode ? 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(20,184,166,0.08))' : 'linear-gradient(135deg, rgba(250,245,255,0.95), rgba(240,253,250,0.9))', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e9d5ff'}` }}>
+          <div style={{ width: 42, height: 42, borderRadius: 14, background: darkMode ? 'rgba(255,255,255,0.06)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+            ✨
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{ fontFamily: handwritten, fontSize: 22, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp }}>
+              Found a great spot?
+            </h3>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: ts, lineHeight: 1.5 }}>
+              Share it with your friends — tell them why it’s worth going.
+            </p>
+          </div>
+          <button
+            onClick={() => setIsRecommendOpen(true)}
+            style={{ padding: '10px 14px', borderRadius: 14, border: 'none', background: '#14b8a6', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            Recommend a place ✨
+          </button>
+        </div>
+      </div>
+
+      {/* ── Community recommendations feed ── */}
+      <div style={{ padding: '0 14px 100px' }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: ts, margin: '4px 2px 10px' }}>
+          What people are recommending
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {recommendedPosts.map((post) => (
+            <RestaurantRecommendationCard
+              key={post.id}
+              post={post}
+              currentUserId={currentUserId}
+              onSomeday={handleSomedayFromRecommendation}
+              darkMode={darkMode}
+            />
+          ))}
+        </div>
+      </div>
+
       {/* ── Detail sheet ── */}
       {selected && (
         <RestaurantDetailSheet
@@ -706,6 +1165,15 @@ const RestaurantPage = ({
           onSaveToSomeday={handleSaveToSomeday}
           onClose={() => setSelected(null)}
           savedIds={savedIds}
+          darkMode={darkMode}
+        />
+      )}
+
+      {/* ── Recommendation modal ── */}
+      {isRecommendOpen && (
+        <PostRestaurantModal
+          onClose={() => setIsRecommendOpen(false)}
+          onSubmit={handleRecommendSubmit}
           darkMode={darkMode}
         />
       )}
@@ -730,5 +1198,53 @@ function inferCuisine(types = [], name = '') {
   if (t.includes('american') || t.includes('burger') || n.match(/burger|bbq|grill|diner/)) return 'american';
   return 'american';
 }
+
+const MOCK_RESTAURANT_POSTS = [
+  {
+    id: 'rp-1',
+    user_id: null,
+    restaurant_name: 'Bestia',
+    restaurant_image: '',
+    address: '2121 E 7th Pl, Los Angeles, CA',
+    cuisine: 'Italian',
+    price_level: '3',
+    rating: 4.8,
+    review: 'The pastas are the move, but the whole room feels like the perfect night-out spot. Always my first answer for a dinner recommendation.',
+    best_for: 'Date night',
+    likes_count: 18,
+    comments_count: 4,
+    created_at: new Date(Date.now() - 3 * 3600000).toISOString(),
+  },
+  {
+    id: 'rp-2',
+    user_id: null,
+    restaurant_name: 'Mariscos Jalisco',
+    restaurant_image: '',
+    address: '3040 E Olympic Blvd, Los Angeles, CA',
+    cuisine: 'Mexican',
+    price_level: '1',
+    rating: 4.9,
+    review: 'If someone wants something fast, fun, and unforgettable, this is the answer. The shrimp tacos are always worth the detour.',
+    best_for: 'Casual lunch',
+    likes_count: 25,
+    comments_count: 8,
+    created_at: new Date(Date.now() - 26 * 3600000).toISOString(),
+  },
+  {
+    id: 'rp-3',
+    user_id: null,
+    restaurant_name: 'République',
+    restaurant_image: '',
+    address: '624 S La Brea Ave, Los Angeles, CA',
+    cuisine: 'French',
+    price_level: '3',
+    rating: 4.7,
+    review: 'The brunch energy is fantastic, but it also works beautifully for a long lingering dinner. Feels special every time.',
+    best_for: 'Brunch',
+    likes_count: 14,
+    comments_count: 3,
+    created_at: new Date(Date.now() - 48 * 3600000).toISOString(),
+  },
+];
 
 export default RestaurantPage;
