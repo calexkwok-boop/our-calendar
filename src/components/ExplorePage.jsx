@@ -179,7 +179,9 @@ function MovieCard({ movie, onAddToSomeday, onPageTap }) {
   );
 }
 
-function CommunityCard({ post, onPageTap, onPlanEvent }) {
+const TYPE_EMOJI = { hiking: "🥾", games: "🎲", restaurants: "🍜", products: "🛍️" };
+
+function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday }) {
   return (
     <div className="rounded-2xl bg-white dark:bg-[#161f30] border border-stone-100 dark:border-transparent shadow-sm dark:shadow-none overflow-hidden">
       <CardHeader post={post} onPageTap={onPageTap} />
@@ -194,14 +196,20 @@ function CommunityCard({ post, onPageTap, onPlanEvent }) {
           <button
             key={a}
             onClick={() => {
-              if (post.type === "games") {
-                if (i === 0) onPageTap?.("games");
-                else onPlanEvent?.({ title: `Game night: ${post.cardTitle}` });
-              } else if (post.type === "hiking") {
-                if (i === 0) onPageTap?.("hiking");
-              } else if (post.type === "products") {
-                if (i === 0) onAddToSomeday?.({ title: post.cardTitle, type: "product" });
-                else onPageTap?.("products");
+              if (i === 0) {
+                // "Add to someday" — first button on all community cards
+                onAddToSomeday?.({
+                  title:    post.cardTitle,
+                  emoji:    TYPE_EMOJI[post.type] || "✨",
+                  type:     post.type,
+                  imageUrl: "",
+                });
+              } else {
+                // Second button — type-specific action
+                if (post.type === "games")       onPlanEvent?.({ title: `Game night: ${post.cardTitle}` });
+                else if (post.type === "hiking")      onPageTap?.("hiking");
+                else if (post.type === "restaurants") onPageTap?.("restaurants");
+                else if (post.type === "products")    onPageTap?.("products");
               }
             }}
             className={`text-xs font-medium px-3.5 py-1.5 rounded-xl active:opacity-70 ${i === 0 ? "bg-teal-400 text-gray-900" : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"}`}
@@ -415,7 +423,7 @@ export default function ExplorePage({ onAddToSomeday, onPlanEvent = () => {}, da
   function renderCard(post) {
     if (post.type === 'movies') return <MovieCard key={`movie-${post.id}`} movie={post} onAddToSomeday={onAddToSomeday} onPageTap={setActivePage} />;
     if (post.type === 'friends') return <FriendCard key={post.id} post={post} />;
-    return <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} />;
+    return <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} />;
   }
 
   function toggleSource(key) { setSources(prev => ({ ...prev, [key]: !prev[key] })); }
