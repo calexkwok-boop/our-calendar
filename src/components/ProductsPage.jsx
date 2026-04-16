@@ -3,8 +3,6 @@ import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient"; // adjust path as needed
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-// Add to your .env:  REACT_APP_RAINFOREST_KEY=your_key_here
-// Get a key at:     https://app.rainforestapi.com
 const RAINFOREST_KEY = process.env.REACT_APP_RAINFOREST_KEY;
 const RAINFOREST_URL = "https://api.rainforestapi.com/request";
 
@@ -32,8 +30,6 @@ const TRENDING = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function normalizeProduct(item) {
-  // Rainforest search result shape:
-  // { asin, title, link, image, rating, ratings_total, price: { value, raw, symbol }, is_prime }
   return {
     id:           item.asin,
     name:         item.title,
@@ -63,7 +59,8 @@ function getCategoryForProduct(name = "") {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 // ─── Product Modal ────────────────────────────────────────────────────────────
-function ProductModal({ product, isSaved, onSomeday, onPost, onClose }) {
+function ProductModal({ product, isSaved, onSomeday, onPost, onClose, darkMode }) {
+  const dm = darkMode;
   const category = getCategoryForProduct(product.name);
   const [saved, setSaved] = useState(isSaved);
 
@@ -89,13 +86,13 @@ function ProductModal({ product, isSaved, onSomeday, onPost, onClose }) {
       className="fixed inset-0 z-[10100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-lg bg-[#0e1520] rounded-t-3xl sm:rounded-3xl border border-white/10 shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div className={`w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border ${dm ? 'bg-[#0e1520] border-white/10' : 'bg-white border-slate-200'}`}>
         {/* Image header */}
         <div className="relative flex-shrink-0">
           {product.image ? (
-            <img src={product.image} alt={product.name} className="w-full h-56 object-contain bg-[#1a2540] p-6" />
+            <img src={product.image} alt={product.name} className={`w-full h-56 object-contain p-6 ${dm ? 'bg-[#1a2540]' : 'bg-slate-100'}`} />
           ) : (
-            <div className="w-full h-56 flex items-center justify-center text-8xl bg-gradient-to-br from-[#1a2540] to-[#1e2040]">🛍️</div>
+            <div className={`w-full h-56 flex items-center justify-center text-8xl bg-gradient-to-br ${dm ? 'from-[#1a2540] to-[#1e2040]' : 'from-slate-100 to-slate-200'}`}>🛍️</div>
           )}
           <button
             onClick={onClose}
@@ -106,37 +103,39 @@ function ProductModal({ product, isSaved, onSomeday, onPost, onClose }) {
         {/* Scrollable content */}
         <div className="overflow-y-auto flex-1 p-6 pb-2">
           <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">{category}</p>
-          <h2 className="font-['Caveat'] text-3xl font-bold text-slate-100 leading-tight mb-1">{product.name}</h2>
+          <h2 className={`font-['Caveat'] text-3xl font-bold leading-tight mb-1 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>{product.name}</h2>
 
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             {product.price && (
-              <span className="font-['Caveat'] text-2xl font-bold text-teal-400">{product.price}</span>
+              <span className="font-['Caveat'] text-2xl font-bold text-teal-500">{product.price}</span>
             )}
             {product.isPrime && (
-              <span className="text-[11px] text-blue-400 bg-blue-400/10 border border-blue-400/20 rounded-full px-2.5 py-0.5">✓ Prime</span>
+              <span className="text-[11px] text-blue-500 bg-blue-500/10 border border-blue-500/20 rounded-full px-2.5 py-0.5">✓ Prime</span>
             )}
             {product.rating && (
-              <span className="text-sm text-slate-400 flex items-center gap-1">
-                <span className="text-amber-400">★</span>
+              <span className="text-sm text-slate-500 flex items-center gap-1">
+                <span className="text-amber-500">★</span>
                 {Number(product.rating).toFixed(1)}
-                {ratingsLabel && <span className="text-slate-600">({ratingsLabel})</span>}
+                {ratingsLabel && <span className="text-slate-400">({ratingsLabel})</span>}
               </span>
             )}
           </div>
 
-          <p className="text-sm text-slate-400 leading-relaxed mb-6">
+          <p className="text-sm text-slate-500 leading-relaxed mb-6">
             {product.description || `Highly rated ${category.toLowerCase()} product loved by the community. Check Amazon for full specs and reviews.`}
           </p>
         </div>
 
         {/* Actions */}
-        <div className="flex-shrink-0 p-6 pt-3 border-t border-white/5 flex flex-col gap-2.5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))]">
+        <div className={`flex-shrink-0 p-6 pt-3 border-t flex flex-col gap-2.5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] ${dm ? 'border-white/5' : 'border-slate-200'}`}>
           <button
             onClick={handleSomeday}
             className={`w-full rounded-2xl py-3 text-sm font-medium border transition-all duration-200 ${
               saved
-                ? "bg-teal-400/20 border-teal-400/35 text-teal-300"
-                : "bg-teal-400/10 border-teal-400/25 text-teal-400 hover:bg-teal-400/20"
+                ? "bg-teal-500/20 border-teal-500/35 text-teal-600"
+                : dm
+                  ? "bg-teal-400/10 border-teal-400/25 text-teal-400 hover:bg-teal-400/20"
+                  : "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100"
             }`}
           >
             {saved ? "✓ In Someday List" : "+ Add to Someday"}
@@ -147,14 +146,14 @@ function ProductModal({ product, isSaved, onSomeday, onPost, onClose }) {
                 href={product.amazonUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 bg-amber-400/10 border border-amber-400/25 rounded-2xl py-3 text-sm font-medium text-amber-400 hover:bg-amber-400/20 transition-all text-center"
+                className={`flex-1 rounded-2xl py-3 text-sm font-medium transition-all text-center border ${dm ? 'bg-amber-400/10 border-amber-400/25 text-amber-400 hover:bg-amber-400/20' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}
               >
                 View on Amazon →
               </a>
             )}
             <button
               onClick={() => { onPost(product); onClose(); }}
-              className="flex-1 bg-violet-400/10 border border-violet-400/25 rounded-2xl py-3 text-sm font-medium text-violet-400 hover:bg-violet-400/20 transition-all"
+              className={`flex-1 rounded-2xl py-3 text-sm font-medium transition-all border ${dm ? 'bg-violet-400/10 border-violet-400/25 text-violet-400 hover:bg-violet-400/20' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
             >
               Share with friends
             </button>
@@ -166,43 +165,47 @@ function ProductModal({ product, isSaved, onSomeday, onPost, onClose }) {
   );
 }
 
-function ProductCard({ product, onSomeday, savedIds, onPost, onOpen }) {
+function ProductCard({ product, onSomeday, savedIds, onPost, onOpen, darkMode }) {
+  const dm = darkMode;
   const isWished = savedIds.has(product.id);
   const category = getCategoryForProduct(product.name);
 
   return (
-    <div onClick={onOpen} className="bg-[#161f30] border border-white/5 rounded-2xl overflow-hidden hover:border-violet-400/25 hover:-translate-y-0.5 transition-all duration-200 flex flex-col cursor-pointer">
+    <div
+      onClick={onOpen}
+      className={`border rounded-2xl overflow-hidden hover:border-violet-400/25 hover:-translate-y-0.5 transition-all duration-200 flex flex-col cursor-pointer ${dm ? 'bg-[#161f30] border-white/5' : 'bg-white border-slate-200'}`}
+    >
       {/* Image */}
       {product.image ? (
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-36 object-contain bg-[#1a2540] p-3"
+          className={`w-full h-36 object-contain p-3 ${dm ? 'bg-[#1a2540]' : 'bg-slate-100'}`}
         />
       ) : (
-        <div className="w-full h-36 flex items-center justify-center text-5xl bg-gradient-to-br from-[#1a2540] to-[#1e2040]">
+        <div className={`w-full h-36 flex items-center justify-center text-5xl bg-gradient-to-br ${dm ? 'from-[#1a2540] to-[#1e2040]' : 'from-slate-100 to-slate-200'}`}>
           🛍️
         </div>
       )}
 
       <div className="p-3.5 flex flex-col flex-1">
         <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">{category}</p>
-        <h3 className="font-['Caveat'] text-lg font-semibold text-slate-100 leading-tight mb-2 flex-1 line-clamp-2">
+        <h3 className={`font-['Caveat'] text-lg font-semibold leading-tight mb-2 flex-1 line-clamp-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
           {product.name}
         </h3>
 
         <div className="flex items-center justify-between mb-3">
           {product.price ? (
-            <span className="font-['Caveat'] text-xl font-bold text-teal-400">{product.price}</span>
+            <span className="font-['Caveat'] text-xl font-bold text-teal-500">{product.price}</span>
           ) : (
-            <span className="text-sm text-slate-500">—</span>
+            <span className="text-sm text-slate-400">—</span>
           )}
           {product.rating && (
-            <span className="text-xs text-slate-400 flex items-center gap-1">
-              <span className="text-amber-400">★</span>
+            <span className="text-xs text-slate-500 flex items-center gap-1">
+              <span className="text-amber-500">★</span>
               {Number(product.rating).toFixed(1)}
               {product.ratingsTotal && (
-                <span className="text-slate-600">
+                <span className="text-slate-400">
                   ({product.ratingsTotal > 999
                     ? `${Math.round(product.ratingsTotal / 1000)}k`
                     : product.ratingsTotal})
@@ -213,7 +216,7 @@ function ProductCard({ product, onSomeday, savedIds, onPost, onOpen }) {
         </div>
 
         {product.isPrime && (
-          <p className="text-[10px] text-blue-400 mb-2">✓ Prime</p>
+          <p className="text-[10px] text-blue-500 mb-2">✓ Prime</p>
         )}
 
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
@@ -221,15 +224,17 @@ function ProductCard({ product, onSomeday, savedIds, onPost, onOpen }) {
             onClick={() => onSomeday(product)}
             className={`flex-1 rounded-xl py-2 text-xs font-medium transition-all duration-200 border ${
               isWished
-                ? "bg-teal-400/20 border-teal-400/35 text-teal-300"
-                : "bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15"
+                ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
+                : dm
+                  ? "bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15"
+                  : "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100"
             }`}
           >
             {isWished ? "✓ Someday" : "+ Someday"}
           </button>
           <button
             onClick={() => onPost(product)}
-            className="flex-1 bg-teal-400/8 border border-teal-400/20 rounded-xl py-2 text-xs font-medium text-teal-400 hover:bg-teal-400/15 transition-all duration-200"
+            className={`flex-1 rounded-xl py-2 text-xs font-medium transition-all duration-200 border ${dm ? 'bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15' : 'bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100'}`}
           >
             Share
           </button>
@@ -239,7 +244,8 @@ function ProductCard({ product, onSomeday, savedIds, onPost, onOpen }) {
   );
 }
 
-function CommunityPost({ post, currentUserId, onAddToSomeday }) {
+function CommunityPost({ post, currentUserId, onAddToSomeday, darkMode }) {
+  const dm = darkMode;
   const [liked, setLiked]   = useState(post.liked_by_me ?? false);
   const [likes, setLikes]   = useState(post.likes_count ?? 0);
   const [wished, setWished] = useState(false);
@@ -248,26 +254,20 @@ function CommunityPost({ post, currentUserId, onAddToSomeday }) {
     const newLiked = !liked;
     setLiked(newLiked);
     setLikes((n) => newLiked ? n + 1 : n - 1);
-    // TODO: persist to Supabase product_post_likes table
-    // if (newLiked) {
-    //   await supabase.from('product_post_likes').insert({ post_id: post.id, user_id: currentUserId });
-    // } else {
-    //   await supabase.from('product_post_likes').delete().match({ post_id: post.id, user_id: currentUserId });
-    // }
   };
 
   const initials = (post.profiles?.full_name ?? "??")
     .split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
-    <div className="bg-[#161f30] border border-white/5 rounded-2xl p-4">
+    <div className={`border rounded-2xl p-4 ${dm ? 'bg-[#161f30] border-white/5' : 'bg-white border-slate-200'}`}>
       {/* Header */}
       <div className="flex items-center gap-3 mb-3">
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center font-['Caveat'] text-base font-bold text-white flex-shrink-0">
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-slate-200 leading-tight">
+          <p className={`text-sm font-medium leading-tight ${dm ? 'text-slate-200' : 'text-slate-800'}`}>
             {post.profiles?.full_name ?? "Someone"} recommended a product
           </p>
           <p className="text-xs text-slate-500">{post.category} · {formatTime(post.created_at)}</p>
@@ -280,27 +280,27 @@ function CommunityPost({ post, currentUserId, onAddToSomeday }) {
           <img
             src={post.product_image}
             alt={post.product_name}
-            className="w-20 h-20 rounded-xl object-contain bg-[#1a2540] p-1.5 flex-shrink-0"
+            className={`w-20 h-20 rounded-xl object-contain p-1.5 flex-shrink-0 ${dm ? 'bg-[#1a2540]' : 'bg-slate-100'}`}
           />
         ) : (
-          <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-[#1a2540] to-[#1e2040] flex items-center justify-center text-3xl flex-shrink-0">
+          <div className={`w-20 h-20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 bg-gradient-to-br ${dm ? 'from-[#1a2540] to-[#1e2040]' : 'from-slate-100 to-slate-200'}`}>
             🛍️
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="font-['Caveat'] text-lg font-semibold text-slate-100 leading-tight mb-0.5 line-clamp-2">
+          <h3 className={`font-['Caveat'] text-lg font-semibold leading-tight mb-0.5 line-clamp-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
             {post.product_name}
           </h3>
           {post.product_brand && (
             <p className="text-xs text-slate-500 mb-1">{post.product_brand}</p>
           )}
           {post.review && (
-            <p className="text-sm text-slate-400 italic leading-relaxed line-clamp-2">
+            <p className="text-sm text-slate-500 italic leading-relaxed line-clamp-2">
               "{post.review}"
             </p>
           )}
           {post.product_price && (
-            <p className="font-['Caveat'] text-lg font-bold text-teal-400 mt-1">
+            <p className="font-['Caveat'] text-lg font-bold text-teal-500 mt-1">
               {post.product_price}
             </p>
           )}
@@ -308,16 +308,16 @@ function CommunityPost({ post, currentUserId, onAddToSomeday }) {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-4 pt-3 border-t border-white/5">
+      <div className={`flex items-center gap-4 pt-3 border-t ${dm ? 'border-white/5' : 'border-slate-200'}`}>
         <button
           onClick={handleLike}
           className={`text-xs flex items-center gap-1 transition-colors duration-150 ${
-            liked ? "text-pink-400" : "text-slate-500 hover:text-pink-400"
+            liked ? "text-pink-500" : "text-slate-400 hover:text-pink-500"
           }`}
         >
           {liked ? "♥" : "♡"} {likes} {likes === 1 ? "like" : "likes"}
         </button>
-        <button className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+        <button className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
           💬 {post.comments_count ?? 0} comments
         </button>
         <button
@@ -334,8 +334,10 @@ function CommunityPost({ post, currentUserId, onAddToSomeday }) {
           }}
           className={`ml-auto text-xs px-3 py-1.5 rounded-xl border transition-all duration-200 ${
             wished
-              ? "bg-teal-400/20 border-teal-400/35 text-teal-300"
-              : "bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15"
+              ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
+              : dm
+                ? "bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15"
+                : "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100"
           }`}
         >
           {wished ? "✓ Someday" : "+ Someday"}
@@ -346,7 +348,8 @@ function CommunityPost({ post, currentUserId, onAddToSomeday }) {
 }
 
 // Post product modal
-function PostProductModal({ product, onClose, onSubmit }) {
+function PostProductModal({ product, onClose, onSubmit, darkMode }) {
+  const dm = darkMode;
   const [review, setReview] = useState("");
   const [category, setCategory] = useState(getCategoryForProduct(product?.name));
   const [submitting, setSubmitting] = useState(false);
@@ -361,21 +364,21 @@ function PostProductModal({ product, onClose, onSubmit }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-[#161f30] border border-white/10 rounded-3xl w-full max-w-md p-6">
+      <div className={`border rounded-3xl w-full max-w-md p-6 ${dm ? 'bg-[#161f30] border-white/10' : 'bg-white border-slate-200'}`}>
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-['Caveat'] text-2xl font-bold text-slate-100">Share this product</h2>
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-300 text-xl">✕</button>
+          <h2 className={`font-['Caveat'] text-2xl font-bold ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Share this product</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
         </div>
 
         {/* Product preview */}
         {product && (
-          <div className="flex gap-3 bg-[#0e1520] rounded-2xl p-3 mb-4">
+          <div className={`flex gap-3 rounded-2xl p-3 mb-4 ${dm ? 'bg-[#0e1520]' : 'bg-slate-100'}`}>
             {product.image && (
-              <img src={product.image} alt={product.name} className="w-14 h-14 object-contain rounded-xl bg-[#1a2540] p-1 flex-shrink-0" />
+              <img src={product.image} alt={product.name} className={`w-14 h-14 object-contain rounded-xl p-1 flex-shrink-0 ${dm ? 'bg-[#1a2540]' : 'bg-slate-200'}`} />
             )}
             <div className="min-w-0">
-              <p className="font-['Caveat'] text-lg font-semibold text-slate-100 leading-tight line-clamp-2">{product.name}</p>
-              {product.price && <p className="font-['Caveat'] text-base font-bold text-teal-400">{product.price}</p>}
+              <p className={`font-['Caveat'] text-lg font-semibold leading-tight line-clamp-2 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>{product.name}</p>
+              {product.price && <p className="font-['Caveat'] text-base font-bold text-teal-500">{product.price}</p>}
             </div>
           </div>
         )}
@@ -390,8 +393,10 @@ function PostProductModal({ product, onClose, onSubmit }) {
                 onClick={() => setCategory(c.label)}
                 className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
                   category === c.label
-                    ? "bg-violet-400/15 border-violet-400/40 text-violet-400"
-                    : "bg-white/5 border-white/8 text-slate-400 hover:border-violet-400/25"
+                    ? "bg-violet-400/15 border-violet-400/40 text-violet-600"
+                    : dm
+                      ? "bg-white/5 border-white/8 text-slate-400 hover:border-violet-400/25"
+                      : "bg-slate-100 border-slate-200 text-slate-500 hover:border-violet-300"
                 }`}
               >
                 {c.emoji} {c.label}
@@ -408,7 +413,7 @@ function PostProductModal({ product, onClose, onSubmit }) {
             onChange={(e) => setReview(e.target.value)}
             placeholder="Tell your friends what makes this worth it..."
             rows={3}
-            className="w-full bg-[#0e1520] border border-white/8 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-violet-400/40 transition-colors resize-none font-['DM_Sans']"
+            className={`w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-colors resize-none font-['DM_Sans'] ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
           />
         </div>
 
@@ -424,7 +429,8 @@ function PostProductModal({ product, onClose, onSubmit }) {
   );
 }
 
-function FeaturedSomedayButton({ featured, onAddToSomeday }) {
+function FeaturedSomedayButton({ featured, onAddToSomeday, darkMode }) {
+  const dm = darkMode;
   const [saved, setSaved] = useState(false);
   return (
     <button
@@ -440,8 +446,10 @@ function FeaturedSomedayButton({ featured, onAddToSomeday }) {
       }}
       className={`text-xs px-4 py-2 rounded-xl border transition-all duration-200 ${
         saved
-          ? "bg-teal-400/20 border-teal-400/35 text-teal-300"
-          : "bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15"
+          ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
+          : dm
+            ? "bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15"
+            : "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100"
       }`}
     >
       {saved ? "✓ Someday" : "+ Someday"}
@@ -451,7 +459,8 @@ function FeaturedSomedayButton({ featured, onAddToSomeday }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
+export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false } = {}) {
+  const dm = darkMode;
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
   const [searchQuery,    setSearchQuery]    = useState("");
   const [products,       setProducts]       = useState([]);
@@ -486,7 +495,7 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
         type:         "search",
         amazon_domain: "amazon.com",
         search_term:  term,
-        sort_by:      "featured",         // or "avg_customer_reviews" for top-rated
+        sort_by:      "featured",
         page:         "1",
       });
 
@@ -523,17 +532,9 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
   }, []);
 
   const fetchCommunityPosts = async () => {
-    // Expects a `product_posts` table with these columns:
-    // id, user_id, product_name, product_brand, product_image, product_price,
-    // product_asin, amazon_url, review, category, likes_count, comments_count,
-    // created_at
-    // + joined profiles table: full_name, avatar_url
     const { data, error } = await supabase
       .from("product_posts")
-      .select(`
-        *,
-        profiles ( full_name, avatar_url )
-      `)
+      .select(`*, profiles ( full_name, avatar_url )`)
       .order("likes_count", { ascending: false })
       .limit(20);
 
@@ -541,7 +542,6 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
       setCommunityPosts(data);
       setFeaturedPost(data[0] ?? null);
     } else {
-      // Fall back to mock feed
       setCommunityPosts(MOCK_FEED);
       setFeaturedPost(MOCK_FEED[0]);
     }
@@ -566,7 +566,6 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
     }
   };
 
-
   // ── Post a product ──
   const handlePostSubmit = async ({ product, review, category }) => {
     const { error } = await supabase.from("product_posts").insert({
@@ -583,33 +582,32 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
     });
 
     if (!error) {
-      fetchCommunityPosts(); // refresh feed
+      fetchCommunityPosts();
     }
   };
 
-  // ── Featured product = top-liked community post ──
   const featured = featuredPost;
   const gridProducts = products.slice(0, 6);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0e1520] text-slate-200 font-['DM_Sans']">
+    <div className={`min-h-screen font-['DM_Sans'] ${dm ? 'bg-[#0e1520] text-slate-200' : 'bg-[#faf8f3] text-slate-800'}`}>
       <div className="max-w-3xl mx-auto px-4 py-6 pb-24">
 
         {/* ── Hero ── */}
-        <div className="relative bg-gradient-to-br from-[#0f1a2e] via-[#1a1535] to-[#0e1520] rounded-3xl p-8 mb-6 overflow-hidden border border-white/5">
+        <div className={`relative bg-gradient-to-br rounded-3xl p-8 mb-6 overflow-hidden border ${dm ? 'from-[#0f1a2e] via-[#1a1535] to-[#0e1520] border-white/5' : 'from-slate-50 via-violet-50 to-slate-50 border-violet-100'}`}>
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_80%_20%,rgba(167,139,250,0.08),transparent)]" />
           <div className="absolute right-8 top-6 text-8xl opacity-10 -rotate-6 select-none">🛍️</div>
 
           {onBack && (
-            <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors mb-4">
+            <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors mb-4">
               ← Back
             </button>
           )}
-          <p className="text-[10px] uppercase tracking-[0.15em] text-violet-400 mb-2 opacity-80">
+          <p className="text-[10px] uppercase tracking-[0.15em] text-violet-500 mb-2 opacity-80">
             Explore · Products
           </p>
-          <h1 className="font-['Caveat'] text-5xl font-bold leading-tight mb-2 bg-gradient-to-r from-slate-100 to-violet-300 bg-clip-text text-transparent">
+          <h1 className={`font-['Caveat'] text-5xl font-bold leading-tight mb-2 bg-gradient-to-r bg-clip-text text-transparent ${dm ? 'from-slate-100 to-violet-300' : 'from-slate-800 to-violet-600'}`}>
             Find your next favorite thing
           </h1>
           <p className="text-sm text-slate-500 leading-relaxed max-w-sm mb-6">
@@ -623,7 +621,7 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
               { num: wishlistedIds.size, lbl: "Wishlist saves" },
             ].map(({ num, lbl }) => (
               <div key={lbl} className="flex flex-col">
-                <span className="font-['Caveat'] text-3xl font-bold text-violet-400 leading-none">{num}</span>
+                <span className="font-['Caveat'] text-3xl font-bold text-violet-500 leading-none">{num}</span>
                 <span className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">{lbl}</span>
               </div>
             ))}
@@ -637,12 +635,12 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Search Amazon products..."
-            className="flex-1 bg-[#161f30] border border-white/7 rounded-2xl px-4 py-3 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-violet-400/40 transition-colors"
+            className={`flex-1 border rounded-2xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#161f30] border-white/7 text-slate-200 placeholder-slate-500 focus:border-violet-400/40' : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400 focus:border-violet-400'}`}
           />
           <button
             onClick={handleSearch}
             disabled={loading}
-            className="bg-violet-500 hover:bg-violet-400 text-white rounded-2xl px-5 py-3 text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
+            className="bg-violet-500 hover:bg-violet-600 text-white rounded-2xl px-5 py-3 text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
           >
             {loading ? "Searching…" : "Discover"}
           </button>
@@ -656,8 +654,10 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
               onClick={() => setActiveCategory(cat)}
               className={`rounded-full px-4 py-1.5 text-xs transition-all duration-200 border ${
                 activeCategory.label === cat.label
-                  ? "bg-violet-400/12 border-violet-400/40 text-violet-400"
-                  : "bg-[#161f30] border-white/7 text-slate-500 hover:text-violet-400 hover:border-violet-400/25"
+                  ? "bg-violet-400/12 border-violet-400/40 text-violet-600"
+                  : dm
+                    ? "bg-[#161f30] border-white/7 text-slate-500 hover:text-violet-400 hover:border-violet-400/25"
+                    : "bg-white border-slate-200 text-slate-500 hover:text-violet-600 hover:border-violet-300"
               }`}
             >
               {cat.emoji} {cat.label}
@@ -672,11 +672,11 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
             <button
               key={t.label}
               onClick={() => fetchProducts(t.label)}
-              className="bg-[#161f30] border border-white/7 rounded-full px-4 py-2 flex items-center gap-2 whitespace-nowrap hover:border-violet-400/30 hover:bg-violet-400/5 transition-all"
+              className={`border rounded-full px-4 py-2 flex items-center gap-2 whitespace-nowrap hover:border-violet-400/30 hover:bg-violet-400/5 transition-all ${dm ? 'bg-[#161f30] border-white/7' : 'bg-white border-slate-200'}`}
             >
               <span className="text-base leading-none">{t.emoji}</span>
-              <span className="text-sm text-slate-200">{t.label}</span>
-              <span className="text-xs text-slate-500">{t.count} posts</span>
+              <span className={`text-sm ${dm ? 'text-slate-200' : 'text-slate-700'}`}>{t.label}</span>
+              <span className="text-xs text-slate-400">{t.count} posts</span>
             </button>
           ))}
         </div>
@@ -685,51 +685,51 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
         {featured && (
           <>
             <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Most loved this week</p>
-            <div className="bg-[#161f30] border border-violet-400/15 rounded-3xl overflow-hidden mb-8 hover:border-violet-400/30 transition-colors">
+            <div className={`border border-violet-400/15 rounded-3xl overflow-hidden mb-8 hover:border-violet-400/30 transition-colors ${dm ? 'bg-[#161f30]' : 'bg-white'}`}>
               <div className="grid grid-cols-2 max-sm:grid-cols-1">
                 {featured.product_image ? (
                   <img
                     src={featured.product_image}
                     alt={featured.product_name}
-                    className="w-full h-52 object-contain bg-[#1a2540] p-6"
+                    className={`w-full h-52 object-contain p-6 ${dm ? 'bg-[#1a2540]' : 'bg-slate-100'}`}
                   />
                 ) : (
-                  <div className="h-52 flex items-center justify-center text-7xl bg-gradient-to-br from-[#1a1535] to-[#231a40]">
+                  <div className={`h-52 flex items-center justify-center text-7xl bg-gradient-to-br ${dm ? 'from-[#1a1535] to-[#231a40]' : 'from-violet-50 to-purple-100'}`}>
                     🛍️
                   </div>
                 )}
                 <div className="p-6 flex flex-col justify-center">
-                  <p className="text-[10px] uppercase tracking-widest text-violet-400 mb-2">
+                  <p className="text-[10px] uppercase tracking-widest text-violet-500 mb-2">
                     🔥 Top recommended
                   </p>
-                  <h2 className="font-['Caveat'] text-2xl font-bold text-slate-100 leading-tight mb-1">
+                  <h2 className={`font-['Caveat'] text-2xl font-bold leading-tight mb-1 ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
                     {featured.product_name}
                   </h2>
                   {featured.product_brand && (
                     <p className="text-xs text-slate-500 mb-2">{featured.product_brand}</p>
                   )}
                   {featured.review && (
-                    <p className="text-sm text-slate-400 italic leading-relaxed mb-4 line-clamp-3">
+                    <p className="text-sm text-slate-500 italic leading-relaxed mb-4 line-clamp-3">
                       "{featured.review}"
                     </p>
                   )}
                   <div className="flex gap-3 flex-wrap mb-4">
                     {featured.product_price && (
                       <div className="flex flex-col">
-                        <span className="font-['Caveat'] text-xl font-semibold text-teal-400">
+                        <span className="font-['Caveat'] text-xl font-semibold text-teal-500">
                           {featured.product_price}
                         </span>
                         <span className="text-[10px] uppercase text-slate-500 tracking-wide">Price</span>
                       </div>
                     )}
                     <div className="flex flex-col">
-                      <span className="font-['Caveat'] text-xl font-semibold text-violet-400">
+                      <span className="font-['Caveat'] text-xl font-semibold text-violet-500">
                         {featured.likes_count ?? 0}
                       </span>
                       <span className="text-[10px] uppercase text-slate-500 tracking-wide">Likes</span>
                     </div>
                   </div>
-                  <FeaturedSomedayButton featured={featured} onAddToSomeday={onAddToSomeday} />
+                  <FeaturedSomedayButton featured={featured} onAddToSomeday={onAddToSomeday} darkMode={dm} />
                 </div>
               </div>
             </div>
@@ -738,7 +738,7 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
 
         {/* ── Error state ── */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-sm text-red-400 mb-6">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-sm text-red-500 mb-6">
             {error}
           </div>
         )}
@@ -751,7 +751,7 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
         {loading ? (
           <div className="grid grid-cols-3 max-sm:grid-cols-2 gap-3 mb-8">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-[#161f30] rounded-2xl h-72 animate-pulse border border-white/5" />
+              <div key={i} className={`rounded-2xl h-72 animate-pulse border ${dm ? 'bg-[#161f30] border-white/5' : 'bg-slate-200 border-slate-200'}`} />
             ))}
           </div>
         ) : (
@@ -764,31 +764,32 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
                 savedIds={wishlistedIds}
                 onPost={setPostingProduct}
                 onOpen={() => setSelectedProduct(product)}
+                darkMode={dm}
               />
             ))}
           </div>
         )}
 
         {!loading && gridProducts.length === 0 && (
-          <div className="text-center py-16 text-slate-500 mb-8">
+          <div className="text-center py-16 text-slate-400 mb-8">
             <div className="text-5xl mb-4">🔍</div>
-            <p className="font-['Caveat'] text-2xl text-slate-400 mb-1">No products found</p>
+            <p className={`font-['Caveat'] text-2xl mb-1 ${dm ? 'text-slate-400' : 'text-slate-600'}`}>No products found</p>
             <p className="text-sm">Try a different search or category</p>
           </div>
         )}
 
         {/* ── Post CTA ── */}
-        <div className="bg-gradient-to-r from-orange-500/8 to-pink-500/6 border border-orange-400/20 rounded-3xl p-5 mb-8 flex items-center gap-4">
+        <div className={`bg-gradient-to-r from-orange-500/8 to-pink-500/6 border border-orange-400/20 rounded-3xl p-5 mb-8 flex items-center gap-4`}>
           <span className="text-3xl flex-shrink-0">✨</span>
           <div className="flex-1 min-w-0">
-            <h3 className="font-['Caveat'] text-xl font-bold text-slate-100 leading-tight">
+            <h3 className={`font-['Caveat'] text-xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
               Found something amazing?
             </h3>
             <p className="text-sm text-slate-500">Share it with your friends — tell them why you love it.</p>
           </div>
           <button
             onClick={() => setPostingProduct({ name: "", image: null, price: null })}
-            className="ml-auto bg-orange-400/12 border border-orange-400/25 rounded-2xl px-4 py-2.5 text-sm text-orange-400 hover:bg-orange-400/20 transition-all whitespace-nowrap"
+            className="ml-auto bg-orange-400/12 border border-orange-400/25 rounded-2xl px-4 py-2.5 text-sm text-orange-600 hover:bg-orange-400/20 transition-all whitespace-nowrap"
           >
             Post a product →
           </button>
@@ -800,7 +801,7 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
         </p>
         <div className="flex flex-col gap-2.5">
           {communityPosts.map((post) => (
-            <CommunityPost key={post.id} post={post} currentUserId={currentUserId} onAddToSomeday={onAddToSomeday} />
+            <CommunityPost key={post.id} post={post} currentUserId={currentUserId} onAddToSomeday={onAddToSomeday} darkMode={dm} />
           ))}
         </div>
 
@@ -812,6 +813,7 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
           product={postingProduct}
           onClose={() => setPostingProduct(null)}
           onSubmit={handlePostSubmit}
+          darkMode={dm}
         />
       )}
 
@@ -823,6 +825,7 @@ export default function ProductsPage({ onBack, onAddToSomeday } = {}) {
           onSomeday={handleSomeday}
           onPost={setPostingProduct}
           onClose={() => setSelectedProduct(null)}
+          darkMode={dm}
         />
       )}
     </div>
