@@ -1,9 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const RAPIDAPI_KEY = process.env.REACT_APP_TRAILAPI_KEY; // 🔑 Replace with your TrailAPI key
+const RAPIDAPI_KEY  = process.env.REACT_APP_TRAILAPI_KEY;
 const RAPIDAPI_HOST = "trailapi-trailapi.p.rapidapi.com";
+const GOOGLE_KEY    = process.env.REACT_APP_GOOGLE_MAPS_KEY;
+
+// NOTE: Places textsearch/json is not CORS-enabled for browser requests.
+// In production, proxy requests through your backend or a Cloud Function.
+// The photo URL used as <img src> works fine without CORS restrictions.
 
 const DIFFICULTY_MAP = {
   1: { label: "Easy",     style: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" },
@@ -11,68 +17,188 @@ const DIFFICULTY_MAP = {
   3: { label: "Hard",     style: "bg-red-500/10     text-red-400     border border-red-500/20"     },
 };
 
-const FILTERS = ["All", "Easy", "Moderate", "Hard", "Dog Friendly", "Kid Friendly", "Views"];
-
+const FILTERS    = ["All", "Easy", "Moderate", "Hard", "Dog Friendly", "Kid Friendly", "Views"];
 const TRAIL_EMOJIS = ["🌲", "🏔️", "🌄", "🌿", "🌊", "🦅", "🌸", "🍂"];
 
-// ─── Mock community feed (replace with Supabase query) ──────────────────────
+// ─── Mock community feed ─────────────────────────────────────────────────────
 
 const MOCK_FEED = [
-  {
-    id: 1,
-    initials: "JL",
-    name: "Jamie L.",
-    action: "hiked",
-    trail: "Mission Peak Loop",
-    time: "2h ago",
-    note: "Brutal but worth every step. Go early — we left at 6am and had the summit almost to ourselves.",
-    likes: 8,
-    comments: 3,
-    hasPhoto: true,
-  },
-  {
-    id: 2,
-    initials: "SR",
-    name: "Sam R.",
-    action: "saved",
-    trail: "Half Dome via JMT",
-    suffix: "to Someday List",
-    time: "Yesterday",
-    note: "Adding this to the summer bucket list — anyone else in?",
-    likes: 5,
-    comments: 7,
-    hasPhoto: false,
-  },
-  {
-    id: 3,
-    initials: "MK",
-    name: "Maya K.",
-    action: "completed",
-    trail: "Muir Woods Loop",
-    time: "3 days ago",
-    note: "Perfect Sunday morning with the kids. The redwoods are absolutely magical right now.",
-    likes: 14,
-    comments: 2,
-    hasPhoto: false,
-  },
+  { id: 1, initials: "JL", name: "Jamie L.",  action: "hiked",     trail: "Mission Peak Loop",    time: "2h ago",    note: "Brutal but worth every step. Go early — we left at 6am and had the summit almost to ourselves.", likes: 8,  comments: 3, hasPhoto: true  },
+  { id: 2, initials: "SR", name: "Sam R.",    action: "saved",     trail: "Half Dome via JMT",    suffix: "to Someday List", time: "Yesterday", note: "Adding this to the summer bucket list — anyone else in?", likes: 5, comments: 7, hasPhoto: false },
+  { id: 3, initials: "MK", name: "Maya K.",   action: "completed", trail: "Muir Woods Loop",      time: "3 days ago", note: "Perfect Sunday morning with the kids. The redwoods are absolutely magical right now.", likes: 14, comments: 2, hasPhoto: false },
 ];
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// ─── TrailModal ──────────────────────────────────────────────────────────────
 
-function TrailCard({ trail, onSave, savedIds }) {
-  const isSaved = savedIds.has(trail.id);
-  const diff = DIFFICULTY_MAP[trail.difficulty] ?? DIFFICULTY_MAP[2];
+function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose }) {
+  const diff  = DIFFICULTY_MAP[trail.difficulty] ?? DIFFICULTY_MAP[2];
   const emoji = TRAIL_EMOJIS[trail.id % TRAIL_EMOJIS.length];
 
+  // Lock body scroll while open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  const handleBackdrop = (e) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={handleBackdrop}
+    >
+      <div className="w-full max-w-lg bg-[#0e1520] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border border-white/8 max-h-[92vh] flex flex-col">
+
+        {/* ── Photo header ── */}
+        <div className="relative flex-shrink-0">
+          {photoUrl || trail.thumbnail ? (
+            <img
+              src={photoUrl || trail.thumbnail}
+              alt={trail.name}
+              className="w-full h-56 object-cover"
+            />
+          ) : (
+            <div className="w-full h-56 flex items-center justify-center text-8xl bg-gradient-to-br from-[#162b3a] to-[#1a3a4a]">
+              {emoji}
+            </div>
+          )}
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0e1520] via-transparent to-black/20" />
+
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/70 transition-all"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+
+          {/* Difficulty badge over image */}
+          <div className="absolute bottom-4 left-4">
+            <span className={`text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full font-medium ${diff.style}`}>
+              {diff.label}
+            </span>
+          </div>
+        </div>
+
+        {/* ── Scrollable content ── */}
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="px-5 pt-4 pb-6">
+
+            {/* Name + location */}
+            <h2 className="font-['Caveat'] text-3xl font-bold text-slate-100 leading-tight mb-0.5">
+              {trail.name}
+            </h2>
+            <p className="text-sm text-slate-500 mb-4">
+              {trail.city}{trail.state ? `, ${trail.state}` : ""}
+            </p>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-3 mb-5">
+              {trail.length && (
+                <div className="bg-[#161f30] rounded-2xl p-3 text-center border border-white/5">
+                  <span className="font-['Caveat'] text-xl font-bold text-teal-400 block leading-none">
+                    {Number(trail.length).toFixed(1)} mi
+                  </span>
+                  <span className="text-[10px] uppercase text-slate-500 tracking-wide mt-1 block">Distance</span>
+                </div>
+              )}
+              {trail.ascent && (
+                <div className="bg-[#161f30] rounded-2xl p-3 text-center border border-white/5">
+                  <span className="font-['Caveat'] text-xl font-bold text-teal-400 block leading-none">
+                    {Math.round(trail.ascent).toLocaleString()} ft
+                  </span>
+                  <span className="text-[10px] uppercase text-slate-500 tracking-wide mt-1 block">Elevation</span>
+                </div>
+              )}
+              {trail.rating && (
+                <div className="bg-[#161f30] rounded-2xl p-3 text-center border border-white/5">
+                  <span className="font-['Caveat'] text-xl font-bold text-amber-400 block leading-none">
+                    {Number(trail.rating).toFixed(1)} ★
+                  </span>
+                  <span className="text-[10px] uppercase text-slate-500 tracking-wide mt-1 block">
+                    {trail.ratingCount ? `${trail.ratingCount} reviews` : "Rating"}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Features */}
+            {trail.features?.length > 0 && (
+              <div className="flex gap-1.5 flex-wrap mb-5">
+                {trail.features.map((f) => (
+                  <span key={f} className="text-[11px] text-teal-400 bg-teal-400/8 border border-teal-400/20 rounded-full px-3 py-1">
+                    {f}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Description */}
+            {trail.description && (
+              <div className="mb-5">
+                <p className="text-[10px] uppercase tracking-widest text-slate-600 mb-2">About</p>
+                <p className="text-sm text-slate-400 leading-relaxed">{trail.description}</p>
+              </div>
+            )}
+
+            {/* Directions */}
+            {trail.directions && (
+              <div className="mb-6">
+                <p className="text-[10px] uppercase tracking-widest text-slate-600 mb-2">Getting there</p>
+                <p className="text-sm text-slate-400 leading-relaxed">{trail.directions}</p>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { onSave(trail); }}
+                className={`flex-1 rounded-2xl py-3 text-sm font-medium transition-all duration-200 border ${
+                  isSaved
+                    ? "bg-teal-400/20 border-teal-400/35 text-teal-300"
+                    : "bg-teal-400 border-transparent text-[#0e1520] hover:bg-teal-300"
+                }`}
+              >
+                {isSaved ? "✓ Saved to Someday" : "+ Save to Someday"}
+              </button>
+              <button
+                onClick={onPlanTrip}
+                className="flex-1 bg-violet-400/10 border border-violet-400/25 rounded-2xl py-3 text-sm font-medium text-violet-400 hover:bg-violet-400/20 transition-all duration-200"
+              >
+                Plan Trip
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ─── TrailCard ───────────────────────────────────────────────────────────────
+
+function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen }) {
+  const isSaved = savedIds.has(trail.id);
+  const diff    = DIFFICULTY_MAP[trail.difficulty] ?? DIFFICULTY_MAP[2];
+  const emoji   = TRAIL_EMOJIS[trail.id % TRAIL_EMOJIS.length];
+  const imgSrc  = photoUrl || trail.thumbnail;
+
   return (
-    <div className="bg-[#161f30] border border-white/5 rounded-2xl overflow-hidden hover:border-teal-400/25 hover:-translate-y-0.5 transition-all duration-200">
+    <div
+      onClick={onOpen}
+      className="bg-[#161f30] border border-white/5 rounded-2xl overflow-hidden hover:border-teal-400/25 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+    >
       {/* Image / placeholder */}
-      {trail.thumbnail ? (
-        <img
-          src={trail.thumbnail}
-          alt={trail.name}
-          className="w-full h-36 object-cover"
-        />
+      {imgSrc ? (
+        <img src={imgSrc} alt={trail.name} className="w-full h-36 object-cover" />
       ) : (
         <div className="w-full h-36 flex items-center justify-center text-5xl bg-gradient-to-br from-[#1a2540] to-[#1e3040]">
           {emoji}
@@ -89,9 +215,7 @@ function TrailCard({ trail, onSave, savedIds }) {
             <span className="text-xs text-slate-400 flex items-center gap-1">
               <span className="text-amber-400">★</span>
               {Number(trail.rating).toFixed(1)}
-              {trail.ratingCount && (
-                <span className="text-slate-500">({trail.ratingCount})</span>
-              )}
+              {trail.ratingCount && <span className="text-slate-500">({trail.ratingCount})</span>}
             </span>
           )}
         </div>
@@ -117,14 +241,12 @@ function TrailCard({ trail, onSave, savedIds }) {
             </span>
           )}
           {trail.features?.slice(0, 1).map((f) => (
-            <span key={f} className="text-[11px] text-slate-400 bg-white/5 rounded-md px-2 py-0.5">
-              {f}
-            </span>
+            <span key={f} className="text-[11px] text-slate-400 bg-white/5 rounded-md px-2 py-0.5">{f}</span>
           ))}
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onSave(trail)}
             className={`flex-1 rounded-xl py-2 text-xs font-medium transition-all duration-200 border ${
@@ -135,8 +257,11 @@ function TrailCard({ trail, onSave, savedIds }) {
           >
             {isSaved ? "✓ Saved" : "+ Someday"}
           </button>
-          <button className="flex-1 bg-violet-400/8 border border-violet-400/20 rounded-xl py-2 text-xs font-medium text-violet-400 hover:bg-violet-400/15 transition-all duration-200">
-            Plan trip
+          <button
+            onClick={onOpen}
+            className="flex-1 bg-violet-400/8 border border-violet-400/20 rounded-xl py-2 text-xs font-medium text-violet-400 hover:bg-violet-400/15 transition-all duration-200"
+          >
+            View trail
           </button>
         </div>
       </div>
@@ -144,19 +269,18 @@ function TrailCard({ trail, onSave, savedIds }) {
   );
 }
 
+// ─── FeedCard ─────────────────────────────────────────────────────────────────
+
 function FeedCard({ item }) {
   const [liked, setLiked] = useState(false);
   const likeCount = liked ? item.likes + 1 : item.likes;
 
   return (
     <div className="bg-[#161f30] border border-white/5 rounded-2xl p-4 flex gap-3">
-      {/* Avatar */}
       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-600 to-violet-500 flex items-center justify-center font-['Caveat'] text-base font-bold text-white flex-shrink-0">
         {item.initials}
       </div>
-
       <div className="flex-1 min-w-0">
-        {/* Header */}
         <div className="flex items-start flex-wrap gap-x-1.5 gap-y-0.5 mb-1">
           <span className="text-sm font-medium text-slate-200">{item.name}</span>
           <span className="text-sm text-slate-500">{item.action}</span>
@@ -164,28 +288,18 @@ function FeedCard({ item }) {
           {item.suffix && <span className="text-sm text-slate-500">{item.suffix}</span>}
           <span className="text-xs text-slate-600 ml-auto">{item.time}</span>
         </div>
-
-        {/* Note */}
         {item.note && (
-          <p className="text-sm text-slate-400 italic leading-relaxed mb-2">
-            "{item.note}"
-          </p>
+          <p className="text-sm text-slate-400 italic leading-relaxed mb-2">"{item.note}"</p>
         )}
-
-        {/* Photo placeholder */}
         {item.hasPhoto && (
           <div className="w-full h-24 rounded-xl bg-gradient-to-br from-[#1a2540] to-[#1e3040] flex items-center justify-center text-3xl mb-2">
             📸
           </div>
         )}
-
-        {/* Reactions */}
         <div className="flex items-center gap-4">
           <button
             onClick={() => setLiked((l) => !l)}
-            className={`text-xs flex items-center gap-1 transition-colors duration-150 ${
-              liked ? "text-pink-400" : "text-slate-500 hover:text-pink-400"
-            }`}
+            className={`text-xs flex items-center gap-1 transition-colors duration-150 ${liked ? "text-pink-400" : "text-slate-500 hover:text-pink-400"}`}
           >
             {liked ? "♥" : "♡"} {likeCount} likes
           </button>
@@ -200,27 +314,30 @@ function FeedCard({ item }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function HikingPage({ onBack } = {}) {
-  const [query, setQuery] = useState("");
+export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent } = {}) {
+  const [query, setQuery]             = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
-  const [trails, setTrails] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [savedIds, setSavedIds] = useState(new Set());
+  const [trails, setTrails]           = useState([]);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState(null);
+  const [savedIds, setSavedIds]       = useState(new Set());
   const [userLocation, setUserLocation] = useState(null);
+  const [placePhotos, setPlacePhotos] = useState({});   // trailId → photo URL
+  const [selectedTrail, setSelectedTrail] = useState(null);
+  const fetchedRef = useRef(new Set());
 
   // ── Get user location on mount ──
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
       (pos) => setUserLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-      () => setUserLocation({ lat: 37.7749, lon: -122.4194 }) // fallback: SF
+      ()    => setUserLocation({ lat: 37.7749, lon: -122.4194 })
     );
   }, []);
 
   // ── Fetch trails when location is ready ──
   useEffect(() => {
     if (userLocation) fetchTrails(userLocation.lat, userLocation.lon);
-  }, [userLocation]);
+  }, [userLocation]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── TrailAPI fetch ──
   const fetchTrails = useCallback(async (lat, lon, searchQuery = "") => {
@@ -228,89 +345,103 @@ export default function HikingPage({ onBack } = {}) {
     setError(null);
     try {
       const params = new URLSearchParams({
-        lat,
-        lon,
-        radius: 30,
-        limit: 20,
+        lat, lon, radius: 30, limit: 20,
         ...(searchQuery && { "q[name_cont]": searchQuery }),
       });
-
-      const res = await fetch(
-        `https://${RAPIDAPI_HOST}/trails/explore/?${params}`,
-        {
-          headers: {
-            "x-rapidapi-key": RAPIDAPI_KEY,
-            "x-rapidapi-host": RAPIDAPI_HOST,
-          },
-        }
-      );
-
+      const res = await fetch(`https://${RAPIDAPI_HOST}/trails/explore/?${params}`, {
+        headers: { "x-rapidapi-key": RAPIDAPI_KEY, "x-rapidapi-host": RAPIDAPI_HOST },
+      });
       if (!res.ok) throw new Error("Failed to fetch trails");
       const data = await res.json();
-
-      // Normalize TrailAPI response shape
       const normalized = (data.data || []).map((t, i) => ({
-        id: t.unique_id ?? i,
-        name: t.name,
-        city: t.city,
-        state: t.state,
-        lat: t.lat,
-        lon: t.lon,
+        id:          t.unique_id ?? i,
+        name:        t.name,
+        city:        t.city,
+        state:       t.state,
+        lat:         t.lat,
+        lon:         t.lon,
         description: t.description,
-        directions: t.directions,
-        difficulty: parseDifficulty(t.activities),
-        length: t.activities?.[0]?.attribs?.length ?? null,
-        ascent: t.activities?.[0]?.attribs?.["ele_gain"] ?? null,
-        rating: t.activities?.[0]?.rating ?? null,
+        directions:  t.directions,
+        difficulty:  parseDifficulty(t.activities),
+        length:      t.activities?.[0]?.attribs?.length ?? null,
+        ascent:      t.activities?.[0]?.attribs?.["ele_gain"] ?? null,
+        rating:      t.activities?.[0]?.rating ?? null,
         ratingCount: t.activities?.[0]?.rating_count ?? null,
-        thumbnail: t.activities?.[0]?.thumbnail ?? null,
-        url: t.activities?.[0]?.url ?? null,
-        features: parseFeatures(t),
+        thumbnail:   t.activities?.[0]?.thumbnail ?? null,
+        url:         t.activities?.[0]?.url ?? null,
+        features:    parseFeatures(t),
       }));
-
       setTrails(normalized);
     } catch (err) {
       console.error(err);
       setError("Couldn't load trails. Check your API key or try again.");
-      // Fall back to mock data so the UI still renders nicely
       setTrails(MOCK_TRAILS);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // ── Fetch Google Places photos for each trail ──
+  const fetchTrailPhoto = useCallback(async (trail) => {
+    if (!GOOGLE_KEY || fetchedRef.current.has(String(trail.id))) return;
+    fetchedRef.current.add(String(trail.id));
+    try {
+      const q = encodeURIComponent(
+        `${trail.name} trail ${trail.city || ""} ${trail.state || ""}`
+      );
+      const res  = await fetch(
+        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${GOOGLE_KEY}`
+      );
+      const data = await res.json();
+      const photoRef = data.results?.[0]?.photos?.[0]?.photo_reference;
+      if (photoRef) {
+        const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${encodeURIComponent(photoRef)}&key=${GOOGLE_KEY}`;
+        setPlacePhotos((prev) => ({ ...prev, [trail.id]: url }));
+      }
+    } catch {
+      // silently fail — CORS or API error; trail thumbnail / emoji fallback used
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!trails.length) return;
+    trails.forEach((t) => fetchTrailPhoto(t));
+  }, [trails, fetchTrailPhoto]);
+
   const handleSearch = () => {
     if (userLocation) fetchTrails(userLocation.lat, userLocation.lon, query);
   };
 
-  const handleSave = async (trail) => {
-    // TODO: wire to your Supabase someday_items table
-    // await supabase.from('someday_items').insert({ user_id, type: 'trail', ref_id: trail.id, data: trail })
+  const handleSave = (trail) => {
     setSavedIds((prev) => {
       const next = new Set(prev);
       next.has(trail.id) ? next.delete(trail.id) : next.add(trail.id);
       return next;
     });
+    onAddToSomeday?.(trail);
+  };
+
+  const handlePlanTrip = (trail) => {
+    setSelectedTrail(null);
+    onPlanEvent?.({ title: `Hike: ${trail.name}` });
   };
 
   // ── Filter trails client-side ──
   const filteredTrails = trails.filter((t) => {
-    if (activeFilter === "All") return true;
-    if (activeFilter === "Easy") return t.difficulty === 1;
+    if (activeFilter === "All")      return true;
+    if (activeFilter === "Easy")     return t.difficulty === 1;
     if (activeFilter === "Moderate") return t.difficulty === 2;
-    if (activeFilter === "Hard") return t.difficulty === 3;
-    return t.features?.some((f) =>
-      f.toLowerCase().includes(activeFilter.toLowerCase())
-    );
+    if (activeFilter === "Hard")     return t.difficulty === 3;
+    return t.features?.some((f) => f.toLowerCase().includes(activeFilter.toLowerCase()));
   });
 
   const featuredTrail = filteredTrails[0] ?? null;
-  const gridTrails = filteredTrails.slice(1, 7);
+  const gridTrails    = filteredTrails.slice(1, 7);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#0e1520] text-slate-200 font-sans">
-      <div className="max-w-3xl mx-auto px-4 py-6 pb-20">
+      <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
 
         {/* ── Top bar ── */}
         {onBack && (
@@ -336,30 +467,22 @@ export default function HikingPage({ onBack } = {}) {
         <div className="relative bg-gradient-to-br from-[#0f2027] via-[#162b3a] to-[#0e1520] rounded-3xl p-8 mb-6 overflow-hidden border border-white/5">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_80%_20%,rgba(45,212,191,0.08),transparent)]" />
           <div className="absolute right-8 top-6 text-8xl opacity-10 rotate-12 select-none">🏔️</div>
-
-          <p className="text-[10px] uppercase tracking-[0.15em] text-teal-400 mb-2 opacity-80">
-            Explore · Hiking
-          </p>
+          <p className="text-[10px] uppercase tracking-[0.15em] text-teal-400 mb-2 opacity-80">Explore · Hiking</p>
           <h1 className="font-['Caveat'] text-5xl font-bold leading-tight mb-2 bg-gradient-to-r from-slate-100 to-teal-300 bg-clip-text text-transparent">
             Hit the trails
           </h1>
           <p className="text-sm text-slate-500 leading-relaxed max-w-sm mb-6">
             Discover trails near you, save hikes to your Someday List, and see where your friends have been adventuring.
           </p>
-
           <div className="flex gap-6 flex-wrap">
             {[
-              { num: `${trails.length || "—"}`, lbl: "Trails nearby" },
-              { num: MOCK_FEED.length, lbl: "Friends hiked" },
-              { num: savedIds.size, lbl: "Someday saves" },
+              { num: trails.length || "—", lbl: "Trails nearby" },
+              { num: MOCK_FEED.length,     lbl: "Friends hiked" },
+              { num: savedIds.size,        lbl: "Someday saves" },
             ].map(({ num, lbl }) => (
               <div key={lbl} className="flex flex-col">
-                <span className="font-['Caveat'] text-3xl font-bold text-teal-400 leading-none">
-                  {num}
-                </span>
-                <span className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">
-                  {lbl}
-                </span>
+                <span className="font-['Caveat'] text-3xl font-bold text-teal-400 leading-none">{num}</span>
+                <span className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">{lbl}</span>
               </div>
             ))}
           </div>
@@ -419,14 +542,15 @@ export default function HikingPage({ onBack } = {}) {
         {/* ── Featured trail ── */}
         {!loading && featuredTrail && (
           <>
-            <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">
-              Featured trail
-            </p>
-            <div className="bg-[#161f30] border border-teal-400/15 rounded-3xl overflow-hidden mb-8 hover:border-teal-400/30 transition-colors cursor-pointer">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Featured trail</p>
+            <div
+              onClick={() => setSelectedTrail(featuredTrail)}
+              className="bg-[#161f30] border border-teal-400/15 rounded-3xl overflow-hidden mb-8 hover:border-teal-400/30 transition-colors cursor-pointer"
+            >
               <div className="grid grid-cols-2 max-sm:grid-cols-1">
-                {featuredTrail.thumbnail ? (
+                {(placePhotos[featuredTrail.id] || featuredTrail.thumbnail) ? (
                   <img
-                    src={featuredTrail.thumbnail}
+                    src={placePhotos[featuredTrail.id] || featuredTrail.thumbnail}
                     alt={featuredTrail.name}
                     className="w-full h-52 object-cover"
                   />
@@ -436,9 +560,7 @@ export default function HikingPage({ onBack } = {}) {
                   </div>
                 )}
                 <div className="p-6 flex flex-col justify-center">
-                  <p className="text-[10px] uppercase tracking-widest text-teal-400 mb-2">
-                    ⭐ Top rated this week
-                  </p>
+                  <p className="text-[10px] uppercase tracking-widest text-teal-400 mb-2">⭐ Top rated this week</p>
                   <h2 className="font-['Caveat'] text-2xl font-bold text-slate-100 leading-tight mb-2">
                     {featuredTrail.name}
                   </h2>
@@ -482,16 +604,16 @@ export default function HikingPage({ onBack } = {}) {
         {/* ── Trail grid ── */}
         {!loading && gridTrails.length > 0 && (
           <>
-            <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">
-              Trails near you
-            </p>
+            <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Trails near you</p>
             <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-3 mb-8">
               {gridTrails.map((trail) => (
                 <TrailCard
                   key={trail.id}
                   trail={trail}
+                  photoUrl={placePhotos[trail.id] ?? null}
                   onSave={handleSave}
                   savedIds={savedIds}
+                  onOpen={() => setSelectedTrail(trail)}
                 />
               ))}
             </div>
@@ -512,9 +634,7 @@ export default function HikingPage({ onBack } = {}) {
           <div className="bg-gradient-to-r from-violet-500/10 to-pink-500/8 border border-violet-400/20 rounded-3xl p-5 mb-8 flex items-center gap-4">
             <span className="text-3xl flex-shrink-0">📌</span>
             <div>
-              <h3 className="font-['Caveat'] text-xl font-bold text-slate-100 leading-tight">
-                Your Someday List
-              </h3>
+              <h3 className="font-['Caveat'] text-xl font-bold text-slate-100 leading-tight">Your Someday List</h3>
               <p className="text-sm text-slate-500">
                 You've saved {savedIds.size} trail{savedIds.size !== 1 ? "s" : ""} — ready to pick a date?
               </p>
@@ -526,16 +646,24 @@ export default function HikingPage({ onBack } = {}) {
         )}
 
         {/* ── Community feed ── */}
-        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">
-          Friends' recent hikes
-        </p>
+        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Friends' recent hikes</p>
         <div className="flex flex-col gap-2.5">
-          {MOCK_FEED.map((item) => (
-            <FeedCard key={item.id} item={item} />
-          ))}
+          {MOCK_FEED.map((item) => <FeedCard key={item.id} item={item} />)}
         </div>
 
       </div>
+
+      {/* ── Modal ── */}
+      {selectedTrail && (
+        <TrailModal
+          trail={selectedTrail}
+          photoUrl={placePhotos[selectedTrail.id] ?? null}
+          isSaved={savedIds.has(selectedTrail.id)}
+          onSave={handleSave}
+          onPlanTrip={() => handlePlanTrip(selectedTrail)}
+          onClose={() => setSelectedTrail(null)}
+        />
+      )}
     </div>
   );
 }
@@ -552,78 +680,19 @@ function parseDifficulty(activities) {
 
 function parseFeatures(trail) {
   const features = [];
-  if (trail.description?.toLowerCase().includes("dog")) features.push("Dog Friendly");
-  if (trail.description?.toLowerCase().includes("kid") || trail.description?.toLowerCase().includes("family")) features.push("Kid Friendly");
-  if (trail.description?.toLowerCase().includes("view") || trail.description?.toLowerCase().includes("summit")) features.push("Views");
+  const desc = trail.description?.toLowerCase() ?? "";
+  if (desc.includes("dog"))                             features.push("Dog Friendly");
+  if (desc.includes("kid") || desc.includes("family")) features.push("Kid Friendly");
+  if (desc.includes("view") || desc.includes("summit")) features.push("Views");
   return features;
 }
 
-// ─── Mock data (used when API key not set or request fails) ──────────────────
+// ─── Mock data ────────────────────────────────────────────────────────────────
 
 const MOCK_TRAILS = [
-  {
-    id: 1,
-    name: "Mission Peak Loop",
-    city: "Fremont",
-    state: "California",
-    difficulty: 2,
-    length: 6.1,
-    ascent: 2100,
-    rating: 4.7,
-    ratingCount: 312,
-    thumbnail: null,
-    features: ["Views"],
-  },
-  {
-    id: 2,
-    name: "Muir Woods Loop",
-    city: "Mill Valley",
-    state: "California",
-    difficulty: 1,
-    length: 2.4,
-    ascent: 180,
-    rating: 4.5,
-    ratingCount: 891,
-    thumbnail: null,
-    features: ["Dog Friendly"],
-  },
-  {
-    id: 3,
-    name: "Mt. Tamalpais East Peak",
-    city: "Marin County",
-    state: "California",
-    difficulty: 3,
-    length: 10.5,
-    ascent: 3400,
-    rating: 4.9,
-    ratingCount: 145,
-    thumbnail: null,
-    features: ["Views"],
-  },
-  {
-    id: 4,
-    name: "Lands End Trail",
-    city: "San Francisco",
-    state: "California",
-    difficulty: 1,
-    length: 3.5,
-    ascent: 320,
-    rating: 4.6,
-    ratingCount: 527,
-    thumbnail: null,
-    features: ["Kid Friendly"],
-  },
-  {
-    id: 5,
-    name: "Ring Mountain Preserve",
-    city: "Tiburon",
-    state: "California",
-    difficulty: 2,
-    length: 4.2,
-    ascent: 850,
-    rating: 4.4,
-    ratingCount: 203,
-    thumbnail: null,
-    features: ["Views", "Dog Friendly"],
-  },
+  { id: 1, name: "Mission Peak Loop",       city: "Fremont",       state: "California", difficulty: 2, length: 6.1,  ascent: 2100, rating: 4.7, ratingCount: 312, thumbnail: null, features: ["Views"],                   description: "A challenging loop to the summit of Mission Peak with panoramic views of the Bay Area. The final push to the pole is steep but rewarding.", directions: "Take Mission Boulevard to Stanford Avenue. Parking at the Hidden Valley trailhead." },
+  { id: 2, name: "Muir Woods Loop",         city: "Mill Valley",   state: "California", difficulty: 1, length: 2.4,  ascent: 180,  rating: 4.5, ratingCount: 891, thumbnail: null, features: ["Dog Friendly"],            description: "A gentle stroll through ancient coast redwoods. The Cathedral Grove section features trees over 1,000 years old.", directions: "Take US-101 to the Muir Woods Road exit. Parking reservations required." },
+  { id: 3, name: "Mt. Tamalpais East Peak", city: "Marin County",  state: "California", difficulty: 3, length: 10.5, ascent: 3400, rating: 4.9, ratingCount: 145, thumbnail: null, features: ["Views"],                   description: "An epic summit hike with sweeping views of the Golden Gate and San Francisco Bay on clear days.", directions: "Access via Pantoll Station on Panoramic Highway. Take the Steep Ravine trail to the summit." },
+  { id: 4, name: "Lands End Trail",         city: "San Francisco", state: "California", difficulty: 1, length: 3.5,  ascent: 320,  rating: 4.6, ratingCount: 527, thumbnail: null, features: ["Kid Friendly"],            description: "A scenic coastal trail along the western edge of San Francisco with views of the Marin Headlands and shipwrecks below.", directions: "Start at the Lands End Lookout visitor center off Point Lobos Avenue." },
+  { id: 5, name: "Ring Mountain Preserve",  city: "Tiburon",       state: "California", difficulty: 2, length: 4.2,  ascent: 850,  rating: 4.4, ratingCount: 203, thumbnail: null, features: ["Views", "Dog Friendly"],   description: "A hidden gem in Marin with wildflowers in spring and stunning bay views. Look for the ancient Native American rock carvings.", directions: "Take Paradise Drive north from Corte Madera. Trailhead parking on Paradise Drive." },
 ];
