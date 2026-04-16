@@ -393,9 +393,7 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
     price: product?.price || "",
     rating: product?.rating ?? "",
     category: getCategoryForProduct(product?.name),
-    amazonUrl: product?.amazonUrl || "",
-    targetUrl: product?.targetUrl || "",
-    walmartUrl: product?.walmartUrl || "",
+    url: product?.amazonUrl || product?.targetUrl || product?.walmartUrl || "",
     review: "",
   }));
 
@@ -431,9 +429,9 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
         price: draft.price || product?.price || "",
         rating: draft.rating === "" ? (product?.rating ?? null) : Number(draft.rating),
         category: draft.category,
-        amazonUrl: draft.amazonUrl.trim(),
-        targetUrl: draft.targetUrl.trim(),
-        walmartUrl: draft.walmartUrl.trim(),
+        amazonUrl: draft.url.trim(),
+        targetUrl: draft.url.trim(),
+        walmartUrl: draft.url.trim(),
       },
       review: draft.review,
       category: draft.category,
@@ -445,7 +443,7 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
   const storeLinks = [
     {
       label: "Amazon",
-      url: draft.amazonUrl || product?.amazonUrl || "",
+      url: draft.url || product?.amazonUrl || "",
       badge: "#111827",
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -457,7 +455,7 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
     },
     {
       label: "Target",
-      url: draft.targetUrl || "",
+      url: draft.url || product?.targetUrl || "",
       badge: "#dc2626",
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -468,7 +466,7 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
     },
     {
       label: "Walmart",
-      url: draft.walmartUrl || "",
+      url: draft.url || product?.walmartUrl || "",
       badge: "#2563eb",
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -573,34 +571,14 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
             )}
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3">
             <label className="grid gap-2">
-              <span className="text-xs uppercase tracking-widest text-slate-500">Amazon link</span>
+              <span className="text-xs uppercase tracking-widest text-slate-500">URL link</span>
               <input
                 type="url"
-                value={draft.amazonUrl}
-                onChange={(e) => updateField("amazonUrl", e.target.value)}
-                placeholder="https://amazon.com/..."
-                className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
-              />
-            </label>
-            <label className="grid gap-2">
-              <span className="text-xs uppercase tracking-widest text-slate-500">Target link</span>
-              <input
-                type="url"
-                value={draft.targetUrl}
-                onChange={(e) => updateField("targetUrl", e.target.value)}
-                placeholder="https://target.com/..."
-                className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
-              />
-            </label>
-            <label className="grid gap-2">
-              <span className="text-xs uppercase tracking-widest text-slate-500">Walmart link</span>
-              <input
-                type="url"
-                value={draft.walmartUrl}
-                onChange={(e) => updateField("walmartUrl", e.target.value)}
-                placeholder="https://walmart.com/..."
+                value={draft.url}
+                onChange={(e) => updateField("url", e.target.value)}
+                placeholder="https://example.com/your-product"
                 className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
               />
             </label>

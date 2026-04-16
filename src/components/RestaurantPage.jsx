@@ -520,7 +520,7 @@ const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeda
   );
 });
 
-const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
+const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
   const pbg = darkMode ? '#131c2e' : '#fff';
   const tp = darkMode ? '#f1f5f9' : '#111827';
   const ts = darkMode ? '#6b7280' : '#9ca3af';
@@ -528,6 +528,8 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
   const fileInputRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [addressSuggesting, setAddressSuggesting] = useState(false);
   const [form, setForm] = useState({
     restaurant_name: '',
     restaurant_image: '',
@@ -542,6 +544,55 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
   const updateField = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
+
+  useEffect(() => {
+    const query = form.address.trim();
+    if (query.length < 2) {
+      setAddressSuggestions([]);
+      setAddressSuggesting(false);
+      return;
+    }
+
+    const KEY = apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || '';
+    if (!KEY) {
+      setAddressSuggestions([]);
+      setAddressSuggesting(false);
+      return;
+    }
+
+    let active = true;
+    setAddressSuggesting(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=geocode&components=country:us&key=${KEY}`
+        );
+        const data = await res.json();
+        if (!active) return;
+        if (data.status === 'OK' && Array.isArray(data.predictions)) {
+          setAddressSuggestions(
+            data.predictions.slice(0, 5).map((prediction) => ({
+              place_id: prediction.place_id,
+              description: prediction.description,
+              main_text: prediction.structured_formatting?.main_text || prediction.description,
+              secondary_text: prediction.structured_formatting?.secondary_text || '',
+            }))
+          );
+        } else {
+          setAddressSuggestions([]);
+        }
+      } catch {
+        if (active) setAddressSuggestions([]);
+      } finally {
+        if (active) setAddressSuggesting(false);
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [apiKey, form.address]);
 
   const readImageFile = (file) => {
     if (!file) return;
@@ -561,6 +612,11 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
 
   const openPhotoPicker = () => {
     fileInputRef.current?.click();
+  };
+
+  const chooseAddressSuggestion = (suggestion) => {
+    setForm(prev => ({ ...prev, address: suggestion.description }));
+    setAddressSuggestions([]);
   };
 
   const handleSubmit = async () => {
@@ -619,7 +675,6 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
           <div style={{ display: 'grid', gap: 12 }}>
             {[ 
               { key: 'restaurant_name', label: 'Restaurant name', required: true, placeholder: 'Bestia' },
-              { key: 'address', label: 'Address', placeholder: '2121 E 7th Pl, Los Angeles' },
               { key: 'cuisine', label: 'Cuisine', placeholder: 'Italian' },
               { key: 'best_for', label: 'Best for', placeholder: 'Date night, brunch, family...' },
             ].map(field => (
@@ -634,6 +689,49 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
                 />
               </label>
             ))}
+
+            <label style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: tp }}>Address</span>
+              <input
+                type="text"
+                value={form.address}
+                placeholder="2121 E 7th Pl, Los Angeles"
+                onChange={e => updateField('address', e.target.value)}
+                style={{ width: '100%', borderRadius: 12, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.04)' : '#f8fafc', color: tp, padding: '11px 12px', fontSize: 14, outline: 'none' }}
+              />
+              {(addressSuggesting || addressSuggestions.length > 0) && form.address.trim().length >= 2 && (
+                <div style={{ border: `1px solid ${bw}`, borderRadius: 14, overflow: 'hidden', background: darkMode ? '#111827' : '#ffffff', boxShadow: darkMode ? '0 12px 28px rgba(0,0,0,0.28)' : '0 12px 28px rgba(15,23,42,0.08)' }}>
+                  {addressSuggesting && addressSuggestions.length === 0 ? (
+                    <div style={{ padding: '10px 12px', fontSize: 13, color: ts }}>
+                      Looking up addresses…
+                    </div>
+                  ) : (
+                    addressSuggestions.map((suggestion, idx) => (
+                      <button
+                        key={suggestion.place_id}
+                        type="button"
+                        onClick={() => chooseAddressSuggestion(suggestion)}
+                        style={{
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '10px 12px',
+                          border: 'none',
+                          borderBottom: idx === addressSuggestions.length - 1 ? 'none' : `1px solid ${bw}`,
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          color: tp,
+                        }}
+                      >
+                        <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.25 }}>{suggestion.main_text}</div>
+                        {suggestion.secondary_text && (
+                          <div style={{ fontSize: 11, color: ts, marginTop: 2 }}>{suggestion.secondary_text}</div>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </label>
 
             <div style={{ display: 'grid', gap: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: tp }}>Photo</span>
@@ -801,6 +899,8 @@ const RestaurantPage = ({
   const [location, setLocation]       = useState(userLocation || { lat: 34.0522, lng: -118.2437 }); // default LA
   const [locationSearch, setLocationSearch] = useState('');
   const [locationLabel, setLocationLabel]   = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [locationSuggesting, setLocationSuggesting]   = useState(false);
   const [locSearching, setLocSearching]     = useState(false);
   const fetchedRef                    = useRef(false);
 
@@ -828,6 +928,55 @@ const RestaurantPage = ({
   useEffect(() => {
     fetchRecommendedPosts();
   }, [fetchRecommendedPosts]);
+
+  useEffect(() => {
+    const query = locationSearch.trim();
+    if (query.length < 2) {
+      setLocationSuggestions([]);
+      setLocationSuggesting(false);
+      return;
+    }
+
+    const KEY = apiKey || process.env.REACT_APP_GOOGLE_PLACES_KEY || '';
+    if (!KEY) {
+      setLocationSuggestions([]);
+      setLocationSuggesting(false);
+      return;
+    }
+
+    let active = true;
+    setLocationSuggesting(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=geocode&components=country:us&key=${KEY}`
+        );
+        const data = await res.json();
+        if (!active) return;
+        if (data.status === 'OK' && Array.isArray(data.predictions)) {
+          setLocationSuggestions(
+            data.predictions.slice(0, 5).map((prediction) => ({
+              place_id: prediction.place_id,
+              description: prediction.description,
+              main_text: prediction.structured_formatting?.main_text || prediction.description,
+              secondary_text: prediction.structured_formatting?.secondary_text || '',
+            }))
+          );
+        } else {
+          setLocationSuggestions([]);
+        }
+      } catch {
+        if (active) setLocationSuggestions([]);
+      } finally {
+        if (active) setLocationSuggesting(false);
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [apiKey, locationSearch]);
 
   // ── fetch restaurants ───────────────────────────────────────────────────────
   // The /api/places proxy already paginates up to 60 results server-side.
@@ -924,6 +1073,7 @@ const RestaurantPage = ({
         setLocation(loc);
         setLocationLabel(data.results[0].formatted_address);
         setLocationSearch('');
+        setLocationSuggestions([]);
         fetchRestaurants(loc, search, radius);
       } else {
         setError('Location not found — try a different city or address.');
@@ -946,6 +1096,7 @@ const RestaurantPage = ({
         setLocation(loc);
         setLocationLabel('');
         setLocationSearch('');
+        setLocationSuggestions([]);
         fetchRestaurants(loc, search, radius);
         setLocSearching(false);
       },
@@ -1093,8 +1244,9 @@ const RestaurantPage = ({
         </div>
 
         {/* Location search */}
-        <div style={{ margin: '0 16px 10px', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', border: `1px solid ${bw}`, borderRadius: 14, padding: '8px 14px' }}>
+        <div style={{ margin: '0 16px 10px', display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', border: `1px solid ${bw}`, borderRadius: 14, padding: '8px 14px' }}>
             <MapPin style={{ width: 14, height: 14, color: ts, flexShrink: 0, opacity: .6 }} />
             <input
               type="text"
@@ -1105,7 +1257,36 @@ const RestaurantPage = ({
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: tp }}
             />
             {locationSearch && (
-              <button onClick={() => setLocationSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: ts, padding: 0 }}>✕</button>
+              <button onClick={() => { setLocationSearch(''); setLocationSuggestions([]); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: ts, padding: 0 }}>✕</button>
+            )}
+            </div>
+            {(locationSuggesting || locationSuggestions.length > 0) && locationSearch.trim().length >= 2 && (
+              <div style={{ marginTop: 8, border: `1px solid ${bw}`, borderRadius: 14, overflow: 'hidden', background: darkMode ? '#111827' : '#ffffff', boxShadow: darkMode ? '0 12px 28px rgba(0,0,0,0.28)' : '0 12px 28px rgba(15,23,42,0.08)' }}>
+                {locationSuggesting && locationSuggestions.length === 0 ? (
+                  <div style={{ padding: '10px 12px', fontSize: 13, color: ts }}>
+                    Looking up places…
+                  </div>
+                ) : (
+                  locationSuggestions.map((suggestion) => (
+                    <button
+                      key={suggestion.place_id}
+                      type="button"
+                      onClick={() => {
+                        setLocationSearch(suggestion.description);
+                        setLocationLabel(suggestion.description);
+                        setLocationSuggestions([]);
+                        geocodeLocation(suggestion.description);
+                      }}
+                      style={{ width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', borderBottom: `1px solid ${bw}`, background: 'transparent', cursor: 'pointer', color: tp }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.25 }}>{suggestion.main_text}</div>
+                      {suggestion.secondary_text && (
+                        <div style={{ fontSize: 11, color: ts, marginTop: 2 }}>{suggestion.secondary_text}</div>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
             )}
           </div>
           <button
@@ -1338,6 +1519,7 @@ const RestaurantPage = ({
           onClose={() => setIsRecommendOpen(false)}
           onSubmit={handleRecommendSubmit}
           darkMode={darkMode}
+          apiKey={apiKey}
         />
       )}
     </div>
