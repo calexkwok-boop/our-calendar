@@ -442,7 +442,7 @@ export default function DateDetailsCardEnhanced({
           className={`max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-[32px] sm:rounded-[32px] shadow-2xl ${panelSurface}`}
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="space-y-5 p-6 pb-8">
+          <div className="space-y-5 p-6 pb-[max(6rem,calc(env(safe-area-inset-bottom)+5rem))]">
             <div className="mb-2 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">

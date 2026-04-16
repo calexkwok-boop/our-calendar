@@ -24672,7 +24672,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
           </div>
         )}
         {memorySystemView === 'create' ? (
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-white px-5 py-6 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+1rem))] [webkit-overflow-scrolling:touch] dark:bg-slate-950 sm:px-6">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-white px-5 py-6 pb-[max(6rem,calc(env(safe-area-inset-bottom)+5rem))] [webkit-overflow-scrolling:touch] dark:bg-slate-950 sm:px-6">
             <MemoryCreator
               key={`memory-create-${memorySystemSessionKey}`}
               onCancel={closeMemorySystem}
@@ -24690,7 +24690,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
         ) : (
           <div className={`${memorySystemView === 'viewer'
             ? 'relative flex-1 min-h-0 overflow-hidden bg-black'
-            : 'flex-1 min-h-0 overflow-y-auto overscroll-contain bg-stone-50 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] [webkit-overflow-scrolling:touch] dark:bg-slate-950 sm:px-6 sm:py-5'}`}>
+            : 'flex-1 min-h-0 overflow-y-auto overscroll-contain bg-stone-50 px-4 py-4 pb-[max(6rem,calc(env(safe-area-inset-bottom)+5rem))] [webkit-overflow-scrolling:touch] dark:bg-slate-950 sm:px-6 sm:py-5'}`}>
             <MemorySystem
               key={`memory-system-${memorySystemSessionKey}-${memorySystemView}-${String(memorySystemCurrentMemoryResolved?.id || 'none')}`}
               view={memorySystemView}
