@@ -321,10 +321,24 @@ function SkeletonCard() {
 
 // ─── Section header ───────────────────────────────────────────────────────────
 function SectionHeader({ label }) {
+  const tone =
+    label === "Good for this weekend"
+      ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20"
+      : label === "Hidden gems"
+        ? "bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/20"
+        : label === "Trending"
+          ? "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20"
+          : label === "From your friends"
+            ? "bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/20"
+            : "bg-stone-100 text-gray-600 dark:bg-white/[0.04] dark:text-gray-300 border-stone-200 dark:border-white/[0.06]";
+
   return (
-    <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 px-4 pt-5 pb-2">
-      {label}
-    </p>
+    <div className="px-4 pt-5 pb-2">
+      <p className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold tracking-[0.16em] uppercase ${tone}`}>
+        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+        {label}
+      </p>
+    </div>
   );
 }
 

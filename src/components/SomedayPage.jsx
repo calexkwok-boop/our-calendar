@@ -531,6 +531,15 @@ const SomedayPage = ({
     : { backgroundColor: '#f5f2eb', backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' };
 
   const visiblePins = (filter === 'all' ? pins : pins.filter(p => p.categoryId === filter)).filter(p => p.id !== heroId);
+  const displayedPins = filter === 'all'
+    ? visiblePins
+    : [...visiblePins].sort((a, b) => (a.y - b.y) || (a.x - b.x));
+  const nudgedPins = filter === 'all'
+    ? displayedPins
+    : displayedPins.map((pin, index) => ({
+        ...pin,
+        y: Math.max(0, pin.y - (index * 14)),
+      }));
   const BOARD_HEIGHT = Math.max(600, Math.ceil(pins.length / 2) * 240 + 240);
 
   // ─── Drag ──────────────────────────────────────────────────────────────────
@@ -699,7 +708,7 @@ const SomedayPage = ({
       {/* Pin board */}
       <div ref={canvasRef} style={{ ...boardBg, position: 'relative', zIndex: 1, width: '100%', height: BOARD_HEIGHT, overflowX: 'hidden', touchAction: dragging ? 'none' : 'pan-y' }}>
 
-        {visiblePins.map(pin => (
+        {nudgedPins.map(pin => (
           <div
             key={pin.id}
             style={{
@@ -728,7 +737,7 @@ const SomedayPage = ({
           </div>
         ))}
 
-        {visiblePins.length === 0 && (
+        {displayedPins.length === 0 && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
             <p style={{ fontFamily: CAVEAT, fontSize: 22, color: ts, fontStyle: 'italic' }}>Nothing pinned here yet</p>
             <button onClick={() => setShowAdd(true)} style={{ padding: '10px 24px', borderRadius: 16, border: `2px dashed ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'}`, background: 'transparent', color: ts, fontFamily: CAVEAT, fontSize: 18, cursor: 'pointer' }}>

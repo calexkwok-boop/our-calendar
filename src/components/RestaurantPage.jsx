@@ -1276,7 +1276,11 @@ const RestaurantPage = ({
   }, []);
 
   // Search submit
-  const handleSearchSubmit = () => {
+  const handleSearchSubmit = async () => {
+    if (locationSearch.trim()) {
+      await resolveLocationSearch(locationSearch);
+      return;
+    }
     fetchRestaurants(location, search, radius);
   };
 
@@ -1353,7 +1357,7 @@ const RestaurantPage = ({
           const label = detailsData?.result?.formatted_address || prediction.description || trimmed;
           setLocation(loc);
           setLocationLabel(label);
-          setLocationSearch('');
+          setLocationSearch(label);
           setLocationSuggestions([]);
           fetchRestaurants(loc, search, radius);
           return;
@@ -1374,9 +1378,10 @@ const RestaurantPage = ({
       if (data.status === 'OK' && data.results?.[0]) {
         const { lat, lng } = data.results[0].geometry.location;
         const loc = { lat, lng };
+        const label = data.results[0].formatted_address || trimmed;
         setLocation(loc);
-        setLocationLabel(data.results[0].formatted_address);
-        setLocationSearch('');
+        setLocationLabel(label);
+        setLocationSearch(label);
         setLocationSuggestions([]);
         fetchRestaurants(loc, search, radius);
         return;
@@ -1555,6 +1560,8 @@ const RestaurantPage = ({
     });
   }, [onSaveToSomeday]);
 
+  const locationScopeLabel = (locationLabel || locationSearch.trim() || 'your current area');
+
   const pageBg = darkMode ? '#0e1520' : '#faf8f3';
   const hBg    = darkMode ? 'rgba(19,28,46,0.98)' : 'rgba(255,255,255,0.98)';
   const bw     = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
@@ -1585,7 +1592,7 @@ const RestaurantPage = ({
               🍽️ Restaurants
             </h1>
             <p style={{ fontSize: 11, color: ts, margin: '3px 0 0' }}>
-              {loading ? 'Finding restaurants near you…' : `${filtered.length} spot${filtered.length !== 1 ? 's' : ''} found`}
+              {loading ? `Finding restaurants near ${locationScopeLabel}…` : `${filtered.length} spot${filtered.length !== 1 ? 's' : ''} found`}
             </p>
             </div>
           </div>
@@ -1621,8 +1628,8 @@ const RestaurantPage = ({
         </div>
 
         {/* Location search */}
-        <div style={{ margin: '0 16px 10px', display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ margin: '0 16px 10px', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', border: `1px solid ${bw}`, borderRadius: 14, padding: '8px 14px' }}>
             <MapPin style={{ width: 14, height: 14, color: ts, flexShrink: 0, opacity: .6 }} />
             <input
@@ -1669,7 +1676,7 @@ const RestaurantPage = ({
           <button
             onClick={useMyLocation}
             disabled={locSearching}
-            style={{ padding: '8px 14px', borderRadius: 14, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: locSearching ? ts : tp, fontSize: 13, fontWeight: 500, cursor: locSearching ? 'default' : 'pointer', whiteSpace: 'nowrap', opacity: locSearching ? .6 : 1 }}
+            style={{ padding: '8px 14px', borderRadius: 14, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: locSearching ? ts : tp, fontSize: 13, fontWeight: 500, cursor: locSearching ? 'default' : 'pointer', whiteSpace: 'nowrap', opacity: locSearching ? .6 : 1, minHeight: 42 }}
           >
             {locSearching ? '…' : '📍 Me'}
           </button>
@@ -1849,6 +1856,40 @@ const RestaurantPage = ({
                     </div>
                   )}
 
+                  {/* â”€â”€ Community recommendations feed â”€â”€ */}
+                  <div ref={communityFeedRef} style={{ gridColumn: '1 / -1', margin: '2px 0 2px' }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: ts, margin: '4px 2px 10px' }}>
+                      What people are recommending
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {recommendedPosts.map((post) => (
+                        <div
+                          key={post.id}
+                          style={{
+                            borderRadius: 20,
+                            padding: post.id === highlightedRestaurantId ? 2 : 0,
+                            background: post.id === highlightedRestaurantId
+                              ? 'linear-gradient(135deg, rgba(201,161,93,0.28), rgba(216,179,106,0.10))'
+                              : 'transparent',
+                            boxShadow: post.id === highlightedRestaurantId
+                              ? '0 0 0 1px rgba(201,161,93,0.18), 0 10px 30px rgba(201,161,93,0.12)'
+                              : 'none',
+                            transition: 'all .2s ease',
+                          }}
+                        >
+                          <RestaurantRecommendationCard
+                            post={post}
+                            currentUserId={currentUserId}
+                            onSomeday={handleSomedayFromRecommendation}
+                            onVote={handleVoteRecommendation}
+                            onDelete={handleDeleteRecommendation}
+                            darkMode={darkMode}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   {remainingRestaurants.map((r, i) => (
                     <RestaurantCard
                       key={r.id}
@@ -1866,7 +1907,7 @@ const RestaurantPage = ({
       </div>
 
       {/* ── Community recommendations feed ── */}
-      <div ref={communityFeedRef} style={{ padding: '0 14px 100px' }}>
+      <div style={{ display: 'none', padding: '0 14px 100px' }}>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: ts, margin: '4px 2px 10px' }}>
           What people are recommending
         </p>
