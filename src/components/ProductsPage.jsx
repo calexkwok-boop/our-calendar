@@ -403,20 +403,86 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
     setDraft((prev) => ({ ...prev, [field]: value }));
   };
 
-  const readImageFile = (file) => {
-    if (!file) return;
+  const readFilesAsDataUrls = (files) => Promise.all(files.map((file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      setDraft((prev) => ({ ...prev, image: String(reader.result || "") }));
-      setPhotoError("");
-    };
-    reader.onerror = () => setPhotoError("Could not read that image.");
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Could not read that image."));
     reader.readAsDataURL(file);
+  })));
+
+  const loadImage = (src) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+
+  const buildCollageDataUrl = async (sources) => {
+    const urls = sources.slice(0, 4);
+    if (urls.length === 0) return "";
+    if (urls.length === 1) return urls[0];
+
+    const canvas = document.createElement("canvas");
+    const size = 1200;
+    const gap = 24;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return urls[0];
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.fillRect(0, 0, size, size);
+
+    const imgs = await Promise.all(urls.map(loadImage));
+    const slots = [
+      [gap, gap, (size - gap * 3) / 2, (size - gap * 3) / 2],
+      [(size + gap) / 2, gap, (size - gap * 3) / 2, (size - gap * 3) / 2],
+      [gap, (size + gap) / 2, (size - gap * 3) / 2, (size - gap * 3) / 2],
+      [(size + gap) / 2, (size + gap) / 2, (size - gap * 3) / 2, (size - gap * 3) / 2],
+    ];
+
+    const drawCover = (img, x, y, w, h) => {
+      const scale = Math.max(w / img.width, h / img.height);
+      const sw = w / scale;
+      const sh = h / scale;
+      const sx = (img.width - sw) / 2;
+      const sy = (img.height - sh) / 2;
+      ctx.save();
+      ctx.beginPath();
+      const r = 32;
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+      ctx.restore();
+    };
+
+    imgs.forEach((img, index) => {
+      const slot = slots[index];
+      if (slot) drawCover(img, ...slot);
+    });
+
+    return canvas.toDataURL("image/jpeg", 0.92);
   };
 
-  const handleImagePick = (event) => {
-    const file = event.target.files?.[0];
-    readImageFile(file);
+  const handleImagePick = async (event) => {
+    const files = Array.from(event.target.files?.length ? event.target.files : []);
+    if (!files.length) return;
+    try {
+      const urls = await readFilesAsDataUrls(files);
+      const collage = await buildCollageDataUrl(urls);
+      setDraft((prev) => ({
+        ...prev,
+        image: collage,
+      }));
+      setPhotoError("");
+    } catch {
+      setPhotoError("Could not read that image.");
+    }
     event.target.value = "";
   };
 
@@ -569,6 +635,7 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
               ref={photoInputRef}
               type="file"
               accept="image/*"
+              multiple
               onChange={handleImagePick}
               className="hidden"
             />
