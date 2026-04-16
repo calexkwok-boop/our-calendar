@@ -525,8 +525,7 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
   const tp = darkMode ? '#f1f5f9' : '#111827';
   const ts = darkMode ? '#6b7280' : '#9ca3af';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
-  const photoUploadRef = useRef(null);
-  const photoCameraRef = useRef(null);
+  const photoInputRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [addressSuggestions, setAddressSuggestions] = useState([]);
@@ -610,12 +609,8 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
     event.target.value = '';
   };
 
-  const openPhotoPicker = (mode = 'upload') => {
-    if (mode === 'camera') {
-      photoCameraRef.current?.click();
-      return;
-    }
-    photoUploadRef.current?.click();
+  const openPhotoPicker = () => {
+    photoInputRef.current?.click();
   };
 
   const chooseAddressSuggestion = (suggestion) => {
@@ -741,7 +736,7 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
               <span style={{ fontSize: 12, fontWeight: 600, color: tp }}>Photo</span>
               {form.restaurant_image ? (
                 <button
-                  onClick={() => openPhotoPicker('upload')}
+                  onClick={openPhotoPicker}
                   type="button"
                   className="relative block w-full overflow-hidden rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-slate-900 text-left transition-all hover:shadow-lg"
                 >
@@ -765,42 +760,23 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
                   </div>
                 </button>
               ) : (
-                <div className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30 transition-all flex flex-col items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={openPhotoPicker}
+                  className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30 transition-all flex flex-col items-center justify-center gap-3"
+                >
                   <Camera className="w-8 h-8 text-stone-500 dark:text-stone-400" />
                   <span className="font-semibold text-stone-700 dark:text-stone-300">
                     Add Photos
                   </span>
                   <span className="text-sm text-stone-500 dark:text-stone-400 text-center px-4">
-                    Upload from your device or take a picture
+                    Tap to upload from your device or take a picture
                   </span>
-                  <div className="flex flex-wrap justify-center gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => openPhotoPicker('upload')}
-                      className="px-4 py-2 rounded-full border border-stone-300 bg-white/80 text-stone-700 text-sm font-semibold hover:bg-white transition-colors"
-                    >
-                      Upload photo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openPhotoPicker('camera')}
-                      className="px-4 py-2 rounded-full border border-stone-300 bg-white/80 text-stone-700 text-sm font-semibold hover:bg-white transition-colors"
-                    >
-                      Use camera
-                    </button>
-                  </div>
-                </div>
+                </button>
               )}
 
               <input
-                ref={photoUploadRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImagePick}
-                className="hidden"
-              />
-              <input
-                ref={photoCameraRef}
+                ref={photoInputRef}
                 type="file"
                 accept="image/*"
                 capture="environment"
@@ -925,6 +901,7 @@ const RestaurantPage = ({
   const [locationSuggestions, setLocationSuggestions] = useState([]);
   const [locationSuggesting, setLocationSuggesting]   = useState(false);
   const [locSearching, setLocSearching]     = useState(false);
+  const communityFeedRef = useRef(null);
   const fetchedRef                    = useRef(false);
 
   useEffect(() => {
@@ -1171,13 +1148,23 @@ const RestaurantPage = ({
       comments_count: 0,
     };
 
-    const { error } = await supabase.from('restaurant_posts').insert(payload);
+    const { data, error } = await supabase
+      .from('restaurant_posts')
+      .insert(payload)
+      .select('id, user_id, restaurant_name, restaurant_image, address, google_place_id, website, phone, cuisine, price_level, rating, review, best_for, vibe_tags, likes_count, comments_count, created_at')
+      .single();
     if (error) {
       console.error(error);
       return false;
     }
 
-    await fetchRecommendedPosts();
+    if (data) {
+      setRecommendedPosts((prev) => [data, ...prev.filter((post) => String(post.id) !== String(data.id))]);
+      window.setTimeout(() => {
+        communityFeedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 120);
+    }
+
     return true;
   };
 
@@ -1498,7 +1485,7 @@ const RestaurantPage = ({
       </div>
 
       {/* ── Community recommendations feed ── */}
-      <div style={{ padding: '0 14px 100px' }}>
+      <div ref={communityFeedRef} style={{ padding: '0 14px 100px' }}>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: ts, margin: '4px 2px 10px' }}>
           What people are recommending
         </p>

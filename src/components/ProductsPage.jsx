@@ -257,7 +257,8 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
     setLikes((n) => newLiked ? n + 1 : n - 1);
   };
 
-  const initials = (post.profiles?.full_name ?? "??")
+  const displayName = post.profiles?.full_name ?? (post.user_id === currentUserId ? "You" : "Someone");
+  const initials = String(displayName || "??")
     .split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
@@ -269,7 +270,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-medium leading-tight ${dm ? 'text-slate-200' : 'text-slate-800'}`}>
-            {post.profiles?.full_name ?? "Someone"} recommended a product
+            {displayName} recommended a product
           </p>
           <p className="text-xs text-slate-500">{post.category} · {formatTime(post.created_at)}</p>
         </div>
@@ -384,10 +385,10 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
 // Post product modal
 function PostProductModal({ product, onClose, onSubmit, darkMode }) {
   const dm = darkMode;
-  const photoUploadRef = useRef(null);
-  const photoCameraRef = useRef(null);
+  const photoInputRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [draft, setDraft] = useState(() => ({
     name: product?.name || "",
     image: product?.image || "",
@@ -422,7 +423,8 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
   const handleSubmit = async () => {
     if (!draft.review.trim()) return;
     setSubmitting(true);
-    await onSubmit({
+    setSubmitError("");
+    const ok = await onSubmit({
       product: {
         ...product,
         name: draft.name.trim() || product?.name || "",
@@ -438,7 +440,11 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
       category: draft.category,
     });
     setSubmitting(false);
-    onClose();
+    if (ok) {
+      onClose();
+    } else {
+      setSubmitError("Could not save this product recommendation right now.");
+    }
   };
 
   const storeLinks = [
@@ -546,40 +552,21 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
 
           <div className="grid gap-3">
             <span className="text-xs uppercase tracking-widest text-slate-500">Photo</span>
-            <div className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30 transition-all flex flex-col items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30 transition-all flex flex-col items-center justify-center gap-3"
+            >
               <Camera className="w-8 h-8 text-stone-500 dark:text-stone-400" />
               <span className="font-semibold text-stone-700 dark:text-stone-300">
                 {draft.image ? "Change photo" : "Add Photos"}
               </span>
               <span className="text-sm text-stone-500 dark:text-stone-400 text-center px-4">
-                Upload from your device or take a picture
+                Tap to upload from your device or take a picture
               </span>
-              <div className="flex flex-wrap justify-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => photoUploadRef.current?.click()}
-                  className="px-4 py-2 rounded-full border border-stone-300 bg-white/80 text-stone-700 text-sm font-semibold hover:bg-white transition-colors"
-                >
-                  Upload photo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => photoCameraRef.current?.click()}
-                  className="px-4 py-2 rounded-full border border-stone-300 bg-white/80 text-stone-700 text-sm font-semibold hover:bg-white transition-colors"
-                >
-                  Use camera
-                </button>
-              </div>
-            </div>
+            </button>
             <input
-              ref={photoUploadRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImagePick}
-              className="hidden"
-            />
-            <input
-              ref={photoCameraRef}
+              ref={photoInputRef}
               type="file"
               accept="image/*"
               capture="environment"
@@ -643,41 +630,41 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
             </label>
           </div>
 
-          <div className="grid gap-3">
-            <div className="text-xs uppercase tracking-widest text-slate-500">Store links</div>
-            <div className="flex flex-wrap gap-2">
-              {storeLinks.map((store) => {
-                const href = String(store.url || "").trim();
-                const disabled = !href;
-                return (
-                  <a
-                    key={store.label}
-                    href={disabled ? undefined : href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-disabled={disabled}
-                    onClick={(e) => { if (disabled) e.preventDefault(); }}
-                    className={`w-16 h-16 rounded-2xl border transition-all flex items-center justify-center ${
-                      disabled
-                        ? 'opacity-35 cursor-not-allowed bg-slate-100 border-slate-200'
-                        : 'hover:-translate-y-0.5 hover:shadow-sm'
-                    }`}
-                    style={{
-                      background: disabled ? undefined : store.badge,
-                      borderColor: disabled ? undefined : store.badge,
-                    }}
-                    title={store.label}
-                    aria-label={store.label}
-                  >
-                    <div className="flex flex-col items-center justify-center gap-1 text-white">
-                      {store.icon}
-                      <span className="text-[9px] font-semibold leading-none">{store.label}</span>
-                    </div>
-                  </a>
-                );
-              })}
+          {submitError && (
+            <div className="text-sm text-red-500">{submitError}</div>
+          )}
+
+          {String(draft.url || "").trim() && (
+            <div className="grid gap-3">
+              <div className="text-xs uppercase tracking-widest text-slate-500">Store links</div>
+              <div className="flex flex-wrap gap-2">
+                {storeLinks.map((store) => {
+                  const href = String(store.url || "").trim();
+                  if (!href) return null;
+                  return (
+                    <a
+                      key={store.label}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-16 h-16 rounded-2xl border transition-all flex items-center justify-center hover:-translate-y-0.5 hover:shadow-sm"
+                      style={{
+                        background: store.badge,
+                        borderColor: store.badge,
+                      }}
+                      title={store.label}
+                      aria-label={store.label}
+                    >
+                      <div className="flex flex-col items-center justify-center gap-1 text-white">
+                        {store.icon}
+                        <span className="text-[9px] font-semibold leading-none">{store.label}</span>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
         </div>
 
@@ -727,6 +714,7 @@ function FeaturedSomedayButton({ featured, onAddToSomeday, darkMode }) {
 
 export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false } = {}) {
   const dm = darkMode;
+  const communityFeedRef = useRef(null);
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
   const [searchQuery,    setSearchQuery]    = useState("");
   const [products,       setProducts]       = useState([]);
@@ -800,11 +788,12 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
   const fetchCommunityPosts = async () => {
     const { data, error } = await supabase
       .from("product_posts")
-      .select(`*, profiles ( full_name, avatar_url )`)
+      .select("id, user_id, product_name, product_brand, product_image, product_price, product_description, product_rating, amazon_url, target_url, walmart_url, review, category, likes_count, comments_count, created_at")
       .order("likes_count", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(20);
 
-    if (!error && data) {
+    if (!error && data && data.length > 0) {
       setCommunityPosts(data);
       setFeaturedPost(data[0] ?? null);
     } else {
@@ -834,26 +823,43 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
 
   // ── Post a product ──
   const handlePostSubmit = async ({ product, review, category }) => {
-    const { error } = await supabase.from("product_posts").insert({
-      user_id:       currentUserId,
-      product_name:  product.name,
+    const payload = {
+      user_id: currentUserId,
+      product_name: product.name,
       product_description: product.description || null,
       product_image: product.image,
       product_price: product.price,
       product_rating: product.rating ?? null,
-      product_asin:  product.id,
-      amazon_url:    product.amazonUrl,
-      target_url:    product.targetUrl || null,
-      walmart_url:   product.walmartUrl || null,
+      product_asin: product.id,
+      amazon_url: product.amazonUrl,
+      target_url: product.targetUrl || null,
+      walmart_url: product.walmartUrl || null,
       review,
       category,
-      likes_count:    0,
+      likes_count: 0,
       comments_count: 0,
-    });
+    };
 
-    if (!error) {
-      fetchCommunityPosts();
+    const { data, error } = await supabase
+      .from("product_posts")
+      .insert(payload)
+      .select("id, user_id, product_name, product_brand, product_image, product_price, product_description, product_rating, amazon_url, target_url, walmart_url, review, category, likes_count, comments_count, created_at")
+      .single();
+
+    if (error) {
+      console.error(error);
+      return false;
     }
+
+    if (data) {
+      setCommunityPosts((prev) => [data, ...prev.filter((post) => String(post.id) !== String(data.id))]);
+      setFeaturedPost(data);
+      window.setTimeout(() => {
+        communityFeedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
+    }
+
+    return true;
   };
 
   const handleOpenProduct = useCallback((product) => {
@@ -1127,7 +1133,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
         </div>
 
         {/* ── Community feed ── */}
-        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">
+        <p ref={communityFeedRef} className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">
           What friends are recommending
         </p>
         <div className="flex flex-col gap-2.5">
