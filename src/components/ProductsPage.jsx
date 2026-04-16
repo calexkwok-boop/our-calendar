@@ -393,7 +393,6 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
     price: product?.price || "",
     rating: product?.rating ?? "",
     category: getCategoryForProduct(product?.name),
-    description: product?.description || "",
     amazonUrl: product?.amazonUrl || "",
     targetUrl: product?.targetUrl || "",
     walmartUrl: product?.walmartUrl || "",
@@ -432,7 +431,6 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
         price: draft.price || product?.price || "",
         rating: draft.rating === "" ? (product?.rating ?? null) : Number(draft.rating),
         category: draft.category,
-        description: draft.description.trim(),
         amazonUrl: draft.amazonUrl.trim(),
         targetUrl: draft.targetUrl.trim(),
         walmartUrl: draft.walmartUrl.trim(),
@@ -445,9 +443,40 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
   };
 
   const storeLinks = [
-    { label: "Amazon", url: draft.amazonUrl || product?.amazonUrl || "" },
-    { label: "Target", url: draft.targetUrl || "" },
-    { label: "Walmart", url: draft.walmartUrl || "" },
+    {
+      label: "Amazon",
+      url: draft.amazonUrl || product?.amazonUrl || "",
+      badge: "#111827",
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 14.5c2.6 2 9 2 12 0" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M16.2 13.2l1.6 1.3" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M15 7.5c-1.7 0-3 .9-3 2" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      ),
+    },
+    {
+      label: "Target",
+      url: draft.targetUrl || "",
+      badge: "#dc2626",
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="7.5" stroke="white" strokeWidth="2" />
+          <circle cx="12" cy="12" r="2.4" fill="white" />
+        </svg>
+      ),
+    },
+    {
+      label: "Walmart",
+      url: draft.walmartUrl || "",
+      badge: "#2563eb",
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 4v5M12 15v5M4 12h5M15 12h5M6.6 6.6l3.5 3.5M13.9 13.9l3.5 3.5M17.4 6.6l-3.5 3.5M10.1 13.9l-3.5 3.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+          <circle cx="12" cy="12" r="1.7" fill="white" />
+        </svg>
+      ),
+    },
   ];
 
   return (
@@ -482,9 +511,6 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
                   <h3 className={`font-['Caveat'] text-3xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>
                     {draft.name || product?.name}
                   </h3>
-                  <p className="mt-2 text-sm text-slate-500 leading-relaxed">
-                    {draft.description || product?.description || `Highly rated ${draft.category.toLowerCase()} product loved by the community.`}
-                  </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -578,16 +604,6 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
                 className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
               />
             </label>
-            <label className="grid gap-2">
-              <span className="text-xs uppercase tracking-widest text-slate-500">Product description</span>
-              <input
-                type="text"
-                value={draft.description}
-                onChange={(e) => updateField("description", e.target.value)}
-                placeholder="What makes it stand out?"
-                className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors ${dm ? 'bg-[#0e1520] border-white/8 text-slate-200 focus:border-violet-400/40' : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-violet-400'}`}
-              />
-            </label>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -643,13 +659,22 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
                     rel="noopener noreferrer"
                     aria-disabled={disabled}
                     onClick={(e) => { if (disabled) e.preventDefault(); }}
-                    className={`rounded-xl px-4 py-2.5 text-sm font-medium border transition-all ${
+                    className={`w-16 h-16 rounded-2xl border transition-all flex items-center justify-center ${
                       disabled
-                        ? 'opacity-40 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-400'
-                        : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'
+                        ? 'opacity-35 cursor-not-allowed bg-slate-100 border-slate-200'
+                        : 'hover:-translate-y-0.5 hover:shadow-sm'
                     }`}
+                    style={{
+                      background: disabled ? undefined : store.badge,
+                      borderColor: disabled ? undefined : store.badge,
+                    }}
+                    title={store.label}
+                    aria-label={store.label}
                   >
-                    {store.label}
+                    <div className="flex flex-col items-center justify-center gap-1 text-white">
+                      {store.icon}
+                      <span className="text-[9px] font-semibold leading-none">{store.label}</span>
+                    </div>
                   </a>
                 );
               })}
