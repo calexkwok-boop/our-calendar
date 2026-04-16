@@ -555,21 +555,20 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
             <button
               type="button"
               onClick={() => photoInputRef.current?.click()}
-              className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30 transition-all flex flex-col items-center justify-center gap-3"
+              className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600 bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30 transition-all flex flex-col items-center justify-center gap-2"
             >
               <Camera className="w-8 h-8 text-stone-500 dark:text-stone-400" />
               <span className="font-semibold text-stone-700 dark:text-stone-300">
                 {draft.image ? "Change photo" : "Add Photos"}
               </span>
-              <span className="text-sm text-stone-500 dark:text-stone-400 text-center px-4">
-                Tap to upload from your device or take a picture
+              <span className="text-sm text-stone-500 dark:text-stone-400">
+                Tap to select from your device
               </span>
             </button>
             <input
               ref={photoInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handleImagePick}
               className="hidden"
             />
