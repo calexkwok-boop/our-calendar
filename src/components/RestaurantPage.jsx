@@ -957,6 +957,7 @@ const RestaurantPage = ({
   const [savedIds, setSavedIds]       = useState(new Set());
   const [currentUserId, setCurrentUserId] = useState(null);
   const [recommendedPosts, setRecommendedPosts] = useState([]);
+  const [featuredRestaurantPost, setFeaturedRestaurantPost] = useState(null);
   const [highlightedRestaurantId, setHighlightedRestaurantId] = useState(null);
   const [isRecommendOpen, setIsRecommendOpen] = useState(false);
   const [location, setLocation]       = useState(userLocation || { lat: 34.0522, lng: -118.2437 }); // default LA
@@ -984,8 +985,10 @@ const RestaurantPage = ({
 
     if (!error && data && data.length > 0) {
       setRecommendedPosts(data);
+      setFeaturedRestaurantPost(data[0] ?? null);
     } else {
       setRecommendedPosts(MOCK_RESTAURANT_POSTS);
+      setFeaturedRestaurantPost(MOCK_RESTAURANT_POSTS[0] ?? null);
     }
   }, []);
 
@@ -1212,23 +1215,26 @@ const RestaurantPage = ({
       comments_count: 0,
     };
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('restaurant_posts')
-      .insert(payload)
-      .select('id, user_id, restaurant_name, restaurant_image, address, google_place_id, website, phone, cuisine, price_level, rating, review, best_for, vibe_tags, likes_count, comments_count, created_at')
-      .single();
+      .insert(payload);
     if (error) {
       console.error(error);
       return false;
     }
 
-    if (data) {
-      setRecommendedPosts((prev) => [data, ...prev.filter((post) => String(post.id) !== String(data.id))]);
-      setHighlightedRestaurantId(String(data.id));
-      window.setTimeout(() => {
-        communityFeedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 120);
-    }
+    const savedPost = {
+      ...payload,
+      id: `local-${Date.now()}`,
+      created_at: new Date().toISOString(),
+    };
+
+    setRecommendedPosts((prev) => [savedPost, ...prev.filter((post) => String(post.restaurant_name || '') !== String(savedPost.restaurant_name || ''))]);
+    setFeaturedRestaurantPost(savedPost);
+    setHighlightedRestaurantId(String(savedPost.id));
+    window.setTimeout(() => {
+      communityFeedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
 
     return true;
   };
@@ -1422,10 +1428,13 @@ const RestaurantPage = ({
         )}
 
         {/* ── Featured recommendation ── */}
-        {recommendedPosts.length > 0 && (
+        {(featuredRestaurantPost || recommendedPosts[0]) && (
           <div style={{ padding: '0 16px 14px' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: ts, margin: '4px 2px 10px' }}>
+              {currentUserId && String((featuredRestaurantPost || recommendedPosts[0])?.user_id || '') === String(currentUserId) ? 'From your community' : 'Most loved this week'}
+            </p>
             <FeaturedRestaurantRecommendation
-              post={recommendedPosts[0]}
+              post={featuredRestaurantPost || recommendedPosts[0]}
               onSomeday={handleSomedayFromRecommendation}
               onRemoveFromSomeday={onRemoveFromSomeday}
               darkMode={darkMode}
