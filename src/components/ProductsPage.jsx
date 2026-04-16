@@ -864,7 +864,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
               </svg>
             </button>
           )}
-          <h1 className={`font-['Caveat'] text-5xl font-bold leading-tight mb-2 bg-gradient-to-r bg-clip-text text-transparent ${dm ? 'from-slate-100 to-violet-300' : 'from-slate-800 to-violet-600'}`}>
+          <h1 className={`font-handwritten text-5xl font-bold leading-tight mb-2 bg-gradient-to-r bg-clip-text text-transparent ${dm ? 'from-slate-100 to-violet-300' : 'from-slate-800 to-violet-600'}`}>
             Find your next favorite thing
           </h1>
           <p className="text-sm text-slate-500 leading-relaxed max-w-sm mb-6">

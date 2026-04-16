@@ -412,6 +412,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className={`min-h-screen font-sans ${dm ? 'bg-[#0e1520] text-slate-200' : 'bg-[#faf8f3] text-slate-800'}`}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap'); .font-handwritten { font-family: 'Caveat', cursive; }`}</style>
       <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
 
         {/* ── Top bar ── */}
@@ -426,7 +427,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
               </svg>
             </button>
             <div>
-              <h1 className={`font-['Caveat'] text-3xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Hiking & Outdoors</h1>
+              <h1 className={`font-handwritten text-3xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Hiking & Outdoors</h1>
               <p className="text-[11px] text-slate-500">
                 {loading ? "Loading…" : `${trails.length} trail${trails.length !== 1 ? "s" : ""} nearby`}
               </p>
