@@ -340,12 +340,13 @@ const RestaurantCard = ({ restaurant, onTap, savedIds, darkMode, stagger }) => {
 };
 
 // ─── skeleton card ────────────────────────────────────────────────────────────
-const FeaturedRestaurantRecommendation = React.memo(({ post, onSomeday, onRemoveFromSomeday, darkMode }) => {
+const FeaturedRestaurantRecommendation = React.memo(({ post, currentUserId, onSomeday, onRemoveFromSomeday, onDelete, darkMode }) => {
   const bg = darkMode ? '#161f30' : '#ffffff';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
   const tp = darkMode ? '#f1f5f9' : '#111827';
   const ts = darkMode ? '#6b7280' : '#9ca3af';
   const [saved, setSaved] = useState(false);
+  const isMine = Boolean(currentUserId && post?.user_id && String(currentUserId) === String(post.user_id));
 
   useEffect(() => {
     setSaved(false);
@@ -398,28 +399,38 @@ const FeaturedRestaurantRecommendation = React.memo(({ post, onSomeday, onRemove
               "{truncateText(post.review, 160)}"
             </p>
           )}
-          <button
-            onClick={() => {
-              const payload = restaurantSomedayPayload(post);
-              if (saved) {
-                onRemoveFromSomeday?.(payload);
-                setSaved(false);
-                return;
-              }
-              setSaved(true);
-              onSomeday?.(post);
-            }}
-            style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 13, fontWeight: 700, fontFamily: handwritten, cursor: 'pointer' }}
-          >
-            {saved ? '✓ In someday list' : '+ Someday list'}
-          </button>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+            <button
+              onClick={() => {
+                const payload = restaurantSomedayPayload(post);
+                if (saved) {
+                  onRemoveFromSomeday?.(payload);
+                  setSaved(false);
+                  return;
+                }
+                setSaved(true);
+                onSomeday?.(post);
+              }}
+              style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 13, fontWeight: 700, fontFamily: handwritten, cursor: 'pointer' }}
+            >
+              {saved ? '✓ In someday list' : '+ Someday list'}
+            </button>
+            {isMine && onDelete && (
+              <button
+                onClick={() => onDelete(post)}
+                style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(251,191,36,0.28)' : '#d8b36a'}`, background: darkMode ? 'rgba(251,191,36,0.08)' : '#fff8ea', color: darkMode ? '#fbbf24' : '#8a5a1f', fontSize: 13, fontWeight: 700, fontFamily: handwritten, cursor: 'pointer' }}
+              >
+                Delete
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 });
 
-const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeday, darkMode }) => {
+const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeday, onDelete, darkMode }) => {
   const bg = darkMode ? '#161f30' : '#ffffff';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
   const tp = darkMode ? '#f1f5f9' : '#111827';
@@ -463,10 +474,10 @@ const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeda
       )}
 
       <div style={{ padding: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ minWidth: 0 }}>
-            <h3 style={{ fontFamily: handwritten, fontSize: 22, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp }}>
-              {post.restaurant_name}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ fontFamily: handwritten, fontSize: 22, fontWeight: 700, lineHeight: 1.1, margin: 0, color: tp }}>
+                {post.restaurant_name}
             </h3>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 7 }}>
               {post.cuisine && (
@@ -480,6 +491,14 @@ const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeda
                 </span>
               )}
             </div>
+            {isMine && onDelete && (
+              <button
+                onClick={() => onDelete(post)}
+                style={{ flexShrink: 0, padding: '6px 10px', borderRadius: 10, border: `1px solid ${darkMode ? 'rgba(251,191,36,0.28)' : '#d8b36a'}`, background: darkMode ? 'rgba(251,191,36,0.08)' : '#fff8ea', color: darkMode ? '#fbbf24' : '#8a5a1f', fontSize: 12, fontWeight: 700, fontFamily: handwritten, cursor: 'pointer' }}
+              >
+                Delete
+              </button>
+            )}
           </div>
           {post.price_level && (
             <span style={{ fontFamily: handwritten, fontSize: 18, color: ts, flexShrink: 0 }}>
@@ -613,8 +632,8 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
     if (urls.length === 1) return urls[0];
 
     const canvas = document.createElement('canvas');
-    const size = 1200;
-    const gap = 24;
+    const size = 800;
+    const gap = 18;
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
@@ -656,7 +675,7 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
       if (slot) drawCover(img, ...slot);
     });
 
-    return canvas.toDataURL('image/jpeg', 0.92);
+    return canvas.toDataURL('image/jpeg', 0.78);
   };
 
   const handleImagePick = async (event) => {
@@ -978,7 +997,7 @@ const RestaurantPage = ({
   const fetchRecommendedPosts = useCallback(async () => {
     const { data, error } = await supabase
       .from('restaurant_posts')
-      .select('id, user_id, restaurant_name, restaurant_image, address, google_place_id, website, phone, cuisine, price_level, rating, review, best_for, vibe_tags, likes_count, comments_count, created_at')
+      .select('id, user_id, restaurant_name, restaurant_image, address, google_place_id, website, phone, cuisine, price_level, rating, review, best_for, vibe_tags, likes_count, created_at')
       .order('likes_count', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(20);
@@ -1117,6 +1136,12 @@ const RestaurantPage = ({
     fetchRestaurants(location, search, radius);
   };
 
+  const handleLocationSubmit = useCallback((query) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    geocodeLocation(trimmed);
+  }, [geocodeLocation]);
+
   // Geocode a typed city/address and re-fetch
   const geocodeLocation = async (query) => {
     if (!query.trim()) return;
@@ -1212,12 +1237,19 @@ const RestaurantPage = ({
       review: form.review.trim(),
       best_for: form.best_for.trim() || null,
       likes_count: 0,
-      comments_count: 0,
     };
 
-    const { error } = await supabase
+    let { error } = await supabase
       .from('restaurant_posts')
       .insert(payload);
+    if (error && payload.restaurant_image) {
+      console.warn('Restaurant image upload looked too large, retrying without the image.', error);
+      const fallbackPayload = { ...payload, restaurant_image: null };
+      ({ error } = await supabase.from('restaurant_posts').insert(fallbackPayload));
+      if (!error) {
+        payload.restaurant_image = null;
+      }
+    }
     if (error) {
       console.error(error);
       return false;
@@ -1238,6 +1270,32 @@ const RestaurantPage = ({
 
     return true;
   };
+
+  const handleDeleteRecommendation = useCallback(async (post) => {
+    if (!post?.id) return;
+    if (!window.confirm('Delete this recommendation?')) return;
+
+    const { error } = await supabase
+      .from('restaurant_posts')
+      .delete()
+      .eq('id', post.id);
+
+    if (error) {
+      console.error(error);
+      setError('Could not delete this recommendation right now.');
+      return;
+    }
+
+    const nextPosts = recommendedPosts.filter((item) => String(item.id) !== String(post.id));
+    setRecommendedPosts(nextPosts);
+    setHighlightedRestaurantId((current) => (String(current) === String(post.id) ? null : current));
+    setFeaturedRestaurantPost((current) => {
+      if (current && String(current.id) === String(post.id)) {
+        return nextPosts[0] ?? null;
+      }
+      return current;
+    });
+  }, [recommendedPosts]);
 
   const handleSomedayFromRecommendation = useCallback((post) => {
     onSaveToSomeday?.({
@@ -1324,7 +1382,7 @@ const RestaurantPage = ({
               type="text"
               value={locationSearch}
               onChange={e => setLocationSearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && geocodeLocation(locationSearch)}
+              onKeyDown={e => e.key === 'Enter' && handleLocationSubmit(locationSearch)}
               placeholder={locationLabel || 'Search a city or address…'}
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: tp }}
             />
@@ -1347,7 +1405,7 @@ const RestaurantPage = ({
                         setLocationSearch(suggestion.description);
                         setLocationLabel(suggestion.description);
                         setLocationSuggestions([]);
-                        geocodeLocation(suggestion.description);
+                        handleLocationSubmit(suggestion.description);
                       }}
                       style={{ width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', borderBottom: `1px solid ${bw}`, background: 'transparent', cursor: 'pointer', color: tp }}
                     >
@@ -1435,8 +1493,10 @@ const RestaurantPage = ({
             </p>
             <FeaturedRestaurantRecommendation
               post={featuredRestaurantPost || recommendedPosts[0]}
+              currentUserId={currentUserId}
               onSomeday={handleSomedayFromRecommendation}
               onRemoveFromSomeday={onRemoveFromSomeday}
+              onDelete={handleDeleteRecommendation}
               darkMode={darkMode}
             />
           </div>
@@ -1583,6 +1643,7 @@ const RestaurantPage = ({
                 post={post}
                 currentUserId={currentUserId}
                 onSomeday={handleSomedayFromRecommendation}
+                onDelete={handleDeleteRecommendation}
                 darkMode={darkMode}
               />
             </div>

@@ -423,8 +423,8 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
     if (urls.length === 1) return urls[0];
 
     const canvas = document.createElement("canvas");
-    const size = 1200;
-    const gap = 24;
+    const size = 800;
+    const gap = 18;
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext("2d");
@@ -466,7 +466,7 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
       if (slot) drawCover(img, ...slot);
     });
 
-    return canvas.toDataURL("image/jpeg", 0.92);
+    return canvas.toDataURL("image/jpeg", 0.78);
   };
 
   const handleImagePick = async (event) => {
@@ -854,7 +854,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
   const fetchCommunityPosts = async () => {
     const { data, error } = await supabase
       .from("product_posts")
-      .select("id, user_id, product_name, product_brand, product_image, product_price, product_description, product_rating, amazon_url, target_url, walmart_url, review, category, likes_count, comments_count, created_at")
+      .select("id, user_id, product_name, product_brand, product_image, product_price, product_description, product_rating, amazon_url, target_url, walmart_url, review, category, likes_count, created_at")
       .order("likes_count", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(20);
@@ -903,13 +903,12 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
       review,
       category,
       likes_count: 0,
-      comments_count: 0,
     };
 
     const { data, error } = await supabase
       .from("product_posts")
       .insert(payload)
-      .select("id, user_id, product_name, product_brand, product_image, product_price, product_description, product_rating, amazon_url, target_url, walmart_url, review, category, likes_count, comments_count, created_at")
+      .select("id, user_id, product_name, product_brand, product_image, product_price, product_description, product_rating, amazon_url, target_url, walmart_url, review, category, likes_count, created_at")
       .single();
 
     if (error) {
