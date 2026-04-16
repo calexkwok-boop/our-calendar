@@ -235,7 +235,7 @@ const ProductCard = React.memo(function ProductCard({ product, onSomeday, savedI
           </button>
           <button
             onClick={() => onPost(product)}
-            className={`flex-1 rounded-xl py-2 text-xs font-handwritten font-bold transition-all duration-200 border ${dm ? 'bg-teal-400/8 border-teal-400/20 text-teal-400 hover:bg-teal-400/15' : 'bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100'}`}
+            className={`flex-1 rounded-xl py-2 text-xs font-handwritten font-bold transition-all duration-200 border ${dm ? 'bg-[#C9A15D]/15 border-[#C9A15D]/35 text-[#C9A15D] hover:bg-[#C9A15D]/25' : 'bg-[#FFF8EA] border-[#D8B36A] text-[#8A5A1F] hover:bg-[#FFF3D4]'}`}
           >
             Share
           </button>
