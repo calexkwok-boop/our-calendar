@@ -480,14 +480,14 @@ function PostProductModal({ product, onClose, onSubmit, darkMode }) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className={`border rounded-3xl w-full max-w-2xl overflow-hidden ${dm ? 'bg-[#161f30] border-white/10' : 'bg-white border-slate-200'}`}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4 overflow-y-auto">
+      <div className={`border rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col ${dm ? 'bg-[#161f30] border-white/10' : 'bg-white border-slate-200'}`}>
         <div className="flex items-center justify-between px-6 pt-6">
           <h2 className={`font-['Caveat'] text-2xl font-bold ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Share this product</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
         </div>
 
-        <div className="px-6 pb-6 pt-4 grid gap-5">
+        <div className="px-6 pb-6 pt-4 grid gap-5 overflow-y-auto flex-1">
           <div className={`overflow-hidden rounded-3xl border ${dm ? 'border-white/10 bg-[#0e1520]' : 'border-slate-200 bg-slate-50'}`}>
             <div className="grid md:grid-cols-[1.1fr_0.9fr]">
               <div className={`min-h-[240px] ${dm ? 'bg-[#1a2540]' : 'bg-slate-100'} relative`}>
