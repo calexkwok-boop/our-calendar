@@ -1136,12 +1136,6 @@ const RestaurantPage = ({
     fetchRestaurants(location, search, radius);
   };
 
-  const handleLocationSubmit = useCallback((query) => {
-    const trimmed = query.trim();
-    if (!trimmed) return;
-    geocodeLocation(trimmed);
-  }, [geocodeLocation]);
-
   // Geocode a typed city/address and re-fetch
   const geocodeLocation = async (query) => {
     if (!query.trim()) return;
@@ -1382,7 +1376,7 @@ const RestaurantPage = ({
               type="text"
               value={locationSearch}
               onChange={e => setLocationSearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLocationSubmit(locationSearch)}
+              onKeyDown={e => e.key === 'Enter' && geocodeLocation(locationSearch)}
               placeholder={locationLabel || 'Search a city or address…'}
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 14, color: tp }}
             />
@@ -1405,7 +1399,7 @@ const RestaurantPage = ({
                         setLocationSearch(suggestion.description);
                         setLocationLabel(suggestion.description);
                         setLocationSuggestions([]);
-                        handleLocationSubmit(suggestion.description);
+                        geocodeLocation(suggestion.description);
                       }}
                       style={{ width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none', borderBottom: `1px solid ${bw}`, background: 'transparent', cursor: 'pointer', color: tp }}
                     >
