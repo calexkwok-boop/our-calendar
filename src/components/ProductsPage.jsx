@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient"; // adjust path as needed
 
@@ -165,14 +165,14 @@ function ProductModal({ product, isSaved, onSomeday, onPost, onClose, darkMode }
   );
 }
 
-function ProductCard({ product, onSomeday, savedIds, onPost, onOpen, darkMode }) {
+const ProductCard = React.memo(function ProductCard({ product, onSomeday, savedIds, onPost, onOpen, darkMode }) {
   const dm = darkMode;
   const isWished = savedIds.has(product.id);
   const category = getCategoryForProduct(product.name);
 
   return (
     <div
-      onClick={onOpen}
+      onClick={() => onOpen(product)}
       className={`border rounded-2xl overflow-hidden hover:border-violet-400/25 hover:-translate-y-0.5 transition-all duration-200 flex flex-col cursor-pointer ${dm ? 'bg-[#161f30] border-white/5' : 'bg-white border-slate-200'}`}
     >
       {/* Image */}
@@ -242,9 +242,9 @@ function ProductCard({ product, onSomeday, savedIds, onPost, onOpen, darkMode })
       </div>
     </div>
   );
-}
+});
 
-function CommunityPost({ post, currentUserId, onAddToSomeday, darkMode }) {
+const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, onAddToSomeday, darkMode }) {
   const dm = darkMode;
   const [liked, setLiked]   = useState(post.liked_by_me ?? false);
   const [likes, setLikes]   = useState(post.likes_count ?? 0);
@@ -345,7 +345,7 @@ function CommunityPost({ post, currentUserId, onAddToSomeday, darkMode }) {
       </div>
     </div>
   );
-}
+});
 
 // Post product modal
 function PostProductModal({ product, onClose, onSubmit, darkMode }) {
@@ -548,7 +548,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
   };
 
   // ── Wishlist save ──
-  const handleSomeday = (product) => {
+  const handleSomeday = useCallback((product) => {
     const alreadySaved = wishlistedIds.has(product.id);
     setWishlistedIds((prev) => {
       const next = new Set(prev);
@@ -564,7 +564,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
         type:     "products",
       });
     }
-  };
+  }, [onAddToSomeday, wishlistedIds]);
 
   // ── Post a product ──
   const handlePostSubmit = async ({ product, review, category }) => {
@@ -586,8 +586,17 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
     }
   };
 
+  const handleOpenProduct = useCallback((product) => {
+    setSelectedProduct(product);
+  }, []);
+
+  const friendsPostedCount = useMemo(
+    () => communityPosts.filter((p) => p.profiles).length,
+    [communityPosts]
+  );
+
   const featured = featuredPost;
-  const gridProducts = products.slice(0, 6);
+  const gridProducts = useMemo(() => products.slice(0, 6), [products]);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -617,7 +626,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
           <div className="flex gap-6 flex-wrap">
             {[
               { num: communityPosts.length || "—", lbl: "Products shared" },
-              { num: communityPosts.filter((p) => p.profiles).length || "—", lbl: "Friends posted" },
+              { num: friendsPostedCount || "—", lbl: "Friends posted" },
               { num: wishlistedIds.size, lbl: "Wishlist saves" },
             ].map(({ num, lbl }) => (
               <div key={lbl} className="flex flex-col">
@@ -763,7 +772,7 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
                 onSomeday={handleSomeday}
                 savedIds={wishlistedIds}
                 onPost={setPostingProduct}
-                onOpen={() => setSelectedProduct(product)}
+                onOpen={handleOpenProduct}
                 darkMode={dm}
               />
             ))}

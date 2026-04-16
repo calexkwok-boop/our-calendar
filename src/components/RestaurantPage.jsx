@@ -40,7 +40,7 @@
  *   If the API is unavailable, FALLBACK_RESTAURANTS provides a rich demo dataset.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { MapPin, Clock, Phone, ExternalLink, Plus, Search, Star, X, ChevronRight, Navigation } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
@@ -340,7 +340,7 @@ const RestaurantCard = ({ restaurant, onTap, savedIds, darkMode, stagger }) => {
 };
 
 // ─── skeleton card ────────────────────────────────────────────────────────────
-const FeaturedRestaurantRecommendation = ({ post, onSomeday, darkMode }) => {
+const FeaturedRestaurantRecommendation = React.memo(({ post, onSomeday, darkMode }) => {
   const bg = darkMode ? '#161f30' : '#ffffff';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
   const tp = darkMode ? '#f1f5f9' : '#111827';
@@ -408,9 +408,9 @@ const FeaturedRestaurantRecommendation = ({ post, onSomeday, darkMode }) => {
       </div>
     </div>
   );
-};
+});
 
-const RestaurantRecommendationCard = ({ post, currentUserId, onSomeday, darkMode }) => {
+const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeday, darkMode }) => {
   const bg = darkMode ? '#161f30' : '#ffffff';
   const bw = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
   const tp = darkMode ? '#f1f5f9' : '#111827';
@@ -509,7 +509,7 @@ const RestaurantRecommendationCard = ({ post, currentUserId, onSomeday, darkMode
       </div>
     </div>
   );
-};
+});
 
 const PostRestaurantModal = ({ onClose, onSubmit, darkMode }) => {
   const pbg = darkMode ? '#131c2e' : '#fff';
@@ -781,7 +781,7 @@ const RestaurantPage = ({
   const fetchRecommendedPosts = useCallback(async () => {
     const { data, error } = await supabase
       .from('restaurant_posts')
-      .select('*')
+      .select('id, user_id, restaurant_name, restaurant_image, address, google_place_id, website, phone, cuisine, price_level, rating, review, best_for, vibe_tags, likes_count, comments_count, created_at')
       .order('likes_count', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(20);
@@ -926,16 +926,18 @@ const RestaurantPage = ({
   };
 
   // ── filtering ───────────────────────────────────────────────────────────────
-  const filtered = restaurants.filter(r => {
-    if (cuisine !== 'all' && r.cuisine !== cuisine) return false;
-    if (price !== 'all' && String(r.priceLevel) !== price) return false;
-    if (openOnly && r.isOpen === false) return false;
-    return true;
-  }).sort((a, b) => {
-    if (sortBy === 'rating')   return b.rating - a.rating;
-    if (sortBy === 'distance') return (parseFloat(a.distance) || 99) - (parseFloat(b.distance) || 99);
-    return 0; // prominence = API order
-  });
+  const filtered = useMemo(() => {
+    return restaurants.filter(r => {
+      if (cuisine !== 'all' && r.cuisine !== cuisine) return false;
+      if (price !== 'all' && String(r.priceLevel) !== price) return false;
+      if (openOnly && r.isOpen === false) return false;
+      return true;
+    }).sort((a, b) => {
+      if (sortBy === 'rating')   return b.rating - a.rating;
+      if (sortBy === 'distance') return (parseFloat(a.distance) || 99) - (parseFloat(b.distance) || 99);
+      return 0; // prominence = API order
+    });
+  }, [restaurants, cuisine, price, openOnly, sortBy]);
 
   // ── handlers ────────────────────────────────────────────────────────────────
   const handleSaveToSomeday = (restaurant) => {
@@ -982,7 +984,7 @@ const RestaurantPage = ({
     return true;
   };
 
-  const handleSomedayFromRecommendation = (post) => {
+  const handleSomedayFromRecommendation = useCallback((post) => {
     onSaveToSomeday?.({
       ...restaurantSomedayPayload(post),
       cuisine: post.cuisine || '',
@@ -991,7 +993,7 @@ const RestaurantPage = ({
       best_for: post.best_for || '',
       price_level: post.price_level || null,
     });
-  };
+  }, [onSaveToSomeday]);
 
   const pageBg = darkMode ? '#0e1520' : '#faf8f3';
   const hBg    = darkMode ? 'rgba(19,28,46,0.98)' : 'rgba(255,255,255,0.98)';
