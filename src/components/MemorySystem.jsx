@@ -98,7 +98,7 @@ const getPersonAvatarUrl = (person) => String(
   || ''
 ).trim();
 
-const PersonAvatar = ({ person, className = 'w-10 h-10', textClassName = 'text-white font-bold', fallbackClassName = 'bg-purple-500' }) => {
+const PersonAvatar = ({ person, className = 'w-10 h-10', textClassName = 'text-white font-bold', fallbackClassName = 'bg-rose-500' }) => {
   const avatarUrl = getPersonAvatarUrl(person);
   const initial = String(person?.name || '?').trim().charAt(0).toUpperCase() || '?';
   if (avatarUrl) {
@@ -201,7 +201,7 @@ const MemoryPlacesAutocomplete = ({ value, onSelect, placeholder, darkMode = fal
           }, 200);
         }}
         placeholder={placeholder || 'Home, Park, Restaurant...'}
-        className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-400 outline-none text-base"
+        className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-400 outline-none text-base"
         style={{ fontSize: '16px' }}
       />
       {showSuggestions && suggestions.length > 0 && (
@@ -214,7 +214,7 @@ const MemoryPlacesAutocomplete = ({ value, onSelect, placeholder, darkMode = fal
                 event.preventDefault();
                 commitSelection(suggestion.description);
               }}
-              className="w-full border-b border-stone-100 px-3 py-2 text-left text-xs hover:bg-amber-50 dark:border-gray-700 dark:hover:bg-stone-700/30 last:border-0"
+              className="w-full border-b border-stone-100 px-3 py-2 text-left text-xs hover:bg-rose-50 dark:border-gray-700 dark:hover:bg-rose-900/20 last:border-0"
             >
               <span className="mr-1 text-gray-400">📍</span>
               <span className="font-medium text-gray-800 dark:text-white">{suggestion.structured_formatting?.main_text}</span>
@@ -433,10 +433,10 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
       {/* Header */}
       <div className="text-center">
         <div className="text-4xl mb-2">💫</div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1.5">
+        <h2 className="text-2xl font-bold text-rose-900 dark:text-rose-100 mb-1.5">
           Your Memories
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-rose-700/80 dark:text-rose-200/70">
           {safeMemories.length} special moment{safeMemories.length !== 1 ? 's' : ''} preserved
         </p>
       </div>
@@ -445,8 +445,8 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
       <div className="flex gap-3">
         <button
           onClick={onCreateNew}
-          className="flex-1 py-3.5 rounded-2xl bg-stone-700 dark:bg-stone-600
-                     text-amber-50 font-bold text-base hover:bg-stone-800 dark:hover:bg-stone-500 hover:shadow-xl transition-all
+          className="flex-1 py-3.5 rounded-2xl bg-rose-600 dark:bg-rose-500
+                     text-rose-50 font-bold text-base hover:bg-rose-700 dark:hover:bg-rose-400 hover:shadow-xl transition-all
                      flex items-center justify-center gap-2">
           <Sparkles className="w-6 h-6" />
           Create a Memory
@@ -455,7 +455,7 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-2xl px-5 py-3.5 bg-white/70 text-gray-700 font-semibold border border-stone-200 shadow-sm transition-all hover:bg-white dark:bg-slate-900 dark:text-slate-100 dark:border-white/10 dark:hover:bg-slate-800"
+            className="shrink-0 rounded-2xl px-5 py-3.5 bg-white/70 text-rose-700 font-semibold border border-rose-200 shadow-sm transition-all hover:bg-white dark:bg-slate-900 dark:text-rose-100 dark:border-rose-400/10 dark:hover:bg-slate-800"
           >
             Close
           </button>
@@ -466,10 +466,10 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
       {safeMemories.length === 0 && (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🎉</div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          <h3 className="text-xl font-bold text-rose-900 dark:text-rose-100 mb-2">
             No memories yet
           </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-rose-700/80 dark:text-rose-200/70 mb-6">
             Preserve your special moments with photos, highlights, and more!
           </p>
         </div>
@@ -478,7 +478,7 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
       {/* Timeline */}
       {years.map(year => (
         <div key={year}>
-          <h3 className="text-xl font-bold text-amber-900/70 dark:text-amber-200/70 mb-4" style={{ fontFamily: "'Caveat', cursive" }}>
+          <h3 className="text-xl font-bold text-rose-900/70 dark:text-rose-200/70 mb-4" style={{ fontFamily: "'Caveat', cursive" }}>
             {year}
           </h3>
           
@@ -564,7 +564,7 @@ const MemoryThumbnail = ({ memory, onClick, onToggleFavorite, onDelete, deleteRe
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
       ) : (
-        <div className="w-full h-full bg-gradient-to-br from-amber-200 via-stone-200 to-amber-100 dark:from-stone-700 dark:via-stone-800 dark:to-stone-900" />
+        <div className="w-full h-full bg-gradient-to-br from-rose-200 via-pink-100 to-rose-100 dark:from-rose-950 dark:via-slate-900 dark:to-stone-950" />
       )}
 
       {/* Gradient overlay */}
@@ -617,7 +617,7 @@ const MemoryThumbnail = ({ memory, onClick, onToggleFavorite, onDelete, deleteRe
         }}
         className={`absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full border shadow-lg backdrop-blur transition-all ${
           isFavorite
-            ? 'border-amber-200 bg-amber-400 text-white'
+            ? 'border-rose-200 bg-rose-400 text-white'
             : 'border-white/40 bg-black/35 text-white hover:bg-black/55'
         }`}
         aria-label={isFavorite ? 'Remove from favorite memories' : 'Favorite this memory'}
@@ -628,7 +628,7 @@ const MemoryThumbnail = ({ memory, onClick, onToggleFavorite, onDelete, deleteRe
 
       {/* Badge if shared */}
       {memory.isShared && (
-        <div className="absolute top-14 right-3 bg-stone-700 text-amber-50 px-2 py-1 rounded-full text-xs font-bold">
+        <div className="absolute top-14 right-3 bg-rose-700 text-rose-50 px-2 py-1 rounded-full text-xs font-bold">
           Shared
         </div>
       )}
@@ -645,13 +645,21 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
   const [memoryData, setMemoryData] = useState(() => createEmptyMemoryDraft(initialData || {}));
   const autoCreatedRef = useRef(false);
   const [photoOnlyMode, setPhotoOnlyMode] = useState(Boolean(autoCreateOnPhotoAdd));
+  const [titleError, setTitleError] = useState('');
 
   useEffect(() => {
     setStep(1);
     setMemoryData(createEmptyMemoryDraft(initialData || {}));
     autoCreatedRef.current = false;
     setPhotoOnlyMode(Boolean(autoCreateOnPhotoAdd));
+    setTitleError('');
   }, [initialData, autoCreateOnPhotoAdd]);
+
+  useEffect(() => {
+    if (!titleError) return;
+    if (!String(memoryData.title || '').trim()) return;
+    setTitleError('');
+  }, [memoryData.title, titleError]);
   
   const handleNext = () => {
     if (step === 1 && photoOnlyMode) {
@@ -667,6 +675,10 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
         coverPhoto: getMemoryCoverUrl(memoryData),
         highlights: (memoryData.highlights || []).filter((h) => String(h || '').trim()),
       });
+      return;
+    }
+    if (step === 2 && !String(memoryData.title || '').trim()) {
+      setTitleError('Please add a title before continuing to People.');
       return;
     }
     if (step < 4) setStep(step + 1);
@@ -720,18 +732,18 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
         <div className="flex items-center justify-between mb-2">
           {[1, 2, 3, 4].map(s => (
             <div key={s} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
                 s === step
-                  ? 'bg-stone-700 text-amber-50 scale-110'
+                  ? 'bg-rose-700 text-rose-50 scale-110'
                   : s < step
-                    ? 'bg-amber-700 text-amber-50'
+                    ? 'bg-rose-600 text-rose-50'
                     : 'bg-stone-100 dark:bg-gray-700 text-stone-400'
               }`}>
                 {s < step ? <Check className="w-5 h-5" /> : s}
               </div>
               {s < 4 && (
                 <div className={`w-12 h-1 mx-2 ${
-                  s < step ? 'bg-amber-600' : 'bg-stone-200 dark:bg-gray-700'
+                  s < step ? 'bg-rose-500' : 'bg-stone-200 dark:bg-gray-700'
                 }`} />
               )}
             </div>
@@ -762,6 +774,7 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
         <MemoryBasicsStep
           data={memoryData}
           onChange={setMemoryData}
+          titleError={titleError}
           darkMode={darkMode}
         />
       )}
@@ -798,15 +811,15 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
         {step < 4 ? (
           <button
             onClick={handleNext}
-            className="flex-1 py-3 rounded-xl bg-stone-700 dark:bg-stone-600
-                     text-amber-50 font-semibold hover:bg-stone-800 dark:hover:bg-stone-500 hover:shadow-xl transition-all">
+            className="flex-1 py-3 rounded-xl bg-rose-600 dark:bg-rose-500
+                     text-rose-50 font-semibold hover:bg-rose-700 dark:hover:bg-rose-400 hover:shadow-xl transition-all">
             Next
           </button>
         ) : (
           <button
             onClick={handleCreate}
-            className="flex-1 min-w-0 py-3 rounded-xl bg-amber-700 dark:bg-amber-800
-                     text-amber-50 font-bold hover:bg-amber-800 dark:hover:bg-amber-700 hover:shadow-xl transition-all flex items-center justify-center gap-2">
+            className="flex-1 min-w-0 py-3 rounded-xl bg-rose-600 dark:bg-rose-700
+                     text-rose-50 font-bold hover:bg-rose-700 dark:hover:bg-rose-600 hover:shadow-xl transition-all flex items-center justify-center gap-2">
             <Sparkles className="w-5 h-5" />
             {submitLabel}
           </button>
@@ -818,7 +831,7 @@ export const MemoryCreator = ({ onCancel, onCreate, onAddPhoto, onTagPerson, use
 };
 
 // Step 2: Details
-const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
+const MemoryBasicsStep = ({ data, onChange, titleError, darkMode }) => {
   const addHighlight = () => {
     onChange({ ...data, highlights: [...data.highlights, ''] });
   };
@@ -850,11 +863,16 @@ const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
           value={data.title}
           onChange={(e) => onChange({ ...data, title: e.target.value })}
           placeholder="Emma's 1st Birthday Party"
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
-                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                   focus:ring-2 focus:ring-amber-400 outline-none text-base"
+          className={`w-full px-4 py-3 rounded-xl border ${titleError ? 'border-rose-400 dark:border-rose-400' : 'border-gray-300 dark:border-gray-600'} 
+                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                    focus:ring-2 focus:ring-rose-400 outline-none text-base`}
           style={{ fontSize: '16px' }} // Prevent iOS zoom
         />
+        {titleError && (
+          <p className="mt-2 text-sm font-medium text-rose-500 dark:text-rose-400">
+            {titleError}
+          </p>
+        )}
       </div>
       
       {/* Date */}
@@ -862,15 +880,17 @@ const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
           Date
         </label>
-        <input
-          type="date"
-          value={data.date}
-          onChange={(e) => onChange({ ...data, date: e.target.value })}
-          className="w-full max-w-full min-w-0 box-border px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
-                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                    focus:ring-2 focus:ring-amber-400 outline-none"
-          style={{ fontSize: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
-        />
+        <div className="w-full min-w-0 overflow-hidden">
+          <input
+            type="date"
+            value={data.date}
+            onChange={(e) => onChange({ ...data, date: e.target.value })}
+            className="block w-full max-w-full min-w-0 box-border appearance-none px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
+                      bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                      focus:ring-2 focus:ring-rose-400 outline-none"
+            style={{ fontSize: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', display: 'block' }}
+          />
+        </div>
       </div>
       
       {/* Location */}
@@ -888,8 +908,8 @@ const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
                 onClick={() => onChange({ ...data, location: preset })}
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
                   active
-                    ? 'bg-stone-700 text-amber-50 shadow-sm'
-                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800/50 dark:text-stone-300 dark:hover:bg-stone-700/50'
+                    ? 'bg-rose-600 text-rose-50 shadow-sm'
+                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-200 dark:hover:bg-rose-900/50'
                 }`}
               >
                 {preset}
@@ -917,7 +937,7 @@ const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
           rows={4}
           className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                   focus:ring-2 focus:ring-purple-500 outline-none resize-none text-base"
+                   focus:ring-2 focus:ring-rose-400 outline-none resize-none text-base"
           style={{ fontSize: '16px' }}
         />
       </div>
@@ -938,7 +958,7 @@ const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
                 placeholder="Emma's first cake bite was hilarious!"
                 className="flex-1 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
                          bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                         focus:ring-2 focus:ring-amber-400 outline-none text-base"
+                         focus:ring-2 focus:ring-rose-400 outline-none text-base"
                 style={{ fontSize: '16px' }}
               />
               {data.highlights.length > 1 && (
@@ -953,7 +973,7 @@ const MemoryBasicsStep = ({ data, onChange, darkMode }) => {
         </div>
         <button
           onClick={addHighlight}
-          className="mt-3 text-sm text-amber-800 dark:text-amber-400 font-semibold hover:underline">
+          className="mt-3 text-sm text-rose-700 dark:text-rose-300 font-semibold hover:underline">
           + Add another moment
         </button>
       </div>
@@ -1023,13 +1043,13 @@ const MemoryPhotosStep = ({
         onClick={() => onTogglePhotoOnlyMode?.()}
         className={`w-full flex items-start gap-3 rounded-2xl border px-4 py-3 text-left transition-all ${
           photoOnlyMode
-            ? 'border-stone-300 bg-amber-50 dark:border-stone-600 dark:bg-stone-900/30'
+            ? 'border-rose-300 bg-rose-50 dark:border-rose-600 dark:bg-rose-950/30'
             : 'border-stone-200 bg-white/70 dark:border-gray-700 dark:bg-slate-900'
         }`}
       >
         <div className={`mt-0.5 flex h-5 min-h-[1.25rem] w-5 min-w-[1.25rem] items-center justify-center rounded-md border transition-all ${
           photoOnlyMode
-            ? 'border-stone-700 bg-stone-700 text-amber-50'
+            ? 'border-rose-700 bg-rose-600 text-rose-50'
             : 'border-stone-300 bg-white text-transparent dark:border-gray-600 dark:bg-slate-800'
         }`}>
           <Check className="h-3.5 w-3.5" />
@@ -1048,7 +1068,7 @@ const MemoryPhotosStep = ({
       {data.photos.length > 0 ? (
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="relative block w-full overflow-hidden rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-slate-900 text-left transition-all hover:shadow-lg"
+          className="relative block w-full overflow-hidden rounded-2xl border border-rose-200 dark:border-rose-700 bg-white dark:bg-slate-900 text-left transition-all hover:shadow-lg"
         >
           <div
             className="h-56 w-full bg-cover bg-center"
@@ -1064,7 +1084,7 @@ const MemoryPhotosStep = ({
                 Tap here to add more photos
               </div>
             </div>
-            <div className="rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-stone-700 shadow-sm">
+            <div className="rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm">
               Add more
             </div>
           </div>
@@ -1073,10 +1093,10 @@ const MemoryPhotosStep = ({
         <button
           onClick={() => fileInputRef.current?.click()}
           className="w-full py-6 rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-600
-                   bg-amber-50/60 dark:bg-stone-900/20 hover:bg-amber-50 dark:hover:bg-stone-900/30
+                   bg-rose-50/60 dark:bg-rose-950/20 hover:bg-rose-50 dark:hover:bg-rose-950/30
                    transition-all flex flex-col items-center justify-center gap-2">
           <Camera className="w-8 h-8 text-stone-500 dark:text-stone-400" />
-          <span className="font-semibold text-stone-700 dark:text-stone-300">
+          <span className="font-semibold text-rose-700 dark:text-rose-300">
             Add Photos
           </span>
           <span className="text-sm text-stone-500 dark:text-stone-400">
@@ -1113,9 +1133,9 @@ const MemoryPhotosStep = ({
                 <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => setCoverPhoto(photo.id)}
-                    className="p-2 bg-white rounded-full hover:bg-amber-50 transition-all"
+                    className="p-2 bg-white rounded-full hover:bg-rose-50 transition-all"
                     title="Set as cover">
-                    <Sparkles className="w-4 h-4 text-amber-700" />
+                    <Sparkles className="w-4 h-4 text-rose-600" />
                   </button>
                   <button
                     onClick={() => removePhoto(photo.id)}
@@ -1127,7 +1147,7 @@ const MemoryPhotosStep = ({
                 
                 {/* Cover badge */}
                 {data.coverPhoto === photo.url && (
-                  <div className="absolute top-2 left-2 bg-stone-700 text-amber-50 px-2 py-1 rounded-full text-xs font-bold">
+                  <div className="absolute top-2 left-2 bg-rose-700 text-rose-50 px-2 py-1 rounded-full text-xs font-bold">
                     Cover
                   </div>
                 )}
@@ -1141,7 +1161,7 @@ const MemoryPhotosStep = ({
                   className="absolute bottom-2 left-2 right-2 px-3 py-1.5 rounded-lg
                            bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm
                            text-sm text-gray-900 dark:text-white border-0 outline-none
-                           focus:ring-2 focus:ring-amber-400"
+                           focus:ring-2 focus:ring-rose-400"
                   style={{ fontSize: '14px' }}
                 />
               </div>
@@ -1189,7 +1209,7 @@ const MemoryPeopleStep = ({ data, onChange, onTagPerson, darkMode }) => {
         <button
           onClick={() => setShowAddForm(true)}
           className="w-full py-4 rounded-xl border-2 border-dashed border-stone-300 dark:border-gray-600
-                   hover:border-amber-500 dark:hover:border-amber-700 hover:bg-amber-50 dark:hover:bg-stone-900/20
+                   hover:border-rose-500 dark:hover:border-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20
                    transition-all flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
           <Plus className="w-5 h-5" />
           <span className="font-semibold">Add Person</span>
@@ -1205,13 +1225,13 @@ const MemoryPeopleStep = ({ data, onChange, onTagPerson, darkMode }) => {
             placeholder="Enter name..."
             className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
                      bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-amber-400 outline-none text-base"
+                     focus:ring-2 focus:ring-rose-400 outline-none text-base"
             style={{ fontSize: '16px' }}
           />
           <div className="flex gap-2">
             <button
               onClick={addPerson}
-              className="flex-1 py-2 rounded-xl bg-stone-700 text-amber-50 font-semibold hover:bg-stone-800">
+              className="flex-1 py-2 rounded-xl bg-rose-600 text-rose-50 font-semibold hover:bg-rose-700">
               Add
             </button>
             <button
@@ -1263,13 +1283,13 @@ const MemoryPreviewStep = ({ data, darkMode }) => {
     <div className="space-y-6">
       <h3 className="text-lg font-bold text-gray-900 dark:text-white">Preview your memory</h3>
       
-      <div className="rounded-2xl overflow-hidden border-2 border-stone-200 dark:border-stone-700">
+      <div className="rounded-2xl overflow-hidden border-2 border-rose-200 dark:border-rose-700">
         {/* Cover */}
         <div className="relative h-48">
           {getMemoryCoverUrl(data) ? (
             <img src={getMemoryCoverUrl(data)} alt={data.title} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-amber-200 via-stone-200 to-amber-100 dark:from-stone-700 dark:via-stone-800 dark:to-stone-900" />
+            <div className="w-full h-full bg-gradient-to-br from-rose-200 via-pink-100 to-rose-100 dark:from-rose-950 dark:via-slate-900 dark:to-stone-950" />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
           
@@ -1364,13 +1384,13 @@ const MemoryPreviewStep = ({ data, darkMode }) => {
               <div className="flex flex-wrap gap-2">
                 {data.taggedPeople.map(person => (
                   <div key={person.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full
-                                                  bg-stone-100 dark:bg-stone-800/50">
+                                                  bg-rose-50 dark:bg-rose-950/30">
                     <PersonAvatar
                       person={person}
                       className="w-6 h-6"
                       textClassName="text-white text-xs font-bold"
                     />
-                    <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
+                    <span className="text-sm font-medium text-rose-700 dark:text-rose-200">
                       {person.name}
                     </span>
                   </div>
@@ -1548,7 +1568,7 @@ const MemoryViewer = ({ memory, onClose, onEdit, onDelete, onReact, onComment, o
 
 const CoverSlide = ({ memory }) => (
   <div className="w-full h-full relative pt-[max(1.25rem,calc(env(safe-area-inset-top)+0.75rem))] pb-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] px-2">
-    <div className="absolute inset-x-2 top-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))] bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] rounded-[28px] bg-gradient-to-b from-amber-900 via-stone-800 to-stone-950" />
+    <div className="absolute inset-x-2 top-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))] bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] rounded-[28px] bg-gradient-to-b from-rose-950 via-slate-900 to-stone-950" />
     <div className="absolute inset-x-2 top-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))] bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] rounded-[28px] bg-gradient-to-t from-black/28 via-transparent to-white/5" />
 
     <div className="absolute inset-x-2 top-[max(5rem,calc(env(safe-area-inset-top)+4rem))] bottom-[max(6.25rem,calc(env(safe-area-inset-bottom)+5rem))] flex flex-col items-center justify-center text-center text-white px-6 py-10 sm:px-8">
@@ -1607,7 +1627,7 @@ const PhotoSlide = ({ photo }) => (
 );
 
 const HighlightsSlide = ({ highlights, memory }) => (
-  <div className="w-full h-full flex items-center justify-center p-6 sm:p-8 bg-gradient-to-br from-stone-950 to-amber-950">
+  <div className="w-full h-full flex items-center justify-center p-6 sm:p-8 bg-gradient-to-br from-slate-950 to-rose-950">
     <div className="max-w-2xl w-full">
       <h2 className="text-2xl sm:text-4xl font-bold text-white text-center mb-6 sm:mb-8">Special Moments</h2>
       <div className="space-y-4 sm:space-y-6">
@@ -1623,7 +1643,7 @@ const HighlightsSlide = ({ highlights, memory }) => (
 );
 
 const PeopleSlide = ({ people, memory }) => (
-  <div className="w-full h-full flex items-center justify-center p-6 sm:p-8 bg-gradient-to-br from-stone-950 to-amber-950">
+  <div className="w-full h-full flex items-center justify-center p-6 sm:p-8 bg-gradient-to-br from-slate-950 to-rose-950">
     <div className="max-w-2xl w-full">
       <h2 className="text-2xl sm:text-4xl font-bold text-white text-center mb-6 sm:mb-8">Who Was There</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
@@ -1675,8 +1695,8 @@ const CommentsSheet = ({ memory, onClose, newComment, setNewComment, onSubmit, d
       <div className="overflow-y-auto max-h-[50vh] p-4 space-y-4">
         {memory.comments?.map(comment => (
           <div key={comment.id} className="flex gap-3">
-            <div className="w-10 h-10 rounded-full bg-stone-600 flex items-center justify-center
-                          text-amber-50 font-bold shrink-0">
+              <div className="w-10 h-10 rounded-full bg-rose-600 flex items-center justify-center
+                          text-rose-50 font-bold shrink-0">
               {comment.userName.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1">
@@ -1716,8 +1736,8 @@ const CommentsSheet = ({ memory, onClose, newComment, setNewComment, onSubmit, d
           <button
             onClick={onSubmit}
             disabled={!newComment.trim()}
-            className="px-6 py-2 rounded-full bg-stone-700 text-amber-50 font-semibold
-                     hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed">
+            className="px-6 py-2 rounded-full bg-rose-600 text-rose-50 font-semibold
+                     hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed">
             Send
           </button>
         </div>
@@ -1732,15 +1752,15 @@ const CommentsSheet = ({ memory, onClose, newComment, setNewComment, onSubmit, d
 
 // Prompt to create memory after event
 const CreateMemoryPrompt = ({ event, onCreateMemory, onDismiss }) => (
-  <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-stone-50 dark:from-stone-900/40 dark:to-amber-950/20
-                border border-stone-200 dark:border-stone-700 p-4 mb-4">
+  <div className="rounded-2xl bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-950/30 dark:to-slate-950/30
+                border border-rose-200 dark:border-rose-700/30 p-4 mb-4">
     <div className="flex items-start gap-3 mb-3">
-      <Sparkles className="w-6 h-6 text-amber-700 dark:text-amber-400 shrink-0 mt-1" />
+      <Sparkles className="w-6 h-6 text-rose-600 dark:text-rose-300 shrink-0 mt-1" />
       <div className="flex-1">
-        <h4 className="font-bold text-stone-900 dark:text-stone-100 mb-1">
+        <h4 className="font-bold text-rose-900 dark:text-rose-100 mb-1">
           Turn this into a Memory?
         </h4>
-        <p className="text-sm text-stone-600 dark:text-stone-300">
+        <p className="text-sm text-rose-700/80 dark:text-rose-200/70">
           Preserve "{event.title}" forever with photos, highlights, and more!
         </p>
       </div>
@@ -1749,14 +1769,14 @@ const CreateMemoryPrompt = ({ event, onCreateMemory, onDismiss }) => (
     <div className="flex gap-2">
       <button
         onClick={onCreateMemory}
-        className="flex-1 py-2 rounded-xl bg-stone-700 dark:bg-stone-600
-                 text-amber-50 font-semibold hover:bg-stone-800 hover:shadow-lg transition-all">
+        className="flex-1 py-2 rounded-xl bg-rose-600 dark:bg-rose-500
+                 text-rose-50 font-semibold hover:bg-rose-700 hover:shadow-lg transition-all">
         ✨ Create a Memory
       </button>
       <button
         onClick={onDismiss}
         className="px-4 py-2 rounded-xl bg-white/70 dark:bg-gray-800
-                 text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700">
+                 text-rose-700 dark:text-rose-200 hover:bg-white dark:hover:bg-gray-700">
         Later
       </button>
     </div>
