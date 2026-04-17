@@ -1800,6 +1800,9 @@ const RestaurantPage = ({
   const bw     = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
   const tp     = darkMode ? '#f1f5f9' : '#111827';
   const ts     = darkMode ? '#6b7280' : '#9ca3af';
+  const heroBg = darkMode
+    ? 'linear-gradient(135deg, #121f34 0%, #173047 54%, #101722 100%)'
+    : 'linear-gradient(135deg, #fff7eb 0%, #fff1f5 55%, #f4f8ff 100%)';
 
   return (
     <div style={{ minHeight: '100vh', background: pageBg, fontFamily: 'var(--font-sans, system-ui, sans-serif)', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
@@ -1809,33 +1812,38 @@ const RestaurantPage = ({
         @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:.5} }
       `}</style>
 
-      {/* ── Sticky header ── */}
-      <div style={{ background: hBg, borderBottom: `1px solid ${bw}`, position: 'sticky', top: 0, zIndex: 100 }}>
 
-        {/* Title + sort */}
-        <div style={{ padding: '16px 18px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {onBack && (
-              <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: tp, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </button>
-            )}
-            <div>
-            <h1 style={{ fontFamily: handwritten, fontSize: 30, fontWeight: 700, color: tp, margin: 0, lineHeight: 1 }}>
-              🍽️ Restaurants
-            </h1>
-            <p style={{ fontSize: 11, color: ts, margin: '3px 0 0' }}>
-              {loading ? `Finding restaurants near ${locationScopeLabel}…` : `${filtered.length} spot${filtered.length !== 1 ? 's' : ''} found`}
-            </p>
-            </div>
-          </div>
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
-            style={{ fontSize: 12, padding: '5px 10px', borderRadius: 10, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: tp, cursor: 'pointer', outline: 'none' }}
+        {/* Hero */}
+        <div style={{ margin: '0 16px 16px', borderRadius: 28, padding: '32px 28px 28px', minHeight: 240, position: 'relative', overflow: 'hidden', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(216,179,106,0.18)'}`, background: heroBg, boxShadow: darkMode ? '0 18px 40px rgba(0,0,0,0.22)' : '0 18px 40px rgba(140,104,37,0.08)' }}>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_80%_20%,rgba(167,139,250,0.08),transparent)]" />
+          {onBack && (
+            <button onClick={onBack} aria-label="Back" style={{ position: 'absolute', top: 16, left: 16, width: 36, height: 36, borderRadius: 10, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(216,179,106,0.24)'}`, background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.65)', color: tp, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 2, backdropFilter: 'blur(8px)' }}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+          )}
+          <div style={{ position: 'absolute', right: 18, top: 10, fontSize: 88, opacity: darkMode ? 0.08 : 0.1, transform: 'rotate(10deg)', pointerEvents: 'none', userSelect: 'none' }}>🍽️</div>
+          <h1
+            style={{
+              fontFamily: handwritten,
+              fontSize: 52,
+              fontWeight: 700,
+              lineHeight: 1.02,
+              margin: '42px 0 12px', 
+              maxWidth: 400,
+              backgroundImage: darkMode
+                ? 'linear-gradient(90deg, #f8fafc 0%, #c4b5fd 100%)'
+                : 'linear-gradient(90deg, #1f2937 0%, #7c3aed 100%)',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              color: 'transparent',
+            }}
           >
-            {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-          </select>
+            Some meals become memories
+          </h1>
+          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: ts, maxWidth: 380 }}>
+            Search for restaurants near you, save the ones worth returning to, and plan a night you'll remember.
+          </p>
         </div>
 
         {/* Search */}
@@ -1915,6 +1923,16 @@ const RestaurantPage = ({
           </button>
         </div>
 
+        <div style={{ margin: '0 16px 12px', display: 'flex', justifyContent: 'flex-end' }}>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            style={{ fontSize: 12, padding: '5px 10px', borderRadius: 10, border: `1px solid ${bw}`, background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6', color: tp, cursor: 'pointer', outline: 'none' }}
+          >
+            {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+          </select>
+        </div>
+
         {/* Cuisine chips */}
         <div style={{ display: 'flex', gap: 6, padding: '0 16px 8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           {CUISINE_FILTERS.map(c => (
@@ -1989,7 +2007,6 @@ const RestaurantPage = ({
           </div>
         )}
 
-      </div>
 
       {/* ── Grid ── */}
       <div style={{ padding: '14px 14px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>

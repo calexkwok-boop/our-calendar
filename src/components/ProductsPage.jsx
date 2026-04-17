@@ -1012,11 +1012,6 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
     setSelectedProduct(product);
   }, []);
 
-  const friendsPostedCount = useMemo(
-    () => communityPosts.filter((p) => p.profiles).length,
-    [communityPosts]
-  );
-
   const featured = featuredPost;
   const gridProducts = useMemo(() => products.slice(0, 6), [products]);
 
@@ -1050,18 +1045,6 @@ export default function ProductsPage({ onBack, onAddToSomeday, darkMode = false 
             Discover products you never knew you needed.
           </p>
 
-          <div className="flex gap-6 flex-wrap">
-            {[
-              { num: communityPosts.length || "—", lbl: "Products shared" },
-              { num: friendsPostedCount || "—", lbl: "Friends posted" },
-              { num: wishlistedIds.size, lbl: "Wishlist saves" },
-            ].map(({ num, lbl }) => (
-              <div key={lbl} className="flex flex-col">
-                <span className="font-['Caveat'] text-3xl font-bold text-violet-500 leading-none">{num}</span>
-                <span className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">{lbl}</span>
-              </div>
-            ))}
-          </div>
           </div>
         </div>
 

@@ -414,48 +414,26 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap'); .font-handwritten { font-family: 'Caveat', cursive; }`}</style>
       <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
 
-        {/* ── Top bar ── */}
-        {onBack && (
-          <div className="flex items-center gap-3 mb-5">
+        {/* -- Hero -- */}
+        <div className={`relative bg-gradient-to-br rounded-3xl p-8 mb-6 overflow-hidden border ${dm ? 'from-[#0f2027] via-[#162b3a] to-[#0e1520] border-white/5' : 'from-slate-50 via-teal-50 to-slate-50 border-teal-100'}`}>
+          {onBack && (
             <button
               onClick={onBack}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center active:opacity-70 flex-shrink-0 ${dm ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-600'}`}
+              className={`absolute top-5 left-5 z-10 w-9 h-9 rounded-xl flex items-center justify-center active:opacity-70 flex-shrink-0 ${dm ? 'bg-white/5 text-slate-300' : 'bg-white/80 text-slate-600 border border-slate-200/70'}`}
             >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                 <path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-            <div>
-              <h1 className={`font-handwritten text-3xl font-bold leading-tight ${dm ? 'text-slate-100' : 'text-slate-900'}`}>Hiking & Outdoors</h1>
-              <p className="text-[11px] text-slate-500">
-                {loading ? "Loading…" : `${trails.length} trail${trails.length !== 1 ? "s" : ""} nearby`}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ── Hero ── */}
-        <div className={`relative bg-gradient-to-br rounded-3xl p-8 mb-6 overflow-hidden border ${dm ? 'from-[#0f2027] via-[#162b3a] to-[#0e1520] border-white/5' : 'from-slate-50 via-teal-50 to-slate-50 border-teal-100'}`}>
+          )}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_80%_20%,rgba(45,212,191,0.08),transparent)]" />
           <div className="absolute right-8 top-6 text-8xl opacity-10 rotate-12 select-none">🏔️</div>
-          <h1 className={`font-['Caveat'] text-5xl font-bold leading-tight mb-2 bg-gradient-to-r bg-clip-text text-transparent ${dm ? 'from-slate-100 to-teal-300' : 'from-slate-800 to-teal-600'}`}>
+          <h1 className={`font-handwritten text-5xl font-bold leading-tight mb-2 mt-10 bg-gradient-to-r bg-clip-text text-transparent ${dm ? 'from-slate-100 to-teal-300' : 'from-slate-800 to-teal-600'}`}>
             Hit the trails
           </h1>
           <p className="text-sm text-slate-500 leading-relaxed max-w-sm mb-6">
             Discover trails near you, save hikes to your Someday List, and see where your friends have been adventuring.
           </p>
-          <div className="flex gap-6 flex-wrap">
-            {[
-              { num: trails.length || "—", lbl: "Trails nearby" },
-              { num: FRIEND_HIKES.length,   lbl: "Friends hiked" },
-              { num: savedIds.size,        lbl: "Someday saves" },
-            ].map(({ num, lbl }) => (
-              <div key={lbl} className="flex flex-col">
-                <span className="font-['Caveat'] text-3xl font-bold text-teal-500 leading-none">{num}</span>
-                <span className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">{lbl}</span>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* ── Search ── */}
