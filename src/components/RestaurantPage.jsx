@@ -1839,10 +1839,10 @@ const RestaurantPage = ({
               color: 'transparent',
             }}
           >
-            Some meals become memories
+            Turn your meals into memories
           </h1>
           <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: ts, maxWidth: 380 }}>
-            Search for restaurants near you, save the ones worth returning to, and plan a night you'll remember.
+            Search, save, and plan a night you'll remember.
           </p>
         </div>
 

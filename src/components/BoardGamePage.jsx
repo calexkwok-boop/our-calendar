@@ -1,4 +1,4 @@
-/**
+﻿/**
  * BoardGamePage.jsx
  *
  * Drop into your components folder and wire up in App.js.
@@ -439,6 +439,92 @@ const SkeletonCard = ({ darkMode }) => (
 );
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+const BoardGameHero = ({ darkMode, onBack }) => (
+  <div style={{
+    position: 'relative',
+    margin: '16px 16px 0',
+    borderRadius: 24,
+    padding: '54px 24px 36px',
+    minHeight: 236,
+    overflow: 'hidden',
+    background: darkMode
+      ? 'linear-gradient(135deg, #1a1035 0%, #2d1b69 50%, #0e1520 100%)'
+      : 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #faf8f3 100%)',
+    border: darkMode ? '1px solid rgba(168,85,247,0.12)' : '1px solid rgba(168,85,247,0.15)',
+    boxShadow: darkMode ? 'none' : '0 18px 40px rgba(109,40,217,0.08)',
+  }}>
+    <div style={{
+      position: 'absolute', inset: 0, pointerEvents: 'none',
+      background: 'radial-gradient(ellipse 60% 80% at 80% 20%, rgba(168,85,247,0.10), transparent)',
+    }} />
+
+    <div style={{
+      position: 'absolute', right: 24, top: 16,
+      fontSize: 96, opacity: 0.08, transform: 'rotate(12deg)', userSelect: 'none', pointerEvents: 'none',
+    }}>
+      🎲
+    </div>
+
+    {onBack && (
+      <button
+        onClick={onBack}
+        aria-label="Go back"
+        style={{
+          position: 'absolute',
+          left: 16,
+          top: 16,
+          width: 38,
+          height: 38,
+          borderRadius: 12,
+          border: darkMode ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(168,85,247,0.18)',
+          background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)',
+          color: darkMode ? '#f8fafc' : '#1e1b4b',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(12px)',
+          boxShadow: darkMode ? 'none' : '0 8px 18px rgba(109,40,217,0.08)',
+        }}
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    )}
+
+
+    <h1 style={{
+      fontFamily: "'Caveat', cursive",
+      fontSize: 48,
+      fontWeight: 700,
+      lineHeight: 1.05,
+      margin: '42px 0 6px',
+      background: darkMode
+        ? 'linear-gradient(to right, #f1f5f9, #c084fc)'
+        : 'linear-gradient(to right, #1e1b4b, #7c3aed)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text',
+      position: 'relative',
+      zIndex: 1,
+    }}>
+      Roll the dice
+    </h1>
+
+    <p style={{
+      fontSize: 14,
+      lineHeight: 1.6,
+      margin: 0,
+      color: darkMode ? 'rgba(203,213,225,0.7)' : 'rgba(107,114,128,0.9)',
+      maxWidth: 280,
+    }}>
+      Discover top-rated games, save ones you want to try, and plan your next game night.
+    </p>
+
+  </div>
+);
+
 const BoardGamePage = ({ onAddEvent, onAddToSomeday, onBack, darkMode = false }) => {
   const [games, setGames]           = useState(FALLBACK_GAMES);
   const [loading, setLoading]       = useState(true);
@@ -539,59 +625,13 @@ const BoardGamePage = ({ onAddEvent, onAddToSomeday, onBack, darkMode = false })
         @keyframes pulse  { 0%,100% { opacity:1 } 50% { opacity:.5 } }
       `}</style>
 
-      {/* ── Header ── */}
+      <BoardGameHero darkMode={darkMode} onBack={onBack} />
+
       <div style={{
         padding: '18px 18px 0',
         background: headerBg,
         borderBottom: `0.5px solid ${borderWarm}`,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {onBack && (
-              <button
-                onClick={onBack}
-                style={{
-                  width: 36, height: 36, borderRadius: 10, border: `0.5px solid ${borderWarm}`,
-                  background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
-                  color: textPrimary, cursor: 'pointer', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', flexShrink: 0,
-                }}
-              >
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            )}
-            <div>
-              <h1 style={{
-                fontFamily: handwritten, fontSize: 30, fontWeight: 700,
-                color: textPrimary, margin: 0, lineHeight: 1,
-              }}>
-                🎲 Board Games
-              </h1>
-              <p style={{ fontSize: 12, color: textSecondary, marginTop: 3 }}>
-                Discover, plan, and buy — all in one place
-              </p>
-            </div>
-          </div>
-          {/* Sort control */}
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
-            style={{
-              fontFamily: handwritten, fontSize: 14,
-              padding: '5px 10px', borderRadius: 10,
-              border: `0.5px solid ${borderWarm}`,
-              background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
-              color: textPrimary, cursor: 'pointer', outline: 'none',
-            }}
-          >
-            <option value="rating">Top rated</option>
-            <option value="name">A–Z</option>
-            <option value="time">Quickest</option>
-          </select>
-        </div>
-
         {/* Search */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
@@ -683,19 +723,37 @@ const BoardGamePage = ({ onAddEvent, onAddToSomeday, onBack, darkMode = false })
       </div>
 
       {/* ── Results count ── */}
-      <div style={{ padding: '10px 18px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '10px 18px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <span style={{ fontFamily: handwritten, fontSize: 15, color: textSecondary }}>
           {loading ? 'Loading from BoardGameGeek…' : `${filtered.length} game${filtered.length !== 1 ? 's' : ''}`}
         </span>
-        {(category !== 'all' || players !== 'all' || timeFilter !== 'all' || search) && (
-          <button
-            onClick={() => { setCategory('all'); setPlayers('all'); setTimeFilter('all'); setSearch(''); }}
-            style={{ fontSize: 12, color: textSecondary, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            style={{
+              fontFamily: handwritten, fontSize: 14,
+              padding: '5px 10px', borderRadius: 10,
+              border: `0.5px solid ${borderWarm}` ,
+              background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
+              color: textPrimary, cursor: 'pointer', outline: 'none',
+            }}
           >
-            Clear filters
-          </button>
-        )}
+            <option value="rating">Top rated</option>
+            <option value="name">A–Z</option>
+            <option value="time">Quickest</option>
+          </select>
+          {(category !== 'all' || players !== 'all' || timeFilter !== 'all' || search) && (
+            <button
+              onClick={() => { setCategory('all'); setPlayers('all'); setTimeFilter('all'); setSearch(''); }}
+              style={{ fontSize: 12, color: textSecondary, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
       </div>
+
 
       {/* ── Game grid ── */}
       <div style={{
