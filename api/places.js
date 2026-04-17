@@ -14,6 +14,8 @@
  * Endpoints used:
  *   GET /api/places?lat=34.05&lng=-118.24&query=sushi&type=restaurant
  *   GET /api/places?action=autocomplete&input=los%20angeles
+ *   GET /api/places?action=autocomplete&input=bestia&types=establishment
+ *   GET /api/places?action=textsearch&query=The%20French%20Laundry&type=restaurant
  *   GET /api/places/details?place_id=ChIJ...
  */
 
@@ -24,7 +26,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'GOOGLE_PLACES_KEY not configured' });
   }
 
-  const { lat, lng, query = '', input = '', type = 'restaurant', place_id, action, ref, maxwidth = '400', radius = '10000' } = req.query;
+  const { lat, lng, query = '', input = '', type = 'restaurant', types = '', place_id, action, ref, maxwidth = '400', radius = '10000' } = req.query;
 
   // ── Photo proxy ───────────────────────────────────────────────────────────
   if (action === 'photo') {
@@ -49,7 +51,8 @@ export default async function handler(req, res) {
     const term = (input || query || '').trim();
     if (!term) return res.status(400).json({ error: 'input required' });
 
-    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(term)}&key=${key}`;
+    const typeFilter = types ? `&types=${encodeURIComponent(types)}` : '';
+    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(term)}${typeFilter}&key=${key}`;
 
     try {
       const r = await fetch(url);
@@ -58,6 +61,21 @@ export default async function handler(req, res) {
       return res.json(data);
     } catch (err) {
       return res.status(500).json({ error: 'Places autocomplete fetch failed' });
+    }
+  }
+
+  if (action === 'textsearch') {
+    if (!query) return res.status(400).json({ error: 'query required' });
+
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&type=restaurant&key=${key}`;
+
+    try {
+      const r = await fetch(url);
+      const data = await r.json();
+      res.setHeader('Cache-Control', 's-maxage=300');
+      return res.json(data);
+    } catch (err) {
+      return res.status(500).json({ error: 'Places text search fetch failed' });
     }
   }
 

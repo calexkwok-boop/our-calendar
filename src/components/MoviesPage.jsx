@@ -407,17 +407,14 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap'); .font-handwritten { font-family: 'Caveat', cursive; }`}</style>
 
       {/* ── Hero ── */}
-      <div className={`relative mx-4 mt-4 mb-4 rounded-3xl p-8 overflow-hidden border bg-gradient-to-br ${
-        darkMode
-          ? 'from-[#0f1a2e] via-[#1a1535] to-[#0e1520] border-white/5'
-          : 'from-slate-50 via-violet-50 to-slate-50 border-violet-100'
-      }`} style={{
-        boxShadow: darkMode ? '0 18px 40px rgba(0,0,0,0.32)' : '0 16px 36px rgba(124,58,237,0.08)',
-      }}>
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: 'radial-gradient(ellipse 60% 80% at 80% 20%, rgba(167,139,250,0.08), transparent)',
-        }} />
+      <div
+        className={`relative mx-4 mt-4 mb-4 rounded-3xl p-8 overflow-hidden border bg-gradient-to-br ${
+          darkMode
+            ? 'from-[#0f1a2e] via-[#1a1535] to-[#0e1520] border-white/5 shadow-[0_18px_40px_rgba(0,0,0,0.32)]'
+            : 'from-slate-50 via-violet-50 to-slate-50 border-violet-100 shadow-[0_16px_36px_rgba(124,58,237,0.08)] dark:from-[#0f1a2e] dark:via-[#1a1535] dark:to-[#0e1520] dark:border-white/5 dark:shadow-[0_18px_40px_rgba(0,0,0,0.32)]'
+        }`}
+      >
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_60%_80%_at_80%_20%,rgba(167,139,250,0.08),transparent)]" />
         <div style={{
           position: 'absolute', right: 24, top: 16,
           fontSize: 96, opacity: 0.08, transform: 'rotate(12deg)',
@@ -429,33 +426,32 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
           <button
             onClick={onBack}
             aria-label="Go back"
-            className="absolute left-4 top-4 w-10 h-10 rounded-xl flex items-center justify-center active:opacity-70 backdrop-blur-sm"
-            style={{
-              background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.72)',
-              border: darkMode ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(168,85,247,0.16)',
-              color: darkMode ? 'rgb(226,232,240)' : 'rgb(75,85,99)',
-            }}
+            className={`absolute left-4 top-4 w-10 h-10 rounded-xl flex items-center justify-center active:opacity-70 backdrop-blur-sm ${
+              darkMode
+                ? 'bg-white/[0.06] border border-white/10 text-slate-200'
+                : 'bg-white/70 border border-violet-400/15 text-gray-600 dark:bg-white/[0.06] dark:border-white/10 dark:text-slate-200'
+            }`}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
               <path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         )}
-        <h1 className="font-handwritten relative z-10" style={{
+        <h1 className={`font-handwritten relative z-10 bg-gradient-to-r bg-clip-text text-transparent ${
+          darkMode
+            ? 'from-slate-100 to-violet-300'
+            : 'from-[#3b0764] to-[#7c3aed] dark:from-slate-100 dark:to-violet-300'
+        }`} style={{
           fontSize: 48, fontWeight: 700, lineHeight: 1.1,
           margin: '24px 0 8px',
-          background: darkMode
-            ? 'linear-gradient(to right, #f1f5f9, #c084fc)'
-            : 'linear-gradient(to right, #3b0764, #7c3aed)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
         }}>
           Lights, camera
         </h1>
-        <p className="relative z-10" style={{
+        <p className={`relative z-10 ${darkMode ? 'text-slate-300/70' : 'text-gray-500 dark:text-slate-300/70'}`} style={{
           fontSize: 14, lineHeight: 1.6, margin: 0,
-          color: darkMode ? 'rgba(203,213,225,0.7)' : 'rgba(107,114,128,0.9)',
           maxWidth: 300,
         }}>
           Browse what's popular, find your next watch, and save movies to your Someday List.
