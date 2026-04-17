@@ -29886,7 +29886,7 @@ transform: translateY(0);
       </div>
     </div>
     {/* -- Create Sub-Calendar Modal -- */}
-    {!activeSubCalendar && (
+    {!activeSubCalendar && !showMemorySystem && (
       <div
         className="fixed inset-x-0 bottom-0 z-[10001]"
         style={{
