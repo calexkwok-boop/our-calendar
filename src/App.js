@@ -9212,6 +9212,7 @@ useEffect(() => {
         color: normalized.solidColor,
         backgroundImage: 'none',
         WebkitTextFillColor: normalized.solidColor,
+        fontFamily: "'Caveat', cursive",
       };
     }
     return {
@@ -9220,6 +9221,7 @@ useEffect(() => {
       WebkitBackgroundClip: 'text',
       backgroundClip: 'text',
       WebkitTextFillColor: 'transparent',
+      fontFamily: "'Caveat', cursive",
     };
   }
 
@@ -15060,10 +15062,43 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     setShowChatMembersPanel(false);
   }, [activeLayerId, activeLayerOwnerId, user?.id, user?.email, user?.phone, currentUser, myShares, sharedOwnerLabels, layerRefreshToken]);
 
+  const knownHandlesLookupKey = useMemo(() => {
+    const tokens = new Set();
+    const addToken = (value) => {
+      const token = String(value || '').trim().toLowerCase();
+      if (token) tokens.add(token);
+    };
+
+    addToken(activeLayerId);
+    addToken(user?.id);
+    addToken(user?.email);
+    addToken(activeLayerOwnerId);
+
+    (myShares || []).forEach((row) => {
+      addToken(row?.shared_with_email);
+      addToken(row?.shared_with_id);
+    });
+    (sharedCalendars || []).forEach((row) => {
+      addToken(row?.shared_with_email);
+      addToken(row?.shared_with_id);
+    });
+    (chatMembers || []).forEach((member) => {
+      addToken(member?.userId);
+      addToken(member?.label);
+    });
+    (calendarChatMessages || []).forEach((msg) => {
+      addToken(msg?.user_id);
+      addToken(msg?.created_by);
+      addToken(msg?.email);
+    });
+
+    return Array.from(tokens).sort().join('|');
+  }, [activeLayerId, user?.id, user?.email, activeLayerOwnerId, myShares, sharedCalendars, chatMembers, calendarChatMessages]);
+
   useEffect(() => {
     if (!activeLayerId) return;
     loadKnownHandlesForActiveLayer();
-  }, [activeLayerId, user?.id, user?.email, activeLayerOwnerId, myShares, sharedCalendars, chatMembers, calendarChatMessages, layerRefreshToken]);
+  }, [knownHandlesLookupKey, activeLayerId]);
 
   useEffect(() => {
     setChatPresenceByUserId({});
@@ -21280,7 +21315,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
     if (!user?.id) return;
     if (bottomNavTab !== 'explore') return;
     loadPublicCalendars();
-  }, [bottomNavTab, user?.id, layerRefreshToken]);
+  }, [bottomNavTab, user?.id]);
 
   useEffect(() => {
     setSubCalMembersCollapsed(true);
