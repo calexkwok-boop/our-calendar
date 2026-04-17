@@ -150,7 +150,7 @@ function FeaturedBanner({ movie, onTap, onAddToSomeday, somedays }) {
           </div>
           <button
             onClick={handleSomeday}
-            className={`flex-shrink-0 text-xs font-handwritten font-bold px-3.5 py-2 rounded-xl transition-all active:opacity-70 ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`}
+            className={`flex-shrink-0 text-sm font-handwritten font-bold px-3.5 py-2 rounded-xl transition-all active:opacity-70 ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`}
           >
             {inSomeday ? "✓ In someday list" : "+ Someday list"}
           </button>

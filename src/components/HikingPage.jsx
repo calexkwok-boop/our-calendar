@@ -134,7 +134,7 @@ function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose, dar
             <div className="flex gap-3">
               <button
                 onClick={() => onSave(trail)}
-                className={`flex-1 rounded-2xl py-3 text-sm font-handwritten font-bold transition-all duration-200 border ${
+                className={`flex-1 rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-all duration-200 border ${
                   isSaved
                     ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
                     : dm
@@ -221,7 +221,7 @@ function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen, onPlanTrip, dark
         <div className="flex gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onSave(trail)}
-            className={`flex-1 rounded-xl py-2 text-xs font-handwritten font-bold transition-all duration-200 border ${
+            className={`flex-1 rounded-xl py-2 text-sm font-['Caveat'] font-bold transition-all duration-200 border ${
               isSaved
                 ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
                 : dm

@@ -223,7 +223,7 @@ const ProductCard = React.memo(function ProductCard({ product, onSomeday, savedI
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onSomeday(product)}
-            className={`flex-1 rounded-xl py-2 text-xs font-handwritten font-bold transition-all duration-200 border ${
+            className={`flex-1 rounded-xl py-2 text-sm font-handwritten font-bold transition-all duration-200 border ${
               isWished
                 ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
                 : dm
@@ -390,7 +390,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
             }
             setWished((w) => !w);
           }}
-          className={`ml-auto text-xs px-3 py-1.5 rounded-xl border font-handwritten font-bold transition-all duration-200 ${
+          className={`ml-auto text-sm px-3 py-1.5 rounded-xl border font-handwritten font-bold transition-all duration-200 ${
             wished
               ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
               : dm
@@ -819,7 +819,7 @@ function FeaturedSomedayButton({ featured, onAddToSomeday, darkMode }) {
           type:     "products",
         });
       }}
-      className={`text-xs px-4 py-2 rounded-xl border font-handwritten font-bold transition-all duration-200 ${
+      className={`text-sm px-4 py-2 rounded-xl border font-handwritten font-bold transition-all duration-200 ${
         saved
           ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
           : dm

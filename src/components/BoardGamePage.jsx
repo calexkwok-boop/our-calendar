@@ -338,11 +338,11 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
                 setInSomeday(v => !v);
                 onAddToSomeday?.({ ...game, type: 'games', cardTitle: game.name, poster_path: '' });
               }}
+              className="font-handwritten"
               style={{
                 flex: 1, padding: '10px 0',
                 borderRadius: 12, cursor: 'pointer',
-                fontFamily: "'Caveat', cursive",
-                fontSize: 16, fontWeight: 700,
+                fontSize: 18, fontWeight: 700,
                 background: inSomeday
                   ? (darkMode ? 'rgba(13,148,136,0.15)' : 'rgba(13,148,136,0.08)')
                   : (darkMode ? '#0d9488' : '#14b8a6'),
@@ -379,7 +379,7 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
                 transition: 'all .2s',
               }}
             >
-              {addedToNight ? '✓ Added!' : <span className="font-handwritten">📅 Game night</span>}
+              {addedToNight ? '✓ Added!' : <span style={{ fontFamily: "'Caveat', cursive" }}>📅 Game night</span>}
             </button>
           </div>
         </div>

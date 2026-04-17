@@ -168,12 +168,12 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPl
         </div>
       </div>
       <div className="flex items-center gap-2 px-4 pb-4 pt-2.5">
-        <button onClick={handleSomeday} className={`text-xs font-handwritten font-bold px-3.5 py-1.5 rounded-xl transition-all active:opacity-70 ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`}>
+        <button onClick={handleSomeday} className={`flex-1 text-sm font-handwritten font-bold px-3.5 py-1.5 rounded-xl transition-all active:opacity-70 ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`}>
           {inSomeday ? "✓ In someday list" : "+ Someday list"}
         </button>
         <button
           onClick={() => onPlanEvent?.({ title: `Movie night: ${movie.title}` })}
-          className="text-xs font-['Caveat'] font-bold px-3.5 py-1.5 rounded-xl bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25 active:opacity-70"
+          className="flex-1 text-sm font-['Caveat'] font-bold px-3.5 py-1.5 rounded-xl bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25 active:opacity-70"
         >
           Plan movie night
         </button>
@@ -239,10 +239,10 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
                 }
               }
             }}
-            className={`text-xs font-['Caveat'] font-bold px-3.5 py-1.5 rounded-xl active:opacity-70 ${
+            className={`flex-1 text-sm font-bold px-3.5 py-1.5 rounded-xl active:opacity-70 ${
               i === 0
-                ? inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"
-                : "bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25"
+                ? `font-handwritten ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`
+                : "font-['Caveat'] bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25"
             }`}
           >
             {i === 0 ? (inSomeday ? "✓ In someday list" : "+ Someday list") : a}
@@ -342,19 +342,18 @@ function SkeletonCard() {
 function SectionHeader({ label }) {
   const tone =
     label === "Good for this weekend"
-      ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20"
+      ? "text-amber-700 dark:text-amber-300"
       : label === "Hidden gems"
-        ? "bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/20"
+        ? "text-violet-700 dark:text-violet-300"
         : label === "Trending"
-          ? "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20"
+          ? "text-rose-700 dark:text-rose-300"
           : label === "From your friends"
-            ? "bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/20"
-            : "bg-stone-100 text-gray-600 dark:bg-white/[0.04] dark:text-gray-300 border-stone-200 dark:border-white/[0.06]";
+            ? "text-teal-700 dark:text-teal-300"
+            : "text-gray-600 dark:text-gray-300";
 
   return (
     <div className="px-4 pt-5 pb-2">
-      <p className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold tracking-[0.16em] uppercase ${tone}`}>
-        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+      <p className={`font-handwritten text-[20px] font-bold leading-none ${tone}`}>
         {label}
       </p>
     </div>
