@@ -341,7 +341,7 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
               style={{
                 flex: 1, padding: '10px 0',
                 borderRadius: 12, cursor: 'pointer',
-                fontFamily: '"Caveat", "Comic Sans MS", cursive',
+                fontFamily: "'Caveat', cursive",
                 fontSize: 16, fontWeight: 700,
                 background: inSomeday
                   ? (darkMode ? 'rgba(13,148,136,0.15)' : 'rgba(13,148,136,0.08)')
@@ -369,16 +369,17 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
               style={{
                 flex: 1, padding: '10px 0',
                 borderRadius: 12, border: 'none', cursor: 'pointer',
-                fontFamily: '"Caveat", "Comic Sans MS", cursive',
+                fontFamily: "'Caveat', cursive",
                 fontSize: 16, fontWeight: 700, letterSpacing: '.01em',
-                background: darkMode ? 'rgba(255,255,255,0.07)' : '#f3f4f6',
+                background: darkMode ? 'rgba(168,85,247,0.12)' : '#f5f3ff',
                 color: addedToNight
                   ? (darkMode ? '#6b7280' : '#9ca3af')
-                  : (darkMode ? '#e2e8f0' : '#374151'),
+                  : (darkMode ? '#c4b5fd' : '#6d28d9'),
+                border: '1px solid ' + (darkMode ? 'rgba(168,85,247,0.25)' : '#d8b4fe'),
                 transition: 'all .2s',
               }}
             >
-              {addedToNight ? '✓ Added!' : '📅 Game night'}
+              {addedToNight ? '✓ Added!' : <span className="font-handwritten">📅 Game night</span>}
             </button>
           </div>
         </div>
@@ -533,6 +534,7 @@ const BoardGamePage = ({ onAddEvent, onAddToSomeday, onBack, darkMode = false })
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap');
+        .font-handwritten { font-family: 'Caveat', cursive; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
         @keyframes pulse  { 0%,100% { opacity:1 } 50% { opacity:.5 } }
       `}</style>

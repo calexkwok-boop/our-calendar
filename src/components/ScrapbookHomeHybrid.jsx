@@ -327,7 +327,8 @@ const ScrapbookHomeHybrid = ({
                 Your day is wide open ✨
               </p>
               <button
-                onClick={onCaptureQuickMoment}
+                type="button"
+                onClick={onAddEvent}
                 className="mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold"
                 style={themeAccentEllieChipButtonStyle}
               >
@@ -556,7 +557,7 @@ const ScrapbookHomeHybrid = ({
                   {bucketList.filter((d) => d.photoUrl).map((dream, idx) => (
                     <div
                       key={dream.id || idx}
-                      className="group flex-shrink-0 snap-start w-28 cursor-pointer"
+                  className="group flex-shrink-0 snap-start w-28 cursor-pointer"
                       style={{ rotate: `${idx % 2 === 0 ? '-1.5deg' : '1.2deg'}` }}
                       onClick={onOpenSomeday}
                     >

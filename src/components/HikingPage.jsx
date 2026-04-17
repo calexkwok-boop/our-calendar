@@ -16,13 +16,9 @@ const DIFFICULTY_MAP = {
 const FILTERS    = ["All", "Easy", "Moderate", "Hard", "Dog Friendly", "Kid Friendly", "Views"];
 const TRAIL_EMOJIS = ["🌲", "🏔️", "🌄", "🌿", "🌊", "🦅", "🌸", "🍂"];
 
-// ─── Mock community feed ─────────────────────────────────────────────────────
+// ─── Friends feed placeholder ────────────────────────────────────────────────
 
-const MOCK_FEED = [
-  { id: 1, initials: "JL", name: "Jamie L.",  action: "hiked",     trail: "Mission Peak Loop",    time: "2h ago",    note: "Brutal but worth every step. Go early — we left at 6am and had the summit almost to ourselves.", likes: 8,  comments: 3, hasPhoto: true  },
-  { id: 2, initials: "SR", name: "Sam R.",    action: "saved",     trail: "Half Dome via JMT",    suffix: "to Someday List", time: "Yesterday", note: "Adding this to the summer bucket list — anyone else in?", likes: 5, comments: 7, hasPhoto: false },
-  { id: 3, initials: "MK", name: "Maya K.",   action: "completed", trail: "Muir Woods Loop",      time: "3 days ago", note: "Perfect Sunday morning with the kids. The redwoods are absolutely magical right now.", likes: 14, comments: 2, hasPhoto: false },
-];
+const FRIEND_HIKES = [];
 
 // ─── TrailModal ──────────────────────────────────────────────────────────────
 
@@ -138,7 +134,7 @@ function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose, dar
             <div className="flex gap-3">
               <button
                 onClick={() => onSave(trail)}
-                className={`flex-1 rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-all duration-200 border ${
+                className={`flex-1 rounded-2xl py-3 text-sm font-handwritten font-bold transition-all duration-200 border ${
                   isSaved
                     ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
                     : dm
@@ -150,7 +146,7 @@ function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose, dar
               </button>
               <button
                 onClick={onPlanTrip}
-                className={`flex-1 rounded-2xl py-3 text-sm font-medium transition-all duration-200 border ${dm ? 'bg-violet-400/10 border-violet-400/25 text-violet-400 hover:bg-violet-400/20' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
+                className={`flex-1 rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-all duration-200 border ${dm ? 'bg-violet-400/10 border-violet-400/25 text-violet-400 hover:bg-violet-400/20' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
               >
                 Plan Trip
               </button>
@@ -165,7 +161,7 @@ function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose, dar
 
 // ─── TrailCard ───────────────────────────────────────────────────────────────
 
-function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen, darkMode }) {
+function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen, onPlanTrip, darkMode }) {
   const dm     = darkMode;
   const isSaved = savedIds.has(trail.id);
   const diff    = DIFFICULTY_MAP[trail.difficulty] ?? DIFFICULTY_MAP[2];
@@ -175,7 +171,7 @@ function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen, darkMode }) {
   return (
     <div
       onClick={onOpen}
-      className={`border rounded-2xl overflow-hidden hover:border-teal-400/25 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer ${dm ? 'bg-[#161f30] border-white/5' : 'bg-white border-slate-200'}`}
+      className={`border rounded-2xl overflow-hidden hover:border-teal-400/25 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer h-full flex flex-col ${dm ? 'bg-[#161f30] border-white/5' : 'bg-white border-slate-200'}`}
     >
       {imgSrc ? (
         <img src={imgSrc} alt={trail.name} className="w-full h-36 object-cover" />
@@ -185,7 +181,7 @@ function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen, darkMode }) {
         </div>
       )}
 
-      <div className="p-4">
+      <div className="p-4 flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-2">
           <span className={`text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full font-medium ${diff.style}`}>
             {diff.label}
@@ -222,10 +218,10 @@ function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen, darkMode }) {
           ))}
         </div>
 
-        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+        <div className="flex gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onSave(trail)}
-            className={`flex-1 rounded-xl py-2 text-xs font-['Caveat'] font-bold transition-all duration-200 border ${
+            className={`flex-1 rounded-xl py-2 text-xs font-handwritten font-bold transition-all duration-200 border ${
               isSaved
                 ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
                 : dm
@@ -236,10 +232,13 @@ function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen, darkMode }) {
             {isSaved ? "✓ In someday list" : "+ Someday list"}
           </button>
           <button
-            onClick={onOpen}
-            className={`flex-1 rounded-xl py-2 text-xs font-medium transition-all duration-200 border ${dm ? 'bg-violet-400/8 border-violet-400/20 text-violet-400 hover:bg-violet-400/15' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlanTrip?.(trail);
+            }}
+            className={`flex-1 rounded-xl py-2 text-xs font-['Caveat'] font-bold transition-all duration-200 border ${dm ? 'bg-violet-400/8 border-violet-400/20 text-violet-400 hover:bg-violet-400/15' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
           >
-            View trail
+            Plan trip
           </button>
         </div>
       </div>
@@ -448,7 +447,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
           <div className="flex gap-6 flex-wrap">
             {[
               { num: trails.length || "—", lbl: "Trails nearby" },
-              { num: MOCK_FEED.length,     lbl: "Friends hiked" },
+              { num: FRIEND_HIKES.length,   lbl: "Friends hiked" },
               { num: savedIds.size,        lbl: "Someday saves" },
             ].map(({ num, lbl }) => (
               <div key={lbl} className="flex flex-col">
@@ -587,6 +586,7 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
                   onSave={handleSave}
                   savedIds={savedIds}
                   onOpen={() => setSelectedTrail(trail)}
+                  onPlanTrip={(item) => handlePlanTrip(item)}
                   darkMode={dm}
                 />
               ))}
@@ -620,10 +620,14 @@ export default function HikingPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
         )}
 
         {/* ── Community feed ── */}
-        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Friends' recent hikes</p>
-        <div className="flex flex-col gap-2.5">
-          {MOCK_FEED.map((item) => <FeedCard key={item.id} item={item} darkMode={dm} />)}
-        </div>
+        {FRIEND_HIKES.length > 0 && (
+          <>
+            <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 mb-3">Friends' recent hikes</p>
+            <div className="flex flex-col gap-2.5">
+              {FRIEND_HIKES.map((item) => <FeedCard key={item.id} item={item} darkMode={dm} />)}
+            </div>
+          </>
+        )}
 
       </div>
 

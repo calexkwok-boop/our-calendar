@@ -258,7 +258,7 @@ const RestaurantDetailSheet = ({ restaurant, onAddEvent, onSaveToSomeday, onClos
                 });
                 onClose();
               }}
-              style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: 'none', background: darkMode ? 'rgba(255,255,255,0.07)' : '#f3f4f6', color: darkMode ? '#d1d5db' : '#374151', fontFamily: handwritten, fontSize: 17, fontWeight: 700, cursor: 'pointer', transition: 'opacity .15s' }}
+              style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: '1px solid ' + (darkMode ? 'rgba(168,85,247,0.25)' : '#d8b4fe'), background: darkMode ? 'rgba(168,85,247,0.12)' : '#f5f3ff', color: darkMode ? '#c4b5fd' : '#6d28d9', fontFamily: "'Caveat', cursive", fontSize: 17, fontWeight: 700, cursor: 'pointer', transition: 'opacity .15s' }}
               onMouseEnter={e => e.currentTarget.style.opacity = '.88'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}
             >
               📅 Plan a dinner
@@ -270,7 +270,7 @@ const RestaurantDetailSheet = ({ restaurant, onAddEvent, onSaveToSomeday, onClos
                   onSaveToSomeday?.(restaurant);
                 }
               }}
-              style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: 'none', background: saved ? '#0d9488' : '#2dd4bf', color: saved ? '#fff' : '#111827', fontFamily: handwritten, fontSize: 17, fontWeight: 700, cursor: saved ? 'default' : 'pointer', transition: 'all .2s' }}
+              style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: 'none', background: saved ? '#0d9488' : '#2dd4bf', color: saved ? '#fff' : '#111827', fontFamily: "'Caveat', cursive", fontSize: 17, fontWeight: 700, cursor: saved ? 'default' : 'pointer', transition: 'all .2s' }}
             >
               {saved ? '✓ In someday list' : '+ Someday list'}
             </button>
@@ -493,7 +493,7 @@ const FeaturedRestaurantRecommendation = React.memo(({ post, currentUserId, onSo
               setSaved(true);
               onSomeday?.(post);
             }}
-            style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 13, fontWeight: 700, fontFamily: handwritten, cursor: 'pointer' }}
+            style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#d1d5db'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 13, fontWeight: 700, fontFamily: "'Caveat', cursive", cursor: 'pointer' }}
           >
             {saved ? '✓ In someday list' : '+ Someday list'}
           </button>
@@ -651,7 +651,7 @@ const RestaurantRecommendationCard = React.memo(({ post, currentUserId, onSomeda
               setSaved(true);
               onSomeday?.(post);
             }}
-            style={{ marginLeft: 'auto', padding: '8px 12px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(45,212,191,0.22)' : '#99f6e4'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 12, fontWeight: 700, fontFamily: handwritten, cursor: saved ? 'default' : 'pointer' }}
+            style={{ marginLeft: 'auto', padding: '8px 12px', borderRadius: 12, border: `1px solid ${darkMode ? 'rgba(45,212,191,0.22)' : '#99f6e4'}`, background: saved ? '#0d9488' : (darkMode ? 'rgba(45,212,191,0.12)' : '#f0fdfa'), color: saved ? '#fff' : (darkMode ? '#5eead4' : '#0f766e'), fontSize: 12, fontWeight: 700, fontFamily: "'Caveat', cursive", cursor: saved ? 'default' : 'pointer' }}
           >
             {saved ? '✓ In someday list' : '+ Someday list'}
           </button>

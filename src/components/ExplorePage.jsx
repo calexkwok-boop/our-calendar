@@ -120,7 +120,7 @@ function FriendCard({ post }) {
   );
 }
 
-function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap }) {
+function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPlanEvent }) {
   const [inSomeday, setInSomeday] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const posterUrl = movie.poster_path ? `${TMDB_IMG}${movie.poster_path}` : null;
@@ -171,7 +171,12 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap }) {
         <button onClick={handleSomeday} className={`text-xs font-handwritten font-bold px-3.5 py-1.5 rounded-xl transition-all active:opacity-70 ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`}>
           {inSomeday ? "✓ In someday list" : "+ Someday list"}
         </button>
-        <button onClick={() => onPageTap?.("movies")} className="text-xs font-medium px-3.5 py-1.5 rounded-xl bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 active:opacity-70">See all →</button>
+        <button
+          onClick={() => onPlanEvent?.({ title: `Movie night: ${movie.title}` })}
+          className="text-xs font-['Caveat'] font-bold px-3.5 py-1.5 rounded-xl bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25 active:opacity-70"
+        >
+          Plan movie night
+        </button>
         <VoteButtons initialVotes={votes} />
       </div>
     </div>
@@ -214,16 +219,30 @@ function CommunityCard({ post, onPageTap, onPlanEvent, onAddToSomeday, onRemoveF
                 }
                 setInSomeday(v => !v);
               } else {
-                if (post.type === "games")            onPlanEvent?.({ title: `Game night: ${post.cardTitle}` });
-                else if (post.type === "hiking")      onPageTap?.("hiking");
-                else if (post.type === "restaurants") onPageTap?.("restaurants");
-                else if (post.type === "products")    onPageTap?.("products");
+                if (post.type === "games") {
+                  onPlanEvent?.({ title: `Game night: ${post.cardTitle}` });
+                } else if (post.type === "hiking") {
+                  onPlanEvent?.({
+                    title: `Hike: ${post.cardTitle}`,
+                    notes: post.location ? `Near ${post.location}` : '',
+                    category: 'outdoors',
+                  });
+                } else if (post.type === "restaurants") {
+                  onPlanEvent?.({
+                    title: `Dinner at ${post.cardTitle}`,
+                    notes: post.location ? post.location : '',
+                    category: 'dinner',
+                    location: post.location || post.cardTitle,
+                  });
+                } else if (post.type === "products") {
+                  onPageTap?.("products");
+                }
               }
             }}
-            className={`text-xs font-handwritten font-bold px-3.5 py-1.5 rounded-xl active:opacity-70 ${
+            className={`text-xs font-['Caveat'] font-bold px-3.5 py-1.5 rounded-xl active:opacity-70 ${
               i === 0
                 ? inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"
-                : "bg-stone-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"
+                : "bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25"
             }`}
           >
             {i === 0 ? (inSomeday ? "✓ In someday list" : "+ Someday list") : a}
@@ -396,7 +415,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
     return <MoviesPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} onPlanEvent={onPlanEvent} />;
   }
   if (activePage === "hiking") {
-    return <HikingPage onBack={() => setActivePage(null)} darkMode={darkMode} />;
+    return <HikingPage onBack={() => setActivePage(null)} onPlanEvent={onPlanEvent} darkMode={darkMode} />;
   }
   if (activePage === "products") {
     return <ProductsPage onBack={() => setActivePage(null)} onAddToSomeday={onAddToSomeday} darkMode={darkMode} />;
@@ -447,7 +466,7 @@ export default function ExplorePage({ onAddToSomeday, onRemoveFromSomeday, onPla
   })();
 
   function renderCard(post) {
-    if (post.type === 'movies') return <MovieCard key={`movie-${post.id}`} movie={post} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} onPageTap={setActivePage} />;
+    if (post.type === 'movies') return <MovieCard key={`movie-${post.id}`} movie={post} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} onPageTap={setActivePage} onPlanEvent={onPlanEvent} />;
     if (post.type === 'friends') return <FriendCard key={post.id} post={post} />;
     return <CommunityCard key={post.id} post={post} onPageTap={setActivePage} onPlanEvent={onPlanEvent} onAddToSomeday={onAddToSomeday} onRemoveFromSomeday={onRemoveFromSomeday} />;
   }

@@ -221,6 +221,7 @@ function AddSheet({ onClose, onAdd, darkMode }) {
   // sticker fields
   const [sticker, setSticker]         = useState('⭐');
   const [stickerSize, setStickerSize] = useState('medium');
+  const labelPresets = ['MOVIES', 'My Wishlist', 'This Summer', 'Bucket List', 'Date Night', 'Trips'];
 
   const sheetBg  = darkMode ? '#131c2e' : '#ffffff';
   const inputBg  = darkMode ? 'rgba(255,255,255,0.06)' : '#f8f7f2';
@@ -248,8 +249,33 @@ function AddSheet({ onClose, onAdd, darkMode }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 10020, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '20px 18px max(44px, calc(env(safe-area-inset-bottom) + 44px))', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}`, maxHeight: '85vh', overflowY: 'auto' }}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 10020,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        padding: '12px 12px max(12px, env(safe-area-inset-bottom))',
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: sheetBg,
+          borderRadius: '24px 24px 0 0',
+          padding: '20px 18px max(32px, calc(env(safe-area-inset-bottom) + 32px))',
+          width: '100%',
+          maxWidth: 480,
+          margin: '0 auto',
+          borderTop: `1px solid ${divider}`,
+          maxHeight: 'calc(100dvh - 24px - env(safe-area-inset-bottom))',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
         <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 18px' }} />
         <p style={{ fontFamily: CAVEAT, fontSize: 24, fontWeight: 700, color: tp, marginBottom: 16 }}>Pin something new</p>
 
@@ -312,6 +338,31 @@ function AddSheet({ onClose, onAdd, darkMode }) {
         {type === 'label' && (
           <>
             <input value={labelText} onChange={e => setLabelText(e.target.value)} placeholder="MOVIES · My Wishlist · This Summer" style={{ ...inputStyle, marginBottom: 12 }} />
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+              {labelPresets.map((preset) => {
+                const active = labelText.trim().toLowerCase() === preset.toLowerCase();
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setLabelText(preset)}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: 999,
+                      border: `1px solid ${active ? '#2dd4bf' : inputBdr}`,
+                      background: active ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent',
+                      color: active ? (darkMode ? '#2dd4bf' : '#0d9488') : ts,
+                      fontFamily: CAVEAT,
+                      fontSize: 14,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {preset}
+                  </button>
+                );
+              })}
+            </div>
 
             <p style={{ fontSize: 11, color: ts, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Style</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>

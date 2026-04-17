@@ -390,7 +390,7 @@ const CommunityPost = React.memo(function CommunityPost({ post, currentUserId, o
             }
             setWished((w) => !w);
           }}
-          className={`ml-auto text-xs px-3 py-1.5 rounded-xl border font-['Caveat'] font-bold transition-all duration-200 ${
+          className={`ml-auto text-xs px-3 py-1.5 rounded-xl border font-handwritten font-bold transition-all duration-200 ${
             wished
               ? "bg-teal-500/20 border-teal-500/30 text-teal-600"
               : dm

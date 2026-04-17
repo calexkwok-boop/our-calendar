@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
 
+const CAVEAT = '"Caveat", cursive';
+
 const CATEGORIES = [
   { id: "travel",    label: "Travel",    icon: "✈",  bg: "#E1F5EE", color: "#085041", border: "#1D9E75", glow: "rgba(29,158,117,.15)",  darkBg: "#0d2e22", darkColor: "#6ee7b7", darkBorder: "#1D9E75", darkGlow: "rgba(29,158,117,.25)" },
   { id: "food",      label: "Food",      icon: "◎",  bg: "#FAEEDA", color: "#633806", border: "#BA7517", glow: "rgba(186,117,23,.15)",  darkBg: "#2e1e07", darkColor: "#fbbf24", darkBorder: "#BA7517", darkGlow: "rgba(186,117,23,.25)" },
@@ -165,8 +167,8 @@ export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
 
         {/* Header */}
         <div style={styles.headerBand}>
-          <h2 style={{ ...styles.title, color: dm("#1a1a2e", "#f0eefc") }}>Add a dream ✦</h2>
-          <p style={{ ...styles.subtitle, color: dm("#666", "#888") }}>What do you want to do someday?</p>
+          <h2 style={{ ...styles.title, color: dm("#1a1a2e", "#f0eefc"), fontFamily: CAVEAT }}>Add a dream ✦</h2>
+          <p style={{ ...styles.subtitle, color: dm("#666", "#888"), fontFamily: CAVEAT }}>What do you want to do someday?</p>
         </div>
 
         <div
@@ -178,7 +180,7 @@ export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
 
         {/* Dream input */}
         <div style={styles.section}>
-          <div style={{ ...styles.secLabel, color: dm("#999", "#666") }}>The dream</div>
+          <div style={{ ...styles.secLabel, color: dm("#999", "#666"), fontFamily: CAVEAT }}>The dream</div>
           <input
             style={{
               ...styles.dreamField,
@@ -229,7 +231,7 @@ export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
 
         {/* Category */}
         <div style={styles.section}>
-          <div style={{ ...styles.secLabel, color: dm("#999", "#666") }}>Category</div>
+          <div style={{ ...styles.secLabel, color: dm("#999", "#666"), fontFamily: CAVEAT }}>Category</div>
           <div style={styles.catGrid}>
             {CATEGORIES.map((cat) => {
               const isActive = selectedCat === cat.id;
@@ -257,7 +259,7 @@ export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
 
         {/* Source */}
         <div style={styles.section}>
-          <div style={{ ...styles.secLabel, color: dm("#999", "#666") }}>Where'd this come from?</div>
+          <div style={{ ...styles.secLabel, color: dm("#999", "#666"), fontFamily: CAVEAT }}>Where'd this come from?</div>
           <div style={styles.sourceRow}>
             {SOURCES.map((src) => {
               const isActive = selectedSources.has(src.id);
@@ -286,7 +288,7 @@ export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
 
         {/* Photo */}
         <div style={styles.section}>
-          <div style={{ ...styles.secLabel, color: dm("#999", "#666") }}>Add a photo (optional)</div>
+          <div style={{ ...styles.secLabel, color: dm("#999", "#666"), fontFamily: CAVEAT }}>Add a photo (optional)</div>
           {photoUrl ? (
             <div style={{ position: "relative", display: "inline-block" }}>
               <img
@@ -349,8 +351,8 @@ export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
           disabled={!dream.trim()}
           style={{
             ...styles.addBtn,
-            background: dm("#1a1a2e", "#f0eefc"),
-            color: dm("#fffdf8", "#18181c"),
+            background: dm("#2dd4bf", "#0f766e"),
+            color: dm("#0a1020", "#f8fafc"),
             opacity: dream.trim() ? 1 : 0.4,
             cursor: dream.trim() ? "pointer" : "not-allowed",
           }}
@@ -371,6 +373,7 @@ const styles = {
     display: "flex",
     alignItems: "flex-end",
     justifyContent: "center",
+    padding: "8px 8px max(8px, env(safe-area-inset-bottom))",
     fontFamily: "var(--font-sans, system-ui, sans-serif)",
   },
   sheet: {
@@ -379,13 +382,16 @@ const styles = {
     maxWidth: 480,
     borderRadius: "20px 20px 0 0",
     boxShadow: "0 24px 80px rgba(0,0,0,0.35)",
-    paddingBottom: 32,
+    paddingBottom: 18,
+    maxHeight: "calc(82dvh - env(safe-area-inset-bottom))",
+    overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
   },
   dragHandle: {
     width: 40,
     height: 5,
     borderRadius: 3,
-    margin: "14px auto 22px",
+    margin: "10px auto 16px",
   },
   closeBtn: {
     position: "absolute",
@@ -406,7 +412,7 @@ const styles = {
     zIndex: 1,
   },
   headerBand: {
-    padding: "0 22px 18px",
+    padding: "0 20px 14px",
   },
   title: {
     fontSize: 22,
@@ -419,11 +425,11 @@ const styles = {
   },
   divider: {
     height: 0.5,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   section: {
-    padding: "0 22px",
-    marginBottom: 22,
+    padding: "0 20px",
+    marginBottom: 18,
   },
   secLabel: {
     fontSize: 11,
@@ -512,9 +518,9 @@ const styles = {
     padding: 15,
     border: "none",
     borderRadius: 16,
-    fontSize: 15,
-    fontWeight: 500,
-    fontFamily: "inherit",
+    fontSize: 18,
+    fontWeight: 700,
+    fontFamily: CAVEAT,
     transition: "opacity .15s",
     letterSpacing: "0.01em",
   },

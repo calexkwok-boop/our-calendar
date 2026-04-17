@@ -3308,6 +3308,8 @@ function App() {
   });
   const [quickThoughtsHydratedUserId, setQuickThoughtsHydratedUserId] = useState(null);
   const [bucketListHydratedUserId, setBucketListHydratedUserId] = useState(null);
+  const bucketListRemoteSyncRef = useRef(false);
+  const quickThoughtsRemoteSyncRef = useRef(false);
   const [memories, setMemories] = useState([]);
   const [memoriesHydratedUserId, setMemoriesHydratedUserId] = useState(null);
   const [memoryTripRosterById, setMemoryTripRosterById] = useState({});
@@ -19996,6 +19998,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (cancelled) return;
       const mergedThoughts = mergePersistedQuickThoughts(remoteThoughts, localThoughts)
         .filter((t) => !tombstones.has(String(t?.id || '')));
+      quickThoughtsRemoteSyncRef.current = true;
       setQuickThoughts(mergedThoughts);
       writeQuickThoughtsState(user?.id, mergedThoughts);
       void persistRemoteQuickThoughtsState(user?.id, mergedThoughts);
@@ -20008,6 +20011,10 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     const currentQuickThoughtsUserId = String(user?.id || 'guest').trim() || 'guest';
+    if (quickThoughtsRemoteSyncRef.current) {
+      quickThoughtsRemoteSyncRef.current = false;
+      return;
+    }
     if (quickThoughtsHydratedUserId !== currentQuickThoughtsUserId) return;
     writeQuickThoughtsState(user?.id, quickThoughts);
     void persistRemoteQuickThoughtsState(user?.id, quickThoughts);
@@ -20030,6 +20037,7 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
       if (cancelled) return;
       const mergedDreams = mergePersistedBucketList(remoteDreams, localDreams)
         .filter((d) => !bucketTombstones.has(String(d?.id || '')));
+      bucketListRemoteSyncRef.current = true;
       setBucketList(mergedDreams);
       writeBucketListState(user?.id, mergedDreams);
       void persistRemoteBucketListState(user?.id, mergedDreams);
@@ -20042,10 +20050,65 @@ const normalizePublicCalendarRow = (row, memberCount = 0) => ({
 
   useEffect(() => {
     const currentBucketListUserId = String(user?.id || 'guest').trim() || 'guest';
+    if (bucketListRemoteSyncRef.current) {
+      bucketListRemoteSyncRef.current = false;
+      return;
+    }
     if (bucketListHydratedUserId !== currentBucketListUserId) return;
     writeBucketListState(user?.id, bucketList);
     void persistRemoteBucketListState(user?.id, bucketList);
   }, [user?.id, bucketList, bucketListHydratedUserId]);
+
+  useEffect(() => {
+    const ownerUserId = String(user?.id || '').trim();
+    if (!ownerUserId || ownerUserId === 'guest') return undefined;
+
+    let cancelled = false;
+
+    const refreshBucketList = async () => {
+      const localDreams = readBucketListState(user?.id);
+      const bucketTombstones = readBucketListTombstones(user?.id);
+      const remoteDreams = (await readRemoteBucketListState(user?.id))
+        .filter((d) => !bucketTombstones.has(String(d?.id || '')));
+      if (cancelled) return;
+      const mergedDreams = mergePersistedBucketList(remoteDreams, localDreams)
+        .filter((d) => !bucketTombstones.has(String(d?.id || '')));
+      bucketListRemoteSyncRef.current = true;
+      setBucketList(mergedDreams);
+      writeBucketListState(user?.id, mergedDreams);
+      setBucketListHydratedUserId(ownerUserId);
+    };
+
+    const refreshQuickThoughts = async () => {
+      const localThoughts = readQuickThoughtsState(user?.id);
+      const tombstones = readQuickThoughtTombstones(user?.id);
+      const remoteThoughts = (await readRemoteQuickThoughtsState(user?.id))
+        .filter((t) => !tombstones.has(String(t?.id || '')));
+      if (cancelled) return;
+      const mergedThoughts = mergePersistedQuickThoughts(remoteThoughts, localThoughts)
+        .filter((t) => !tombstones.has(String(t?.id || '')));
+      quickThoughtsRemoteSyncRef.current = true;
+      setQuickThoughts(mergedThoughts);
+      writeQuickThoughtsState(user?.id, mergedThoughts);
+      setQuickThoughtsHydratedUserId(ownerUserId);
+    };
+
+    const bucketChannel = supabase
+      .channel(`bucket-list-sync-${ownerUserId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: USER_BUCKET_LIST_TABLE, filter: `owner_user_id=eq.${ownerUserId}` }, refreshBucketList)
+      .subscribe();
+
+    const quickThoughtsChannel = supabase
+      .channel(`quick-thoughts-sync-${ownerUserId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: USER_QUICK_THOUGHTS_TABLE, filter: `owner_user_id=eq.${ownerUserId}` }, refreshQuickThoughts)
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(bucketChannel);
+      supabase.removeChannel(quickThoughtsChannel);
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     try { localStorage.setItem('someday-pin-positions', JSON.stringify(somedayPinPositions)); } catch {}
@@ -27664,6 +27727,7 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             onDeleteThought={deleteQuickThought}
             bucketList={bucketList}
             onAddDream={openAddDreamSheet}
+            onAddEvent={openHomeAddEventModal}
             onPlanFromDream={planFromDream}
             onDeleteDream={deleteBucketDream}
             momentsThisWeek={homeMomentsThisWeek}
@@ -27673,7 +27737,6 @@ return { label: 'Widget', icon: <Plus className="w-4 h-4" />, active: false, dis
             tripSpotlight={homeTripSpotlight}
             memoryCollagePhotos={homeMemoryCollagePhotos}
             onShowCalendarView={openCalendarTab}
-            onAddEvent={openHomeAddEventModal}
             onOpenUpcoming={() => {
               setEventsTabView('upcoming');
               setBottomNavTab('events');
