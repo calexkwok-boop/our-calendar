@@ -329,8 +329,8 @@ const ScrapbookHomeHybrid = ({
               <button
                 type="button"
                 onClick={onAddEvent}
-                className="mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold"
-                style={themeAccentEllieChipButtonStyle}
+                className="mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold font-handwritten text-white shadow-[0_10px_24px_rgba(139,92,246,0.24)] transition-transform hover:scale-[1.01]"
+                style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 52%, #f97316 100%)' }}
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add something

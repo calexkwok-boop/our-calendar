@@ -381,7 +381,7 @@ const GreetingHeader = ({ todayEvents, activeTrips, openSubCalendar, onScrollToT
               type="button"
               onClick={() => onScrollToTodaySchedule?.()}
               className="transition-colors"
-              style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive', fontSize: 18, color: darkMode ? '#e5d9c8' : '#5a4a3a' }}
+              style={{ fontFamily: "'Caveat', cursive", fontSize: 18, color: darkMode ? '#e5d9c8' : '#5a4a3a' }}
             >
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </button>
@@ -452,7 +452,7 @@ const ActiveTripsBanner = ({ trips, openSubCalendar, darkMode }) => (
                 HAPPENING NOW
               </div>
             </div>
-            <div className="font-bold text-lg mb-1" style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive', color: '#1e3a5f' }}>
+            <div className="font-bold text-lg mb-1" style={{ fontFamily: "'Caveat', cursive", color: '#1e3a5f' }}>
               {trip.name}
             </div>
             <div className="text-sm" style={{ color: '#1e3a5f', opacity: 0.8 }}>
@@ -506,7 +506,7 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
           <button
             type="button"
             onClick={goToToday}
-            style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive', fontSize: 20, color: darkMode ? '#e5d9c8' : '#5a4a3a' }}
+            style={{ fontFamily: "'Caveat', cursive", fontSize: 20, color: darkMode ? '#e5d9c8' : '#5a4a3a' }}
           >
             {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </button>
@@ -533,7 +533,7 @@ const CalendarHeader = ({ currentDate, setCurrentDate, calendarView, setCalendar
             onClick={() => setCalendarView(view)}
             className="flex-1 px-2.5 py-1.5 text-xs font-semibold transition-all duration-300 sm:flex-none sm:px-4 sm:py-2 sm:text-sm rounded-xl"
             style={calendarView === view
-              ? { background: darkMode ? 'rgba(255,255,255,0.12)' : '#fff', color: darkMode ? '#e5d9c8' : '#5a4a3a', boxShadow: '0 1px 4px rgba(0,0,0,0.10)', fontFamily: '"Comic Sans MS", "Bradley Hand", cursive' }
+              ? { background: darkMode ? 'rgba(255,255,255,0.12)' : '#fff', color: darkMode ? '#e5d9c8' : '#5a4a3a', boxShadow: '0 1px 4px rgba(0,0,0,0.10)', fontFamily: "'Caveat', cursive" }
               : { color: darkMode ? '#9ca3af' : '#a08060' }
             }
           >
@@ -560,7 +560,7 @@ const DayHeaders = ({ darkMode, accent }) => {
           key={day}
           className="text-center text-xs sm:text-sm py-2 rounded-2xl transition-all"
           style={idx === todayIdx
-            ? { background: darkMode ? 'rgba(180,150,100,0.22)' : 'rgba(245,235,215,0.9)', color: darkMode ? '#e5d9c8' : '#5a4a3a', transform: 'scale(1.05)', fontFamily: '"Comic Sans MS", "Bradley Hand", cursive', fontWeight: 600 }
+            ? { background: darkMode ? 'rgba(180,150,100,0.22)' : 'rgba(245,235,215,0.9)', color: darkMode ? '#e5d9c8' : '#5a4a3a', transform: 'scale(1.05)', fontFamily: "'Caveat', cursive", fontWeight: 600 }
             : { color: darkMode ? '#9ca3af' : '#a08060', fontWeight: 500 }
           }
         >
@@ -598,7 +598,7 @@ const WeekHeaders = ({ currentDate, darkMode, accent }) => {
             key={idx}
             className="text-center text-xs sm:text-sm py-2 rounded-2xl transition-all"
             style={isToday
-              ? { background: darkMode ? 'rgba(180,150,100,0.22)' : 'rgba(245,235,215,0.9)', color: darkMode ? '#e5d9c8' : '#5a4a3a', transform: 'scale(1.05)', fontFamily: '"Comic Sans MS", "Bradley Hand", cursive', fontWeight: 600 }
+              ? { background: darkMode ? 'rgba(180,150,100,0.22)' : 'rgba(245,235,215,0.9)', color: darkMode ? '#e5d9c8' : '#5a4a3a', transform: 'scale(1.05)', fontFamily: "'Caveat', cursive", fontWeight: 600 }
               : { color: darkMode ? '#9ca3af' : '#a08060', fontWeight: 500 }
             }
           >
@@ -676,14 +676,12 @@ const WeekGrid = ({
             boxShadow: isSelected ? '0 12px 28px rgba(0,0,0,0.18)' : undefined,
           }}
           >
-            <div className="text-sm sm:text-base mb-1" style={{ fontWeight: 600, color: isSelected ? '#fff' : isTodayDate ? (darkMode ? '#e5d9c8' : '#5a4a3a') : (darkMode ? '#e5e7eb' : '#6b5a45'), fontFamily: (isTodayDate || isSelected) ? '"Comic Sans MS", "Bradley Hand", cursive' : 'inherit' }}>
+            <div className="text-sm sm:text-base mb-1 font-sans tabular-nums tracking-tight" style={{ fontWeight: 600, color: isSelected ? '#fff' : isTodayDate ? (darkMode ? '#e5d9c8' : '#5a4a3a') : (darkMode ? '#e5e7eb' : '#6b5a45') }}>
               {date.getDate()}
             </div>
             {showBadge && (
               <div className="absolute bottom-0.5 sm:bottom-1 left-1/2 transform -translate-x-1/2">
-                <div className="px-1 sm:px-1.5 py-0.5 rounded-full text-white text-[7px] sm:text-[9px] font-bold shadow-sm" style={{ background: 'linear-gradient(90deg, #c4a882 0%, #a08060 100%)' }}>
-                  {eventCount > 9 ? '9+' : eventCount}
-                </div>
+                <div className="w-2 h-2 rounded-full shadow-sm" style={{ background: '#14b8a6' }} />
               </div>
             )}
           </button>
@@ -712,7 +710,7 @@ const AgendaList = ({ startDate, days = 30, getEventsForDate, getDateKey, onEven
   return (
     <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
       {list.every(row => row.events.length === 0) ? (
-        <div className="text-center py-8 text-sm italic" style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive', color: darkMode ? '#9ca3af' : '#a08060' }}>
+        <div className="text-center py-8 text-sm italic" style={{ fontFamily: "'Caveat', cursive", color: darkMode ? '#9ca3af' : '#a08060' }}>
           Nothing coming up in this range
         </div>
       ) : (
@@ -725,7 +723,7 @@ const AgendaList = ({ startDate, days = 30, getEventsForDate, getDateKey, onEven
               {showHeader && (
                 <div
                   className="sticky top-0 z-10 -mx-1 px-2 py-1 rounded-lg backdrop-blur text-xs font-semibold mb-1"
-                  style={{ background: darkMode ? 'rgba(31,41,55,0.95)' : 'rgba(245,235,215,0.97)', border: '0.5px solid rgba(180,150,100,0.25)', color: darkMode ? '#e5d9c8' : '#5a4a3a', fontFamily: '"Comic Sans MS", "Bradley Hand", cursive' }}
+                  style={{ background: darkMode ? 'rgba(31,41,55,0.95)' : 'rgba(245,235,215,0.97)', border: '0.5px solid rgba(180,150,100,0.25)', color: darkMode ? '#e5d9c8' : '#5a4a3a', fontFamily: "'Caveat', cursive" }}
                 >
                   {row.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                 </div>
@@ -853,7 +851,7 @@ const CalendarGrid = ({
             )}
             
             {/* Date number */}
-            <div className="text-sm sm:text-base mb-1" style={{ fontWeight: 600, color: isSelected ? '#fff' : isTodayDate ? (darkMode ? '#e5d9c8' : '#5a4a3a') : (darkMode ? '#e5e7eb' : '#6b5a45'), fontFamily: (isTodayDate || isSelected) ? '"Comic Sans MS", "Bradley Hand", cursive' : 'inherit' }}>
+            <div className="text-sm sm:text-base mb-1" style={{ fontWeight: 600, color: isSelected ? '#fff' : isTodayDate ? (darkMode ? '#e5d9c8' : '#5a4a3a') : (darkMode ? '#e5e7eb' : '#6b5a45'), fontFamily: (isTodayDate || isSelected) ? "'Caveat', cursive" : 'inherit' }}>
               {date.getDate()}
             </div>
 
@@ -870,9 +868,7 @@ const CalendarGrid = ({
             {/* Event count badge */}
             {showBadge && (
               <div className="absolute bottom-0.5 sm:bottom-1 left-1/2 transform -translate-x-1/2">
-                <div className="px-1 sm:px-1.5 py-0.5 rounded-full text-white text-[7px] sm:text-[9px] font-bold shadow-sm" style={{ background: 'linear-gradient(90deg, #c4a882 0%, #a08060 100%)' }}>
-                  {eventCount > 9 ? '9+' : eventCount}
-                </div>
+                <div className="w-2 h-2 rounded-full shadow-sm" style={{ background: '#14b8a6' }} />
               </div>
             )}
 
@@ -926,7 +922,7 @@ const SelectedDateDetails = ({
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive', fontSize: 20, color: darkMode ? '#e5d9c8' : '#5a4a3a' }}>
+        <h3 style={{ fontFamily: "'Caveat', cursive", fontSize: 20, color: darkMode ? '#e5d9c8' : '#5a4a3a' }}>
           {isSelectedToday
             ? "Today's schedule"
             : selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
@@ -1012,7 +1008,7 @@ const SelectedDateDetails = ({
                 <div className="flex flex-col items-center justify-center w-16 h-16 rounded-2xl shrink-0" style={{ background: darkMode ? 'rgba(180,150,100,0.18)' : 'rgba(245,235,215,0.85)', border: '0.5px solid rgba(180,150,100,0.25)' }}>
                   {event.time ? (
                     <>
-                      <span className="text-xs font-bold" style={{ color: darkMode ? '#e5d9c8' : '#5a4a3a', fontFamily: '"Comic Sans MS", "Bradley Hand", cursive' }}>
+                      <span className="text-xs font-bold" style={{ color: darkMode ? '#e5d9c8' : '#5a4a3a', fontFamily: "'Caveat', cursive" }}>
                         {formatTime(event.time).split(' ')[0]}
                       </span>
                       <span className="text-[10px]" style={{ color: darkMode ? '#b4a080' : '#a08060' }}>
@@ -1020,7 +1016,7 @@ const SelectedDateDetails = ({
                       </span>
                     </>
                   ) : (
-                    <span className="text-xs font-bold" style={{ color: darkMode ? '#e5d9c8' : '#5a4a3a', fontFamily: '"Comic Sans MS", "Bradley Hand", cursive' }}>
+                    <span className="text-xs font-bold" style={{ color: darkMode ? '#e5d9c8' : '#5a4a3a', fontFamily: "'Caveat', cursive" }}>
                       All day
                     </span>
                   )}
@@ -1054,7 +1050,7 @@ const SelectedDateDetails = ({
           })}
         </div>
       ) : (
-        <div className="text-center py-6 italic" style={{ fontFamily: '"Comic Sans MS", "Bradley Hand", cursive', color: darkMode ? '#9ca3af' : '#a08060' }}>
+        <div className="text-center py-6 italic" style={{ fontFamily: "'Caveat', cursive", color: darkMode ? '#9ca3af' : '#a08060' }}>
           Nothing planned for this day
         </div>
       )}
@@ -1063,7 +1059,7 @@ const SelectedDateDetails = ({
       <button
         onClick={() => onAddEvent?.(selectedDate)}
         className="w-full py-3 rounded-2xl font-semibold hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-2"
-        style={{ background: 'linear-gradient(90deg, #c4a882 0%, #a08060 100%)', color: '#fff' }}>
+        style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 52%, #f97316 100%)', color: '#fff' }}>
         <Plus className="w-5 h-5" />
         <span>Add Event</span>
       </button>

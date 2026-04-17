@@ -698,14 +698,12 @@ const WeekGrid = ({
                 : undefined,
           }}
           >
-            <div className="text-sm sm:text-base font-bold mb-1" style={{ color: isSelected ? '#fff' : isTodayDate ? (darkMode ? hexToRgba(accent, 0.9) : accent) : (darkMode ? '#e5e7eb' : '#374151') }}>
+            <div className="text-sm sm:text-base font-bold mb-1 font-sans tabular-nums tracking-tight" style={{ color: isSelected ? '#fff' : isTodayDate ? (darkMode ? hexToRgba(accent, 0.9) : accent) : (darkMode ? '#e5e7eb' : '#374151') }}>
               {date.getDate()}
             </div>
             {showBadge && (
               <div className="absolute bottom-0.5 sm:bottom-1 left-1/2 transform -translate-x-1/2">
-                <div className="px-1 sm:px-1.5 py-0.5 rounded-full text-white text-[7px] sm:text-[9px] font-bold shadow-md" style={{ background: `linear-gradient(90deg, ${hexToRgba(accent, 0.95)} 0%, ${hexToRgba(accent, 0.75)} 100%)` }}>
-                  {eventCount > 9 ? '9+' : eventCount}
-                </div>
+                <div className="w-2 h-2 rounded-full shadow-md" style={{ background: '#14b8a6' }} />
               </div>
             )}
           </button>
@@ -887,9 +885,7 @@ const CalendarGrid = ({
             {/* Event count badge */}
             {showBadge && (
               <div className="absolute bottom-0.5 sm:bottom-1 left-1/2 transform -translate-x-1/2">
-                <div className="px-1 sm:px-1.5 py-0.5 rounded-full text-white text-[7px] sm:text-[9px] font-bold shadow-md" style={{ background: `linear-gradient(90deg, ${hexToRgba(accent, 0.95)} 0%, ${hexToRgba(accent, 0.75)} 100%)` }}>
-                  {eventCount > 9 ? '9+' : eventCount}
-                </div>
+                <div className="w-2 h-2 rounded-full shadow-md" style={{ background: '#14b8a6' }} />
               </div>
             )}
             
@@ -1080,7 +1076,7 @@ const SelectedDateDetails = ({
       <button
         onClick={() => onAddEvent?.(selectedDate)}
         className="w-full py-3 rounded-2xl text-white font-semibold hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-2"
-        style={{ background: `linear-gradient(90deg, ${hexToRgba(accent, 0.95)} 0%, ${hexToRgba(accent, 0.75)} 100%)` }}>
+        style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 52%, #f97316 100%)' }}>
         <Plus className="w-5 h-5" />
         <span>Add Event</span>
       </button>
