@@ -220,7 +220,7 @@ const UnifiedCalendarView = ({
   const accent = activeLayerPageTheme?.accent || '#a855f7';
 
   return (
-    <div className="unified-calendar-view">
+    <div className="unified-calendar-view" style={{ fontFamily: "'Caveat', cursive" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
         .cal-heading { font-family: 'Caveat', cursive; }

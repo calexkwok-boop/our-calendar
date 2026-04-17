@@ -220,7 +220,7 @@ const UnifiedCalendarView = ({
   const accent = activeLayerPageTheme?.accent || '#a855f7';
 
   return (
-    <div className="unified-calendar-view">
+    <div className="unified-calendar-view" style={{ fontFamily: "'Caveat', cursive" }}>
       {/* Persistent Header - Always visible */}
       <GreetingHeader
         todayEvents={todayEvents}
