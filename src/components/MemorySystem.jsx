@@ -201,7 +201,7 @@ const MemoryPlacesAutocomplete = ({ value, onSelect, placeholder, darkMode = fal
           }, 200);
         }}
         placeholder={placeholder || 'Home, Park, Restaurant...'}
-        className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-400 outline-none text-base"
+        className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#C4848A] dark:text-[#D4A5A5] focus:ring-2 focus:ring-[#D4A5A5] outline-none text-base"
         style={{ fontSize: '16px' }}
       />
       {showSuggestions && suggestions.length > 0 && (
@@ -433,10 +433,10 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
       {/* Header */}
       <div className="text-center">
         <div className="text-4xl mb-2">💫</div>
-        <h2 className="text-2xl font-bold text-rose-900 dark:text-rose-100 mb-1.5">
+        <h2 className="text-2xl font-bold text-[#C4848A] dark:text-[#D4A5A5] mb-1.5">
           Your Memories
         </h2>
-        <p className="text-sm text-rose-700/80 dark:text-rose-200/70">
+        <p className="text-sm text-[#C4848A]/80 dark:text-[#D4A5A5]/70">
           {safeMemories.length} special moment{safeMemories.length !== 1 ? 's' : ''} preserved
         </p>
       </div>
@@ -455,7 +455,7 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-2xl px-5 py-3.5 bg-white/70 text-rose-700 font-semibold border border-rose-200 shadow-sm transition-all hover:bg-white dark:bg-slate-900 dark:text-rose-100 dark:border-rose-400/10 dark:hover:bg-slate-800"
+            className="shrink-0 rounded-2xl px-5 py-3.5 bg-white/70 text-[#C4848A] font-semibold border border-rose-200 shadow-sm transition-all hover:bg-white dark:bg-slate-900 dark:text-[#D4A5A5] dark:border-rose-400/10 dark:hover:bg-slate-800"
           >
             Close
           </button>
@@ -466,10 +466,10 @@ const MemoriesGallery = ({ memories, onSelectMemory, onCreateNew, onClose, onTog
       {safeMemories.length === 0 && (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🎉</div>
-          <h3 className="text-xl font-bold text-rose-900 dark:text-rose-100 mb-2">
+          <h3 className="text-xl font-bold text-[#C4848A] dark:text-[#D4A5A5] mb-2">
             No memories yet
           </h3>
-          <p className="text-rose-700/80 dark:text-rose-200/70 mb-6">
+          <p className="text-[#C4848A]/80 dark:text-[#D4A5A5]/70 mb-6">
             Preserve your special moments with photos, highlights, and more!
           </p>
         </div>
@@ -863,13 +863,13 @@ const MemoryBasicsStep = ({ data, onChange, titleError, darkMode }) => {
           value={data.title}
           onChange={(e) => onChange({ ...data, title: e.target.value })}
           placeholder="Emma's 1st Birthday Party"
-          className={`w-full px-4 py-3 rounded-xl border ${titleError ? 'border-rose-400 dark:border-rose-400' : 'border-gray-300 dark:border-gray-600'} 
-                    bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                    focus:ring-2 focus:ring-rose-400 outline-none text-base`}
+          className={`w-full px-4 py-3 rounded-xl border ${titleError ? 'border-[#D4A5A5] dark:border-[#D4A5A5]' : 'border-gray-300 dark:border-gray-600'} 
+                    bg-white dark:bg-gray-800 text-[#C4848A] dark:text-[#D4A5A5]
+                    focus:ring-2 focus:ring-[#D4A5A5] outline-none text-base`}
           style={{ fontSize: '16px' }} // Prevent iOS zoom
         />
         {titleError && (
-          <p className="mt-2 text-sm font-medium text-rose-500 dark:text-rose-400">
+          <p className="mt-2 text-sm font-medium text-[#C4848A] dark:text-[#D4A5A5]">
             {titleError}
           </p>
         )}
@@ -886,8 +886,8 @@ const MemoryBasicsStep = ({ data, onChange, titleError, darkMode }) => {
             value={data.date}
             onChange={(e) => onChange({ ...data, date: e.target.value })}
             className="block w-full max-w-full min-w-0 box-border appearance-none px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
-                      bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                      focus:ring-2 focus:ring-rose-400 outline-none"
+                      bg-white dark:bg-gray-800 text-[#C4848A] dark:text-[#D4A5A5]
+                      focus:ring-2 focus:ring-[#D4A5A5] outline-none"
             style={{ fontSize: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', display: 'block' }}
           />
         </div>
@@ -909,7 +909,7 @@ const MemoryBasicsStep = ({ data, onChange, titleError, darkMode }) => {
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
                   active
                     ? 'bg-[#D4A5A5] text-rose-50 shadow-sm'
-                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-200 dark:hover:bg-rose-900/50'
+                    : 'bg-rose-50 text-[#C4848A] hover:bg-rose-100 dark:bg-rose-950/30 dark:text-[#D4A5A5] dark:hover:bg-rose-900/50'
                 }`}
               >
                 {preset}
@@ -936,8 +936,8 @@ const MemoryBasicsStep = ({ data, onChange, titleError, darkMode }) => {
           placeholder="What made this day special?"
           rows={4}
           className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 
-                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                   focus:ring-2 focus:ring-rose-400 outline-none resize-none text-base"
+                   bg-white dark:bg-gray-800 text-[#C4848A] dark:text-[#D4A5A5]
+                   focus:ring-2 focus:ring-[#D4A5A5] outline-none resize-none text-base"
           style={{ fontSize: '16px' }}
         />
       </div>
@@ -957,8 +957,8 @@ const MemoryBasicsStep = ({ data, onChange, titleError, darkMode }) => {
                 onChange={(e) => updateHighlight(index, e.target.value)}
                 placeholder="Emma's first cake bite was hilarious!"
                 className="flex-1 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 
-                         bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                         focus:ring-2 focus:ring-rose-400 outline-none text-base"
+                         bg-white dark:bg-gray-800 text-[#C4848A] dark:text-[#D4A5A5]
+                         focus:ring-2 focus:ring-[#D4A5A5] outline-none text-base"
                 style={{ fontSize: '16px' }}
               />
               {data.highlights.length > 1 && (
@@ -973,7 +973,7 @@ const MemoryBasicsStep = ({ data, onChange, titleError, darkMode }) => {
         </div>
         <button
           onClick={addHighlight}
-          className="mt-3 text-sm text-rose-700 dark:text-rose-300 font-semibold hover:underline">
+          className="mt-3 text-sm text-[#C4848A] dark:text-[#D4A5A5] font-semibold hover:underline">
           + Add another moment
         </button>
       </div>
@@ -1096,7 +1096,7 @@ const MemoryPhotosStep = ({
                    bg-rose-50/60 dark:bg-rose-950/20 hover:bg-rose-50 dark:hover:bg-rose-950/30
                    transition-all flex flex-col items-center justify-center gap-2">
           <Camera className="w-8 h-8 text-stone-500 dark:text-stone-400" />
-          <span className="font-semibold text-rose-700 dark:text-rose-300">
+          <span className="font-semibold text-[#C4848A] dark:text-[#D4A5A5]">
             Add Photos
           </span>
           <span className="text-sm text-stone-500 dark:text-stone-400">
@@ -1682,10 +1682,10 @@ const CommentsSheet = ({ memory, onClose, newComment, setNewComment, onSubmit, d
       {/* Header */}
       <div className="p-4 border-b border-rose-200 dark:border-rose-700/30">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-bold text-rose-900 dark:text-rose-100">
+          <h3 className="text-lg font-bold text-[#C4848A] dark:text-[#D4A5A5]">
             Comments ({memory.comments?.length || 0})
           </h3>
-          <button onClick={onClose} className="p-2 text-rose-400 hover:text-rose-600 dark:hover:text-rose-200">
+          <button onClick={onClose} className="p-2 text-[#D4A5A5] hover:text-[#C4848A] dark:hover:text-[#D4A5A5]">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -1701,12 +1701,12 @@ const CommentsSheet = ({ memory, onClose, newComment, setNewComment, onSubmit, d
             </div>
             <div className="flex-1">
               <div className="bg-rose-100/80 dark:bg-rose-900/25 rounded-2xl px-4 py-2 border border-rose-200 dark:border-rose-700/25">
-                <p className="font-semibold text-sm text-rose-900 dark:text-rose-100">
+                <p className="font-semibold text-sm text-[#C4848A] dark:text-[#D4A5A5]">
                   {comment.userName}
                 </p>
-                <p className="text-rose-800/90 dark:text-rose-200/80">{comment.text}</p>
+                <p className="text-[#C4848A]/90 dark:text-[#D4A5A5]/80">{comment.text}</p>
               </div>
-              <p className="text-xs text-rose-500/80 mt-1 ml-4">
+              <p className="text-xs text-[#C4848A]/70 mt-1 ml-4">
                 {new Date(comment.createdAt).toLocaleDateString()}
               </p>
             </div>
@@ -1714,7 +1714,7 @@ const CommentsSheet = ({ memory, onClose, newComment, setNewComment, onSubmit, d
         ))}
         
         {(!memory.comments || memory.comments.length === 0) && (
-          <div className="text-center py-8 text-rose-700/70 dark:text-rose-200/70">
+          <div className="text-center py-8 text-rose-700/70 dark:text-[#D4A5A5]/70">
             No comments yet. Be the first!
           </div>
         )}
@@ -1730,7 +1730,7 @@ const CommentsSheet = ({ memory, onClose, newComment, setNewComment, onSubmit, d
             onKeyPress={(e) => e.key === 'Enter' && onSubmit()}
             placeholder="Add a comment..."
             className="flex-1 px-4 py-2 rounded-full border border-rose-200 dark:border-rose-700/30 
-                     bg-white dark:bg-rose-950/20 text-rose-900 dark:text-rose-100 outline-none text-base"
+                     bg-white dark:bg-rose-950/20 text-[#C4848A] dark:text-[#D4A5A5] outline-none text-base"
             style={{ fontSize: '16px' }}
           />
           <button
@@ -1757,10 +1757,10 @@ const CreateMemoryPrompt = ({ event, onCreateMemory, onDismiss }) => (
     <div className="flex items-start gap-3 mb-3">
       <Sparkles className="w-6 h-6 text-[#C4848A] dark:text-[#D4A5A5] shrink-0 mt-1" />
       <div className="flex-1">
-        <h4 className="font-bold text-rose-900 dark:text-rose-100 mb-1">
+        <h4 className="font-bold text-[#C4848A] dark:text-[#D4A5A5] mb-1">
           Turn this into a Memory?
         </h4>
-        <p className="text-sm text-rose-700/80 dark:text-rose-200/70">
+        <p className="text-sm text-[#C4848A]/80 dark:text-[#D4A5A5]/70">
           Preserve "{event.title}" forever with photos, highlights, and more!
         </p>
       </div>
@@ -1794,3 +1794,4 @@ export {
   CreateMemoryPrompt,
   MemoryThumbnail,
 };
+
