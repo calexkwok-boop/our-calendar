@@ -142,13 +142,13 @@ function TrailModal({ trail, photoUrl, isSaved, onSave, onPlanTrip, onClose, dar
                       : "bg-teal-500 border-transparent text-white hover:bg-teal-600"
                 }`}
               >
-                {isSaved ? "✓ In someday list" : "+ Someday list"}
+                {isSaved ? "✓ Someday" : "+ Someday"}
               </button>
               <button
                 onClick={onPlanTrip}
                 className={`flex-1 rounded-2xl py-3 text-sm font-['Caveat'] font-bold transition-all duration-200 border ${dm ? 'bg-violet-400/10 border-violet-400/25 text-violet-400 hover:bg-violet-400/20' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
               >
-                Plan Trip
+                + Plan
               </button>
             </div>
           </div>
@@ -229,7 +229,7 @@ function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen, onPlanTrip, dark
                   : "bg-teal-50 border-teal-300 text-teal-700 hover:bg-teal-100"
             }`}
           >
-            {isSaved ? "✓ In someday list" : "+ Someday list"}
+            {isSaved ? "✓ Someday" : "+ Someday"}
           </button>
           <button
             onClick={(e) => {
@@ -238,7 +238,7 @@ function TrailCard({ trail, photoUrl, onSave, savedIds, onOpen, onPlanTrip, dark
             }}
             className={`flex-1 rounded-xl py-2 text-xs font-['Caveat'] font-bold transition-all duration-200 border ${dm ? 'bg-violet-400/8 border-violet-400/20 text-violet-400 hover:bg-violet-400/15' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
           >
-            Plan trip
+            + Plan
           </button>
         </div>
       </div>

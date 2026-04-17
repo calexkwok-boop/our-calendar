@@ -80,14 +80,14 @@ function MovieDetailSheet({ movie, open, onClose, onAddToSomeday, onPlanEvent, s
               onClick={handleSomeday}
               className={`flex-1 py-3 rounded-2xl text-sm font-handwritten font-bold transition-all active:opacity-70 ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`}
             >
-              {inSomeday ? "✓ In someday list" : "+ Someday list"}
+              {inSomeday ? "✓ Someday" : "+ Someday"}
             </button>
-            <button
-              onClick={() => { onClose(); onPlanEvent?.({ title: `Movie night: ${movie.title}` }); }}
-            className="flex-1 py-3 rounded-2xl text-sm font-['Caveat'] font-bold bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25 active:opacity-70"
-            >
-              Plan movie night
-            </button>
+        <button
+          onClick={() => { onClose(); onPlanEvent?.({ title: `Movie night: ${movie.title}` }); }}
+          className="flex-1 py-3 rounded-2xl text-sm font-['Caveat'] font-bold bg-violet-500/10 dark:bg-violet-400/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 dark:border-violet-400/25 active:opacity-70"
+        >
+          + Plan
+        </button>
           </div>
         </div>
       </div>
@@ -152,7 +152,7 @@ function FeaturedBanner({ movie, onTap, onAddToSomeday, somedays }) {
             onClick={handleSomeday}
             className={`flex-shrink-0 text-sm font-handwritten font-bold px-3.5 py-2 rounded-xl transition-all active:opacity-70 ${inSomeday ? "bg-teal-600 text-white" : "bg-teal-400 text-gray-900"}`}
           >
-            {inSomeday ? "✓ In someday list" : "+ Someday list"}
+          {inSomeday ? "✓ Someday" : "+ Someday"}
           </button>
         </div>
       </div>

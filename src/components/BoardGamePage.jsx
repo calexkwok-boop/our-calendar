@@ -355,7 +355,7 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
                 transition: 'all .2s',
               }}
             >
-              {inSomeday ? '✓ In someday list' : '+ Someday list'}
+              {inSomeday ? '✓ Someday' : '+ Someday'}
             </button>
             <button
               onClick={() => {
@@ -379,7 +379,7 @@ const GameCard = ({ game, onAddEvent, onAddToSomeday, darkMode, stagger, initInS
                 transition: 'all .2s',
               }}
             >
-              {addedToNight ? '✓ Added!' : <span style={{ fontFamily: "'Caveat', cursive" }}>📅 Game night</span>}
+              {addedToNight ? '✓ Added!' : '+ Plan'}
             </button>
           </div>
         </div>
