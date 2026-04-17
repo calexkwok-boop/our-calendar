@@ -103,9 +103,11 @@ export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
   const [selectedCat, setSelectedCat] = useState("travel");
   const [selectedSources, setSelectedSources] = useState(new Set());
   const [photoUrl, setPhotoUrl] = useState("");
+  const [dragY, setDragY] = useState(0);
 
   const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
+  const dragStartYRef = useRef(null);
 
   const dm = (light, dark) => (darkMode ? dark : light);
 
@@ -135,6 +137,24 @@ export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
     });
   };
 
+  const handleDragStart = (clientY) => {
+    dragStartYRef.current = clientY;
+    setDragY(0);
+  };
+
+  const handleDragMove = (clientY) => {
+    if (dragStartYRef.current == null) return;
+    const delta = Math.max(0, clientY - dragStartYRef.current);
+    setDragY(delta);
+  };
+
+  const handleDragEnd = () => {
+    const shouldDismiss = dragY > 90;
+    dragStartYRef.current = null;
+    setDragY(0);
+    if (shouldDismiss) onDismiss?.();
+  };
+
   return (
     <div style={styles.overlay} onClick={() => onDismiss?.()}>
       <div
@@ -142,6 +162,8 @@ export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
           ...styles.sheet,
           background: dm("#fffdf8", "#18181c"),
           border: `1px solid ${dm("rgba(15,23,42,0.08)", "rgba(255,255,255,0.08)")}`,
+          transform: `translateY(${dragY}px)`,
+          transition: dragStartYRef.current ? "none" : "transform 180ms ease",
         }}
         onClick={(event) => event.stopPropagation()}
       >
@@ -162,6 +184,18 @@ export default function AddDreamSheet({ onAdd, onDismiss, darkMode = false }) {
           style={{
             ...styles.dragHandle,
             background: dm("rgba(15,23,42,0.15)", "rgba(255,255,255,0.15)"),
+          }}
+          onTouchStart={(e) => handleDragStart(e.touches[0].clientY)}
+          onTouchMove={(e) => handleDragMove(e.touches[0].clientY)}
+          onTouchEnd={handleDragEnd}
+          onMouseDown={(e) => handleDragStart(e.clientY)}
+          onMouseMove={(e) => {
+            if (dragStartYRef.current == null) return;
+            handleDragMove(e.clientY);
+          }}
+          onMouseUp={handleDragEnd}
+          onMouseLeave={() => {
+            if (dragStartYRef.current != null) handleDragEnd();
           }}
         />
 

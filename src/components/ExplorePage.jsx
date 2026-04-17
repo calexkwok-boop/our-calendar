@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import MoviesPage from "./MoviesPage";
 import BoardGamePage from "./BoardGamePage";
 import RestaurantPage from "./RestaurantPage";
@@ -34,6 +34,55 @@ const TAG_STYLES = {
   Restaurants: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
   Products:    "bg-violet-500/10 text-violet-600 dark:text-violet-400",
 };
+
+function useSwipeDownSheet(onClose, open) {
+  const [dragY, setDragY] = useState(0);
+  const dragStartYRef = useRef(null);
+  const dragDistanceRef = useRef(0);
+
+  const handleStart = (clientY) => {
+    dragStartYRef.current = clientY;
+    dragDistanceRef.current = 0;
+    setDragY(0);
+  };
+
+  const handleMove = (clientY) => {
+    if (dragStartYRef.current == null) return;
+    const delta = Math.max(0, clientY - dragStartYRef.current);
+    dragDistanceRef.current = delta;
+    setDragY(delta);
+  };
+
+  const handleEnd = () => {
+    const shouldClose = dragDistanceRef.current > 90;
+    dragStartYRef.current = null;
+    dragDistanceRef.current = 0;
+    setDragY(0);
+    if (shouldClose) onClose?.();
+  };
+
+  return {
+    sheetStyle: {
+      transform: open ? `translateY(${dragY}px)` : undefined,
+      transition: dragStartYRef.current ? "none" : "transform 180ms ease",
+    },
+    handleProps: {
+      onTouchStart: (e) => handleStart(e.touches[0].clientY),
+      onTouchMove: (e) => handleMove(e.touches[0].clientY),
+      onTouchEnd: handleEnd,
+      onMouseDown: (e) => handleStart(e.clientY),
+      onMouseMove: (e) => {
+        if (dragStartYRef.current == null) return;
+        handleMove(e.clientY);
+      },
+      onMouseUp: handleEnd,
+      onMouseLeave: () => {
+        if (dragStartYRef.current != null) handleEnd();
+      },
+      style: { touchAction: "none", cursor: "grab" },
+    },
+  };
+}
 
 function interleavePosts(friends, movies, community) {
   const result = [];
@@ -260,6 +309,8 @@ function ToggleRow({ sourceKey, config, enabled, onToggle }) {
 }
 
 function FilterDrawer({ open, sources, onToggle, onClose }) {
+  const { sheetStyle, handleProps } = useSwipeDownSheet(onClose, open);
+
   useEffect(() => {
     const handler = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handler);
@@ -279,8 +330,8 @@ function FilterDrawer({ open, sources, onToggle, onClose }) {
   return (
     <>
       <div onClick={onClose} className={`fixed inset-0 z-[10002] bg-black/50 transition-opacity duration-200 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} />
-      <div className={`fixed bottom-0 left-0 right-0 z-[10002] max-w-lg mx-auto bg-white dark:bg-[#131c2e] rounded-t-3xl border-t border-stone-200 dark:border-white/[0.06] pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+2.5rem))] transition-transform duration-300 ease-out ${open ? "translate-y-0" : "translate-y-full"}`}>
-        <div className="w-9 h-1 bg-stone-200 dark:bg-white/10 rounded-full mx-auto mt-3 mb-4" />
+      <div className={`fixed bottom-0 left-0 right-0 z-[10002] max-w-lg mx-auto bg-white dark:bg-[#131c2e] rounded-t-3xl border-t border-stone-200 dark:border-white/[0.06] pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+2.5rem))] transition-transform duration-300 ease-out ${open ? "translate-y-0" : "translate-y-full"}`} style={{ ...sheetStyle }}>
+        <div {...handleProps} className="w-9 h-1 bg-stone-200 dark:bg-white/10 rounded-full mx-auto mt-3 mb-4" style={handleProps.style} />
         <h2 className="font-['Caveat',cursive] text-2xl font-semibold text-gray-900 dark:text-gray-100 px-5 pb-4">Feed settings</h2>
         <div className="px-5 mb-5">
           <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 mb-2.5">Social</p>

@@ -150,12 +150,62 @@ const Stars = ({ rating, size = 12 }) => {
 };
 
 // ─── Restaurant Detail Sheet ──────────────────────────────────────────────────
+function useSwipeDownSheet(onClose) {
+  const [dragY, setDragY] = useState(0);
+  const dragStartYRef = useRef(null);
+  const dragDistanceRef = useRef(0);
+
+  const handleStart = (clientY) => {
+    dragStartYRef.current = clientY;
+    dragDistanceRef.current = 0;
+    setDragY(0);
+  };
+
+  const handleMove = (clientY) => {
+    if (dragStartYRef.current == null) return;
+    const delta = Math.max(0, clientY - dragStartYRef.current);
+    dragDistanceRef.current = delta;
+    setDragY(delta);
+  };
+
+  const handleEnd = () => {
+    const shouldClose = dragDistanceRef.current > 90;
+    dragStartYRef.current = null;
+    dragDistanceRef.current = 0;
+    setDragY(0);
+    if (shouldClose) onClose?.();
+  };
+
+  return {
+    sheetStyle: {
+      transform: `translateY(${dragY}px)`,
+      transition: dragStartYRef.current ? 'none' : 'transform 180ms ease',
+    },
+    handleProps: {
+      onTouchStart: (e) => handleStart(e.touches[0].clientY),
+      onTouchMove: (e) => handleMove(e.touches[0].clientY),
+      onTouchEnd: handleEnd,
+      onMouseDown: (e) => handleStart(e.clientY),
+      onMouseMove: (e) => {
+        if (dragStartYRef.current == null) return;
+        handleMove(e.clientY);
+      },
+      onMouseUp: handleEnd,
+      onMouseLeave: () => {
+        if (dragStartYRef.current != null) handleEnd();
+      },
+      style: { touchAction: 'none', cursor: 'grab' },
+    },
+  };
+}
+
 const RestaurantDetailSheet = ({ restaurant, onAddEvent, onSaveToSomeday, onClose, savedIds, darkMode }) => {
   const [saved, setSaved] = useState(savedIds.has(restaurant.id));
   const pbg = darkMode ? '#131c2e' : '#fff';
   const tp  = darkMode ? '#f1f5f9' : '#111827';
   const ts  = darkMode ? '#6b7280' : '#9ca3af';
   const bw  = darkMode ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
+  const { sheetStyle, handleProps } = useSwipeDownSheet(onClose);
 
   const bgGradient = darkMode
     ? 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(99,102,241,0.03))'
@@ -167,11 +217,11 @@ const RestaurantDetailSheet = ({ restaurant, onAddEvent, onSaveToSomeday, onClos
       onClick={onClose}
     >
       <div
-        style={{ width: '100%', maxWidth: 480, background: pbg, borderRadius: '24px 24px 0 0', maxHeight: '88vh', overflowY: 'auto', borderTop: `1px solid ${bw}`, paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}
+        style={{ width: '100%', maxWidth: 480, background: pbg, borderRadius: '24px 24px 0 0', maxHeight: '88vh', overflowY: 'auto', borderTop: `1px solid ${bw}`, paddingBottom: 'calc(80px + env(safe-area-inset-bottom))', ...sheetStyle }}
         onClick={e => e.stopPropagation()}
       >
         {/* Drag handle */}
-        <div style={{ width: 36, height: 4, background: darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb', borderRadius: 3, margin: '12px auto 0' }} />
+        <div {...handleProps} style={{ width: 36, height: 4, background: darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb', borderRadius: 3, margin: '12px auto 0', ...handleProps.style }} />
 
         {/* Hero */}
         <div style={{ width: '100%', height: 200, background: bgGradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 72, position: 'relative' }}>
@@ -671,6 +721,7 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
   const [submitError, setSubmitError] = useState('');
   const [addressSuggestions, setAddressSuggestions] = useState([]);
   const [addressSuggesting, setAddressSuggesting] = useState(false);
+  const { sheetStyle, handleProps } = useSwipeDownSheet(onClose);
   const [form, setForm] = useState({
     restaurant_name: '',
     restaurant_image: '',
@@ -869,10 +920,10 @@ const PostRestaurantModal = ({ onClose, onSubmit, darkMode, apiKey }) => {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', overflow: 'hidden', overscrollBehavior: 'contain' }} onClick={onClose}>
       <div
-        style={{ width: '100%', maxWidth: 560, background: pbg, borderRadius: '24px 24px 0 0', maxHeight: '88vh', overflowY: 'auto', overscrollBehavior: 'contain', borderTop: `1px solid ${bw}`, paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}
+        style={{ width: '100%', maxWidth: 560, background: pbg, borderRadius: '24px 24px 0 0', maxHeight: '88vh', overflowY: 'auto', overscrollBehavior: 'contain', borderTop: `1px solid ${bw}`, paddingBottom: 'calc(28px + env(safe-area-inset-bottom))', ...sheetStyle }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ width: 36, height: 4, background: darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb', borderRadius: 3, margin: '12px auto 0' }} />
+        <div {...handleProps} style={{ width: 36, height: 4, background: darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb', borderRadius: 3, margin: '12px auto 0', ...handleProps.style }} />
         <div style={{ padding: '18px 20px 22px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
             <div>

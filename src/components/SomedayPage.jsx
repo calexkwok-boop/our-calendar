@@ -40,6 +40,55 @@ const NOTE_COLORS = {
   green:  { light: { bg: '#dcfce7', fold: '#86efac', text: '#14532d' }, dark: { bg: '#0a2010', fold: '#15803d', text: '#bbf7d0' } },
 };
 
+function useSwipeDownSheet(onClose) {
+  const [dragY, setDragY] = useState(0);
+  const dragStartYRef = useRef(null);
+  const dragDistanceRef = useRef(0);
+
+  const handleStart = (clientY) => {
+    dragStartYRef.current = clientY;
+    dragDistanceRef.current = 0;
+    setDragY(0);
+  };
+
+  const handleMove = (clientY) => {
+    if (dragStartYRef.current == null) return;
+    const delta = Math.max(0, clientY - dragStartYRef.current);
+    dragDistanceRef.current = delta;
+    setDragY(delta);
+  };
+
+  const handleEnd = () => {
+    const shouldClose = dragDistanceRef.current > 90;
+    dragStartYRef.current = null;
+    dragDistanceRef.current = 0;
+    setDragY(0);
+    if (shouldClose) onClose?.();
+  };
+
+  return {
+    sheetStyle: {
+      transform: `translateY(${dragY}px)`,
+      transition: dragStartYRef.current ? 'none' : 'transform 180ms ease',
+    },
+    handleProps: {
+      onTouchStart: (e) => handleStart(e.touches[0].clientY),
+      onTouchMove: (e) => handleMove(e.touches[0].clientY),
+      onTouchEnd: handleEnd,
+      onMouseDown: (e) => handleStart(e.clientY),
+      onMouseMove: (e) => {
+        if (dragStartYRef.current == null) return;
+        handleMove(e.clientY);
+      },
+      onMouseUp: handleEnd,
+      onMouseLeave: () => {
+        if (dragStartYRef.current != null) handleEnd();
+      },
+      style: { touchAction: 'none', cursor: 'grab' },
+    },
+  };
+}
+
 const PIN_COLORS = {
   teal:   { light: '#0d9488', dark: '#2dd4bf' },
   purple: { light: '#7c3aed', dark: '#c084fc' },
@@ -221,7 +270,7 @@ function AddSheet({ onClose, onAdd, darkMode }) {
   // sticker fields
   const [sticker, setSticker]         = useState('⭐');
   const [stickerSize, setStickerSize] = useState('medium');
-  const labelPresets = ['MOVIES', 'My Wishlist', 'This Summer', 'Bucket List', 'Date Night', 'Trips'];
+  const labelPresets = ['MOVIES', 'My Wishlist', 'Date Night', 'Trips'];
 
   const sheetBg  = darkMode ? '#131c2e' : '#ffffff';
   const inputBg  = darkMode ? 'rgba(255,255,255,0.06)' : '#f8f7f2';
@@ -230,6 +279,7 @@ function AddSheet({ onClose, onAdd, darkMode }) {
   const ts       = darkMode ? '#4a5568' : '#9ca3af';
   const divider  = darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece4';
   const inputStyle = { background: inputBg, border: `1px solid ${inputBdr}`, borderRadius: 12, padding: '10px 13px', fontFamily: CAVEAT, fontSize: 16, color: tp, outline: 'none', width: '100%' };
+  const { sheetStyle, handleProps } = useSwipeDownSheet(onClose);
 
   function pillStyle(active) {
     return { flex: 1, padding: '7px 4px', borderRadius: 12, border: `1px solid ${active ? '#2dd4bf' : inputBdr}`, background: active ? (darkMode ? 'rgba(45,212,191,0.1)' : '#f0fdfb') : 'transparent', color: active ? (darkMode ? '#2dd4bf' : '#0d9488') : ts, fontFamily: CAVEAT, fontSize: 14, cursor: 'pointer' };
@@ -274,9 +324,13 @@ function AddSheet({ onClose, onAdd, darkMode }) {
           maxHeight: 'calc(100dvh - 24px - env(safe-area-inset-bottom))',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
+          ...sheetStyle,
         }}
       >
-        <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 18px' }} />
+        <div
+          {...handleProps}
+          style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 18px', ...handleProps.style }}
+        />
         <p style={{ fontFamily: CAVEAT, fontSize: 24, fontWeight: 700, color: tp, marginBottom: 16 }}>Pin something new</p>
 
         {/* Type selector — 2×2 grid */}
@@ -337,7 +391,7 @@ function AddSheet({ onClose, onAdd, darkMode }) {
         {/* ── Label fields ── */}
         {type === 'label' && (
           <>
-            <input value={labelText} onChange={e => setLabelText(e.target.value)} placeholder="MOVIES · My Wishlist · This Summer" style={{ ...inputStyle, marginBottom: 12 }} />
+            <input value={labelText} onChange={e => setLabelText(e.target.value)} placeholder="MOVIES · My Wishlist · Date Night" style={{ ...inputStyle, marginBottom: 12 }} />
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
               {labelPresets.map((preset) => {
@@ -449,11 +503,12 @@ function DetailSheet({ pin, onClose, onConvertToEvent, onConvertToTrip, onMarkDo
   const ts      = darkMode ? '#4a5568' : '#9ca3af';
   const divider = darkMode ? 'rgba(255,255,255,0.05)' : '#f0ece4';
   const secBg   = darkMode ? 'rgba(255,255,255,0.04)' : '#f8f7f2';
+  const { sheetStyle, handleProps } = useSwipeDownSheet(onClose);
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10020, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '20px 18px max(128px, calc(env(safe-area-inset-bottom) + 128px))', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}` }}>
-        <div style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 16px' }} />
+      <div onClick={e => e.stopPropagation()} style={{ background: sheetBg, borderRadius: '24px 24px 0 0', padding: '20px 18px max(128px, calc(env(safe-area-inset-bottom) + 128px))', width: '100%', maxWidth: 480, margin: '0 auto', borderTop: `1px solid ${divider}`, ...sheetStyle }}>
+        <div {...handleProps} style={{ width: 36, height: 4, borderRadius: 2, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 auto 16px', ...handleProps.style }} />
 
         {pin.type === 'photo' && pin.imageUrl && (
           <img src={pin.imageUrl} alt={pin.label} style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 16, marginBottom: 14 }} />

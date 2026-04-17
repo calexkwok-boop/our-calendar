@@ -631,51 +631,6 @@ const ScrapbookHomeHybrid = ({
           )}
         </div>
 
-        {/* Mini Journey Card (under Moments) */}
-        <div id="home-mini-journey" className="rounded-[20px] border border-white/50 dark:border-white/10 bg-white/90 dark:bg-white/[0.05] p-3 shadow-sm">
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Journey</div>
-            {typeof onOpenJourney === 'function' && (
-              <button
-                onClick={onOpenJourney}
-                className="shrink-0 rounded-xl px-2.5 py-1 text-[11px] font-semibold"
-                style={themeAccentEllieChipButtonStyle}
-              >
-                Open
-              </button>
-            )}
-          </div>
-          {primaryJourneyGoal ? (
-            <div className="flex items-start gap-3">
-              <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{primaryJourneyGoal.title}</div>
-                <div className="mt-1 text-xs text-gray-600 dark:text-gray-300 truncate">
-                  {primaryJourneyProgressText || 'Keep going. Progress adds up.'}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <span className="rounded-full bg-white/90 dark:bg-white/[0.08] px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:text-gray-200">
-                    {primaryJourneyStreak} day streak
-                  </span>
-                  <span className="rounded-full bg-white/90 dark:bg-white/[0.08] px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:text-gray-200">
-                    {primaryJourneyLoggedToday ? 'Logged today' : 'Not logged yet'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-start gap-3">
-              <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">Start a goal</div>
-                <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                  Track one simple habit or outcome and build momentum.
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
         <div className="rounded-[24px] border border-amber-900/10 bg-white/70 px-4 py-3 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-black/20 sm:px-6 sm:py-4">
           <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-900/55 dark:text-amber-100/55">
             {(yearStats.year || new Date().getFullYear())} so far
