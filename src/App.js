@@ -1846,6 +1846,13 @@ const readCachedProfilePhotoUrl = (userLike) => {
   }
   return '';
 };
+const getStableAvatarPublicUrl = (userLike) => {
+  const userId = String(typeof userLike === 'object' && userLike
+    ? userLike?.id
+    : userLike || '').trim();
+  if (!userId || !SUPABASE_URL) return '';
+  return normalizeProfilePhotoUrl(`${SUPABASE_URL}/storage/v1/object/public/${AVATAR_BUCKET}/${normalizeStorageObjectPath(`${userId}/avatar`)}`);
+};
 const writeCachedProfilePhotoUrl = (userLike, photoUrl) => {
   if (typeof window === 'undefined') return;
   try {
@@ -1874,6 +1881,7 @@ const getUserProfilePhotoUrl = (authUser) => {
     ]))
     : [];
   const candidates = [
+    getStableAvatarPublicUrl(authUser),
     metadata?.avatar_url,
     metadata?.picture,
     metadata?.photo_url,
@@ -1902,6 +1910,7 @@ const mergeAuthUserPreservingProfilePhoto = (nextAuthUser, previousAuthUser, pre
 
   const fallbackPhotoUrl = String(
     preservedPhotoUrl
+    || getStableAvatarPublicUrl(nextAuthUser?.id || previousAuthUser?.id || '')
     || getUserProfilePhotoUrl(previousAuthUser)
     || readCachedProfilePhotoUrl(nextAuthUser?.id || previousAuthUser?.id || '')
     || ''
@@ -9434,6 +9443,7 @@ useEffect(() => {
   };
   const currentUserProfilePhotoUrl = String(
     getUserProfilePhotoUrl(user)
+    || getStableAvatarPublicUrl(user?.id)
     || profilePhotoOverrideUrl
     || preservedProfilePhotoUrlRef.current
     || readCachedProfilePhotoUrl(user)
@@ -9456,6 +9466,7 @@ useEffect(() => {
     const cachedPhotoUrl = String(
       readCachedProfilePhotoUrl(user)
       || readCachedProfilePhotoUrl(userId)
+      || getStableAvatarPublicUrl(userId)
       || preservedProfilePhotoUrlRef.current
       || ''
     ).trim();

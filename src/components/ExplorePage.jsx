@@ -47,17 +47,6 @@ function interleavePosts(friends, movies, community) {
   return result;
 }
 
-function SourceTag({ tag, onClick }) {
-  return (
-    <span
-      onClick={onClick}
-      className={`text-[10px] font-medium px-2 py-0.5 rounded-full tracking-wide flex-shrink-0 ${onClick ? "cursor-pointer active:opacity-70" : ""} ${TAG_STYLES[tag] || "bg-stone-100 dark:bg-white/10 text-stone-500 dark:text-white/50"}`}
-    >
-      {tag}
-    </span>
-  );
-}
-
 function CardHeader({ post, onPageTap }) {
   const tappable = !!onPageTap && !post.avatar;
   return (
@@ -77,7 +66,6 @@ function CardHeader({ post, onPageTap }) {
         </p>
         <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-0.5">{post.time}</p>
       </div>
-      <SourceTag tag={post.tag} onClick={tappable ? () => onPageTap(post.type) : undefined} />
     </div>
   );
 }
@@ -146,7 +134,6 @@ function MovieCard({ movie, onAddToSomeday, onRemoveFromSomeday, onPageTap, onPl
           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:text-teal-600 dark:hover:text-teal-400 transition-colors" onClick={() => onPageTap?.("movies")}>Movies</p>
           <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-0.5">Community pick</p>
         </div>
-        <SourceTag tag="Movies" onClick={() => onPageTap?.("movies")} />
       </div>
       <div className="flex border-t border-stone-100 dark:border-white/[0.04] cursor-pointer" onClick={() => setExpanded(v => !v)}>
         <div className="w-[72px] flex-shrink-0 bg-purple-500/10">
