@@ -406,17 +406,65 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
     <div className="min-h-screen bg-[#faf8f3] dark:bg-[#0e1520] pb-28">
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap'); .font-handwritten { font-family: 'Caveat', cursive; }`}</style>
 
-      {/* ── Top bar ── */}
-      <div className="bg-white dark:bg-[#131c2e] border-b border-stone-200 dark:border-white/[0.05] px-4 pt-5 pb-3 sticky top-0 z-30">
-        <div className="flex items-center gap-3 mb-3">
+      {/* ── Hero ── */}
+      <div className={`relative mx-4 mt-4 mb-4 rounded-3xl p-8 overflow-hidden border bg-gradient-to-br ${
+        darkMode
+          ? 'from-[#0f1a2e] via-[#1a1535] to-[#0e1520] border-white/5'
+          : 'from-slate-50 via-violet-50 to-slate-50 border-violet-100'
+      }`} style={{
+        boxShadow: darkMode ? '0 18px 40px rgba(0,0,0,0.32)' : '0 16px 36px rgba(124,58,237,0.08)',
+      }}>
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'radial-gradient(ellipse 60% 80% at 80% 20%, rgba(167,139,250,0.08), transparent)',
+        }} />
+        <div style={{
+          position: 'absolute', right: 24, top: 16,
+          fontSize: 96, opacity: 0.08, transform: 'rotate(12deg)',
+          userSelect: 'none', pointerEvents: 'none', lineHeight: 1,
+        }}>
+          🎬
+        </div>
+        {onBack && (
           <button
             onClick={onBack}
-            className="w-9 h-9 rounded-xl bg-stone-100 dark:bg-white/5 flex items-center justify-center text-gray-600 dark:text-gray-300 active:opacity-70 flex-shrink-0"
+            aria-label="Go back"
+            className="absolute left-4 top-4 w-10 h-10 rounded-xl flex items-center justify-center active:opacity-70 backdrop-blur-sm"
+            style={{
+              background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.72)',
+              border: darkMode ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(168,85,247,0.16)',
+              color: darkMode ? 'rgb(226,232,240)' : 'rgb(75,85,99)',
+            }}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
               <path d="M11 4l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
+        )}
+        <h1 className="font-handwritten relative z-10" style={{
+          fontSize: 48, fontWeight: 700, lineHeight: 1.1,
+          margin: '24px 0 8px',
+          background: darkMode
+            ? 'linear-gradient(to right, #f1f5f9, #c084fc)'
+            : 'linear-gradient(to right, #3b0764, #7c3aed)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}>
+          Lights, camera
+        </h1>
+        <p className="relative z-10" style={{
+          fontSize: 14, lineHeight: 1.6, margin: 0,
+          color: darkMode ? 'rgba(203,213,225,0.7)' : 'rgba(107,114,128,0.9)',
+          maxWidth: 300,
+        }}>
+          Browse what's popular, find your next watch, and save movies to your Someday List.
+        </p>
+      </div>
+
+      {/* ── Top bar ── */}
+      <div className="bg-white dark:bg-[#131c2e] border-b border-stone-200 dark:border-white/[0.05] px-4 pt-5 pb-3 sticky top-0 z-30">
+        <div className="flex items-center gap-3 mb-3">
           <div>
             <h1 className="font-handwritten text-3xl font-bold text-gray-900 dark:text-gray-100 leading-tight">Movies</h1>
             <p className="text-[11px] text-gray-400 dark:text-gray-600">
@@ -462,52 +510,7 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent, darkMo
             <button onClick={() => setSearch("")} className="text-gray-400 text-xs px-1">✕</button>
           )}
         </div>
-      </div>{/* ── Hero ── */}
-<div className={`relative bg-gradient-to-br rounded-3xl p-8 mb-6 overflow-hidden border ${
-  darkMode
-    ? 'from-[#0f1a2e] via-[#1a1535] to-[#0e1520] border-white/5'
-    : 'from-slate-50 via-violet-50 to-slate-50 border-violet-100'
-}`} style={{
-  boxShadow: darkMode ? '0 18px 40px rgba(0,0,0,0.32)' : '0 16px 36px rgba(124,58,237,0.08)',
-}}>
-  {/* Radial glow */}
-  <div style={{
-    position: 'absolute', inset: 0, pointerEvents: 'none',
-    background: 'radial-gradient(ellipse 60% 80% at 80% 20%, rgba(167,139,250,0.08), transparent)',
-  }} />
-
-  {/* Background emoji */}
-  <div style={{
-    position: 'absolute', right: 24, top: 16,
-    fontSize: 96, opacity: 0.08, transform: 'rotate(12deg)',
-    userSelect: 'none', pointerEvents: 'none', lineHeight: 1,
-  }}>
-    🎬
-  </div>
-
-  {/* Title */}
-  <h1 className="font-handwritten" style={{
-    fontSize: 48, fontWeight: 700, lineHeight: 1.1,
-    margin: '0 0 8px',
-    background: darkMode
-      ? 'linear-gradient(to right, #f1f5f9, #c084fc)'
-      : 'linear-gradient(to right, #3b0764, #7c3aed)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
-  }}>
-    Lights, camera
-  </h1>
-
-  {/* Subtitle */}
-  <p style={{
-    fontSize: 14, lineHeight: 1.6, margin: 0,
-    color: darkMode ? 'rgba(203,213,225,0.7)' : 'rgba(107,114,128,0.9)',
-    maxWidth: 300,
-  }}>
-    Find your next watch and save movies to your Someday List.
-  </p>
-</div>
+      </div>
 
       {/* ── Section label ── */}
       <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 px-4 pt-5 pb-3 truncate">
