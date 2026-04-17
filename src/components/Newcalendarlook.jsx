@@ -220,7 +220,22 @@ const UnifiedCalendarView = ({
   const accent = activeLayerPageTheme?.accent || '#a855f7';
 
   return (
-    <div className="unified-calendar-view" style={{ fontFamily: "'Caveat', cursive" }}>
+    <div className="unified-calendar-view paper-texture" style={{ fontFamily: "'Caveat', cursive" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
+        .paper-texture {
+          background-image:
+            repeating-linear-gradient(0deg, rgba(0,0,0,.024) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.024) 3px),
+            repeating-linear-gradient(90deg, rgba(0,0,0,.024) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.024) 3px);
+        }
+        .dark .paper-texture {
+          background-image:
+            linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0)),
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.035) 3px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.03) 3px);
+          background-blend-mode: screen, normal, normal;
+        }
+      `}</style>
       {/* Persistent Header - Always visible */}
       <GreetingHeader
         todayEvents={todayEvents}
@@ -913,11 +928,24 @@ const SelectedDateDetails = ({
   return (
     <div
       id="todays-events"
-      className="mt-6 rounded-[28px] p-5 shadow-xl"
+      className="mt-6 rounded-[28px] p-5 shadow-xl paper-texture"
       style={{
         animation: 'fadeInUp 0.4s ease-out',
-        background: darkMode ? 'rgba(31,41,55,0.9)' : 'rgba(255,252,245,0.96)',
-        border: `1px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(180,150,100,0.3)'}`,
+        backgroundColor: darkMode ? 'rgba(15,23,42,0.96)' : 'rgba(255,250,245,0.98)',
+        backgroundImage: darkMode
+          ? [
+              'linear-gradient(135deg, rgba(15,23,42,0.96) 0%, rgba(30,41,59,0.96) 50%, rgba(15,23,42,0.96) 100%)',
+              'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0))',
+              'repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.035) 3px)',
+              'repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.03) 3px)',
+            ].join(', ')
+          : [
+              'linear-gradient(135deg, rgba(255,250,245,0.98) 0%, rgba(250,244,236,0.98) 50%, rgba(255,247,242,0.98) 100%)',
+              'repeating-linear-gradient(0deg, rgba(0,0,0,.024) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.024) 3px)',
+              'repeating-linear-gradient(90deg, rgba(0,0,0,.024) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.024) 3px)',
+            ].join(', '),
+        backgroundBlendMode: darkMode ? 'screen, normal, normal, normal' : 'normal, normal, normal',
+        border: `1px solid ${darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(180,150,100,0.22)'}`,
       }}
     >
       {/* Header */}

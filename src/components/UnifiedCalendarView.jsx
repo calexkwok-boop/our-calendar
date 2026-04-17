@@ -933,8 +933,21 @@ const SelectedDateDetails = ({
       className="mt-6 rounded-3xl backdrop-blur-sm p-5 shadow-xl border paper-texture"
       style={{
         animation: 'fadeInUp 0.4s ease-out',
-        background: darkMode ? 'rgba(31,41,55,0.9)' : '#fdf9f4',
-        borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.07)'
+        backgroundColor: darkMode ? 'rgba(15,23,42,0.96)' : 'rgba(255,250,245,0.98)',
+        backgroundImage: darkMode
+          ? [
+              'linear-gradient(135deg, rgba(15,23,42,0.96) 0%, rgba(30,41,59,0.96) 50%, rgba(15,23,42,0.96) 100%)',
+              'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0))',
+              'repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.035) 3px)',
+              'repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.03) 3px)',
+            ].join(', ')
+          : [
+              'linear-gradient(135deg, rgba(255,250,245,0.98) 0%, rgba(250,244,236,0.98) 50%, rgba(255,247,242,0.98) 100%)',
+              'repeating-linear-gradient(0deg, rgba(0,0,0,.024) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.024) 3px)',
+              'repeating-linear-gradient(90deg, rgba(0,0,0,.024) 0px, transparent 1px, transparent 2px, rgba(0,0,0,.024) 3px)',
+            ].join(', '),
+        backgroundBlendMode: darkMode ? 'screen, normal, normal, normal' : 'normal, normal, normal',
+        borderColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(180,150,100,0.22)'
       }}
     >
       {/* Header */}
