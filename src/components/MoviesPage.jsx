@@ -267,7 +267,7 @@ function SkeletonGrid() {
 // ---------------------------------------------------------------------------
 // Main MoviesPage
 // ---------------------------------------------------------------------------
-export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent }) {
+export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent, darkMode = false }) {
   const [activeTab, setActiveTab]           = useState("popular");
   const [search, setSearch]                 = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -462,7 +462,52 @@ export default function MoviesPage({ onBack, onAddToSomeday, onPlanEvent }) {
             <button onClick={() => setSearch("")} className="text-gray-400 text-xs px-1">✕</button>
           )}
         </div>
-      </div>
+      </div>{/* ── Hero ── */}
+<div className={`relative bg-gradient-to-br rounded-3xl p-8 mb-6 overflow-hidden border ${
+  darkMode
+    ? 'from-[#0f1a2e] via-[#1a1535] to-[#0e1520] border-white/5'
+    : 'from-slate-50 via-violet-50 to-slate-50 border-violet-100'
+}`} style={{
+  boxShadow: darkMode ? '0 18px 40px rgba(0,0,0,0.32)' : '0 16px 36px rgba(124,58,237,0.08)',
+}}>
+  {/* Radial glow */}
+  <div style={{
+    position: 'absolute', inset: 0, pointerEvents: 'none',
+    background: 'radial-gradient(ellipse 60% 80% at 80% 20%, rgba(167,139,250,0.08), transparent)',
+  }} />
+
+  {/* Background emoji */}
+  <div style={{
+    position: 'absolute', right: 24, top: 16,
+    fontSize: 96, opacity: 0.08, transform: 'rotate(12deg)',
+    userSelect: 'none', pointerEvents: 'none', lineHeight: 1,
+  }}>
+    🎬
+  </div>
+
+  {/* Title */}
+  <h1 className="font-handwritten" style={{
+    fontSize: 48, fontWeight: 700, lineHeight: 1.1,
+    margin: '0 0 8px',
+    background: darkMode
+      ? 'linear-gradient(to right, #f1f5f9, #c084fc)'
+      : 'linear-gradient(to right, #3b0764, #7c3aed)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+  }}>
+    Lights, camera
+  </h1>
+
+  {/* Subtitle */}
+  <p style={{
+    fontSize: 14, lineHeight: 1.6, margin: 0,
+    color: darkMode ? 'rgba(203,213,225,0.7)' : 'rgba(107,114,128,0.9)',
+    maxWidth: 300,
+  }}>
+    Find your next watch and save movies to your Someday List.
+  </p>
+</div>
 
       {/* ── Section label ── */}
       <p className="text-[10px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-600 px-4 pt-5 pb-3 truncate">
